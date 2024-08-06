@@ -5,7 +5,11 @@ import json
 from typing import Tuple
 from loguru import logger
 import traceback
-from ai import stt, llm, tts
+from ai import stt, tts
+from ai.assistant.assistant import Assistant
+from ai.assistant.memory import DatabaseMemory
+from gateways.database.mongodb import MongoDBGateway
+from gateways.users import UsersGateway
 
 app = FastAPI()
 
@@ -17,9 +21,17 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+def talk_with_assistant(text:str):
+    users_gateway = UsersGateway(MongoDBGateway("users"))
+    user = users_gateway.get_user_by_id("66b29679de73d9a05e77a247")
+    memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
+    assistant = Assistant(memory=memory, user=user)
+    return assistant.get_response(text)
+
+
 async def process_audio_pipeline(audio_bytes: bytes) -> Tuple[str, bytes]:
     transcription = stt.speech_to_text(audio_bytes)
-    response = llm.talk_with_assistant(transcription)
+    response = talk_with_assistant(transcription)
     audio_response = tts.text_to_speech(response)
     return response, audio_response
 

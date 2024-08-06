@@ -4,7 +4,7 @@ from datetime import datetime
 from entities.message import Message
 from entities.user import User
 from ai.assistant.memory import Memory
-from loguru import logger
+from ai.llm import ask_text
 
 
 class Assistant(object):
@@ -17,9 +17,17 @@ class Assistant(object):
         self.memory = memory
         self.user = user
 
-    def ask_text(self, text: str,) -> str:
+    def get_response(self, user_input: str):
+        self.memory.write(
+            Message.new(
+                user_input,
+                sender_name=self.user.name,
+                sender_id=self.user.id,
+                recipient_name=self.name,
+                recipient_id="0",
+            )
+        )
 
-        # todo: bind this to user timezone
         current_time = datetime.now().strftime("%H:%M")
 
         system = f"""
@@ -34,29 +42,7 @@ class Assistant(object):
 
         """
         
-        logger.info(f"Asking text: {text} to assistant with system {system}") 
-
-        response = client.chat.completions.create(
-        model=LLM_MODEL,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": text}
-        ],
-        temperature=0.7,
-        )
-        return response.choices[0].message.content
-
-    def get_response(self, user_input: str):
-        self.memory.write(
-            Message.new(
-                user_input,
-                sender_name=self.user.name,
-                sender_id=self.user.id,
-                recipient_name=self.name,
-                recipient_id="0",
-            )
-        )
-        response = self.ask_text(user_input)
+        response = ask_text(user_input, system)
 
         self.memory.write(
             Message.new(
