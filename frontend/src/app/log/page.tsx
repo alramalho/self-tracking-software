@@ -64,7 +64,7 @@ const LogPage: React.FC = () => {
         toggleRecording={toggleRecording}
       />
       <Toaster 
-        position="bottom-center" 
+        position="top-center" 
         toastOptions={{
           style: {
             background: 'rgb(55 65 81)', // Tailwind's gray-700

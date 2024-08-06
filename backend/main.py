@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import base64
 import json
 from typing import Tuple
+from loguru import logger
+import traceback
 from ai import stt, llm, tts
 
 app = FastAPI()
@@ -17,9 +19,9 @@ app.add_middleware(
 
 async def process_audio_pipeline(audio_bytes: bytes) -> Tuple[str, bytes]:
     transcription = stt.speech_to_text(audio_bytes)
-    gpt_response = llm.ask_text(transcription)
-    audio_response = tts.text_to_speech(gpt_response)
-    return gpt_response, audio_response
+    response = llm.talk_with_assistant(transcription)
+    audio_response = tts.text_to_speech(response)
+    return response, audio_response
 
 @app.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
@@ -50,7 +52,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 audio_buffer.clear()
     
     except Exception as e:
-        print(f"Error: {e}")
+        traceback.print_exc()
+        logger.error(f"Error: {e}")
     finally:
         await websocket.close()
 
