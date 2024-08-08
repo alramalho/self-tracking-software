@@ -1,9 +1,9 @@
 import datetime
-from typing import Any, List
+from typing import Any, List, Tuple
 
 from entities.user import User
-from gateways.database.base import DBGateway
 from loguru import logger
+from gateways.database.mongodb import MongoDBGateway
 
 class UserDoesNotExistException(Exception):
     pass
@@ -15,8 +15,8 @@ class UserAlreadyExistsException(Exception):
 
 # todo: this users gateway now has permissions and CRUD responsiblities... we should split?
 class UsersGateway:
-    def __init__(self, db_gateway: DBGateway):
-        self.db_gateway = db_gateway
+    def __init__(self,):
+        self.db_gateway = MongoDBGateway("users")
 
     def get_all_users(self) -> list[User]:
         return [User(**data) for data in self.db_gateway.scan()]
@@ -70,11 +70,11 @@ class UsersGateway:
 
     def update_field(self, user_id: str, field_name: str, new_value: Any) -> User:
         return self.update_fields(user_id, {field_name: new_value})
+    
 
 if __name__ == "__main__":
     from gateways.database.mongodb import MongoDBGateway
 
-    gateway = UsersGateway(MongoDBGateway("users"))
+    gateway = UsersGateway()
 
-    user = User(name="Alex", email="alexandre.ramalho.1998@gmail.com")
-    gateway.create_user(user)
+    print(gateway.get_user_by_id("66b29679de73d9a05e77a247"))

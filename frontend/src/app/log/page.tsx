@@ -6,9 +6,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useMicrophone } from '@/hooks/useMicrophone';
 import { useSpeaker } from '@/hooks/useSpeaker';
 import AudioControls from '@/components/AudioControls';
-import { Toaster } from "@/components/ui/sonner"
-import { toast } from "sonner"
-
+import toast, { Toaster } from 'react-hot-toast';
 
 const LogPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -41,6 +39,7 @@ const LogPage: React.FC = () => {
     // Show toast notification with transcription
     toast(transcription, {
       duration: Math.max(2000, 400 * transcription.split(' ').length),
+      icon: "✋",
     });
   }, [addToQueue]);
 
@@ -63,16 +62,8 @@ const LogPage: React.FC = () => {
         isConnected={isConnected}
         toggleRecording={toggleRecording}
       />
-      <Toaster 
-        position="top-center" 
-        toastOptions={{
-          style: {
-            background: 'rgb(55 65 81)', // Tailwind's gray-700
-            color: 'white',
-            border: 'none',
-          },
-        }}
-      />
+      <Toaster />
+
     </div>
   );
 };
