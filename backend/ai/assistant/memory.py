@@ -14,7 +14,7 @@ class Memory(ABC):
         pass
 
     @abstractmethod
-    def read_all(self, max_words: Optional[int] = None, max_age_in_minutes: int = 90) -> List[Message]:
+    def read_all(self, max_words: Optional[int] = None, max_age_in_minutes: int = 90, max_messages: int = None) -> List[Message]:
         pass
 
     @abstractmethod
@@ -35,8 +35,10 @@ class ArrayMemory(Memory):
         filtered_messages = self._filter_messages(max_words, max_age_in_minutes)
         return filtered_messages
 
-    def read_all_as_str(self, max_words: Optional[int] = None, max_age_in_minutes: int = 90) -> str:
+    def read_all_as_str(self, max_words: Optional[int] = None, max_age_in_minutes: int = 90, max_messages: int = None) -> str:
         filtered_messages = self.read_all(max_words, max_age_in_minutes)
+        if max_messages is not None:
+            filtered_messages = filtered_messages[-max_messages:]
         return self._format_messages_as_str(filtered_messages)
 
     def _filter_messages(self, max_words: Optional[int], max_age_in_minutes: int) -> List[Message]:
@@ -86,8 +88,10 @@ class DatabaseMemory(Memory):
         filtered_messages = self._filter_messages(all_messages, max_words, max_age_in_minutes)
         return filtered_messages
 
-    def read_all_as_str(self, max_words: Optional[int] = None, max_age_in_minutes: int = 90) -> str:
+    def read_all_as_str(self, max_words: Optional[int] = None, max_age_in_minutes: int = 90, max_messages: int = None) -> str:
         filtered_messages = self.read_all(max_words, max_age_in_minutes)
+        if max_messages is not None:
+            filtered_messages = filtered_messages[-max_messages:]
         return self._format_messages_as_str(filtered_messages, max_age_in_minutes)
 
     def _get_all_messages(self) -> List[Message]:

@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 from shared.utils import time_ago
-
+from bson import ObjectId
 
 class Message(BaseModel):
     id: str
@@ -24,7 +24,7 @@ class Message(BaseModel):
         recipient_id: str,
     ) -> "Message":
         return cls(
-            id=str(uuid.uuid4()),
+            id=str(ObjectId()),
             text=text,
             sender_name=sender_name,
             sender_id=sender_id,
