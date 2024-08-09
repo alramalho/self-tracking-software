@@ -75,7 +75,7 @@ class ArrayMemory(Memory):
         ])
 
 class DatabaseMemory(Memory):
-    def __init__(self, gateway: DBGateway, user_id: str, minimum_messages: int = 3):
+    def __init__(self, gateway: DBGateway, user_id: str, minimum_messages: int = 0):
         self.db_gateway = gateway
         self.user_id = user_id
         self.minimum_messages = minimum_messages

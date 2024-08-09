@@ -17,16 +17,13 @@ const AudioControls = forwardRef<HTMLButtonElement, AudioControlsProps>(
           ref={ref}
           onClick={toggleRecording}
           className={`flex items-center justify-center p-4 rounded-full ${
-            isRecording ? 'bg-red-500' : 'bg-blue-500'
+            isRecording ? 'bg-red-500' : isConnected? 'bg-blue-500': 'bg-gray-500'
           } text-white`}
           disabled={!isConnected}
         >
           <Mic size={24} />
           <span className="ml-2">{isRecording ? 'Stop' : 'Start'} Recording</span>
         </button>
-        <p className="mt-4">
-          Status: {isConnected ? 'Connected' : 'Disconnected'}
-        </p>
       </div>
     );
   }
