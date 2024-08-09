@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import BottomNav from "../components/BottomNav";
 import { Toaster } from "react-hot-toast";
+import { NotificationsProvider } from "@/hooks/useNotifications";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,14 +20,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <main className="pb-16">{children}</main>
-        <Toaster
-          position="top-center"
-          containerStyle={{
-            bottom: "5rem", // Adjust this value based on your BottomNav height
-          }}
-        />
-        <BottomNav />
+        <NotificationsProvider>
+          <main className="pb-16">{children}</main>
+          <Toaster
+            position="top-center"
+            containerStyle={{
+              bottom: "5rem", // Adjust this value based on your BottomNav height
+            }}
+          />
+          <BottomNav />
+        </NotificationsProvider>
       </body>
     </html>
   );

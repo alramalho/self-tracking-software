@@ -20,10 +20,18 @@ class ActivitiesGateway:
         self.activitiy_entries_db_gateway = MongoDBGateway("activity_entries")
 
     def get_activity_by_id(self, activity_id:str) -> Activity:
-        return self.activities_db_gateway.query("id", activity_id)
+        data = self.activities_db_gateway.query("id", activity_id)
+        if len(data) > 0:
+            return Activity(**data[0])
+        else:
+            return None
     
     def get_activity_entry_by_id(self, activity_entry_id:str) -> Activity:
-        return self.activitiy_entries_db_gateway.query("id", activity_entry_id)
+        data = self.activitiy_entries_db_gateway.query("id", activity_entry_id)
+        if len(data) > 0:
+            return ActivityEntry(**data[0])
+        else:
+            return None
         
     def get_all_activities_by_user_id(self, user_id:str) -> list[Activity]:
         return [Activity(**data) for data in self.activities_db_gateway.query("user_id", user_id)]

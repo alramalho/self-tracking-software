@@ -1,18 +1,29 @@
+'use client';
+
 import React from 'react';
 import { Pencil, Eye } from 'lucide-react';
+import { useNotifications } from '@/hooks/useNotifications';
+import Link from 'next/link';
 
 const BottomNav = () => {
+  const { notificationCount } = useNotifications();
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[10000]">
       <div className="flex justify-around">
-        <a href="/see" className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500">
+        <Link href="/see" className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500 relative">
+          {notificationCount > 0 && (
+            <div className="absolute top-0 right-0 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-xs">
+              {notificationCount}
+            </div>
+          )}
           <Eye size={24} />
           <span className="text-xs mt-1">See</span>
-        </a>
-        <a href="/log" className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500">
+        </Link>
+        <Link href="/log" className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500">
           <Pencil size={24} />
           <span className="text-xs mt-1">Log</span>
-        </a>
+        </Link>
       </div>
     </nav>
   );

@@ -4,14 +4,17 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useMicrophone } from '@/hooks/useMicrophone';
 import { useSpeaker } from '@/hooks/useSpeaker';
 import AudioControls from '@/components/AudioControls';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle } from 'lucide-react';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const LogPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { isRecording, toggleRecording } = useMicrophone(socket);
   const { addToQueue } = useSpeaker();
+  const { addNotifications } = useNotifications();
+
   const [transcription, setTranscription] = useState<string>('');
   const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -48,7 +51,7 @@ const LogPage: React.FC = () => {
     };
   }, [connectWebSocket]);
 
-  const handleIncomingAudio = useCallback((base64Audio: string, transcription: string) => {
+  const handleIncomingAudio = useCallback((base64Audio: string, transcription: string, newActivities: any[], newActivityEntries: any[]) => {
     const binaryString = atob(base64Audio);
     const len = binaryString.length;
     const bytes = new Uint8Array(len);
@@ -61,25 +64,44 @@ const LogPage: React.FC = () => {
       duration: Math.max(2000, 400 * transcription.split(' ').length),
       icon: "🤖",
     });
+
+    if (newActivityEntries.length > 0) {
+      addNotifications(newActivityEntries.length);
+      toast(`${newActivityEntries.length} new activities logged!`, {
+        duration: 5000,
+        position: 'top-left',
+        icon: "📊",
+      });
+    }
+
     setIsLoading(false);
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-  }, [addToQueue]);
+  }, [addToQueue, addNotifications]);
 
   useEffect(() => {
-    if (!socket) return;
+   if (!socket) return;
 
     socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
+      
+      // Create a copy of the data for logging
+      const logData = { ...data };
+      if (logData.audio) {
+        logData.audio = '<audio file>';
+      }
+      console.log('Received message:', logData);
+
       if (data.type === 'audio') {
-        handleIncomingAudio(data.audio, data.transcription);
+        handleIncomingAudio(data.audio, data.transcription, data.new_activities, data.new_activity_entries);
       } else if (data.type === 'transcription') {
         toast.success(data.text, {
           duration: Math.max(2000, 3000 + 1200 * data.text.split(' ').length),
           position: 'bottom-center',
         });
         setTranscription(data.text);
+        setIsLoading(true);
         
         // Set timeout for server response
         timeoutRef.current = setTimeout(() => {
@@ -169,12 +191,7 @@ const LogPage: React.FC = () => {
         <AudioControls
           isRecording={isRecording}
           isConnected={isConnected}
-          toggleRecording={() => {
-            if (isRecording) { // means it now stops recording
-              setIsLoading(true);
-            }
-            toggleRecording();
-          }}
+          toggleRecording={toggleRecording}
         />
       ) : (
         <div className="w-full max-w-md">
