@@ -3,7 +3,7 @@ import { Pencil, Eye } from 'lucide-react';
 
 const BottomNav = () => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[10000]">
       <div className="flex justify-around">
         <a href="/see" className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500">
           <Eye size={24} />

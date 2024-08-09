@@ -1,18 +1,21 @@
 'use client';
 
-
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useMicrophone } from '@/hooks/useMicrophone';
 import { useSpeaker } from '@/hooks/useSpeaker';
 import AudioControls from '@/components/AudioControls';
-import toast, { Toaster } from 'react-hot-toast';
-import { Wifi, WifiOff } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle } from 'lucide-react';
 
 const LogPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { isRecording, toggleRecording } = useMicrophone(socket);
   const { addToQueue } = useSpeaker();
+  const [transcription, setTranscription] = useState<string>('');
+  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = useCallback(() => {
     const newSocket = new WebSocket('ws://localhost:8000/connect');
@@ -56,8 +59,12 @@ const LogPage: React.FC = () => {
     
     toast(transcription, {
       duration: Math.max(2000, 400 * transcription.split(' ').length),
-      icon: "✋",
+      icon: "🤖",
     });
+    setIsLoading(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
   }, [addToQueue]);
 
   useEffect(() => {
@@ -67,6 +74,20 @@ const LogPage: React.FC = () => {
       const data = JSON.parse(event.data);
       if (data.type === 'audio') {
         handleIncomingAudio(data.audio, data.transcription);
+      } else if (data.type === 'transcription') {
+        toast.success(data.text, {
+          duration: Math.max(2000, 3000 + 1200 * data.text.split(' ').length),
+          position: 'bottom-center',
+        });
+        setTranscription(data.text);
+        
+        // Set timeout for server response
+        timeoutRef.current = setTimeout(() => {
+          setIsLoading(false);
+          toast.error('Server response timed out', {
+            position: 'top-right',
+          });
+        }, 20000);
       }
     };
   }, [socket, handleIncomingAudio]);
@@ -78,8 +99,39 @@ const LogPage: React.FC = () => {
     connectWebSocket();
   };
 
+  const handleTranscriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setTranscription(e.target.value);
+  };
+
+  const handleTranscriptionSubmit = () => {
+    if (socket && isConnected) {
+      setIsLoading(true);
+      socket.send(JSON.stringify({
+        action: 'update_transcription',
+        text: transcription
+      }));
+
+      // Set timeout for server response
+      timeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        toast.error('Server response timed out', {
+          position: 'top-right',
+        });
+      }, 20000);
+    }
+  };
+
+  const toggleInputMode = () => {
+    setInputMode(prevMode => prevMode === 'voice' ? 'text' : 'voice');
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      {isLoading && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+          <LoaderCircle className="animate-spin text-gray-600" size={24} />
+        </div>
+      )}
       <h1 className="text-2xl mb-4">Log App</h1>
       <div className="flex items-center mb-4">
         {isConnected ? (
@@ -97,12 +149,51 @@ const LogPage: React.FC = () => {
           Reconnect
         </button>
       </div>
-      <AudioControls
-        isRecording={isRecording}
-        isConnected={isConnected}
-        toggleRecording={toggleRecording}
-      />
-      <Toaster />
+      <button
+        onClick={toggleInputMode}
+        className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors flex items-center"
+      >
+        {inputMode === 'voice' ? (
+          <>
+            <Mic className="mr-2" size={20} />
+            Switch to Text
+          </>
+        ) : (
+          <>
+            <MessageSquare className="mr-2" size={20} />
+            Switch to Voice
+          </>
+        )}
+      </button>
+      {inputMode === 'voice' ? (
+        <AudioControls
+          isRecording={isRecording}
+          isConnected={isConnected}
+          toggleRecording={() => {
+            if (isRecording) { // means it now stops recording
+              setIsLoading(true);
+            }
+            toggleRecording();
+          }}
+        />
+      ) : (
+        <div className="w-full max-w-md">
+          <textarea
+            value={transcription}
+            onChange={handleTranscriptionChange}
+            className="w-full p-2 border rounded"
+            rows={4}
+            placeholder="Type your message here..."
+          />
+          <button
+            onClick={handleTranscriptionSubmit}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors w-full"
+            disabled={!isConnected}
+          >
+            Submit Message
+          </button>
+        </div>
+      )}
     </div>
   );
 };

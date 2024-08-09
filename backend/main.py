@@ -105,7 +105,6 @@ def store_activities_from_conversation(user_id: str) -> Tuple[List[Activity], Li
             logger.error(f"Error creating activity entry: {e}")
 
     return activities, activity_entries
-
 @app.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -125,6 +124,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 audio_bytes = base64.b64decode(audio_data)
                 
                 transcription = stt.speech_to_text(audio_bytes)
+                
+                # Send transcription to the client
+                await websocket.send_json({
+                    "type": "transcription",
+                    "text": transcription
+                })
+
                 text_response = talk_with_assistant(user_id=user_id, user_input=transcription)
                 activities, activity_entries = store_activities_from_conversation(user_id=user_id)
                 audio_response = tts.text_to_speech(text_response)
@@ -139,6 +145,20 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
 
                 audio_buffer.clear()
+            
+            elif message['action'] == 'update_transcription':
+                updated_transcription = message.get('text', '')
+                text_response = talk_with_assistant(user_id=user_id, user_input=updated_transcription)
+                activities, activity_entries = store_activities_from_conversation(user_id=user_id)
+                audio_response = tts.text_to_speech(text_response)
+                
+                await websocket.send_json({
+                    "type": "audio",
+                    "transcription": text_response,
+                    "audio": base64.b64encode(audio_response).decode('utf-8'),
+                    "new_activities": [a.model_dump() for a in activities],
+                    "new_activity_entries":  [a.model_dump() for a in activity_entries],
+                })
     
     except Exception as e:
         traceback.print_exc()
