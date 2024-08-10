@@ -52,9 +52,9 @@ const SeePage: React.FC = () => {
     const fetchData = async () => {
       try {
         const [activitiesResponse, entriesResponse, moodResponse] = await Promise.all([
-          axios.get<Activity[]>("http://localhost:8000/api/activities"),
-          axios.get<ActivityEntry[]>("http://localhost:8000/api/activity-entries"),
-          axios.get<MoodReport[]>("http://localhost:8000/api/mood-reports"),
+          axios.get<Activity[]>(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activities`),
+          axios.get<ActivityEntry[]>(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activity-entries`),
+          axios.get<MoodReport[]>(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/mood-reports`),
         ]);
 
         setActivities(activitiesResponse.data);
