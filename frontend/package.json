@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.1.1",
     "@uiw/react-heat-map": "^2.2.2",
     "@uiw/react-tooltip": "^4.22.3",
     "axios": "^1.7.3",
@@ -22,6 +23,7 @@
     "react": "^18",
     "react-dom": "^18",
     "react-hot-toast": "^2.4.1",
+    "recharts": "^2.12.7",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7"
   },

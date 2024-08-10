@@ -49,7 +49,7 @@ class Assistant(object):
         - If its the first time you are taling to the user today (divider in the conversation), greet the user, make him at ease (i.e. make a initial exploratory question) by his name and very gently ask how happy is he feeling in a scale from 1 to 10. 
         - After the user rates how happy is he feeling frmo 1 to 10, ask why.
         - Ask questions that focus on getting breadth of information about the day rather than depth about a specific task. Any activiity must be uniquely identifiable though (e.g. 'work in a project' is too generic, 'work in my startup called X' is good, 'work in my startup X on the new feature for user signups' is too specific).
-        - After an activity is shared, you must always ask for how does the user wants to measure for every mentioned activity (e.g. how many hours of work / kilometers of running / times OR minutes meditated, etc ). If its a new activity ask how does the user wants to measure it. (Existent user activities are {', '.join([str(a) for a in self.user_activities])})
+        - After an activity is shared and no way to measure is shared and (he just mentions he did something) and the activity is new (non existing), you must ask for how does the user wants to measure for every mentioned activity (e.g. how many hours of work / kilometers of running / times OR minutes meditated, etc ). (Existent user activities are {', '.join([str(a) for a in self.user_activities])})
         - Your message must naturally fit to contiue conversation history.
         
         Here's your past conversation with the user:

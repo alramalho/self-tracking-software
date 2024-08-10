@@ -5,6 +5,27 @@ import HeatMap from "@uiw/react-heat-map";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { useNotifications } from "@/hooks/useNotifications";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface MoodReport {
+  id: string;
+  date: string;
+  score: number; // 0-10
+}
 
 interface Activity {
   id: string;
@@ -22,24 +43,26 @@ interface ActivityEntry {
 const SeePage: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([]);
+  const [moodReports, setMoodReports] = useState<MoodReport[]>([]);
   const { clearNotifications } = useNotifications();
   const [selected, setSelected] = useState("");
+  const [timeRange, setTimeRange] = useState("Current Year");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [activitiesResponse, entriesResponse] = await Promise.all([
+        const [activitiesResponse, entriesResponse, moodResponse] = await Promise.all([
           axios.get<Activity[]>("http://localhost:8000/api/activities"),
-          axios.get<ActivityEntry[]>(
-            "http://localhost:8000/api/activity-entries"
-          ),
+          axios.get<ActivityEntry[]>("http://localhost:8000/api/activity-entries"),
+          axios.get<MoodReport[]>("http://localhost:8000/api/mood-reports"),
         ]);
 
         setActivities(activitiesResponse.data);
         setActivityEntries(entriesResponse.data);
+        setMoodReports(moodResponse.data);
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast.error("Failed to load activities");
+        toast.error("Failed to load data");
       }
     };
 
@@ -60,18 +83,8 @@ const SeePage: React.FC = () => {
     const labels = [];
     const currentDate = new Date(startDate);
     const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
 
     for (let i = 0; i < 12; i++) {
@@ -94,15 +107,63 @@ const SeePage: React.FC = () => {
     );
   };
 
+  const filterDataByTimeRange = (data: any[]) => {
+    const currentDate = new Date();
+    const startDate = new Date(
+      timeRange === "Current Year"
+        ? `${currentDate.getFullYear()}-01-01`
+        : `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-01`
+    );
+    return data.filter(item => new Date(item.date) >= startDate);
+  };
+  
+  const moodChartData = filterDataByTimeRange(moodReports).map(report => ({
+    date: new Date(report.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    score: report.score
+  }));
+
   return (
     <div className="p-4 space-y-8">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Activity and Mood Tracker</h1>
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select time range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Current Year">Current Year</SelectItem>
+            <SelectItem value="Current Month">Current Month</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mood Over Time</CardTitle>
+          <CardDescription>Your mood scores over the selected time period</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AreaChart
+            width={800}
+            height={300}
+            data={moodChartData}
+            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis domain={[0, 10]} />
+            <Tooltip />
+            <Area type="monotone" dataKey="score" stroke="#8884d8" fill="#8884d8" />
+          </AreaChart>
+        </CardContent>
+      </Card>
+
       {activities.map((activity) => {
-        const startDate = new Date(`${new Date().getFullYear()}/01/01`);
+        const startDate = new Date(timeRange === "Current Year" ? `${new Date().getFullYear()}/01/01` : `${new Date().getFullYear()}/${new Date().getMonth() + 1}/01`);
         const endDate = new Date();
         const monthLabels = generateMonthLabels(startDate);
         const value = getActivityEntries(activity.id);
-
-        console.log({ value });
+        const filteredValue = filterDataByTimeRange(value);
 
         return (
           <div key={activity.id} className="bg-white p-6 rounded-lg border-2">
@@ -116,7 +177,7 @@ const SeePage: React.FC = () => {
             </div>
             <div className="relative">
               <HeatMap
-                value={value}
+                value={filteredValue}
                 startDate={startDate}
                 endDate={endDate}
                 width="100%"
@@ -132,17 +193,10 @@ const SeePage: React.FC = () => {
                       {...props}
                       onClick={() => {
                         if (data.date !== selected) {
-                          console.log(data.date);
-                          const entry = activityEntries.find((e) => {
-                            console.log({ edate: e.date });
-                            console.log({
-                              datadate: data.date.replaceAll("/", "-"),
-                            });
-                            return (
-                              e.activity_id === activity.id &&
-                              isSameDate(e.date, data.date.replaceAll("/", "-"))
-                            );
-                          });
+                          const entry = activityEntries.find((e) => 
+                            e.activity_id === activity.id &&
+                            isSameDate(e.date, data.date.replaceAll("/", "-"))
+                          );
                           const quantity = entry ? entry.quantity : 0;
                           if (quantity > 0) {
                             toast.success(
