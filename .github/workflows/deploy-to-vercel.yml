@@ -1,0 +1,53 @@
+name: Deploy to Vercel
+
+on:
+  workflow_call:
+    inputs:
+      deploy_url:
+        description: 'Vercel Deploy Hook URL'
+        required: true
+        type: string
+
+env:
+  VERCEL_PROJECT_ID: prj_7jVbMD4AqXfMDHlPGcV2KoBv4Xta
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  deploy-to-vercel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Trigger Deployment and Track Status
+        run: |
+          # Trigger deployment using the provided deploy hook URL
+          DEPLOY_RESPONSE=$(curl -X POST "${{ inputs.deploy_url }}")
+          echo "Deployment triggered. Response: $DEPLOY_RESPONSE"
+
+          # Extract job ID from the response
+          JOB_ID=$(echo $DEPLOY_RESPONSE | jq -r '.job.id')
+          echo "Job ID: $JOB_ID"
+
+          # Function to check deployment status
+          check_status() {
+            DEPLOYMENT=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+                         "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&limit=1&filter=production" | 
+                         jq '.deployments[0]')
+            echo $DEPLOYMENT
+          }
+
+          # Poll for status every 10 seconds
+          STATUS="INITIALIZING"
+          while [ "$STATUS" != "READY" ] && [ "$STATUS" != "ERROR" ]; do
+            sleep 10
+            DEPLOYMENT=$(check_status)
+            STATUS=$(echo $DEPLOYMENT | jq -r '.state')
+            echo "Current status: $STATUS"
+          done
+
+          if [ "$STATUS" = "ERROR" ]; then
+            echo "Deployment failed"
+            exit 1
+          else
+            URL=$(echo $DEPLOYMENT | jq -r '.url')
+            echo "Deployment successful! URL: https://$URL"
+          fi

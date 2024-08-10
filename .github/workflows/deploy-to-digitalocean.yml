@@ -1,0 +1,48 @@
+name: Deploy to DigitalOcean
+
+on:
+  workflow_call:
+    inputs:
+      app_id:
+        required: true
+        type: string
+
+jobs:
+  deploy-to-digitalOcean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Deploy to DigitalOcean
+      run: |
+        DEPLOYMENT_ID=$(doctl apps create-deployment ${{ inputs.app_id }} --format ID --no-header | tail -n 1)
+        echo "Current deployment id: $DEPLOYMENT_ID"
+
+        while true; do
+          DEPLOYMENT_STATUS=$(doctl apps get-deployment ${{ inputs.app_id }} $DEPLOYMENT_ID --format Phase --no-header)
+          echo "Current deployment status: $DEPLOYMENT_STATUS"
+          
+          if [[ "$DEPLOYMENT_STATUS" == "ACTIVE" ]]; then
+            echo "Deployment succeeded!"
+            break
+          elif [[ "$DEPLOYMENT_STATUS" == "ERROR" ]]; then
+            echo "Deployment failed!"
+            exit 1
+          elif [[ "$DEPLOYMENT_STATUS" == "CANCELED" ]]; then
+            echo "Deployment cancelled!"
+            exit 1
+          fi
+          
+          echo "Polling deployment status again..."
+          sleep 5
+        done
