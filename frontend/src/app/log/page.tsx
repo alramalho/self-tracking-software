@@ -21,7 +21,7 @@ const LogPage: React.FC = () => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = useCallback(() => {
-    const newSocket = new WebSocket("ws://localhost:8000/connect");
+    const newSocket = new WebSocket(process.env.NEXT_PUBLIC_BACKEND_WS_URL!);
 
     newSocket.onopen = () => {
       setIsConnected(true);
