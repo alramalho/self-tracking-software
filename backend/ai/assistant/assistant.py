@@ -8,6 +8,7 @@ from ai.llm import ask_schema
 from typing import List
 from entities.activity import Activity
 from pydantic import BaseModel, Field
+from loguru import logger
 
 class Assistant(object):
     def __init__(
@@ -50,15 +51,17 @@ class Assistant(object):
         - After the user rates how happy is he feeling frmo 1 to 10, ask why.
         - Ask questions that focus on getting breadth of information about the day rather than depth about a specific task. Any activiity must be uniquely identifiable though (e.g. 'work in a project' is too generic, 'work in my startup called X' is good, 'work in my startup X on the new feature for user signups' is too specific).
         - After an activity is shared and no way to measure is shared and (he just mentions he did something) and the activity is new (non existing), you must ask for how does the user wants to measure for every mentioned activity (e.g. how many hours of work / kilometers of running / times OR minutes meditated, etc ). (Existent user activities are {', '.join([str(a) for a in self.user_activities])})
-        - Your message must naturally fit to contiue conversation history.
+        - Your message must naturally fit to continue conversation history.
         
         Here's your past conversation with the user:
-        {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=2*60)}
+        {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=24*60)}
 
         """
 
+        logger.info(f"System: {system}")
+
         class ResponseModel(BaseModel):
-            reasoning: str = Field(description="Your extensive reasoning on how to approach the user message given your instructions, the rules and conversation flow.")
+            reasoning: str = Field(description="A numbered reflection on 1. your instructions/goal  2. the whole conversation history for today 3. how to approach the user message given your instructions, given the rules and the conversation flow.")
             message: str = Field(description="Message to be sent to the user.")
         
         response = ask_schema(user_input, system, pymodel=ResponseModel)

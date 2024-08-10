@@ -1,5 +1,6 @@
 // /app/hooks/useMicrophone.ts
 
+import { arrayBufferToBase64, arrayBufferToBase64Async } from '@/lib/utils';
 import { useState, useCallback, useRef } from 'react';
 
 export const useMicrophone = (socket: WebSocket | null) => {
@@ -23,8 +24,8 @@ export const useMicrophone = (socket: WebSocket | null) => {
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const arrayBuffer = await audioBlob.arrayBuffer();
-        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-        
+        const base64Audio: string = await arrayBufferToBase64Async(arrayBuffer)
+
         socket.send(JSON.stringify({
           action: 'stop_recording',
           audio_data: base64Audio

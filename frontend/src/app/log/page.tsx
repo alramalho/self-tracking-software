@@ -52,14 +52,7 @@ const LogPage: React.FC = () => {
   }, [connectWebSocket]);
 
   const handleIncomingAudio = useCallback(
-    (
-      base64Audio: string,
-      transcription: string,
-      newActivities: any[],
-      newActivityEntries: any[],
-      notificationText: string,
-      reportedMood: boolean
-    ) => {
+    (base64Audio: string, transcription: string) => {
       const binaryString = atob(base64Audio);
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
@@ -78,7 +71,7 @@ const LogPage: React.FC = () => {
             <div className="flex items-start">
               <div className="flex-shrink-0 pt-0.5">
                 <div
-                  className="h-10 w-10 rounded-full bg-yellow-500	"
+                  className="h-10 w-10 rounded-full bg-yellow-500"
                 />
               </div>
               <div className="ml-3 flex-1">
@@ -102,6 +95,16 @@ const LogPage: React.FC = () => {
         </div>
       ));
 
+      setIsLoading(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    },
+    [addToQueue]
+  );
+
+  const handleActivitiesUpdate = useCallback(
+    (newActivityEntries: any[], notificationText: string, reportedMood: boolean) => {
       if ((newActivityEntries.length > 0 || reportedMood) && notificationText) {
         addNotifications(newActivityEntries.length + (reportedMood ? 1 : 0));
         toast(notificationText, {
@@ -110,13 +113,8 @@ const LogPage: React.FC = () => {
           icon: "📊",
         });
       }
-
-      setIsLoading(false);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
     },
-    [addToQueue, addNotifications]
+    [addNotifications]
   );
 
   useEffect(() => {
@@ -133,17 +131,16 @@ const LogPage: React.FC = () => {
       console.log("Received message:", logData);
 
       if (data.type === "audio") {
-        handleIncomingAudio(
-          data.audio,
-          data.transcription,
-          data.new_activities,
+        handleIncomingAudio(data.audio, data.transcription);
+      } else if (data.type === "activities_update") {
+        handleActivitiesUpdate(
           data.new_activity_entries,
           data.new_activities_notification,
           data.reported_mood
         );
       } else if (data.type === "transcription") {
         toast.success(data.text, {
-          duration: Math.max(2000, 3000 + 1200 * data.text.split(" ").length),
+          duration: Math.min(10000, Math.max(2000, 3000 + 1200 * data.text.split(" ").length)),
           position: "bottom-center",
         });
         setTranscription(data.text);
@@ -158,7 +155,7 @@ const LogPage: React.FC = () => {
         }, 20000);
       }
     };
-  }, [socket, handleIncomingAudio]);
+  }, [socket, handleIncomingAudio, handleActivitiesUpdate]);
 
   const handleReconnect = () => {
     if (socket) {
