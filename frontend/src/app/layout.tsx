@@ -23,7 +23,7 @@ export default function RootLayout({
         <NotificationsProvider>
           <main className="pb-16">{children}</main>
           <Toaster
-            position="top-center"
+            position="bottom-center"
             containerStyle={{
               bottom: "5rem", // Adjust this value based on your BottomNav height
             }}

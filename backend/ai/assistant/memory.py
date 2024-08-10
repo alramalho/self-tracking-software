@@ -69,13 +69,21 @@ class ArrayMemory(Memory):
         return filtered_messages
 
     def _format_messages_as_str(self, messages: List[Message]) -> str:
-        return "\n".join([
-            f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}"
-            for m in messages
-        ])
+        today = datetime.now(UTC).date()
+        formatted_messages = []
+        today_divider_added = False
+
+        for m in messages:
+            message_date = parser.parse(m.created_at).date()
+            if message_date == today and not today_divider_added:
+                formatted_messages.append(f"--- Today ({today.strftime('%Y-%m-%d')}) ---")
+                today_divider_added = True
+            formatted_messages.append(f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}")
+
+        return "\n".join(formatted_messages)
 
 class DatabaseMemory(Memory):
-    def __init__(self, gateway: DBGateway, user_id: str, minimum_messages: int = 0):
+    def __init__(self, gateway: DBGateway, user_id: str, minimum_messages: int = 3):
         self.db_gateway = gateway
         self.user_id = user_id
         self.minimum_messages = minimum_messages
@@ -129,9 +137,18 @@ class DatabaseMemory(Memory):
         return filtered_messages
 
     def _format_messages_as_str(self, messages: List[Message], max_age_in_minutes: int) -> str:
-        result = f"... (older than {max_age_in_minutes} minutes messages omitted) ...\n" if len(messages) < len(self._get_all_messages()) else ""
-        result += "\n".join([
-            f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}"
-            for m in messages
-        ])
-        return result or "<no messages in history>"
+        today = datetime.now(UTC).date()
+        formatted_messages = []
+        today_divider_added = False
+
+        if len(messages) < len(self._get_all_messages()):
+            formatted_messages.append(f"... (older than {max_age_in_minutes} minutes messages omitted) ...")
+
+        for m in messages:
+            message_date = parser.parse(m.created_at).date()
+            if message_date == today and not today_divider_added:
+                formatted_messages.append(f"--- Today ({today.strftime('%Y-%m-%d')}) ---")
+                today_divider_added = True
+            formatted_messages.append(f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}")
+
+        return "\n".join(formatted_messages) or "<no messages in history>"

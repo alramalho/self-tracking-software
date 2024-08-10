@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useMicrophone } from '@/hooks/useMicrophone';
-import { useSpeaker } from '@/hooks/useSpeaker';
-import AudioControls from '@/components/AudioControls';
-import toast, { Toaster } from 'react-hot-toast';
-import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle } from 'lucide-react';
-import { useNotifications } from '@/hooks/useNotifications';
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useMicrophone } from "@/hooks/useMicrophone";
+import { useSpeaker } from "@/hooks/useSpeaker";
+import AudioControls from "@/components/AudioControls";
+import toast, { Toaster } from "react-hot-toast";
+import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const LogPage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -15,27 +15,27 @@ const LogPage: React.FC = () => {
   const { addToQueue } = useSpeaker();
   const { addNotifications } = useNotifications();
 
-  const [transcription, setTranscription] = useState<string>('');
-  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
+  const [transcription, setTranscription] = useState<string>("");
+  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = useCallback(() => {
-    const newSocket = new WebSocket('ws://localhost:8000/connect');
-    
+    const newSocket = new WebSocket("ws://localhost:8000/connect");
+
     newSocket.onopen = () => {
       setIsConnected(true);
-      toast.success('WebSocket connected');
+      toast.success("WebSocket connected");
     };
-    
+
     newSocket.onclose = () => {
       setIsConnected(false);
-      toast.error('WebSocket disconnected');
+      toast.error("WebSocket disconnected");
     };
 
     newSocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      toast.error('WebSocket error occurred');
+      console.error("WebSocket error:", error);
+      toast.error("WebSocket error occurred");
     };
 
     setSocket(newSocket);
@@ -51,63 +51,109 @@ const LogPage: React.FC = () => {
     };
   }, [connectWebSocket]);
 
-  const handleIncomingAudio = useCallback((base64Audio: string, transcription: string, newActivities: any[], newActivityEntries: any[], notificationText: string) => {
-    const binaryString = atob(base64Audio);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    addToQueue(bytes.buffer);
-    
-    toast(transcription, {
-      duration: Math.max(2000, 400 * transcription.split(' ').length),
-      icon: "🤖",
-    });
+  const handleIncomingAudio = useCallback(
+    (
+      base64Audio: string,
+      transcription: string,
+      newActivities: any[],
+      newActivityEntries: any[],
+      notificationText: string,
+      reportedMood: boolean
+    ) => {
+      const binaryString = atob(base64Audio);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      addToQueue(bytes.buffer);
 
-    if (newActivityEntries.length > 0 && notificationText) {
-      addNotifications(newActivityEntries.length);
-      toast(notificationText, {
-        duration: 5000,
-        position: 'top-left',
-        icon: "📊",
-      });
-    }
+      toast.custom((t) => (
+        <div
+          className={`${
+            t.visible ? "animate-enter" : "animate-leave"
+          } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+        >
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <div
+                  className="h-10 w-10 rounded-full bg-yellow-500	"
+                />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Torotoro
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {transcription}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-gray-200">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ));
 
-    setIsLoading(false);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-  }, [addToQueue, addNotifications]);
+      if ((newActivityEntries.length > 0 || reportedMood) && notificationText) {
+        addNotifications(newActivityEntries.length + (reportedMood ? 1 : 0));
+        toast(notificationText, {
+          duration: 5000,
+          position: "top-center",
+          icon: "📊",
+        });
+      }
+
+      setIsLoading(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    },
+    [addToQueue, addNotifications]
+  );
 
   useEffect(() => {
-   if (!socket) return;
+    if (!socket) return;
 
     socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
-      
+
       // Create a copy of the data for logging
       const logData = { ...data };
       if (logData.audio) {
-        logData.audio = '<audio file>';
+        logData.audio = "<audio file>";
       }
-      console.log('Received message:', logData);
+      console.log("Received message:", logData);
 
-      if (data.type === 'audio') {
-        handleIncomingAudio(data.audio, data.transcription, data.new_activities, data.new_activity_entries, data.new_activities_notification);
-      } else if (data.type === 'transcription') {
+      if (data.type === "audio") {
+        handleIncomingAudio(
+          data.audio,
+          data.transcription,
+          data.new_activities,
+          data.new_activity_entries,
+          data.new_activities_notification,
+          data.reported_mood
+        );
+      } else if (data.type === "transcription") {
         toast.success(data.text, {
-          duration: Math.max(2000, 3000 + 1200 * data.text.split(' ').length),
-          position: 'bottom-center',
+          duration: Math.max(2000, 3000 + 1200 * data.text.split(" ").length),
+          position: "bottom-center",
         });
         setTranscription(data.text);
         setIsLoading(true);
-        
+
         // Set timeout for server response
         timeoutRef.current = setTimeout(() => {
           setIsLoading(false);
-          toast.error('Server response timed out', {
-            position: 'top-right',
+          toast.error("Server response timed out", {
+            position: "top-right",
           });
         }, 20000);
       }
@@ -121,30 +167,34 @@ const LogPage: React.FC = () => {
     connectWebSocket();
   };
 
-  const handleTranscriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTranscriptionChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
     setTranscription(e.target.value);
   };
 
   const handleTranscriptionSubmit = () => {
     if (socket && isConnected) {
       setIsLoading(true);
-      socket.send(JSON.stringify({
-        action: 'update_transcription',
-        text: transcription
-      }));
+      socket.send(
+        JSON.stringify({
+          action: "update_transcription",
+          text: transcription,
+        })
+      );
 
       // Set timeout for server response
       timeoutRef.current = setTimeout(() => {
         setIsLoading(false);
-        toast.error('Server response timed out', {
-          position: 'top-right',
+        toast.error("Server response timed out", {
+          position: "top-right",
         });
       }, 20000);
     }
   };
 
   const toggleInputMode = () => {
-    setInputMode(prevMode => prevMode === 'voice' ? 'text' : 'voice');
+    setInputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
   };
 
   return (
@@ -162,7 +212,7 @@ const LogPage: React.FC = () => {
           <WifiOff className="text-red-500 mr-2" size={20} />
         )}
         <span className="text-sm font-medium">
-          {isConnected ? 'Connected' : 'Disconnected'}
+          {isConnected ? "Connected" : "Disconnected"}
         </span>
         <button
           onClick={handleReconnect}
@@ -175,7 +225,7 @@ const LogPage: React.FC = () => {
         onClick={toggleInputMode}
         className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors flex items-center"
       >
-        {inputMode === 'voice' ? (
+        {inputMode === "voice" ? (
           <>
             <Mic className="mr-2" size={20} />
             Switch to Text
@@ -187,7 +237,7 @@ const LogPage: React.FC = () => {
           </>
         )}
       </button>
-      {inputMode === 'voice' ? (
+      {inputMode === "voice" ? (
         <AudioControls
           isRecording={isRecording}
           isConnected={isConnected}

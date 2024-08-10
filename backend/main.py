@@ -13,12 +13,15 @@ from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
+from entities.mood_report import MoodReport
 from entities.activity import Activity, ActivityEntry
 from pydantic import BaseModel, Field
+from gateways.moodreports import MoodsGateway
 
 app = FastAPI()
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
+moods_gateway = MoodsGateway()
 
 app.add_middleware(
     CORSMiddleware,
@@ -91,8 +94,29 @@ def get_activity_entries_from_conversation(user_id: str) -> List[ActivityEntry]:
 
     return activity_entries
 
+def get_mood_report_from_conversation(user_id: str) -> MoodReport:
+    memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
+    current_date = datetime.now().strftime("%Y-%m-%d")
 
-def store_activities_from_conversation(user_id: str) -> Tuple[List[Activity], List[ActivityEntry], str]:
+    prompt = f"""
+    Given the conversation history, extract the user's mood report for today.
+    If a mood report is not explicitly mentioned, do not create one.
+    The mood score should be on a scale of 0 to 10, where 0 is extremely unhappy and 10 is extremely happy.
+
+    Conversation history:
+    {memory.read_all_as_str(max_messages=6)}
+    (today is {current_date})
+    """
+
+    class ResponseModel(BaseModel):
+        reasoning: str = Field(description="Your reasoning justifying the mood report against the conversation history.")
+        mood_report: MoodReport | None
+
+    response = ask_schema("Extract mood report", prompt, ResponseModel)
+    mood_report = MoodReport.new(user_id=user_id, score=response.mood_report.score, date=response.mood_report.date) if response.mood_report else None
+    return mood_report
+
+def store_activities_and_mood_from_conversation(user_id: str) -> Tuple[List[Activity], List[ActivityEntry], MoodReport | None, str]:
     activities_gateway = ActivitiesGateway()
     
     activities = get_activities_from_conversation(user_id)
@@ -115,44 +139,64 @@ def store_activities_from_conversation(user_id: str) -> Tuple[List[Activity], Li
             traceback.print_exc()
             logger.error(f"Error creating activity entry: {e}")
 
+    mood_report = get_mood_report_from_conversation(user_id)
+    logger.info(f"Mood report: {mood_report}")
+
+    if mood_report:
+        try:
+            # Assuming you have a method to store mood reports
+            moods_gateway.create_mood_report(mood_report)
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Error creating mood report: {e}")
+
     # Generate notification text
-    notification_text = generate_notification_text(activities, activity_entries)
+    notification_text = generate_notification_text(activities, activity_entries, mood_report)
 
-    return activities, activity_entries, notification_text.strip('"')
+    return activities, activity_entries, mood_report, notification_text.strip('"')
 
-def generate_notification_text(activities: List[Activity], activity_entries: List[ActivityEntry]) -> str:
-    if not activities and not activity_entries:
+def generate_notification_text(activities: List[Activity], activity_entries: List[ActivityEntry], mood_report: MoodReport | None) -> str:
+    if not activities and not activity_entries and not mood_report:
         return ""
     
     current_date = datetime.now().strftime("%Y-%m-%d")
     
     system_prompt = f"""
-    You are an AI assistant that generates informative notifications about a user's activities.
-    Given a list of activities and activity entries, create a brief notification that summarizes what the user has done.
+    You are an AI assistant that generates informative notifications about a user's activities and mood.
+    Given a list of activities, activity entries, and a mood report, create a brief notification that summarizes what the user has done and how they're feeling.
     Keep it minimal and merely informative.
 
-    Examples:
-       Activity: {{title: 'meditate', measure: 'hours'}}, Entry: {{quantity: 2, date: '{current_date}'}}
-       Notification: "I've registered that you meditated for 2 hours today."
-       Activities: 
-       - {{title: 'reading', measure: 'pages'}}, Entry: {{quantity: 20, date: '{current_date}'}}
-       - {{title: 'run', measure: 'kilmeteers'}}, Entry: {{quantity: 5, date: '{current_date}'}}
-         
-       Notification: "I've registered that you read 20 pages and ran 20 pages today."
+    Today is {current_date}.
 
+    Examples:
+       Activity: 
+       Activity Entries:
+       Mood Report: {{score: 3, date: '{current_date}'}}
+       Notification: "I've registered that you're feeling 8 out of 10 today."
+
+       Activity: {{title: 'meditate', measure: 'hours'}}
+       Activity Entries: {{quantity: 2, date: '{current_date}'}}
+       Mood Report: {{score: 8, date: '{current_date}'}}
+       Notification: "I've registered that you meditated for 2 hours today and that you're feelinng 8 out of 10."
     """
 
-    activities_str = "\n".join([f"Activity: {{title: '{a.title}', measure: '{a.measure}'}}" for a in activities])
-    entries_str = "\n".join([f"Entry: {{quantity: {e.quantity}, date: '{e.date}'}}" for e in activity_entries])
+    activities_str = "\n".join([f"- {{title: '{a.title}', measure: '{a.measure}'}}" for a in activities])
+    entries_str = "\n".join([f"- {{quantity: {e.quantity}, date: '{e.date}'}}" for e in activity_entries])
+    mood_str = f"- {{score: {mood_report.score}, date: '{mood_report.date}'}}" if mood_report else "No mood report available."
 
     user_prompt = f"""
-    Please generate a notification based on these activities and entries:
+    Please generate a notification based on these activities, entries, and mood report:
 
+    Activities:
     {activities_str}
+    Activity Entries:
     {entries_str}
+    Mood Report:
+    {mood_str}
+    Notification:
     """
 
-    return ask_text(user_prompt, system_prompt)
+    return ask_text(user_prompt, system_prompt).strip('"')
 
 @app.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
@@ -181,7 +225,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
 
                 text_response = talk_with_assistant(user_id=user_id, user_input=transcription)
-                activities, activity_entries, notification_text = store_activities_from_conversation(user_id=user_id)
+                activities, activity_entries, mood_report, notification_text = store_activities_and_mood_from_conversation(user_id=user_id)
                 audio_response = tts.text_to_speech(text_response)
                 
                 # Send audio response back to the client
@@ -191,7 +235,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     "audio": base64.b64encode(audio_response).decode('utf-8'),
                     "new_activities": [a.model_dump() for a in activities],
                     "new_activity_entries": [a.model_dump() for a in activity_entries],
-                    "new_activities_notification": notification_text
+                    "new_mood_report": mood_report.model_dump() if mood_report else None,
+                    "new_activities_notification": notification_text,
+                    "reported_mood": bool(mood_report.model_dump() if mood_report else None)
                 })
 
                 audio_buffer.clear()
@@ -199,7 +245,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif message['action'] == 'update_transcription':
                 updated_transcription = message.get('text', '')
                 text_response = talk_with_assistant(user_id=user_id, user_input=updated_transcription)
-                activities, activity_entries, notification_text = store_activities_from_conversation(user_id=user_id)
+                activities, activity_entries, mood_report, notification_text = store_activities_and_mood_from_conversation(user_id=user_id)
                 audio_response = tts.text_to_speech(text_response)
                 
                 await websocket.send_json({
@@ -208,6 +254,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "audio": base64.b64encode(audio_response).decode('utf-8'),
                     "new_activities": [a.model_dump() for a in activities],
                     "new_activity_entries": [a.model_dump() for a in activity_entries],
+                    "reported_mood": bool(mood_report.model_dump() if mood_report else None),
                     "new_activities_notification": notification_text
                 })
     
@@ -228,6 +275,12 @@ class ActivityEntryResponse(BaseModel):
     quantity: int
     date: str
 
+class MoodReportResponse(BaseModel):
+    id: str
+    user_id: str
+    date: str
+    score: str
+
 @app.get("/api/activities", response_model=List[ActivityResponse])
 async def get_activities():
     user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
@@ -244,7 +297,13 @@ async def get_activity_entries():
         all_entries.extend(entries)
     return [ActivityEntryResponse(id=e.id, activity_id=e.activity_id, quantity=e.quantity, date=e.date) for e in all_entries]
 
+@app.get("/api/mood-reports", response_model=List[MoodReportResponse])
+async def get_mood_reports():
+    user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
+    mood_reports = moods_gateway.get_all_mood_reports_by_user_id(user_id)
+    return [MoodReportResponse(id=m.id, user_id=m.user_id, date=m.date, score=m.score) for m in mood_reports]
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    

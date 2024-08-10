@@ -26,7 +26,7 @@ T = TypeVar("T", bound=BaseModel)
 
 def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL) -> T:
 
-    logger.info(f"Asking schema: \n{pymodel.model_json_schema()}\nText: '{text}'\nSystem: '{system}'")
+    # logger.info(f"Asking schema: \n{pymodel.model_json_schema()}\nText: '{text}'\nSystem: '{system}'")
 
     completion = client.beta.chat.completions.parse(
         model=model,

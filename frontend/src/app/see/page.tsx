@@ -105,7 +105,7 @@ const SeePage: React.FC = () => {
         console.log({ value });
 
         return (
-          <div key={activity.id} className="bg-white p-6 rounded-lg shadow-md">
+          <div key={activity.id} className="bg-white p-6 rounded-lg border-2">
             <div className="flex items-center space-x-3 mb-4">
               <h2 className="text-xl font-semibold text-gray-800">
                 {activity.title}
