@@ -915,7 +915,7 @@
   resolved "https://registry.yarnpkg.com/@babel/regjsgen/-/regjsgen-0.8.0.tgz#f0ba69b075e1f05fb2825b7fad991e7adbb18310"
   integrity sha512-x/rqGMdzj+fWZvCOYForTghzbtqPDZ5gPwaoNGHdgDfF2QA/XZbCBp4Moo5scrkAMPhB7z26XM/AaHuIJdgauA==
 
-"@babel/runtime@^7.11.2", "@babel/runtime@^7.8.4":
+"@babel/runtime@^7.11.2", "@babel/runtime@^7.5.5", "@babel/runtime@^7.8.4", "@babel/runtime@^7.8.7":
   version "7.25.0"
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.25.0.tgz#3af9a91c1b739c569d5d80cc917280919c544ecb"
   integrity sha512-7dRy4DwXwtzBrPbZflqxnvfxLF8kdZXPkhymtDeFoFqE6ldzjQFgYTtYIFARcLEYDrqfBfYcZt1WqFxRoyC9Rw==
@@ -1328,6 +1328,41 @@
   version "2.2.2"
   resolved "https://registry.yarnpkg.com/@uiw/react-heat-map/-/react-heat-map-2.2.2.tgz#65723d9b53d1d5e79678ca7b38661e00469b88f3"
   integrity sha512-9aNjDd8fz6tXhWj5rQ8+5MmQRhDQOfOri2CeIyMjnHunPBagg49FIPEu7H/5pRet0JD6pUrfSyMf+UpZNX5FgA==
+
+"@uiw/react-overlay-trigger@^4.22.3":
+  version "4.22.3"
+  resolved "https://registry.yarnpkg.com/@uiw/react-overlay-trigger/-/react-overlay-trigger-4.22.3.tgz#2aeb5b1c1b7813f899669119fbac58e84aad7884"
+  integrity sha512-7YT+kaPCpMYWwmOPFGf4AHPJsEVswgqzDSUdDbqIz/NWbQbl5+4hCbqsz3xEnIL5EW+plKnKq4E3Ou3DjRqPiQ==
+  dependencies:
+    "@uiw/react-overlay" "^4.22.3"
+    "@uiw/utils" "^4.22.3"
+
+"@uiw/react-overlay@^4.22.3":
+  version "4.22.3"
+  resolved "https://registry.yarnpkg.com/@uiw/react-overlay/-/react-overlay-4.22.3.tgz#2a46c0e647aeab36b13e5099584fec2a9217a995"
+  integrity sha512-SFHY3kU3Citpf/QdXzQQzMyMpQ/fpLPIoOSS1xwBQgRTqcGR7h7yjSpNYfZxK5xS6/MxFs3HzFvln+IVDOTW1g==
+  dependencies:
+    "@uiw/react-portal" "^4.22.3"
+    "@uiw/utils" "^4.22.3"
+    react-transition-group "~4.4.2"
+
+"@uiw/react-portal@^4.22.3":
+  version "4.22.3"
+  resolved "https://registry.yarnpkg.com/@uiw/react-portal/-/react-portal-4.22.3.tgz#55f27c14ef7c2517f394f74e2b6df28929a56102"
+  integrity sha512-YvTJBNdc0uPsfI2Spuo0ThnavMjdzNn1d0NNv0zoIDkZ30ccxL3USSORzhg5T3SjBFwLxFQ1VxaP7nCJJEVL3Q==
+
+"@uiw/react-tooltip@^4.22.3":
+  version "4.22.3"
+  resolved "https://registry.yarnpkg.com/@uiw/react-tooltip/-/react-tooltip-4.22.3.tgz#bc3292b4606cc1d357d2946c840acb44134b5a9f"
+  integrity sha512-wGn7tWKUK5Ara0M5+ASSWqaCHYzIOYp9DIlzyQ12D06h06IUtzt2vIAbH0ovLNRhCYAuWyBJI6tV65jAkYFfTw==
+  dependencies:
+    "@uiw/react-overlay-trigger" "^4.22.3"
+    "@uiw/utils" "^4.22.3"
+
+"@uiw/utils@^4.22.3":
+  version "4.22.3"
+  resolved "https://registry.yarnpkg.com/@uiw/utils/-/utils-4.22.3.tgz#cb346c589620a89479b39ec6a81dd3d04f09d7e2"
+  integrity sha512-XEi6PBE7mvL1P+6Wa/+npKmmDovkVeXpw0XDfsdrmaRXYTUc05RYXyOy3olVmglgutagTQlCUJzAP+GXaSgw/A==
 
 "@ungap/structured-clone@^1.2.0":
   version "1.2.0"
@@ -2005,6 +2040,14 @@ doctrine@^3.0.0:
   integrity sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w==
   dependencies:
     esutils "^2.0.2"
+
+dom-helpers@^5.0.1:
+  version "5.2.1"
+  resolved "https://registry.yarnpkg.com/dom-helpers/-/dom-helpers-5.2.1.tgz#d9400536b2bf8225ad98fe052e029451ac40e902"
+  integrity sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==
+  dependencies:
+    "@babel/runtime" "^7.8.7"
+    csstype "^3.0.2"
 
 eastasianwidth@^0.2.0:
   version "0.2.0"
@@ -3783,7 +3826,7 @@ pretty-bytes@^5.3.0, pretty-bytes@^5.4.1:
   resolved "https://registry.yarnpkg.com/pretty-bytes/-/pretty-bytes-5.6.0.tgz#356256f643804773c82f64723fe78c92c62beaeb"
   integrity sha512-FFw039TmrBqFK8ma/7OL3sDz/VytdtJr044/QUJtH0wK9lb9jLq9tJyIxUwtQJHwar2BqtiA4iCWSwo9JLkzFg==
 
-prop-types@^15.8.1:
+prop-types@^15.6.2, prop-types@^15.8.1:
   version "15.8.1"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.8.1.tgz#67d87bf1a694f48435cf332c24af10214a3140b5"
   integrity sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==
@@ -3833,6 +3876,16 @@ react-is@^16.13.1:
   version "16.13.1"
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
+
+react-transition-group@~4.4.2:
+  version "4.4.5"
+  resolved "https://registry.yarnpkg.com/react-transition-group/-/react-transition-group-4.4.5.tgz#e53d4e3f3344da8521489fbef8f2581d42becdd1"
+  integrity sha512-pZcd1MCJoiKiBR2NRxeCRg13uCXbydPnmB4EOeRrY7480qNWO8IIgQG6zlDkm6uRMsURXPuKq0GWtiM59a5Q6g==
+  dependencies:
+    "@babel/runtime" "^7.5.5"
+    dom-helpers "^5.0.1"
+    loose-envify "^1.4.0"
+    prop-types "^15.6.2"
 
 react@^18:
   version "18.3.1"

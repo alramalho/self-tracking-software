@@ -32,27 +32,30 @@ def talk_with_assistant(user_id:str, user_input:str,) -> str:
     user = users_gateway.get_user_by_id(user_id)
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
 
-    assistant = Assistant(memory=memory, user=user)
+    assistant = Assistant(memory=memory, user=user, user_activities=activities_gateway.get_all_activities_by_user_id(user_id))
     return assistant.get_response(user_input)
 
 def get_activities_from_conversation(user_id: str) -> List[Activity]:
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
     activities = activities_gateway.get_all_activities_by_user_id(user_id)
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
     prompt = f"""
     Given the conversation history, extract any present high level (examples include work, exercise, reading, meditation, be with friends, etc. counter examples include low level tasks like fixing a specific bug or reading first chapter of a book) activities.
     Try to match activities with existent ones, if not, create new ones.
     Don't infer anything that is not explicitly included. 
-    If you don't have enough information to create complete activities (e.g. missing measure), do not create them. This is of utmost importance.
+    If you don't have enough explicit information from the dialogue to create complete activities (e.g. missing measure), do not create them. This is of utmost importance.
 
     Existent Activities:
     {", ".join([str(a) for a in activities])}
     
     Conversation history:
     {memory.read_all_as_str(max_messages=6)}
+    (today is {current_date})
     """
 
     class ResponseModel(BaseModel):
-        reasonings: str = Field(description="Your reasoning justifying each activity against the conversation history, specifically the message from the user must be included.")
+        reasonings: str = Field(description="Your very extensive reasoning justifying each created activity against the conversation history, relevant user messages for all activitiy fields must be included.")
         activities: list[Activity]
 
     response = ask_schema("Go!", prompt, ResponseModel)
@@ -63,20 +66,24 @@ def get_activity_entries_from_conversation(user_id: str) -> List[ActivityEntry]:
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
     activities_gateway = ActivitiesGateway()
     activities = activities_gateway.get_all_activities_by_user_id(user_id)
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
     prompt = f"""
     Given the conversation history extract any activity entries that are mentioned & matched against existent activities.
     Try to match activities with existent ones, if not, create new ones.
     Don't infer anything that is not explicitly included.
-    If you don't have enough information to create complete activity entries (e.g. missing quantity from the dialogue), do not create them. This is of utmost importance.
+    If you don't have enough explicit informatio from the dialogue to create complete activity entries (e.g. missing quantity from the dialogue), do not create them. This is of utmost importance.
+
 
     Existent Activities:
     {", ".join([f"{str(a)} (id: '{a.id}')" for a in activities])}
     
     Conversation history:
     {memory.read_all_as_str(max_messages=6)}
+    (today is {current_date})
     """
     class ResponseModel(BaseModel):
-        reasonings: str = Field(description="Your reasoning justifying each activity entry against the conversation history, specifically the message from the user must be included.")
+        reasonings: str = Field(description="Your very extensive  reasoning justifying each activity and its full data entry against the conversation history, specifically the message from the user must be included")
         activity_entries: list[ActivityEntry]
 
     response = ask_schema("Go!", prompt, ResponseModel)
@@ -120,15 +127,19 @@ def generate_notification_text(activities: List[Activity], activity_entries: Lis
     current_date = datetime.now().strftime("%Y-%m-%d")
     
     system_prompt = f"""
-    You are an AI assistant that generates friendly and encouraging notifications about a user's activities.
-    Given a list of activities and activity entries, create a brief, engaging notification that summarizes what the user has done.
-    Use a conversational tone and combine information from both activities and entries when possible.
+    You are an AI assistant that generates informative notifications about a user's activities.
+    Given a list of activities and activity entries, create a brief notification that summarizes what the user has done.
+    Keep it minimal and merely informative.
 
-    Example:
+    Examples:
        Activity: {{title: 'meditate', measure: 'hours'}}, Entry: {{quantity: 2, date: '{current_date}'}}
-       Notification: "I've registered that you meditated for 2 hours today. Keep up the good work!"
+       Notification: "I've registered that you meditated for 2 hours today."
+       Activities: 
+       - {{title: 'reading', measure: 'pages'}}, Entry: {{quantity: 20, date: '{current_date}'}}
+       - {{title: 'run', measure: 'kilmeteers'}}, Entry: {{quantity: 5, date: '{current_date}'}}
+         
+       Notification: "I've registered that you read 20 pages and ran 20 pages today."
 
-    Keep it minimal and merely informative. Only a minimal encouragement is allowed at the end, as the above example shows.
     """
 
     activities_str = "\n".join([f"Activity: {{title: '{a.title}', measure: '{a.measure}'}}" for a in activities])

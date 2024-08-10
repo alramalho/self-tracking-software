@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@uiw/react-heat-map": "^2.2.2",
+    "@uiw/react-tooltip": "^4.22.3",
     "axios": "^1.7.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

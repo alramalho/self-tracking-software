@@ -37,7 +37,7 @@ class ActivitiesGateway:
         return [Activity(**data) for data in self.activities_db_gateway.query("user_id", user_id)]
     
     def get_all_activity_entries_by_activity_id(self, activity_id: str) -> list[ActivityEntry]:
-        return [Activity(**data) for data in self.activitiy_entries_db_gateway.query("activity_id", activity_id)]
+        return [ActivityEntry(**data) for data in self.activitiy_entries_db_gateway.query("activity_id", activity_id)]
 
     def create_activity(self, activity: Activity) -> Activity:
         if len(self.activities_db_gateway.query("id", activity.id)) != 0:

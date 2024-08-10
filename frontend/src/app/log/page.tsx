@@ -51,7 +51,7 @@ const LogPage: React.FC = () => {
     };
   }, [connectWebSocket]);
 
-  const handleIncomingAudio = useCallback((base64Audio: string, transcription: string, newActivities: any[], newActivityEntries: any[]) => {
+  const handleIncomingAudio = useCallback((base64Audio: string, transcription: string, newActivities: any[], newActivityEntries: any[], notificationText: string) => {
     const binaryString = atob(base64Audio);
     const len = binaryString.length;
     const bytes = new Uint8Array(len);
@@ -65,9 +65,9 @@ const LogPage: React.FC = () => {
       icon: "🤖",
     });
 
-    if (newActivityEntries.length > 0) {
+    if (newActivityEntries.length > 0 && notificationText) {
       addNotifications(newActivityEntries.length);
-      toast(`${newActivityEntries.length} new activities logged!`, {
+      toast(notificationText, {
         duration: 5000,
         position: 'top-left',
         icon: "📊",
@@ -94,7 +94,7 @@ const LogPage: React.FC = () => {
       console.log('Received message:', logData);
 
       if (data.type === 'audio') {
-        handleIncomingAudio(data.audio, data.transcription, data.new_activities, data.new_activity_entries);
+        handleIncomingAudio(data.audio, data.transcription, data.new_activities, data.new_activity_entries, data.new_activities_notification);
       } else if (data.type === 'transcription') {
         toast.success(data.text, {
           duration: Math.max(2000, 3000 + 1200 * data.text.split(' ').length),

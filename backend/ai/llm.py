@@ -16,6 +16,8 @@ def ask_text(text: str, system: str, model: str = LLM_MODEL) -> str:
         ],
         temperature=0.7,
     )
+
+    logger.info(f"Assistant response: {response.choices[0].message.content}")
     return response.choices[0].message.content
 
 
@@ -35,4 +37,5 @@ def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL)
         response_format=pymodel,
     )
 
+    logger.info(f"Assistant response: {completion.choices[0].message.parsed}")
     return completion.choices[0].message.parsed
