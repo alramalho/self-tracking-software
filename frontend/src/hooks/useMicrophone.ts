@@ -1,6 +1,6 @@
 // /app/hooks/useMicrophone.ts
 
-import { arrayBufferToBase64, arrayBufferToBase64Async } from '@/lib/utils';
+import { arrayBufferToBase64Async } from '@/lib/utils';
 import { useState, useCallback, useRef } from 'react';
 
 export const useMicrophone = (socket: WebSocket | null) => {
