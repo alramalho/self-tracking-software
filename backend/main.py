@@ -416,6 +416,9 @@ async def get_mood_reports():
         for m in mood_reports
     ]
 
+@app.get("/")
+def read_root():
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn
