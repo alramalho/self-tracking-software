@@ -6,3 +6,5 @@ python-dotenv
 loguru
 python-dateutil
 pymongo
+passlib
+python-jose

@@ -20,9 +20,11 @@ from gateways.moodreports import MoodsGateway
 from concurrent.futures import ThreadPoolExecutor
 from os import cpu_count
 import asyncio
-
+from fastapi import APIRouter, Depends
+from auth.clerk import is_clerk_user, is_clerk_user_ws
 
 app = FastAPI()
+users_router = APIRouter(dependencies=[Depends(is_clerk_user)])
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
@@ -256,107 +258,111 @@ async def process_activities_and_mood(user_id: str):
 
 @app.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    audio_buffer = bytearray()
-    try:
-        while True:
-            data = await websocket.receive_text()
-            message = json.loads(data)
-            user_id = "66b29679de73d9a05e77a247"
+    authenticated = await is_clerk_user_ws(websocket)
+    if authenticated:
+        await websocket.accept()
+        audio_buffer = bytearray()
+        try:
+            while True:
+                data = await websocket.receive_text()
+                message = json.loads(data)
+                user_id = "66b29679de73d9a05e77a247"
 
-            if message["action"] == "start_recording":
-                audio_buffer.clear()
+                if message["action"] == "start_recording":
+                    audio_buffer.clear()
 
-            elif message["action"] == "stop_recording":
-                audio_data = message.get("audio_data", "")
-                audio_bytes = base64.b64decode(audio_data)
+                elif message["action"] == "stop_recording":
+                    audio_data = message.get("audio_data", "")
+                    audio_bytes = base64.b64decode(audio_data)
 
-                loop = asyncio.get_event_loop()
-                transcription = await loop.run_in_executor(
-                    executor, stt.speech_to_text, audio_bytes
-                )
+                    loop = asyncio.get_event_loop()
+                    transcription = await loop.run_in_executor(
+                        executor, stt.speech_to_text, audio_bytes
+                    )
 
-                await websocket.send_json(
-                    {"type": "transcription", "text": transcription}
-                )
+                    await websocket.send_json(
+                        {"type": "transcription", "text": transcription}
+                    )
 
-                # Process audio and activities/mood concurrently
-                text_response, audio_response = await process_audio(
-                    user_id, transcription
-                )
-                activities, activity_entries, mood_report, notification_text = (
-                    await process_activities_and_mood(user_id)
-                )
+                    # Process audio and activities/mood concurrently
+                    text_response, audio_response = await process_audio(
+                        user_id, transcription
+                    )
+                    activities, activity_entries, mood_report, notification_text = (
+                        await process_activities_and_mood(user_id)
+                    )
 
-                await websocket.send_json(
-                    {
-                        "type": "audio",
-                        "transcription": text_response,
-                        "audio": base64.b64encode(audio_response).decode("utf-8"),
-                    }
-                )
+                    await websocket.send_json(
+                        {
+                            "type": "audio",
+                            "transcription": text_response,
+                            "audio": base64.b64encode(audio_response).decode("utf-8"),
+                        }
+                    )
 
-                # Send activities and mood data separately
-                await websocket.send_json(
-                    {
-                        "type": "activities_update",
-                        "new_activities": [a.model_dump() for a in activities],
-                        "new_activity_entries": [
-                            a.model_dump() for a in activity_entries
-                        ],
-                        "new_mood_report": (
-                            mood_report.model_dump() if mood_report else None
-                        ),
-                        "new_activities_notification": notification_text,
-                        "reported_mood": bool(
-                            mood_report.model_dump() if mood_report else None
-                        ),
-                    }
-                )
+                    # Send activities and mood data separately
+                    await websocket.send_json(
+                        {
+                            "type": "activities_update",
+                            "new_activities": [a.model_dump() for a in activities],
+                            "new_activity_entries": [
+                                a.model_dump() for a in activity_entries
+                            ],
+                            "new_mood_report": (
+                                mood_report.model_dump() if mood_report else None
+                            ),
+                            "new_activities_notification": notification_text,
+                            "reported_mood": bool(
+                                mood_report.model_dump() if mood_report else None
+                            ),
+                        }
+                    )
 
-                audio_buffer.clear()
+                    audio_buffer.clear()
 
-            elif message["action"] == "update_transcription":
-                updated_transcription = message.get("text", "")
+                elif message["action"] == "update_transcription":
+                    updated_transcription = message.get("text", "")
 
-                # Process audio and activities/mood concurrently
-                text_response, audio_response = await process_audio(
-                    user_id, updated_transcription
-                )
-                activities, activity_entries, mood_report, notification_text = (
-                    await process_activities_and_mood(user_id)
-                )
+                    # Process audio and activities/mood concurrently
+                    text_response, audio_response = await process_audio(
+                        user_id, updated_transcription
+                    )
+                    activities, activity_entries, mood_report, notification_text = (
+                        await process_activities_and_mood(user_id)
+                    )
 
-                await websocket.send_json(
-                    {
-                        "type": "audio",
-                        "transcription": text_response,
-                        "audio": base64.b64encode(audio_response).decode("utf-8"),
-                    }
-                )
+                    await websocket.send_json(
+                        {
+                            "type": "audio",
+                            "transcription": text_response,
+                            "audio": base64.b64encode(audio_response).decode("utf-8"),
+                        }
+                    )
 
-                # Send activities and mood data separately
-                await websocket.send_json(
-                    {
-                        "type": "activities_update",
-                        "new_activities": [a.model_dump() for a in activities],
-                        "new_activity_entries": [
-                            a.model_dump() for a in activity_entries
-                        ],
-                        "new_mood_report": (
-                            mood_report.model_dump() if mood_report else None
-                        ),
-                        "new_activities_notification": notification_text,
-                        "reported_mood": bool(
-                            mood_report.model_dump() if mood_report else None
-                        ),
-                    }
-                )
+                    # Send activities and mood data separately
+                    await websocket.send_json(
+                        {
+                            "type": "activities_update",
+                            "new_activities": [a.model_dump() for a in activities],
+                            "new_activity_entries": [
+                                a.model_dump() for a in activity_entries
+                            ],
+                            "new_mood_report": (
+                                mood_report.model_dump() if mood_report else None
+                            ),
+                            "new_activities_notification": notification_text,
+                            "reported_mood": bool(
+                                mood_report.model_dump() if mood_report else None
+                            ),
+                        }
+                    )
 
-    except Exception as e:
-        traceback.print_exc()
-        logger.error(f"Error: {e}")
-    finally:
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Error: {e}")
+        finally:
+            await websocket.close()
+    else:
         await websocket.close()
 
 
@@ -380,7 +386,7 @@ class MoodReportResponse(BaseModel):
     score: str
 
 
-@app.get("/api/activities", response_model=List[ActivityResponse])
+@users_router.get("/api/activities", response_model=List[ActivityResponse])
 async def get_activities():
     user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
     activities = activities_gateway.get_all_activities_by_user_id(user_id)
@@ -389,7 +395,7 @@ async def get_activities():
     ]
 
 
-@app.get("/api/activity-entries", response_model=List[ActivityEntryResponse])
+@users_router.get("/api/activity-entries", response_model=List[ActivityEntryResponse])
 async def get_activity_entries():
     user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
     activities = activities_gateway.get_all_activities_by_user_id(user_id)
@@ -407,7 +413,7 @@ async def get_activity_entries():
     ]
 
 
-@app.get("/api/mood-reports", response_model=List[MoodReportResponse])
+@users_router.get("/api/mood-reports", response_model=List[MoodReportResponse])
 async def get_mood_reports():
     user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
     mood_reports = moods_gateway.get_all_mood_reports_by_user_id(user_id)
@@ -416,9 +422,18 @@ async def get_mood_reports():
         for m in mood_reports
     ]
 
+
 @app.get("/")
 def read_root():
     return {"status": "ok"}
+
+
+@users_router.get("/user-health")
+async def health():
+    return {"status": "ok"}
+
+
+app.include_router(users_router)
 
 if __name__ == "__main__":
     import uvicorn

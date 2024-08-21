@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import BottomNav from "../components/BottomNav";
-import { Toaster } from "react-hot-toast";
 import { NotificationsProvider } from "@/hooks/useNotifications";
+import { ClerkProvider } from "@clerk/nextjs";
+import dynamic from 'next/dynamic';
+
+const ClientLayout = dynamic(() => import('./layoutClient'), { ssr: false });
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,16 +22,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <NotificationsProvider>
-          <main className="pb-16">{children}</main>
-          <Toaster
-            position="bottom-center"
-            containerStyle={{
-              bottom: "5rem", // Adjust this value based on your BottomNav height
-            }}
-          />
-          <BottomNav />
-        </NotificationsProvider>
+        <ClerkProvider>
+          <NotificationsProvider>
+            <ClientLayout>
+              {children}
+            </ClientLayout>
+          </NotificationsProvider>
+        </ClerkProvider>
       </body>
     </html>
   );
