@@ -5,7 +5,15 @@ import HeatMap from "@uiw/react-heat-map";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { useNotifications } from "@/hooks/useNotifications";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
+import { useApiWithAuth } from "@/api";
 import {
   Card,
   CardContent,
@@ -48,14 +56,23 @@ const SeePage: React.FC = () => {
   const [selected, setSelected] = useState("");
   const [timeRange, setTimeRange] = useState("Current Year");
 
+  const apiClient = useApiWithAuth();
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [activitiesResponse, entriesResponse, moodResponse] = await Promise.all([
-          axios.get<Activity[]>(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activities`),
-          axios.get<ActivityEntry[]>(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activity-entries`),
-          axios.get<MoodReport[]>(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/mood-reports`),
-        ]);
+        const [activitiesResponse, entriesResponse, moodResponse] =
+          await Promise.all([
+            apiClient.get<Activity[]>(
+              `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activities`
+            ),
+            apiClient.get<ActivityEntry[]>(
+              `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activity-entries`
+            ),
+            apiClient.get<MoodReport[]>(
+              `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/mood-reports`
+            ),
+          ]);
 
         setActivities(activitiesResponse.data);
         setActivityEntries(entriesResponse.data);
@@ -83,8 +100,18 @@ const SeePage: React.FC = () => {
     const labels = [];
     const currentDate = new Date(startDate);
     const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
 
     for (let i = 0; i < 12; i++) {
@@ -112,14 +139,19 @@ const SeePage: React.FC = () => {
     const startDate = new Date(
       timeRange === "Current Year"
         ? `${currentDate.getFullYear()}-01-01`
-        : `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-01`
+        : `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")}-01`
     );
-    return data.filter(item => new Date(item.date) >= startDate);
+    return data.filter((item) => new Date(item.date) >= startDate);
   };
-  
-  const moodChartData = filterDataByTimeRange(moodReports).map(report => ({
-    date: new Date(report.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    score: report.score
+
+  const moodChartData = filterDataByTimeRange(moodReports).map((report) => ({
+    date: new Date(report.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    score: report.score,
   }));
 
   return (
@@ -140,7 +172,9 @@ const SeePage: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle>Mood Over Time</CardTitle>
-          <CardDescription>Your mood scores over the selected time period</CardDescription>
+          <CardDescription>
+            Your mood scores over the selected time period
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <AreaChart
@@ -153,13 +187,22 @@ const SeePage: React.FC = () => {
             <XAxis dataKey="date" />
             <YAxis domain={[0, 10]} />
             <Tooltip />
-            <Area type="monotone" dataKey="score" stroke="#8884d8" fill="#8884d8" />
+            <Area
+              type="monotone"
+              dataKey="score"
+              stroke="#8884d8"
+              fill="#8884d8"
+            />
           </AreaChart>
         </CardContent>
       </Card>
 
       {activities.map((activity) => {
-        const startDate = new Date(timeRange === "Current Year" ? `${new Date().getFullYear()}/01/01` : `${new Date().getFullYear()}/${new Date().getMonth() + 1}/01`);
+        const startDate = new Date(
+          timeRange === "Current Year"
+            ? `${new Date().getFullYear()}/01/01`
+            : `${new Date().getFullYear()}/${new Date().getMonth() + 1}/01`
+        );
         const endDate = new Date();
         const monthLabels = generateMonthLabels(startDate);
         const value = getActivityEntries(activity.id);
@@ -193,9 +236,10 @@ const SeePage: React.FC = () => {
                       {...props}
                       onClick={() => {
                         if (data.date !== selected) {
-                          const entry = activityEntries.find((e) => 
-                            e.activity_id === activity.id &&
-                            isSameDate(e.date, data.date.replaceAll("/", "-"))
+                          const entry = activityEntries.find(
+                            (e) =>
+                              e.activity_id === activity.id &&
+                              isSameDate(e.date, data.date.replaceAll("/", "-"))
                           );
                           const quantity = entry ? entry.quantity : 0;
                           if (quantity > 0) {
