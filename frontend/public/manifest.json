@@ -1,7 +1,8 @@
 {
   "id": "2",
-  "name": "PWA App",
-  "short_name": "App",
+  "name": "Self Tracking Software",
+  "short_name": "tracking.so",
+  "description": "Your app for AI powered self tracking & improvement.",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
