@@ -201,7 +201,7 @@ const LogPage: React.FC = () => {
           <LoaderCircle className="animate-spin text-gray-600" size={24} />
         </div>
       )}
-      <h1 className="text-2xl mb-4">Log App</h1>
+      <h1 className="text-2xl mb-4">tracking.so</h1>
       <div className="flex items-center mb-4">
         {isConnected ? (
           <Wifi className="text-green-500 mr-2" size={20} />

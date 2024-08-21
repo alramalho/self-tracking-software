@@ -7,7 +7,7 @@ export default function Home() {
   const { isSignedIn } = useSession();
   return (
     <div className="flex flex-col items-center justify-center h-screen">
-      <h1 className="text-4xl mb-4">Welcome to the Log App</h1>
+      <h1 className="text-4xl mb-4">Welcome to tracking.so</h1>
       {isSignedIn ? (
         <Link
           href="/log"
