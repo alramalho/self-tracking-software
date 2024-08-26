@@ -363,6 +363,7 @@ async def websocket_endpoint(websocket: WebSocket):
         finally:
             await websocket.close()
     else:
+        logger.error("Websocket authorization failed.")
         await websocket.close()
 
 
