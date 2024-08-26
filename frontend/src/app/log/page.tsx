@@ -7,8 +7,11 @@ import AudioControls from "@/components/AudioControls";
 import toast, { Toaster } from "react-hot-toast";
 import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useAuth } from "@clerk/nextjs";
 
 const LogPage: React.FC = () => {
+  const {getToken} = useAuth()
+  
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { isRecording, toggleRecording } = useMicrophone(socket);
@@ -20,8 +23,9 @@ const LogPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const connectWebSocket = useCallback(() => {
-    const newSocket = new WebSocket(process.env.NEXT_PUBLIC_BACKEND_WS_URL!);
+  const connectWebSocket = useCallback(async () => {
+    const token = await getToken()
+    const newSocket = new WebSocket(`${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}?token=${token}`);
 
     newSocket.onopen = () => {
       setIsConnected(true);

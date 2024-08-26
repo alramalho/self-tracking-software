@@ -1,4 +1,5 @@
 from fastapi import FastAPI, WebSocket
+from shared.logger import create_logger
 from fastapi.middleware.cors import CORSMiddleware
 import base64
 import json
@@ -22,6 +23,7 @@ from os import cpu_count
 import asyncio
 from fastapi import APIRouter, Depends
 from auth.clerk import is_clerk_user, is_clerk_user_ws
+
 
 app = FastAPI()
 users_router = APIRouter(dependencies=[Depends(is_clerk_user)])

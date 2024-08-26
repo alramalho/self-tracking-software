@@ -33,7 +33,7 @@ def get_token_from_request(request: Request) -> str:
     return token
 
 async def get_token_from_websocket(websocket: WebSocket) -> str:
-    logger.info('Getting token from websocket')
+    logger.log('AUTH', 'Getting token from websocket')
     # Try to get the token from the WebSocket query parameters
     token = websocket.query_params.get("token")
     if not token:
@@ -41,7 +41,7 @@ async def get_token_from_websocket(websocket: WebSocket) -> str:
         token = websocket.cookies.get("__session")
     
     if not token:
-        logger.error("Token not found in query params or session cookie")
+        logger.log('AUTH', "Token not found in query params or session cookie")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No authentication information available",
@@ -50,7 +50,7 @@ async def get_token_from_websocket(websocket: WebSocket) -> str:
     return token
 
 async def validate_token(token: str) -> bool:
-    logger.info("Validating token")
+    logger.log("AUTH", "Validating token")
 
     # if ENVIRONMENT == "dev":
     #     return True
