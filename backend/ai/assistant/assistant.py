@@ -9,6 +9,21 @@ from typing import List
 from entities.activity import Activity
 from pydantic import BaseModel, Field
 from loguru import logger
+from typing import Dict, Literal, TypedDict
+import re
+
+
+def extract_questions(mermaid_code):
+    # Regular expression to match the pattern
+    pattern = r"(\w+)\s*{([^}]+)}\s*-->.*\|Yes\|"
+
+    # Find all matches in the Mermaid code
+    matches = re.findall(pattern, mermaid_code, re.MULTILINE)
+
+    # Extract and return the questions
+    questions = [match[1].strip() for match in matches]
+    return questions
+
 
 class Assistant(object):
     def __init__(
@@ -35,8 +50,31 @@ class Assistant(object):
 
         current_time = datetime.now().strftime("%H:%M")
 
+        conversation_graph = """
+        graph TD
+            Start[Start Conversation] --> FirstTimeEver{First time ever talking to user?}
+            FirstTimeEver -->|Yes| Introduce[Introduce yourself and goals]
+            Introduce --> WaitFeedback[Wait for user feedback]
+            WaitFeedback --> FirstTimeToday{First time talking today?}
+            FirstTimeEver -->|No| FirstTimeToday
+            FirstTimeToday -->|Yes| Greet[Greet user]
+            Greet --> AskDayGoing[Ask how day is going]
+            FirstTimeToday -->|No| AskHappiness[Ask happiness scale 1-10]
+            AskDayGoing --> AskHappiness
+            AskHappiness --> AskWhyHappiness[Ask why that happiness level]
+            AskWhyHappiness --> ExploreActivities[Explore user's activities today]
+            ExploreActivities --> NewActivity{New activity mentioned?}
+            NewActivity -->|Yes| MeasurementShared{Measurement method shared?}
+            MeasurementShared -->|No| AskMeasurement[Ask how to measure activity]
+            MeasurementShared -->|Yes| NewActivity
+            NewActivity -->|No| ExploreActivities
+            AskMeasurement --> ExploreActivities        
+        """
+
+        questions = ", ".join([*extract_questions(conversation_graph)])
+
         system = f"""
-        You are {self.name}, a friendly assistant sole goal is to help the user track himself by askinh how is he ad by getting him to say what did the the user do today in the morning, afteroon and evening. Actually in all parts of the day up to {current_time}. 
+        You are {self.name}, a friendly assistant sole goal is to engage the user in a conversation about his past activities, exposing as much information as possible. 
 
         Rules:
         - Follow the conversation flow.
@@ -45,13 +83,10 @@ class Assistant(object):
         - Always answer in the language of the user.
         - If the user mentions generically mentions any project or event, get a brief description of it.
 
-        Conversation flow:
-        - If its the very first time you are ever talking to the user (no prev messages), just introduce yourself, your goals with the user, and wait for his feedback before 'drilling' him with questions.
-        - If its the first time you are taling to the user today (divider in the conversation), greet the user, make him at ease (i.e. make a initial exploratory question) by his name and very gently ask how happy is he feeling in a scale from 1 to 10. 
-        - After the user rates how happy is he feeling frmo 1 to 10, ask why.
-        - Ask questions that focus on getting breadth of information about the day rather than depth about a specific task. Any activiity must be uniquely identifiable though (e.g. 'work in a project' is too generic, 'work in my startup called X' is good, 'work in my startup X on the new feature for user signups' is too specific).
-        - After an activity is shared and no way to measure is shared and (he just mentions he did something) and the activity is new (non existing), you must ask for how does the user wants to measure for every mentioned activity (e.g. how many hours of work / kilometers of running / times OR minutes meditated, etc ). (Existent user activities are {', '.join([str(a) for a in self.user_activities])})
-        - Your message must naturally fit to continue conversation history.
+        Conversation flow graph:
+        {conversation_graph}
+
+        Current Time: {current_time}
         
         Here's your past conversation with the user:
         {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=24*60)}
@@ -60,15 +95,26 @@ class Assistant(object):
 
         logger.info(f"System: {system}")
 
+        class ConversationStageReflection(TypedDict):
+            questions: Dict[str, str]
+            conclusion: str
+
         class ResponseModel(BaseModel):
-            reasoning: str = Field(description="A numbered reflection on 1. your instructions/goal  2. the whole conversation history for today 3. how to approach the user message given your instructions, given the rules and the conversation flow.")
-            message: str = Field(description="Message to be sent to the user.")
-        
+            conversation_stage_reflection: str = Field(
+                description="A dictionary of questions mapping to 'Yes' or 'No', "
+                            "finishing with a 'conclusion' stating the current conversation stage. "
+                            "Cannot be null."
+            )
+            reasoning: str = Field(
+                description="Reflect how to address the user message based on conversation stage."
+            )
+            message_to_be_sent_to_the_user: str
+
         response = ask_schema(user_input, system, pymodel=ResponseModel)
 
         self.memory.write(
             Message.new(
-                response.message,
+                response.message_to_be_sent_to_the_user,
                 sender_name=self.name,
                 sender_id="0",
                 recipient_name=self.user.name,
@@ -76,4 +122,4 @@ class Assistant(object):
             )
         )
 
-        return response.message
+        return response.message_to_be_sent_to_the_user

@@ -1,5 +1,7 @@
 from fastapi import FastAPI, WebSocket
 from shared.logger import create_logger
+create_logger()
+
 from fastapi.middleware.cors import CORSMiddleware
 import base64
 import json
@@ -76,7 +78,7 @@ def get_activities_from_conversation(user_id: str) -> List[Activity]:
 
     class ResponseModel(BaseModel):
         reasonings: str = Field(
-            description="Your reasoning justifying each created activity against the conversation history."
+            description="Your reasoning justifying each created activity against the conversation history. Must not be emtpy or null."
         )
         activities: list[Activity]
 
@@ -109,7 +111,7 @@ def get_activity_entries_from_conversation(user_id: str) -> List[ActivityEntry]:
 
     class ResponseModel(BaseModel):
         reasonings: str = Field(
-            description="Your reasoning justifying each activity and its full data entry against the conversation history."
+            description="Your reasoning justifying each activity and its full data entry against the conversation history. Must not be emtpy or null."
         )
         activity_entries: list[ActivityEntry]
 

@@ -22,9 +22,9 @@ class MongoDBGateway(DBGateway):
     def delete_all(self, key: str, value: str) -> None:
         if key == 'id':
             key = '_id'
-        logger.info(f'MongoDB: Deleting from MongoDB ... Key:"{key}" Value:"{value}"')
+        logger.log("DB", f'MongoDB: Deleting from MongoDB ... Key:"{key}" Value:"{value}"')
         result = self.collection.delete_many({key: value})
-        logger.info(f"MongoDB: Deleted {result.deleted_count} documents")
+        logger.log("DB", f"MongoDB: Deleted {result.deleted_count} documents")
 
     def write(self, data: dict):
         if 'id' in data:
@@ -38,12 +38,12 @@ class MongoDBGateway(DBGateway):
                 data['_id'] = ObjectId()
             del data['id']
         
-        logger.info(f"MongoDB: Writing to MongoDB ... {data}")
+        logger.log("DB", f"MongoDB: Writing to MongoDB ... {data}")
         result = self.collection.replace_one({'_id': data['_id']}, data, upsert=True)
-        logger.info(f"MongoDB: Upserted document with id: {data['_id']}")
+        logger.log("DB", f"MongoDB: Upserted document with id: {data['_id']}")
 
     def scan(self) -> List[Dict]:
-        logger.info("MongoDB: Scanning from MongoDB ...")
+        logger.log("DB", "MongoDB: Scanning from MongoDB ...")
         return [self._convert_from_mongo(doc) for doc in self.collection.find()]
 
     def query(self, key: str, value: str) -> List[Dict]:
@@ -51,7 +51,7 @@ class MongoDBGateway(DBGateway):
             key = '_id'
             if type(value) == str:
                 value = ObjectId(value)
-        logger.info(f'MongoDB: Querying from MongoDB ... Key:"{key}" Value:"{value}"')
+        logger.log("DB", f'MongoDB: Querying from MongoDB ... Key:"{key}" Value:"{value}"')
         return [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
 
     def count(self, key: str, value: str) -> int:
@@ -59,7 +59,7 @@ class MongoDBGateway(DBGateway):
             key = '_id'
             if type(value) == str:
                 value = ObjectId(value)
-        logger.info(f'MongoDB: Counting in MongoDB ... Key:"{key}" Value:"{value}"')
+        logger.log("DB", f'MongoDB: Counting in MongoDB ... Key:"{key}" Value:"{value}"')
         return self.collection.count_documents({key: value})
 
     def __del__(self):
