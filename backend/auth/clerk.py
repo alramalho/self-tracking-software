@@ -33,6 +33,7 @@ def get_token_from_request(request: Request) -> str:
     return token
 
 async def get_token_from_websocket(websocket: WebSocket) -> str:
+    logger.info('Getting token from websocket')
     # Try to get the token from the WebSocket query parameters
     token = websocket.query_params.get("token")
     if not token:
@@ -48,8 +49,10 @@ async def get_token_from_websocket(websocket: WebSocket) -> str:
     return token
 
 async def validate_token(token: str) -> bool:
-    if ENVIRONMENT == "dev":
-        return True
+    logger.info("Validating token")
+
+    # if ENVIRONMENT == "dev":
+    #     return True
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

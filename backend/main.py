@@ -258,6 +258,7 @@ async def process_activities_and_mood(user_id: str):
 
 @app.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
+    logger.info("Connecting to websocket endpoint.")
     authenticated = await is_clerk_user_ws(websocket)
     if authenticated:
         await websocket.accept()
