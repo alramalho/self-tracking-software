@@ -11,7 +11,7 @@ import traceback
 from datetime import datetime
 from ai import stt, tts
 from ai.llm import ask_schema, ask_text
-from ai.assistant.assistant import Assistant
+from ai.assistant.assistant import Assistant, activities_description, activity_entries_description
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
 from gateways.activities import ActivitiesGateway
@@ -66,8 +66,7 @@ def get_activities_from_conversation(user_id: str) -> List[Activity]:
 
     prompt = f"""
     Given the conversation history, extract any present activities. 
-    Good activities examples include 'work in startup named X', 'work in job at company Y', 'read', 'meditate', etc.
-    Counter examples include 'work' (too generic), 'work in solving a bug' (too specific), 'read the introduction of a book' (too specific) 
+    {activities_description}
     Try to match activities with existent ones, if not, create new ones.
     Don't infer anything that is not explicitly included. 
     If you don't have enough explicit information from the dialogue to create complete activities (e.g. missing measure), do not create them.
@@ -101,6 +100,7 @@ def get_activity_entries_from_conversation(user_id: str) -> List[ActivityEntry]:
 
     prompt = f"""
     Given the conversation history extract any activity entries that are mentioned & matched against existent activities.
+    {activity_entries_description}
     Try to match activities with existent ones, if not, create new ones.
     All information regarding the activtiy must be EXPLICTLY mentioned for you to create it. Do not craete it otherwise. 
 

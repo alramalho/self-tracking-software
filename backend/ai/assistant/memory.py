@@ -144,6 +144,9 @@ class DatabaseMemory(Memory):
         if len(messages) < len(self._get_all_messages()):
             formatted_messages.append(f"... (older than {max_age_in_minutes} minutes messages omitted) ...")
 
+        if len(messages) == 1: # means there's only user's first message
+            formatted_messages.append("<no other messages in history>")
+
         for m in messages:
             message_date = parser.parse(m.created_at).date()
             if message_date == today and not today_divider_added:
@@ -151,4 +154,4 @@ class DatabaseMemory(Memory):
                 today_divider_added = True
             formatted_messages.append(f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}")
 
-        return "\n".join(formatted_messages) or "<no messages in history>"
+        return "\n".join(formatted_messages)

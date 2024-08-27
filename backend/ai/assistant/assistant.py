@@ -20,6 +20,21 @@ def extract_questions(mermaid_code):
     return questions
 
 
+activities_description = """
+        Activies are measured in quantifiable ways.
+        Good activities examples include 'work in startup named X', 'work in job at company Y', 'read', 'meditate', etc.
+        Counter examples include 'work' (too generic), 'debugging' (too specific), 'read the introduction of a book' (too specific) 
+        Activities need a name, and a way to measure them.
+""".replace(
+    "\t", ""
+)
+activity_entries_description = """
+        Activity entries are a materialization of activities need a date & quantity (e.g. worked 2h my startup X today maps to 1 activity 'work in startup X' and 1 activity entry for 'today' & '2 hours')
+""".replace(
+    "\t", ""
+)
+
+
 class Assistant(object):
     def __init__(
         self,
@@ -70,19 +85,18 @@ class Assistant(object):
             AskMeasurement --> ExploreActivities     
         """
 
-        questions = ", ".join([f"{i+1}. {q}" for i, q in enumerate(extract_questions(conversation_graph))])
+        questions = ", ".join(
+            [f"{i+1}. {q}" for i, q in enumerate(extract_questions(conversation_graph))]
+        )
 
         system = f"""
-        You are {self.name}, a friendly assistant sole goal is to engage the user in a conversation about his past activities and activity entries, exposing as much information for them to be subsequently created.
-        Good activities examples include 'work in startup named X', 'work in job at company Y', 'read', 'meditate', etc.
-        Counter examples include 'work' (too generic), 'work in solving a bug' (too specific), 'read the introduction of a book' (too specific) 
-        Activies are measured in quantifiable ways. Good examples include 'hours' (eg. hours worked in startup), 'times' (times meditated), 'kilometres' (kilometres ran), etc.
-        Activities need a name, and a way to measure them.
-        Activity entries are a materialization of activities need a date & quantity (e.g. worked 2h my startup X today maps to 1 activity 'work in startup X' and 1 activity entry for 'today' & '2 hours')
+        You are {self.name}, a friendly assistant which principal goal is to engage the user in a conversation about his past activities and activity entries, exposing as much information for them to be subsequently created.
+        {activities_description}
         Your goal is to expose this information through an engaging conversation.
 
         Rules:
         - Follow the conversation flow.
+        - Let the user lead the conversation
         - Talk directly and succintly.
         - Always address latest message comprehensively (if it has a greeting, greet back. if it has a question, answer it.)
         - Always answer in the language of the user.
@@ -100,18 +114,14 @@ class Assistant(object):
 
         logger.info(f"System: {system}")
 
-        class ConversationStageReflection(TypedDict):
-            questions: Dict[str, str]
-            conclusion: str
-
         class ResponseModel(BaseModel):
             conversation_stage_reflection: str = Field(
                 description=f"A dictionary of questions ({questions}) mapping to 'Yes' or 'No', "
-                            "finishing with a 'conclusion' stating the current conversation stage. "
-                            "Cannot be null."
+                "finishing with a 'conclusion' stating the current conversation stage. "
+                "Cannot be null, and you must include the question number and statement in the keys."
             )
             reasoning: str = Field(
-                description="Reflect how to address the user message based on your goals and conversation stage."
+                description="Reflect on the last message of the user and how to address it given the conversation stage and your goals."
             )
             message_to_be_sent_to_the_user: str
 
