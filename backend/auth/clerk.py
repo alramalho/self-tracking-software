@@ -8,6 +8,9 @@ from jose import JWTError, jwt
 from loguru import logger
 from passlib.context import CryptContext
 from constants import CLERK_JWT_PUBLIC_KEY, ENVIRONMENT
+from gateways.users import UsersGateway
+from entities.user import User
+from typing import Tuple
 
 # JWT token settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -49,7 +52,7 @@ async def get_token_from_websocket(websocket: WebSocket) -> str:
         )
     return token
 
-async def validate_token(token: str) -> bool:
+async def validate_token(token: str) -> Tuple[bool, str]:
     logger.log("AUTH", "Validating token")
 
     # if ENVIRONMENT == "dev":
@@ -80,11 +83,15 @@ async def validate_token(token: str) -> bool:
     except JWTError as e:
         logger.error(f"Could not validate user credentials. Error: {str(e)}")
         raise credentials_exception
-    return True
+    return True, clerk_id
 
-async def is_clerk_user(token: str = Depends(get_token_from_request)) -> bool:
-    return await validate_token(token)
+async def is_clerk_user(token: str = Depends(get_token_from_request)) -> User:
+    validated, clerk_id = await validate_token(token)
+    if validated:
+        return UsersGateway().get_user_by("clerk_id", clerk_id)
 
-async def is_clerk_user_ws(websocket: WebSocket) -> bool:
+async def is_clerk_user_ws(websocket: WebSocket) -> User:
     token = await get_token_from_websocket(websocket)
-    return await validate_token(token)
+    validated, clerk_id = await validate_token(token)
+    if validated:
+        return UsersGateway().get_user_by("clerk_id", clerk_id)

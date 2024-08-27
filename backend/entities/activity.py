@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
-from uuid import uuid4
 from pydantic import field_validator
 from bson import ObjectId
 

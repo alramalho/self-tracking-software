@@ -15,6 +15,7 @@ from ai.assistant.assistant import Assistant
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
 from gateways.activities import ActivitiesGateway
+from entities.user import User
 from gateways.users import UsersGateway
 from entities.mood_report import MoodReport
 from entities.activity import Activity, ActivityEntry
@@ -25,9 +26,10 @@ from os import cpu_count
 import asyncio
 from fastapi import APIRouter, Depends
 from auth.clerk import is_clerk_user, is_clerk_user_ws
-
+from routers.clerk import router as clerk_router
 
 app = FastAPI()
+app.include_router(clerk_router)
 users_router = APIRouter(dependencies=[Depends(is_clerk_user)])
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
@@ -274,15 +276,14 @@ async def process_activities_and_mood(user_id: str):
 @app.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
     logger.info("Connecting to websocket endpoint.")
-    authenticated = await is_clerk_user_ws(websocket)
-    if authenticated:
+    user = await is_clerk_user_ws(websocket)
+    if user:
         await websocket.accept()
         audio_buffer = bytearray()
         try:
             while True:
                 data = await websocket.receive_text()
                 message = json.loads(data)
-                user_id = "66b29679de73d9a05e77a247"
 
                 if message["action"] == "start_recording":
                     audio_buffer.clear()
@@ -302,10 +303,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
                     # Process audio and activities/mood concurrently
                     text_response, audio_response = await process_audio(
-                        user_id, transcription
+                        user.id, transcription
                     )
                     activities, activity_entries, mood_report, notification_text = (
-                        await process_activities_and_mood(user_id)
+                        await process_activities_and_mood(user.id)
                     )
 
                     await websocket.send_json(
@@ -341,10 +342,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
                     # Process audio and activities/mood concurrently
                     text_response, audio_response = await process_audio(
-                        user_id, updated_transcription
+                        user.id, updated_transcription
                     )
                     activities, activity_entries, mood_report, notification_text = (
-                        await process_activities_and_mood(user_id)
+                        await process_activities_and_mood(user.id)
                     )
 
                     await websocket.send_json(
@@ -403,19 +404,17 @@ class MoodReportResponse(BaseModel):
     score: str
 
 
+
 @users_router.get("/api/activities", response_model=List[ActivityResponse])
-async def get_activities():
-    user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
-    activities = activities_gateway.get_all_activities_by_user_id(user_id)
+async def get_activities(user: User = Depends(is_clerk_user)):
+    activities = activities_gateway.get_all_activities_by_user_id(user.id)
     return [
         ActivityResponse(id=a.id, title=a.title, measure=a.measure) for a in activities
     ]
 
-
 @users_router.get("/api/activity-entries", response_model=List[ActivityEntryResponse])
-async def get_activity_entries():
-    user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
-    activities = activities_gateway.get_all_activities_by_user_id(user_id)
+async def get_activity_entries(user: User = Depends(is_clerk_user)):
+    activities = activities_gateway.get_all_activities_by_user_id(user.id)
     all_entries = []
     for activity in activities:
         entries = activities_gateway.get_all_activity_entries_by_activity_id(
@@ -429,11 +428,9 @@ async def get_activity_entries():
         for e in all_entries
     ]
 
-
 @users_router.get("/api/mood-reports", response_model=List[MoodReportResponse])
-async def get_mood_reports():
-    user_id = "66b29679de73d9a05e77a247"  # Replace with actual user authentication
-    mood_reports = moods_gateway.get_all_mood_reports_by_user_id(user_id)
+async def get_mood_reports(user: User = Depends(is_clerk_user)):
+    mood_reports = moods_gateway.get_all_mood_reports_by_user_id(user.id)
     return [
         MoodReportResponse(id=m.id, user_id=m.user_id, date=m.date, score=m.score)
         for m in mood_reports
@@ -454,5 +451,14 @@ app.include_router(users_router)
 
 if __name__ == "__main__":
     import uvicorn
+    from pyngrok import ngrok
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = 8000
+    public_url = ngrok.connect(port).public_url
+    logger.info(
+        "Webhook link to use (NGROK tunnel):\n"
+        + public_url
+        + "/clerk/webhook",
+    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

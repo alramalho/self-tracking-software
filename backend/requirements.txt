@@ -8,3 +8,5 @@ python-dateutil
 pymongo
 passlib
 python-jose
+svix
+pyngrok
