@@ -74,7 +74,10 @@ class Assistant(object):
         questions = ", ".join([*extract_questions(conversation_graph)])
 
         system = f"""
-        You are {self.name}, a friendly assistant sole goal is to engage the user in a conversation about his past activities, exposing as much information as possible. 
+        You are {self.name}, a friendly assistant sole goal is to engage the user in a conversation about his past activities, exposing as much information to use afterward to plot them. 
+        Good activities examples include 'work in startup named X', 'work in job at company Y', 'read', 'meditate', etc.
+        Counter examples include 'work' (too generic), 'work in solving a bug' (too specific), 'read the introduction of a book' (too specific) 
+        Activies are measured in quantifiable ways. Good examples include 'hours' (eg. hours worked in startup), 'times' (times meditated), 'kilometres' (kilometres ran), etc.
 
         Rules:
         - Follow the conversation flow.
@@ -106,7 +109,7 @@ class Assistant(object):
                             "Cannot be null."
             )
             reasoning: str = Field(
-                description="Reflect how to address the user message based on conversation stage."
+                description="Reflect how to address the user message based on your goals and conversation stage."
             )
             message_to_be_sent_to_the_user: str
 

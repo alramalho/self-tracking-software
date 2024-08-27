@@ -63,7 +63,9 @@ def get_activities_from_conversation(user_id: str) -> List[Activity]:
     current_date = datetime.now().strftime("%Y-%m-%d")
 
     prompt = f"""
-    Given the conversation history, extract any present high level activities.
+    Given the conversation history, extract any present activities. 
+    Good activities examples include 'work in startup named X', 'work in job at company Y', 'read', 'meditate', etc.
+    Counter examples include 'work' (too generic), 'work in solving a bug' (too specific), 'read the introduction of a book' (too specific) 
     Try to match activities with existent ones, if not, create new ones.
     Don't infer anything that is not explicitly included. 
     If you don't have enough explicit information from the dialogue to create complete activities (e.g. missing measure), do not create them.
@@ -130,8 +132,9 @@ def get_mood_report_from_conversation(user_id: str) -> MoodReport:
 
     prompt = f"""
     Given the conversation history, extract the user's mood report for today.
-    If a mood report is not explicitly mentioned, do not create one.
-    The mood score should be on a scale of 0 to 10, where 0 is extremely unhappy and 10 is extremely happy.
+    It is imperatiive that the mood report is explicitly mentioned by the user, as an answer to the question of how happy the user is feeling from from 1 to 10.
+    If theres no such question & answer, do not create a mood report.
+    The mood score should be on a scale of 1 to 10, where 1 is extremely unhappy and 10 is extremely happy.
 
     Conversation history:
     {memory.read_all_as_str(max_messages=6)}
@@ -206,37 +209,46 @@ def store_activities_and_mood_from_conversation(
     user_id: str,
 ) -> Tuple[List[Activity], List[ActivityEntry], MoodReport | None, str]:
     activities = get_activities_from_conversation(user_id)
+    created_activities = []
     logger.info(f"Activities: {activities}")
 
     for activity in activities:
         try:
-            activities_gateway.create_activity(activity)
+            new_activity = activities_gateway.create_activity(activity)
+            if new_activity:
+                created_activities.append(new_activity)
         except Exception as e:
             traceback.print_exc()
             logger.error(f"Error creating activity: {e}")
 
     activity_entries = get_activity_entries_from_conversation(user_id)
+    created_activity_entries = []
     logger.info(f"Activity entries: {activity_entries}")
 
     for activity_entry in activity_entries:
         try:
-            activities_gateway.create_activity_entry(activity_entry)
+            new_activity_entry = activities_gateway.create_activity_entry(activity_entry)
+            if new_activity_entry:
+                created_activities.append(new_activity)
         except Exception as e:
             traceback.print_exc()
             logger.error(f"Error creating activity entry: {e}")
 
     mood_report = get_mood_report_from_conversation(user_id)
+    created_mood_report = []
     logger.info(f"Mood report: {mood_report}")
 
     if mood_report:
         try:
-            moods_gateway.create_mood_report(mood_report)
+            new_mood_report = moods_gateway.create_mood_report(mood_report)
+            if new_mood_report:
+                created_mood_report.append(new_mood_report)
         except Exception as e:
             traceback.print_exc()
             logger.error(f"Error creating mood report: {e}")
 
     notification_text = generate_notification_text(
-        activities, activity_entries, mood_report
+        created_activities, created_activity_entries, created_mood_report
     )
 
     return activities, activity_entries, mood_report, notification_text.strip('"')
