@@ -116,9 +116,9 @@ class Assistant(object):
 
         class ResponseModel(BaseModel):
             conversation_stage_reflection: str = Field(
-                description=f"A dictionary of questions ({questions}) mapping to 'Yes' or 'No', "
+                description=f"A dictionary of questions (keys must be {questions}) mapping to 'Yes' or 'No', "
                 "finishing with a 'conclusion' stating the current conversation stage. "
-                "Cannot be null, and you must include the question number and statement in the keys."
+                "Cannot be null."
             )
             reasoning: str = Field(
                 description="Reflect on the last message of the user and how to address it given the conversation stage and your goals."
