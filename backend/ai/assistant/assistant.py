@@ -14,13 +14,8 @@ import re
 
 
 def extract_questions(mermaid_code):
-    # Regular expression to match the pattern
-    pattern = r"(\w+)\s*{([^}]+)}\s*-->.*\|Yes\|"
-
-    # Find all matches in the Mermaid code
+    pattern = r"(\w+)\s*{([^}]+)}"
     matches = re.findall(pattern, mermaid_code, re.MULTILINE)
-
-    # Extract and return the questions
     questions = [match[1].strip() for match in matches]
     return questions
 
@@ -59,25 +54,32 @@ class Assistant(object):
             FirstTimeEver -->|No| FirstTimeToday
             FirstTimeToday -->|Yes| Greet[Greet user]
             Greet --> AskDayGoing[Ask how day is going]
-            FirstTimeToday -->|No| AskHappiness[Ask happiness scale 1-10]
+            FirstTimeToday -->|No| AskHappiness{User shared happiness in a scale 1-10?}
             AskDayGoing --> AskHappiness
-            AskHappiness --> AskWhyHappiness[Ask why that happiness level]
-            AskWhyHappiness --> ExploreActivities[Explore user's activities today]
+            AskHappiness -->|No| AskHappinessLevel[Ask user's happiness level from 1-10]
+            AskHappinessLevel --> AskWhyHappiness
+            AskHappiness -->|Yes| AskWhyHappiness{User shared why that happiness level?}
+            AskWhyHappiness -->|No| AskHappinessReason[Ask reason for happiness level]
+            AskHappinessReason --> ExploreActivities
+            AskWhyHappiness -->|Yes| ExploreActivities[Explore user's activities today]
             ExploreActivities --> NewActivity{New activity mentioned?}
             NewActivity -->|Yes| MeasurementShared{Measurement method shared?}
             MeasurementShared -->|No| AskMeasurement[Ask how to measure activity]
             MeasurementShared -->|Yes| NewActivity
             NewActivity -->|No| ExploreActivities
-            AskMeasurement --> ExploreActivities        
+            AskMeasurement --> ExploreActivities     
         """
 
-        questions = ", ".join([*extract_questions(conversation_graph)])
+        questions = ", ".join([f"{i+1}. {q}" for i, q in enumerate(extract_questions(conversation_graph))])
 
         system = f"""
-        You are {self.name}, a friendly assistant sole goal is to engage the user in a conversation about his past activities, exposing as much information to use afterward to plot them. 
+        You are {self.name}, a friendly assistant sole goal is to engage the user in a conversation about his past activities and activity entries, exposing as much information for them to be subsequently created.
         Good activities examples include 'work in startup named X', 'work in job at company Y', 'read', 'meditate', etc.
         Counter examples include 'work' (too generic), 'work in solving a bug' (too specific), 'read the introduction of a book' (too specific) 
         Activies are measured in quantifiable ways. Good examples include 'hours' (eg. hours worked in startup), 'times' (times meditated), 'kilometres' (kilometres ran), etc.
+        Activities need a name, and a way to measure them.
+        Activity entries are a materialization of activities need a date & quantity (e.g. worked 2h my startup X today maps to 1 activity 'work in startup X' and 1 activity entry for 'today' & '2 hours')
+        Your goal is to expose this information through an engaging conversation.
 
         Rules:
         - Follow the conversation flow.
@@ -104,7 +106,7 @@ class Assistant(object):
 
         class ResponseModel(BaseModel):
             conversation_stage_reflection: str = Field(
-                description="A dictionary of questions mapping to 'Yes' or 'No', "
+                description=f"A dictionary of questions ({questions}) mapping to 'Yes' or 'No', "
                             "finishing with a 'conclusion' stating the current conversation stage. "
                             "Cannot be null."
             )

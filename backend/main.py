@@ -100,8 +100,7 @@ def get_activity_entries_from_conversation(user_id: str) -> List[ActivityEntry]:
     prompt = f"""
     Given the conversation history extract any activity entries that are mentioned & matched against existent activities.
     Try to match activities with existent ones, if not, create new ones.
-    Don't infer anything that is not explicitly included.
-    If you don't have enough explicit information from the dialogue to create complete activity entries (e.g. missing quantity), do not create them.
+    All information regarding the activtiy must be EXPLICTLY mentioned for you to create it. Do not craete it otherwise. 
 
     Existent Activities:
     {", ".join([f"{str(a)} (id: '{a.id}')" for a in activities])}
