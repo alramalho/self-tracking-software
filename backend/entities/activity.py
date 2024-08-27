@@ -40,7 +40,7 @@ class Activity(BaseModel):
 class ActivityEntry(BaseModel):
     id: str
     activity_id: str
-    quantity: int = Field(ge=1)
+    quantity: int = Field(description="Way to quantify it, must be > 0.")
     date: str = Field(description="The YYYY-MM-DD date of the activity.")
     created_at: str
 
