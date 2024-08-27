@@ -8,10 +8,21 @@ import toast, { Toaster } from "react-hot-toast";
 import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
+import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
+import {
+  ChatBubble,
+  ChatBubbleAvatar,
+  ChatBubbleMessage,
+} from "@/components/ui/chat/chat-bubble";
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 const LogPage: React.FC = () => {
-  const {getToken} = useAuth()
-  
+  const { getToken } = useAuth();
+
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { isRecording, toggleRecording } = useMicrophone(socket);
@@ -21,11 +32,14 @@ const LogPage: React.FC = () => {
   const [transcription, setTranscription] = useState<string>("");
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = useCallback(async () => {
-    const token = await getToken()
-    const newSocket = new WebSocket(`${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}?token=${token}`);
+    const token = await getToken();
+    const newSocket = new WebSocket(
+      `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}?token=${token}`
+    );
 
     newSocket.onopen = () => {
       setIsConnected(true);
@@ -55,6 +69,10 @@ const LogPage: React.FC = () => {
     };
   }, [connectWebSocket]);
 
+  const addMessage = (message: Message) => {
+    setMessages((prevMessages) => [...prevMessages, message]);
+  };
+
   const handleIncomingAudio = useCallback(
     (base64Audio: string, transcription: string) => {
       const binaryString = atob(base64Audio);
@@ -65,39 +83,7 @@ const LogPage: React.FC = () => {
       }
       addToQueue(bytes.buffer);
 
-      toast.custom((t) => (
-        <div
-          className={`${
-            t.visible ? "animate-enter" : "animate-leave"
-          } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-        >
-          <div className="flex-1 w-0 p-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 pt-0.5">
-                <div
-                  className="h-10 w-10 rounded-full bg-yellow-500"
-                />
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Torotoro
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  {transcription}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex border-l border-gray-200">
-            <button
-              onClick={() => toast.dismiss(t.id)}
-              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      ));
+      addMessage({ role: "assistant", content: transcription } as Message);
 
       setIsLoading(false);
       if (timeoutRef.current) {
@@ -108,7 +94,11 @@ const LogPage: React.FC = () => {
   );
 
   const handleActivitiesUpdate = useCallback(
-    (newActivityEntries: any[], notificationText: string, reportedMood: boolean) => {
+    (
+      newActivityEntries: any[],
+      notificationText: string,
+      reportedMood: boolean
+    ) => {
       if ((newActivityEntries.length > 0 || reportedMood) && notificationText) {
         addNotifications(newActivityEntries.length + (reportedMood ? 1 : 0));
         toast(notificationText, {
@@ -144,7 +134,10 @@ const LogPage: React.FC = () => {
         );
       } else if (data.type === "transcription") {
         toast.success(data.text, {
-          duration: Math.min(10000, Math.max(2000, 3000 + 1200 * data.text.split(" ").length)),
+          duration: Math.min(
+            10000,
+            Math.max(2000, 3000 + 1200 * data.text.split(" ").length)
+          ),
           position: "bottom-center",
         });
         setTranscription(data.text);
@@ -184,6 +177,8 @@ const LogPage: React.FC = () => {
         })
       );
 
+      addMessage({role: "user", content: transcription})
+
       // Set timeout for server response
       timeoutRef.current = setTimeout(() => {
         setIsLoading(false);
@@ -198,6 +193,10 @@ const LogPage: React.FC = () => {
     setInputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
   };
 
+  useEffect(() => {
+    console.log({ messages });
+  }, [messages]);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       {isLoading && (
@@ -205,6 +204,23 @@ const LogPage: React.FC = () => {
           <LoaderCircle className="animate-spin text-gray-600" size={24} />
         </div>
       )}
+      <ChatMessageList className="max-w-xl">
+        {messages.map((message, index) => (
+          <ChatBubble
+            key={index}
+            variant={message.role == "assistant" ? "received" : "sent"}
+          >
+            <ChatBubbleAvatar
+              src={
+                message.role == "assistant"
+                  ? "https://htmlcolorcodes.com/assets/images/colors/sky-blue-color-solid-background-1920x1080.png"
+                  : "https://htmlcolorcodes.com/assets/images/colors/orange-color-solid-background-1920x1080.png"
+              }
+            />
+            <ChatBubbleMessage>{message.content}</ChatBubbleMessage>
+          </ChatBubble>
+        ))}
+      </ChatMessageList>
       <h1 className="text-2xl mb-4">tracking.so</h1>
       <div className="flex items-center mb-4">
         {isConnected ? (
