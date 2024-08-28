@@ -133,14 +133,8 @@ const LogPage: React.FC = () => {
           data.reported_mood
         );
       } else if (data.type === "transcription") {
-        toast.success(data.text, {
-          duration: Math.min(
-            10000,
-            Math.max(2000, 3000 + 1200 * data.text.split(" ").length)
-          ),
-          position: "bottom-center",
-        });
         setTranscription(data.text);
+        addMessage({role: "user", content: `🎙️ ${data.text}`})
         setIsLoading(true);
 
         // Set timeout for server response
