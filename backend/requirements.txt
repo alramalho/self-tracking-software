@@ -10,3 +10,4 @@ passlib
 python-jose
 svix
 pyngrok
+filetype
