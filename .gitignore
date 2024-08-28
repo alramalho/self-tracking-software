@@ -4,3 +4,5 @@
 **/__pycache__
 **/.DS_Store
 todos.md
+localhost.crt
+localhost.key

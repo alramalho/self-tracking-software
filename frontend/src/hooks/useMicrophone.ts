@@ -2,6 +2,7 @@
 
 import { arrayBufferToBase64Async } from '@/lib/utils';
 import { useState, useCallback, useRef } from 'react';
+import toast from 'react-hot-toast';
 
 export const useMicrophone = (socket: WebSocket | null) => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -39,6 +40,7 @@ export const useMicrophone = (socket: WebSocket | null) => {
       socket.send(JSON.stringify({ action: 'start_recording' }));
     } catch (error) {
       console.error('Error accessing microphone:', error);
+      toast.error(`Error accessing microphone: ${error}`)
     }
   }, [socket]);
 
