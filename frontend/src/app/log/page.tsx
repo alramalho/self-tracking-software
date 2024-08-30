@@ -27,7 +27,7 @@ const LogPage: React.FC = () => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { isRecording, toggleRecording } = useMicrophone(socket);
   const { addToQueue } = useSpeaker();
-  const { addNotifications } = useNotifications();
+  const { addNotifications, sendNotification } = useNotifications();
 
   const [transcription, setTranscription] = useState<string>("");
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
@@ -248,6 +248,7 @@ const LogPage: React.FC = () => {
           </>
         )}
       </button>
+      <button onClick={() => sendNotification("Hello",{ body: "World"})}>Send Notification</button>
       {inputMode === "voice" ? (
         <AudioControls
           isRecording={isRecording}
