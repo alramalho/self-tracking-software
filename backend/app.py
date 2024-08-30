@@ -236,14 +236,14 @@ def store_activities_and_mood_from_conversation(
             logger.error(f"Error creating activity entry: {e}")
 
     mood_report = get_mood_report_from_conversation(user_id)
-    created_mood_report = []
+    created_mood_report = None
     logger.info(f"Mood report: {mood_report}")
 
     if mood_report:
         try:
             new_mood_report = moods_gateway.create_mood_report(mood_report)
             if new_mood_report:
-                created_mood_report.append(new_mood_report)
+                created_mood_report = new_mood_report
         except Exception as e:
             traceback.print_exc()
             logger.error(f"Error creating mood report: {e}")
