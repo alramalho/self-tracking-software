@@ -290,11 +290,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 elif message["action"] == "stop_recording":
                     audio_data = message.get("audio_data", "")
+                    audio_format = message.get("audio_format", "")
                     audio_bytes = base64.b64decode(audio_data)
 
                     loop = asyncio.get_event_loop()
                     transcription = await loop.run_in_executor(
-                        executor, stt.speech_to_text, audio_bytes
+                        executor, stt.speech_to_text, audio_bytes, audio_format
                     )
 
                     await websocket.send_json(
