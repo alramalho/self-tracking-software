@@ -30,5 +30,6 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "permissions": ["notifications", "periodicSync"]
 }

@@ -1,20 +1,17 @@
 "use client";
 
 import React from "react";
-import { LogOut, Eye, Pencil } from "lucide-react";
+import { Eye, Pencil, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSession } from "@clerk/clerk-react";
-import { useClerk } from '@clerk/nextjs'
-
 import Link from "next/link";
 
 const BottomNav = () => {
   const { notificationCount } = useNotifications();
-  const { isSignedIn,  } = useSession();
-  const { signOut } = useClerk()
+  const { isSignedIn } = useSession();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[10000]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[1000]">
       <div className="flex justify-around">
         <Link
           href="/see"
@@ -36,13 +33,13 @@ const BottomNav = () => {
           <span className="text-xs mt-1">Log</span>
         </Link>
         {isSignedIn && (
-          <button
-            onClick={() => signOut()}
+          <Link
+            href="/profile"
             className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500"
           >
-            <LogOut size={24} />
-            <span className="text-xs mt-1">Signout</span>
-          </button>
+            <User size={24} />
+            <span className="text-xs mt-1">Profile</span>
+          </Link>
         )}
       </div>
     </nav>

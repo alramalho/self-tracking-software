@@ -134,7 +134,7 @@ const LogPage: React.FC = () => {
         );
       } else if (data.type === "transcription") {
         setTranscription(data.text);
-        addMessage({role: "user", content: `🎙️ ${data.text}`})
+        addMessage({ role: "user", content: `🎙️ ${data.text}` });
         setIsLoading(true);
 
         // Set timeout for server response
@@ -171,7 +171,7 @@ const LogPage: React.FC = () => {
         })
       );
 
-      addMessage({role: "user", content: transcription})
+      addMessage({ role: "user", content: transcription });
 
       // Set timeout for server response
       timeoutRef.current = setTimeout(() => {
@@ -248,7 +248,9 @@ const LogPage: React.FC = () => {
           </>
         )}
       </button>
-      <button onClick={() => sendNotification("Hello",{ body: "World"})}>Send Notification</button>
+      <button onClick={() => sendNotification("Hello", { body: "World" })}>
+        Send Notification
+      </button>
       {inputMode === "voice" ? (
         <AudioControls
           isRecording={isRecording}
