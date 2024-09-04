@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useMessageHistory, Message } from "@/hooks/useMessageHistory"; // Add this import
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
 import AudioControls from "@/components/AudioControls";
 import toast, { Toaster } from "react-hot-toast";
-import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle, Volume2, VolumeX } from "lucide-react";
+import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle, Volume2, VolumeX, Trash2 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
@@ -15,11 +16,6 @@ import {
   ChatBubbleMessage,
 } from "@/components/ui/chat/chat-bubble";
 import { Switch } from "@/components/ui/switch";
-
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-};
 
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
@@ -34,7 +30,8 @@ const LogPage: React.FC = () => {
   const [outputMode, setOutputMode] = useState<"voice" | "text">("voice");
   const { isRecording, toggleRecording } = useMicrophone();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, addMessage, clearMessages } = useMessageHistory(); // Update this line
+
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = useCallback(async () => {
@@ -71,10 +68,6 @@ const LogPage: React.FC = () => {
     };
   }, [connectWebSocket]);
 
-  const addMessage = (message: Message) => {
-    setMessages((prevMessages) => [...prevMessages, message]);
-  };
-
   const handleIncomingMessage = useCallback(
     (message: string, audioBase64: string | null) => {
       addMessage({ role: "assistant", content: message });
@@ -94,7 +87,7 @@ const LogPage: React.FC = () => {
         clearTimeout(timeoutRef.current);
       }
     },
-    [addToQueue, outputMode]
+    [addMessage, addToQueue, outputMode]
   );
 
   const handleActivitiesUpdate = useCallback(
@@ -225,11 +218,11 @@ const LogPage: React.FC = () => {
         {messages.map((message, index) => (
           <ChatBubble
             key={index}
-            variant={message.role == "assistant" ? "received" : "sent"}
+            variant={message.role === "assistant" ? "received" : "sent"}
           >
             <ChatBubbleAvatar
               src={
-                message.role == "assistant"
+                message.role === "assistant"
                   ? "https://htmlcolorcodes.com/assets/images/colors/sky-blue-color-solid-background-1920x1080.png"
                   : "https://htmlcolorcodes.com/assets/images/colors/orange-color-solid-background-1920x1080.png"
               }
@@ -238,6 +231,15 @@ const LogPage: React.FC = () => {
           </ChatBubble>
         ))}
       </ChatMessageList>
+      {messages.length > 0 && (
+        <button
+          onClick={clearMessages}
+          className="flex items-center text-red-500 hover:text-red-600 transition-colors"
+        >
+          <Trash2 size={16} className="mr-1" />
+          Clear Messages
+        </button>
+      )}
       <h1 className="text-2xl mb-4">tracking.so</h1>
       <div className="flex items-center mb-4">
         {isConnected ? (
