@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import HeatMap from "@uiw/react-heat-map";
 import toast from "react-hot-toast";
-import axios from "axios";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   Area,
@@ -12,6 +11,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  ReferenceDot,
 } from "recharts";
 import { useApiWithAuth } from "@/api";
 import {
@@ -146,13 +146,49 @@ const SeePage: React.FC = () => {
     return data.filter((item) => new Date(item.date) >= startDate);
   };
 
-  const moodChartData = filterDataByTimeRange(moodReports).map((report) => ({
+  const fillMissingDates = (data: MoodReport[]) => {
+    if (data.length === 0) return [];
+
+    const sortedData = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const startDate = new Date(sortedData[0].date);
+    const endDate = new Date(sortedData[sortedData.length - 1].date);
+    const filledData = [];
+
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const existingReport = sortedData.find(report => 
+        new Date(report.date).toDateString() === d.toDateString()
+      );
+      filledData.push({
+        date: d.toISOString().split('T')[0],
+        score: existingReport ? existingReport.score : null
+      });
+    }
+
+    return filledData;
+  };
+
+  const moodChartData = fillMissingDates(filterDataByTimeRange(moodReports)).map((report) => ({
     date: new Date(report.date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     }),
     score: report.score,
   }));
+
+  const gradientOffset = () => {
+    const dataMax = Math.max(...moodChartData.map((i) => i.score || 0));
+    const dataMin = Math.min(...moodChartData.map((i) => i.score || 10));
+    
+    if (dataMax <= 0) {
+      return 0;
+    }
+    if (dataMin >= 0) {
+      return 1;
+    }
+    return dataMax / (dataMax - dataMin);
+  };
+
+  const off = gradientOffset();
 
   return (
     <div className="p-4 space-y-8">
@@ -187,12 +223,31 @@ const SeePage: React.FC = () => {
             <XAxis dataKey="date" />
             <YAxis domain={[0, 10]} />
             <Tooltip />
+            <defs>
+              <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                <stop offset={'5%'} stopColor="#34B042" stopOpacity={0.8}/>
+                <stop offset={'95%'} stopColor="#34B042" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
             <Area
               type="monotone"
               dataKey="score"
-              stroke="#8884d8"
-              fill="#8884d8"
+              stroke="#34B042"
+              fill="url(#splitColor)"
+              connectNulls={false}
             />
+            {moodChartData.map((entry, index) => (
+              entry.score !== null && (
+                <ReferenceDot
+                  key={index}
+                  x={entry.date}
+                  y={entry.score}
+                  r={4}
+                  fill="#34B042"
+                  stroke="#fff"
+                />
+              )
+            ))}
           </AreaChart>
         </CardContent>
       </Card>
@@ -285,3 +340,4 @@ const SeePage: React.FC = () => {
 };
 
 export default SeePage;
+
