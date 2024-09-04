@@ -47,7 +47,7 @@ class Assistant(object):
         self.user = user
         self.user_activities = user_activities
 
-    def get_response(self, user_input: str):
+    def get_response(self, user_input: str, extraction_summary: str = None):
         self.memory.write(
             Message.new(
                 user_input,
@@ -69,31 +69,48 @@ class Assistant(object):
             FirstTimeEver -->|No| FirstTimeToday
             FirstTimeToday -->|Yes| Greet[Greet user]
             Greet --> AskDayGoing[Ask how day is going]
-            FirstTimeToday -->|No| AskHappiness{User shared happiness in a scale 1-10?}
-            AskDayGoing --> AskHappiness
+            FirstTimeToday -->|No| ExploreMood
+            AskDayGoing --> ExploreMood[Explore user's mood/happiness]
+            ExploreMood --> AskHappiness{User shared happiness in a scale 1-10?}
             AskHappiness -->|No| AskHappinessLevel[Ask user's happiness level from 1-10]
             AskHappinessLevel --> AskWhyHappiness
             AskHappiness -->|Yes| AskWhyHappiness{User shared why that happiness level?}
             AskWhyHappiness -->|No| AskHappinessReason[Ask reason for happiness level]
-            AskHappinessReason --> ExploreActivities
-            AskWhyHappiness -->|Yes| ExploreActivities[Explore user's activities today]
-            ExploreActivities --> NewActivity{New activity mentioned?}
+            AskHappinessReason --> CheckMoodExtraction
+            AskWhyHappiness -->|Yes| CheckMoodExtraction
+            CheckMoodExtraction{Mood/Happiness succesfully extracted in extraction summary?}
+            CheckMoodExtraction -->|Yes| InformMoodExtraction[Inform user about extracted mood/happiness]
+            CheckMoodExtraction -->|No| ReflectMoodExtraction[Reflect on mood/happiness extraction summary]
+            InformMoodExtraction --> ExploreActivities
+            ReflectMoodExtraction --> AdaptMoodExtraction[Incorporate mood extraction summary feedback in conversation]
+            AdaptMoodExtraction --> CheckMoodExtraction
+            ExploreActivities[Explore user's activities today] --> NewActivity{New activity mentioned?}
             NewActivity -->|Yes| MeasurementShared{Measurement method shared?}
             MeasurementShared -->|No| AskMeasurement[Ask how to measure activity]
-            MeasurementShared -->|Yes| NewActivity
+            MeasurementShared -->|Yes| CheckActivitiesExtraction
             NewActivity -->|No| ExploreActivities
-            AskMeasurement --> ExploreActivities     
+            AskMeasurement --> MeasurementShared
+            CheckActivitiesExtraction{Activities extracted?}
+            CheckActivitiesExtraction -->|Yes| InformActivitiesExtraction[Inform user about extracted activities]
+            CheckActivitiesExtraction -->|No| ReflectActivitiesExtraction[Reflect on activities extraction summary]
+            ReflectActivitiesExtraction --> AdaptActivitiesExtraction[Incorporate activities extraction summary feedback in conversation]
+            AdaptActivitiesExtraction --> CheckActivitiesExtraction
+            InformActivitiesExtraction --> End[End Conversation]  
         """
 
         questions = ", ".join(
             [f"{i+1}. {q}" for i, q in enumerate(extract_questions(conversation_graph))]
         )
 
+        if extraction_summary:
+            extraction_summary = f"\n\nHere is an extraction summary thus far, use this to guide the conversation:\n{extraction_summary}\n"
+
         system = f"""
-        You are {self.name}, a friendly assistant which principal goal is to engage the user in a conversation about his past activities and activity entries, exposing as much information for them to be subsequently created.
+        You are {self.name}, a friendly assistant which principal goal is to engage the user in a conversation about his past activities and activity entries, exposing as much information for them to be subsequently extracted.
         {activities_description}
         Your goal is to expose this information through an engaging conversation.
-
+        {extraction_summary}
+        
         Rules:
         - Follow the conversation flow.
         - Let the user lead the conversation
@@ -101,6 +118,7 @@ class Assistant(object):
         - Always address latest message comprehensively (if it has a greeting, greet back. if it has a question, answer it.)
         - Always answer in the language of the user.
         - If the user mentions generically mentions any project or event, get a brief description of it.
+        - If any information was extracted (activities, activity entries, or mood report), inform the user about it briefly.
 
         Conversation flow graph:
         {conversation_graph}

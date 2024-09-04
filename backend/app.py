@@ -5,7 +5,7 @@ create_logger()
 from fastapi.middleware.cors import CORSMiddleware
 import base64
 import json
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from loguru import logger
 import traceback
 from datetime import datetime
@@ -48,7 +48,7 @@ app.add_middleware(
 )
 
 
-def talk_with_assistant(user_id: str, user_input: str) -> str:
+def talk_with_assistant(user_id: str, user_input: str, extraction_summary: str = None) -> str:
     user = users_gateway.get_user_by_id(user_id)
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
     assistant = Assistant(
@@ -56,10 +56,10 @@ def talk_with_assistant(user_id: str, user_input: str) -> str:
         user=user,
         user_activities=activities_gateway.get_all_activities_by_user_id(user_id),
     )
-    return assistant.get_response(user_input)
+    return assistant.get_response(user_input, extraction_summary)
 
 
-def get_activities_from_conversation(user_id: str) -> List[Activity]:
+def get_activities_from_conversation(user_id: str) -> Tuple[List[Activity], str]:
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
     activities = activities_gateway.get_all_activities_by_user_id(user_id)
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -90,10 +90,10 @@ def get_activities_from_conversation(user_id: str) -> List[Activity]:
         Activity.new(user_id=user_id, measure=a.measure, title=a.title)
         for a in response.activities
     ]
-    return activities
+    return activities, response.reasonings
 
 
-def get_activity_entries_from_conversation(user_id: str) -> List[ActivityEntry]:
+def get_activity_entries_from_conversation(user_id: str) -> Tuple[List[ActivityEntry], str]:
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
     activities = activities_gateway.get_all_activities_by_user_id(user_id)
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -124,10 +124,10 @@ def get_activity_entries_from_conversation(user_id: str) -> List[ActivityEntry]:
         for a in response.activity_entries
     ]
 
-    return activity_entries
+    return activity_entries, response.reasonings
 
 
-def get_mood_report_from_conversation(user_id: str) -> MoodReport:
+def get_mood_report_from_conversation(user_id: str) -> Tuple[MoodReport | None, str]:
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
     current_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -158,7 +158,7 @@ def get_mood_report_from_conversation(user_id: str) -> MoodReport:
         if response.mood_report
         else None
     )
-    return mood_report
+    return mood_report, response.reasoning
 
 
 def generate_notification_text(
@@ -206,53 +206,6 @@ def generate_notification_text(
     return ask_text(user_prompt, system_prompt).strip('"')
 
 
-def store_activities_and_mood_from_conversation(
-    user_id: str,
-) -> Tuple[List[Activity], List[ActivityEntry], MoodReport | None, str]:
-    activities = get_activities_from_conversation(user_id)
-    created_activities = []
-    logger.info(f"Activities: {activities}")
-
-    for activity in activities:
-        try:
-            new_activity = activities_gateway.create_activity(activity)
-            if new_activity:
-                created_activities.append(new_activity)
-        except Exception as e:
-            traceback.print_exc()
-            logger.error(f"Error creating activity: {e}")
-
-    activity_entries = get_activity_entries_from_conversation(user_id)
-    created_activity_entries = []
-    logger.info(f"Activity entries: {activity_entries}")
-
-    for activity_entry in activity_entries:
-        try:
-            new_activity_entry = activities_gateway.create_activity_entry(activity_entry)
-            if new_activity_entry:
-                created_activities.append(new_activity)
-        except Exception as e:
-            traceback.print_exc()
-            logger.error(f"Error creating activity entry: {e}")
-
-    mood_report = get_mood_report_from_conversation(user_id)
-    created_mood_report = None
-    logger.info(f"Mood report: {mood_report}")
-
-    if mood_report:
-        try:
-            new_mood_report = moods_gateway.create_mood_report(mood_report)
-            if new_mood_report:
-                created_mood_report = new_mood_report
-        except Exception as e:
-            traceback.print_exc()
-            logger.error(f"Error creating mood report: {e}")
-
-    notification_text = generate_notification_text(
-        created_activities, created_activity_entries, created_mood_report
-    )
-
-    return activities, activity_entries, mood_report, notification_text.strip('"')
 
 
 async def process_audio(user_id: str, transcription: str):
@@ -266,11 +219,63 @@ async def process_audio(user_id: str, transcription: str):
     return text_response, audio_response
 
 
-async def process_activities_and_mood(user_id: str):
+async def process_activities_and_mood(user_id: str) -> Tuple[List[Activity], List[ActivityEntry], MoodReport | None, str, Dict[str, str]]:
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
-        executor, store_activities_and_mood_from_conversation, user_id
+    activities, activities_reasoning = await loop.run_in_executor(
+        executor, get_activities_from_conversation, user_id
     )
+    activity_entries, activity_entries_reasoning = await loop.run_in_executor(
+        executor, get_activity_entries_from_conversation, user_id
+    )
+    mood_report, mood_report_reasoning = await loop.run_in_executor(
+        executor, get_mood_report_from_conversation, user_id
+    )
+
+    created_activities = []
+    created_activity_entries = []
+    created_mood_report = None
+
+    logger.info(f"Activities: {activities}")
+    for activity in activities:
+        try:
+            new_activity = activities_gateway.create_activity(activity)
+            if new_activity:
+                created_activities.append(new_activity)
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Error creating activity: {e}")
+
+    logger.info(f"Activity entries: {activity_entries}")
+    for activity_entry in activity_entries:
+        try:
+            new_activity_entry = activities_gateway.create_activity_entry(activity_entry)
+            if new_activity_entry:
+                created_activity_entries.append(new_activity_entry)
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Error creating activity entry: {e}")
+
+    logger.info(f"Mood report: {mood_report}")
+    if mood_report:
+        try:
+            new_mood_report = moods_gateway.create_mood_report(mood_report)
+            if new_mood_report:
+                created_mood_report = new_mood_report
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Error creating mood report: {e}")
+
+    notification_text = generate_notification_text(
+        created_activities, created_activity_entries, created_mood_report
+    )
+
+    reasoning = {
+        "activities": activities_reasoning,
+        "activity_entries": activity_entries_reasoning,
+        "mood_report": mood_report_reasoning
+    }
+
+    return created_activities, created_activity_entries, created_mood_report, notification_text.strip('"'), reasoning
 
 
 async def process_message(websocket: WebSocket, user_id: str, message: str, input_mode: str, output_mode: str, audio_data: str = None, audio_format: str = None):
@@ -287,8 +292,20 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
         })
         message = transcription
 
+    activities, activity_entries, mood_report, notification_text, reasoning = (
+        await process_activities_and_mood(user_id)
+    )
+
+    # Update the assistant with the extraction results
+    extraction_summary = f"""
+    Extraction results:
+    Activities: {reasoning['activities']}
+    Activity Entries: {reasoning['activity_entries']}
+    Mood Report: {reasoning['mood_report']}
+    """
+
     text_response = await loop.run_in_executor(
-        executor, talk_with_assistant, user_id, message
+        executor, talk_with_assistant, user_id, message, extraction_summary
     )
     
     audio_response = None
@@ -296,10 +313,6 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
         audio_response = await loop.run_in_executor(
             executor, tts.text_to_speech, text_response
         )
-    
-    activities, activity_entries, mood_report, notification_text = (
-        await process_activities_and_mood(user_id)
-    )
     
     return text_response, audio_response, activities, activity_entries, mood_report, notification_text
 
