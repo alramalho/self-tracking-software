@@ -209,7 +209,7 @@ const SeePage: React.FC = () => {
         const filteredValue = filterDataByTimeRange(value);
 
         return (
-          <div key={activity.id} className="bg-white p-6 rounded-lg border-2">
+          <div key={activity.id} className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
             <div className="flex items-center space-x-3 mb-4">
               <h2 className="text-xl font-semibold text-gray-800">
                 {activity.title}
@@ -223,7 +223,7 @@ const SeePage: React.FC = () => {
                 value={filteredValue}
                 startDate={startDate}
                 endDate={endDate}
-                width="100%"
+                width={650}
                 height={200}
                 rectSize={14}
                 rectRender={(props, data) => {
