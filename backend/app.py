@@ -273,6 +273,37 @@ async def process_activities_and_mood(user_id: str):
     )
 
 
+async def process_message(websocket: WebSocket, user_id: str, message: str, input_mode: str, output_mode: str, audio_data: str = None, audio_format: str = None):
+    loop = asyncio.get_event_loop()
+    
+    if input_mode == "voice" and audio_data and audio_format:
+        # Perform STT and send intermediary transcription
+        transcription = await loop.run_in_executor(
+            executor, stt.speech_to_text, base64.b64decode(audio_data), audio_format
+        )
+        await websocket.send_json({
+            "type": "intermediary_transcription",
+            "text": transcription
+        })
+        message = transcription
+
+    text_response = await loop.run_in_executor(
+        executor, talk_with_assistant, user_id, message
+    )
+    
+    audio_response = None
+    if output_mode == "voice":
+        audio_response = await loop.run_in_executor(
+            executor, tts.text_to_speech, text_response
+        )
+    
+    activities, activity_entries, mood_report, notification_text = (
+        await process_activities_and_mood(user_id)
+    )
+    
+    return text_response, audio_response, activities, activity_entries, mood_report, notification_text
+
+
 @app.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
     logger.info("Connecting to websocket endpoint.")
@@ -285,77 +316,26 @@ async def websocket_endpoint(websocket: WebSocket):
                 data = await websocket.receive_text()
                 message = json.loads(data)
 
-                if message["action"] == "start_recording":
-                    audio_buffer.clear()
+                if message["action"] == "send_message":
+                    text = message.get("text", "")
+                    input_mode = message.get("input_mode", "text")
+                    output_mode = message.get("output_mode", "text")
+                    audio_data = message.get("audio_data")
+                    audio_format = message.get("audio_format")
 
-                elif message["action"] == "stop_recording":
-                    audio_data = message.get("audio_data", "")
-                    audio_format = message.get("audio_format", "")
-                    audio_bytes = base64.b64decode(audio_data)
-
-                    loop = asyncio.get_event_loop()
-                    transcription = await loop.run_in_executor(
-                        executor, stt.speech_to_text, audio_bytes, audio_format
+                    text_response, audio_response, activities, activity_entries, mood_report, notification_text = (
+                        await process_message(websocket, user.id, text, input_mode, output_mode, audio_data, audio_format)
                     )
 
-                    await websocket.send_json(
-                        {"type": "transcription", "text": transcription}
-                    )
+                    response_data = {
+                        "type": "message",
+                        "text": text_response,
+                    }
 
-                    # Process audio and activities/mood concurrently
-                    text_response, audio_response = await process_audio(
-                        user.id, transcription
-                    )
-                    activities, activity_entries, mood_report, notification_text = (
-                        await process_activities_and_mood(user.id)
-                    )
+                    if output_mode == "voice" and audio_response:
+                        response_data["audio"] = base64.b64encode(audio_response).decode("utf-8")
 
-                    await websocket.send_json(
-                        {
-                            "type": "audio",
-                            "transcription": text_response,
-                            "audio": base64.b64encode(audio_response).decode("utf-8"),
-                        }
-                    )
-
-                    # Send activities and mood data separately
-                    await websocket.send_json(
-                        {
-                            "type": "activities_update",
-                            "new_activities": [a.model_dump() for a in activities],
-                            "new_activity_entries": [
-                                a.model_dump() for a in activity_entries
-                            ],
-                            "new_mood_report": (
-                                mood_report.model_dump() if mood_report else None
-                            ),
-                            "new_activities_notification": notification_text,
-                            "reported_mood": bool(
-                                mood_report.model_dump() if mood_report else None
-                            ),
-                        }
-                    )
-
-                    audio_buffer.clear()
-
-                elif message["action"] == "update_transcription":
-                    updated_transcription = message.get("text", "")
-
-                    # Process audio and activities/mood concurrently
-                    text_response, audio_response = await process_audio(
-                        user.id, updated_transcription
-                    )
-                    activities, activity_entries, mood_report, notification_text = (
-                        await process_activities_and_mood(user.id)
-                    )
-
-                    await websocket.send_json(
-                        {
-                            "type": "audio",
-                            "transcription": text_response,
-                            "audio": base64.b64encode(audio_response).decode("utf-8"),
-                        }
-                    )
+                    await websocket.send_json(response_data)
 
                     # Send activities and mood data separately
                     await websocket.send_json(

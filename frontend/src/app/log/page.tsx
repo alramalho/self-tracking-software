@@ -5,7 +5,7 @@ import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
 import AudioControls from "@/components/AudioControls";
 import toast, { Toaster } from "react-hot-toast";
-import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle } from "lucide-react";
+import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle, Volume2, VolumeX } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
@@ -14,6 +14,7 @@ import {
   ChatBubbleAvatar,
   ChatBubbleMessage,
 } from "@/components/ui/chat/chat-bubble";
+import { Switch } from "@/components/ui/switch";
 
 type Message = {
   role: "user" | "assistant";
@@ -25,12 +26,13 @@ const LogPage: React.FC = () => {
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const { isRecording, toggleRecording } = useMicrophone(socket);
   const { addToQueue } = useSpeaker();
   const { addNotifications, sendNotification } = useNotifications();
-
+  
   const [transcription, setTranscription] = useState<string>("");
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
+  const [outputMode, setOutputMode] = useState<"voice" | "text">("voice");
+  const { isRecording, toggleRecording } = useMicrophone();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,24 +75,26 @@ const LogPage: React.FC = () => {
     setMessages((prevMessages) => [...prevMessages, message]);
   };
 
-  const handleIncomingAudio = useCallback(
-    (base64Audio: string, transcription: string) => {
-      const binaryString = atob(base64Audio);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      addToQueue(bytes.buffer);
+  const handleIncomingMessage = useCallback(
+    (message: string, audioBase64: string | null) => {
+      addMessage({ role: "assistant", content: message });
 
-      addMessage({ role: "assistant", content: transcription } as Message);
+      if (outputMode === "voice" && audioBase64) {
+        const binaryString = atob(audioBase64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        addToQueue(bytes.buffer);
+      }
 
       setIsLoading(false);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     },
-    [addToQueue]
+    [addToQueue, outputMode]
   );
 
   const handleActivitiesUpdate = useCallback(
@@ -117,36 +121,22 @@ const LogPage: React.FC = () => {
     socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
 
-      // Create a copy of the data for logging
-      const logData = { ...data };
-      if (logData.audio) {
-        logData.audio = "<audio file>";
-      }
-      console.log("Received message:", logData);
+      console.log("Received message:", data);
 
-      if (data.type === "audio") {
-        handleIncomingAudio(data.audio, data.transcription);
+      if (data.type === "message") {
+        handleIncomingMessage(data.text, data.audio);
       } else if (data.type === "activities_update") {
         handleActivitiesUpdate(
           data.new_activity_entries,
           data.new_activities_notification,
           data.reported_mood
         );
-      } else if (data.type === "transcription") {
+      } else if (data.type === "intermediary_transcription") {
         setTranscription(data.text);
         addMessage({ role: "user", content: `🎙️ ${data.text}` });
-        setIsLoading(true);
-
-        // Set timeout for server response
-        timeoutRef.current = setTimeout(() => {
-          setIsLoading(false);
-          toast.error("Server response timed out", {
-            position: "top-right",
-          });
-        }, 20000);
       }
     };
-  }, [socket, handleIncomingAudio, handleActivitiesUpdate]);
+  }, [socket, handleIncomingMessage, handleActivitiesUpdate]);
 
   const handleReconnect = () => {
     if (socket) {
@@ -161,17 +151,20 @@ const LogPage: React.FC = () => {
     setTranscription(e.target.value);
   };
 
-  const handleTranscriptionSubmit = () => {
+  const handleSendMessage = () => {
     if (socket && isConnected) {
       setIsLoading(true);
       socket.send(
         JSON.stringify({
-          action: "update_transcription",
+          action: "send_message",
           text: transcription,
+          input_mode: inputMode,
+          output_mode: outputMode,
         })
       );
 
       addMessage({ role: "user", content: transcription });
+      setTranscription("");
 
       // Set timeout for server response
       timeoutRef.current = setTimeout(() => {
@@ -186,6 +179,36 @@ const LogPage: React.FC = () => {
   const toggleInputMode = () => {
     setInputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
   };
+
+  const toggleOutputMode = () => {
+    setOutputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
+  };
+
+  const handleToggleRecording = useCallback(() => {
+    toggleRecording((audioData, audioFormat) => {
+      if (socket && isConnected) {
+        setIsLoading(true);
+        socket.send(
+          JSON.stringify({
+            action: "send_message",
+            text: "", // The server will use STT to convert audio to text
+            input_mode: "voice",
+            output_mode: outputMode,
+            audio_data: audioData,
+            audio_format: audioFormat,
+          })
+        );
+
+        // Set timeout for server response
+        timeoutRef.current = setTimeout(() => {
+          setIsLoading(false);
+          toast.error("Server response timed out", {
+            position: "top-right",
+          });
+        }, 20000);
+      }
+    });
+  }, [socket, isConnected, outputMode, toggleRecording]);
 
   useEffect(() => {
     console.log({ messages });
@@ -232,22 +255,48 @@ const LogPage: React.FC = () => {
           Reconnect
         </button>
       </div>
-      <button
-        onClick={toggleInputMode}
-        className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors flex items-center"
-      >
-        {inputMode === "voice" ? (
-          <>
-            <Mic className="mr-2" size={20} />
-            Switch to Text
-          </>
-        ) : (
-          <>
-            <MessageSquare className="mr-2" size={20} />
-            Switch to Voice
-          </>
-        )}
-      </button>
+      <div className="flex space-x-4 mb-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={inputMode === "voice"}
+            onCheckedChange={toggleInputMode}
+            id="input-mode"
+          />
+          <label htmlFor="input-mode" className="text-sm font-medium">
+            {inputMode === "voice" ? (
+              <>
+                <Mic className="inline mr-1" size={16} />
+                Voice Input
+              </>
+            ) : (
+              <>
+                <MessageSquare className="inline mr-1" size={16} />
+                Text Input
+              </>
+            )}
+          </label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={outputMode === "voice"}
+            onCheckedChange={toggleOutputMode}
+            id="output-mode"
+          />
+          <label htmlFor="output-mode" className="text-sm font-medium">
+            {outputMode === "voice" ? (
+              <>
+                <Volume2 className="inline mr-1" size={16} />
+                Voice Output
+              </>
+            ) : (
+              <>
+                <VolumeX className="inline mr-1" size={16} />
+                Text Output
+              </>
+            )}
+          </label>
+        </div>
+      </div>
       <button onClick={() => sendNotification("Hello", { body: "World" })}>
         Send Notification
       </button>
@@ -255,7 +304,7 @@ const LogPage: React.FC = () => {
         <AudioControls
           isRecording={isRecording}
           isConnected={isConnected}
-          toggleRecording={toggleRecording}
+          toggleRecording={handleToggleRecording}
         />
       ) : (
         <div className="w-full max-w-md">
@@ -267,11 +316,11 @@ const LogPage: React.FC = () => {
             placeholder="Type your message here..."
           />
           <button
-            onClick={handleTranscriptionSubmit}
+            onClick={handleSendMessage}
             className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors w-full"
             disabled={!isConnected}
           >
-            Submit Message
+            Send Message
           </button>
         </div>
       )}
