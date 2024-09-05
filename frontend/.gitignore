@@ -39,5 +39,6 @@ next-env.d.ts
 
 public/sw.js.map
 public/sw.js
+public/swe-worker-*.js
 public/workbox-*.js
 public/workbox-*.js.map
