@@ -17,10 +17,6 @@ interface NotificationsContextType {
   requestPermission: () => Promise<void>;
   isAppInstalled: boolean;
   isPushGranted: boolean;
-  isPeriodicSyncEnabled: boolean;
-  setupPeriodicSync: () => Promise<void>;
-  cancelPeriodicSync: () => Promise<void>;
-  triggerPeriodicSync: () => Promise<void>;
   alertSubscriptionEndpoint: () => void;
 }
 
@@ -40,7 +36,6 @@ export const NotificationsProvider = ({
 
   const [isPwaSupported, setIsPwaSupported] = useState(false);
   const [isPushGranted, setIsPushGranted] = useState(false);
-  const [isPeriodicSyncEnabled, setIsPeriodicSyncEnabled] = useState(false);
   const [registration, setRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
 
@@ -156,150 +151,42 @@ export const NotificationsProvider = ({
 
   const requestPermission = async () => {
     try {
-      if (isPwaSupported)
-        Notification.requestPermission().then(async (result) => {
-          if (result === "granted") {
-            setIsPushGranted(true);
+      if (isPwaSupported) {
+        const result = await Notification.requestPermission();
+        if (result === "granted") {
+          setIsPushGranted(true);
 
-            // Reload to make sure page is in the correct state with new permissions
-            location.reload();
+          // Wait for the registration to be available
+          const reg = await navigator.serviceWorker.ready;
+          setRegistration(reg);
 
-            // Permission state *should* match "granted" after above operation, but we check again
-            // for safety. This is necessary if the subscription request is elsewhere in your flow
-            const pm = await registration?.pushManager?.permissionState();
-            if (pm === "granted")
-              // https://developer.mozilla.org/en-US/docs/Web/API/PushManager
-              // Requires HTTPS and a valid service worker to receive push notifications
-              registration?.pushManager
-                .subscribe({
-                  userVisibleOnly: true,
-                  applicationServerKey: "HELLOWORLD",
-                })
-                .then(
-                  (subscription) => {
-                    setSubscription(subscription);
-                    // This is the endpoint URL you're looking for
-                    alert("Push endpoint:" + subscription.endpoint);
-                    
-                    // You should send this endpoint to your server and store it
-                    // associated with the user's account
-                    // sendEndpointToServer(subscription.endpoint);
-                  },
-                  (err) => alert(err)
-                );
+          // Check permission state again
+          const pm = await reg.pushManager.permissionState({userVisibleOnly: true});
+          if (pm === "granted") {
+            try {
+              const subscription = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+              });
+              setSubscription(subscription);
+              alert("Push endpoint:" + subscription.endpoint);
+              // sendEndpointToServer(subscription.endpoint);
+            } catch (err) {
+              console.error("Failed to subscribe:", err);
+              alert("Failed to subscribe: " + err);
+            }
           } else {
-            alert(
-              "We weren't allowed to send you notifications. Permission state is: " +
-                result
-            );
+            alert("Push manager permission state is: " + pm);
           }
-        });
-      else {
-        // Alert the user that they need to install the web page to use notifications
+        } else {
+          alert("Notification permission was not granted. State: " + result);
+        }
+      } else {
         alert("You need to install this web page to use notifications");
       }
     } catch (err) {
-      alert(err);
-    }
-  };
-
-  const setupPeriodicSync = async () => {
-    alert("setupPeriodicSync");
-    if (isAppInstalled) {
-      if (
-        "serviceWorker" in navigator &&
-        "periodicSync" in navigator.serviceWorker
-      ) {
-        const registration = await navigator.serviceWorker.ready;
-        if ("periodicSync" in registration) {
-          try {
-            const periodicSync = (registration as any).periodicSync;
-            const tags = await periodicSync.getTags();
-            if (!tags.includes("daily-sync")) {
-              await periodicSync.register("daily-sync", {
-                minInterval: 24 * 60 * 60 * 1000, // 1 day
-              });
-              alert("Daily sync registered");
-              setIsPeriodicSyncEnabled(true);
-            } else {
-              alert("Daily sync already registered");
-            }
-          } catch (error) {
-            alert("Error setting up periodic sync:" + error);
-          }
-        } else {
-          alert("Periodic Sync API not available in registration");
-        }
-      } else {
-        alert("Periodic Sync API not available in navigator");
-      }
-    } else {
-      alert("You need to install the app to setup periodic sync");
-    }
-  };
-
-  const cancelPeriodicSync = async () => {
-    if (isAppInstalled) {
-      if (
-        "serviceWorker" in navigator &&
-        "periodicSync" in navigator.serviceWorker
-      ) {
-        const registration = await navigator.serviceWorker.ready;
-        if ("periodicSync" in registration) {
-          try {
-            const periodicSync = (registration as any).periodicSync;
-            const tags = await periodicSync.getTags();
-            if (tags.includes("daily-sync")) {
-              await periodicSync.unregister("daily-sync");
-              alert("Daily sync unregistered");
-              setIsPeriodicSyncEnabled(false);
-            } else {
-              alert("No daily sync to cancel");
-            }
-          } catch (error) {
-            alert("Error canceling periodic sync:" + error);
-          }
-        }
-      }
-    } else {
-      alert("You need to install the app to cancel periodic sync");
-    }
-  };
-
-  const triggerPeriodicSync = async () => {
-    if (isAppInstalled && registration) {
-      try {
-        const periodicSync = (registration as any).periodicSync;
-        if (periodicSync) {
-          await periodicSync.trigger('daily-sync');
-          alert('Periodic sync triggered manually');
-        } else {
-          console.warn('Periodic Sync API not available');
-        }
-      } catch (error) {
-        alert('Error triggering periodic sync:' + error);
-      }
-    } else {
-      alert('App not installed or registration not available');
-    }
-  };
-
-  const triggerNotificationFromClient = async () => {
-    try {
-      const response = await fetch('/api/trigger-notification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      if (response.ok) {
-        console.log('Notification triggered successfully');
-      } else {
-        console.error('Failed to trigger notification');
-      }
-    } catch (error) {
-      console.error('Error triggering notification:', error);
+      console.error("Error in requestPermission:", err);
+      alert("Error: " + err);
     }
   };
 
@@ -313,10 +200,6 @@ export const NotificationsProvider = ({
         requestPermission,
         isAppInstalled,
         isPushGranted,
-        isPeriodicSyncEnabled,
-        setupPeriodicSync,
-        cancelPeriodicSync,
-        triggerPeriodicSync,
         alertSubscriptionEndpoint
       }}
     >

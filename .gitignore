@@ -7,3 +7,7 @@ todos.md
 localhost.crt
 localhost.key
 .vercel
+
+
+vapid_private.pem
+vapid_public.pem

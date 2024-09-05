@@ -11,12 +11,8 @@ const ProfilePage: React.FC = () => {
   const { signOut } = useClerk();
   const {
     isAppInstalled,
-    setupPeriodicSync,
-    triggerPeriodicSync,
     sendNotification,
     isPushGranted,
-    isPeriodicSyncEnabled,
-    cancelPeriodicSync,
     requestPermission,
     alertSubscriptionEndpoint,
   } = useNotifications();
@@ -32,14 +28,6 @@ const ProfilePage: React.FC = () => {
       if (!isPushGranted) {
         await requestPermission();
         return
-      }
-
-      await setupPeriodicSync();
-    } else {
-      try {
-        await cancelPeriodicSync();
-      } catch (error) {
-        alert("Error canceling periodic sync:" + error);
       }
     }
   };
@@ -61,7 +49,7 @@ const ProfilePage: React.FC = () => {
         <Bell size={20} />
         <span>Notifications</span>
         <Switch
-          checked={isAppInstalled && isPushGranted && isPeriodicSyncEnabled}
+          checked={isAppInstalled && isPushGranted}
           onCheckedChange={handleNotificationChange}
         />
       </div>
@@ -69,13 +57,6 @@ const ProfilePage: React.FC = () => {
         <span>App Installed</span>
         <Switch checked={isAppInstalled} disabled />
       </div>
-      <button
-        onClick={triggerPeriodicSync}
-        className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-purple-500 hover:bg-purple-600"
-        disabled={!isAppInstalled}
-      >
-        Test Periodic Sync
-      </button>
       <button
         onClick={handleTestNotification}
         className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-blue-500 hover:bg-blue-600"
