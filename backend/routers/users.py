@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends
-from typing import List
+from fastapi import APIRouter, Depends, Body
+from typing import List, Optional
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
+from gateways.users import UsersGateway
 
-router = APIRouter(prefix="/api", dependencies=[Depends(is_clerk_user)])
+router = APIRouter(prefix="/api")
 
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
+users_gateway = UsersGateway()
 
 class ActivityResponse(BaseModel):
     id: str
@@ -27,6 +29,11 @@ class MoodReportResponse(BaseModel):
     user_id: str
     date: str
     score: str
+
+class PwaStatusUpdate(BaseModel):
+    is_pwa_installed: Optional[bool] = None
+    is_pwa_notifications_enabled: Optional[bool] = None
+    pwa_endpoint: Optional[str] = None
 
 @router.get("/activities", response_model=List[ActivityResponse])
 async def get_activities(user: User = Depends(is_clerk_user)):
@@ -62,3 +69,12 @@ async def get_mood_reports(user: User = Depends(is_clerk_user)):
 @router.get("/user-health")
 async def health():
     return {"status": "ok"}
+
+@router.post("/update-pwa-status")
+async def update_pwa_status(
+    status_update: PwaStatusUpdate = Body(...),
+    user: User = Depends(is_clerk_user)
+):
+    update_fields = {k: v for k, v in status_update.dict().items() if v is not None}
+    updated_user = users_gateway.update_fields(user.id, update_fields)
+    return {"message": "PWA status updated successfully", "user": updated_user}

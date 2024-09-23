@@ -8,6 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import { isNotifySupported } from "@/app/swSupport";
+import { useApiWithAuth } from "@/api";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -39,6 +40,8 @@ export const NotificationsProvider = ({
   const [registration, setRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
 
+  const api = useApiWithAuth();
+
   useEffect(() => {
     if (subscription) {
       alert("Subscription:" + subscription.endpoint);
@@ -56,7 +59,7 @@ export const NotificationsProvider = ({
   useEffect(() => {
     const isInPWA = window.matchMedia('(display-mode: standalone)').matches;
     setIsAppInstalled(isInPWA);
-  });
+  }, []);
 
   useEffect(() => {
     // Check if all the features we want are available
@@ -170,7 +173,8 @@ export const NotificationsProvider = ({
               });
               setSubscription(subscription);
               alert("Push endpoint:" + subscription.endpoint);
-              // sendEndpointToServer(subscription.endpoint);
+              // Use api in a useCallback hook
+              await updatePwaStatus(subscription.endpoint);
             } catch (err) {
               console.error("Failed to subscribe:", err);
               alert("Failed to subscribe: " + err);
@@ -189,6 +193,21 @@ export const NotificationsProvider = ({
       alert("Error: " + err);
     }
   };
+
+  // Define updatePwaStatus using useCallback
+  const updatePwaStatus = React.useCallback(async (endpoint: string) => {
+    try {
+      await api.post("/api/update-pwa-status", {
+        is_pwa_installed: true,
+        is_pwa_notifications_enabled: true,
+        pwa_endpoint: endpoint,
+      });
+      alert("PWA status updated");
+    } catch (error) {
+      console.error("Failed to update PWA status:", error);
+      alert("Failed to update PWA status: " + error);
+    }
+  }, [api]);
 
   return (
     <NotificationsContext.Provider

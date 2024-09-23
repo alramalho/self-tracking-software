@@ -29,10 +29,14 @@ class MongoDBGateway(DBGateway):
     def write(self, data: dict):
         if 'id' in data:
             # Check if document with this id exists
-            existing = self.collection.find_one({'_id': data['id']})
-            if existing:
+            existing_entries = self.query('id', data['id'])
+            if len(existing_entries) > 0:
                 # Document exists, use the provided id
-                data['_id'] = data['id']
+                existing_id = existing_entries[0]['id']
+                if type(existing_id) == str:
+                    data['_id'] = ObjectId(existing_id)
+                else:
+                    data['_id'] = existing_id
             else:
                 # Document doesn't exist, create new ObjectId
                 data['_id'] = ObjectId()
@@ -49,10 +53,15 @@ class MongoDBGateway(DBGateway):
     def query(self, key: str, value: str) -> List[Dict]:
         if key == 'id':
             key = '_id'
+            logger.log("DB", "Value type: " + str(type(value)))
             if type(value) == str:
+                logger.log("DB", "Value is a string")
                 value = ObjectId(value)
         logger.log("DB", f'MongoDB: Querying from MongoDB ... Key:"{key}" Value:"{value}"')
-        return [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
+        logger.log("DB", "New Value type: " + str(type(value)))
+        result = [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
+        logger.log("DB", "Result: " + str(result))
+        return result
 
     def count(self, key: str, value: str) -> int:
         if key == 'id':
