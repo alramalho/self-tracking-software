@@ -16,3 +16,9 @@ MONGO_DB_NAME="trackingso"
 MONGO_DB_CONNECTION_STRING=os.getenv("MONGO_DB_CONNECTION_STRING")
 CLERK_JWT_PUBLIC_KEY=os.getenv("CLERK_JWT_PUBLIC_KEY")
 SVIX_SECRET=os.getenv("SVIX_SECRET")
+
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
+VAPID_CLAIMS = {
+    "sub": "mailto:alexandre.ramalho.1998@gmail.com"
+}

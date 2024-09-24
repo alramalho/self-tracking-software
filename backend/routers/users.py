@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
@@ -6,6 +6,10 @@ from entities.user import User
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from gateways.users import UsersGateway
+from constants import VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_CLAIMS
+from pywebpush import webpush, WebPushException
+import json
+import traceback
 
 router = APIRouter(prefix="/api")
 
@@ -30,10 +34,11 @@ class MoodReportResponse(BaseModel):
     date: str
     score: str
 
-class PwaStatusUpdate(BaseModel):
-    is_pwa_installed: Optional[bool] = None
-    is_pwa_notifications_enabled: Optional[bool] = None
-    pwa_endpoint: Optional[str] = None
+class PushNotificationPayload(BaseModel):
+    title: str
+    body: str
+    icon: Optional[str] = None
+    url: Optional[str] = None
 
 @router.get("/activities", response_model=List[ActivityResponse])
 async def get_activities(user: User = Depends(is_clerk_user)):
@@ -70,6 +75,13 @@ async def get_mood_reports(user: User = Depends(is_clerk_user)):
 async def health():
     return {"status": "ok"}
 
+class PwaStatusUpdate(BaseModel):
+    is_pwa_installed: Optional[bool] = None
+    is_pwa_notifications_enabled: Optional[bool] = None
+    pwa_subscription_endpoint: Optional[str] = None
+    pwa_subscription_key: Optional[str] = None
+    pwa_subscription_auth_token: Optional[str] = None
+
 @router.post("/update-pwa-status")
 async def update_pwa_status(
     status_update: PwaStatusUpdate = Body(...),
@@ -78,3 +90,34 @@ async def update_pwa_status(
     update_fields = {k: v for k, v in status_update.dict().items() if v is not None}
     updated_user = users_gateway.update_fields(user.id, update_fields)
     return {"message": "PWA status updated successfully", "user": updated_user}
+
+@router.post("/send-push-notification")
+async def send_push_notification(
+    payload: PushNotificationPayload = Body(...),
+    user: User = Depends(is_clerk_user)
+):
+    subscription_info = users_gateway.get_subscription_info(user.id)
+    if not subscription_info:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    print(f"Sending push notification to: {subscription_info}")
+    print(f"Payload: {payload}")
+
+    try:
+        response = webpush(
+            subscription_info,
+            data=json.dumps({
+                "title": payload.title,
+                "body": payload.body,
+                "icon": payload.icon,
+                "url": payload.url
+            }),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims=VAPID_CLAIMS
+        )
+        print(f"WebPush response: {response.text}")
+        return {"message": "Push notification sent successfully"}
+    except WebPushException as ex:
+        print(f"WebPush error: {ex}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to send push notification: {ex}")

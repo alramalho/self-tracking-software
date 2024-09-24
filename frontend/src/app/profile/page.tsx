@@ -11,16 +11,19 @@ const ProfilePage: React.FC = () => {
   const { signOut } = useClerk();
   const {
     isAppInstalled,
-    sendNotification,
+    sendLocalNotification,
+    sendPushNotification,
     isPushGranted,
+    setIsPushGranted,
     requestPermission,
     alertSubscriptionEndpoint,
   } = useNotifications();
 
-  const handleTestNotification = () => {
-    sendNotification("Test Notification", {
-      body: "This is a test notification",
-    });
+  const handleTestLocalNotification = () => {
+    sendLocalNotification("Test Local Notification", "This is a test localnotification");
+  };
+  const handleTestPushNotification = () => {
+    sendPushNotification("Test Push Notification", "This is a test push notification");
   };
 
   const handleNotificationChange = async (checked: boolean) => {
@@ -29,6 +32,8 @@ const ProfilePage: React.FC = () => {
         await requestPermission();
         return
       }
+    } else {
+      setIsPushGranted(false);
     }
   };
 
@@ -49,7 +54,7 @@ const ProfilePage: React.FC = () => {
         <Bell size={20} />
         <span>Notifications</span>
         <Switch
-          checked={isAppInstalled && isPushGranted}
+          checked={isPushGranted}
           onCheckedChange={handleNotificationChange}
         />
       </div>
@@ -58,11 +63,18 @@ const ProfilePage: React.FC = () => {
         <Switch checked={isAppInstalled} disabled />
       </div>
       <button
-        onClick={handleTestNotification}
+        onClick={handleTestLocalNotification}
         className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-blue-500 hover:bg-blue-600"
         disabled={!isAppInstalled}
       >
-        Test Notification
+        Test Local Notification
+      </button>
+      <button
+        onClick={handleTestPushNotification}
+        className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-blue-500 hover:bg-blue-600"
+        disabled={!isAppInstalled}
+      >
+        Test Push Notification
       </button>
       <button
         onClick={alertSubscriptionEndpoint}

@@ -70,6 +70,18 @@ class UsersGateway:
 
     def update_field(self, user_id: str, field_name: str, new_value: Any) -> User:
         return self.update_fields(user_id, {field_name: new_value})
+
+    def get_subscription_info(self, user_id: str):
+        # Fetch the subscription info from your database
+        # This is just a placeholder implementation
+        user = self.get_user_by_id(user_id)
+        return {
+            "endpoint": user.pwa_subscription_endpoint,
+            "keys": {
+                "p256dh": user.pwa_subscription_key,
+                "auth": user.pwa_subscription_auth_token
+            }
+        }
     
 
 if __name__ == "__main__":

@@ -10,4 +10,6 @@ class User(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     is_pwa_installed: bool = False
     is_pwa_notifications_enabled: bool = False
-    pwa_endpoint: str | None = None
+    pwa_subscription_endpoint: str | None = None
+    pwa_subscription_key: str | None = None
+    pwa_subscription_auth_token: str | None = None
