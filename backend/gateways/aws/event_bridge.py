@@ -88,7 +88,7 @@ class EventBridgeCronGateway:
 
     def delete(self, cronjob_id: str):
         try:
-            self.client.remove_targets(Rule=cronjob_id, Ids=["y-thinking-app-backend-lambda"])
+            self.client.remove_targets(Rule=cronjob_id, Ids=["tracking-software-backend-lambda"])
             self.client.delete_rule(Name=cronjob_id)
         except ClientError as err:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":

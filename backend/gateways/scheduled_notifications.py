@@ -91,10 +91,10 @@ class ScheduledNotificationController:
         return [ScheduledNotification(**item) for item in self.db_gateway.query("user_id", user_id)]
 
     def delete(self, notification_id: str):
-        notification = self.db_gateway.get_item("id", notification_id)
+        notification = self.get(notification_id)
         if notification:
-            self.cron_gateway.delete(notification['aws_cronjob_id'])
-            self.db_gateway.delete_item("id", notification_id)
+            self.cron_gateway.delete(notification.aws_cronjob_id)
+            self.db_gateway.delete_all("id", notification_id)
 
     def update(self, notification: ScheduledNotification):
         self.db_gateway.write(notification.dict())
@@ -104,8 +104,8 @@ class ScheduledNotificationController:
         if not notification or not notification.activated:
             return ""
 
-        return ask_text(notification.purpose_prompt)
+        return ask_text(notification.purpose_prompt, "")
 
     def get(self, notification_id: str) -> Optional[ScheduledNotification]:
-        item = self.db_gateway.get_item("id", notification_id)
-        return ScheduledNotification(**item) if item else None
+        data = self.db_gateway.query("id", notification_id)
+        return ScheduledNotification(**data[0]) if len(data) > 0 else None
