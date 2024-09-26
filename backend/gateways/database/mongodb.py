@@ -71,5 +71,9 @@ class MongoDBGateway(DBGateway):
         logger.log("DB", f'MongoDB: Counting in MongoDB ... Key:"{key}" Value:"{value}"')
         return self.collection.count_documents({key: value})
 
+    def close(self):
+        if hasattr(self, 'client'):
+            self.client.close()
+
     def __del__(self):
-        self.client.close()
+        self.close()

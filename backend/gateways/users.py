@@ -85,8 +85,13 @@ class UsersGateway:
     
 
 if __name__ == "__main__":
+    from shared.logger import create_logger
+
+    logger = create_logger()
     from gateways.database.mongodb import MongoDBGateway
+    from ai.assistant.memory import DatabaseMemory
 
     gateway = UsersGateway()
+    memory = DatabaseMemory(MongoDBGateway("messages"), "66b29679de73d9a05e77a247")
 
-    print(gateway.get_user_by_id("66b29679de73d9a05e77a247"))
+    print(memory.read_all_as_str())

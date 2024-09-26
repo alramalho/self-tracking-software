@@ -299,7 +299,7 @@ export const NotificationsProvider = ({
     url?: string
   ) => {
     try {
-      await api.post("/api/send-push-notification", {
+      await api.post("/api/trigger-push-notification", {
         title,
         body,
         icon,

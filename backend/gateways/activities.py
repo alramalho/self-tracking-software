@@ -38,6 +38,11 @@ class ActivitiesGateway:
     
     def get_all_activity_entries_by_activity_id(self, activity_id: str) -> list[ActivityEntry]:
         return [ActivityEntry(**data) for data in self.activitiy_entries_db_gateway.query("activity_id", activity_id)]
+    
+    def get_recent_activity_entries(self, user_id: str, limit: int = 5) -> list[ActivityEntry]:
+        all_activity_entries = self.activitiy_entries_db_gateway.query("user_id", user_id)
+        ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x['created_at'], reverse=True)
+        return [ActivityEntry(**data) for data in ordered_activity_entries[:limit]]
 
     def create_activity(self, activity: Activity) -> Activity:
         if len(self.activities_db_gateway.query("id", activity.id)) != 0:

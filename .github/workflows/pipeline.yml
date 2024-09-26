@@ -8,9 +8,7 @@ on:
 jobs:
 
   deploy-backend:
-    uses: ./.github/workflows/deploy-to-digitalocean.yml
-    with:
-      app_id: e725e5a4-9d51-473f-85be-c8fa45671399
+    uses: ./.github/workflows/deploy-backend.yml
     secrets: inherit
 
   deploy-frontend:

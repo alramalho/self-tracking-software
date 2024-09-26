@@ -12,3 +12,6 @@ svix
 pyngrok
 filetype
 pywebpush
+boto3
+aws_cron_expression_validator
+pytz

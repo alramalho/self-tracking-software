@@ -1,0 +1,32 @@
+name: Deploy to Sandbox
+
+on:
+  workflow_call:
+jobs:
+  deploy-cdk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+            token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Deploy CDK
+        env:
+          ENVIRONMENT: sandbox
+        run: |
+          cd aws-infrastructure
+          export BACKEND_API_URL=$(doctl apps list --format DefaultIngress | awk 'NR==2')
+          yarn
+          yarn bootstrap
+          yarn deploy

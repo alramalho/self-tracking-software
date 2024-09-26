@@ -42,7 +42,7 @@ class Assistant(object):
         user_activities: List[Activity],
         memory: Memory,
     ):
-        self.name = "Torotoro"
+        self.name = "Jarvis"
         self.memory = memory
         self.user = user
         self.user_activities = user_activities

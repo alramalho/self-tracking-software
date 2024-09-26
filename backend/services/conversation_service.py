@@ -8,6 +8,7 @@ from ai.assistant.memory import DatabaseMemory
 from ai.llm import ask_schema, ask_text
 from datetime import datetime
 from ai.assistant.assistant import Assistant, activities_description, activity_entries_description
+import pytz
 
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
@@ -22,6 +23,9 @@ from fastapi import WebSocket
 import base64
 
 from shared.executor import executor
+
+from backend.gateways.scheduled_notifications import ScheduledNotificationController
+from gateways.users import UsersGateway
 
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
@@ -294,3 +298,57 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
         )
     
     return text_response, audio_response, activities, activity_entries, mood_report, notification_text
+
+def initiate_user_recurrent_checkin(user_id: str):
+    users_gateway = UsersGateway()
+    user = users_gateway.get_user_by_id(user_id)
+    
+    activities_gateway = ActivitiesGateway()
+    activities = activities_gateway.get_all_activities_by_user_id(user_id)
+    
+    notification_controller = ScheduledNotificationController()
+
+    memory = DatabaseMemory(MongoDBGateway("messages"), user_id)
+    conversation_history = memory.read_all_as_str()
+
+    purpose_prompt = f"""
+            You are Jarvis, a friendly AI assistant focused on engaging the user in conversations about their activities, mood, and personal growth.
+            This is your proactive reach-out time.
+            Analyze ALL information provided to you about the User (activities, preferences, conversation history) to craft a short, engaging notification.
+            The goal of this notification is to encourage reflection and interaction.
+            
+            Craft your message as a brief, inspiring quote, a meaningful tip, or a personal question tailored to the user's goals and activities. Aim for a balance that sparks curiosity and invites a response.
+            
+            Examples of effective messages include:
+            - "How's your meditation practice going? Remember, even 5 minutes can make a difference!", for a user with a meditation activity
+            - "Finished any good books lately? I'd love to hear your thoughts!", for a user with a reading activity
+            - "How's the progress on your startup? Any exciting milestones this week?", for a user working on a startup
+            - "Music gives a soul to the universe, wings to the mind, flight to the imagination. – Plato", for a user interested in music
+
+            Avoid overly complex or deep questions. Keep it light, personal, and engaging.
+            Always start with a brief greeting.
+            Diversify your questions and topics to keep the interactions fresh and interesting.
+
+            Here's the info about the user:
+            Activities: {[str(a) for a in activities]}
+            Last activities logged: {[str(a) for a in activities_gateway.get_recent_activity_entries(user_id)]}
+
+            Conversation history:
+            {conversation_history}
+
+            Current date and time in user's timezone:
+            {datetime.now(pytz.timezone(user.preferences.timezone)).strftime("%A, %B %d, %Y at %I:%M %p %Z")}
+
+            Output only the message to be sent to the user. Nothing more, nothing less.
+
+            Your message to be sent to the user:
+    """
+
+    # Create daily check-in
+    notification_controller.create(
+        user_id=user_id,
+        purpose_prompt=purpose_prompt,
+        recurrence="daily",
+        time_deviation_in_hours=3
+    )
+

@@ -1,0 +1,35 @@
+{
+  "name": "aws-infrastructure",
+  "version": "0.1.0",
+  "bin": {
+    "aws-infrastructure": "src/main.js"
+  },
+  "scripts": {
+    "diff": "cdk diff",
+    "bootstrap": "cdk bootstrap",
+    "presynth": "echo '\n️\\0033[43;1m ⚠ Consider running `yarn diff` to check differences ⚠\\0033[0m️\n️' && rm -rf cdk.out",
+    "synth": "cdk synth",
+    "predeploy": "yarn synth",
+    "list": "cdk ls",
+    "deploy": "cdk deploy --require-approval never --all"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.4.0",
+    "@types/node": "18.14.6",
+    "@types/prettier": "2.7.2",
+    "aws-cdk": "^2.85.0",
+    "aws-cdk-local": "^2.17.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.0.5",
+    "ts-node": "^10.9.1",
+    "typescript": "~4.9.5"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-apigatewayv2-alpha": "^2.85.0-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "^2.85.0-alpha.0",
+    "aws-cdk-lib": "^2.85.0",
+    "constructs": "^10.1.270",
+    "dotenv": "^16.0.3",
+    "source-map-support": "^0.5.21"
+  }
+}

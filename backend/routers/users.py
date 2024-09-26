@@ -6,10 +6,12 @@ from entities.user import User
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from gateways.users import UsersGateway
-from constants import VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_CLAIMS
+from constants import VAPID_PRIVATE_KEY, VAPID_CLAIMS
 from pywebpush import webpush, WebPushException
+from services.conversation_service import initiate_user_recurrent_checkin
 import json
 import traceback
+from backend.gateways.scheduled_notifications import ScheduledNotificationController
 
 router = APIRouter(prefix="/api")
 
@@ -91,10 +93,9 @@ async def update_pwa_status(
     updated_user = users_gateway.update_fields(user.id, update_fields)
     return {"message": "PWA status updated successfully", "user": updated_user}
 
-@router.post("/send-push-notification")
 async def send_push_notification(
-    payload: PushNotificationPayload = Body(...),
-    user: User = Depends(is_clerk_user)
+    payload: PushNotificationPayload,
+    user: User
 ):
     subscription_info = users_gateway.get_subscription_info(user.id)
     if not subscription_info:
@@ -121,3 +122,38 @@ async def send_push_notification(
         print(f"WebPush error: {ex}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to send push notification: {ex}")
+
+@router.post("/trigger-push-notification")
+async def trigger_push_notification(
+    payload: PushNotificationPayload = Body(...),
+    user: User = Depends(is_clerk_user)
+):
+    return await send_push_notification(payload, user)
+
+@router.post("/process-scheduled-notification")
+async def process_scheduled_notification(notification_id: str = Body(...)):
+    notification_controller = ScheduledNotificationController()
+    message = notification_controller.process_notification(notification_id)
+    
+    if message:
+        users_gateway = UsersGateway()
+        notification = notification_controller.get(notification_id)
+        user = users_gateway.get_user_by_id(notification.user_id)
+        
+        # Send push notification
+        await send_push_notification(
+            PushNotificationPayload(title=f"hey {user.name}", body=message.lower(), url="/log"),
+            user
+        )
+
+        # Recreate the notification for changing time of the day its processed
+        notification_controller.recreate(notification_id)
+
+        return {"message": "Notification processed, sent successfully, and recreated for next occurrence"}
+    else:
+        return {"message": "No notification processed"}
+
+@router.post("/initiate-user-recurrent-checkin")
+async def initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
+    initiate_user_recurrent_checkin(user.id)
+    return {"message": "Recurrent check-in initiated successfully"}
