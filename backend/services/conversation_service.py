@@ -24,7 +24,7 @@ import base64
 
 from shared.executor import executor
 
-from backend.gateways.scheduled_notifications import ScheduledNotificationController
+from gateways.scheduled_notifications import ScheduledNotificationController
 from gateways.users import UsersGateway
 
 users_gateway = UsersGateway()

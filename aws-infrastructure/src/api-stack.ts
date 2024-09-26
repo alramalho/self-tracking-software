@@ -27,7 +27,7 @@ export class ApiStack extends cdk.Stack {
         handler: "cron_proxy.lambda_handler",
         timeout: cdk.Duration.seconds(899),
         code: lambda.Code.fromAsset(
-          path.join(__dirname, "..", "..", "..", "backend", "lambdas")
+          path.join(__dirname, "..", "..", "backend", "lambdas")
         ),
         environment: {
           API_URL: process.env.BACKEND_API_URL!,

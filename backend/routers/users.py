@@ -11,7 +11,7 @@ from pywebpush import webpush, WebPushException
 from services.conversation_service import initiate_user_recurrent_checkin
 import json
 import traceback
-from backend.gateways.scheduled_notifications import ScheduledNotificationController
+from gateways.scheduled_notifications import ScheduledNotificationController
 
 router = APIRouter(prefix="/api")
 

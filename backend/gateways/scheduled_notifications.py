@@ -4,7 +4,6 @@ from typing import List, Optional
 from gateways.aws.event_bridge import EventBridgeCronGateway
 from gateways.database.mongodb import MongoDBGateway
 from constants import CHRON_PROXY_LAMBDA_TARGET_ARN
-from services.conversation_service import get_last_interaction_date, get_recent_activity_entries
 from ai.llm import ask_text
 import pytz
 import random
