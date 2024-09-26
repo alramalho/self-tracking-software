@@ -136,7 +136,6 @@ async def process_scheduled_notification(notification_id: str = Body(...)):
     message = notification_controller.process_notification(notification_id)
     
     if message:
-        users_gateway = UsersGateway()
         notification = notification_controller.get(notification_id)
         user = users_gateway.get_user_by_id(notification.user_id)
         
@@ -153,7 +152,7 @@ async def process_scheduled_notification(notification_id: str = Body(...)):
     else:
         return {"message": "No notification processed"}
 
-@router.post("/initiate-user-recurrent-checkin")
-async def initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
-    initiate_user_recurrent_checkin(user.id)
+@router.post("/initiate-user-recurrent-checkin/{user_id}")
+async def initiate_recurrent_checkin(user_id: str):
+    initiate_user_recurrent_checkin(user_id)
     return {"message": "Recurrent check-in initiated successfully"}
