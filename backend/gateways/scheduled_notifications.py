@@ -3,14 +3,15 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from gateways.aws.event_bridge import EventBridgeCronGateway
 from gateways.database.mongodb import MongoDBGateway
+from bson import ObjectId
+from pydantic import Field
 from constants import CHRON_PROXY_LAMBDA_TARGET_ARN
 from ai.llm import ask_text
 import pytz
 import random
-import uuid
 
 class ScheduledNotification(BaseModel):
-    id: str
+    id: str = Field(default_factory=lambda: str(ObjectId()))
     created_at: str
     purpose_prompt: str
     user_id: str
@@ -25,7 +26,7 @@ class ScheduledNotificationController:
 
     def create(self, user_id: str, purpose_prompt: str, recurrence: str, time_deviation_in_hours: int) -> ScheduledNotification:
         cron_str = self._generate_cron_string(recurrence, time_deviation_in_hours)
-        notification_id = str(uuid.uuid4())
+        notification_id=str(ObjectId())
         aws_cronjob_id = self.cron_gateway.create(
             cron_str,
             target=CHRON_PROXY_LAMBDA_TARGET_ARN,

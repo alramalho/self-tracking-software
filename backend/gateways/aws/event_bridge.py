@@ -5,6 +5,7 @@ import boto3
 from constants import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 from typing import Optional, List
 from pydantic import BaseModel
+from datetime import datetime
 
 class CronJobTarget(BaseModel):
     Arn: str
@@ -76,7 +77,7 @@ class EventBridgeCronGateway:
             Name=cron_id,
             ScheduleExpression=aws_cron_string,
             State="ENABLED",
-            Description="Task created by Tracking Software.",
+            Description=f"Task created by Tracking Software on {datetime.now().isoformat()}.",
         )
 
         self.client.put_targets(

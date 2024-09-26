@@ -12,7 +12,7 @@ from services.conversation_service import initiate_user_recurrent_checkin
 import json
 import traceback
 from gateways.scheduled_notifications import ScheduledNotificationController
-
+from fastapi import Request
 router = APIRouter(prefix="/api")
 
 activities_gateway = ActivitiesGateway()
@@ -131,7 +131,13 @@ async def trigger_push_notification(
     return await send_push_notification(payload, user)
 
 @router.post("/process-scheduled-notification")
-async def process_scheduled_notification(notification_id: str = Body(...)):
+async def process_scheduled_notification(request: Request):
+    body = await request.json()
+    notification_id = body.get("notification_id", None)
+
+    if not notification_id:
+        raise HTTPException(status_code=400, detail="Notification ID is required")
+
     notification_controller = ScheduledNotificationController()
     message = notification_controller.process_notification(notification_id)
     

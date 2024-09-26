@@ -336,8 +336,8 @@ def initiate_user_recurrent_checkin(user_id: str):
             Conversation history:
             {conversation_history}
 
-            Current date and time in user's timezone:
-            {datetime.now(pytz.timezone(user.preferences.timezone)).strftime("%A, %B %d, %Y at %I:%M %p %Z")}
+            Current date and time in UTC:
+            {datetime.now(pytz.UTC).strftime("%A, %B %d, %Y at %I:%M %p %Z")}
 
             Output only the message to be sent to the user. Nothing more, nothing less.
 
