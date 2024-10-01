@@ -33,3 +33,14 @@ self.addEventListener("push", function (event: any) {
     );
   }
 });
+
+// Add this new event listener
+self.addEventListener("notificationclick", function (event: any) {
+  console.log("Notification clicked:", event);
+  event.notification.close();
+
+  if (event.notification.data && event.notification.data.url) {
+    // @ts-ignore clients is not defined in the service worker global scope
+    event.waitUntil(clients.openWindow(event.notification.data.url));
+  }
+});
