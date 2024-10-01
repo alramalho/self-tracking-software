@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Request
 from shared.logger import create_logger
 create_logger()
 
@@ -90,6 +90,14 @@ async def websocket_endpoint(websocket: WebSocket):
     else:
         logger.error("Websocket authorization failed.")
         await websocket.close()
+
+
+@app.post("/hume-callback")
+async def hume_callback(request: Request):
+    data = await request.json()
+    logger.info(f"Received Hume callback: {data}")
+    # Here you can process the Hume results further if needed
+    return {"status": "success"}
 
 
 @app.get("/")

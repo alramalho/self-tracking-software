@@ -9,6 +9,7 @@ from ai.llm import ask_schema, ask_text
 from datetime import datetime
 from ai.assistant.assistant import Assistant, activities_description, activity_entries_description
 import pytz
+from services.hume_service import process_audio_with_hume
 
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
@@ -278,6 +279,12 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
     activities, activity_entries, mood_report, notification_text, reasoning = (
         await process_activities_and_mood(user_id)
     )
+    try:
+        hume_result = await process_audio_with_hume(base64.b64decode(audio_data), audio_format)
+        logger.info(f"Hume result: {hume_result}")
+    except Exception as e:
+        logger.error(f"Error processing audio with Hume: {e}")
+        hume_result = None
 
     # Update the assistant with the extraction results
     extraction_summary = f"""
