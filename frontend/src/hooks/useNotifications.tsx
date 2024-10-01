@@ -87,23 +87,17 @@ export const NotificationsProvider = ({
         )}\nRegistration.active: ${JSON.stringify(registration.active)}\n`
       );
       if (registration.active) {
-        console.log("Registration.active: " + JSON.stringify(registration.active));
+        console.log(
+          "Registration.active: " + JSON.stringify(registration.active)
+        );
         registration.active.addEventListener("push", (event) => {
           console.log("Push message received from within:", event);
-          // if (event.data) {
-          //   const data = event.data.json();
-          //   console.log("Push data:", data);
-          //   event.waitUntil(
-          //     registration.showNotification(data.title, {
-          //       body: data.body,
-          //       icon: data.icon || "/icons/icon-192x192.png",
-          //       data: { url: data.url },
-          //     })
-          //   );
-          // }
+
         });
         if (registration.active.state === "activated") {
-          console.log("Registration.active.state: " + registration.active.state);
+          console.log(
+            "Registration.active.state: " + registration.active.state
+          );
           setIsAppInstalled(true);
         }
       }
@@ -150,7 +144,9 @@ export const NotificationsProvider = ({
         .register()
         .then((result: ServiceWorkerRegistration | undefined) => {
           if (result) {
-            console.log("Service worker registered with scope: " + result.scope);
+            console.log(
+              "Service worker registered with scope: " + result.scope
+            );
             setRegistration(result);
           } else {
             console.log("Service worker registration failed");
@@ -239,6 +235,7 @@ export const NotificationsProvider = ({
                 console.log("Push endpoint:" + subscription.endpoint);
                 // Use api in a useCallback hook
                 await updatePwaStatus(subscription);
+                await initiateUserRecurrentCheckin();
               } catch (err) {
                 console.error("Failed to subscribe:", err);
                 console.log("Failed to subscribe: " + err);
@@ -250,7 +247,9 @@ export const NotificationsProvider = ({
             console.log("Registration not available");
           }
         } else {
-          console.log("Notification permission was not granted. State: " + result);
+          console.log(
+            "Notification permission was not granted. State: " + result
+          );
         }
       } else {
         console.log("You need to install this web page to use notifications");
@@ -258,6 +257,16 @@ export const NotificationsProvider = ({
     } catch (err) {
       console.error("Error in requestPermission:", err);
       console.log("Error: " + err);
+    }
+  };
+
+  const initiateUserRecurrentCheckin = async () => {
+    try {
+      await api.post("/api/initiate-user-recurrent-checkin");
+      console.log("Recurrent check-in initiated successfully");
+    } catch (error) {
+      console.error("Failed to initiate recurrent check-in:", error);
+      console.log("Failed to initiate recurrent check-in: " + error);
     }
   };
 

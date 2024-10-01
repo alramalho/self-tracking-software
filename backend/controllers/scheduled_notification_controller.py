@@ -1,3 +1,5 @@
+from models.processed_notification import ProcessedNotification
+from controllers.processed_notification_controller import ProcessedNotificationController
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import List, Optional, Literal
@@ -23,6 +25,8 @@ class ScheduledNotificationController:
     def __init__(self):
         self.db_gateway = MongoDBGateway("scheduled_notifications")
         self.cron_gateway = EventBridgeCronGateway()
+        self.processed_notification_controller = ProcessedNotificationController()
+
 
     def create(self, user_id: str, purpose_prompt: str, recurrence: Literal["daily", "weekly"], time_deviation_in_hours: int) -> ScheduledNotification:
         cron_str = self._generate_cron_string(recurrence, time_deviation_in_hours)
@@ -98,13 +102,22 @@ class ScheduledNotificationController:
     def update(self, notification: ScheduledNotification):
         self.db_gateway.write(notification.dict())
 
-    def process_notification(self, notification_id: str) -> str:
-        notification = self.get(notification_id)
-        if not notification or not notification.activated:
-            return ""
+    def process_notification(self, notification_id: str) -> ProcessedNotification | None:
+        scheduled_notification = self.get(notification_id)
+        if not scheduled_notification or not scheduled_notification.activated:
+            return None
 
-        return ask_text(notification.purpose_prompt, "")
-
+        message = ask_text(scheduled_notification.purpose_prompt, "")
+        
+        if message:
+            processed_notification = self.processed_notification_controller.create(
+                scheduled_notification_id=notification_id,
+                user_id=scheduled_notification.user_id,
+                message=message
+            )
+            return processed_notification
+        
+        return None
     def get(self, notification_id: str) -> Optional[ScheduledNotification]:
         data = self.db_gateway.query("id", notification_id)
         return ScheduledNotification(**data[0]) if len(data) > 0 else None

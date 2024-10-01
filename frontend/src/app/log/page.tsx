@@ -10,6 +10,9 @@ import { Wifi, WifiOff, Mic, MessageSquare, LoaderCircle, Volume2, VolumeX, Tras
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
+import { useSearchParams } from 'next/navigation'
+import { useApiWithAuth } from "@/api";
+
 import {
   ChatBubble,
   ChatBubbleAvatar,
@@ -19,11 +22,15 @@ import { Switch } from "@/components/ui/switch";
 
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
+  const authedApi = useApiWithAuth();
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { addToQueue } = useSpeaker();
   const { addNotifications, sendPushNotification } = useNotifications();
+
+  const searchParams = useSearchParams();
+  const notificationId = searchParams.get('notification_id');
   
   const [transcription, setTranscription] = useState<string>("");
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
@@ -206,6 +213,20 @@ const LogPage: React.FC = () => {
   useEffect(() => {
     console.log({ messages });
   }, [messages]);
+
+  useEffect(() => {
+    const markNotificationOpened = async () => {
+      if (notificationId) {
+        try {
+          await authedApi.post(`/api/mark-notification-opened?notification_id=${notificationId}`);
+        } catch (error) {
+          console.error('Error marking notification as opened:', error);
+        }
+      }
+    };
+
+    markNotificationOpened();
+  }, [notificationId, authedApi]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">

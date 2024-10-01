@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body, HTTPException, Response
+from fastapi import APIRouter, Depends, Body, HTTPException, Response, Query
 from typing import List, Optional
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
@@ -11,9 +11,13 @@ from pywebpush import webpush, WebPushException
 from services.conversation_service import initiate_user_recurrent_checkin
 import json
 import traceback
-from gateways.scheduled_notifications import ScheduledNotificationController
+from controllers.processed_notification_controller import ProcessedNotificationController
+from controllers.scheduled_notification_controller import ScheduledNotificationController
 from fastapi import Request
+
 router = APIRouter(prefix="/api")
+processed_notification_controller = ProcessedNotificationController()
+scheduled_notification_controller = ScheduledNotificationController()
 
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
@@ -138,27 +142,43 @@ async def process_scheduled_notification(request: Request):
     if not notification_id:
         raise HTTPException(status_code=400, detail="Notification ID is required")
 
-    notification_controller = ScheduledNotificationController()
-    message = notification_controller.process_notification(notification_id)
+    processed_notification = scheduled_notification_controller.process_notification(notification_id)
     
-    if message:
-        notification = notification_controller.get(notification_id)
-        user = users_gateway.get_user_by_id(notification.user_id)
+    if processed_notification:
+        user = users_gateway.get_user_by_id(processed_notification.user_id)
         
         # Send push notification
         await send_push_notification(
-            PushNotificationPayload(title=f"hey {user.name}", body=message.lower(), url="/log"),
+            PushNotificationPayload(
+                title=f"hey {user.name}",
+                body=processed_notification.message.lower(),
+                url=f"/log?notification_id={processed_notification.id}"
+            ),
             user
         )
 
-        # Recreate the notification for changing time of the day its processed
-        notification_controller.recreate(notification_id)
+        # Recreate the scheduled notification for changing time of the day its processed
+        scheduled_notification_controller.recreate(notification_id)
 
         return {"message": "Notification processed, sent successfully, and recreated for next occurrence"}
     else:
         return Response(status_code=204, content={"message": "No notification processed"})
 
-@router.post("/initiate-user-recurrent-checkin/{user_id}")
-async def initiate_recurrent_checkin(user_id: str):
-    initiate_user_recurrent_checkin(user_id)
+@router.post("/mark-notification-opened")
+async def mark_notification_opened(notification_id: str = Query(...), user: User = Depends(is_clerk_user)):
+    processed_notification = processed_notification_controller.get(notification_id)
+    
+    if not processed_notification:
+        raise HTTPException(status_code=404, detail="Processed notification not found")
+    
+    if processed_notification.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to mark this notification as opened")
+    
+    updated_notification = processed_notification_controller.mark_as_opened(notification_id)
+    
+    return {"message": "Notification marked as opened", "notification": updated_notification}
+
+@router.post("/initiate-user-recurrent-checkin")
+async def initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
+    initiate_user_recurrent_checkin(user.id)
     return {"message": "Recurrent check-in initiated successfully"}

@@ -25,8 +25,7 @@ from fastapi import WebSocket
 import base64
 
 from shared.executor import executor
-
-from gateways.scheduled_notifications import ScheduledNotificationController
+from controllers.scheduled_notification_controller import ScheduledNotificationController
 from gateways.users import UsersGateway
 
 users_gateway = UsersGateway()
