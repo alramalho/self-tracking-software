@@ -23,7 +23,7 @@ const ProfilePage: React.FC = () => {
     sendLocalNotification("Test Local Notification", "This is a test localnotification");
   };
   const handleTestPushNotification = () => {
-    sendPushNotification("Test Push Notification", "This is a test push notification");
+    sendPushNotification("Test Push Notification", "This is a test push notification", "/next.png", "/see");
   };
 
   const handleNotificationChange = async (checked: boolean) => {
