@@ -63,11 +63,9 @@ export const NotificationsProvider = ({
       .then((result) => {
         if (result) {
           console.log("Notifications disabled", result);
-          alert("Notifications disabled");
           setIsPushGranted(false);
         } else {
           console.log("Notifications were not succesfully disabled", result);
-          alert("Notifications were not succesfully disabled");
         }
       })
       .catch((err) => {
@@ -77,19 +75,19 @@ export const NotificationsProvider = ({
 
   useEffect(() => {
     if (subscription) {
-      alert("Subscription:" + subscription.endpoint);
+      console.log("Subscription:" + subscription.endpoint);
     }
   }, [subscription]);
 
   useEffect(() => {
     if (registration) {
-      alert(
+      console.log(
         `Registration: ${JSON.stringify(
           registration
         )}\nRegistration.active: ${JSON.stringify(registration.active)}\n`
       );
       if (registration.active) {
-        alert("Registration.active: " + JSON.stringify(registration.active));
+        console.log("Registration.active: " + JSON.stringify(registration.active));
         registration.active.addEventListener("push", (event) => {
           console.log("Push message received from within:", event);
           // if (event.data) {
@@ -105,7 +103,7 @@ export const NotificationsProvider = ({
           // }
         });
         if (registration.active.state === "activated") {
-          alert("Registration.active.state: " + registration.active.state);
+          console.log("Registration.active.state: " + registration.active.state);
           setIsAppInstalled(true);
         }
       }
@@ -114,9 +112,9 @@ export const NotificationsProvider = ({
 
   const alertSubscriptionEndpoint = () => {
     if (subscription) {
-      alert("Subscription:" + subscription.endpoint);
+      console.log("Subscription:" + subscription.endpoint);
     } else {
-      alert("No subscription");
+      console.log("No subscription");
     }
   };
 
@@ -140,11 +138,11 @@ export const NotificationsProvider = ({
       }
 
       const beforeinstallprompt = (event: any) => {
-        alert("Before install prompt: " + event);
+        console.log("Before install prompt: " + event);
       };
 
       const appinstalled = (event: any) => {
-        alert("App installed: " + event);
+        console.log("App installed: " + event);
       };
 
       // Register the service worker
@@ -152,13 +150,13 @@ export const NotificationsProvider = ({
         .register()
         .then((result: ServiceWorkerRegistration | undefined) => {
           if (result) {
-            alert("Service worker registered with scope: " + result.scope);
+            console.log("Service worker registered with scope: " + result.scope);
             setRegistration(result);
           } else {
-            alert("Service worker registration failed");
+            console.log("Service worker registration failed");
           }
         })
-        .catch((err: any) => alert(err))
+        .catch((err: any) => console.log(err))
         .catch((err: Error) => console.warn(err));
 
       window.addEventListener("beforeinstallprompt", beforeinstallprompt);
@@ -170,9 +168,6 @@ export const NotificationsProvider = ({
       };
     } else {
       console.log(
-        "Serwist is not available or the requisite features are not available"
-      );
-      alert(
         "Serwist is not available or the requisite features are not available"
       );
     }
@@ -241,28 +236,28 @@ export const NotificationsProvider = ({
                     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
                 });
                 setSubscription(subscription);
-                alert("Push endpoint:" + subscription.endpoint);
+                console.log("Push endpoint:" + subscription.endpoint);
                 // Use api in a useCallback hook
                 await updatePwaStatus(subscription);
               } catch (err) {
                 console.error("Failed to subscribe:", err);
-                alert("Failed to subscribe: " + err);
+                console.log("Failed to subscribe: " + err);
               }
             } else {
-              alert("Push manager permission state is: " + pm);
+              console.log("Push manager permission state is: " + pm);
             }
           } else {
-            alert("Registration not available");
+            console.log("Registration not available");
           }
         } else {
-          alert("Notification permission was not granted. State: " + result);
+          console.log("Notification permission was not granted. State: " + result);
         }
       } else {
-        alert("You need to install this web page to use notifications");
+        console.log("You need to install this web page to use notifications");
       }
     } catch (err) {
       console.error("Error in requestPermission:", err);
-      alert("Error: " + err);
+      console.log("Error: " + err);
     }
   };
 
@@ -283,10 +278,10 @@ export const NotificationsProvider = ({
           pwa_subscription_key: p256dh,
           pwa_subscription_auth_token: auth,
         });
-        alert("PWA status updated");
+        console.log("PWA status updated");
       } catch (error) {
         console.error("Failed to update PWA status:", error);
-        alert("Failed to update PWA status: " + error);
+        console.log("Failed to update PWA status: " + error);
       }
     },
     [api]
@@ -305,10 +300,10 @@ export const NotificationsProvider = ({
         icon,
         url,
       });
-      alert("Push notification sent");
+      console.log("Push notification sent");
     } catch (error) {
       console.error("Failed to send push notification:", error);
-      alert("Failed to send push notification: " + error);
+      console.log("Failed to send push notification: " + error);
     }
   };
 
