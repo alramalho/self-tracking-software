@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Literal
 from gateways.aws.event_bridge import EventBridgeCronGateway
 from gateways.database.mongodb import MongoDBGateway
 from bson import ObjectId
 from pydantic import Field
-from constants import CHRON_PROXY_LAMBDA_TARGET_ARN
+from constants import CHRON_PROXY_LAMBDA_TARGET_ARN, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 from ai.llm import ask_text
 import pytz
 import random
@@ -24,9 +24,9 @@ class ScheduledNotificationController:
         self.db_gateway = MongoDBGateway("scheduled_notifications")
         self.cron_gateway = EventBridgeCronGateway()
 
-    def create(self, user_id: str, purpose_prompt: str, recurrence: str, time_deviation_in_hours: int) -> ScheduledNotification:
+    def create(self, user_id: str, purpose_prompt: str, recurrence: Literal["daily", "weekly"], time_deviation_in_hours: int) -> ScheduledNotification:
         cron_str = self._generate_cron_string(recurrence, time_deviation_in_hours)
-        notification_id=str(ObjectId())
+        notification_id = str(ObjectId())
         aws_cronjob_id = self.cron_gateway.create(
             cron_str,
             target=CHRON_PROXY_LAMBDA_TARGET_ARN,
@@ -52,13 +52,12 @@ class ScheduledNotificationController:
             raise ValueError(f"Notification with id {notification_id} not found")
 
         recurrence = 'daily' if '* * ? *' in notification.recurrence_cron_str else 'weekly'
-        time_deviation_in_hours = 3  # Assuming 3 hours deviation
 
         new_notification = self.create(
             user_id=notification.user_id,
             purpose_prompt=notification.purpose_prompt,
             recurrence=recurrence,
-            time_deviation_in_hours=time_deviation_in_hours
+            time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
         )
         
         self.delete(notification.id)
@@ -66,7 +65,7 @@ class ScheduledNotificationController:
 
         return new_notification
 
-    def _generate_cron_string(self, recurrence: str, time_deviation_in_hours: int) -> str:
+    def _generate_cron_string(self, recurrence: Literal["daily", "weekly"], time_deviation_in_hours: int) -> str:
         now = datetime.now(pytz.UTC)
         if recurrence == 'daily':
             base_time = now.replace(hour=12, minute=0, second=0, microsecond=0)  # Noon UTC

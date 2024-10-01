@@ -7,10 +7,12 @@ from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class CronJobTarget(BaseModel):
     Arn: str
     Id: str
     Input: str
+
 
 class CronJobDetails(BaseModel):
     id: str
@@ -20,26 +22,27 @@ class CronJobDetails(BaseModel):
     arn: str
     targets: List[CronJobTarget]
 
+
 class EventBridgeCronGateway:
     def __init__(self):
         self.client = boto3.client(
             "events",
             aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         )
 
     def get(self, cron_id: str) -> Optional[CronJobDetails]:
         try:
             response = self.client.describe_rule(Name=cron_id)
             targets = self.client.list_targets_by_rule(Rule=cron_id)
-            
+
             return CronJobDetails(
                 id=cron_id,
                 schedule=response.get("ScheduleExpression", ""),
                 state=response.get("State", ""),
                 description=response.get("Description", ""),
                 arn=response.get("Arn", ""),
-                targets=[CronJobTarget(**t) for t in targets.get("Targets", [])]
+                targets=[CronJobTarget(**t) for t in targets.get("Targets", [])],
             )
         except ClientError as err:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":
@@ -55,7 +58,7 @@ class EventBridgeCronGateway:
             Name=cron_id,
             ScheduleExpression=aws_cron_string,
             State="ENABLED",
-            Description="Task created by Tracking Software.",
+            Description=f"Task created by Tracking Software on {datetime.now().isoformat()}.",
         )
 
         self.client.put_targets(
@@ -70,7 +73,9 @@ class EventBridgeCronGateway:
         )
         return cron_id
 
-    def update(self, cron_id: str, aws_cron_string: str, targets: List[CronJobTarget]) -> str:
+    def update(
+        self, cron_id: str, aws_cron_string: str, targets: List[CronJobTarget]
+    ) -> str:
         if "cron(" not in aws_cron_string:
             aws_cron_string = f"cron({aws_cron_string})"
         self.client.put_rule(
@@ -88,7 +93,9 @@ class EventBridgeCronGateway:
 
     def delete(self, cronjob_id: str):
         try:
-            self.client.remove_targets(Rule=cronjob_id, Ids=["tracking-software-backend-lambda"])
+            self.client.remove_targets(
+                Rule=cronjob_id, Ids=["tracking-software-backend-lambda"]
+            )
             self.client.delete_rule(Name=cronjob_id)
         except ClientError as err:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":

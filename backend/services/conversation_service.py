@@ -10,6 +10,7 @@ from datetime import datetime
 from ai.assistant.assistant import Assistant, activities_description, activity_entries_description
 import pytz
 from services.hume_service import process_audio_with_hume
+from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
@@ -356,6 +357,6 @@ def initiate_user_recurrent_checkin(user_id: str):
         user_id=user_id,
         purpose_prompt=purpose_prompt,
         recurrence="daily",
-        time_deviation_in_hours=3
+        time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
     )
 

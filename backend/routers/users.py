@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body, HTTPException
+from fastapi import APIRouter, Depends, Body, HTTPException, Response
 from typing import List, Optional
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
@@ -156,7 +156,7 @@ async def process_scheduled_notification(request: Request):
 
         return {"message": "Notification processed, sent successfully, and recreated for next occurrence"}
     else:
-        return {"message": "No notification processed"}
+        return Response(status_code=204, content={"message": "No notification processed"})
 
 @router.post("/initiate-user-recurrent-checkin/{user_id}")
 async def initiate_recurrent_checkin(user_id: str):
