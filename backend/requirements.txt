@@ -15,4 +15,4 @@ pywebpush
 boto3
 aws_cron_expression_validator
 pytz
-aiohttp==3.8.4
+aiohttp
