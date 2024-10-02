@@ -1,14 +1,18 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, Response, Query
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
+from ai.assistant.memory import DatabaseMemory
+from gateways.database.mongodb import MongoDBGateway
 from gateways.users import UsersGateway
 from constants import VAPID_PRIVATE_KEY, VAPID_CLAIMS
 from pywebpush import webpush, WebPushException
-from services.conversation_service import initiate_user_recurrent_checkin
+from entities.message import Message
+from services.conversation_service import initiate_recurrent_checkin
 import json
 import traceback
 from controllers.processed_notification_controller import ProcessedNotificationController
@@ -157,12 +161,21 @@ async def process_scheduled_notification(request: Request):
             user
         )
 
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        memory.write(Message.new(
+            text=processed_notification.message,
+            sender_name="Jarvis",
+            sender_id="0",
+            recipient_name=user.name,
+            recipient_id=user.id,
+        ))
+
         # Recreate the scheduled notification for changing time of the day its processed
-        scheduled_notification_controller.recreate(notification_id)
+        scheduled_notification_controller.update_time(notification_id)
 
         return {"message": "Notification processed, sent successfully, and recreated for next occurrence"}
     else:
-        return Response(status_code=204, content={"message": "No notification processed"})
+        return JSONResponse(status_code=204, content={"message": "No notification processed"})
 
 @router.post("/mark-notification-opened")
 async def mark_notification_opened(notification_id: str = Query(...), user: User = Depends(is_clerk_user)):
@@ -178,7 +191,8 @@ async def mark_notification_opened(notification_id: str = Query(...), user: User
     
     return {"message": "Notification marked as opened", "notification": updated_notification}
 
-@router.post("/initiate-user-recurrent-checkin")
-async def initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
-    initiate_user_recurrent_checkin(user.id)
+
+@router.post("/initiate-recurrent-checkin")
+async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
+    initiate_recurrent_checkin(user.id)
     return {"message": "Recurrent check-in initiated successfully"}

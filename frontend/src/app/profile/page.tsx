@@ -5,6 +5,8 @@ import { useUser, useClerk } from "@clerk/nextjs";
 import { LogOut, User, Bell } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Switch } from "@/components/ui/switch";
+import { useApiWithAuth } from "@/api";
+import toast from "react-hot-toast";
 
 const ProfilePage: React.FC = () => {
   const { user } = useUser();
@@ -18,19 +20,39 @@ const ProfilePage: React.FC = () => {
     requestPermission,
     alertSubscriptionEndpoint,
   } = useNotifications();
+  const authedApi = useApiWithAuth();
 
   const handleTestLocalNotification = () => {
-    sendLocalNotification("Test Local Notification", "This is a test localnotification");
+    sendLocalNotification(
+      "Test Local Notification",
+      "This is a test localnotification"
+    );
   };
   const handleTestPushNotification = () => {
-    sendPushNotification("Test Push Notification", "This is a test push notification", "/next.png", "/see");
+    sendPushNotification(
+      "Test Push Notification",
+      "This is a test push notification",
+      "/next.png",
+      "/see"
+    );
+  };
+
+  const handleRecurrentCheckin = async () => {
+    try {
+      await authedApi.post("/api/initiate-recurrent-checkin");
+      toast.success(
+      `Recurrent Checkin initiated.`
+    );
+    } catch (error) {
+      toast.error("Failed to initiate recurrent checkin");
+    }
   };
 
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
       if (!isPushGranted) {
         await requestPermission();
-        return
+        return;
       }
     } else {
       setIsPushGranted(false);
@@ -63,12 +85,20 @@ const ProfilePage: React.FC = () => {
         <Switch checked={isAppInstalled} disabled />
       </div>
       <button
+        onClick={handleRecurrentCheckin}
+        className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-green-500 hover:bg-green-600"
+        disabled={!isAppInstalled}
+      >
+        Intitiate Recurrent Checkin
+      </button>
+      <button
         onClick={handleTestLocalNotification}
         className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-blue-500 hover:bg-blue-600"
         disabled={!isAppInstalled}
       >
         Test Local Notification
       </button>
+
       <button
         onClick={handleTestPushNotification}
         className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-blue-500 hover:bg-blue-600"

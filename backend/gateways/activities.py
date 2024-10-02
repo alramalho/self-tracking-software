@@ -4,7 +4,8 @@ from entities.activity import Activity
 from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
-
+from shared.utils import time_ago
+from typing import List
 class ActivityDoesNotExistException(Exception):
     pass
 
@@ -39,10 +40,29 @@ class ActivitiesGateway:
     def get_all_activity_entries_by_activity_id(self, activity_id: str) -> list[ActivityEntry]:
         return [ActivityEntry(**data) for data in self.activitiy_entries_db_gateway.query("activity_id", activity_id)]
     
-    def get_recent_activity_entries(self, user_id: str, limit: int = 5) -> list[ActivityEntry]:
-        all_activity_entries = self.activitiy_entries_db_gateway.query("user_id", user_id)
-        ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x['created_at'], reverse=True)
-        return [ActivityEntry(**data) for data in ordered_activity_entries[:limit]]
+    def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5) -> str:
+        all_activities_dict = {activity.id: activity for activity in self.get_all_activities_by_user_id(user_id)}
+
+        all_activity_entries: List[ActivityEntry] = []
+        for activity_id in all_activities_dict.keys():
+            all_activity_entries.extend(self.get_all_activity_entries_by_activity_id(activity_id))
+
+        ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.created_at, reverse=True)
+        
+        # not return the time ago of the entry + the title of the respecitve activity
+        readable_activity_entries: List[str] = []
+        for activity_entry in ordered_activity_entries[:limit]:
+            respective_activity = all_activities_dict[activity_entry.activity_id]
+
+            readable_time_ago = time_ago(activity_entry.created_at)
+            quantity = activity_entry.quantity
+            activity_title = respective_activity.title
+            activity_measure = respective_activity.measure
+            
+            readable_activity_entries.append(f"{readable_time_ago} - {activity_title} ({quantity} {activity_measure})")
+
+        return "\n".join(readable_activity_entries)
+    
 
     def create_activity(self, activity: Activity) -> Activity:
         if len(self.activities_db_gateway.query("id", activity.id)) != 0:

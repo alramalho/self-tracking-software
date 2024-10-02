@@ -1,5 +1,6 @@
 from models.processed_notification import ProcessedNotification
 from gateways.database.mongodb import MongoDBGateway
+from typing import List
 from datetime import datetime
 
 class ProcessedNotificationController:
@@ -29,3 +30,11 @@ class ProcessedNotificationController:
     def get(self, notification_id: str) -> ProcessedNotification | None:
         notification_data = self.db_gateway.query("id", notification_id)
         return ProcessedNotification(**notification_data[0]) if notification_data else None
+    
+    def get_all_for_user(self, user_id: str) -> List[ProcessedNotification]:
+        return [ProcessedNotification(**notification) for notification in self.db_gateway.query("user_id", user_id)]    
+    
+    def get_last_notifications_sent_to_user(self, user_id: str, limit: int = 10) -> List[ProcessedNotification]:
+        notifications = self.get_all_for_user(user_id)
+        ordered_notifications = sorted(notifications, key=lambda x: x.processed_at, reverse=True)
+        return ordered_notifications[:limit]
