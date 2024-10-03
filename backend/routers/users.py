@@ -211,13 +211,18 @@ async def onboarding_step(data: Dict = Body(...), user: User = Depends(is_clerk_
     return {"message": "Onboarding step saved", "user": updated_user}
 
 @router.post("/onboarding/generate-plans")
-async def generate_plans(user: User = Depends(is_clerk_user)):
+async def generate_plans(
+    data: Dict = Body(...),
+    user: User = Depends(is_clerk_user)
+):
     goal = user.onboarding_progress.get("goal")
     finishing_date = user.onboarding_progress.get("finishing_date")
+    plan_description = data.get("planDescription")
+    
     if not goal:
         raise HTTPException(status_code=400, detail="Goal not set in onboarding progress")
     
-    plans = plan_controller.generate_plans(goal, finishing_date)
+    plans = plan_controller.generate_plans(goal, finishing_date, plan_description)
     return {"plans": plans}
 
 @router.post("/onboarding/select-plan")

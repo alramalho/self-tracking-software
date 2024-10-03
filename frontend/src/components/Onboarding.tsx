@@ -4,9 +4,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Calendar } from "@/components/ui/calendar";
 import toast from "react-hot-toast";
-import { Loader2 } from "lucide-react"; // Add this import
+import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 interface Plan {
   goal: string;
@@ -23,7 +26,10 @@ const Onboarding: React.FC = () => {
   const [goal, setGoal] = useState("");
   const [finishingDate, setFinishingDate] = useState("");
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false); // Add this state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [planDescription, setPlanDescription] = useState("");
+  const [selectedPlanIndex, setSelectedPlanIndex] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const api = useApiWithAuth();
   const router = useRouter();
@@ -65,9 +71,11 @@ const Onboarding: React.FC = () => {
   };
 
   const handleGeneratePlans = async () => {
-    setIsGenerating(true); // Set loading state to true
+    setIsGenerating(true);
     try {
-      const response = await api.post("/api/onboarding/generate-plans");
+      const response = await api.post("/api/onboarding/generate-plans", {
+        planDescription: planDescription.trim() || undefined
+      });
       setPlans(response.data.plans);
       console.log({ plans: response.data.plans });
       setStep(4);
@@ -75,7 +83,7 @@ const Onboarding: React.FC = () => {
       console.error("Error generating plans:", error);
       toast.error("Failed to generate plans. Please try again.");
     } finally {
-      setIsGenerating(false); // Set loading state to false when done
+      setIsGenerating(false);
     }
   };
 
@@ -86,6 +94,35 @@ const Onboarding: React.FC = () => {
     } catch (error) {
       console.error("Plan selection error:", error);
     }
+  };
+
+  const renderCalendar = (plan: Plan) => {
+    const sessionDates = plan.sessions.map(session => new Date(session.date));
+
+    return (
+      <div className="mb-4">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={setSelectedDate}
+          className="rounded-md border"
+          modifiers={{ hasSession: sessionDates }}
+          modifiersStyles={{
+            hasSession: { backgroundColor: 'lightblue' }
+          }}
+        />
+        {selectedDate && (
+          <div className="mt-2">
+            <h4 className="font-semibold">Sessions on {format(selectedDate, 'PP')}:</h4>
+            {plan.sessions
+              .filter(session => new Date(session.date).toDateString() === selectedDate.toDateString())
+              .map((session, index) => (
+                <p key={index}>{session.descriptive_guide}</p>
+              ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderStep = () => {
@@ -200,21 +237,42 @@ const Onboarding: React.FC = () => {
         );
       case 4:
         return (
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-2xl">
             <CardHeader>
               <CardTitle>Select a Plan</CardTitle>
             </CardHeader>
             <CardContent>
+              <Textarea
+                placeholder="Describe your ideal plan (optional)"
+                value={planDescription}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPlanDescription(e.target.value)}
+                className="mb-4"
+              />
+              <Button
+                className="w-full mb-4"
+                onClick={() => handleGeneratePlans()}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerating Plans...
+                  </>
+                ) : (
+                  "Regenerate Plans"
+                )}
+              </Button>
+              <p>Goal: {goal}</p>
               {plans.map((plan, index) => (
-                <Card key={index} className="mb-4">
+                <Card key={index} className="mb-8">
                   <CardHeader>
                     <CardTitle>Plan {index + 1} - {plan.intensity} Intensity</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p>Goal: {plan.goal || "Not specified"}</p>
                     <p>Finishing Date: {plan.finishing_date || "Not specified"}</p>
                     <p>Activities: {plan.activity_descriptions.join(", ")}</p>
                     <p>Number of sessions: {plan.sessions.length}</p>
+                    {renderCalendar(plan)}
                     <Button
                       className="w-full mt-2"
                       onClick={() => handlePlanSelection(plan)}

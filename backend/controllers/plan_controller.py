@@ -39,18 +39,21 @@ class PlanController:
         else:
             raise Exception("Plan not found")
 
-    def generate_plans(self, goal: str, finishing_date: Optional[str] = None) -> List[Dict]:
+    def generate_plans(self, goal: str, finishing_date: Optional[str] = None, plan_description: Optional[str] = None) -> List[Dict]:
         current_date = datetime.now().strftime("%Y-%m-%d")
         system_prompt = f"""
         You will act as a personal coach for the goal of {goal}.
 
-        Generate 3 progressive plans with varying intensities (low, medium, high) where one of the plans should have the finishing date.
-        Each plan should include a list of activities and a schedule of sessions.
+        Generate a progressive plan where activities intensity and/or recurrence should increase over time.
+        The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
 
         Current date: {current_date}
         """
-        user_prompt = f"Help be achieve the goal: {goal}\n Finishing Date: {finishing_date}"
+
+        user_prompt = f"Help me achieve the goal: {goal}\nFinishing Date: {finishing_date}"
         
+        if plan_description:
+            user_prompt += f"\nAdditional plan description: {plan_description}"
         class GeneratedActivity(BaseModel):
             description: str
             frequency: str
