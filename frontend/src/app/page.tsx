@@ -2,6 +2,7 @@
 
 import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
+import Onboarding from "@/components/Onboarding";
 
 export default function Home() {
   const { isSignedIn } = useSession();
@@ -9,14 +10,7 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center h-screen">
       <h1 className="text-4xl mb-4">Welcome to tracking.so</h1>
       {isSignedIn ? (
-        <>
-          <Link
-            href="/log"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Go to Log Page
-          </Link>
-        </>
+        <Onboarding />
       ) : (
         <Link
           href="/signin"

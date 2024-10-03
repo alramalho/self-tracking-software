@@ -236,7 +236,7 @@ const LogPage: React.FC = () => {
         </div>
       )}
       <ChatMessageList className="max-w-xl">
-        {messages.map((message, index) => (
+        {messages && messages.length > 0 && messages.map((message, index) => (
           <ChatBubble
             key={index}
             variant={message.role === "assistant" ? "received" : "sent"}

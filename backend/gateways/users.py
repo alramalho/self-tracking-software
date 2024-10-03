@@ -50,6 +50,11 @@ class UsersGateway:
         logger.info(f"User {user.id} ({user.name}) created")
         return user
 
+    def update_user(self, user: User) -> User:
+        self.db_gateway.write(user.dict())
+        logger.info(f"User {user.id} ({user.name}) updated")
+        return user
+
     def update_fields(self, user_id: str, fields: dict) -> User:
         user = self.get_user_by_id(user_id)
         for field_name, new_value in fields.items():
@@ -83,6 +88,15 @@ class UsersGateway:
             }
         }
     
+    def update_onboarding_progress(self, user_id: str, step: str, data: Any) -> User:
+        user = self.get_user_by_id(user_id)
+        user.onboarding_progress[step] = data
+        return self.update_user(user)
+
+    def set_selected_plan(self, user_id: str, plan_id: str) -> User:
+        user = self.get_user_by_id(user_id)
+        user.selected_plan_id = plan_id
+        return self.update_user(user)
 
 if __name__ == "__main__":
     from shared.logger import create_logger

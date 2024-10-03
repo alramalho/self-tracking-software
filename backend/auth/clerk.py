@@ -87,6 +87,7 @@ async def validate_token(token: str) -> Tuple[bool, str]:
 
 async def is_clerk_user(token: str = Depends(get_token_from_request)) -> User:
     validated, clerk_id = await validate_token(token)
+    print(f"Clerk ID: {clerk_id}")
     if validated:
         return UsersGateway().get_user_by("clerk_id", clerk_id)
 

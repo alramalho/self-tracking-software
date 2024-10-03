@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, Response, Query
 from fastapi.responses import JSONResponse
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
@@ -18,6 +18,7 @@ import traceback
 from controllers.processed_notification_controller import ProcessedNotificationController
 from controllers.scheduled_notification_controller import ScheduledNotificationController
 from fastapi import Request
+from controllers.plan_controller import PlanController
 
 router = APIRouter(prefix="/api")
 processed_notification_controller = ProcessedNotificationController()
@@ -26,6 +27,7 @@ scheduled_notification_controller = ScheduledNotificationController()
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
 users_gateway = UsersGateway()
+plan_controller = PlanController()
 
 class ActivityResponse(BaseModel):
     id: str
@@ -196,3 +198,30 @@ async def mark_notification_opened(notification_id: str = Query(...), user: User
 async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
     initiate_recurrent_checkin(user.id)
     return {"message": "Recurrent check-in initiated successfully"}
+
+
+@router.get("/onboarding/step")
+async def get_onboarding_step(user: User = Depends(is_clerk_user)):
+    return {"onboarding_progress": user.onboarding_progress}
+
+@router.post("/onboarding/step")
+async def onboarding_step(data: Dict = Body(...), user: User = Depends(is_clerk_user)):
+    for key, value in data.items():
+        updated_user = users_gateway.update_onboarding_progress(user.id, key, value)
+    return {"message": "Onboarding step saved", "user": updated_user}
+
+@router.post("/onboarding/generate-plans")
+async def generate_plans(user: User = Depends(is_clerk_user)):
+    goal = user.onboarding_progress.get("goal")
+    finishing_date = user.onboarding_progress.get("finishing_date")
+    if not goal:
+        raise HTTPException(status_code=400, detail="Goal not set in onboarding progress")
+    
+    plans = plan_controller.generate_plans(goal, finishing_date)
+    return {"plans": plans}
+
+@router.post("/onboarding/select-plan")
+async def select_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
+    created_plan = plan_controller.create_plan(user.id, plan)
+    updated_user = users_gateway.set_selected_plan(user.id, created_plan.id)
+    return {"message": "Plan selected and created", "user": updated_user, "plan": created_plan}

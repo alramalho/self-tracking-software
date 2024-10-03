@@ -1,15 +1,28 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
-from bson import ObjectId
+from typing import Optional, Dict, Any
 
 class User(BaseModel):
-    id: str = Field(default_factory=lambda: str(ObjectId()))
-    name: str | None = None
-    email: str | None = None
-    clerk_id: str | None = None
-    created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+    id: str
+    name: Optional[str] = None
+    timezone: Optional[str] = None
+    clerk_id: Optional[str] = None
+    email: str
+    created_at: str
+    deleted: bool = False
+    deleted_at: Optional[str] = None
     is_pwa_installed: bool = False
     is_pwa_notifications_enabled: bool = False
-    pwa_subscription_endpoint: str | None = None
-    pwa_subscription_key: str | None = None
-    pwa_subscription_auth_token: str | None = None
+    pwa_subscription_endpoint: Optional[str] = None
+    pwa_subscription_key: Optional[str] = None
+    pwa_subscription_auth_token: Optional[str] = None
+    onboarding_progress: Dict[str, Any] = Field(default_factory=dict)
+    selected_plan_id: Optional[str] = None
+
+    @classmethod
+    def new(cls, id: str, email: str) -> "User":
+        return cls(
+            id=id,
+            email=email,
+            created_at=datetime.now(UTC).isoformat(),
+        )
