@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
+import { Loader2 } from "lucide-react"; // Add this import
 
 interface Plan {
   goal: string;
@@ -22,6 +23,7 @@ const Onboarding: React.FC = () => {
   const [goal, setGoal] = useState("");
   const [finishingDate, setFinishingDate] = useState("");
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false); // Add this state
 
   const api = useApiWithAuth();
   const router = useRouter();
@@ -63,6 +65,7 @@ const Onboarding: React.FC = () => {
   };
 
   const handleGeneratePlans = async () => {
+    setIsGenerating(true); // Set loading state to true
     try {
       const response = await api.post("/api/onboarding/generate-plans");
       setPlans(response.data.plans);
@@ -70,6 +73,9 @@ const Onboarding: React.FC = () => {
       setStep(4);
     } catch (error) {
       console.error("Error generating plans:", error);
+      toast.error("Failed to generate plans. Please try again.");
+    } finally {
+      setIsGenerating(false); // Set loading state to false when done
     }
   };
 
@@ -178,8 +184,16 @@ const Onboarding: React.FC = () => {
                   saveStep("finishing_date", finishingDate);
                   handleGeneratePlans();
                 }}
+                disabled={isGenerating}
               >
-                Generate Plans
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Plans...
+                  </>
+                ) : (
+                  "Generate Plans"
+                )}
               </Button>
             </CardContent>
           </Card>
