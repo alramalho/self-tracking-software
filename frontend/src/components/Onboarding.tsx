@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
+import { addDays } from "date-fns";
 
 interface Plan {
   goal: string;
@@ -102,15 +103,25 @@ const Onboarding: React.FC = () => {
   };
 
   const formatSessionsForHeatMap = (plan: Plan) => {
-    return plan.sessions.map(session => ({
+    const sessions = plan.sessions.map(session => ({
       date: session.date.replaceAll('-', '/'),
       count: 1 // We'll use this to indicate a session
     }));
+
+    // Add the finishing date to the heatmap data
+    if (plan.finishing_date) {
+      sessions.push({
+        date: plan.finishing_date.replaceAll('-', '/'),
+        count: 2 // We'll use 2 to indicate the finishing date
+      });
+    }
+
+    return sessions;
   };
 
   const renderHeatMap = (plan: Plan) => {
     const today = new Date();
-    const endDate = plan.finishing_date ? new Date(plan.finishing_date) : undefined;
+    const endDate = plan.finishing_date ? addDays(new Date(plan.finishing_date), 1) : undefined;
     const heatmapData = formatSessionsForHeatMap(plan);
 
     return (
@@ -126,6 +137,10 @@ const Onboarding: React.FC = () => {
             rx: 3,
           }}
           rectRender={(props, data) => {
+            // Customize the color for the finishing date
+            if (data.count === 2) {
+              props.fill = "#4299E1"; // A shade of blue
+            }
             return (
               <rect
                 {...props}
@@ -160,12 +175,20 @@ const Onboarding: React.FC = () => {
       session => session.date === focusedDate.replaceAll('/', '-')
     );
 
+    const isFinishingDate = plan.finishing_date === focusedDate.replaceAll('/', '-');
+
     return (
       <div className="mt-4 p-4 border rounded-lg bg-white">
         <h3 className="text-lg font-semibold mb-2">
-          Activities on {format(new Date(focusedDate), 'MMMM d, yyyy')}
+          {isFinishingDate ? (
+            <span className="text-blue-600">Finishing Date: {format(new Date(focusedDate), 'MMMM d, yyyy')}</span>
+          ) : (
+            `Activities on ${format(new Date(focusedDate), 'MMMM d, yyyy')}`
+          )}
         </h3>
-        {sessionsOnDate.length === 0 ? (
+        {isFinishingDate ? (
+          <p>This is your goal completion date!</p>
+        ) : sessionsOnDate.length === 0 ? (
           <p>No activities scheduled for this date.</p>
         ) : (
           <div>
