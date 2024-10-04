@@ -6,6 +6,7 @@ from typing import List, Optional, Dict
 from pydantic import BaseModel, Field, create_model
 from gateways.activities import ActivitiesGateway
 from datetime import datetime
+import concurrent.futures
 
 class PlanController:
     def __init__(self):
@@ -40,12 +41,15 @@ class PlanController:
             raise Exception("Plan not found")
 
     def generate_plans(self, goal: str, finishing_date: Optional[str] = None, plan_description: Optional[str] = None) -> List[Dict]:
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now().strftime("%Y-%m-%d, %A")
+        number_of_weeks = self._count_number_of_weeks_till(finishing_date)
         system_prompt = f"""
         You will act as a personal coach for the goal of {goal}.
 
         Generate a progressive plan where activities intensity and/or recurrence should increase over time.
         The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
+
+        The plan should encompass and be gently progressive over the span of {number_of_weeks} (weeks till the finishing date).
 
         Current date: {current_date}
         """
@@ -54,36 +58,62 @@ class PlanController:
         
         if plan_description:
             user_prompt += f"\nAdditional plan description: {plan_description}"
+
         class GeneratedActivity(BaseModel):
-            description: str
-            frequency: str
+            title: str
+            measure: str = Field(description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')")
 
         class GeneratedSession(BaseModel):
             date: str
             descriptive_guide: str
 
+        class GeneratedSessionWeek(BaseModel):
+            reasoning: str = Field(..., description="A step by step thinking on how intense the week should be given the ammount of weeks left to achieve the goal.")
+            times_per_week: str
+            sessions: List[GeneratedSession] = Field(..., description="List of sessions for this plan. The length should be the same as the times_per_week.")
+
         class GeneratedPlan(BaseModel):
-            intensity: str = Field(..., description="The intensity level of the plan: low, medium, or high")
+            overview: str = Field(..., description="A short overview of the plan")
             activities: List[GeneratedActivity] = Field(..., description="List of activities for this plan")
-            sessions: List[GeneratedSession] = Field(..., description="List of sessions for this plan")
+            sessions_weeks: List[GeneratedSessionWeek] = Field(..., description="List of sessions weeks for this plan")
 
-        class GeneratePlansResponse(BaseModel):
-            plans: List[GeneratedPlan] = Field(..., description="List of 3 generated plans with varying intensities")
+        def generate_plan_for_intensity(intensity: str) -> Dict:
+            class GeneratePlansResponse(BaseModel):
+                reasoning: str = Field(..., description=f"A reflection on what is the goal and how does that affect the plan and its progresison. Most notably, how it affects the intensity of the weeks, and how progressive should they be to culiminate init the goal of {goal} by the finishing date.")
+                plan: GeneratedPlan = Field(..., description=f"The generated plan of {intensity} intensity")
 
-        response = ask_schema(user_prompt, system_prompt, GeneratePlansResponse)
-        
-        simplified_plans = []
-        for generated_plan in response.plans:
-            simplified_plan = {
+            response = ask_schema(user_prompt, f"{system_prompt}\nGenerate a {intensity} intensity plan.", GeneratePlansResponse)            
+            return {
                 "goal": goal,
                 "finishing_date": finishing_date,
-                "activity_descriptions": [activity.description for activity in generated_plan.activities],
-                "sessions": [session.dict() for session in generated_plan.sessions],
-                "intensity": generated_plan.intensity
-            }
-            simplified_plans.append(simplified_plan)
+                "activity_descriptions": [activity.title for activity in response.plan.activities],
+                "sessions": [session.dict() for session_week in response.plan.sessions_weeks for session in session_week.sessions],
+                "intensity": intensity,
+                "overview": response.plan.overview
+                }
+
+        intensities = ["low", "medium", "high"]
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_intensity = {executor.submit(generate_plan_for_intensity, intensity): intensity for intensity in intensities}
+            simplified_plans = []
+            
+            for future in concurrent.futures.as_completed(future_to_intensity):
+                intensity = future_to_intensity[future]
+                try:
+                    plan = future.result()
+                    simplified_plans.append(plan)
+                except Exception as exc:
+                    print(f'{intensity} intensity plan generation generated an exception: {exc}')
         
         return simplified_plans
+    
+    def _count_number_of_weeks_till(self, finishing_date: Optional[str] = None) -> int:
+        if finishing_date:
+            current_date = datetime.now()
+            finishing_date = datetime.strptime(finishing_date, "%Y-%m-%d")
+            return (finishing_date - current_date).days // 7 + 1
+        return 0
 
     def update_plan(self, plan: Plan) -> Plan:
         self.db_gateway.write(plan.dict())

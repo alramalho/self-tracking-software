@@ -18,9 +18,9 @@ import { addDays } from "date-fns";
 interface Plan {
   goal: string;
   finishing_date?: string;
-  activity_descriptions: string[];
   sessions: { date: string; descriptive_guide: string }[];
   intensity: string;
+  overview: string; // Add this line to include the overview in the Plan interface
 }
 
 const Onboarding: React.FC = () => {
@@ -178,7 +178,7 @@ const Onboarding: React.FC = () => {
     const isFinishingDate = plan.finishing_date === focusedDate.replaceAll('/', '-');
 
     return (
-      <div className="mt-4 p-4 border rounded-lg bg-white">
+      <div className="mt-4 p-4 border rounded-lg bg-white w-96">
         <h3 className="text-lg font-semibold mb-2">
           {isFinishingDate ? (
             <span className="text-blue-600">Finishing Date: {format(new Date(focusedDate), 'MMMM d, yyyy')}</span>
@@ -193,24 +193,10 @@ const Onboarding: React.FC = () => {
         ) : (
           <div>
             {sessionsOnDate.map((session, index) => (
-              <div
-                key={index}
-                className={`p-2 mb-2 rounded cursor-pointer ${
-                  focusedActivity === session.descriptive_guide
-                    ? 'bg-blue-100'
-                    : 'hover:bg-gray-100'
-                }`}
-                onClick={() => setFocusedActivity(session.descriptive_guide)}
-              >
+              <div key={index} className="p-2 mb-2 rounded">
                 <p>{session.descriptive_guide}</p>
               </div>
             ))}
-            {focusedActivity && (
-              <div className="mt-4 p-3 bg-gray-50 rounded">
-                <h4 className="font-semibold mb-2">Activity Details:</h4>
-                <p>{focusedActivity}</p>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -362,8 +348,11 @@ const Onboarding: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <p>Finishing Date: {plan.finishing_date || "Not specified"}</p>
-                    <p>Activities: {plan.activity_descriptions.join(", ")}</p>
                     <p>Number of sessions: {plan.sessions.length}</p>
+                    <div className="mt-4 mb-4">
+                      <h3 className="text-lg font-semibold mb-2">Plan Overview:</h3>
+                      <p className="text-sm text-gray-600">{plan.overview}</p>
+                    </div>
                     {renderHeatMap(plan)}
                     <Button
                       className="w-full mt-2"
