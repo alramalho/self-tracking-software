@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
@@ -10,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import HeatMap from "@uiw/react-heat-map";
 
 interface Plan {
   goal: string;
@@ -30,6 +33,8 @@ const Onboarding: React.FC = () => {
   const [planDescription, setPlanDescription] = useState("");
   const [selectedPlanIndex, setSelectedPlanIndex] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [focusedDate, setFocusedDate] = useState<string | null>(null);
+  const [focusedActivity, setFocusedActivity] = useState<string | null>(null);
 
   const api = useApiWithAuth();
   const router = useRouter();
@@ -96,29 +101,93 @@ const Onboarding: React.FC = () => {
     }
   };
 
-  const renderCalendar = (plan: Plan) => {
-    const sessionDates = plan.sessions.map(session => new Date(session.date));
+  const formatSessionsForHeatMap = (plan: Plan) => {
+    return plan.sessions.map(session => ({
+      date: session.date.replaceAll('-', '/'),
+      count: 1 // We'll use this to indicate a session
+    }));
+  };
+
+  const renderHeatMap = (plan: Plan) => {
+    const today = new Date();
+    const endDate = plan.finishing_date ? new Date(plan.finishing_date) : undefined;
+    const heatmapData = formatSessionsForHeatMap(plan);
 
     return (
       <div className="mb-4">
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={setSelectedDate}
-          className="rounded-md border"
-          modifiers={{ hasSession: sessionDates }}
-          modifiersStyles={{
-            hasSession: { backgroundColor: 'lightblue' }
+        <HeatMap
+          value={heatmapData}
+          startDate={today}
+          endDate={endDate}
+          height={200}
+          rectSize={14}
+          legendCellSize={12}
+          rectProps={{
+            rx: 3,
+          }}
+          rectRender={(props, data) => {
+            return (
+              <rect
+                {...props}
+                onClick={() => {
+                  setFocusedDate(data.date);
+                  setFocusedActivity(null); // Reset focused activity when a new date is selected
+                }}
+              />
+            );
+          }}
+          legendRender={(props) => (
+            // @ts-ignore
+            <rect {...props} y={props.y + 10} rx={props.range} />
+          )}
+          panelColors={{
+            0: "#EBEDF0",
+            1: "#9BE9A8",
+            2: "#40C463",
+            3: "#30A14E",
+            4: "#216E39",
           }}
         />
-        {selectedDate && (
-          <div className="mt-2">
-            <h4 className="font-semibold">Sessions on {format(selectedDate, 'PP')}:</h4>
-            {plan.sessions
-              .filter(session => new Date(session.date).toDateString() === selectedDate.toDateString())
-              .map((session, index) => (
-                <p key={index}>{session.descriptive_guide}</p>
-              ))}
+        {renderActivityViewer(plan)}
+      </div>
+    );
+  };
+
+  const renderActivityViewer = (plan: Plan) => {
+    if (!focusedDate) return null;
+
+    const sessionsOnDate = plan.sessions.filter(
+      session => session.date === focusedDate.replaceAll('/', '-')
+    );
+
+    return (
+      <div className="mt-4 p-4 border rounded-lg bg-white">
+        <h3 className="text-lg font-semibold mb-2">
+          Activities on {format(new Date(focusedDate), 'MMMM d, yyyy')}
+        </h3>
+        {sessionsOnDate.length === 0 ? (
+          <p>No activities scheduled for this date.</p>
+        ) : (
+          <div>
+            {sessionsOnDate.map((session, index) => (
+              <div
+                key={index}
+                className={`p-2 mb-2 rounded cursor-pointer ${
+                  focusedActivity === session.descriptive_guide
+                    ? 'bg-blue-100'
+                    : 'hover:bg-gray-100'
+                }`}
+                onClick={() => setFocusedActivity(session.descriptive_guide)}
+              >
+                <p>{session.descriptive_guide}</p>
+              </div>
+            ))}
+            {focusedActivity && (
+              <div className="mt-4 p-3 bg-gray-50 rounded">
+                <h4 className="font-semibold mb-2">Activity Details:</h4>
+                <p>{focusedActivity}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -272,7 +341,7 @@ const Onboarding: React.FC = () => {
                     <p>Finishing Date: {plan.finishing_date || "Not specified"}</p>
                     <p>Activities: {plan.activity_descriptions.join(", ")}</p>
                     <p>Number of sessions: {plan.sessions.length}</p>
-                    {renderCalendar(plan)}
+                    {renderHeatMap(plan)}
                     <Button
                       className="w-full mt-2"
                       onClick={() => handlePlanSelection(plan)}
