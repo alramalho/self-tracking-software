@@ -94,7 +94,7 @@ class PlanController:
                 "overview": response.plan.overview
                 }
 
-        intensities = ["medium"]
+        intensities = ["low", "medium", "high"]
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             future_to_intensity = {executor.submit(generate_plan_for_intensity, intensity): intensity for intensity in intensities}
