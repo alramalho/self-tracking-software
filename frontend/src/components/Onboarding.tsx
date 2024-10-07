@@ -19,13 +19,18 @@ import { Badge } from "./ui/badge";
 interface Plan {
   goal: string;
   finishing_date?: Date;
-  sessions: { date: Date; descriptive_guide: string; quantity: number, activity_name: string }[];
-  activities: { title: string, measure: string }[];
+  sessions: {
+    date: Date;
+    descriptive_guide: string;
+    quantity: number;
+    activity_name: string;
+  }[];
+  activities: { title: string; measure: string }[];
   intensity: string;
   overview: string;
 }
 
-interface ApiPlan extends Omit<Plan, 'finishing_date' | 'sessions'> {
+interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
   finishing_date?: string;
   sessions: { date: string; descriptive_guide: string; quantity: number }[];
 }
@@ -39,7 +44,9 @@ const Onboarding: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
-  const [selectedPlanIndex, setSelectedPlanIndex] = useState<number | null>(null);
+  const [selectedPlanIndex, setSelectedPlanIndex] = useState<number | null>(
+    null
+  );
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const [focusedActivity, setFocusedActivity] = useState<string | null>(null);
@@ -57,7 +64,11 @@ const Onboarding: React.FC = () => {
           setName(userData.onboarding_progress.name || "");
           setTimezone(userData.onboarding_progress.timezone || "");
           setGoal(userData.onboarding_progress.goal || "");
-          setFinishingDate(userData.onboarding_progress.finishing_date ? parseISO(userData.onboarding_progress.finishing_date) : null);
+          setFinishingDate(
+            userData.onboarding_progress.finishing_date
+              ? parseISO(userData.onboarding_progress.finishing_date)
+              : null
+          );
           // Set the appropriate step based on progress
           // This is a simple example, you might want to implement more sophisticated logic
           if (userData.onboarding_progress.name) setStep(1);
@@ -87,16 +98,18 @@ const Onboarding: React.FC = () => {
     setIsGenerating(true);
     try {
       const response = await api.post("/api/onboarding/generate-plans", {
-        planDescription: planDescription.trim() || undefined
+        planDescription: planDescription.trim() || undefined,
       });
       // Convert string dates to Date objects
       const plansWithDateObjects = response.data.plans.map((plan: ApiPlan) => ({
         ...plan,
-        finishing_date: plan.finishing_date ? parseISO(plan.finishing_date) : undefined,
-        sessions: plan.sessions.map(session => ({
+        finishing_date: plan.finishing_date
+          ? parseISO(plan.finishing_date)
+          : undefined,
+        sessions: plan.sessions.map((session) => ({
           ...session,
-          date: parseISO(session.date)
-        }))
+          date: parseISO(session.date),
+        })),
       }));
       setPlans(plansWithDateObjects);
       setStep(4);
@@ -118,109 +131,147 @@ const Onboarding: React.FC = () => {
   };
 
   const formatSessionsForHeatMap = (plan: Plan) => {
-    const sessions = plan.sessions.map(session => ({
+    const sessions = plan.sessions.map((session) => ({
       date: session.date,
-      count: session.quantity
+      count: session.quantity,
     }));
 
     if (plan.finishing_date) {
       sessions.push({
         date: plan.finishing_date,
-        count: -1
+        count: -1,
       });
     }
 
     return sessions;
   };
 
-  const getActivityColor = (index: number) => {
-    const colors = [
-      "bg-red-200 text-red-800",
-      "bg-blue-200 text-blue-800",
-      "bg-green-200 text-green-800",
-      "bg-yellow-200 text-yellow-800",
-      "bg-purple-200 text-purple-800",
-      "bg-pink-200 text-pink-800",
-      "bg-indigo-200 text-indigo-800",
-      "bg-gray-200 text-gray-800",
+  const getActivityColorMatrix = () => {
+    const baseColors = [
+      ["#9AE6B4", "#68D391", "#48BB78", "#38A169", "#2F855A"], // green
+      ["#BEE3F8", "#90CDF4", "#63B3ED", "#4299E1", "#3182CE"], // blue
+      ["#FEB2B2", "#FC8181", "#F56565", "#E53E3E", "#C53030"], // red
+      ["#FAF089", "#F6E05E", "#ECC94B", "#D69E2E", "#B7791F"], // yellow
+      ["#E9D8FD", "#D6BCFA", "#B794F4", "#9F7AEA", "#805AD5"], // purple
+      ["#FED7E2", "#FBB6CE", "#F687B3", "#ED64A6", "#D53F8C"], // pink
+      ["#C3DAFE", "#A3BFFA", "#7F9CF5", "#667EEA", "#5A67D8"], // indigo
+      ["#E2E8F0", "#CBD5E0", "#A0AEC0", "#718096", "#4A5568"], // gray
     ];
-    return colors[index % colors.length];
+    return baseColors;
+  };
+
+  const getActivityColor = (activityIndex: number, intensityLevel: number) => {
+    const colorMatrix = getActivityColorMatrix();
+    const row = colorMatrix[activityIndex % colorMatrix.length];
+    return row[Math.min(intensityLevel, row.length - 1)];
   };
 
   const renderHeatMap = (plan: Plan) => {
     const today = new Date();
-    const endDate = plan.finishing_date ? addDays(plan.finishing_date, 1) : undefined;
+    const endDate = plan.finishing_date
+      ? addDays(plan.finishing_date, 1)
+      : undefined;
     const heatmapData = formatSessionsForHeatMap(plan);
 
-    console.log("Plan: ", plan.intensity);
-    console.log({ heatmapData });
-
     // Calculate min and max quantities
-    const quantities = plan.sessions.map(session => session.quantity);
+    const quantities = plan.sessions.map((session) => session.quantity);
     const minQuantity = Math.min(...quantities);
     const maxQuantity = Math.max(...quantities);
 
     // Define intensity levels (excluding 0)
-    const intensityLevels = 4;
+    const intensityLevels = 5;
     const intensityStep = (maxQuantity - minQuantity) / intensityLevels;
-
-    // Define colors array (first color is for 0 quantity)
-    const colors = ["#EBEDF0", "#9BE9A8", "#40C463", "#30A14E", "#216E39", "#E16A42"];
 
     return (
       <div className="mb-4">
-        <HeatMap
-          value={heatmapData}
-          startDate={today}
-          endDate={endDate}
-          height={200}
-          rectSize={14}
-          legendCellSize={12}
-          rectProps={{
-            rx: 3,
-          }}
-          rectRender={(props, data) => {
-            // Determine intensity level
-            let intensityLevel;
-            if (data.count === -1) {
-              intensityLevel = 5; // Special case for finishing date
-            } else if (data.count === undefined || data.count === null || data.count === 0) {
-              intensityLevel = 0; // Special case for no data or 0 quantity
-            } else {
-              intensityLevel = Math.min(Math.floor((data.count - minQuantity) / intensityStep) + 1, intensityLevels);
-            }
-            
-            // Ensure intensityLevel is within the valid range
-            intensityLevel = Math.max(0, Math.min(intensityLevel, colors.length - 1));
-            
-            // Assign color based on intensity level
-            props.fill = colors[intensityLevel];
+        <div className="flex justify-center">
+          <div className="flex flex-col">
+            <HeatMap
+              value={heatmapData}
+              startDate={today}
+              endDate={endDate}
+              height={200}
+              rectSize={14}
+              legendRender={() => null}
+              rectProps={{
+                rx: 3,
+              }}
+              rectRender={(props, data) => {
+                const session = plan.sessions.find(
+                  (s) =>
+                    format(s.date, "yyyy-MM-dd") ===
+                    format(new Date(data.date), "yyyy-MM-dd")
+                );
 
-            return (
-              <rect
-                key={data.index}
-                {...props}
-                onClick={() => {
-                  // Parse the date string correctly
-                  const clickedDate = new Date(data.date);
-                  if (!isNaN(clickedDate.getTime())) {
-                    setFocusedDate(clickedDate);
-                    setFocusedActivity(null);
-                  } else {
-                    console.error("Invalid date:", data.date);
-                  }
-                }}
-              />
-            );
-          }}
-          legendRender={(props) => (
-            // @ts-ignore
-            <rect {...props} y={props.y + 10} rx={props.range} />
-          )}
-        />
+                let color = "#EBEDF0"; // Default color for no activity
+
+                if (session) {
+                  const activityIndex = plan.activities.findIndex(
+                    (a) => a.title === session.activity_name
+                  );
+                  const intensityLevel = Math.min(
+                    Math.floor(
+                      (session.quantity - minQuantity) / intensityStep
+                    ),
+                    intensityLevels - 1
+                  );
+                  color = getActivityColor(activityIndex, intensityLevel);
+                }
+
+                return (
+                  <rect
+                    key={data.index}
+                    {...props}
+                    fill={color}
+                    onClick={() => {
+                      const clickedDate = new Date(data.date);
+                      console.log({ clickedDate });
+                      if (!isNaN(clickedDate.getTime())) {
+                        setFocusedDate(clickedDate);
+                        setFocusedActivity(null);
+                      } else {
+                        console.error("Invalid date:", data.date);
+                      }
+                    }}
+                  />
+                );
+              }}
+            />
+          </div>
+          <div className="flex justify-center mt-4">
+            {renderActivityLegend(plan)}
+          </div>
+        </div>
         <div className="flex justify-center mt-4">
           {renderActivityViewer(plan)}
         </div>
+      </div>
+    );
+  };
+
+  const renderActivityLegend = (plan: Plan) => {
+    const colorMatrix = getActivityColorMatrix();
+    return (
+      <div className="flex flex-wrap justify-center gap-2 mt-2">
+        {plan.activities.map((activity, index) => (
+          <div key={index} className="flex flex-col items-center">
+            <span className="text-sm font-semibold mb-1">
+              {activity.title} ({activity.measure})
+            </span>
+            <div className="flex">
+              {colorMatrix[index % colorMatrix.length].map(
+                (color, intensityIndex) => (
+                  <div
+                    key={intensityIndex}
+                    className="w-4 h-4 mr-1"
+                    style={{ backgroundColor: color }}
+                    title={`Intensity level ${intensityIndex + 1}`}
+                  />
+                )
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     );
   };
@@ -229,19 +280,24 @@ const Onboarding: React.FC = () => {
     if (!focusedDate) return null;
 
     const sessionsOnDate = plan.sessions.filter(
-      session => format(session.date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd')
+      (session) =>
+        format(session.date, "yyyy-MM-dd") === format(focusedDate, "yyyy-MM-dd")
     );
 
-    const isFinishingDate = plan.finishing_date && 
-      format(plan.finishing_date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd');
+    const isFinishingDate =
+      plan.finishing_date &&
+      format(plan.finishing_date, "yyyy-MM-dd") ===
+        format(focusedDate, "yyyy-MM-dd");
 
     return (
       <div className="mt-4 p-4 border rounded-lg bg-white w-full max-w-md w-96">
         <h3 className="text-lg font-semibold mb-2">
           {isFinishingDate ? (
-            <span>🎉 Finishing Date: {format(focusedDate, 'MMMM d, yyyy')}</span>
+            <span>
+              🎉 Finishing Date: {format(focusedDate, "MMMM d, yyyy")}
+            </span>
           ) : (
-            `Activities on ${format(focusedDate, 'MMMM d, yyyy')}`
+            `Activities on ${format(focusedDate, "MMMM d, yyyy")}`
           )}
         </h3>
         {isFinishingDate ? (
@@ -251,12 +307,28 @@ const Onboarding: React.FC = () => {
         ) : (
           <div>
             {sessionsOnDate.map((session, index) => (
-              <div key={index} className="p-2 mb-2 rounded border border-gray-200">
+              <div
+                key={index}
+                className="p-2 mb-2 rounded border border-gray-200"
+              >
                 <div className="flex flex-wrap gap-2 mb-2">
                   {plan.activities.map((activity, actIndex) => {
-                    if (plan.sessions.find(s => format(s.date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd') && s.activity_name === activity.title) ) {
+                    if (
+                      plan.sessions.find(
+                        (s) =>
+                          format(s.date, "yyyy-MM-dd") ===
+                            format(focusedDate, "yyyy-MM-dd") &&
+                          s.activity_name === activity.title
+                      )
+                    ) {
                       return (
-                        <Badge key={actIndex} className={`${getActivityColor(actIndex)}`}>
+                        <Badge
+                          key={actIndex}
+                          className={`${getActivityColor(
+                            actIndex,
+                            session.quantity
+                          )}`}
+                        >
                           {activity.title}
                         </Badge>
                       );
@@ -264,7 +336,11 @@ const Onboarding: React.FC = () => {
                     return null;
                   })}
                 </div>
-                <p className="text-sm font-semibold">Intensity: {session.quantity} {plan.activities[0].measure}</p>
+                <p className="text-sm font-semibold">
+                  Intensity: {session.quantity} {plan.activities.find(
+                    (a) => a.title === session.activity_name
+                  )?.measure}
+                </p>
                 <p className="text-sm">{session.descriptive_guide}</p>
               </div>
             ))}
@@ -313,7 +389,8 @@ const Onboarding: React.FC = () => {
               <Button
                 className="w-full"
                 onClick={() => {
-                  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                  const timezone =
+                    Intl.DateTimeFormat().resolvedOptions().timeZone;
                   setTimezone(timezone);
                   saveStep("timezone", timezone);
                   setStep(2);
@@ -367,7 +444,12 @@ const Onboarding: React.FC = () => {
               <Button
                 className="w-full"
                 onClick={() => {
-                  saveStep("finishing_date", finishingDate ? finishingDate.toISOString().split('T')[0] : '');
+                  saveStep(
+                    "finishing_date",
+                    finishingDate
+                      ? finishingDate.toISOString().split("T")[0]
+                      : ""
+                  );
                   handleGeneratePlans();
                 }}
                 disabled={isGenerating}
@@ -394,7 +476,9 @@ const Onboarding: React.FC = () => {
               <Textarea
                 placeholder="Describe your ideal plan (optional)"
                 value={planDescription}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPlanDescription(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setPlanDescription(e.target.value)
+                }
                 className="mb-4"
               />
               <Button
@@ -415,13 +499,22 @@ const Onboarding: React.FC = () => {
               {plans.map((plan, index) => (
                 <Card key={index} className="mb-8">
                   <CardHeader>
-                    <CardTitle>Plan {index + 1} - {plan.intensity} Intensity</CardTitle>
+                    <CardTitle>
+                      Plan {index + 1} - {plan.intensity} Intensity
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p>Finishing Date: {plan.finishing_date ? format(plan.finishing_date, 'yyyy-MM-dd') : "Not specified"}</p>
+                    <p>
+                      Finishing Date:{" "}
+                      {plan.finishing_date
+                        ? format(plan.finishing_date, "yyyy-MM-dd")
+                        : "Not specified"}
+                    </p>
                     <p>Number of sessions: {plan.sessions.length}</p>
                     <div className="mt-4 mb-4">
-                      <h3 className="text-lg font-semibold mb-2">Plan Overview:</h3>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Plan Overview:
+                      </h3>
                       <p className="text-sm text-gray-600">{plan.overview}</p>
                     </div>
                     {renderHeatMap(plan)}
@@ -444,7 +537,9 @@ const Onboarding: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <h1 className="text-2xl font-bold mb-8">Welcome to the Onboarding Process</h1>
+      <h1 className="text-2xl font-bold mb-8">
+        Welcome to the Onboarding Process
+      </h1>
       {renderStep()}
     </div>
   );
