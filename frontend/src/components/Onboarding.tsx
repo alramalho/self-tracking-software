@@ -10,17 +10,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Calendar } from "@/components/ui/calendar";
 import toast from "react-hot-toast";
-import { Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, ShieldEllipsisIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { addDays } from "date-fns";
+import { Badge } from "./ui/badge";
 
 interface Plan {
   goal: string;
-  finishing_date?: string;
-  sessions: { date: string; descriptive_guide: string }[];
+  finishing_date?: Date;
+  sessions: { date: Date; descriptive_guide: string; quantity: number }[];
+  activities: { title: string, measure: string }[];
   intensity: string;
-  overview: string; // Add this line to include the overview in the Plan interface
+  overview: string;
+}
+
+interface ApiPlan extends Omit<Plan, 'finishing_date' | 'sessions'> {
+  finishing_date?: string;
+  sessions: { date: string; descriptive_guide: string; quantity: number }[];
 }
 
 const Onboarding: React.FC = () => {
@@ -28,13 +35,13 @@ const Onboarding: React.FC = () => {
   const [name, setName] = useState("");
   const [timezone, setTimezone] = useState("");
   const [goal, setGoal] = useState("");
-  const [finishingDate, setFinishingDate] = useState("");
+  const [finishingDate, setFinishingDate] = useState<Date | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
   const [selectedPlanIndex, setSelectedPlanIndex] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [focusedDate, setFocusedDate] = useState<string | null>(null);
+  const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const [focusedActivity, setFocusedActivity] = useState<string | null>(null);
 
   const api = useApiWithAuth();
@@ -50,7 +57,7 @@ const Onboarding: React.FC = () => {
           setName(userData.onboarding_progress.name || "");
           setTimezone(userData.onboarding_progress.timezone || "");
           setGoal(userData.onboarding_progress.goal || "");
-          setFinishingDate(userData.onboarding_progress.finishing_date || "");
+          setFinishingDate(userData.onboarding_progress.finishing_date ? parseISO(userData.onboarding_progress.finishing_date) : null);
           // Set the appropriate step based on progress
           // This is a simple example, you might want to implement more sophisticated logic
           if (userData.onboarding_progress.name) setStep(1);
@@ -82,8 +89,16 @@ const Onboarding: React.FC = () => {
       const response = await api.post("/api/onboarding/generate-plans", {
         planDescription: planDescription.trim() || undefined
       });
-      setPlans(response.data.plans);
-      console.log({ plans: response.data.plans });
+      // Convert string dates to Date objects
+      const plansWithDateObjects = response.data.plans.map((plan: ApiPlan) => ({
+        ...plan,
+        finishing_date: plan.finishing_date ? parseISO(plan.finishing_date) : undefined,
+        sessions: plan.sessions.map(session => ({
+          ...session,
+          date: parseISO(session.date)
+        }))
+      }));
+      setPlans(plansWithDateObjects);
       setStep(4);
     } catch (error) {
       console.error("Error generating plans:", error);
@@ -104,25 +119,52 @@ const Onboarding: React.FC = () => {
 
   const formatSessionsForHeatMap = (plan: Plan) => {
     const sessions = plan.sessions.map(session => ({
-      date: session.date.replaceAll('-', '/'),
-      count: 1 // We'll use this to indicate a session
+      date: session.date,
+      count: session.quantity
     }));
 
-    // Add the finishing date to the heatmap data
     if (plan.finishing_date) {
       sessions.push({
-        date: plan.finishing_date.replaceAll('-', '/'),
-        count: 2 // We'll use 2 to indicate the finishing date
+        date: plan.finishing_date,
+        count: -1
       });
     }
 
     return sessions;
   };
 
+  const getActivityColor = (index: number) => {
+    const colors = [
+      "bg-red-200 text-red-800",
+      "bg-blue-200 text-blue-800",
+      "bg-green-200 text-green-800",
+      "bg-yellow-200 text-yellow-800",
+      "bg-purple-200 text-purple-800",
+      "bg-pink-200 text-pink-800",
+      "bg-indigo-200 text-indigo-800",
+      "bg-gray-200 text-gray-800",
+    ];
+    return colors[index % colors.length];
+  };
+
   const renderHeatMap = (plan: Plan) => {
     const today = new Date();
-    const endDate = plan.finishing_date ? addDays(new Date(plan.finishing_date), 1) : undefined;
+    const endDate = plan.finishing_date ? addDays(plan.finishing_date, 1) : undefined;
     const heatmapData = formatSessionsForHeatMap(plan);
+
+    console.log({ heatmapData });
+
+    // Calculate min and max quantities
+    const quantities = plan.sessions.map(session => session.quantity);
+    const minQuantity = Math.min(...quantities);
+    const maxQuantity = Math.max(...quantities);
+
+    // Define intensity levels
+    const intensityLevels = 4;
+    const intensityStep = (maxQuantity - minQuantity) / intensityLevels;
+
+    // Define colors array
+    const colors = ["#EBEDF0", "#9BE9A8", "#40C463", "#30A14E", "#216E39", "#E16A42"];
 
     return (
       <div className="mb-4">
@@ -137,16 +179,35 @@ const Onboarding: React.FC = () => {
             rx: 3,
           }}
           rectRender={(props, data) => {
-            // Customize the color for the finishing date
-            if (data.count === 2) {
-              props.fill = "#4299E1"; // A shade of blue
+            // Determine intensity level
+            let intensityLevel;
+            if (data.count === -1) {
+              intensityLevel = 5; // Special case for finishing date
+            } else if (data.count === undefined || data.count === null) {
+              intensityLevel = 0; // Special case for no data
+            } else {
+              intensityLevel = Math.min(Math.floor((data.count - minQuantity) / intensityStep), intensityLevels - 1);
             }
+            
+            // Ensure intensityLevel is within the valid range
+            intensityLevel = Math.max(0, Math.min(intensityLevel, colors.length - 1));
+            
+            // Assign color based on intensity level
+            props.fill = colors[intensityLevel];
+
             return (
               <rect
+                key={data.index}
                 {...props}
                 onClick={() => {
-                  setFocusedDate(data.date);
-                  setFocusedActivity(null); // Reset focused activity when a new date is selected
+                  // Parse the date string correctly
+                  const clickedDate = new Date(data.date);
+                  if (!isNaN(clickedDate.getTime())) {
+                    setFocusedDate(clickedDate);
+                    setFocusedActivity(null);
+                  } else {
+                    console.error("Invalid date:", data.date);
+                  }
                 }}
               />
             );
@@ -155,15 +216,10 @@ const Onboarding: React.FC = () => {
             // @ts-ignore
             <rect {...props} y={props.y + 10} rx={props.range} />
           )}
-          panelColors={{
-            0: "#EBEDF0",
-            1: "#9BE9A8",
-            2: "#40C463",
-            3: "#30A14E",
-            4: "#216E39",
-          }}
         />
-        {renderActivityViewer(plan)}
+        <div className="flex justify-center mt-4">
+          {renderActivityViewer(plan)}
+        </div>
       </div>
     );
   };
@@ -171,19 +227,25 @@ const Onboarding: React.FC = () => {
   const renderActivityViewer = (plan: Plan) => {
     if (!focusedDate) return null;
 
+
     const sessionsOnDate = plan.sessions.filter(
-      session => session.date === focusedDate.replaceAll('/', '-')
+      session => format(session.date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd')
     );
 
-    const isFinishingDate = plan.finishing_date === focusedDate.replaceAll('/', '-');
+    console.log({sessionsOnDate});
+
+    const isFinishingDate = plan.finishing_date && 
+      format(plan.finishing_date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd');
+
+    console.log({isFinishingDate});
 
     return (
-      <div className="mt-4 p-4 border rounded-lg bg-white w-96">
+      <div className="mt-4 p-4 border rounded-lg bg-white w-full max-w-md w-96">
         <h3 className="text-lg font-semibold mb-2">
           {isFinishingDate ? (
-            <span className="text-blue-600">Finishing Date: {format(new Date(focusedDate), 'MMMM d, yyyy')}</span>
+            <span >🎉 Finishing Date: {format(focusedDate, 'MMMM d, yyyy')}</span>
           ) : (
-            `Activities on ${format(new Date(focusedDate), 'MMMM d, yyyy')}`
+            `Activities on ${format(focusedDate, 'MMMM d, yyyy')}`
           )}
         </h3>
         {isFinishingDate ? (
@@ -193,8 +255,16 @@ const Onboarding: React.FC = () => {
         ) : (
           <div>
             {sessionsOnDate.map((session, index) => (
-              <div key={index} className="p-2 mb-2 rounded">
-                <p>{session.descriptive_guide}</p>
+              <div key={index} className="p-2 mb-2 rounded border border-gray-200">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {plan.activities.map((activity, actIndex) => (
+                    <Badge key={actIndex} className={`${getActivityColor(actIndex)}`}>
+                      {activity.title}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-sm font-semibold">Intensity: {session.quantity} {plan.activities[0].measure}</p>
+                <p className="text-sm">{session.descriptive_guide}</p>
               </div>
             ))}
           </div>
@@ -289,14 +359,14 @@ const Onboarding: React.FC = () => {
             </CardHeader>
             <CardContent>
               <DatePicker
-                selected={finishingDate ? new Date(finishingDate) : undefined}
-                onSelect={(date: any) => setFinishingDate(date ? date.toISOString().split('T')[0] : '')}
+                selected={finishingDate!}
+                onSelect={(date: Date | undefined) => setFinishingDate(date!)}
                 className="mb-4"
               />
               <Button
                 className="w-full"
                 onClick={() => {
-                  saveStep("finishing_date", finishingDate);
+                  saveStep("finishing_date", finishingDate ? finishingDate.toISOString().split('T')[0] : '');
                   handleGeneratePlans();
                 }}
                 disabled={isGenerating}
@@ -347,7 +417,7 @@ const Onboarding: React.FC = () => {
                     <CardTitle>Plan {index + 1} - {plan.intensity} Intensity</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p>Finishing Date: {plan.finishing_date || "Not specified"}</p>
+                    <p>Finishing Date: {plan.finishing_date ? format(plan.finishing_date, 'yyyy-MM-dd') : "Not specified"}</p>
                     <p>Number of sessions: {plan.sessions.length}</p>
                     <div className="mt-4 mb-4">
                       <h3 className="text-lg font-semibold mb-2">Plan Overview:</h3>

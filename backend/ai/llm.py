@@ -37,5 +37,5 @@ def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL)
         response_format=pymodel,
     )
 
-    logger.info(f"Assistant response: {completion.choices[0].message.parsed}")
+    logger.info(f"Assistant response: {completion.choices[0].message.parsed.model_dump_json(indent=2)}")
     return completion.choices[0].message.parsed

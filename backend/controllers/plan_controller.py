@@ -65,6 +65,8 @@ class PlanController:
 
         class GeneratedSession(BaseModel):
             date: str
+            activity_name: str
+            quantity: int = Field(description="The quantity of the activity to be performed. Directly related to the actvity and should be measured in the same way.")
             descriptive_guide: str
 
         class GeneratedSessionWeek(BaseModel):
@@ -86,13 +88,13 @@ class PlanController:
             return {
                 "goal": goal,
                 "finishing_date": finishing_date,
-                "activity_descriptions": [activity.title for activity in response.plan.activities],
+                "activities": [activity.dict() for activity in response.plan.activities],
                 "sessions": [session.dict() for session_week in response.plan.sessions_weeks for session in session_week.sessions],
                 "intensity": intensity,
                 "overview": response.plan.overview
                 }
 
-        intensities = ["low", "medium", "high"]
+        intensities = ["medium"]
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             future_to_intensity = {executor.submit(generate_plan_for_intensity, intensity): intensity for intensity in intensities}

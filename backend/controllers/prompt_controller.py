@@ -47,8 +47,7 @@ class PromptController:
             - "How's your meditation practice going? Remember, even 5 minutes can make a difference!", for a user with a meditation activity
             - "I've noticed you haven't picked up reading lately? What's happening?", for a user with a reading activity
             - "I've noticed you haven't logged an activity in a while. Remember, what gets measured gets managed!", for a user who hasn't logged any activities in the past week
-            - "Music gives a soul to the universe, wings to the mind, flight to the imagination. – Plato. How's your music practice going?", for a user interested in music
-
+            - "'Music gives a soul to the universe, wings to the mind, flight to the imagination.' – Plato. How's your music practice going?", for a user interested in music
 
             Output only the message to be sent to the user. Nothing more, nothing less.
 
