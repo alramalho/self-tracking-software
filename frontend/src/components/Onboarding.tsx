@@ -19,7 +19,7 @@ import { Badge } from "./ui/badge";
 interface Plan {
   goal: string;
   finishing_date?: Date;
-  sessions: { date: Date; descriptive_guide: string; quantity: number }[];
+  sessions: { date: Date; descriptive_guide: string; quantity: number, activity_name: string }[];
   activities: { title: string, measure: string }[];
   intensity: string;
   overview: string;
@@ -228,23 +228,18 @@ const Onboarding: React.FC = () => {
   const renderActivityViewer = (plan: Plan) => {
     if (!focusedDate) return null;
 
-
     const sessionsOnDate = plan.sessions.filter(
       session => format(session.date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd')
     );
 
-    console.log({sessionsOnDate});
-
     const isFinishingDate = plan.finishing_date && 
       format(plan.finishing_date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd');
-
-    console.log({isFinishingDate});
 
     return (
       <div className="mt-4 p-4 border rounded-lg bg-white w-full max-w-md w-96">
         <h3 className="text-lg font-semibold mb-2">
           {isFinishingDate ? (
-            <span >🎉 Finishing Date: {format(focusedDate, 'MMMM d, yyyy')}</span>
+            <span>🎉 Finishing Date: {format(focusedDate, 'MMMM d, yyyy')}</span>
           ) : (
             `Activities on ${format(focusedDate, 'MMMM d, yyyy')}`
           )}
@@ -258,11 +253,16 @@ const Onboarding: React.FC = () => {
             {sessionsOnDate.map((session, index) => (
               <div key={index} className="p-2 mb-2 rounded border border-gray-200">
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {plan.activities.map((activity, actIndex) => (
-                    <Badge key={actIndex} className={`${getActivityColor(actIndex)}`}>
-                      {activity.title}
-                    </Badge>
-                  ))}
+                  {plan.activities.map((activity, actIndex) => {
+                    if (plan.sessions.find(s => format(s.date, 'yyyy-MM-dd') === format(focusedDate, 'yyyy-MM-dd') && s.activity_name === activity.title) ) {
+                      return (
+                        <Badge key={actIndex} className={`${getActivityColor(actIndex)}`}>
+                          {activity.title}
+                        </Badge>
+                      );
+                    }
+                    return null;
+                  })}
                 </div>
                 <p className="text-sm font-semibold">Intensity: {session.quantity} {plan.activities[0].measure}</p>
                 <p className="text-sm">{session.descriptive_guide}</p>
