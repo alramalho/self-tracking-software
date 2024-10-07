@@ -152,6 +152,7 @@ const Onboarding: React.FC = () => {
     const endDate = plan.finishing_date ? addDays(plan.finishing_date, 1) : undefined;
     const heatmapData = formatSessionsForHeatMap(plan);
 
+    console.log("Plan: ", plan.intensity);
     console.log({ heatmapData });
 
     // Calculate min and max quantities
@@ -159,11 +160,11 @@ const Onboarding: React.FC = () => {
     const minQuantity = Math.min(...quantities);
     const maxQuantity = Math.max(...quantities);
 
-    // Define intensity levels
+    // Define intensity levels (excluding 0)
     const intensityLevels = 4;
     const intensityStep = (maxQuantity - minQuantity) / intensityLevels;
 
-    // Define colors array
+    // Define colors array (first color is for 0 quantity)
     const colors = ["#EBEDF0", "#9BE9A8", "#40C463", "#30A14E", "#216E39", "#E16A42"];
 
     return (
@@ -183,10 +184,10 @@ const Onboarding: React.FC = () => {
             let intensityLevel;
             if (data.count === -1) {
               intensityLevel = 5; // Special case for finishing date
-            } else if (data.count === undefined || data.count === null) {
-              intensityLevel = 0; // Special case for no data
+            } else if (data.count === undefined || data.count === null || data.count === 0) {
+              intensityLevel = 0; // Special case for no data or 0 quantity
             } else {
-              intensityLevel = Math.min(Math.floor((data.count - minQuantity) / intensityStep), intensityLevels - 1);
+              intensityLevel = Math.min(Math.floor((data.count - minQuantity) / intensityStep) + 1, intensityLevels);
             }
             
             // Ensure intensityLevel is within the valid range
