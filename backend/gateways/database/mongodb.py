@@ -39,7 +39,11 @@ class MongoDBGateway(DBGateway):
                     data['_id'] = existing_id
             else:
                 # Document doesn't exist, create new ObjectId
-                data['_id'] = ObjectId()
+                try:
+                    data['_id'] = ObjectId(data['id'])
+                except Exception as e:
+                    logger.error(f"Error creating ObjectId from {data['id']}: {e}. Creating new ObjectId.")
+                    data['_id'] = ObjectId()
             del data['id']
         
         logger.log("DB", f"MongoDB: Writing to MongoDB ... {data}")

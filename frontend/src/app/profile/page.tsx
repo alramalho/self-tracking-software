@@ -7,6 +7,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Switch } from "@/components/ui/switch";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
+import { convertApiPlansToPlans, useUserPlan } from "@/contexts/UserPlanContext";
+import PlanRenderer from "@/components/PlanRenderer";
 
 const ProfilePage: React.FC = () => {
   const { user } = useUser();
@@ -21,6 +23,7 @@ const ProfilePage: React.FC = () => {
     alertSubscriptionEndpoint,
   } = useNotifications();
   const authedApi = useApiWithAuth();
+  const { plan, loading, error } = useUserPlan();
 
   const handleTestLocalNotification = () => {
     sendLocalNotification(
@@ -58,6 +61,14 @@ const ProfilePage: React.FC = () => {
       setIsPushGranted(false);
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -98,7 +109,6 @@ const ProfilePage: React.FC = () => {
       >
         Test Local Notification
       </button>
-
       <button
         onClick={handleTestPushNotification}
         className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-blue-500 hover:bg-blue-600"
@@ -122,11 +132,13 @@ const ProfilePage: React.FC = () => {
       </button>
       <button
         onClick={() => signOut()}
-        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center"
+        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center mb-8"
       >
         <LogOut size={20} className="mr-2" />
         Sign Out
       </button>
+
+      {plan && <PlanRenderer plan={convertApiPlansToPlans([plan])[0]} />}
     </div>
   );
 };

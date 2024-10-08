@@ -24,9 +24,13 @@ class PlanController:
         
         # Create activities and get their IDs
         activity_ids = []
-        for activity_description in plan_data.get('activity_descriptions', []):
-            activity = Activity.new(user_id, activity_description, "count")  # Default measure to "count"
-            created_activity = self.activities_gateway.create_activity(activity)
+        for activity in plan_data.get('activities', []):
+            converted_activity = Activity.new(
+                user_id=user_id,
+                title=activity.get('title'),
+                measure=activity.get('measure')
+            )
+            created_activity = self.activities_gateway.create_activity(converted_activity)
             activity_ids.append(created_activity.id)
         
         plan.activity_ids = activity_ids

@@ -8,32 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Calendar } from "@/components/ui/calendar";
 import toast from "react-hot-toast";
-import { Loader2, ShieldEllipsisIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { addDays } from "date-fns";
 import { Badge } from "./ui/badge";
-
-interface Plan {
-  goal: string;
-  finishing_date?: Date;
-  sessions: {
-    date: Date;
-    descriptive_guide: string;
-    quantity: number;
-    activity_name: string;
-  }[];
-  activities: { title: string; measure: string }[];
-  intensity: string;
-  overview: string;
-}
-
-interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
-  finishing_date?: string;
-  sessions: { date: string; descriptive_guide: string; quantity: number }[];
-}
+import { ApiPlan, convertApiPlansToPlans, Plan } from "@/contexts/UserPlanContext";
 
 const Onboarding: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -97,18 +78,8 @@ const Onboarding: React.FC = () => {
       const response = await api.post("/api/onboarding/generate-plans", {
         planDescription: planDescription.trim() || undefined,
       });
-      // Convert string dates to Date objects
-      const plansWithDateObjects = response.data.plans.map((plan: ApiPlan) => ({
-        ...plan,
-        finishing_date: plan.finishing_date
-          ? parseISO(plan.finishing_date)
-          : undefined,
-        sessions: plan.sessions.map((session) => ({
-          ...session,
-          date: parseISO(session.date),
-        })),
-      }));
-      setPlans(plansWithDateObjects);
+
+      setPlans(convertApiPlansToPlans(response.data.plans));
       setStep(4);
     } catch (error) {
       console.error("Error generating plans:", error);
@@ -121,7 +92,7 @@ const Onboarding: React.FC = () => {
   const handlePlanSelection = async (plan: Plan) => {
     try {
       await api.post("/api/onboarding/select-plan", plan);
-      router.push("/");
+      router.push("/profile");
     } catch (error) {
       console.error("Plan selection error:", error);
     }

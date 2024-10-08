@@ -6,6 +6,8 @@ from bson import ObjectId
 class PlanSession(BaseModel):
     date: str
     descriptive_guide: str
+    activity_name: str
+    quantity: int
 
 class Plan(BaseModel):
     id: str

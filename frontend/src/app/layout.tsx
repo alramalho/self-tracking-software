@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { NotificationsProvider } from "@/hooks/useNotifications";
 import { ClerkProvider } from "@clerk/nextjs";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
+import { NotificationsProvider } from "@/hooks/useNotifications";
 
-const ClientLayout = dynamic(() => import('./layoutClient'), { ssr: false });
+const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Tracking Software",
   description: "Know yourself better",
-  manifest: "/manifest.json", 
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
