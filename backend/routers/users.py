@@ -230,3 +230,7 @@ async def select_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user
     created_plan = plan_controller.create_plan(user.id, plan)
     updated_user = users_gateway.set_selected_plan(user.id, created_plan.id)
     return {"message": "Plan selected and created", "user": updated_user, "plan": created_plan}
+
+@router.get("/user")
+async def get_user(user: User = Depends(is_clerk_user)):
+    return user

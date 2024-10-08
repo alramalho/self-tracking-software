@@ -121,7 +121,7 @@ const Onboarding: React.FC = () => {
   const handlePlanSelection = async (plan: Plan) => {
     try {
       await api.post("/api/onboarding/select-plan", plan);
-      router.push("/dashboard");
+      router.push("/");
     } catch (error) {
       console.error("Plan selection error:", error);
     }
