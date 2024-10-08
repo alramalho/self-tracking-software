@@ -44,12 +44,7 @@ const Onboarding: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
-  const [selectedPlanIndex, setSelectedPlanIndex] = useState<number | null>(
-    null
-  );
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
-  const [focusedActivity, setFocusedActivity] = useState<string | null>(null);
 
   const api = useApiWithAuth();
   const router = useRouter();
@@ -75,7 +70,9 @@ const Onboarding: React.FC = () => {
           if (userData.onboarding_progress.timezone) setStep(2);
           if (userData.onboarding_progress.goal) setStep(3);
           if (userData.onboarding_progress.finishing_date) {
-            await handleGeneratePlans();
+            if (!isGenerating) {
+              await handleGeneratePlans();
+            }
             setStep(4);
           }
         }
@@ -132,13 +129,13 @@ const Onboarding: React.FC = () => {
 
   const formatSessionsForHeatMap = (plan: Plan) => {
     const sessions = plan.sessions.map((session) => ({
-      date: session.date,
+      date: format(session.date, "yyyy/MM/dd"),
       count: session.quantity,
     }));
 
     if (plan.finishing_date) {
       sessions.push({
-        date: plan.finishing_date,
+        date: format(plan.finishing_date, "yyyy/MM/dd"),
         count: -1,
       });
     }
@@ -192,7 +189,7 @@ const Onboarding: React.FC = () => {
               endDate={endDate}
               height={200}
               rectSize={14}
-              legendRender={() => null}
+              legendRender={() => <></>}
               rectProps={{
                 rx: 3,
               }}
@@ -224,13 +221,17 @@ const Onboarding: React.FC = () => {
                     {...props}
                     fill={color}
                     onClick={() => {
-                      const clickedDate = new Date(data.date);
-                      console.log({ clickedDate });
-                      if (!isNaN(clickedDate.getTime())) {
-                        setFocusedDate(clickedDate);
-                        setFocusedActivity(null);
-                      } else {
+                      try {
+                        const clickedDate = new Date(data.date);
+                        console.log({ clickedDate });
+                        if (!isNaN(clickedDate.getTime())) {
+                          setFocusedDate(clickedDate);
+                        } else {
+                          console.error("Invalid date:", data.date);
+                        }
+                      } catch (error) {
                         console.error("Invalid date:", data.date);
+                        console.error("Error setting focused date:", error);
                       }
                     }}
                   />
@@ -337,9 +338,12 @@ const Onboarding: React.FC = () => {
                   })}
                 </div>
                 <p className="text-sm font-semibold">
-                  Intensity: {session.quantity} {plan.activities.find(
-                    (a) => a.title === session.activity_name
-                  )?.measure}
+                  Intensity: {session.quantity}{" "}
+                  {
+                    plan.activities.find(
+                      (a) => a.title === session.activity_name
+                    )?.measure
+                  }
                 </p>
                 <p className="text-sm">{session.descriptive_guide}</p>
               </div>
@@ -439,7 +443,6 @@ const Onboarding: React.FC = () => {
               <DatePicker
                 selected={finishingDate!}
                 onSelect={(date: Date | undefined) => setFinishingDate(date!)}
-                className="mb-4"
               />
               <Button
                 className="w-full"
