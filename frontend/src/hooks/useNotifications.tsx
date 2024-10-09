@@ -13,7 +13,7 @@ import { arrayBufferToBase64Async } from "@/lib/utils";
 
 interface NotificationsContextType {
   notificationCount: number;
-  addNotifications: (count: number) => void;
+  addToNotificationCount: (count: number) => void;
   clearNotifications: () => void;
   sendLocalNotification: (
     title: string,
@@ -173,7 +173,7 @@ export const NotificationsProvider = ({
     navigator.setAppBadge && navigator.setAppBadge(notificationCount);
   }, [notificationCount]);
 
-  const addNotifications = (count: number) =>
+  const addToNotificationCount = (count: number) =>
     setNotificationCount((prev) => prev + count);
 
   const clearNotifications = async () => {
@@ -203,7 +203,7 @@ export const NotificationsProvider = ({
         icon,
         data: { url },
       });
-      addNotifications(1);
+      addToNotificationCount(1);
     } else {
       console.warn(
         "Notification permission not granted or registration not available"
@@ -320,7 +320,7 @@ export const NotificationsProvider = ({
     <NotificationsContext.Provider
       value={{
         notificationCount,
-        addNotifications,
+        addToNotificationCount,
         clearNotifications,
         sendLocalNotification,
         sendPushNotification,

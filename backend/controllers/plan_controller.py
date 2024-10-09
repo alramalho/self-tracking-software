@@ -64,6 +64,7 @@ class PlanController:
             user_prompt += f"\nAdditional plan description: {plan_description}"
 
         class GeneratedActivity(BaseModel):
+            emoji: str
             title: str
             measure: str = Field(description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')")
 

@@ -81,6 +81,15 @@ class ActivitiesGateway:
         logger.info(f"ActivityEntry ({activity.title} for date {activity_entry.date}) created")
         return activity_entry
 
+    def update_activity(self, activity: Activity) -> Activity:
+        existing_activity = self.get_activity_by_id(activity.id)
+        if existing_activity is None:
+            logger.info(f"Activity {activity.id} does not exist")
+            raise ActivityDoesNotExistException()
+        updated_activity = self.activities_db_gateway.write(activity.dict())
+        logger.info(f"Activity {activity.id} updated")
+        return Activity(**updated_activity)
+
     def delete_activity(self, activity_id: str):
         activity = self.get_activity_by_id(activity_id)
         activity.deleted = True

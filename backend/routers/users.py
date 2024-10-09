@@ -13,6 +13,7 @@ from constants import VAPID_PRIVATE_KEY, VAPID_CLAIMS
 from pywebpush import webpush, WebPushException
 from entities.message import Message
 from services.conversation_service import initiate_recurrent_checkin
+from entities.activity import Activity
 import json
 import traceback
 from controllers.processed_notification_controller import (
@@ -23,6 +24,8 @@ from controllers.scheduled_notification_controller import (
 )
 from fastapi import Request
 from controllers.plan_controller import PlanController
+from entities.activity import ActivityEntry
+from datetime import datetime
 
 router = APIRouter(prefix="/api")
 processed_notification_controller = ProcessedNotificationController()
@@ -32,12 +35,6 @@ activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
 users_gateway = UsersGateway()
 plan_controller = PlanController()
-
-
-class ActivityResponse(BaseModel):
-    id: str
-    title: str
-    measure: str
 
 
 class ActivityEntryResponse(BaseModel):
@@ -61,12 +58,9 @@ class PushNotificationPayload(BaseModel):
     url: Optional[str] = None
 
 
-@router.get("/activities", response_model=List[ActivityResponse])
+@router.get("/activities", response_model=List[Activity])
 async def get_activities(user: User = Depends(is_clerk_user)):
-    activities = activities_gateway.get_all_activities_by_user_id(user.id)
-    return [
-        ActivityResponse(id=a.id, title=a.title, measure=a.measure) for a in activities
-    ]
+    return activities_gateway.get_all_activities_by_user_id(user.id)
 
 
 @router.get("/activity-entries", response_model=List[ActivityEntryResponse])
@@ -286,3 +280,51 @@ async def get_plan(plan_id: str, user: User = Depends(is_clerk_user)):
     }
     plan["activities"] = [activity_map[activity_id] for activity_id in plan["activity_ids"]]
     return plan
+
+@router.post("/log-activity", response_model=ActivityEntryResponse)
+async def log_activity(
+    activity_id: str = Body(...),
+    iso_date_string: str = Body(...),
+    quantity: int = Body(...),
+    user: User = Depends(is_clerk_user)
+):
+    activity_entry = ActivityEntry.new(
+        activity_id=activity_id,
+        quantity=quantity,
+        date=iso_date_string,
+    )
+    logged_entry = activities_gateway.create_activity_entry(activity_entry)
+    return ActivityEntryResponse(
+        id=logged_entry.id,
+        activity_id=logged_entry.activity_id,
+        quantity=logged_entry.quantity,
+        date=logged_entry.date
+    )
+
+@router.get("/recent-activities")
+async def get_recent_activities(user: User = Depends(is_clerk_user)):
+    recent_activities = activities_gateway.get_readable_recent_activity_entries(user.id, limit=5)
+    return {"recent_activities": recent_activities}
+
+# Add this new endpoint to your existing router
+
+@router.post("/upsert-activity")
+async def upsert_activity(
+    activity: dict = Body(...),
+    user: User = Depends(is_clerk_user)
+):
+    activity_id = activity.get('id')
+    if activity_id:
+        # Update existing activity
+        updated_activity = activities_gateway.update_activity(activity_id, activity)
+        return updated_activity
+    else:
+        # Create new activity
+        new_activity = Activity.new(
+            user_id=user.id,
+            title=activity['title'],
+            measure=activity['measure'],
+            emoji=activity['emoji']
+        )
+        created_activity = activities_gateway.create_activity(new_activity)
+        return created_activity

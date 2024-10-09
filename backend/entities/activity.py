@@ -8,6 +8,7 @@ class Activity(BaseModel):
     user_id: str
     title: str
     measure: str = Field(description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')")
+    emoji: str
     created_at: str
 
     @field_validator('title')
@@ -27,12 +28,14 @@ class Activity(BaseModel):
         user_id: str,
         title: str,
         measure: str,
+        emoji: str
     ) -> "Activity":
         return cls(
             id=str(ObjectId()),
             user_id=user_id,
             title=title,
             measure=measure,
+            emoji=emoji,
             created_at=datetime.now(UTC).isoformat(),
         )
 

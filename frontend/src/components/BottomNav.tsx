@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Eye, Home, Pencil, User } from "lucide-react";
+import { Eye, Home, Pencil, Sparkle, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
@@ -24,6 +24,13 @@ const BottomNav = () => {
           )}
           <Eye size={24} />
           <span className="text-xs mt-1">See</span>
+        </Link>
+        <Link
+          href="/ai"
+          className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500"
+        >
+          <Sparkle size={24} />
+          <span className="text-xs mt-1">AI</span>
         </Link>
         <Link
           href="/log"

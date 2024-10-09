@@ -2,6 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
 import { parseISO } from "date-fns";
 
+export interface Activity {
+  id: string;
+  title: string;
+  measure: string;
+  emoji?: string; // Include this if your backend provides emojis
+}
+
+
 interface User {
   id: string;
   name: string;
@@ -32,16 +40,16 @@ export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
     activity_name: string;
   }[];
 }
+
 interface UserPlanContextType {
   user: User | null;
   plan: ApiPlan | null;
+  activities: Activity[];
   loading: boolean;
   error: string | null;
 }
 
-const UserPlanContext = createContext<UserPlanContextType | undefined>(
-  undefined
-);
+const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
 
 export function convertApiPlansToPlans(apiPlans: ApiPlan[]): Plan[] {
   return apiPlans.map((apiPlan) => ({
@@ -62,16 +70,22 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [plan, setPlan] = useState<ApiPlan | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const api = useApiWithAuth();
 
   useEffect(() => {
-    const fetchUserAndPlan = async () => {
+    const fetchUserPlanAndActivities = async () => {
       try {
-        const userResponse = await api.get("/api/user");
+        const [userResponse, activitiesResponse] = await Promise.all([
+          api.get("/api/user"),
+          api.get("/api/activities"),
+        ]);
+
         const userData: User = userResponse.data;
         setUser(userData);
+        setActivities(activitiesResponse.data);
 
         if (userData.selected_plan_id) {
           const planResponse = await api.get(
@@ -81,17 +95,17 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           setPlan(planData);
         }
       } catch (err) {
-        setError("Failed to fetch user and plan data");
+        setError("Failed to fetch user, plan, and activities data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserAndPlan();
+    fetchUserPlanAndActivities();
   }, []);
 
   return (
-    <UserPlanContext.Provider value={{ user, plan, loading, error }}>
+    <UserPlanContext.Provider value={{ user, plan, activities, loading, error }}>
       {children}
     </UserPlanContext.Provider>
   );
