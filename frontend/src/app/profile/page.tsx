@@ -95,6 +95,7 @@ const ProfilePage: React.FC = () => {
         <span>App Installed</span>
         <Switch checked={isAppInstalled} disabled />
       </div>
+      {plan && <PlanRenderer plan={convertApiPlansToPlans([plan])[0]} title="Your Plan" />}
       <button
         onClick={handleRecurrentCheckin}
         className="px-4 py-2 text-white rounded transition-colors flex items-center mb-4 bg-green-500 hover:bg-green-600"
@@ -138,7 +139,6 @@ const ProfilePage: React.FC = () => {
         Sign Out
       </button>
 
-      {plan && <PlanRenderer plan={convertApiPlansToPlans([plan])[0]} />}
     </div>
   );
 };

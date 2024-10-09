@@ -9,6 +9,7 @@ interface User {
 }
 
 export interface Plan {
+  id: string | undefined;
   goal: string;
   finishing_date?: Date;
   sessions: {
@@ -87,7 +88,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     fetchUserAndPlan();
-  }, [api]);
+  }, []);
 
   return (
     <UserPlanContext.Provider value={{ user, plan, loading, error }}>

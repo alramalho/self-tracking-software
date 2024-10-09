@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { format, parseISO, addDays } from 'date-fns';
+import React, { useState } from "react";
+import { format, parseISO, addDays } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plan } from '@/contexts/UserPlanContext';
+import { Plan } from "@/contexts/UserPlanContext";
 
 interface PlanRendererProps {
   plan: Plan;
+  title: string;
 }
 
-const PlanRenderer: React.FC<PlanRendererProps> = ({ plan }) => {
+const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
 
   const formatSessionsForHeatMap = (plan: Plan) => {
@@ -43,6 +44,7 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan }) => {
   };
 
   const getActivityColor = (activityIndex: number, intensityLevel: number) => {
+    console.log({ activityIndex, intensityLevel });
     const colorMatrix = getActivityColorMatrix();
     const row = colorMatrix[activityIndex % colorMatrix.length];
     return row[Math.min(intensityLevel, row.length - 1)];
@@ -87,7 +89,9 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan }) => {
 
                 if (session) {
                   const activityIndex = plan.activities.findIndex(
-                    (a) => a.title === session.activity_name
+                    (a) =>
+                      a.title.toLowerCase() ===
+                      session.activity_name.toLowerCase()
                   );
                   const intensityLevel = Math.min(
                     Math.floor(
@@ -230,11 +234,9 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan }) => {
   };
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle>Your Plan</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <>
+      <div className="p-4">
+        <h3 className="text-xl font-semibold mb-2">{title}</h3>
         <p>Goal: {plan.goal}</p>
         <p>
           Finishing Date:{" "}
@@ -248,8 +250,8 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan }) => {
           <p className="text-sm text-gray-600">{plan.overview}</p>
         </div>
         {renderHeatMap(plan)}
-      </CardContent>
-    </Card>
+      </div>
+    </>
   );
 };
 
