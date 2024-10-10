@@ -7,16 +7,12 @@ interface ActivitySelectorProps {
   activities: Activity[];
   selectedActivity: string;
   onSelectActivity: (activityId: string) => void;
-  onActivityAdded: (activity: Activity) => void;
-  onActivityUpdated: (activity: Activity) => void;
 }
 
 const ActivitySelector: React.FC<ActivitySelectorProps> = ({ 
   activities, 
   selectedActivity, 
   onSelectActivity,
-  onActivityAdded,
-  onActivityUpdated
 }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -32,11 +28,6 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
   };
 
   const handleSaveActivity = (savedActivity: Activity) => {
-    if (editingActivity) {
-      onActivityUpdated(savedActivity);
-    } else {
-      onActivityAdded(savedActivity);
-    }
     setShowEditor(false);
     setEditingActivity(null);
   };

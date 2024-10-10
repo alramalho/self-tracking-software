@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 from pydantic import field_validator
+from typing import Optional
 from bson import ObjectId
 
 class Activity(BaseModel):
@@ -45,6 +46,7 @@ class ActivityEntry(BaseModel):
     quantity: int = Field(description="Way to quantify it, must be > 0.")
     date: str = Field(description="The YYYY-MM-DD date of the activity.")
     created_at: str
+    image_s3_path: Optional[str] = None
 
     @classmethod
     def new(

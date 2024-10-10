@@ -14,6 +14,10 @@ class ActivityAlreadyExistsException(Exception):
     pass
 
 
+class ActivityEntryDoesNotExistException(Exception):
+    pass
+
+
 # todo: this activities gateway now has permissions and CRUD responsiblities... we should split?
 class ActivitiesGateway:
     def __init__(self,):
@@ -90,6 +94,17 @@ class ActivitiesGateway:
         logger.info(f"Activity {activity.id} updated")
         return Activity(**updated_activity)
 
+    def update_activity_entry(self, activity_entry_id: str, updates: dict) -> ActivityEntry:
+        activity_entry = self.get_activity_entry_by_id(activity_entry_id)
+        if activity_entry is None:
+            logger.info(f"ActivityEntry {activity_entry_id} does not exist")
+            raise ActivityEntryDoesNotExistException()
+        for key, value in updates.items():
+            setattr(activity_entry, key, value)
+        self.activitiy_entries_db_gateway.write(activity_entry.dict())
+        logger.info(f"ActivityEntry {activity_entry_id} updated")
+        return activity_entry
+    
     def delete_activity(self, activity_id: str):
         activity = self.get_activity_by_id(activity_id)
         activity.deleted = True

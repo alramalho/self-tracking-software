@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body, HTTPException, Response, Query
+from fastapi import APIRouter, Depends, Body, HTTPException, Response, Query, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -26,6 +26,9 @@ from fastapi import Request
 from controllers.plan_controller import PlanController
 from entities.activity import ActivityEntry
 from datetime import datetime
+from gateways.aws.s3 import S3Gateway
+import uuid
+import os
 
 router = APIRouter(prefix="/api")
 processed_notification_controller = ProcessedNotificationController()
@@ -328,3 +331,32 @@ async def upsert_activity(
         )
         created_activity = activities_gateway.create_activity(new_activity)
         return created_activity
+
+@router.post("/store-activity-photo")
+async def store_activity_photo(
+    photo: UploadFile = File(...),
+    activityEntryId: str = Form(...),
+    keepInProfile: bool = Form(...),
+    user: User = Depends(is_clerk_user)
+):
+    s3_gateway = S3Gateway()
+    activities_gateway = ActivitiesGateway()
+
+    # Generate a unique photo ID
+    photo_id = str(uuid.uuid4())
+
+    # Get the file extension
+    _, file_extension = os.path.splitext(photo.filename)
+
+    # Create the S3 path with the file extension
+    s3_path = f"/users/{user.id}/activity_entries/{activityEntryId}/photos/{photo_id}{file_extension}"
+
+    # Upload the photo to S3
+    s3_gateway.upload(await photo.read(), s3_path)
+
+    # Update the activity entry with the image S3 path
+    updated_entry = activities_gateway.update_activity_entry(activityEntryId, {"image_s3_path": s3_path})
+
+    # If keepInProfile is True, you might want to update the user's profile or perform other actions
+
+    return {"message": "Photo uploaded successfully", "updated_entry": updated_entry}

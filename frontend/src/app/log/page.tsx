@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import ActivitySelector from "@/components/ActivitySelector";
+import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,8 @@ const LogPage: React.FC = () => {
   );
   const [quantity, setQuantity] = useState<number>(0);
   const [measureType, setMeasureType] = useState<string>("");
+  const [showPhotoUploader, setShowPhotoUploader] = useState(false);
+  const [loggedActivityEntry, setLoggedActivityEntry] = useState<any>(null);
   const api = useApiWithAuth();
   const { addToNotificationCount } = useNotifications();
 
@@ -50,11 +53,11 @@ const LogPage: React.FC = () => {
 
       toast.success("Activity logged successfully!");
       addToNotificationCount(1);
-      return true;
+      return response.data;
     } catch (error) {
       console.error("Error logging activity:", error);
       toast.error("Failed to log activity. Please try again.");
-      return false;
+      return null;
     }
   };
 
@@ -64,15 +67,22 @@ const LogPage: React.FC = () => {
       return;
     }
 
-    const success = await logActivity(selectedActivity, selectedDate, quantity);
+    const loggedEntry = await logActivity(selectedActivity, selectedDate, quantity);
 
-    if (success) {
-      // Reset form
-      setSelectedActivity("");
-      setSelectedDate(new Date());
-      setQuantity(0);
-      setMeasureType("");
+    if (loggedEntry) {
+      setLoggedActivityEntry(loggedEntry);
+      setShowPhotoUploader(true);
     }
+  };
+
+  const handlePhotoUploaded = () => {
+    setShowPhotoUploader(false);
+    setLoggedActivityEntry(null);
+    // Reset form
+    setSelectedActivity("");
+    setSelectedDate(new Date());
+    setQuantity(0);
+    setMeasureType("");
   };
 
   if (loading) {
@@ -91,7 +101,6 @@ const LogPage: React.FC = () => {
           activities={activities}
           selectedActivity={selectedActivity}
           onSelectActivity={handleSelectActivity}
-          onActivityAdded={logActivity}
         />
       ) : (
         <p>No activities found.</p>
@@ -150,6 +159,13 @@ const LogPage: React.FC = () => {
           Log Activity
         </Button>
       </div>
+      {showPhotoUploader && loggedActivityEntry && (
+        <ActivityPhotoUploader
+          activityEntry={loggedActivityEntry}
+          onClose={() => setShowPhotoUploader(false)}
+          onPhotoUploaded={handlePhotoUploaded}
+        />
+      )}
       <BottomNav />
     </div>
   );
