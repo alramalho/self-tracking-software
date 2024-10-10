@@ -13,5 +13,3 @@ export default withSerwist({
     // Client env variables go here
   },
 });
-
-export default {};

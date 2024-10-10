@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import HeatMap from "@uiw/react-heat-map";
 import toast from "react-hot-toast";
-import { Activity } from '@/contexts/UserPlanContext';
-import { ActivityEntry } from '@/app/see/page';
+import { Activity, ActivityEntry } from '@/contexts/UserPlanContext';
 
 interface ActivityGridRendererProps {
   activities: Activity[];
