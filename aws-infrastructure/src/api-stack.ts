@@ -38,6 +38,12 @@ export class ApiStack extends cdk.Stack {
       new iam.ServicePrincipal("events.amazonaws.com")
     );
 
+    const s3Bucket = new s3.Bucket(this, "S3Bucket", {
+      bucketName: `${KEBAB_CASE_PREFIX}-bucket-${props.environment}`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    });
+
     new cdk.CfnOutput(
       this,
       `${PASCAL_CASE_PREFIX}ApiCronProxyLambdaARN${props.environment}`,
