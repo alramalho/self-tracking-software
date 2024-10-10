@@ -33,7 +33,8 @@ const LogPage: React.FC = () => {
 
   const handleSelectDate = (date: Date | undefined) => {
     if (date && date <= new Date()) {
-      setSelectedDate(date);
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      setSelectedDate(utcDate);
     }
   };
 
