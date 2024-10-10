@@ -32,7 +32,9 @@ const LogPage: React.FC = () => {
   };
 
   const handleSelectDate = (date: Date | undefined) => {
-    setSelectedDate(date);
+    if (date && date <= new Date()) {
+      setSelectedDate(date);
+    }
   };
 
   const handleQuantityChange = (amount: number) => {
@@ -113,6 +115,7 @@ const LogPage: React.FC = () => {
             selected={selectedDate}
             onSelect={handleSelectDate}
             className="rounded-md border"
+            disableFutureDates={true}
           />
         </div>
         {selectedActivity && (

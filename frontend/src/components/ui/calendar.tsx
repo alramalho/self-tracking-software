@@ -7,17 +7,25 @@ import { DayPicker } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  disableFutureDates?: boolean;
+};
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  disableFutureDates = false,
   ...props
 }: CalendarProps) {
+  const disabledDays = disableFutureDates
+    ? [{ from: new Date(new Date().setHours(0, 0, 0, 0) + 86400000), to: new Date(2100, 0, 1) }]
+    : undefined;
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      disabled={disabledDays}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -53,11 +61,14 @@ function Calendar({
         day_today: "bg-accent text-accent-foreground",
         day_outside:
           "day-outside text-muted-foreground opacity-50  aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        day_disabled: "text-muted-foreground opacity-50",
+        day_disabled: "text-muted-foreground opacity-50 pointer-events-none",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
         ...classNames,
+      }}
+      modifiersClassNames={{
+        disabled: "opacity-50 cursor-not-allowed",
       }}
       components={{
         IconLeft: ({ ...props }) => <ChevronLeftIcon className="h-4 w-4" />,

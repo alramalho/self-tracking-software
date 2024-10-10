@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Activity } from "@/contexts/UserPlanContext";
 
 interface MoodReport {
   id: string;
@@ -35,13 +36,7 @@ interface MoodReport {
   score: number; // 0-10
 }
 
-interface Activity {
-  id: string;
-  title: string;
-  measure: string;
-}
-
-interface ActivityEntry {
+export interface ActivityEntry {
   id: string;
   activity_id: string;
   quantity: number;
@@ -54,7 +49,7 @@ const SeePage: React.FC = () => {
   const [moodReports, setMoodReports] = useState<MoodReport[]>([]);
   const { clearNotifications } = useNotifications();
   const [selected, setSelected] = useState("");
-  const [timeRange, setTimeRange] = useState("Current Year");
+  const [timeRange, setTimeRange] = useState("Last 3 Months");
 
   const apiClient = useApiWithAuth();
 
@@ -91,37 +86,23 @@ const SeePage: React.FC = () => {
     return activityEntries
       .filter((entry) => entry.activity_id === activityId)
       .map((entry) => ({
-        date: entry.date.replaceAll("-", "/"),
+        date: entry.date.replaceAll("-", "/").split("T")[0],
         count: entry.quantity,
       }));
   };
 
-  const generateMonthLabels = (startDate: Date) => {
-    const labels = [];
-    const currentDate = new Date(startDate);
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
+  const getLastThreeMonths = () => {
+    const end = new Date();
+    const start = new Date(end.getFullYear(), end.getMonth() - 2, 1);
+    return { start, end };
+  };
 
-    for (let i = 0; i < 12; i++) {
-      const month = months[currentDate.getMonth()];
-      const year = currentDate.getFullYear();
-      labels.push(`${month} ${year}`);
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
-
-    return labels;
+  const filterDataByTimeRange = (data: any[]) => {
+    const { start, end } = getLastThreeMonths();
+    return data.filter((item) => {
+      const itemDate = new Date(item.date);
+      return itemDate >= start && itemDate <= end;
+    });
   };
 
   const isSameDate = (date1: string, date2: string) => {
@@ -132,18 +113,6 @@ const SeePage: React.FC = () => {
       d1.getMonth() === d2.getMonth() &&
       d1.getDate() === d2.getDate()
     );
-  };
-
-  const filterDataByTimeRange = (data: any[]) => {
-    const currentDate = new Date();
-    const startDate = new Date(
-      timeRange === "Current Year"
-        ? `${currentDate.getFullYear()}-01-01`
-        : `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1)
-            .toString()
-            .padStart(2, "0")}-01`
-    );
-    return data.filter((item) => new Date(item.date) >= startDate);
   };
 
   const fillMissingDates = (data: MoodReport[]) => {
@@ -175,41 +144,18 @@ const SeePage: React.FC = () => {
     score: report.score,
   }));
 
-  const gradientOffset = () => {
-    const dataMax = Math.max(...moodChartData.map((i) => i.score || 0));
-    const dataMin = Math.min(...moodChartData.map((i) => i.score || 10));
-    
-    if (dataMax <= 0) {
-      return 0;
-    }
-    if (dataMin >= 0) {
-      return 1;
-    }
-    return dataMax / (dataMax - dataMin);
-  };
-
-  const off = gradientOffset();
-
   return (
     <div className="p-4 space-y-8">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Activity and Mood Tracker</h1>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Current Year">Current Year</SelectItem>
-            <SelectItem value="Current Month">Current Month</SelectItem>
-          </SelectContent>
-        </Select>
+        <span className="text-sm text-gray-500">Last 3 Months</span>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Mood Over Time</CardTitle>
           <CardDescription>
-            Your mood scores over the selected time period
+            Your mood scores over the last 3 months
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -234,7 +180,7 @@ const SeePage: React.FC = () => {
               dataKey="score"
               stroke="#34B042"
               fill="url(#splitColor)"
-              connectNulls={false}
+              connectNulls={true}
             />
             {moodChartData.map((entry, index) => (
               entry.score !== null && (
@@ -253,21 +199,15 @@ const SeePage: React.FC = () => {
       </Card>
 
       {activities.map((activity) => {
-        const startDate = new Date(
-          timeRange === "Current Year"
-            ? `${new Date().getFullYear()}/01/01`
-            : `${new Date().getFullYear()}/${new Date().getMonth() + 1}/01`
-        );
-        const endDate = new Date();
-        const monthLabels = generateMonthLabels(startDate);
-        const value = getActivityEntries(activity.id);
-        const filteredValue = filterDataByTimeRange(value);
+        const { start: startDate, end: endDate } = getLastThreeMonths();
+        const actvityEntries = getActivityEntries(activity.id);
+        const filteredActivityEntries = filterDataByTimeRange(actvityEntries);
 
         return (
           <div key={activity.id} className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
             <div className="flex items-center space-x-3 mb-4">
               <h2 className="text-xl font-semibold text-gray-800">
-                {activity.title}
+                {activity.emoji ? `${activity.emoji} ${activity.title}` : activity.title}
               </h2>
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                 {activity.measure}
@@ -275,10 +215,9 @@ const SeePage: React.FC = () => {
             </div>
             <div className="relative">
               <HeatMap
-                value={filteredValue}
+                value={filteredActivityEntries}
                 startDate={startDate}
                 endDate={endDate}
-                width={650}
                 height={200}
                 rectSize={14}
                 rectRender={(props, data) => {
@@ -292,9 +231,12 @@ const SeePage: React.FC = () => {
                       onClick={() => {
                         if (data.date !== selected) {
                           const entry = activityEntries.find(
-                            (e) =>
+                            (e) =>{
+                              console.log({eDate: e.date})
+                              console.log({dataDate: data.date})
+                              return(
                               e.activity_id === activity.id &&
-                              isSameDate(e.date, data.date.replaceAll("/", "-"))
+                              isSameDate(e.date, data.date.replaceAll("/", "-")))}
                           );
                           const quantity = entry ? entry.quantity : 0;
                           if (quantity > 0) {
@@ -321,7 +263,7 @@ const SeePage: React.FC = () => {
                   // @ts-ignore
                   <rect {...props} y={props.y + 10} rx={props.range} />
                 )}
-                monthLabels={monthLabels}
+                // monthLabels={monthLabels}
                 panelColors={{
                   0: "#EBEDF0",
                   2: "#9BE9A8",
@@ -340,4 +282,3 @@ const SeePage: React.FC = () => {
 };
 
 export default SeePage;
-
