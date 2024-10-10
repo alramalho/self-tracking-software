@@ -2,7 +2,7 @@ from gateways.database.mongodb import MongoDBGateway
 from entities.plan import Plan, PlanSession
 from entities.activity import Activity
 from ai.llm import ask_schema
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, create_model
 from gateways.activities import ActivitiesGateway
 from datetime import datetime
@@ -13,11 +13,12 @@ class PlanController:
         self.db_gateway = MongoDBGateway("plans")
         self.activities_gateway = ActivitiesGateway()
 
-    def create_plan(self, user_id: str, plan_data: Dict) -> Plan:
+    def create_plan(self, user_id: str, plan_data: Dict[str, Any]) -> Plan:
         sessions = [PlanSession(**session) for session in plan_data.get('sessions', [])]
         plan = Plan.new(
             user_id=user_id,
             goal=plan_data['goal'],
+            emoji=plan_data['emoji'],  # Add this line
             finishing_date=plan_data.get('finishing_date'),
             sessions=sessions
         )
@@ -80,6 +81,7 @@ class PlanController:
             sessions: List[GeneratedSession] = Field(..., description="List of sessions for this plan. The length should be the same as the times_per_week.")
 
         class GeneratedPlan(BaseModel):
+            emoji: str
             overview: str = Field(..., description="A short overview of the plan")
             activities: List[GeneratedActivity] = Field(..., description="List of activities for this plan")
             sessions_weeks: List[GeneratedSessionWeek] = Field(..., description="List of sessions weeks for this plan")

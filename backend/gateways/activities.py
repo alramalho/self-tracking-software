@@ -6,6 +6,7 @@ from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
 from shared.utils import time_ago
 from typing import List
+
 class ActivityDoesNotExistException(Exception):
     pass
 
@@ -112,6 +113,14 @@ class ActivitiesGateway:
         self.activities_db_gateway.write(activity.dict())
         logger.info(f"Activity {activity.id} ({activity.title}) marked as deleted")
     
+
+    def get_all_activity_entries_by_user_id(self, user_id: str) -> List[ActivityEntry]:
+        activities = self.get_all_activities_by_user_id(user_id)
+        all_entries = []
+        for activity in activities:
+            entries = self.get_all_activity_entries_by_activity_id(activity.id)
+            all_entries.extend(entries)
+        return all_entries
 
 if __name__ == "__main__":
     from gateways.database.mongodb import MongoDBGateway

@@ -28,19 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity, ActivityEntry } from "@/contexts/UserPlanContext";
 
 interface MoodReport {
   id: string;
   date: string;
   score: number; // 0-10
-}
-
-export interface ActivityEntry {
-  id: string;
-  activity_id: string;
-  quantity: number;
-  date: string;
 }
 
 const SeePage: React.FC = () => {

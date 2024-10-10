@@ -68,18 +68,12 @@ async def get_activities(user: User = Depends(is_clerk_user)):
 
 @router.get("/activity-entries", response_model=List[ActivityEntryResponse])
 async def get_activity_entries(user: User = Depends(is_clerk_user)):
-    activities = activities_gateway.get_all_activities_by_user_id(user.id)
-    all_entries = []
-    for activity in activities:
-        entries = activities_gateway.get_all_activity_entries_by_activity_id(
-            activity.id
-        )
-        all_entries.extend(entries)
+    entries = activities_gateway.get_all_activity_entries_by_user_id(user.id)
     return [
         ActivityEntryResponse(
             id=e.id, activity_id=e.activity_id, quantity=e.quantity, date=e.date
         )
-        for e in all_entries
+        for e in entries
     ]
 
 
@@ -277,6 +271,18 @@ async def get_user(user: User = Depends(is_clerk_user)):
 @router.get("/plans/{plan_id}")
 async def get_plan(plan_id: str, user: User = Depends(is_clerk_user)):
     plan = plan_controller.get_plan(plan_id).dict()
+    activity_map = {
+        activity.id: {"title": activity.title, "measure": activity.measure}
+        for activity in activities_gateway.get_all_activities_by_user_id(user.id)
+    }
+    plan["activities"] = [activity_map[activity_id] for activity_id in plan["activity_ids"]]
+    return plan
+
+@router.get("/user-plan")
+async def get_user_plan(user: User = Depends(is_clerk_user)):
+    if not user.selected_plan_id:
+        return None
+    plan = plan_controller.get_plan(user.selected_plan_id).dict()
     activity_map = {
         activity.id: {"title": activity.title, "measure": activity.measure}
         for activity in activities_gateway.get_all_activities_by_user_id(user.id)
