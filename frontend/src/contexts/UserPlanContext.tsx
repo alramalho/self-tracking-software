@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import { useApiWithAuth } from "@/api";
-import { parseISO, isSameDay } from "date-fns";
+import { parseISO, isSameDay, format } from "date-fns";
 
 export interface Activity {
   id: string;
@@ -83,6 +83,17 @@ export function convertApiPlansToPlans(apiPlans: ApiPlan[]): Plan[] {
       activity_name: session.activity_name,
     })),
   }));
+}
+
+export function convertPlanToApiPlan(plan: Plan): ApiPlan {
+  return {
+    ...plan,
+    finishing_date: plan.finishing_date ? format(plan.finishing_date, "yyyy-MM-dd") : undefined,
+    sessions: plan.sessions.map((session) => ({
+      ...session,
+      date: format(session.date, "yyyy-MM-dd"),
+    })),
+  } as ApiPlan;
 }
 
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({

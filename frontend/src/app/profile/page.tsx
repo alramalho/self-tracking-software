@@ -23,7 +23,7 @@ const ProfilePage: React.FC = () => {
     alertSubscriptionEndpoint,
   } = useNotifications();
   const authedApi = useApiWithAuth();
-  const { plan, loading, error } = useUserPlan();
+  const { loading, error } = useUserPlan();
 
   const handleTestLocalNotification = () => {
     sendLocalNotification(

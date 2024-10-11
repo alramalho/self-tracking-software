@@ -29,7 +29,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
-  const [finishingDate, setFinishingDate] = useState<Date | null>(null);
+  const [finishingDate, setFinishingDate] = useState<Date | undefined>(undefined);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
@@ -204,7 +204,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <DatePicker
                 selected={finishingDate}
                 onSelect={(date: Date | undefined) =>
-                  setFinishingDate(date || null)
+                  setFinishingDate(date)
                 }
               />
               <Button

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import Link from "next/link";
 import { Loader2, Plus } from "lucide-react";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { convertPlanToApiPlan, Plan, useUserPlan } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
 import { format, parseISO, startOfWeek, addWeeks, isToday, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -149,8 +149,8 @@ export default function Home() {
     </div>
   );
 
-  const handleNewPlanComplete = (newPlan: ApiPlan) => {
-    setPlans([...plans, newPlan]);
+  const handleNewPlanComplete = (newPlan: Plan) => {
+    setPlans([...plans, convertPlanToApiPlan(newPlan)]);
     setSelectedPlanId(newPlan.id);
     setIsCreatingNewPlan(false);
     toast.success("New plan created successfully!");
@@ -178,7 +178,10 @@ export default function Home() {
           {sessionData.length > 0 && (
             <div className="mt-8 max-w-4xl">
               <LineChart 
-                data={sessionData}
+                data={sessionData.map(item => ({
+                  ...item,
+                  completed: item.completed ?? 0
+                }))}
                 xAxisKey="week"
                 lines={[
                   { dataKey: "planned", name: "Planned Sessions", color: "hsl(var(--chart-1))" },
