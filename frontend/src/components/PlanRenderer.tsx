@@ -44,7 +44,6 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
   };
 
   const getActivityColor = (activityIndex: number, intensityLevel: number) => {
-    console.log({ activityIndex, intensityLevel });
     const colorMatrix = getActivityColorMatrix();
     const row = colorMatrix[activityIndex % colorMatrix.length];
     return row[Math.min(intensityLevel, row.length - 1)];
@@ -56,6 +55,11 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
       ? addDays(plan.finishing_date, 1)
       : undefined;
     const heatmapData = formatSessionsForHeatMap(plan);
+
+    // Calculate the number of weeks between today and the end date
+    const numberOfWeeks = endDate
+      ? Math.ceil((endDate.getTime() - today.getTime()) / (7 * 24 * 60 * 60 * 1000))
+      : 52; // Default to 52 weeks if no end date is specified
 
     const quantities = plan.sessions.map((session) => session.quantity);
     const minQuantity = Math.min(...quantities);
@@ -72,6 +76,7 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
               value={heatmapData}
               startDate={today}
               endDate={endDate}
+              width={30 + 18 * numberOfWeeks}
               height={200}
               rectSize={14}
               legendRender={() => <></>}
@@ -99,7 +104,9 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
                     ),
                     intensityLevels - 1
                   );
-                  color = getActivityColor(activityIndex, intensityLevel);
+                  if (activityIndex !== -1) {
+                    color = getActivityColor(activityIndex, intensityLevel);
+                  }
                 }
 
                 return (
@@ -237,7 +244,7 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
     <>
       <div className="p-4">
         <h3 className="text-xl font-semibold mb-2">{title}</h3>
-        <p>Goal: {plan.goal}</p>
+        <p>{plan.emoji ? plan.emoji : "Goal:"} {plan.goal}</p>
         <p>
           Finishing Date:{" "}
           {plan.finishing_date

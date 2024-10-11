@@ -12,6 +12,8 @@ import { format, parseISO, startOfWeek, addWeeks, isToday, isAfter } from "date-
 import { Button } from "@/components/ui/button";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ApiPlan } from "@/contexts/UserPlanContext";
+import Onboarding from "@/components/Onboarding";
+import toast from "react-hot-toast";
 
 interface User {
   id: string;
@@ -21,13 +23,14 @@ interface User {
 
 export default function Home() {
   const { isSignedIn } = useSession();
-  const { plans, getCompletedSessions } = useUserPlan();
+  const { plans, setPlans, getCompletedSessions } = useUserPlan();
   const router = useRouter();
   const api = useApiWithAuth();
   const [loading, setLoading] = useState(true);
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [sessionData, setSessionData] = useState<{ week: string; planned: number; completed: number | null }[]>([]);
   const [showNewPlanPopover, setShowNewPlanPopover] = useState(false);
+  const [isCreatingNewPlan, setIsCreatingNewPlan] = useState(false);
 
   useEffect(() => {
     const checkUserAndRedirect = async () => {
@@ -133,7 +136,7 @@ export default function Home() {
       onClick={() => setSelectedPlanId(plan.id)}
     >
       {plan.emoji && (
-        <span className="text-6xl self-center">{plan.emoji}</span>
+        <span className="text-6xl">{plan.emoji}</span>
       )}
       <div className="flex flex-col">
         <span className="text-xl font-medium">
@@ -146,52 +149,48 @@ export default function Home() {
     </div>
   );
 
+  const handleNewPlanComplete = (newPlan: ApiPlan) => {
+    setPlans([...plans, newPlan]);
+    setSelectedPlanId(newPlan.id);
+    setIsCreatingNewPlan(false);
+    toast.success("New plan created successfully!");
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col">
-      <h1 className="text-3xl font-bold mb-6">Your Plans</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {plans.map(renderPlanCard)}
-        <Button
-          variant="outline"
-          className="h-full min-h-[150px] flex flex-col items-center justify-center"
-          onClick={() => setShowNewPlanPopover(true)}
-        >
-          <Plus className="h-8 w-8 mb-2" />
-          <span>Create New Plan</span>
-        </Button>
-      </div>
+      {isCreatingNewPlan ? (
+        <Onboarding isNewPlan={true} onComplete={handleNewPlanComplete} />
+      ) : (
+        <>
+          <h1 className="text-3xl font-bold mb-6">Your Plans</h1>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {plans.map(renderPlanCard)}
+            <Button
+              variant="outline"
+              className="h-full flex flex-col items-center justify-center"
+              onClick={() => setIsCreatingNewPlan(true)}
+            >
+              <Plus className="h-8 w-8 mb-2" />
+              <span>Create New Plan</span>
+            </Button>
+          </div>
 
-      {sessionData.length > 0 && (
-        <div className="mt-8 max-w-4xl">
-          <LineChart 
-            data={sessionData}
-            xAxisKey="week"
-            lines={[
-              { dataKey: "planned", name: "Planned Sessions", color: "hsl(var(--chart-1))" },
-              { dataKey: "completed", name: "Completed Sessions", color: "hsl(var(--chart-2))" }
-            ]}
-            title="Sessions Overview"
-            description={`${sessionData[0].week} - ${sessionData[sessionData.length - 1].week}`}
-            currentDate={new Date()} // Make sure this line is present
-          />
-        </div>
-      )}
-
-      {showNewPlanPopover && (
-        <AppleLikePopover onClose={() => setShowNewPlanPopover(false)}>
-          <h2 className="text-2xl font-bold mb-4">Create New Plan</h2>
-          <form className="space-y-4">
-            <div>
-              <label htmlFor="goal" className="block text-sm font-medium text-gray-700">Goal</label>
-              <input type="text" id="goal" name="goal" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+          {sessionData.length > 0 && (
+            <div className="mt-8 max-w-4xl">
+              <LineChart 
+                data={sessionData}
+                xAxisKey="week"
+                lines={[
+                  { dataKey: "planned", name: "Planned Sessions", color: "hsl(var(--chart-1))" },
+                  { dataKey: "completed", name: "Completed Sessions", color: "hsl(var(--chart-2))" }
+                ]}
+                title="Sessions Overview"
+                description={`${sessionData[0].week} - ${sessionData[sessionData.length - 1].week}`}
+                currentDate={new Date()} // Make sure this line is present
+              />
             </div>
-            <div>
-              <label htmlFor="finishingDate" className="block text-sm font-medium text-gray-700">Finishing Date</label>
-              <input type="date" id="finishingDate" name="finishingDate" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
-            </div>
-            <Button type="submit" className="w-full">Create Plan</Button>
-          </form>
-        </AppleLikePopover>
+          )}
+        </>
       )}
     </div>
   );

@@ -225,22 +225,10 @@ async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
     return {"message": "Recurrent check-in initiated successfully"}
 
 
-@router.get("/onboarding/step")
-async def get_onboarding_step(user: User = Depends(is_clerk_user)):
-    return {"onboarding_progress": user.onboarding_progress}
-
-
-@router.post("/onboarding/step")
-async def onboarding_step(data: Dict = Body(...), user: User = Depends(is_clerk_user)):
-    for key, value in data.items():
-        updated_user = users_gateway.update_onboarding_progress(user.id, key, value)
-    return {"message": "Onboarding step saved", "user": updated_user}
-
-
-@router.post("/onboarding/generate-plans")
+@router.post("/generate-plans")
 async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_user)):
-    goal = user.onboarding_progress.get("goal")
-    finishing_date = user.onboarding_progress.get("finishing_date")
+    goal = data.get("goal")
+    finishing_date = data.get("finishingDate")
     plan_description = data.get("planDescription")
 
     if not goal:
@@ -252,8 +240,8 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
     return {"plans": plans}
 
 
-@router.post("/add-plan")
-async def add_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
+@router.post("/select-plan")
+async def select_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
     created_plan = plan_controller.create_plan(user.id, plan)
     updated_user = users_gateway.add_plan_to_user(user.id, created_plan.id)
     return {
@@ -274,8 +262,14 @@ async def remove_plan(plan_id: str, user: User = Depends(is_clerk_user)):
 
 @router.get("/user-plans")
 async def get_user_plans(user: User = Depends(is_clerk_user)):
-    plans = [plan_controller.get_plan(plan_id).dict() for plan_id in user.plan_ids]
-    
+    plans = []
+    for plan_id in user.plan_ids:
+        if plan_id is not None:
+            plan = plan_controller.get_plan(plan_id)
+            if plan is not None:
+                plan_dict = plan.dict()
+                plans.append(plan_dict)
+
     activity_map = {
         activity.id: {"title": activity.title, "measure": activity.measure}
         for activity in activities_gateway.get_all_activities_by_user_id(user.id)

@@ -10,97 +10,86 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import HeatMap from "@uiw/react-heat-map";
-import { addDays } from "date-fns";
-import { Badge } from "./ui/badge";
+
 import {
-  ApiPlan,
-  convertApiPlansToPlans,
   Plan,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import PlanRenderer from './PlanRenderer';
+import PlanRenderer from "./PlanRenderer";
 
-const Onboarding: React.FC = () => {
+interface OnboardingProps {
+  isNewPlan?: boolean;
+  onComplete?: (plan: Plan) => void;
+}
+
+const Onboarding: React.FC<OnboardingProps> = ({
+  isNewPlan = false,
+  onComplete,
+}) => {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
-  const [timezone, setTimezone] = useState("");
   const [goal, setGoal] = useState("");
   const [finishingDate, setFinishingDate] = useState<Date | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
-  const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const api = useApiWithAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [hasGeneratedPlans, setHasGeneratedPlans] = useState(false);
-  const { plans: previouslySelectedPlans } = useUserPlan();
+  const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(undefined);
+  const { plans: userPlans } = useUserPlan();
 
   useEffect(() => {
-    if (previouslySelectedPlans.length > 0) {
-      toast.success("You already have a plan selected");
+    if (!isNewPlan && userPlans.length > 0) {
+      toast.success("You already have a plan");
       router.push("/");
     }
-  }, [previouslySelectedPlans]);
+  }, [isNewPlan, userPlans]);
 
   useEffect(() => {
-    // Load onboarding progress when component mounts
-    const loadOnboardingProgress = async () => {
+    // Load user data when component mounts
+    const loadUserData = async () => {
       setIsLoading(true);
       try {
-        const response = await api.get("/api/onboarding/step");
+        const response = await api.get("/api/user");
         const userData = response.data;
-        if (userData.onboarding_progress) {
-          setName(userData.onboarding_progress.name || "");
-          setTimezone(userData.onboarding_progress.timezone || "");
-          setGoal(userData.onboarding_progress.goal || "");
-          setFinishingDate(
-            userData.onboarding_progress.finishing_date
-              ? parseISO(userData.onboarding_progress.finishing_date)
-              : null
-          );
-          // Set the appropriate step based on progress
-          // This is a simple example, you might want to implement more sophisticated logic
-          if (userData.onboarding_progress.name) setStep(1);
-          if (userData.onboarding_progress.timezone) setStep(2);
-          if (userData.onboarding_progress.goal) setStep(3);
-          if (userData.onboarding_progress.finishing_date) {
-            setStep(4);
-          }
+        if (userData.name) {
+          setName(userData.name);
+          setStep(1); // Skip name step if user already has a name
         }
       } catch (error) {
-        console.error("Error loading onboarding progress:", error);
-        toast.error("Error loading onboarding progress");
+        console.error("Error loading user data:", error);
+        toast.error("Error loading user data");
       } finally {
         setIsLoading(false);
       }
     };
-    loadOnboardingProgress();
+    loadUserData();
   }, []);
-
-  const saveStep = async (stepKey: string, stepValue: string) => {
-    try {
-      await api.post("/api/onboarding/step", { [stepKey]: stepValue });
-    } catch (error) {
-      console.error("Error saving onboarding step:", error);
-    }
-  };
 
   const handleGeneratePlans = async () => {
     setIsGenerating(true);
     try {
-      const response = await api.post("/api/onboarding/generate-plans", {
+      console.log({
+        planData: {
+          goal,
+          finishingDate: finishingDate?.toISOString(),
+          planDescription: planDescription.trim() || undefined,
+          emoji: selectedEmoji,
+        },
+      });
+      const response = await api.post("/api/generate-plans", {
+        goal,
+        finishingDate: finishingDate?.toISOString().split("T")[0],
         planDescription: planDescription.trim() || undefined,
+        emoji: selectedEmoji,
       });
 
-      setPlans(convertApiPlansToPlans(response.data.plans));
+      setPlans(response.data.plans);
       setStep(4);
-      setHasGeneratedPlans(true);
     } catch (error) {
-      console.error("Error generating plans:", error);
-      toast.error("Failed to generate plans. Please try again.");
+      console.error("Error generating plan:", error);
+      toast.error("Failed to generate plan. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -108,12 +97,17 @@ const Onboarding: React.FC = () => {
 
   const handlePlanSelection = async (plan: Plan) => {
     try {
-      if (!previouslySelectedPlan || plan.id != previouslySelectedPlan.id) {
-        await api.post("/api/onboarding/select-plan", plan);
+      if (plan) {
+        await api.post("/api/select-plan", { ...plan, emoji: selectedEmoji });
+        if (onComplete) {
+          onComplete(plan);
+        } else {
+          router.push("/profile");
+        }
       }
-      router.push("/profile");
     } catch (error) {
-      console.error("Plan selection error:", error);
+      console.error("Plan creation error:", error);
+      toast.error("Failed to create plan. Please try again.");
     }
   };
 
@@ -123,20 +117,24 @@ const Onboarding: React.FC = () => {
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>What is your name?</CardTitle>
+              <CardTitle>
+                {isNewPlan ? "Plan Name" : "What is your name?"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder={isNewPlan ? "Enter plan name" : "Enter your name"}
                 className="mb-4"
               />
               <Button
                 className="w-full"
                 onClick={() => {
-                  saveStep("name", name);
+                  if (!isNewPlan) {
+                    api.post("/api/user", { name });
+                  }
                   setStep(1);
                 }}
                 disabled={!name.trim()}
@@ -150,33 +148,11 @@ const Onboarding: React.FC = () => {
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>What is your location?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button
-                className="w-full"
-                onClick={() => {
-                  const timezone =
-                    Intl.DateTimeFormat().resolvedOptions().timeZone;
-                  setTimezone(timezone);
-                  saveStep("timezone", timezone);
-                  setStep(2);
-                  toast.success("Timezone set successfully to " + timezone);
-                }}
-              >
-                Get Location
-              </Button>
-            </CardContent>
-          </Card>
-        );
-      case 2:
-        return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
               <CardTitle>What goal do you want to accomplish?</CardTitle>
             </CardHeader>
             <CardContent>
               <Input
+                id="goal"
                 type="text"
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
@@ -185,11 +161,33 @@ const Onboarding: React.FC = () => {
               />
               <Button
                 className="w-full"
-                onClick={() => {
-                  saveStep("goal", goal);
-                  setStep(3);
-                }}
+                onClick={() => setStep(2)}
                 disabled={!goal.trim()}
+              >
+                Next
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      case 2:
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Choose an emoji for your plan (Optional)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Input
+                id="emoji"
+                type="text"
+                value={selectedEmoji}
+                onChange={(e) => setSelectedEmoji(e.target.value)}
+                placeholder="Enter an emoji"
+                className="mb-4"
+                maxLength={2}
+              />
+              <Button
+                className="w-full"
+                onClick={() => setStep(3)}
               >
                 Next
               </Button>
@@ -204,20 +202,14 @@ const Onboarding: React.FC = () => {
             </CardHeader>
             <CardContent>
               <DatePicker
-                selected={finishingDate!}
-                onSelect={(date: Date | undefined) => setFinishingDate(date!)}
+                selected={finishingDate}
+                onSelect={(date: Date | undefined) =>
+                  setFinishingDate(date || null)
+                }
               />
               <Button
-                className="w-full"
-                onClick={() => {
-                  saveStep(
-                    "finishing_date",
-                    finishingDate
-                      ? finishingDate.toISOString().split("T")[0]
-                      : ""
-                  );
-                  handleGeneratePlans();
-                }}
+                className="w-full mt-4"
+                onClick={handleGeneratePlans}
                 disabled={isGenerating}
               >
                 {isGenerating ? (
@@ -236,20 +228,18 @@ const Onboarding: React.FC = () => {
         return (
           <Card className="w-full max-w-2xl">
             <CardHeader>
-              <CardTitle>Select a Plan</CardTitle>
+              <CardTitle>Review Your Plan</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
-                placeholder="Describe your ideal plan (optional)"
                 value={planDescription}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setPlanDescription(e.target.value)
-                }
+                onChange={(e) => setPlanDescription(e.target.value)}
+                placeholder="Enter additional plan description (optional)"
                 className="mb-4"
               />
               <Button
                 className="w-full mb-4"
-                onClick={() => handleGeneratePlans()}
+                onClick={handleGeneratePlans}
                 disabled={isGenerating}
               >
                 {isGenerating ? (
@@ -257,39 +247,25 @@ const Onboarding: React.FC = () => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Regenerating Plans...
                   </>
-                ) : hasGeneratedPlans ? (
-                  "Regenerate Plans"
                 ) : (
-                  "Generate Plans"
+                  "Regenerate Plans"
                 )}
               </Button>
-              {plans.map((plan, index) => (
-                <>
-                  <Card>
-                    <CardContent>
-                      <PlanRenderer 
-                        title={previouslySelectedPlan && !hasGeneratedPlans ? "Preselected plan" : `Plan ${index + 1} – ${plan.intensity} intensity`}
-                        key={index} 
-                        plan={plan} 
-                      />
-                      <Button
-                        className="w-full mt-2"
-                        onClick={() => handlePlanSelection(plan)}
-                      >
-                        {previouslySelectedPlan && !hasGeneratedPlans ? "Confirm Plan selection" : "Select Plan"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </>
+
+              {plans.map((plan) => (
+                <div key={plan.id} className="mb-6 border p-4 rounded-md">
+                  <PlanRenderer
+                    title={`${name} - ${plan.intensity} intensity`}
+                    plan={plan}
+                  />
+                  <Button
+                    className="w-full mt-4"
+                    onClick={() => handlePlanSelection(plan)}
+                  >
+                    Select Plan
+                  </Button>
+                </div>
               ))}
-              {previouslySelectedPlan && hasGeneratedPlans && (
-                <Button
-                  className="w-full mt-2"
-                  onClick={() => handlePlanSelection(convertApiPlansToPlans([previouslySelectedPlan])[0])}
-                >
-                  Continue with previously selected plan
-                </Button>
-              )}
             </CardContent>
           </Card>
         );
@@ -301,7 +277,7 @@ const Onboarding: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
       <h1 className="text-2xl font-bold mb-8">
-        Welcome to the Onboarding Process
+        {isNewPlan ? "Create New Plan" : "Welcome to the Onboarding Process"}
       </h1>
       {isLoading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin">

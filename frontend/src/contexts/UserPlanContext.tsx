@@ -59,6 +59,7 @@ interface CompletedSession extends Omit<ActivityEntry, "id"> {}
 interface UserPlanContextType {
   user: User | null;
   plans: ApiPlan[];
+  setPlans: (plans: ApiPlan[]) => void;
   activities: Activity[];
   activityEntries: ActivityEntry[];
   getCompletedSessions: (plan: ApiPlan) => CompletedSession[];
@@ -150,6 +151,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         user,
         plans,
+        setPlans,
         activities,
         activityEntries,
         getCompletedSessions,
