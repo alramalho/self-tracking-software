@@ -252,15 +252,39 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
     return {"plans": plans}
 
 
-@router.post("/onboarding/select-plan")
-async def select_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
+@router.post("/add-plan")
+async def add_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
     created_plan = plan_controller.create_plan(user.id, plan)
-    updated_user = users_gateway.set_selected_plan(user.id, created_plan.id)
+    updated_user = users_gateway.add_plan_to_user(user.id, created_plan.id)
     return {
-        "message": "Plan selected and created",
+        "message": "Plan created and added to user",
         "user": updated_user,
         "plan": created_plan,
     }
+
+
+@router.delete("/remove-plan/{plan_id}")
+async def remove_plan(plan_id: str, user: User = Depends(is_clerk_user)):
+    updated_user = users_gateway.remove_plan_from_user(user.id, plan_id)
+    return {
+        "message": "Plan removed from user",
+        "user": updated_user,
+    }
+
+
+@router.get("/user-plans")
+async def get_user_plans(user: User = Depends(is_clerk_user)):
+    plans = [plan_controller.get_plan(plan_id).dict() for plan_id in user.plan_ids]
+    
+    activity_map = {
+        activity.id: {"title": activity.title, "measure": activity.measure}
+        for activity in activities_gateway.get_all_activities_by_user_id(user.id)
+    }
+    
+    for plan in plans:
+        plan["activities"] = [activity_map[activity_id] for activity_id in plan["activity_ids"]]
+    
+    return {"plans": plans}
 
 
 @router.get("/user")
@@ -278,17 +302,6 @@ async def get_plan(plan_id: str, user: User = Depends(is_clerk_user)):
     plan["activities"] = [activity_map[activity_id] for activity_id in plan["activity_ids"]]
     return plan
 
-@router.get("/user-plan")
-async def get_user_plan(user: User = Depends(is_clerk_user)):
-    if not user.selected_plan_id:
-        return None
-    plan = plan_controller.get_plan(user.selected_plan_id).dict()
-    activity_map = {
-        activity.id: {"title": activity.title, "measure": activity.measure}
-        for activity in activities_gateway.get_all_activities_by_user_id(user.id)
-    }
-    plan["activities"] = [activity_map[activity_id] for activity_id in plan["activity_ids"]]
-    return plan
 
 @router.post("/log-activity", response_model=ActivityEntryResponse)
 async def log_activity(
@@ -310,12 +323,12 @@ async def log_activity(
         date=logged_entry.date
     )
 
+
 @router.get("/recent-activities")
 async def get_recent_activities(user: User = Depends(is_clerk_user)):
     recent_activities = activities_gateway.get_readable_recent_activity_entries(user.id, limit=5)
     return {"recent_activities": recent_activities}
 
-# Add this new endpoint to your existing router
 
 @router.post("/upsert-activity")
 async def upsert_activity(
@@ -337,6 +350,7 @@ async def upsert_activity(
         )
         created_activity = activities_gateway.create_activity(new_activity)
         return created_activity
+
 
 @router.post("/store-activity-photo")
 async def store_activity_photo(

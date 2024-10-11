@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 class User(BaseModel):
     id: str
@@ -17,7 +17,7 @@ class User(BaseModel):
     pwa_subscription_key: Optional[str] = None
     pwa_subscription_auth_token: Optional[str] = None
     onboarding_progress: Dict[str, Any] = Field(default_factory=dict)
-    selected_plan_id: Optional[str] = None
+    plan_ids: List[str] = Field(default_factory=list)  # Changed from selected_plan_id to plan_ids
 
     @classmethod
     def new(cls, id: str, email: str) -> "User":

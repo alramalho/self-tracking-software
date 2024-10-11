@@ -98,6 +98,19 @@ class UsersGateway:
         user.selected_plan_id = plan_id
         return self.update_user(user)
 
+    def add_plan_to_user(self, user_id: str, plan_id: str) -> User:
+        user = self.get_user_by_id(user_id)
+        if plan_id not in user.plan_ids:
+            user.plan_ids.append(plan_id)
+        return self.update_user(user)
+
+    def remove_plan_from_user(self, user_id: str, plan_id: str) -> User:
+        user = self.get_user_by_id(user_id)
+        if plan_id in user.plan_ids:
+            user.plan_ids.remove(plan_id)
+        return self.update_user(user)
+
+
 if __name__ == "__main__":
     from shared.logger import create_logger
 

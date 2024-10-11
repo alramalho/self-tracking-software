@@ -25,7 +25,7 @@ export interface ActivityEntry {
 interface User {
   id: string;
   name: string;
-  selected_plan_id: string | null;
+  plan_ids: string[];
 }
 
 export interface Plan {
@@ -54,18 +54,14 @@ export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
   }[];
 }
 
-interface CompletedSession {
-  date: Date;
-  activity_id: string;
-  quantity: number;
-}
+interface CompletedSession extends Omit<ActivityEntry, "id"> {}
 
 interface UserPlanContextType {
   user: User | null;
-  plan: ApiPlan | null;
+  plans: ApiPlan[];
   activities: Activity[];
   activityEntries: ActivityEntry[];
-  completedSessions: CompletedSession[]; // Add this line
+  getCompletedSessions: (plan: ApiPlan) => CompletedSession[];
   loading: boolean;
   error: string | null;
 }
@@ -92,7 +88,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [plan, setPlan] = useState<ApiPlan | null>(null);
+  const [plans, setPlans] = useState<ApiPlan[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,75 +96,63 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const api = useApiWithAuth();
 
   useEffect(() => {
-    const fetchUserPlanAndActivities = async () => {
+    const fetchUserPlansAndActivities = async () => {
       try {
-        const [userResponse, activitiesResponse, activityEntriesResponse] =
+        const [userResponse, plansResponse, activitiesResponse, activityEntriesResponse] =
           await Promise.all([
             api.get("/api/user"),
+            api.get("/api/user-plans"),
             api.get("/api/activities"),
             api.get("/api/activity-entries"),
           ]);
 
         const userData: User = userResponse.data;
         setUser(userData);
+        setPlans(plansResponse.data.plans);
         setActivities(activitiesResponse.data);
         setActivityEntries(activityEntriesResponse.data);
 
         console.log({ activities: activitiesResponse.data });
         console.log({ activityEntries: activityEntriesResponse.data });
-        if (userData.selected_plan_id) {
-          const planResponse = await api.get(
-            `/api/plans/${userData.selected_plan_id}`
-          );
-          const planData: ApiPlan = planResponse.data;
-          setPlan(planData);
-          console.log({ plan: planData });
-        }
+        console.log({ plans: plansResponse.data.plans });
       } catch (err) {
         setError(
-          "Failed to fetch user, plan, activities, and activity entries data"
+          "Failed to fetch user, plans, activities, and activity entries data"
         );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserPlanAndActivities();
+    fetchUserPlansAndActivities();
   }, []);
 
-  const completedSessions = useMemo(() => {
+  const getCompletedSessions = (plan: ApiPlan): CompletedSession[] => {
     if (!plan || !activityEntries.length) return [];
 
-    const result2 = plan.sessions.filter((session) =>
-      activityEntries.some((entry) => {
-        console.log({ session: session.date, entry: entry.date });
-        return (
+    return plan.sessions
+      .filter((session) =>
+        activityEntries.some((entry) =>
           isSameDay(parseISO(session.date), parseISO(entry.date)) &&
           session.activity_name.toLowerCase() ===
             activities.find((a) => a.id === entry.activity_id)?.title.toLowerCase()
-        );
-      })
-    );
-    const result = result2.map((session) => ({
-      date: parseISO(session.date),
-      activity_id:
-        activities.find((a) => a.title === session.activity_name)?.id || "",
-      quantity: session.quantity,
-    }));
-
-    console.log({ intermediate: result2 });
-    console.log({ completedSessions: result });
-    return result;
-  }, [plan, activityEntries, activities]);
+        )
+      ).map((session) => ({
+        date: session.date,
+        activity_id:
+          activities.find((a) => a.title.toLowerCase() === session.activity_name.toLowerCase())?.id || "",
+        quantity: session.quantity,
+      }));
+  };
 
   return (
     <UserPlanContext.Provider
       value={{
         user,
-        plan,
+        plans,
         activities,
         activityEntries,
-        completedSessions,
+        getCompletedSessions,
         loading,
         error,
       }}

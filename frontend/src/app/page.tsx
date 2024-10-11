@@ -5,49 +5,59 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
-import { format, parseISO, startOfWeek, addWeeks } from "date-fns";
+import { format, parseISO, startOfWeek, addWeeks, isToday, isAfter } from "date-fns";
+import { Button } from "@/components/ui/button";
+import AppleLikePopover from "@/components/AppleLikePopover";
+import { ApiPlan } from "@/contexts/UserPlanContext";
 
 interface User {
   id: string;
   name: string;
-  selected_plan_id: string | null;
+  plan_ids: string[];
 }
 
 export default function Home() {
   const { isSignedIn } = useSession();
-  const { plan: userPlan, completedSessions } = useUserPlan();
+  const { plans, getCompletedSessions } = useUserPlan();
   const router = useRouter();
   const api = useApiWithAuth();
   const [loading, setLoading] = useState(true);
-  const [sessionData, setSessionData] = useState<{ week: string; planned: number; completed: number }[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
+  const [sessionData, setSessionData] = useState<{ week: string; planned: number; completed: number | null }[]>([]);
+  const [showNewPlanPopover, setShowNewPlanPopover] = useState(false);
 
   useEffect(() => {
     const checkUserAndRedirect = async () => {
       try {
         const response = await api.get("/api/user");
         const user: User = response.data;
-        if (!user.selected_plan_id) {
+        if (user.plan_ids.length === 0) {
           router.push("/onboarding");
         }
       } catch (error) {
         console.error("Error fetching user:", error);
+      } finally {
         setLoading(false);
       }
     };
-    if (userPlan != null) {
-      setLoading(false);
-      if (isSignedIn) {
-        checkUserAndRedirect();
-      }
+
+    if (isSignedIn) {
+      checkUserAndRedirect();
     }
-  }, [isSignedIn, userPlan]);
+  }, [isSignedIn, api, router]);
 
   useEffect(() => {
-    if (userPlan && userPlan.sessions && completedSessions) {
-      const allDates = [...userPlan.sessions.map(s => parseISO(s.date)), ...completedSessions.map(s => s.date)]
+    if (selectedPlanId && plans.length > 0) {
+      const selectedPlan = plans.find(plan => plan.id === selectedPlanId);
+      if (!selectedPlan) return;
+
+      const completedSessions = getCompletedSessions(selectedPlan);
+      const currentDate = new Date();
+
+      const allDates = [...selectedPlan.sessions.map(s => parseISO(s.date)), ...completedSessions.map(s => parseISO(s.date))]
         .sort((a, b) => a.getTime() - b.getTime());
 
       if (allDates.length === 0) return;
@@ -69,11 +79,14 @@ export default function Home() {
 
       allDates.forEach(date => {
         const weekKey = format(startOfWeek(date), 'yyyy-MM-dd');
-        if (userPlan.sessions.some(s => parseISO(s.date).getTime() === date.getTime())) {
+        if (selectedPlan.sessions.some(s => parseISO(s.date).getTime() === date.getTime())) {
           cumulativePlanned += 1;
         }
-        if (completedSessions.some(s => s.date.getTime() === date.getTime())) {
-          cumulativeCompleted += 1;
+        if (completedSessions.some(s => parseISO(s.date).getTime() === date.getTime())) {
+          // Only increment completed if the date is not after the current date
+          if (!isAfter(date, currentDate)) {
+            cumulativeCompleted += 1;
+          }
         }
         weeklyData[weekKey].planned = cumulativePlanned;
         weeklyData[weekKey].completed = cumulativeCompleted;
@@ -82,11 +95,12 @@ export default function Home() {
       const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
         week: format(parseISO(week), 'MMM d'),
         planned: data.planned,
-        completed: data.completed
+        completed: isAfter(parseISO(week), currentDate) ? null : data.completed,
+        fullDate: week
       }));
       setSessionData(formattedData);
     }
-  }, [userPlan, completedSessions]);
+  }, [selectedPlanId, plans, getCompletedSessions]);
 
   if (loading) {
     return (
@@ -110,29 +124,45 @@ export default function Home() {
     );
   }
 
+  const renderPlanCard = (plan: ApiPlan) => (
+    <div
+      key={plan.id}
+      className={`grid grid-cols-[auto,1fr] gap-4 p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
+        selectedPlanId === plan.id ? 'border-blue-500' : 'border-gray-200'
+      }`}
+      onClick={() => setSelectedPlanId(plan.id)}
+    >
+      {plan.emoji && (
+        <span className="text-6xl self-center">{plan.emoji}</span>
+      )}
+      <div className="flex flex-col">
+        <span className="text-xl font-medium">
+          {plan.goal}
+        </span>
+        <span className="text-sm text-gray-500 mt-2">
+          📍 {plan.finishing_date ? new Date(plan.finishing_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col">
-      <h1 className="text-3xl font-bold mb-6">Your Plan</h1>
-      {userPlan ? (
-        <div className="grid grid-cols-[auto,1fr] gap-4 p-6 rounded-lg border-2">
-          {userPlan.emoji && (
-            <span className="text-6xl self-center">{userPlan.emoji}</span>
-          )}
-          <div className="flex flex-col">
-            <span className="text-xl font-medium">
-              {userPlan.goal}
-            </span>
-            <span className="text-sm text-gray-500 mt-2">
-              📍 {userPlan.finishing_date ? new Date(userPlan.finishing_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
-            </span>
-          </div>
-        </div>
-      ) : (
-        <p>No plan selected. Please complete the onboarding process.</p>
-      )}
+      <h1 className="text-3xl font-bold mb-6">Your Plans</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {plans.map(renderPlanCard)}
+        <Button
+          variant="outline"
+          className="h-full min-h-[150px] flex flex-col items-center justify-center"
+          onClick={() => setShowNewPlanPopover(true)}
+        >
+          <Plus className="h-8 w-8 mb-2" />
+          <span>Create New Plan</span>
+        </Button>
+      </div>
 
       {sessionData.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-8 max-w-4xl">
           <LineChart 
             data={sessionData}
             xAxisKey="week"
@@ -140,10 +170,28 @@ export default function Home() {
               { dataKey: "planned", name: "Planned Sessions", color: "hsl(var(--chart-1))" },
               { dataKey: "completed", name: "Completed Sessions", color: "hsl(var(--chart-2))" }
             ]}
-            title="Cumulative Weekly Sessions"
+            title="Sessions Overview"
             description={`${sessionData[0].week} - ${sessionData[sessionData.length - 1].week}`}
+            currentDate={new Date()} // Make sure this line is present
           />
         </div>
+      )}
+
+      {showNewPlanPopover && (
+        <AppleLikePopover onClose={() => setShowNewPlanPopover(false)}>
+          <h2 className="text-2xl font-bold mb-4">Create New Plan</h2>
+          <form className="space-y-4">
+            <div>
+              <label htmlFor="goal" className="block text-sm font-medium text-gray-700">Goal</label>
+              <input type="text" id="goal" name="goal" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            </div>
+            <div>
+              <label htmlFor="finishingDate" className="block text-sm font-medium text-gray-700">Finishing Date</label>
+              <input type="date" id="finishingDate" name="finishingDate" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            </div>
+            <Button type="submit" className="w-full">Create Plan</Button>
+          </form>
+        </AppleLikePopover>
       )}
     </div>
   );

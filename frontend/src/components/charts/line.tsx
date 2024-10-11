@@ -1,7 +1,7 @@
 "use client"
 
 import { TrendingUp } from "lucide-react"
-import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
 
 import {
   Card,
@@ -17,6 +17,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { parse, startOfWeek, endOfWeek, isWithinInterval } from "date-fns"
 
 interface DataPoint {
   [key: string]: string | number
@@ -34,6 +35,7 @@ interface LineChartProps {
   description?: string
   trendPercentage?: number
   dateRange?: string
+  currentDate?: Date // Add this new prop
 }
 
 export function LineChart({
@@ -44,6 +46,7 @@ export function LineChart({
   description = "Data visualization",
   trendPercentage,
   dateRange,
+  currentDate, // Add this new prop
 }: LineChartProps) {
   const chartConfig = lines.reduce((config, line) => {
     config[line.dataKey] = {
@@ -52,6 +55,17 @@ export function LineChart({
     }
     return config
   }, {} as ChartConfig)
+
+  // Find the week that contains the current date
+  const currentWeek = currentDate ? data.find(item => {
+    // Parse the date string correctly
+    const itemDate = parse(item.week.toString(), 'MMM d', new Date());
+    const weekStart = startOfWeek(itemDate);
+    const weekEnd = endOfWeek(itemDate);
+    return isWithinInterval(currentDate, { start: weekStart, end: weekEnd });
+  }) : null;
+
+  console.log({ currentWeek, data, currentDate });
 
   return (
     <Card>
@@ -65,7 +79,7 @@ export function LineChart({
             <RechartsLineChart
               data={data}
               margin={{
-                top: 5,
+                top: 20, // Increased top margin to accommodate the label
                 right: 30,
                 left: 20,
                 bottom: 20,
@@ -94,6 +108,22 @@ export function LineChart({
                   dot={false}
                 />
               ))}
+              
+              {/* Updated ReferenceLine for the current week */}
+              {currentWeek && (
+                <ReferenceLine
+                  x={currentWeek.week}
+                  stroke="#888"
+                  strokeDasharray="3 3"
+                  label={{
+                    value: "This week",
+                    position: "top",
+                    fill: "#888",
+                    fontSize: 12,
+                    offset: 10, // Adjust this value to fine-tune the label position
+                  }}
+                />
+              )}
             </RechartsLineChart>
           </ResponsiveContainer>
         </ChartContainer>

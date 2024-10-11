@@ -36,16 +36,14 @@ const Onboarding: React.FC = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [hasGeneratedPlans, setHasGeneratedPlans] = useState(false);
-  const { plan: previouslySelectedPlan } = useUserPlan();
+  const { plans: previouslySelectedPlans } = useUserPlan();
 
   useEffect(() => {
-    if (previouslySelectedPlan) {
-      toast.success("Plan loaded from user context");
-      console.log({ plan: previouslySelectedPlan });
-      setStep(4);
-      setPlans(convertApiPlansToPlans([previouslySelectedPlan]));
+    if (previouslySelectedPlans.length > 0) {
+      toast.success("You already have a plan selected");
+      router.push("/");
     }
-  }, [previouslySelectedPlan]);
+  }, [previouslySelectedPlans]);
 
   useEffect(() => {
     // Load onboarding progress when component mounts
