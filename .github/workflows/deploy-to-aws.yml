@@ -23,7 +23,7 @@ jobs:
 
       - name: Deploy CDK
         env:
-          ENVIRONMENT: sandbox
+          ENVIRONMENT: production
         run: |
           cd aws-infrastructure
           export BACKEND_API_URL=$(doctl apps list --format DefaultIngress | awk 'NR==2')
