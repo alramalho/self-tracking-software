@@ -11,10 +11,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
-import {
-  Plan,
-  useUserPlan,
-} from "@/contexts/UserPlanContext";
+import { Plan, useUserPlan } from "@/contexts/UserPlanContext";
 import PlanRenderer from "./PlanRenderer";
 
 interface OnboardingProps {
@@ -29,14 +26,18 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
-  const [finishingDate, setFinishingDate] = useState<Date | undefined>(undefined);
+  const [finishingDate, setFinishingDate] = useState<Date | undefined>(
+    undefined
+  );
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
   const api = useApiWithAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(undefined);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
+    undefined
+  );
   const { plans: userPlans } = useUserPlan();
 
   useEffect(() => {
@@ -185,10 +186,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 className="mb-4"
                 maxLength={2}
               />
-              <Button
-                className="w-full"
-                onClick={() => setStep(3)}
-              >
+              <Button className="w-full" onClick={() => setStep(3)}>
                 Next
               </Button>
             </CardContent>
@@ -203,9 +201,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
             <CardContent>
               <DatePicker
                 selected={finishingDate}
-                onSelect={(date: Date | undefined) =>
-                  setFinishingDate(date)
-                }
+                onSelect={(date: Date | undefined) => setFinishingDate(date)}
               />
               <Button
                 className="w-full mt-4"
@@ -214,8 +210,10 @@ const Onboarding: React.FC<OnboardingProps> = ({
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Plans...
+                    <div className="flex flex-col items-center justify-center h-screen">
+                      <Loader2 className="h-6 w-6 animate-spin mb-2" />
+                      <span className="text-center">Generating Plans...</span>
+                    </div>
                   </>
                 ) : (
                   "Generate Plans"
