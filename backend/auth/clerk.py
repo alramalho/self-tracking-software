@@ -72,8 +72,10 @@ async def validate_token(token: str) -> Tuple[bool, str]:
         logger.info(f"User w/ clerk id {clerk_id} authorized.")
 
         if not exp:
+            logger.error("Token does not have an expiration date")
             raise credentials_exception
         if datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(tz=timezone.utc):
+            logger.error("Token expired")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token expired",
