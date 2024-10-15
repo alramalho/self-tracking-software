@@ -1,8 +1,5 @@
-name: Main Pipeline
+name: Deploy all to Production
 on:
-  push:
-    branches:
-      - "main"
   workflow_dispatch:
 
 jobs:
