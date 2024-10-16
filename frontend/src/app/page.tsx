@@ -26,7 +26,7 @@ export default function Home() {
   const { plans, setPlans, getCompletedSessions } = useUserPlan();
   const router = useRouter();
   const api = useApiWithAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [sessionData, setSessionData] = useState<{ week: string; planned: number; completed: number | null }[]>([]);
   const [showNewPlanPopover, setShowNewPlanPopover] = useState(false);
@@ -48,6 +48,7 @@ export default function Home() {
     };
 
     if (isSignedIn) {
+      setLoading(true);
       checkUserAndRedirect();
     }
   }, [isSignedIn, api, router]);
@@ -109,6 +110,7 @@ export default function Home() {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <span>Loading your data...</span>
       </div>
     );
   }
@@ -189,7 +191,7 @@ export default function Home() {
                 ]}
                 title="Sessions Overview"
                 description={`${sessionData[0].week} - ${sessionData[sessionData.length - 1].week}`}
-                currentDate={new Date()} // Make sure this line is present
+                currentDate={new Date()} 
               />
             </div>
           )}
