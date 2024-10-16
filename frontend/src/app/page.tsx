@@ -23,35 +23,19 @@ interface User {
 
 export default function Home() {
   const { isSignedIn } = useSession();
-  const { plans, setPlans, getCompletedSessions } = useUserPlan();
+  const { loading, user, plans, setPlans, getCompletedSessions } = useUserPlan();
   const router = useRouter();
-  const api = useApiWithAuth();
-  const [loading, setLoading] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [sessionData, setSessionData] = useState<{ week: string; planned: number; completed: number | null }[]>([]);
-  const [showNewPlanPopover, setShowNewPlanPopover] = useState(false);
   const [isCreatingNewPlan, setIsCreatingNewPlan] = useState(false);
 
   useEffect(() => {
-    const checkUserAndRedirect = async () => {
-      try {
-        const response = await api.get("/api/user");
-        const user: User = response.data;
-        if (user.plan_ids.length === 0) {
-          router.push("/onboarding");
-        }
-      } catch (error) {
-        console.error("Error fetching user:", error);
-      } finally {
-        setLoading(false);
+    if (isSignedIn && user) {
+      if (user.plan_ids.length === 0) {
+        router.push("/onboarding");
       }
-    };
-
-    if (isSignedIn) {
-      setLoading(true);
-      checkUserAndRedirect();
     }
-  }, [isSignedIn, api, router]);
+  }, [isSignedIn, user]);
 
   useEffect(() => {
     if (selectedPlanId && plans.length > 0) {
