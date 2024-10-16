@@ -61,7 +61,7 @@ class MongoDBGateway(DBGateway):
             if type(value) == str:
                 logger.log("DB", "Value is a string")
                 value = ObjectId(value)
-        logger.log("DB", f'MongoDB: Querying from MongoDB '{self.collection.name}' ... Key:"{key}" Value:"{value}"')
+        logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Key:"{key}" Value:"{value}"')
         logger.log("DB", "New Value type: " + str(type(value)))
         result = [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
         logger.log("DB", "Result: " + str(result))
