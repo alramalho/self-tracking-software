@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
 import { Plan, useUserPlan } from "@/contexts/UserPlanContext";
-import PlanRenderer from "./PlanRenderer";
+import PlanRendererHeatmap from "./PlanRendererHeatmap";
 
 interface OnboardingProps {
   isNewPlan?: boolean;
@@ -244,7 +244,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
               {plans.map((plan) => (
                 <div key={plan.id} className="mb-6 border p-4 rounded-md">
-                  <PlanRenderer
+                  <PlanRendererHeatmap
                     title={`${name} - ${plan.intensity} intensity`}
                     plan={plan}
                   />

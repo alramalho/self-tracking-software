@@ -10,7 +10,7 @@ interface PlanRendererProps {
   title: string;
 }
 
-const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
+const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
 
   const formatSessionsForHeatMap = (plan: Plan) => {
@@ -262,4 +262,4 @@ const PlanRenderer: React.FC<PlanRendererProps> = ({ plan, title }) => {
   );
 };
 
-export default PlanRenderer;
+export default PlanRendererHeatmap;

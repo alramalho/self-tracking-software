@@ -6,12 +6,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, Plus } from "lucide-react";
 import {
-  Activity,
   convertPlanToApiPlan,
   Plan,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import { LineChart } from "@/components/charts/line";
 import {
   format,
   parseISO,
@@ -19,16 +17,13 @@ import {
   addWeeks,
   isToday,
   isAfter,
-  isBefore,
 } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ApiPlan } from "@/contexts/UserPlanContext";
 import Onboarding from "@/components/Onboarding";
 import toast from "react-hot-toast";
-import { Calendar } from "@/components/ui/calendar";
-import { isFuture } from "date-fns";
-import { cn } from "@/lib/utils";
 import { useClerk } from "@clerk/nextjs";
+import { PlanRendererv2 } from "@/components/PlanRendererv2";
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useSession();
@@ -142,7 +137,7 @@ export default function Home() {
   if (!isLoaded || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin mr-2" />
         <span>Loading your data...</span>
       </div>
     );
@@ -214,43 +209,6 @@ export default function Home() {
     toast.success("New plan created successfully!");
   };
 
-  const prepareCalendarData = (plan: ApiPlan | undefined) => {
-    if (!plan) return { dates: [], sessionsMap: new Map() };
-
-    const sessions = plan.sessions.map((session) => ({
-      ...session,
-      date: parseISO(session.date),
-    }));
-    const dates = sessions.map((session) => session.date);
-    const sessionsMap = new Map(
-      sessions.map((session) => [format(session.date, "yyyy-MM-dd"), session])
-    );
-
-    return { dates, sessionsMap };
-  };
-
-  const renderSessionDetails = (
-    session: ApiPlan["sessions"][0],
-    activity: Activity | undefined
-  ) => {
-    const sessionDate =
-      typeof session.date === "string" ? parseISO(session.date) : session.date;
-
-    return (
-      <div className="mb-4 p-4 bg-gray-100 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">
-          {format(sessionDate, "MMMM d, yyyy")}
-        </h3>
-        <ul className="list-disc list-inside mb-2">
-          <li>
-            {session.quantity} {activity?.measure} of {session.activity_name}
-          </li>
-        </ul>
-        <p className="text-sm text-gray-600">{session.descriptive_guide}</p>
-      </div>
-    );
-  };
-
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col">
       {isCreatingNewPlan ? (
@@ -270,105 +228,12 @@ export default function Home() {
             </Button>
           </div>
 
-          {sessionData.length > 0 && (
-            <div className="mt-8 max-w-4xl">
-              <LineChart
-                data={sessionData.map((item) => ({
-                  ...item,
-                  completed: item.completed ?? 0,
-                }))}
-                xAxisKey="week"
-                lines={[
-                  {
-                    dataKey: "planned",
-                    name: "Planned Sessions",
-                    color: "hsl(var(--chart-1))",
-                  },
-                  {
-                    dataKey: "completed",
-                    name: "Completed Sessions",
-                    color: "hsl(var(--chart-2))",
-                  },
-                ]}
-                title="Sessions Overview"
-                description={`${sessionData[0].week} - ${
-                  sessionData[sessionData.length - 1].week
-                }`}
-                currentDate={new Date()}
-              />
-            </div>
-          )}
-
           {selectedPlanId && (
-            <div className="mt-8">
-              <h2 className="text-2xl font-bold mb-4">Upcoming Sessions</h2>
-              <div className="flex flex-row gap-8 flex-wrap">
-                {selectedSession && (
-                  <>
-                    {renderSessionDetails(
-                      selectedSession,
-                      activities.find(
-                        (a) =>
-                          a.title.toLowerCase() ===
-                          selectedSession.activity_name.toLowerCase()
-                      )
-                    )}
-                  </>
-                )}
-                <Calendar
-                  mode="multiple"
-                  selected={
-                    prepareCalendarData(
-                      plans.find((p) => p.id === selectedPlanId)
-                    ).dates
-                  }
-                  className="rounded-md border w-[280px]"
-                  components={{
-                    Day: ({ date, ...props }) => {
-                      const { sessionsMap } = prepareCalendarData(
-                        plans.find((p) => p.id === selectedPlanId)
-                      );
-                      const sessionDate = format(date, "yyyy-MM-dd");
-                      const session = sessionsMap.get(sessionDate);
-
-                      return (
-                        <div
-                          className={cn(
-                            "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                            "relative flex items-center justify-center",
-                            session &&
-                              isFuture(date) &&
-                              "bg-blue-100 h-9 w-9 rounded-full",
-                            session &&
-                              isToday(date) &&
-                              "bg-red-100 h-9 w-9 rounded-full",
-                            isBefore(date, new Date()) &&
-                              !isToday(date) &&
-                              "text-gray-400"
-                          )}
-                          {...props}
-                          onClick={() => {
-                            if (session && (isFuture(date) || isToday(date))) {
-                              setSelectedSession({
-                                ...session,
-                                date: format(
-                                  typeof session.date === "string"
-                                    ? parseISO(session.date)
-                                    : session.date,
-                                  "yyyy-MM-dd"
-                                ),
-                              });
-                            }
-                          }}
-                        >
-                          <span>{date.getDate()}</span>
-                        </div>
-                      );
-                    },
-                  }}
-                />
-              </div>
-            </div>
+            <PlanRendererv2
+              selectedPlan={plans.find((p) => p.id === selectedPlanId)!}
+              activities={activities}
+              getCompletedSessions={getCompletedSessions}
+            />
           )}
         </>
       )}
