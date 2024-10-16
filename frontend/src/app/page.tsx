@@ -30,10 +30,8 @@ export default function Home() {
   const [isCreatingNewPlan, setIsCreatingNewPlan] = useState(false);
 
   useEffect(() => {
-    if (isSignedIn && user) {
-      if (user.plan_ids.length === 0) {
-        router.push("/onboarding");
-      }
+    if (isSignedIn && (!user || user.plan_ids.length === 0)) {
+      router.push("/onboarding");
     }
   }, [isSignedIn, user]);
 
