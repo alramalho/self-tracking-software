@@ -38,7 +38,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
     undefined
   );
-  const { plans: userPlans } = useUserPlan();
+  const { plans: userPlans, user } = useUserPlan();
 
   useEffect(() => {
     if (!isNewPlan && userPlans.length > 0) {
@@ -49,24 +49,16 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
   useEffect(() => {
     // Load user data when component mounts
-    const loadUserData = async () => {
-      setIsLoading(true);
-      try {
-        const response = await api.get("/api/user");
-        const userData = response.data;
-        if (userData.name) {
-          setName(userData.name);
-          setStep(1); // Skip name step if user already has a name
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error);
-        toast.error("Error loading user data");
-      } finally {
-        setIsLoading(false);
+    try {
+      if (user && user.name) {
+        setName(user.name);
+        setStep(1); // Skip name step if user already has a name
       }
-    };
-    loadUserData();
-  }, []);
+    } catch (error) {
+      console.error("Error loading user data:", error);
+      toast.error("Error loading user data");
+    }
+  }, [user]);
 
   const handleGeneratePlans = async () => {
     setIsGenerating(true);
