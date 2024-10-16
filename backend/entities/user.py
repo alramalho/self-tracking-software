@@ -5,6 +5,7 @@ from bson import ObjectId
 class User(BaseModel):
     id: str
     name: Optional[str] = None
+    picture: Optional[str] = None
     username: Optional[str] = None  # Add this line
     timezone: Optional[str] = None
     clerk_id: Optional[str] = None

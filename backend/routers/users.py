@@ -423,3 +423,11 @@ async def update_user(
 ):
     updated_user = users_gateway.update_fields(user.id, user_data)
     return {"message": "User updated successfully", "user": updated_user}
+
+
+@router.get("/search-username/{username}")
+async def search_username(username: str, user: User = Depends(is_clerk_user)):
+    user = users_gateway.get_user_by_safely("username", username)
+    if user:
+        return {"username": user.username, "name": user.name, "picture": user.picture}
+    return None
