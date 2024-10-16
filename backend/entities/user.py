@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 from typing import Optional, Dict, Any, List
-
+from bson import ObjectId
 class User(BaseModel):
     id: str
     name: Optional[str] = None
@@ -19,9 +19,9 @@ class User(BaseModel):
     plan_ids: List[str] = Field(default_factory=list)  # Changed from selected_plan_id to plan_ids
 
     @classmethod
-    def new(cls, id: str, email: str, clerk_id: Optional[str] = None) -> "User":
+    def new(cls, email: str, clerk_id: Optional[str] = None) -> "User":
         return cls(
-            id=id,
+            id=str(ObjectId()),
             email=email,
             created_at=datetime.now(UTC).isoformat(),
             clerk_id=clerk_id,

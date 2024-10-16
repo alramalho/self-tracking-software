@@ -59,7 +59,6 @@ async def user_event_webhook(request: Request):
                 )
                 users_gateway.create_user(
                     User.new(
-                        id=user_clerk_id,
                         email=email_address,
                         clerk_id=user_clerk_id,
                     )
