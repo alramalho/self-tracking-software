@@ -15,8 +15,32 @@ from routers.users import router as users_router
 from services.conversation_service import process_message, users_gateway, activities_gateway, moods_gateway
 from shared.executor import executor
 from ai import stt
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
+import time
+from fastapi.responses import Response
 
 app = FastAPI()
+
+# Add the LoggingMiddleware
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # Get the response body
+        response_body = b""
+        async for chunk in response.body_iterator:
+            response_body += chunk
+        
+        # Log the response body
+        logger.info(f"Response body: {response_body.decode()}")
+        
+        # Re-create the response with the consumed body
+        return Response(content=response_body, status_code=response.status_code,
+                        headers=dict(response.headers), media_type=response.media_type)
+
+app.add_middleware(LoggingMiddleware)
+
 app.include_router(clerk_router)
 app.include_router(evaluation_router)
 app.include_router(users_router)
