@@ -138,27 +138,44 @@ const LogPage: React.FC = () => {
       )}
       <h1 className="text-2xl font-bold mb-6 mt-16">Log Activity</h1>
       {activities.length > 0 ? (
-        <ActivitySelector
-          activities={activities}
-          selectedActivity={selectedActivity}
-          onSelectActivity={handleSelectActivity}
-        />
+        <>
+          <ActivitySelector
+            activities={activities}
+            selectedActivity={selectedActivity}
+            onSelectActivity={(aId) => {
+              handleSelectActivity(aId);
+              // scroll to calendar
+              const calendar = document.getElementById("calendar");
+              if (calendar) {
+                calendar.scrollIntoView({ behavior: "smooth" });
+              }
+            }}
+          />
+        </>
       ) : (
         <p>No activities found.</p>
       )}
-      <div className="mt-6 grid grid-cols-2 gap-6">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
           <h2 className="text-xl font-semibold mb-2">Select Date</h2>
           <Calendar
+            id="calendar"
             mode="single"
             selected={selectedDate}
-            onSelect={handleSelectDate}
+            onSelect={(date) => {
+              handleSelectDate(date);
+              // scroll to quantity
+              const quantity = document.getElementById("quantity");
+              if (quantity) {
+                quantity.scrollIntoView({ behavior: "smooth" });
+              }
+            }}
             className="rounded-md border"
             disableFutureDates={true}
           />
         </div>
         {selectedActivity && (
-          <div>
+          <div id="quantity">
             <h2 className="text-xl font-semibold mb-2">{measureType}</h2>
             <div className="flex items-center justify-center space-x-4">
               <Button
@@ -193,13 +210,15 @@ const LogPage: React.FC = () => {
         )}
       </div>
       <div className="mt-8">
-        <Button
-          onClick={handleLogActivity}
-          className="w-full"
-          disabled={!selectedActivity || !selectedDate || quantity === 0}
-        >
-          Log Activity
-        </Button>
+        <div className="fixed bottom-0 left-0 right-0 p-4 pb-20 bg-white border-t">
+          <Button
+            onClick={handleLogActivity}
+            className="w-full bg-black text-white"
+            disabled={!selectedActivity || !selectedDate || quantity === 0}
+          >
+            Log Activity
+          </Button>
+        </div>
       </div>
       {showPhotoUploader && loggedActivityEntry && (
         <ActivityPhotoUploader

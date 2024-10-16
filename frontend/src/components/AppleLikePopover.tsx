@@ -46,7 +46,6 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
       className={`fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity duration-300 ${
         isVisible ? "opacity-100" : "opacity-0"
       }`}
-      onClick={handleClose}
     >
       <div
         ref={containerRef}
@@ -54,7 +53,6 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
           isVisible ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxWidth: "500px", margin: "0 auto" }}
-        onClick={(e) => e.stopPropagation()}
         onTouchStart={handleSwipeUp}
       >
         <div className="w-12 h-1 bg-gray-300 rounded mx-auto mb-6" />

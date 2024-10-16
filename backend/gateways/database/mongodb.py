@@ -1,6 +1,7 @@
 from typing import List, Dict
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING
 from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 from constants import MONGO_DB_CONNECTION_STRING, MONGO_DB_NAME, ENVIRONMENT
 from gateways.database.base import DBGateway
@@ -47,8 +48,12 @@ class MongoDBGateway(DBGateway):
             del data['id']
         
         logger.log("DB", f"MongoDB: Writing to MongoDB ... {data}")
-        result = self.collection.replace_one({'_id': data['_id']}, data, upsert=True)
-        logger.log("DB", f"MongoDB: Upserted document with id: {data['_id']}")
+        try:
+            result = self.collection.replace_one({'_id': data['_id']}, data, upsert=True)
+            logger.log("DB", f"MongoDB: Upserted document with id: {data['_id']}")
+        except DuplicateKeyError:
+            logger.error(f"Duplicate key error for data: {data}")
+            raise
 
     def scan(self) -> List[Dict]:
         logger.log("DB", "MongoDB: Scanning from MongoDB ...")

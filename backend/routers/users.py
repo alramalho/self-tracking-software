@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
-from gateways.activities import ActivitiesGateway
+from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsException
 from gateways.moodreports import MoodsGateway
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
@@ -30,6 +30,7 @@ from gateways.aws.s3 import S3Gateway
 import uuid
 import os
 import concurrent.futures
+from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/api")
 processed_notification_controller = ProcessedNotificationController()
@@ -310,13 +311,34 @@ async def log_activity(
         quantity=quantity,
         date=iso_date_string,
     )
-    logged_entry = activities_gateway.create_activity_entry(activity_entry)
-    return ActivityEntryResponse(
-        id=logged_entry.id,
-        activity_id=logged_entry.activity_id,
-        quantity=logged_entry.quantity,
-        date=logged_entry.date
-    )
+    
+    try:
+        logged_entry = activities_gateway.create_activity_entry(activity_entry)
+        return ActivityEntryResponse(
+            id=logged_entry.id,
+            activity_id=logged_entry.activity_id,
+            quantity=logged_entry.quantity,
+            date=logged_entry.date
+        )
+    except ActivityEntryAlreadyExistsException:
+        # An entry for this activity and date already exists
+        existing_entry = activities_gateway.get_activity_entry(activity_id, iso_date_string)
+        if existing_entry:
+            # Update the existing entry with the new quantity
+            updated_entry = activities_gateway.update_activity_entry(
+                existing_entry.id,
+                {"quantity": quantity + existing_entry.quantity}
+            )
+            return ActivityEntryResponse(
+                id=updated_entry.id,
+                activity_id=updated_entry.activity_id,
+                quantity=updated_entry.quantity,
+                date=updated_entry.date
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update existing activity entry")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
 @router.get("/recent-activities")

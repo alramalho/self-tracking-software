@@ -1,6 +1,5 @@
 import datetime
 
-from entities.activity import Activity
 from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
@@ -19,11 +18,15 @@ class ActivityEntryDoesNotExistException(Exception):
     pass
 
 
+class ActivityEntryAlreadyExistsException(Exception):
+    pass
+
+
 # todo: this activities gateway now has permissions and CRUD responsiblities... we should split?
 class ActivitiesGateway:
     def __init__(self,):
         self.activities_db_gateway = MongoDBGateway("activities")
-        self.activitiy_entries_db_gateway = MongoDBGateway("activity_entries")
+        self.activity_entries_db_gateway = MongoDBGateway("activity_entries")
 
     def get_activity_by_id(self, activity_id:str) -> Activity:
         data = self.activities_db_gateway.query("id", activity_id)
@@ -33,7 +36,7 @@ class ActivitiesGateway:
             return None
     
     def get_activity_entry_by_id(self, activity_entry_id:str) -> Activity:
-        data = self.activitiy_entries_db_gateway.query("id", activity_entry_id)
+        data = self.activity_entries_db_gateway.query("id", activity_entry_id)
         if len(data) > 0:
             return ActivityEntry(**data[0])
         else:
@@ -43,7 +46,7 @@ class ActivitiesGateway:
         return [Activity(**data) for data in self.activities_db_gateway.query("user_id", user_id)]
     
     def get_all_activity_entries_by_activity_id(self, activity_id: str) -> list[ActivityEntry]:
-        return [ActivityEntry(**data) for data in self.activitiy_entries_db_gateway.query("activity_id", activity_id)]
+        return [ActivityEntry(**data) for data in self.activity_entries_db_gateway.query("activity_id", activity_id)]
     
     def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5) -> str:
         all_activities_dict = {activity.id: activity for activity in self.get_all_activities_by_user_id(user_id)}
@@ -79,12 +82,22 @@ class ActivitiesGateway:
     
     def create_activity_entry(self, activity_entry: ActivityEntry) -> ActivityEntry:
         activity = self.get_activity_by_id(activity_entry.activity_id)
-        if len(self.activitiy_entries_db_gateway.query("id", activity_entry.id)) != 0:
-            logger.info(f"ActivityEntry ({activity.title} for date {activity_entry.date}) already exists")
-            raise ActivityAlreadyExistsException()
-        self.activitiy_entries_db_gateway.write(activity_entry.dict())
-        logger.info(f"ActivityEntry ({activity.title} for date {activity_entry.date}) created")
-        return activity_entry
+        if activity is None:
+            raise ActivityDoesNotExistException(f"Activity with id {activity_entry.activity_id} does not exist")
+
+        existing_entry = self.get_activity_entry(activity_entry.activity_id, activity_entry.date)
+        if existing_entry:
+            raise ActivityEntryAlreadyExistsException(
+                f"ActivityEntry for activity {activity.title} on date {activity_entry.date} already exists"
+            )
+
+        try:
+            self.activity_entries_db_gateway.write(activity_entry.dict())
+            logger.info(f"ActivityEntry ({activity.title} for date {activity_entry.date}) created")
+            return activity_entry
+        except Exception as e:
+            logger.error(f"Error creating activity entry: {e}")
+            raise
 
     def update_activity(self, activity: Activity) -> Activity:
         existing_activity = self.get_activity_by_id(activity.id)
@@ -102,7 +115,7 @@ class ActivitiesGateway:
             raise ActivityEntryDoesNotExistException()
         for key, value in updates.items():
             setattr(activity_entry, key, value)
-        self.activitiy_entries_db_gateway.write(activity_entry.dict())
+        self.activity_entries_db_gateway.write(activity_entry.dict())
         logger.info(f"ActivityEntry {activity_entry_id} updated")
         return activity_entry
     
@@ -121,6 +134,13 @@ class ActivitiesGateway:
             entries = self.get_all_activity_entries_by_activity_id(activity.id)
             all_entries.extend(entries)
         return all_entries
+
+    def get_activity_entry(self, activity_id: str, date: str) -> ActivityEntry:
+        entries = self.activity_entries_db_gateway.query("activity_id", activity_id)
+        for entry in entries:
+            if entry["date"] == date:
+                return ActivityEntry(**entry)
+        return None
 
 if __name__ == "__main__":
     from gateways.database.mongodb import MongoDBGateway

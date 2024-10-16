@@ -22,6 +22,7 @@ export interface ActivityEntry {
   activity_id: string;
   quantity: number;
   date: string;
+  image_s3_path?: string;
 }
 
 export interface MoodReport {
