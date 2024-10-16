@@ -39,6 +39,16 @@ async def user_event_webhook(request: Request):
         email_address = data["email_addresses"][0]["email_address"]
         first_name = data["first_name"]
         last_name = data["last_name"]
+        picture = None
+        if data.get("external_accounts"):
+            picture = data.get("external_accounts")[0].get("picture")
+            if picture:
+                logger.info(f"Picture found!")
+                picture = picture.strip('"')
+            else:
+                logger.info(f"No picture found for user {user_clerk_id}")
+        else:
+            logger.info(f"No external accounts found for user {user_clerk_id}")
         users_gateway = UsersGateway()
 
         if event_type == "user.created":
@@ -50,6 +60,7 @@ async def user_event_webhook(request: Request):
                         "email": email_address,
                         "name": f"{first_name} {last_name}",
                         "clerk_id": user_clerk_id,
+                        "picture": picture,  # Add the picture field
                     },
                 )
                 logger.info(f"User with email '{email_address}' updated.")
@@ -61,6 +72,7 @@ async def user_event_webhook(request: Request):
                     User.new(
                         email=email_address,
                         clerk_id=user_clerk_id,
+                        picture=picture,  # Add the picture field
                     )
                 )
             return {"status": "success", "message": "User created successfully"}
@@ -73,6 +85,7 @@ async def user_event_webhook(request: Request):
                     "email": email_address,
                     "name": f"{first_name} {last_name}",
                     "clerk_id": user_clerk_id,
+                    "picture": picture,  # Add the picture field
                 },
             )
             return {"status": "success", "message": "User updated successfully"}
