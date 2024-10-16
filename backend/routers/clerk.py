@@ -58,9 +58,9 @@ async def user_event_webhook(request: Request):
                     f"User with email '{email_address}' not found. Creating new user."
                 )
                 users_gateway.create_user(
-                    User(
+                    User.new(
+                        id=user_clerk_id,
                         email=email_address,
-                        name=f"{first_name} {last_name}",
                         clerk_id=user_clerk_id,
                     )
                 )

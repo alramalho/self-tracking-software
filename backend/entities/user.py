@@ -19,9 +19,10 @@ class User(BaseModel):
     plan_ids: List[str] = Field(default_factory=list)  # Changed from selected_plan_id to plan_ids
 
     @classmethod
-    def new(cls, id: str, email: str) -> "User":
+    def new(cls, id: str, email: str, clerk_id: Optional[str] = None) -> "User":
         return cls(
             id=id,
             email=email,
             created_at=datetime.now(UTC).isoformat(),
+            clerk_id=clerk_id,
         )
