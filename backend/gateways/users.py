@@ -110,6 +110,10 @@ class UsersGateway:
             user.plan_ids.remove(plan_id)
         return self.update_user(user)
 
+    def get_friend_count(self, user_id: str) -> int:
+        user = self.get_user_by_id(user_id)
+        return len(user.friend_ids) if hasattr(user, 'friend_ids') else 0
+
 
 if __name__ == "__main__":
     from shared.logger import create_logger

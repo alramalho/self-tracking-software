@@ -19,6 +19,7 @@ class User(BaseModel):
     pwa_subscription_key: Optional[str] = None
     pwa_subscription_auth_token: Optional[str] = None
     plan_ids: List[str] = Field(default_factory=list)  # Changed from selected_plan_id to plan_ids
+    friend_ids: List[str] = Field(default_factory=list)
 
     @classmethod
     def new(cls, email: str, clerk_id: Optional[str] = None) -> "User":

@@ -431,3 +431,9 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
     if user:
         return {"username": user.username, "name": user.name, "picture": user.picture}
     return None
+
+# Add this new endpoint
+@router.get("/user/friend-count")
+async def get_friend_count(user: User = Depends(is_clerk_user)):
+    friend_count = users_gateway.get_friend_count(user.id)
+    return {"friendCount": friend_count}
