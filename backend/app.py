@@ -33,7 +33,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response_body += chunk
         
         # Log the response body
-        logger.info(f"Response body: {response_body.decode()}")
+        if response.status_code >= 400:
+            logger.error(f"Error response body: {response_body.decode()}")
         
         # Re-create the response with the consumed body
         return Response(content=response_body, status_code=response.status_code,
