@@ -3,16 +3,18 @@ import React, {
   useContext,
   useState,
   useEffect,
-  useMemo,
 } from "react";
 import { useApiWithAuth } from "@/api";
 import { parseISO, isSameDay, format } from "date-fns";
+import { useSession } from "@clerk/clerk-react";
+import { useClerk } from "@clerk/nextjs";
+import { toast } from 'react-hot-toast';
 
 export interface Activity {
   id: string;
   title: string;
   measure: string;
-  emoji?: string; // Include this if your backend provides emojis
+  emoji?: string;
 }
 
 export interface ActivityEntry {
@@ -22,7 +24,14 @@ export interface ActivityEntry {
   date: string;
 }
 
-interface User {
+export interface MoodReport {
+  id: string;
+  user_id: string;
+  date: string;
+  score: string;
+}
+
+export interface User {
   id: string;
   name: string;
   plan_ids: string[];
@@ -62,6 +71,7 @@ interface UserPlanContextType {
   setPlans: (plans: ApiPlan[]) => void;
   activities: Activity[];
   activityEntries: ActivityEntry[];
+  moodReports: MoodReport[];
   getCompletedSessions: (plan: ApiPlan) => CompletedSession[];
   loading: boolean;
   error: string | null;
@@ -88,7 +98,9 @@ export function convertApiPlansToPlans(apiPlans: ApiPlan[]): Plan[] {
 export function convertPlanToApiPlan(plan: Plan): ApiPlan {
   return {
     ...plan,
-    finishing_date: plan.finishing_date ? format(plan.finishing_date, "yyyy-MM-dd") : undefined,
+    finishing_date: plan.finishing_date
+      ? format(plan.finishing_date, "yyyy-MM-dd")
+      : undefined,
     sessions: plan.sessions.map((session) => ({
       ...session,
       date: format(session.date, "yyyy-MM-dd"),
@@ -103,56 +115,66 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const [plans, setPlans] = useState<ApiPlan[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [moodReports, setMoodReports] = useState<MoodReport[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isSignedIn } = useSession();
+  const { signOut } = useClerk()
+
   const api = useApiWithAuth();
 
   useEffect(() => {
-    const fetchUserPlansAndActivities = async () => {
+    const fetchAllUserData = async () => {
+      if (!isSignedIn) return;
+
       try {
-        const [userResponse, plansResponse, activitiesResponse, activityEntriesResponse] =
-          await Promise.all([
-            api.get("/api/user"),
-            api.get("/api/user-plans"),
-            api.get("/api/activities"),
-            api.get("/api/activity-entries"),
-          ]);
+        setLoading(true);
+        console.log("GETTING USER DATA")
+        const response = await api.get("/api/load-all-user-data");
 
-        const userData: User = userResponse.data;
-        setUser(userData);
-        setPlans(plansResponse.data.plans);
-        setActivities(activitiesResponse.data);
-        setActivityEntries(activityEntriesResponse.data);
+        setUser(response.data.user);
+        setPlans(response.data.plans);
+        setActivities(response.data.activities);
+        setActivityEntries(response.data.activity_entries);
+        setMoodReports(response.data.mood_reports);
 
-        console.log({ activities: activitiesResponse.data });
-        console.log({ activityEntries: activityEntriesResponse.data });
-        console.log({ plans: plansResponse.data.plans });
-      } catch (err) {
-        setError(
-          "Failed to fetch user, plans, activities, and activity entries data"
-        );
+        console.log("Fetched user data:", response.data);
+      } catch (err: unknown) {
+        console.error("Error fetching data:", err);
+        toast.error("Failed to fetch user data. Please try again.");
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserPlansAndActivities();
-  }, []);
+    fetchAllUserData();
+  }, [isSignedIn]);
 
   const getCompletedSessions = (plan: ApiPlan): CompletedSession[] => {
     if (!plan || !activityEntries.length) return [];
 
     return plan.sessions
       .filter((session) =>
-        activityEntries.some((entry) =>
-          isSameDay(parseISO(session.date), parseISO(entry.date)) &&
-          session.activity_name.toLowerCase() ===
-            activities.find((a) => a.id === entry.activity_id)?.title.toLowerCase()
+        activityEntries.some(
+          (entry) =>
+            isSameDay(parseISO(session.date), parseISO(entry.date)) &&
+            session.activity_name.toLowerCase() ===
+              activities
+                .find((a) => a.id === entry.activity_id)
+                ?.title.toLowerCase()
         )
-      ).map((session) => ({
+      )
+      .map((session) => ({
         date: session.date,
         activity_id:
-          activities.find((a) => a.title.toLowerCase() === session.activity_name.toLowerCase())?.id || "",
+          activities.find(
+            (a) => a.title.toLowerCase() === session.activity_name.toLowerCase()
+          )?.id || "",
         quantity: session.quantity,
       }));
   };
@@ -165,6 +187,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         setPlans,
         activities,
         activityEntries,
+        moodReports,
         getCompletedSessions,
         loading,
         error,

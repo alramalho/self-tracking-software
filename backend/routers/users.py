@@ -29,6 +29,7 @@ from datetime import datetime
 from gateways.aws.s3 import S3Gateway
 import uuid
 import os
+import concurrent.futures
 
 router = APIRouter(prefix="/api")
 processed_notification_controller = ProcessedNotificationController()
@@ -374,3 +375,36 @@ async def store_activity_photo(
     # If keepInProfile is True, you might want to update the user's profile or perform other actions
 
     return {"message": "Photo uploaded successfully", "updated_entry": updated_entry}
+
+
+@router.get("/load-all-user-data")
+async def load_all_user_data(user: User = Depends(is_clerk_user)):
+    try:
+        # Use concurrent.futures to run all database queries concurrently
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            activities_future = executor.submit(activities_gateway.get_all_activities_by_user_id, user.id)
+            entries_future = executor.submit(activities_gateway.get_all_activity_entries_by_user_id, user.id)
+            mood_reports_future = executor.submit(moods_gateway.get_all_mood_reports_by_user_id, user.id)
+            plans_future = executor.submit(plan_controller.get_plans, user.plan_ids)
+
+            # Wait for all futures to complete and convert to dicts
+            activities = [activity.dict() for activity in activities_future.result()]
+            entries = [entry.dict() for entry in entries_future.result()]
+            mood_reports = [report.dict() for report in mood_reports_future.result()]
+            plans = [plan.dict() for plan in plans_future.result()]
+            
+
+        # Process plans to include activities
+        activity_map = {activity['id']: activity for activity in activities}
+        for plan in plans:
+            plan['activities'] = [activity_map[activity_id] for activity_id in plan['activity_ids'] if activity_id in activity_map]
+
+        return {
+            "user": user,
+            "activities": activities,
+            "activity_entries": entries,
+            "mood_reports": mood_reports,
+            "plans": plans
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred while fetching user data: {str(e)}")

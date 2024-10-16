@@ -3,37 +3,34 @@
 import { useSession } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useApiWithAuth } from "@/api";
 import Link from "next/link";
 import { Loader2, Plus } from "lucide-react";
 import { convertPlanToApiPlan, Plan, useUserPlan } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
 import { format, parseISO, startOfWeek, addWeeks, isToday, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
-import AppleLikePopover from "@/components/AppleLikePopover";
 import { ApiPlan } from "@/contexts/UserPlanContext";
 import Onboarding from "@/components/Onboarding";
 import toast from "react-hot-toast";
-
-interface User {
-  id: string;
-  name: string;
-  plan_ids: string[];
-}
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { isFuture } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useClerk } from "@clerk/nextjs";
 
 export default function Home() {
-  const { isSignedIn } = useSession();
-  const { loading, user, plans, setPlans, getCompletedSessions } = useUserPlan();
+  const { isSignedIn, isLoaded } = useSession();
+  const { loading, user, plans, activities, error, setPlans, getCompletedSessions } = useUserPlan();
   const router = useRouter();
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [sessionData, setSessionData] = useState<{ week: string; planned: number; completed: number | null }[]>([]);
   const [isCreatingNewPlan, setIsCreatingNewPlan] = useState(false);
-
+  const { signOut } = useClerk();
   useEffect(() => {
-    if (isSignedIn && (!user || user.plan_ids.length === 0)) {
+    if (isLoaded && isSignedIn && user && user.plan_ids.length === 0) {
       router.push("/onboarding");
     }
-  }, [isSignedIn, user]);
+  }, [isLoaded, isSignedIn, user, router]);
 
   useEffect(() => {
     if (selectedPlanId && plans.length > 0) {
@@ -88,11 +85,31 @@ export default function Home() {
     }
   }, [selectedPlanId, plans, getCompletedSessions]);
 
-  if (loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
         <span>Loading your data...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    const handleSignOut = async () => {
+      await signOut();
+      window.location.href = "/signin";
+    };
+
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h1 className="text-4xl mb-4">An error occurred</h1>
+        <p>{error}</p>
+        <button
+          onClick={handleSignOut}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4 mb-2"
+        >
+          Try signing in again
+        </button>
       </div>
     );
   }
@@ -140,6 +157,16 @@ export default function Home() {
     toast.success("New plan created successfully!");
   };
 
+  const prepareCalendarData = (plan: ApiPlan | undefined) => {
+    if (!plan) return { dates: [], sessionsMap: new Map() };
+
+    const futureSessions = plan.sessions.filter(session => isFuture(parseISO(session.date)));
+    const dates = futureSessions.map(session => parseISO(session.date));
+    const sessionsMap = new Map(futureSessions.map(session => [session.date, session]));
+
+    return { dates, sessionsMap };
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col">
       {isCreatingNewPlan ? (
@@ -174,6 +201,55 @@ export default function Home() {
                 title="Sessions Overview"
                 description={`${sessionData[0].week} - ${sessionData[sessionData.length - 1].week}`}
                 currentDate={new Date()} 
+              />
+            </div>
+          )}
+
+          {selectedPlanId && (
+            <div className="mt-8">
+              <h2 className="text-2xl font-bold mb-4">Upcoming Sessions</h2>
+              <Calendar
+                mode="multiple"
+                selected={prepareCalendarData(plans.find(p => p.id === selectedPlanId)).dates}
+                className="rounded-md border"
+                components={{
+                  Day: ({ date, ...props }) => {
+                    const { sessionsMap } = prepareCalendarData(plans.find(p => p.id === selectedPlanId));
+                    const sessionDate = format(date, 'yyyy-MM-dd');
+                    const session = sessionsMap.get(sessionDate);
+
+                    if (session) {
+                      const activity = activities.find(a => a.title.toLowerCase() === session.activity_name.toLowerCase());
+                      return (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <div className={cn(
+                              "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
+                              "relative flex items-center justify-center",
+                            )} {...props}>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="h-7 w-7 rounded-full border-2 border-primary" />
+                              </div>
+                              <span>{date.getDate()}</span>
+                            </div>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80">
+                            <div className="grid gap-2">
+                              <p className="font-medium">{format(date, 'MMMM d, yyyy')}</p>
+                              <p>{session.descriptive_guide}</p>
+                              <p>
+                                {session.quantity} {activity?.measure}
+                                {session.quantity > 1 ? 's' : ''} of {session.activity_name}
+                              </p>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      );
+                    }
+
+                    return <div className="h-8 w-8 p-0 font-normal aria-selected:opacity-100" {...props}>{date.getDate()}</div>;
+                  },
+                }}
               />
             </div>
           )}

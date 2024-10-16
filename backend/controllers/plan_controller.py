@@ -174,3 +174,11 @@ class PlanController:
     def update_plan(self, plan: Plan) -> Plan:
         self.db_gateway.write(plan.dict())
         return plan
+
+    def get_plans(self, plan_ids: List[str]) -> List[Plan]:
+        plans = []
+        for plan_id in plan_ids:
+            plan = self.get_plan(plan_id)
+            if plan:
+                plans.append(plan)
+        return plans
