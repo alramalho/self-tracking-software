@@ -34,6 +34,7 @@ export interface MoodReport {
 export interface User {
   id: string;
   name: string;
+  username: string;
   plan_ids: string[];
 }
 

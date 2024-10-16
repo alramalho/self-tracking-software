@@ -408,3 +408,18 @@ async def load_all_user_data(user: User = Depends(is_clerk_user)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while fetching user data: {str(e)}")
+
+
+@router.get("/check-username/{username}")
+async def check_username(username: str):
+    user = users_gateway.get_user_by_safely("username", username)
+    return {"exists": user is not None}
+
+
+@router.post("/update-user")
+async def update_user(
+    user_data: dict = Body(...),
+    user: User = Depends(is_clerk_user)
+):
+    updated_user = users_gateway.update_fields(user.id, user_data)
+    return {"message": "User updated successfully", "user": updated_user}

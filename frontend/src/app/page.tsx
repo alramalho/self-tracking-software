@@ -177,30 +177,6 @@ export default function Home() {
     );
   }
 
-  const renderPlanCard = (plan: ApiPlan) => (
-    <div
-      key={plan.id}
-      className={`grid grid-cols-[auto,1fr] gap-4 p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
-        selectedPlanId === plan.id ? "border-blue-500" : "border-gray-200"
-      }`}
-      onClick={() => setSelectedPlanId(plan.id)}
-    >
-      {plan.emoji && <span className="text-6xl">{plan.emoji}</span>}
-      <div className="flex flex-col">
-        <span className="text-xl font-medium">{plan.goal}</span>
-        <span className="text-sm text-gray-500 mt-2">
-          📍{" "}
-          {plan.finishing_date
-            ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
-            : ""}
-        </span>
-      </div>
-    </div>
-  );
 
   const handleNewPlanComplete = (newPlan: Plan) => {
     setPlans([...plans, convertPlanToApiPlan(newPlan)]);
@@ -217,7 +193,30 @@ export default function Home() {
         <>
           <h1 className="text-3xl font-bold mb-6">Your Plans</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {plans.map(renderPlanCard)}
+            {plans.map((plan) => (
+              <div
+                  key={plan.id}
+                  className={`grid grid-cols-[auto,1fr] gap-4 p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
+                    selectedPlanId === plan.id ? "border-blue-500" : "border-gray-200"
+                  }`}
+                  onClick={() => setSelectedPlanId(plan.id)}
+                >
+                  {plan.emoji && <span className="text-6xl">{plan.emoji}</span>}
+                  <div className="flex flex-col">
+                    <span className="text-xl font-medium">{plan.goal}</span>
+                    <span className="text-sm text-gray-500 mt-2">
+                      📍{" "}
+                      {plan.finishing_date
+                        ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : ""}
+                    </span>
+                </div>
+              </div>
+            ))}
             <Button
               variant="outline"
               className="h-full flex flex-col items-center justify-center"

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import ActivitySelector from "@/components/ActivitySelector";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
@@ -10,8 +11,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import { useNotifications } from "@/hooks/useNotifications";
+import { Loader2, X } from "lucide-react";
 
 const LogPage: React.FC = () => {
+  const router = useRouter();
   const { activities, loading, error } = useUserPlan();
   const [selectedActivity, setSelectedActivity] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -23,6 +26,7 @@ const LogPage: React.FC = () => {
   const [loggedActivityEntry, setLoggedActivityEntry] = useState<any>(null);
   const api = useApiWithAuth();
   const { addToNotificationCount } = useNotifications();
+  const [showBanner, setShowBanner] = useState(true);
 
   const handleSelectActivity = (activityId: string) => {
     setSelectedActivity(activityId);
@@ -33,7 +37,9 @@ const LogPage: React.FC = () => {
 
   const handleSelectDate = (date: Date | undefined) => {
     if (date && date <= new Date()) {
-      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const utcDate = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+      );
       setSelectedDate(utcDate);
     }
   };
@@ -45,8 +51,12 @@ const LogPage: React.FC = () => {
   const handleQuickSelect = (value: number) => {
     setQuantity(value);
   };
-  
-  const logActivity = async (activityId: string, date: Date, quantity: number) => {
+
+  const logActivity = async (
+    activityId: string,
+    date: Date,
+    quantity: number
+  ) => {
     try {
       const response = await api.post("/api/log-activity", {
         activity_id: activityId,
@@ -70,7 +80,11 @@ const LogPage: React.FC = () => {
       return;
     }
 
-    const loggedEntry = await logActivity(selectedActivity, selectedDate, quantity);
+    const loggedEntry = await logActivity(
+      selectedActivity,
+      selectedDate,
+      quantity
+    );
 
     if (loggedEntry) {
       setLoggedActivityEntry(loggedEntry);
@@ -89,7 +103,12 @@ const LogPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <p className="mt-2">Loading Activities</p>
+      </div>
+    );
   }
 
   if (error) {
@@ -97,8 +116,27 @@ const LogPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 mb-16">
-      <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
+    <div className="container mx-auto px-4 py-8 mb-16 relative">
+      {showBanner && (
+        <div
+          className="fixed top-0 left-0 right-0 bg-gradient-to-r from-purple-500 to-blue-500 text-white p-4 text-center z-50 cursor-pointer"
+          onClick={() => router.push("/ai")}
+        >
+          <p className="font-semibold">
+            Log everything at once by talking to our AI coach 💬
+          </p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowBanner(false);
+            }}
+            className="absolute top-1 right-2 text-white"
+          >
+            <X size={24} />
+          </button>
+        </div>
+      )}
+      <h1 className="text-2xl font-bold mb-6 mt-16">Log Activity</h1>
       {activities.length > 0 ? (
         <ActivitySelector
           activities={activities}
