@@ -132,9 +132,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useSession();
-  const { signOut } = useClerk();
 
   const api = useApiWithAuth();
+
+  useEffect(() => {
+    localStorage.setItem("userData", JSON.stringify(userData));
+  }, [userData]);
 
   const fetchUserData = useCallback(async (username: string = 'me') => {
     if (!isSignedIn) return;

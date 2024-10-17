@@ -221,7 +221,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 type="text"
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                placeholder="Enter your goal"
+                placeholder="I want to gain the habit to meditate 3 times a week"
                 className="mb-4"
               />
               <Button

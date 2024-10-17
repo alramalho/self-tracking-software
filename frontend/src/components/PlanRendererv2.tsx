@@ -98,7 +98,7 @@ export function PlanRendererv2({
       });
 
       const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
-        week: format(parseISO(week), "MMM d"),
+        week: format(parseISO(week), "MMM d, yyyy"),
         planned: data.planned,
         completed: isAfter(parseISO(week), currentDate) ? null : data.completed,
         fullDate: week,
@@ -207,7 +207,7 @@ export function PlanRendererv2({
                       "relative flex items-center justify-center",
                       session &&
                         isFuture(date) &&
-                        "bg-blue-100 h-9 w-9 rounded-full",
+                        "bg-blue-100 h-9 w-9 rounded-full cursor-pointer",
                       session &&
                         isToday(date) &&
                         "bg-red-100 h-9 w-9 rounded-full",

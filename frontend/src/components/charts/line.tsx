@@ -59,13 +59,11 @@ export function LineChart({
   // Find the week that contains the current date
   const currentWeek = currentDate ? data.find(item => {
     // Parse the date string correctly
-    const itemDate = parse(item.week.toString(), 'MMM d', new Date());
+    const itemDate = parse(item.week.toString(), 'MMM d, yyyy', new Date());
     const weekStart = startOfWeek(itemDate);
     const weekEnd = endOfWeek(itemDate);
     return isWithinInterval(currentDate, { start: weekStart, end: weekEnd });
   }) : null;
-
-  console.log({ currentWeek, data, currentDate });
 
   return (
     <Card>

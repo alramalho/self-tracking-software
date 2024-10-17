@@ -63,6 +63,7 @@ class PlanController:
         number_of_weeks = self._count_number_of_weeks_till(finishing_date)
         system_prompt = f"""
         You will act as a personal coach for the goal of {goal}, given the finishing date of {finishing_date} and that today is {current_date}.
+        No date should be before today ({current_date}).
         For that, wll you will develop a progressive plan over the course of {number_of_weeks} weeks.
         
         The plan should be progressive (intensities or recurrence of activities should increase over time).
@@ -137,7 +138,7 @@ class PlanController:
                 "sessions": [
                     session.dict()
                     for session_week in response.plan.sessions_weeks
-                    for session in session_week.sessions
+                    for session in session_week.sessions if session.date >= current_date
                 ],
                 "intensity": intensity,
                 "overview": response.plan.overview,
