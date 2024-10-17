@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { Bell, Settings } from "lucide-react";
 import { UserProfile } from "@clerk/nextjs";
@@ -12,13 +12,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInDays } from "date-fns";
 
 const ProfilePage: React.FC = () => {
+  const { clearNotifications } = useNotifications();
   const { user: clerkUser } = useUser();
   const { isPushGranted, setIsPushGranted, requestPermission } = useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
   const { activityEntries, activities } = useUserPlan();
+
+  useEffect(() => {
+    clearNotifications();
+  }, []);
 
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
@@ -40,13 +45,20 @@ const ProfilePage: React.FC = () => {
   };
 
   const photosWithDetails = useMemo(() => {
+    const now = new Date();
     return activityEntries
-      .filter(entry => entry.image_s3_path)
-      .map(entry => ({
-        ...entry,
-        activityTitle: activities.find(a => a.id === entry.activity_id)?.title || 'Unknown Activity',
-        formattedDate: format(parseISO(entry.date), "HH:mm")
-      }))
+      .filter(entry => entry.image?.url && entry.image?.created_at && entry.image?.expires_at && entry.image?.keep_in_profile)
+      .map(entry => {
+        const expiresAt = parseISO(entry.image.expires_at!);
+        const daysUntilExpiration = differenceInDays(expiresAt, now);
+        return {
+          ...entry,
+          activityTitle: activities.find(a => a.id === entry.activity_id)?.title || 'Unknown Activity',
+          formattedDate: format(parseISO(entry.date), "HH:mm"),
+          daysUntilExpiration: daysUntilExpiration > 0 ? daysUntilExpiration : 0
+        };
+      })
+      .filter(photo => photo.daysUntilExpiration > 0)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activityEntries, activities]);
 
@@ -100,19 +112,22 @@ const ProfilePage: React.FC = () => {
                 {photosWithDetails.map((photo) => (
                   <div key={photo.id} className="border rounded-lg overflow-hidden">
                     <img 
-                      src={photo.image_s3_path} 
+                      src={photo.image.url} 
                       alt={photo.activityTitle} 
-                      className="w-full h-64 object-cover"
+                      className="w-full h-full aspect-square object-contain"
                     />
-                    <div className="p-4 flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Avatar className="w-6 h-6">
-                          <AvatarImage src={clerkUser?.imageUrl} alt={clerkUser?.fullName || ""} />
-                          <AvatarFallback>{clerkUser?.fullName?.[0] || "U"}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-semibold">{photo.activityTitle}</span>
+                    <div className="p-4 flex flex-col">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="w-6 h-6">
+                            <AvatarImage src={clerkUser?.imageUrl} alt={clerkUser?.fullName || ""} />
+                            <AvatarFallback>{clerkUser?.fullName?.[0] || "U"}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-semibold">{photo.activityTitle}</span>
+                        </div>
+                        <span className="text-sm text-gray-500">{photo.formattedDate}</span>
                       </div>
-                      <span className="text-sm text-gray-500">{photo.formattedDate}</span>
+                      <span className="text-xs text-gray-400">Expires in {photo.daysUntilExpiration} days</span>
                     </div>
                   </div>
                 ))}

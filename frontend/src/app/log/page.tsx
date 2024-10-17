@@ -144,10 +144,10 @@ const LogPage: React.FC = () => {
             selectedActivity={selectedActivity}
             onSelectActivity={(aId) => {
               handleSelectActivity(aId);
-              // scroll to calendar
-              const calendar = document.getElementById("calendar");
-              if (calendar) {
-                calendar.scrollIntoView({ behavior: "smooth" });
+              // scroll to quantity
+              const quantity = document.getElementById("quantity");
+              if (quantity) {
+                quantity.scrollIntoView({ behavior: "smooth" });
               }
             }}
           />
@@ -164,11 +164,6 @@ const LogPage: React.FC = () => {
             selected={selectedDate}
             onSelect={(date) => {
               handleSelectDate(date);
-              // scroll to quantity
-              const quantity = document.getElementById("quantity");
-              if (quantity) {
-                quantity.scrollIntoView({ behavior: "smooth" });
-              }
             }}
             className="rounded-md border"
             disableFutureDates={true}
@@ -179,7 +174,7 @@ const LogPage: React.FC = () => {
             <h2 className="text-xl font-semibold mb-2">{measureType}</h2>
             <div className="flex items-center justify-center space-x-4">
               <Button
-                onClick={() => handleQuantityChange(-1)}
+                onClick={() => handleQuantityChange(-15)}
                 variant="outline"
                 size="icon"
               >
@@ -187,7 +182,7 @@ const LogPage: React.FC = () => {
               </Button>
               <span className="text-2xl font-bold">{quantity}</span>
               <Button
-                onClick={() => handleQuantityChange(1)}
+                onClick={() => handleQuantityChange(5)}
                 variant="outline"
                 size="icon"
               >

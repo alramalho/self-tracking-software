@@ -13,7 +13,8 @@ from constants import VAPID_PRIVATE_KEY, VAPID_CLAIMS
 from pywebpush import webpush, WebPushException
 from entities.message import Message
 from services.conversation_service import initiate_recurrent_checkin
-from entities.activity import Activity
+from entities.activity import Activity, ImageInfo
+from datetime import datetime, timedelta
 import json
 import traceback
 from controllers.processed_notification_controller import (
@@ -391,12 +392,32 @@ async def store_activity_photo(
     # Upload the photo to S3
     s3_gateway.upload(await photo.read(), s3_path)
 
-    # Update the activity entry with the image S3 path
-    updated_entry = activities_gateway.update_activity_entry(activityEntryId, {"image_s3_path": s3_path})
+    # Generate presigned URL
+    expiration = 604799 if keepInProfile else 86400  # 7 days or 24 hours
+    presigned_url = s3_gateway.generate_presigned_url(s3_path, expiration)
 
-    # If keepInProfile is True, you might want to update the user's profile or perform other actions
+    # Calculate expiration date
+    image_expires_at = datetime.now() + timedelta(seconds=expiration)
 
-    return {"message": "Photo uploaded successfully", "updated_entry": updated_entry}
+    # Create ImageInfo object
+    image_info = ImageInfo(
+        s3_path=s3_path,
+        url=presigned_url,
+        expires_at=image_expires_at.isoformat(),
+        created_at=datetime.now().isoformat(),
+        keep_in_profile=keepInProfile
+    )
+
+    # Update the activity entry with the image information
+    updated_entry = activities_gateway.update_activity_entry(activityEntryId, {
+        "image": image_info.dict()
+    })
+
+    return {
+        "message": "Photo uploaded successfully",
+        "updated_entry": updated_entry,
+        "presigned_url": presigned_url
+    }
 
 
 @router.get("/load-all-user-data")

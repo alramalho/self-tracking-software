@@ -40,13 +40,20 @@ class Activity(BaseModel):
             created_at=datetime.now(UTC).isoformat(),
         )
 
+class ImageInfo(BaseModel):
+    s3_path: Optional[str] = None
+    url: Optional[str] = None
+    expires_at: Optional[str] = None
+    created_at: Optional[str] = None
+    keep_in_profile: bool = False
+
 class ActivityEntry(BaseModel):
     id: str
     activity_id: str
     quantity: int = Field(description="Way to quantify it, must be > 0.")
     date: str = Field(description="The YYYY-MM-DD date of the activity.")
     created_at: str
-    image_s3_path: Optional[str] = None
+    image: Optional[ImageInfo] = None
 
     @classmethod
     def new(

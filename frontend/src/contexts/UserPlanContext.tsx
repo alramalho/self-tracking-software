@@ -22,7 +22,13 @@ export interface ActivityEntry {
   activity_id: string;
   quantity: number;
   date: string;
-  image_s3_path?: string;
+  image: {
+    s3_path?: string;
+    url?: string;
+    expires_at?: string;
+    created_at?: string;
+    keep_in_profile?: boolean;
+  }
 }
 
 export interface MoodReport {
