@@ -7,6 +7,7 @@ import { UserPlanProviderWrapper } from "@/components/UserPlanProviderWrapper";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function ClientLayout({
   children,
@@ -14,13 +15,6 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const { isSignedIn, isLoaded } = useSession();
-  const { signOut } = useClerk();
-
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      signOut();
-    }
-  }, [isLoaded, isSignedIn, signOut]);
 
   if (!isLoaded) {
     return (
@@ -30,6 +24,7 @@ export default function ClientLayout({
       </div>
     );
   }
+
 
   return (
     <>
