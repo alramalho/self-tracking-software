@@ -5,9 +5,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlansRenderer from "@/components/PlansRenderer";
 import { useSession } from "@clerk/nextjs";
 import Link from "next/link";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useRouter } from "next/navigation";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
+  const router = useRouter();
+  const { userData } = useUserPlan();
+  
+  if (userData && userData['me'] && userData['me'].plans.length == 0) {
+    router.push('/onboarding');
+  }
 
   if (!isSignedIn) {
     return (
@@ -22,6 +30,7 @@ const HomePage: React.FC = () => {
       </div>
     );
   }
+
 
   return (
     <div className="container mx-auto p-4">
