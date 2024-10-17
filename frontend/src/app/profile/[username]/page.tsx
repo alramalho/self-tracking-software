@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
-import { Bell, Loader2, Settings, UserPlus } from "lucide-react";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { Bell, Link, Loader2, LogOut, Settings, UserPlus } from "lucide-react";
 import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
-  const { user: clerkUser } = useUser();
+  const { signOut } = useClerk();
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -137,6 +137,11 @@ const ProfilePage: React.FC = () => {
                 className="cursor-pointer"
                 onClick={() => setShowUserProfile(true)}
               />
+              <Button variant="ghost" onClick={() => {
+                signOut();
+              }}>
+                <LogOut size={24} className="cursor-pointer" />
+              </Button>
             </div>
           ) : (
             <Button variant="outline" className="flex items-center space-x-2">
