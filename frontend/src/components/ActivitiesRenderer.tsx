@@ -5,7 +5,6 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Activity, ActivityEntry, useUserPlan } from "@/contexts/UserPlanContext";
 
 const ActivitiesRenderer: React.FC = () => {
-  const { clearNotifications } = useNotifications();
   const [selected, setSelected] = useState("");
   const { user, activities, activityEntries } = useUserPlan();
 
@@ -46,8 +45,8 @@ const ActivitiesRenderer: React.FC = () => {
     <>
       {activities.map((activity) => {
         const { start: startDate, end: endDate } = getLastThreeMonths();
-        const activityEntries = getActivityEntries(activity.id);
-        const filteredActivityEntries = filterDataByTimeRange(activityEntries);
+        const relevantActivityEntries = getActivityEntries(activity.id);
+        const filteredActivityEntries = filterDataByTimeRange(relevantActivityEntries);
 
         return (
           <div key={activity.id} className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
@@ -76,11 +75,10 @@ const ActivitiesRenderer: React.FC = () => {
                       {...props}
                       onClick={() => {
                         if (data.date !== selected) {
-                          const entry = activityEntries.find(
-                            (e) => e.activity_id === activity.id &&
-                              isSameDate(e.date, data.date.replaceAll("/", "-"))
+                          const entry = relevantActivityEntries.find(
+                            (e) => isSameDate(e.date, data.date.replaceAll("/", "-"))
                           );
-                          const quantity = entry ? entry.quantity : 0;
+                          const quantity = entry ? entry.count : 0;
                           if (quantity > 0) {
                             toast.success(
                               `On ${data.date} you have done "${activity.title}" ${quantity} ${activity.measure}!`
