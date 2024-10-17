@@ -117,6 +117,11 @@ const Onboarding: React.FC<OnboardingProps> = ({
     try {
       if (plan) {
         await api.post("/api/select-plan", { ...plan, emoji: selectedEmoji });
+        setUserData("me", {
+          ...userData["me"],
+          // @ts-ignore
+          plans: [...userData["me"].plans, plan],
+        });
         if (onComplete) {
           onComplete(plan);
         } else {

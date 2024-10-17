@@ -175,7 +175,7 @@ const LogPage: React.FC = () => {
             <h2 className="text-xl font-semibold mb-2">{measureType}</h2>
             <div className="flex items-center justify-center space-x-4">
               <Button
-                onClick={() => handleQuantityChange(-15)}
+                onClick={() => handleQuantityChange(-1)}
                 variant="outline"
                 size="icon"
               >
@@ -183,7 +183,7 @@ const LogPage: React.FC = () => {
               </Button>
               <span className="text-2xl font-bold">{quantity}</span>
               <Button
-                onClick={() => handleQuantityChange(5)}
+                onClick={() => handleQuantityChange(1)}
                 variant="outline"
                 size="icon"
               >
@@ -191,7 +191,7 @@ const LogPage: React.FC = () => {
               </Button>
             </div>
             <div className="mt-4 flex justify-center space-x-2">
-              {[10, 30, 45].map((value) => (
+              {[10, 30, 45, 60, 90].map((value) => (
                 <Button
                   key={value}
                   onClick={() => handleQuickSelect(value)}
