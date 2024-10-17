@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
-import { Check, X,Loader2 } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 
 import { Plan, useUserPlan } from "@/contexts/UserPlanContext";
 import PlanRendererHeatmap from "./PlanRendererHeatmap";
@@ -39,8 +39,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
     undefined
   );
-  const { userData } = useUserPlan();
-  const { plans: userPlans = [], user} = userData['me'] || {};
+  const { userData, setUserData } = useUserPlan();
+  const { plans: userPlans = [], user } = userData["me"] || {};
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
 
@@ -120,7 +120,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         if (onComplete) {
           onComplete(plan);
         } else {
-          router.push("/profile");
+          router.push("/profile/me");
         }
       }
     } catch (error) {
@@ -150,8 +150,13 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 onClick={() => {
                   if (!isNewPlan) {
                     api.post("/api/update-user", { name });
+                    setUserData("me", {
+                      ...userData["me"],
+                      // @ts-ignore
+                      user: { ...userData["me"].user, name },
+                    });
+                    setStep(1);
                   }
-                  setStep(1);
                 }}
                 disabled={!name.trim()}
               >
@@ -199,6 +204,11 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 onClick={() => {
                   if (username.trim()) {
                     api.post("/api/update-user", { username });
+                    setUserData("me", {
+                      ...userData["me"],
+                      // @ts-ignore
+                      user: { ...userData["me"].user, username },
+                    });
                   }
                   setStep(2);
                 }}
@@ -221,7 +231,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 type="text"
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                placeholder="I want to gain the habit to meditate 3 times a week"
+                placeholder="I want to gain the habit to go to the gym 3 times a week on Mondays, Wednesdays and Tuesdays"
                 className="mb-4"
               />
               <Button
@@ -283,7 +293,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <Textarea
                 value={planDescription}
                 onChange={(e) => setPlanDescription(e.target.value)}
-                placeholder="Enter additional plan description"
+                placeholder="I want my plan to be with just a simple 'gym' activity measured in sessions"
                 className="mb-4"
               />
               <Button
