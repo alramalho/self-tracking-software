@@ -74,7 +74,7 @@ export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
   }[];
 }
 
-interface CompletedSession extends Omit<ActivityEntry, "id"> {}
+interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}
 
 export interface UserData {
   user: User | null;
