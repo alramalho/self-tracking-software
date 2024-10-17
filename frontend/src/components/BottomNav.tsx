@@ -5,10 +5,10 @@ import { Eye, Home, Pencil, Search, Sparkle, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
+import { useUserPlan } from "@/contexts/UserPlanContext";
 
 const BottomNav = () => {
   const { notificationCount } = useNotifications();
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[1000]">
       <div className="flex justify-around">
@@ -34,7 +34,7 @@ const BottomNav = () => {
           <span className="text-xs mt-1">Log</span>
         </Link>
         <Link
-          href="/profile"
+          href={`/profile/me`}
           className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500 relative"
         >
           <User size={24} />

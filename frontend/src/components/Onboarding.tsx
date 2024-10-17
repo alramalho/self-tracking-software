@@ -39,7 +39,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
     undefined
   );
-  const { plans: userPlans, user } = useUserPlan();
+  const { userData } = useUserPlan();
+  const { plans: userPlans = [], user} = userData['me'] || {};
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
 

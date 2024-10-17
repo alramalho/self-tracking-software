@@ -15,7 +15,8 @@ import { Loader2, X } from "lucide-react";
 
 const LogPage: React.FC = () => {
   const router = useRouter();
-  const { activities, loading, error } = useUserPlan();
+  const { userData, loading, error } = useUserPlan();
+  const activities = userData['me']?.activities || [];
   const [selectedActivity, setSelectedActivity] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()

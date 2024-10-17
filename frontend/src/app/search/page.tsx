@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useApiWithAuth } from '@/api';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import Link from 'next/link';
 
 const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,16 +51,18 @@ const SearchPage = () => {
         </p>
       )}
       {searchResult && (
-        <div className="flex items-center space-x-4">
-          <Avatar>
-            <AvatarImage src={searchResult.picture || '/default-avatar.png'} alt={searchResult.name || searchResult.username} />
-            <AvatarFallback>{searchResult.name ? searchResult.name[0] : searchResult.username[0]}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold">{searchResult.name}</p>
-            <p className="text-sm text-gray-600">@{searchResult.username}</p>
+        <Link href={`/profile/${searchResult.username}`} className="block">
+          <div className="flex items-center space-x-4 hover:bg-gray-100 p-2 rounded-md transition-colors">
+            <Avatar>
+              <AvatarImage src={searchResult.picture || '/default-avatar.png'} alt={searchResult.name || searchResult.username} />
+              <AvatarFallback>{searchResult.name ? searchResult.name[0] : searchResult.username[0]}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-semibold">{searchResult.name}</p>
+              <p className="text-sm text-gray-600">@{searchResult.username}</p>
+            </div>
           </div>
-        </div>
+        </Link>
       )}
     </div>
   );

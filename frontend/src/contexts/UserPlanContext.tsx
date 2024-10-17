@@ -3,9 +3,10 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
 } from "react";
 import { useApiWithAuth } from "@/api";
-import { parseISO, isSameDay, format } from "date-fns";
+import { parseISO, isSameDay, format, addDays, addHours } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { useClerk } from "@clerk/nextjs";
 import { toast } from 'react-hot-toast';
@@ -41,8 +42,10 @@ export interface MoodReport {
 export interface User {
   id: string;
   name: string;
+  picture: string;
   username: string;
   plan_ids: string[];
+  friend_ids: string[]
 }
 
 export interface Plan {
@@ -73,16 +76,22 @@ export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
 
 interface CompletedSession extends Omit<ActivityEntry, "id"> {}
 
-interface UserPlanContextType {
+export interface UserData {
   user: User | null;
   plans: ApiPlan[];
-  setPlans: (plans: ApiPlan[]) => void;
   activities: Activity[];
   activityEntries: ActivityEntry[];
   moodReports: MoodReport[];
+  expiresAt: string;
+}
+
+interface UserPlanContextType {
+  userData: { [username: string]: UserData };
+  setUserData: (username: string, data: UserData) => void;
   getCompletedSessions: (plan: ApiPlan) => CompletedSession[];
   loading: boolean;
   error: string | null;
+  fetchUserData: (username?: string) => Promise<void>;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(
@@ -119,60 +128,83 @@ export function convertPlanToApiPlan(plan: Plan): ApiPlan {
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [plans, setPlans] = useState<ApiPlan[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([]);
-  const [moodReports, setMoodReports] = useState<MoodReport[]>([]);
+  const [userData, setUserData] = useState<{ [username: string]: UserData }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useSession();
-  const { signOut } = useClerk()
+  const { signOut } = useClerk();
 
   const api = useApiWithAuth();
 
-  useEffect(() => {
-    const fetchAllUserData = async () => {
-      if (!isSignedIn) return;
+  const fetchUserData = useCallback(async (username: string = 'me') => {
+    if (!isSignedIn) return;
 
-      try {
-        setLoading(true);
-        console.log("GETTING USER DATA")
-        const response = await api.get("/api/load-all-user-data");
+    try {
+      setLoading(true);
+      console.log("GETTING USER DATA");
 
-        setUser(response.data.user);
-        setPlans(response.data.plans);
-        setActivities(response.data.activities);
-        setActivityEntries(response.data.activity_entries);
-        setMoodReports(response.data.mood_reports);
-
-        console.log("Fetched user data:", response.data);
-      } catch (err: unknown) {
-        console.error("Error fetching data:", err);
-        toast.error("Failed to fetch user data. Please try again.");
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("An unknown error occurred");
+      // Check if data exists in local storage and is not expired
+      const storedData = localStorage.getItem(`userData_${username || 'me'}`);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        if (new Date(parsedData.expiresAt) > new Date()) {
+          setUserData(prevData => ({
+            ...prevData,
+            [username]: parsedData
+          }));
+          setLoading(false);
+          return;
         }
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchAllUserData();
+      const response = await api.get(`/api/load-all-user-data/${username}`);
+
+      const newUserData: UserData = {
+        user: response.data.user,
+        plans: response.data.plans,
+        activities: response.data.activities,
+        activityEntries: response.data.activity_entries,
+        moodReports: response.data.mood_reports,
+        expiresAt: addHours(new Date(), 1).toISOString(),
+      };
+
+      setUserData(prevData => ({
+        ...prevData,
+        [username || 'me']: newUserData
+      }));
+
+      // Store in local storage
+      localStorage.setItem(`userData_${username || 'me'}`, JSON.stringify(newUserData));
+
+      console.log("Fetched user data:", response.data);
+    } catch (err: unknown) {
+      console.error("Error fetching data:", err);
+      toast.error("Failed to fetch user data. Please try again.");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [isSignedIn]);
 
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
+
   const getCompletedSessions = (plan: ApiPlan): CompletedSession[] => {
-    if (!plan || !activityEntries.length) return [];
+    const currentUserData = userData['me'];
+    if (!currentUserData || !plan || !currentUserData.activityEntries.length) return [];
 
     return plan.sessions
       .filter((session) =>
-        activityEntries.some(
+        currentUserData.activityEntries.some(
           (entry) =>
             isSameDay(parseISO(session.date), parseISO(entry.date)) &&
             session.activity_name.toLowerCase() ===
-              activities
+              currentUserData.activities
                 .find((a) => a.id === entry.activity_id)
                 ?.title.toLowerCase()
         )
@@ -180,7 +212,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       .map((session) => ({
         date: session.date,
         activity_id:
-          activities.find(
+          currentUserData.activities.find(
             (a) => a.title.toLowerCase() === session.activity_name.toLowerCase()
           )?.id || "",
         quantity: session.quantity,
@@ -190,15 +222,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   return (
     <UserPlanContext.Provider
       value={{
-        user,
-        plans,
-        setPlans,
-        activities,
-        activityEntries,
-        moodReports,
+        userData,
+        setUserData: (username: string, data: UserData) => 
+          setUserData(prevData => ({ ...prevData, [username]: data })),
         getCompletedSessions,
         loading,
         error,
+        fetchUserData,
       }}
     >
       {children}

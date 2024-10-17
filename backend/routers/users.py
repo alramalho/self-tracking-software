@@ -420,9 +420,17 @@ async def store_activity_photo(
     }
 
 
-@router.get("/load-all-user-data")
-async def load_all_user_data(user: User = Depends(is_clerk_user)):
+@router.get("/load-all-user-data/{username}")
+async def load_all_user_data(username: Optional[str] = None, current_user: User = Depends(is_clerk_user)):
     try:
+        # If username is not provided or is 'me', use the current user
+        if not username or username == 'me':
+            user = current_user
+        else:
+            user = users_gateway.get_user_by_safely("username", username)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
         # Use concurrent.futures to run all database queries concurrently
         with concurrent.futures.ThreadPoolExecutor() as executor:
             activities_future = executor.submit(activities_gateway.get_all_activities_by_user_id, user.id)
@@ -435,7 +443,6 @@ async def load_all_user_data(user: User = Depends(is_clerk_user)):
             entries = [entry.dict() for entry in entries_future.result()]
             mood_reports = [report.dict() for report in mood_reports_future.result()]
             plans = [plan.dict() for plan in plans_future.result()]
-            
 
         # Process plans to include activities
         activity_map = {activity['id']: activity for activity in activities}
@@ -456,7 +463,7 @@ async def load_all_user_data(user: User = Depends(is_clerk_user)):
 @router.get("/check-username/{username}")
 async def check_username(username: str):
     user = users_gateway.get_user_by_safely("username", username)
-    return {"exists": user is not None}
+    return {"exists": user is not None or username == 'me'}
 
 
 @router.post("/update-user")
@@ -480,3 +487,20 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
 async def get_friend_count(user: User = Depends(is_clerk_user)):
     friend_count = users_gateway.get_friend_count(user.id)
     return {"friendCount": friend_count}
+
+@router.get("/user/{username}")
+async def get_user_profile(username: str, current_user: User = Depends(is_clerk_user)):
+    if username == "me":
+        return current_user
+    
+    user = users_gateway.get_user_by_safely("username", username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    friend_count = users_gateway.get_friend_count(user.id)
+    
+    # Remove sensitive information
+    user_dict = user.dict(exclude={"email", "clerk_id", "plan_ids"})
+    user_dict["friendCount"] = friend_count
+    
+    return user_dict

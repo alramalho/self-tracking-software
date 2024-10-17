@@ -32,7 +32,9 @@ const SeePage: React.FC = () => {
   const [moodReports, setMoodReports] = useState<MoodReport[]>([]);
   const [timeRange, setTimeRange] = useState("Last 3 Months");
   const apiClient = useApiWithAuth();
-  const { user } = useUserPlan();
+  const { userData } = useUserPlan();
+  const activities = userData['me']?.activities || [];
+  const activityEntries = userData['me']?.activityEntries || [];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,7 +149,7 @@ const SeePage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <ActivitiesRenderer />
+      <ActivitiesRenderer activities={activities} activityEntries={activityEntries} />
     </div>
   );
 };

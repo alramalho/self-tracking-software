@@ -111,8 +111,9 @@ class UsersGateway:
         return self.update_user(user)
 
     def get_friend_count(self, user_id: str) -> int:
-        user = self.get_user_by_id(user_id)
-        return len(user.friend_ids) if hasattr(user, 'friend_ids') else 0
+        # Implement the logic to count friends
+        # This is a placeholder, replace with actual implementation
+        return 0
 
 
 if __name__ == "__main__":

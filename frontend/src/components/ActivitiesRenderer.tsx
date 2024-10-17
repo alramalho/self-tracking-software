@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import HeatMap from "@uiw/react-heat-map";
 import toast from "react-hot-toast";
-import { useNotifications } from "@/hooks/useNotifications";
-import { Activity, ActivityEntry, useUserPlan } from "@/contexts/UserPlanContext";
+import { Activity, ActivityEntry } from "@/contexts/UserPlanContext";
 
-const ActivitiesRenderer: React.FC = () => {
+interface ActivitiesRendererProps {
+  activities: Activity[];
+  activityEntries: ActivityEntry[];
+}
+
+const ActivitiesRenderer: React.FC<ActivitiesRendererProps> = ({ activities, activityEntries }) => {
   const [selected, setSelected] = useState("");
-  const { user, activities, activityEntries } = useUserPlan();
 
   const getActivityEntries = (activityId: string) => {
     return activityEntries

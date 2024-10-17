@@ -4,10 +4,13 @@ import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from 'next/link';
+import { ApiPlan, Activity } from "@/contexts/UserPlanContext";
 
 const PlansRenderer: React.FC = () => {
-  const { plans, activities, getCompletedSessions } = useUserPlan();
+  const { userData, getCompletedSessions } = useUserPlan();
   const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
+
+  const { plans = [], activities = [] } = userData['me'] || {};
 
   return (
     <div className="space-y-6">
@@ -40,7 +43,7 @@ const PlansRenderer: React.FC = () => {
         <Link href="/create-new-plan" passHref>
           <Button
             variant="outline"
-            className=" w-full h-full flex flex-col items-center justify-center"
+            className="w-full h-full flex flex-col items-center justify-center"
           >
             <Plus className="h-8 w-8 mb-2" />
             <span>Create New Plan</span>
