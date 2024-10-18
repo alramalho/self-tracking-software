@@ -16,7 +16,7 @@ import { Loader2, X } from "lucide-react";
 const LogPage: React.FC = () => {
   const router = useRouter();
   const { userData, loading, error } = useUserPlan();
-  const activities = userData['me']?.activities || [];
+  const activities = userData["me"]?.activities || [];
   const [selectedActivity, setSelectedActivity] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
@@ -138,24 +138,18 @@ const LogPage: React.FC = () => {
         </div>
       )}
       <h1 className="text-2xl font-bold mb-6 mt-16">Log Activity</h1>
-      {activities.length > 0 ? (
-        <>
-          <ActivitySelector
-            activities={activities}
-            selectedActivity={selectedActivity}
-            onSelectActivity={(aId) => {
-              handleSelectActivity(aId);
-              // scroll to quantity
-              const quantity = document.getElementById("quantity");
-              if (quantity) {
-                quantity.scrollIntoView({ behavior: "smooth" });
-              }
-            }}
-          />
-        </>
-      ) : (
-        <p>No activities found.</p>
-      )}
+      <ActivitySelector
+        activities={activities}
+        selectedActivity={selectedActivity}
+        onSelectActivity={(aId) => {
+          handleSelectActivity(aId);
+          // scroll to quantity
+          const quantity = document.getElementById("quantity");
+          if (quantity) {
+            quantity.scrollIntoView({ behavior: "smooth" });
+          }
+        }}
+      />
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
           <h2 className="text-xl font-semibold mb-2">Select Date</h2>
