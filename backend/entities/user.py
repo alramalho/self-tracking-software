@@ -22,10 +22,11 @@ class User(BaseModel):
     friend_ids: List[str] = Field(default_factory=list)
 
     @classmethod
-    def new(cls, email: str, clerk_id: Optional[str] = None) -> "User":
+    def new(cls, email: str, clerk_id: Optional[str] = None, picture: Optional[str] = None) -> "User":
         return cls(
             id=str(ObjectId()),
             email=email,
             created_at=datetime.now(UTC).isoformat(),
             clerk_id=clerk_id,
+            picture=picture,
         )
