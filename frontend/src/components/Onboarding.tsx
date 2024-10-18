@@ -45,13 +45,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
 
   useEffect(() => {
-    if (!isNewPlan && userPlans.length > 0) {
-      toast.success("You already have a plan");
-      router.push("/");
-    }
-  }, [isNewPlan, userPlans]);
-
-  useEffect(() => {
     try {
       if (user) {
         if (user.name) {
@@ -88,7 +81,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   };
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUsername = e.target.value;
+    const newUsername = (e.target.value).toLowerCase();
     setUsername(newUsername);
     checkUsername(newUsername);
   };

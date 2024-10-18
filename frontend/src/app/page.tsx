@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlansRenderer from "@/components/PlansRenderer";
 import { useSession } from "@clerk/nextjs";
@@ -13,9 +13,11 @@ const HomePage: React.FC = () => {
   const router = useRouter();
   const { userData } = useUserPlan();
   
-  if (userData && userData['me'] && userData['me'].plans.length == 0) {
-    router.push('/onboarding');
-  }
+  useEffect(() => {
+    if (userData && userData['me'] && userData['me'].plans.length == 0) {
+      router.push('/onboarding');
+    } 
+  }, [userData]);
 
   if (!isSignedIn) {
     return (
