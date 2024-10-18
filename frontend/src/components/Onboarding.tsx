@@ -39,7 +39,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
     undefined
   );
-  const { userData, setUserData } = useUserPlan();
+  const { userData, fetchUserData, setUserData } = useUserPlan();
   const { plans: userPlans = [], user } = userData["me"] || {};
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
@@ -117,11 +117,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
     try {
       if (plan) {
         await api.post("/api/select-plan", { ...plan, emoji: selectedEmoji });
-        setUserData("me", {
-          ...userData["me"],
-          // @ts-ignore
-          plans: [...userData["me"].plans, plan],
-        });
+        fetchUserData();
         if (onComplete) {
           onComplete(plan);
         } else {

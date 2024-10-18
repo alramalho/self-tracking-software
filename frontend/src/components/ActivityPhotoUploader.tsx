@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApiWithAuth } from '@/api';
+import { useUserPlan } from '@/contexts/UserPlanContext';
 import { toast } from 'react-hot-toast';
 import AppleLikePopover from './AppleLikePopover';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [keepInProfile, setKeepInProfile] = useState(false);
+  const { fetchUserData } = useUserPlan();
   const api = useApiWithAuth();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,6 +45,9 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           'Content-Type': 'multipart/form-data',
         },
       });
+
+      fetchUserData();
+
       toast.success('Photo uploaded successfully!');
       onPhotoUploaded();
     } catch (error) {
