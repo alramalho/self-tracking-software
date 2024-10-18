@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { useApiWithAuth } from "@/api";
-import { parseISO, isSameDay, format, addDays, addHours } from "date-fns";
+import { parseISO, isSameDay, format, addDays, addSeconds } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { useClerk } from "@clerk/nextjs";
 import { toast } from 'react-hot-toast';
@@ -168,7 +168,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         activities: response.data.activities,
         activityEntries: response.data.activity_entries,
         moodReports: response.data.mood_reports,
-        expiresAt: addHours(new Date(), 1).toISOString(),
+        expiresAt: addSeconds(new Date(), 1).toISOString(),
       };
 
       setUserData(prevData => ({
