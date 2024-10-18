@@ -2,7 +2,15 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useClerk, useUser } from "@clerk/nextjs";
-import { Bell, Link, Loader2, LogOut, Settings, UserPlus } from "lucide-react";
+import {
+  Bell,
+  Check,
+  Loader2,
+  LogOut,
+  Settings,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -15,6 +23,9 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useApiWithAuth } from "@/api";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -26,8 +37,10 @@ const ProfilePage: React.FC = () => {
   const params = useParams();
   const username = params.username as string;
   const currentUser = userData["me"]?.user;
+  const currentUserFriendRequests = userData["me"]?.friendRequests;
   const isOwnProfile = currentUser?.username === username || username === "me";
   const profileData = isOwnProfile ? userData["me"] : userData[username];
+  const api = useApiWithAuth();
 
   useEffect(() => {
     if (!profileData) {
@@ -57,6 +70,39 @@ const ProfilePage: React.FC = () => {
       }
     } else {
       setIsPushGranted(false);
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (profileData && profileData.user) {
+      try {
+        await api.post(`/api/send-friend-request/${profileData.user.id}`);
+
+        // Update the local state to reflect the sent friend request
+        fetchUserData();
+        toast.success("Friend request sent successfully");
+      } catch (error) {
+        console.error("Error sending friend request:", error);
+        toast.error("Failed to send friend request");
+      }
+    }
+  };
+
+  const handleFriendRequest = async (action: "accept" | "reject") => {
+    if (profileData && profileData.user) {
+      try {
+        const request = currentUserFriendRequests?.find(
+          (req) => req.sender_id === profileData.user?.id && req.status === "pending"
+        );
+        if (request) {
+          await api.post(`/api/friend-requests/${request.id}/${action}`);
+          toast.success(`Friend request ${action}ed`);
+          fetchUserData();
+        }
+      } catch (error) {
+        console.error(`Error ${action}ing friend request:`, error);
+        toast.error(`Failed to ${action} friend request`);
+      }
     }
   };
 
@@ -93,6 +139,10 @@ const ProfilePage: React.FC = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [profileData]);
 
+  const pendingFriendRequests = currentUserFriendRequests?.filter(
+    (request) => request.status === "pending" && request.recipient_id === currentUser?.id
+  );
+
   if (loading) {
     return (
       <div className="flex flex-col items-center min-h-screen p-4">
@@ -114,7 +164,7 @@ const ProfilePage: React.FC = () => {
       <div className="w-full max-w-3xl">
         <div className="flex justify-between items-center mb-8">
           <Avatar className="w-20 h-20">
-            <AvatarImage src={user?.picture} alt={user?.name || ""} />
+            <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
             <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
           </Avatar>
           <div className="text-center">
@@ -122,9 +172,17 @@ const ProfilePage: React.FC = () => {
               {user?.friend_ids?.length || 0}
             </p>
             <p className="text-sm text-gray-500">Friends</p>
+            {pendingFriendRequests?.length > 0 && (
+              <Link href="/friend-requests">
+                <Badge variant="secondary" className="cursor-pointer bg-red-500 text-white">
+                  {pendingFriendRequests?.length || 0} Requests
+                  </Badge>
+                </Link>
+              )}
           </div>
           {isOwnProfile ? (
             <div className="flex items-center space-x-4">
+              
               <div className="flex items-center space-x-2">
                 <Bell size={20} />
                 <Switch
@@ -137,17 +195,66 @@ const ProfilePage: React.FC = () => {
                 className="cursor-pointer"
                 onClick={() => setShowUserProfile(true)}
               />
-              <Button variant="ghost" onClick={() => {
-                signOut();
-              }}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  signOut();
+                }}
+              >
                 <LogOut size={24} className="cursor-pointer" />
               </Button>
             </div>
           ) : (
-            <Button variant="outline" className="flex items-center space-x-2">
-              <UserPlus size={20} />
-              <span>Add Friend</span>
-            </Button>
+            <>
+              {currentUserFriendRequests?.some(
+                (request) =>
+                  request.sender_id === profileData.user?.id &&
+                  request.status === "pending"
+              ) ? (
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                    onClick={() => handleFriendRequest("accept")}
+                  >
+                    <Check size={20} />
+                    <span>Accept</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                    onClick={() => handleFriendRequest("reject")}
+                  >
+                    <X size={20} />
+                    <span>Reject</span>
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="flex items-center space-x-2"
+                  onClick={handleSendFriendRequest}
+                  disabled={currentUserFriendRequests?.some(
+                    (request) => request.recipient_id === profileData.user?.id
+                  )}
+                >
+                  {currentUserFriendRequests?.some(
+                    (request) => request.recipient_id === profileData.user?.id
+                  ) ? (
+                    <Check size={20} />
+                  ) : (
+                    <UserPlus size={20} />
+                  )}
+                  <span>
+                    {currentUserFriendRequests?.some(
+                      (request) => request.recipient_id === profileData.user?.id
+                    )
+                      ? "Request Sent"
+                      : "Add Friend"}
+                  </span>
+                </Button>
+              )}
+            </>
           )}
         </div>
 
@@ -196,7 +303,8 @@ const ProfilePage: React.FC = () => {
                             </AvatarFallback>
                           </Avatar>
                           <span className="font-semibold">
-                            {photo.activityTitle} – {photo.activityEntryQuantity}{" "}
+                            {photo.activityTitle} –{" "}
+                            {photo.activityEntryQuantity}{" "}
                             {photo.activityMeasure}
                           </span>
                         </div>

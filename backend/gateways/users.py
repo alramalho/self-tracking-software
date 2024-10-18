@@ -4,6 +4,8 @@ from typing import Any, List, Tuple
 from entities.user import User
 from loguru import logger
 from gateways.database.mongodb import MongoDBGateway
+from entities.friend_request import FriendRequest
+from gateways.friend_requests import FriendRequestGateway
 
 class UserDoesNotExistException(Exception):
     pass
@@ -15,8 +17,9 @@ class UserAlreadyExistsException(Exception):
 
 # todo: this users gateway now has permissions and CRUD responsiblities... we should split?
 class UsersGateway:
-    def __init__(self,):
+    def __init__(self):
         self.db_gateway = MongoDBGateway("users")
+        self.friend_request_gateway = FriendRequestGateway()
 
     def get_all_users(self) -> list[User]:
         return [User(**data) for data in self.db_gateway.scan()]
@@ -76,6 +79,23 @@ class UsersGateway:
     def update_field(self, user_id: str, field_name: str, new_value: Any) -> User:
         return self.update_fields(user_id, {field_name: new_value})
 
+    def append_to_field(self, user_id: str, field_name: str, new_value: Any) -> User:
+        user = self.get_user_by_id(user_id)
+        if not hasattr(user, field_name):
+            raise Exception(f"User does not have field {field_name}")
+
+        field = getattr(user, field_name)
+        if type(field) != list:
+            raise Exception(f"Field {field_name} is not a list")
+        
+        if field is None:
+            setattr(user, field_name, [])
+
+        getattr(user, field_name).append(new_value)
+        self.db_gateway.write(user.dict())
+        logger.info(f"User {user.id} ({user.name}) field {field_name} updated")
+        return user
+
     def get_subscription_info(self, user_id: str):
         # Fetch the subscription info from your database
         # This is just a placeholder implementation
@@ -110,10 +130,64 @@ class UsersGateway:
             user.plan_ids.remove(plan_id)
         return self.update_user(user)
 
+    def send_friend_request(self, sender_id: str, recipient_id: str) -> FriendRequest:
+        friend_request = FriendRequest.new(sender_id, recipient_id)
+        created_request = self.friend_request_gateway.create_friend_request(friend_request)
+        self.append_to_field(recipient_id, "pending_friend_requests", created_request.id)
+        self.append_to_field(sender_id, "pending_friend_requests", created_request.id)
+        return created_request
+
+    def accept_friend_request(self, request_id: str) -> Tuple[User, User]:
+        friend_request = self.friend_request_gateway.get_friend_request(request_id)
+        if not friend_request:
+            raise Exception("Invalid friend request")
+        
+        if friend_request.status == "rejected":
+            raise Exception("Friend request is rejected")
+
+        sender = self.get_user_by_id(friend_request.sender_id)
+        recipient = self.get_user_by_id(friend_request.recipient_id)
+
+        if friend_request.status == "accepted":
+            return sender, recipient
+
+        sender.friend_ids.append(recipient.id)
+        recipient.friend_ids.append(sender.id)
+        recipient.pending_friend_requests.remove(request_id)
+
+        self.update_user(sender)
+        self.update_user(recipient)
+
+        self.friend_request_gateway.update_friend_request(request_id, "accepted")
+
+        return sender, recipient
+
+    def reject_friend_request(self, request_id: str) -> User:
+        friend_request = self.friend_request_gateway.get_friend_request(request_id)
+        if not friend_request:
+            raise Exception("Invalid friend request")
+        
+        if friend_request.status == "accepted":
+            raise Exception("Friend request is already accepted")
+        
+        recipient = self.get_user_by_id(friend_request.recipient_id)
+
+        if friend_request.status == "rejected":
+            return recipient
+
+        recipient.pending_friend_requests.remove(request_id)
+        self.update_user(recipient)
+
+        self.friend_request_gateway.update_friend_request(request_id, "rejected")
+
+        return recipient
+
     def get_friend_count(self, user_id: str) -> int:
-        # Implement the logic to count friends
-        # This is a placeholder, replace with actual implementation
-        return 0
+        user = self.get_user_by_id(user_id)
+        return len(user.friend_ids)
+
+    def get_pending_friend_requests(self, user_id: str) -> List[FriendRequest]:
+        return self.friend_request_gateway.get_pending_requests(user_id)
 
 
 if __name__ == "__main__":

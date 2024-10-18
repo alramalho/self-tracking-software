@@ -2,11 +2,12 @@ from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 from typing import Optional, Dict, Any, List
 from bson import ObjectId
+
 class User(BaseModel):
     id: str
     name: Optional[str] = None
     picture: Optional[str] = None
-    username: Optional[str] = None  # Add this line
+    username: Optional[str] = None
     timezone: Optional[str] = None
     clerk_id: Optional[str] = None
     email: str
@@ -18,8 +19,9 @@ class User(BaseModel):
     pwa_subscription_endpoint: Optional[str] = None
     pwa_subscription_key: Optional[str] = None
     pwa_subscription_auth_token: Optional[str] = None
-    plan_ids: List[str] = Field(default_factory=list)  # Changed from selected_plan_id to plan_ids
+    plan_ids: List[str] = Field(default_factory=list)
     friend_ids: List[str] = Field(default_factory=list)
+    pending_friend_requests: List[str] = Field(default_factory=list)
 
     @classmethod
     def new(cls, email: str, clerk_id: Optional[str] = None, picture: Optional[str] = None) -> "User":

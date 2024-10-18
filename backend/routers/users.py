@@ -1,4 +1,14 @@
-from fastapi import APIRouter, Depends, Body, HTTPException, Response, Query, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    Body,
+    HTTPException,
+    Response,
+    Query,
+    UploadFile,
+    File,
+    Form,
+)
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -32,6 +42,8 @@ import uuid
 import os
 import concurrent.futures
 from pymongo.errors import DuplicateKeyError
+from entities.friend_request import FriendRequest
+from loguru import logger
 
 router = APIRouter(prefix="/api")
 processed_notification_controller = ProcessedNotificationController()
@@ -114,7 +126,8 @@ async def update_pwa_status(
 async def send_push_notification(payload: PushNotificationPayload, user: User):
     subscription_info = users_gateway.get_subscription_info(user.id)
     if not subscription_info:
-        raise HTTPException(status_code=404, detail="Subscription not found")
+        logger.error(f"Subscription not found for {user.id}")
+        raise Exception(f"Subscription not found for {user.id}")
 
     print(f"Sending push notification to: {subscription_info}")
     print(f"Payload: {payload}")
@@ -138,16 +151,17 @@ async def send_push_notification(payload: PushNotificationPayload, user: User):
     except WebPushException as ex:
         print(f"WebPush error: {ex}")
         traceback.print_exc()
-        raise HTTPException(
-            status_code=500, detail=f"Failed to send push notification: {ex}"
-        )
+        raise Exception(f"Failed to send push notification: {ex}")
 
 
 @router.post("/trigger-push-notification")
 async def trigger_push_notification(
     payload: PushNotificationPayload = Body(...), user: User = Depends(is_clerk_user)
 ):
-    return await send_push_notification(payload, user)
+    try:
+        return await send_push_notification(payload, user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/process-scheduled-notification")
@@ -166,14 +180,19 @@ async def process_scheduled_notification(request: Request):
         user = users_gateway.get_user_by_id(processed_notification.user_id)
 
         # Send push notification
-        await send_push_notification(
-            PushNotificationPayload(
-                title=f"hey {user.name}",
-                body=processed_notification.message.lower(),
-                url=f"/log?notification_id={processed_notification.id}",
-            ),
-            user,
-        )
+        try:
+            await send_push_notification(
+                PushNotificationPayload(
+                    title=f"hey {user.name}",
+                    body=processed_notification.message.lower(),
+                    url=f"/log?notification_id={processed_notification.id}",
+                ),
+                user,
+            )
+            logger.info(f"Sent push notification to {user.id}")
+        except Exception as e:
+            logger.error(f"Failed to send push notification: {e}")
+            raise Exception(f"Failed to send push notification: {e}")
 
         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
         memory.write(
@@ -277,10 +296,12 @@ async def get_user_plans(user: User = Depends(is_clerk_user)):
         activity.id: {"title": activity.title, "measure": activity.measure}
         for activity in activities_gateway.get_all_activities_by_user_id(user.id)
     }
-    
+
     for plan in plans:
-        plan["activities"] = [activity_map[activity_id] for activity_id in plan["activity_ids"]]
-    
+        plan["activities"] = [
+            activity_map[activity_id] for activity_id in plan["activity_ids"]
+        ]
+
     return {"plans": plans}
 
 
@@ -296,7 +317,9 @@ async def get_plan(plan_id: str, user: User = Depends(is_clerk_user)):
         activity.id: {"title": activity.title, "measure": activity.measure}
         for activity in activities_gateway.get_all_activities_by_user_id(user.id)
     }
-    plan["activities"] = [activity_map[activity_id] for activity_id in plan["activity_ids"]]
+    plan["activities"] = [
+        activity_map[activity_id] for activity_id in plan["activity_ids"]
+    ]
     return plan
 
 
@@ -305,55 +328,59 @@ async def log_activity(
     activity_id: str = Body(...),
     iso_date_string: str = Body(...),
     quantity: int = Body(...),
-    user: User = Depends(is_clerk_user)
+    user: User = Depends(is_clerk_user),
 ):
     activity_entry = ActivityEntry.new(
         activity_id=activity_id,
         quantity=quantity,
         date=iso_date_string,
     )
-    
+
     try:
         logged_entry = activities_gateway.create_activity_entry(activity_entry)
         return ActivityEntryResponse(
             id=logged_entry.id,
             activity_id=logged_entry.activity_id,
             quantity=logged_entry.quantity,
-            date=logged_entry.date
+            date=logged_entry.date,
         )
     except ActivityEntryAlreadyExistsException:
         # An entry for this activity and date already exists
-        existing_entry = activities_gateway.get_activity_entry(activity_id, iso_date_string)
+        existing_entry = activities_gateway.get_activity_entry(
+            activity_id, iso_date_string
+        )
         if existing_entry:
             # Update the existing entry with the new quantity
             updated_entry = activities_gateway.update_activity_entry(
-                existing_entry.id,
-                {"quantity": quantity + existing_entry.quantity}
+                existing_entry.id, {"quantity": quantity + existing_entry.quantity}
             )
             return ActivityEntryResponse(
                 id=updated_entry.id,
                 activity_id=updated_entry.activity_id,
                 quantity=updated_entry.quantity,
-                date=updated_entry.date
+                date=updated_entry.date,
             )
         else:
-            raise HTTPException(status_code=500, detail="Failed to update existing activity entry")
+            raise HTTPException(
+                status_code=500, detail="Failed to update existing activity entry"
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
 @router.get("/recent-activities")
 async def get_recent_activities(user: User = Depends(is_clerk_user)):
-    recent_activities = activities_gateway.get_readable_recent_activity_entries(user.id, limit=5)
+    recent_activities = activities_gateway.get_readable_recent_activity_entries(
+        user.id, limit=5
+    )
     return {"recent_activities": recent_activities}
 
 
 @router.post("/upsert-activity")
 async def upsert_activity(
-    activity: dict = Body(...),
-    user: User = Depends(is_clerk_user)
+    activity: dict = Body(...), user: User = Depends(is_clerk_user)
 ):
-    activity_id = activity.get('id')
+    activity_id = activity.get("id")
     if activity_id:
         # Update existing activity
         updated_activity = activities_gateway.update_activity(activity_id, activity)
@@ -362,9 +389,9 @@ async def upsert_activity(
         # Create new activity
         new_activity = Activity.new(
             user_id=user.id,
-            title=activity['title'],
-            measure=activity['measure'],
-            emoji=activity['emoji']
+            title=activity["title"],
+            measure=activity["measure"],
+            emoji=activity["emoji"],
         )
         created_activity = activities_gateway.create_activity(new_activity)
         return created_activity
@@ -375,7 +402,7 @@ async def store_activity_photo(
     photo: UploadFile = File(...),
     activityEntryId: str = Form(...),
     keepInProfile: bool = Form(...),
-    user: User = Depends(is_clerk_user)
+    user: User = Depends(is_clerk_user),
 ):
     s3_gateway = S3Gateway()
     activities_gateway = ActivitiesGateway()
@@ -405,26 +432,28 @@ async def store_activity_photo(
         url=presigned_url,
         expires_at=image_expires_at.isoformat(),
         created_at=datetime.now().isoformat(),
-        keep_in_profile=keepInProfile
+        keep_in_profile=keepInProfile,
     )
 
     # Update the activity entry with the image information
-    updated_entry = activities_gateway.update_activity_entry(activityEntryId, {
-        "image": image_info.dict()
-    })
+    updated_entry = activities_gateway.update_activity_entry(
+        activityEntryId, {"image": image_info.dict()}
+    )
 
     return {
         "message": "Photo uploaded successfully",
         "updated_entry": updated_entry,
-        "presigned_url": presigned_url
+        "presigned_url": presigned_url,
     }
 
 
 @router.get("/load-all-user-data/{username}")
-async def load_all_user_data(username: Optional[str] = None, current_user: User = Depends(is_clerk_user)):
+async def load_all_user_data(
+    username: Optional[str] = None, current_user: User = Depends(is_clerk_user)
+):
     try:
         # If username is not provided or is 'me', use the current user
-        if not username or username == 'me':
+        if not username or username == "me":
             user = current_user
         else:
             user = users_gateway.get_user_by_safely("username", username)
@@ -433,44 +462,70 @@ async def load_all_user_data(username: Optional[str] = None, current_user: User 
 
         # Use concurrent.futures to run all database queries concurrently
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            activities_future = executor.submit(activities_gateway.get_all_activities_by_user_id, user.id)
-            entries_future = executor.submit(activities_gateway.get_all_activity_entries_by_user_id, user.id)
-            mood_reports_future = executor.submit(moods_gateway.get_all_mood_reports_by_user_id, user.id)
+            activities_future = executor.submit(
+                activities_gateway.get_all_activities_by_user_id, user.id
+            )
+            entries_future = executor.submit(
+                activities_gateway.get_all_activity_entries_by_user_id, user.id
+            )
+            mood_reports_future = executor.submit(
+                moods_gateway.get_all_mood_reports_by_user_id, user.id
+            )
             plans_future = executor.submit(plan_controller.get_plans, user.plan_ids)
-
+            friend_requests_future = executor.submit(
+                users_gateway.friend_request_gateway.get_pending_requests, user.id
+            )
             # Wait for all futures to complete and convert to dicts
             activities = [activity.dict() for activity in activities_future.result()]
             entries = [entry.dict() for entry in entries_future.result()]
             mood_reports = [report.dict() for report in mood_reports_future.result()]
             plans = [plan.dict() for plan in plans_future.result()]
-
+            friend_requests = [
+                request.dict() for request in friend_requests_future.result()
+            ]
         # Process plans to include activities
-        activity_map = {activity['id']: activity for activity in activities}
+        activity_map = {activity["id"]: activity for activity in activities}
         for plan in plans:
-            plan['activities'] = [activity_map[activity_id] for activity_id in plan['activity_ids'] if activity_id in activity_map]
+            plan["activities"] = [
+                activity_map[activity_id]
+                for activity_id in plan["activity_ids"]
+                if activity_id in activity_map
+            ]
+
+        # hydrate friend requests with sender and recipient data
+        for request in friend_requests:
+            sender = users_gateway.get_user_by_id(request["sender_id"])
+            recipient = users_gateway.get_user_by_id(request["recipient_id"])
+            request["sender_name"] = sender.name
+            request["sender_username"] = sender.username
+            request["sender_picture"] = sender.picture
+            request["recipient_name"] = recipient.name
+            request["recipient_username"] = recipient.username
+            request["recipient_picture"] = recipient.picture
 
         return {
             "user": user,
             "activities": activities,
             "activity_entries": entries,
             "mood_reports": mood_reports,
-            "plans": plans
+            "plans": plans,
+            "friend_requests": friend_requests,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred while fetching user data: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while fetching user data: {str(e)}",
+        )
 
 
 @router.get("/check-username/{username}")
 async def check_username(username: str):
     user = users_gateway.get_user_by_safely("username", username)
-    return {"exists": user is not None or username == 'me'}
+    return {"exists": user is not None or username == "me"}
 
 
 @router.post("/update-user")
-async def update_user(
-    user_data: dict = Body(...),
-    user: User = Depends(is_clerk_user)
-):
+async def update_user(user_data: dict = Body(...), user: User = Depends(is_clerk_user)):
     updated_user = users_gateway.update_fields(user.id, user_data)
     return {"message": "User updated successfully", "user": updated_user}
 
@@ -482,25 +537,102 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
         return {"username": user.username, "name": user.name, "picture": user.picture}
     return None
 
+
 # Add this new endpoint
 @router.get("/user/friend-count")
 async def get_friend_count(user: User = Depends(is_clerk_user)):
     friend_count = users_gateway.get_friend_count(user.id)
     return {"friendCount": friend_count}
 
+
 @router.get("/user/{username}")
 async def get_user_profile(username: str, current_user: User = Depends(is_clerk_user)):
     if username == "me":
         return current_user
-    
+
     user = users_gateway.get_user_by_safely("username", username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    friend_count = users_gateway.get_friend_count(user.id)
-    
+
     # Remove sensitive information
-    user_dict = user.dict(exclude={"email", "clerk_id", "plan_ids"})
-    user_dict["friendCount"] = friend_count
-    
+    user_dict = user.dict(
+        exclude={"email", "clerk_id", "plan_ids", "pending_friend_requests"}
+    )
+
     return user_dict
+
+
+@router.post("/send-friend-request/{recipient_id}")
+async def send_friend_request(
+    recipient_id: str, current_user: User = Depends(is_clerk_user)
+):
+    try:
+        friend_request = users_gateway.send_friend_request(
+            current_user.id, recipient_id
+        )
+        recipient = users_gateway.get_user_by_id(recipient_id)
+        try:
+            await send_push_notification(
+                PushNotificationPayload(
+                    title="✋ New Friend Request",
+                    body=f"{current_user.name} sent you a friend request",
+                ),
+                recipient,
+            )
+            logger.info(f"Sent push notification to {recipient.id}")
+        except Exception as e:
+            logger.error(f"Failed to send push notification: {e}")
+        return {
+            "message": "Friend request sent successfully",
+            "request": friend_request,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/friend-requests/{request_id}/{action}")
+async def friend_request_action(
+    request_id: str, action: str, current_user: User = Depends(is_clerk_user)
+):
+    try:
+        if action == "accept":
+            sender, recipient = users_gateway.accept_friend_request(request_id)
+            try:
+                await send_push_notification(
+                    PushNotificationPayload(
+                        title="🤝 Friend Request Accepted",
+                        body=f"{current_user.name} accepted your friend request. You can now see their activities!",
+                    ),
+                    sender,
+                )
+                logger.info(f"Sent push notification to {sender.id}")
+            except Exception as e:
+                logger.error(f"Failed to send push notification: {e}")
+        elif action == "reject":
+            recipient = users_gateway.reject_friend_request(request_id)
+            try:
+                await send_push_notification(
+                    PushNotificationPayload(
+                        title="😔 Friend Request Rejected",
+                        body=f"{current_user.name} rejected your friend request.",
+                    ),
+                    recipient,
+                )
+                logger.info(f"Sent push notification to {recipient.id}")
+            except Exception as e:
+                logger.error(f"Failed to send push notification: {e}")
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action")
+
+        return {
+            "message": "Friend request accepted",
+            "recipient": recipient,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/pending-friend-requests")
+async def get_pending_friend_requests(current_user: User = Depends(is_clerk_user)):
+    pending_requests = users_gateway.get_pending_friend_requests(current_user.id)
+    return {"pending_requests": pending_requests}

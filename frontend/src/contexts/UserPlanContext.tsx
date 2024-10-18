@@ -41,11 +41,28 @@ export interface MoodReport {
 
 export interface User {
   id: string;
-  name: string;
-  picture: string;
-  username: string;
+  name?: string;
+  picture?: string;
+  username?: string;
+  email: string;
   plan_ids: string[];
-  friend_ids: string[]
+  friend_ids: string[];
+  pending_friend_requests: string[];
+}
+
+interface FriendRequest {
+  id: string;
+  sender_id: string;
+  sender_username: string;
+  sender_name: string;
+  sender_picture: string;
+  recipient_id: string;
+  recipient_username: string;
+  recipient_name: string;
+  recipient_picture: string;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface Plan {
@@ -82,6 +99,7 @@ export interface UserData {
   activities: Activity[];
   activityEntries: ActivityEntry[];
   moodReports: MoodReport[];
+  friendRequests: FriendRequest[];
   expiresAt: string;
 }
 
@@ -168,6 +186,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         activities: response.data.activities,
         activityEntries: response.data.activity_entries,
         moodReports: response.data.mood_reports,
+        friendRequests: response.data.friend_requests,
         expiresAt: addSeconds(new Date(), 1).toISOString(),
       };
 
