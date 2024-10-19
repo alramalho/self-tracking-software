@@ -1,18 +1,20 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from "react";
 import PlansRenderer from "@/components/PlansRenderer";
 import { useSession } from "@clerk/nextjs";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
 import TimelineRenderer from "@/components/TimelineRenderer";
+import AppleLikePopover from "@/components/AppleLikePopover";
+import { ChevronRight, Loader2 } from "lucide-react";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
   const { userData } = useUserPlan();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   
   useEffect(() => {
     if (userData && userData['me'] && userData['me'].plans.length == 0) {
@@ -33,28 +35,40 @@ const HomePage: React.FC = () => {
       </div>
     );
   }
-
-
+  
+  if (!userData || !userData["me"]) {
+    return <div className="h-screen flex items-center justify-center">
+      <Loader2 className="w-10 h-10 animate-spin" />
+      <p className="ml-3">Loading your data...</p>
+    </div>
+  }
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Welcome to Your Dashboard</h1>
       
-      <Tabs defaultValue="plans" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="plans">Plans</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="plans">
+      <div 
+        className="bg-gray-100 p-4 rounded-lg mb-6 cursor-pointer hover:bg-gray-200 transition-colors duration-200 flex items-center justify-between"
+        onClick={() => setIsPopoverOpen(true)}
+      >
+        <div className="flex items-center">
+          <span className="text-3xl mr-2 flex items-center h-full">🧑</span>
+          <h2 className="text-lg font-semibold">Your plans</h2>
+        </div>
+        <ChevronRight 
+          className={`transition-transform duration-300 ${isPopoverOpen ? 'rotate-90' : ''}`} 
+          size={24}
+        />
+      </div>
+
+      <div className="py-8">
+        <TimelineRenderer />
+      </div>
+
+      {isPopoverOpen && (
+        <AppleLikePopover onClose={() => setIsPopoverOpen(false)}>
           <PlansRenderer />
-        </TabsContent>
-        
-        <TabsContent value="timeline">
-          <div className="py-8">
-            <TimelineRenderer />
-          </div>
-        </TabsContent>
-      </Tabs>
+        </AppleLikePopover>
+      )}
     </div>
   );
 };

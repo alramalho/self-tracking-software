@@ -15,11 +15,8 @@ const CreateNewPlan: React.FC = () => {
   const { userData, setUserData } = useUserPlan();
 
   const handleNewPlanComplete = (newPlan: Plan) => {
-    const currentUserData = userData['me'];
+    const currentUserData = userData["me"];
     if (currentUserData) {
-      const updatedPlans = [...currentUserData.plans, convertPlanToApiPlan(newPlan)];
-      setUserData('me', { ...currentUserData, plans: updatedPlans });
-      toast.success("New plan created successfully!");
       router.push("/"); // Redirect to home page after creating the plan
     } else {
       toast.error("Failed to create new plan. User data not found.");

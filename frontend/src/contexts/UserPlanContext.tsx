@@ -70,6 +70,12 @@ export interface Plan {
   emoji?: string;
   goal: string;
   finishing_date?: Date;
+  invitees: {
+    user_id: string;
+    username: string;
+    name: string;
+    picture: string;
+  }[];
   sessions: {
     date: Date;
     descriptive_guide: string;

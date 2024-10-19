@@ -49,10 +49,9 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
     >
       <div
         ref={containerRef}
-        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 pb-20 transition-transform duration-300 ease-out ${
+        className={`max-w-full max-h-full overflow-scroll mx-auto absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 pb-20 transition-transform duration-300 ease-out ${
           isVisible ? "translate-y-0" : "translate-y-full"
         }`}
-        style={{ maxWidth: "500px", margin: "0 auto" }}
         onTouchStart={handleSwipeUp}
       >
         <div className="w-12 h-1 bg-gray-300 rounded mx-auto mb-6" />

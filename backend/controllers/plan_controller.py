@@ -1,10 +1,10 @@
 from gateways.database.mongodb import MongoDBGateway
-from entities.plan import Plan, PlanSession
+from entities.plan import Plan, PlanSession, PlanInvitee
 from entities.activity import Activity
 from ai.llm import ask_schema
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, create_model
-from gateways.activities import ActivitiesGateway
+from gateways.activities import ActivitiesGateway, ActivityAlreadyExistsException
 from datetime import datetime, timedelta
 from entities.user import User
 import concurrent.futures
@@ -22,6 +22,7 @@ class PlanController:
             goal=plan_data["goal"],
             emoji=plan_data.get("emoji", ""),
             finishing_date=plan_data.get("finishing_date", None),
+            invitees=[PlanInvitee(**invitee) for invitee in plan_data.get("invitees", [])],
             sessions=sessions,
         )
 
@@ -34,10 +35,13 @@ class PlanController:
                 measure=activity.get("measure"),
                 emoji=activity.get("emoji"),
             )
-            created_activity = self.activities_gateway.create_activity(
-                converted_activity
-            )
-            activity_ids.append(created_activity.id)
+            try:
+                created_activity = self.activities_gateway.create_activity(
+                    converted_activity
+                )
+                activity_ids.append(created_activity.id)
+            except ActivityAlreadyExistsException:
+                logger.info(f"Activity {converted_activity.id} ({converted_activity.title}) already exists")
 
         plan.activity_ids = activity_ids
         self.db_gateway.write(plan.dict())
@@ -70,7 +74,7 @@ class PlanController:
     def get_recommended_activities(self, user: User, limit: int = 5) -> List[Activity]:
 
         # get all activities
-        user_activities = self.activities_gateway.get_all_activities_by_user_id(user.id)
+        user_activities = self.activities_gateway.get_all_activities_by_user_id(user.id)[:5] # limit to 5 to avoid too much data
         user_activities_ids = [activity.id for activity in user_activities]
 
         # get a list of activities for each user activity based on similarity search of that activity and the user activity (n x N)

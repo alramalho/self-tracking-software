@@ -9,9 +9,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
-import { Check, X, Loader2 } from "lucide-react";
+import {
+  Check,
+  X,
+  Loader2,
+  CheckIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import UserSearch, { UserSearchResult } from "./UserSearch";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
-import { Plan, useUserPlan } from "@/contexts/UserPlanContext";
+import { convertPlanToApiPlan, Plan, useUserPlan } from "@/contexts/UserPlanContext";
 import PlanRendererHeatmap from "./PlanRendererHeatmap";
 
 interface OnboardingProps {
@@ -30,7 +39,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [finishingDate, setFinishingDate] = useState<Date | undefined>(
     undefined
   );
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [generatedPlans, setGeneratedPlans] = useState<Plan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
   const api = useApiWithAuth();
@@ -44,7 +54,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
   useEffect(() => {
     try {
-      if (user) {
+      if (user && step < 2) {
         if (user.name) {
           setName(user.name);
           setStep(1);
@@ -79,7 +89,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   };
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUsername = (e.target.value).toLowerCase();
+    const newUsername = e.target.value.toLowerCase();
     setUsername(newUsername);
     checkUsername(newUsername);
   };
@@ -94,7 +104,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         emoji: selectedEmoji,
       });
 
-      setPlans(response.data.plans);
+      setGeneratedPlans(response.data.plans);
       setStep(6);
     } catch (error) {
       console.error("Error generating plan:", error);
@@ -107,18 +117,33 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const handlePlanSelection = async (plan: Plan) => {
     try {
       if (plan) {
-        await api.post("/api/select-plan", { ...plan, emoji: selectedEmoji });
-        fetchUserData();
-        if (onComplete) {
-          onComplete(plan);
-        } else {
-          router.push("/profile/me");
-        }
+        setSelectedPlan(plan);
+        setStep(7);
       }
     } catch (error) {
+      setStep(6);
       console.error("Plan creation error:", error);
-      toast.error("Failed to create plan. Please try again.");
     }
+  };
+
+  const handleUserInvite = (user: UserSearchResult) => {
+    setSelectedPlan((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        invitees: [...(prev.invitees || []), user],
+      };
+    });
+  };
+
+  const removeInvitee = (invitee_to_remove: UserSearchResult) => {
+    setSelectedPlan((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        invitees: prev.invitees?.filter((invitee) => invitee.user_id !== invitee_to_remove.user_id),
+      };
+    });
   };
 
   const renderStep = () => {
@@ -301,10 +326,22 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Generating Plans...
                   </>
+                ) : generatedPlans.length > 0 ? (
+                  "Regenerate Plans"
                 ) : (
                   "Generate Plans"
                 )}
               </Button>
+              {generatedPlans.length > 0 && (
+                <Button
+                  className="w-full mt-4"
+                  onClick={() => setStep(6)}
+                  variant="outline"
+                >
+                  <ChevronRight className="mr-2 h-4 w-4" />
+                  See plans again
+                </Button>
+              )}
             </CardContent>
           </Card>
         );
@@ -315,7 +352,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <CardTitle>Review Your Plan</CardTitle>
             </CardHeader>
             <CardContent>
-              {plans.map((plan) => (
+              {generatedPlans.map((plan) => (
                 <div key={plan.id} className="mb-6 border p-4 rounded-md">
                   <PlanRendererHeatmap
                     title={`${name} - ${plan.intensity} intensity`}
@@ -325,23 +362,72 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     className="w-full mt-4"
                     onClick={() => handlePlanSelection(plan)}
                   >
+                    <CheckIcon className="mr-2 h-4 w-4" />
                     Select Plan
                   </Button>
                 </div>
               ))}
               <Button
                 className="w-full mt-4"
-                onClick={handleGeneratePlans}
-                disabled={isGenerating}
+                onClick={() => setStep(5)}
+                variant="outline"
               >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Regenerating Plans...
-                  </>
-                ) : (
-                  "Regenerate Plans"
-                )}
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Edit Plan Description
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      case 7:
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Invite People (Optional)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {selectedPlan?.invitees?.map((invitee) => (
+                  <Avatar
+                    key={invitee.username}
+                    className="cursor-pointer"
+                    onClick={() => removeInvitee(invitee)}
+                  >
+                    <AvatarImage
+                      src={invitee.picture || "/default-avatar.png"}
+                      alt={invitee.name || invitee.username}
+                    />
+                    <AvatarFallback>
+                      {invitee.name ? invitee.name[0] : invitee.username[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              <UserSearch onUserClick={handleUserInvite} />
+              <Button
+                className="w-full mt-4"
+                onClick={async () => {
+                  await toast.promise(
+                    api.post("/api/create-plan", {
+                      ...selectedPlan,
+                      emoji: selectedEmoji,
+                    }),
+                    {
+                      loading: "Creating new plan...",
+                      success: "New plan created successfully!",
+                      error: "Failed to create plan. Please try again.",
+                    }
+                  );
+                  setUserData("me", {
+                    ...userData["me"],
+                    plans: [
+                      ...userData["me"].plans,
+                      convertPlanToApiPlan(selectedPlan!),
+                    ],
+                  }); 
+                  onComplete?.(selectedPlan!);
+                }}
+              >
+                Done
               </Button>
             </CardContent>
           </Card>

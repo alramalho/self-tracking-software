@@ -1,15 +1,23 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useApiWithAuth } from '@/api';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import Link from 'next/link';
 
-const SearchPage = () => {
+export interface UserSearchResult {
+  user_id: string;
+  username: string;
+  name: string;
+  picture: string;
+}
+
+interface UserSearchProps {
+  onUserClick: (user: UserSearchResult) => void;
+}
+
+const UserSearch: React.FC<UserSearchProps> = ({ onUserClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [searchResult, setSearchResult] = useState<{ username: string; name: string; picture: string } | null>(null);
+  const [searchResult, setSearchResult] = useState<UserSearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const api = useApiWithAuth();
 
@@ -35,8 +43,7 @@ const SearchPage = () => {
   }, [debouncedSearchTerm]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-4">Search Users</h1>
+    <div>
       <input
         type="text"
         value={searchTerm}
@@ -51,21 +58,22 @@ const SearchPage = () => {
         </p>
       )}
       {searchResult && (
-        <Link href={`/profile/${searchResult.username}`} className="block">
-          <div className="flex items-center space-x-4 hover:bg-gray-100 p-2 rounded-md transition-colors">
-            <Avatar>
-              <AvatarImage src={searchResult.picture || '/default-avatar.png'} alt={searchResult.name || searchResult.username} />
-              <AvatarFallback>{searchResult.name ? searchResult.name[0] : searchResult.username[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold">{searchResult.name}</p>
-              <p className="text-sm text-gray-600">@{searchResult.username}</p>
-            </div>
+        <div 
+          className="flex items-center space-x-4 hover:bg-gray-100 p-2 rounded-md transition-colors cursor-pointer"
+          onClick={() => onUserClick(searchResult)}
+        >
+          <Avatar>
+            <AvatarImage src={searchResult.picture || '/default-avatar.png'} alt={searchResult.name || searchResult.username} />
+            <AvatarFallback>{searchResult.name ? searchResult.name[0] : searchResult.username[0]}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-semibold">{searchResult.name}</p>
+            <p className="text-sm text-gray-600">@{searchResult.username}</p>
           </div>
-        </Link>
+        </div>
       )}
     </div>
   );
 };
 
-export default SearchPage;
+export default UserSearch;

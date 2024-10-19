@@ -5,6 +5,8 @@ from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
 from shared.utils import time_ago
 from typing import List
+from pymongo.errors import DuplicateKeyError
+
 
 class ActivityDoesNotExistException(Exception):
     pass
@@ -79,9 +81,16 @@ class ActivitiesGateway:
         if len(self.activities_db_gateway.query("id", activity.id)) != 0:
             logger.info(f"Activity {activity.id} ({activity.title}) already exists")
             raise ActivityAlreadyExistsException()
-        self.activities_db_gateway.write(activity.dict())
-        logger.info(f"Activity {activity.id} ({activity.title}) created")
-        return activity
+        try:
+            self.activities_db_gateway.write(activity.dict())
+            logger.info(f"Activity {activity.id} ({activity.title}) created")
+            return activity
+        except DuplicateKeyError as e: # todo, this activities gateway should be mongo agnostic
+            raise ActivityAlreadyExistsException()
+        except Exception as e:
+            logger.error(f"Error creating activity: {e}")
+            raise
+        
     
     def create_activity_entry(self, activity_entry: ActivityEntry) -> ActivityEntry:
         activity = self.get_activity_by_id(activity_entry.activity_id)

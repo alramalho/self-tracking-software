@@ -263,8 +263,8 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
     return {"plans": plans}
 
 
-@router.post("/select-plan")
-async def select_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
+@router.post("/create-plan")
+async def create_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
     created_plan = plan_controller.create_plan(user.id, plan)
     updated_user = users_gateway.add_plan_to_user(user.id, created_plan.id)
     return {
@@ -560,13 +560,15 @@ async def update_user(user_data: dict = Body(...), user: User = Depends(is_clerk
     return {"message": "User updated successfully", "user": updated_user}
 
 
-@router.get("/search-username/{username}")
+@router.get("/search-users/{username}")
 async def search_username(username: str, user: User = Depends(is_clerk_user)):
+    if user.username == username:
+        return None
+    
     user = users_gateway.get_user_by_safely("username", username)
     if user:
-        return {"username": user.username, "name": user.name, "picture": user.picture}
+        return {"user_id": user.id, "username": user.username, "name": user.name, "picture": user.picture}
     return None
-
 
 # Add this new endpoint
 @router.get("/user/friend-count")

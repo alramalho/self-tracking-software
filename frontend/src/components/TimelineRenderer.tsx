@@ -10,14 +10,11 @@ import { format, differenceInDays } from "date-fns";
 import { useApiWithAuth } from "@/api";
 import {isBefore} from "date-fns"
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 const TimelineRenderer: React.FC = () => {
   const { userData } = useUserPlan();
   const router = useRouter();
-
-  if (!userData || !userData["me"]) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

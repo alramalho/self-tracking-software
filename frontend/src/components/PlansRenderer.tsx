@@ -1,16 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from "react";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import Link from 'next/link';
-import { ApiPlan, Activity } from "@/contexts/UserPlanContext";
+import Link from "next/link";
+import { ApiPlan } from "@/contexts/UserPlanContext";
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+  AvatarGroup,
+} from "@/components/ui/avatar";
 
 const PlansRenderer: React.FC = () => {
   const { userData, getCompletedSessions } = useUserPlan();
-  const [selectedPlanId, setSelectedPlanId] = React.useState<string | undefined>(undefined);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
-  const { plans = [], activities = [] } = userData['me'] || {};
+  useEffect(() => {
+    // Select the first plan when the component mounts or when userData changes
+    if (userData && userData.me && userData.me.plans.length > 0) {
+      setSelectedPlanId(userData.me.plans[0].id || null);
+    }
+  }, [userData]);
+
+  if (!userData || !userData.me || userData.me.plans.length === 0) {
+    return <div>No plans available.</div>;
+  }
+
+  const { plans = [], activities = [] } = userData["me"] || {};
 
   return (
     <div className="space-y-6">
@@ -19,13 +36,13 @@ const PlansRenderer: React.FC = () => {
         {plans.map((plan) => (
           <div
             key={plan.id}
-            className={`grid grid-cols-[auto,1fr] gap-4 p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
+            className={`grid grid-cols-[auto,auto] gap-4 p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
               selectedPlanId === plan.id ? "border-blue-500" : "border-gray-200"
             }`}
-            onClick={() => setSelectedPlanId(plan.id)}
+            onClick={() => setSelectedPlanId(plan.id || null)}
           >
             {plan.emoji && <span className="text-6xl">{plan.emoji}</span>}
-            <div className="flex flex-col">
+            <div className="flex flex-col justify-">
               <span className="text-xl font-medium">{plan.goal}</span>
               <span className="text-sm text-gray-500 mt-2">
                 📍{" "}
@@ -37,6 +54,24 @@ const PlansRenderer: React.FC = () => {
                     })
                   : ""}
               </span>
+            </div>
+            <div className="flex items-center space-x-4 justify-end">
+              {plan.invitees.map((invitee) => (
+                <div
+                  key={invitee.user_id}
+                  className="flex flex-row flex-nowrap ml-[30px] justify-content-end"
+                >
+                  <Avatar className="border-[1px] border-gray-400 ml-[-30px]">
+                    <AvatarImage
+                      src={invitee.picture || ""}
+                      alt={invitee.name || invitee.username}
+                    />
+                    <AvatarFallback>
+                      {invitee.name?.[0] || invitee.username?.[0] || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              ))}
             </div>
           </div>
         ))}
