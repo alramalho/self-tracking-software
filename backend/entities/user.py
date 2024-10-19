@@ -24,11 +24,12 @@ class User(BaseModel):
     pending_friend_requests: List[str] = Field(default_factory=list)
 
     @classmethod
-    def new(cls, email: str, clerk_id: Optional[str] = None, picture: Optional[str] = None) -> "User":
+    def new(cls, email: str, clerk_id: Optional[str] = None, picture: Optional[str] = None, name: Optional[str] = None, id: Optional[str] = None) -> "User":
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             email=email,
             created_at=datetime.now(UTC).isoformat(),
             clerk_id=clerk_id,
             picture=picture,
+            name=name,
         )

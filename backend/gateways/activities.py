@@ -42,6 +42,9 @@ class ActivitiesGateway:
         else:
             return None
         
+    def get_all_activities(self) -> list[Activity]:
+        return [Activity(**data) for data in self.activities_db_gateway.scan()]
+        
     def get_all_activities_by_user_id(self, user_id:str) -> list[Activity]:
         return [Activity(**data) for data in self.activities_db_gateway.query("user_id", user_id)]
     
@@ -125,7 +128,14 @@ class ActivitiesGateway:
         activity.deleted_at = datetime.datetime.now(datetime.UTC).isoformat()
         self.activities_db_gateway.write(activity.dict())
         logger.info(f"Activity {activity.id} ({activity.title}) marked as deleted")
-    
+
+    def permanently_delete_activity(self, activity_id: str):
+        self.activities_db_gateway.delete_all('id', activity_id)
+        logger.info(f"Activity {activity_id} forever deleted")
+
+    def permanently_delete_activity_entry(self, activity_entry_id: str):
+        self.activity_entries_db_gateway.delete_all('id', activity_entry_id)
+        logger.info(f"ActivityEntry {activity_entry_id} forever deleted")
 
     def get_all_activity_entries_by_user_id(self, user_id: str) -> List[ActivityEntry]:
         activities = self.get_all_activities_by_user_id(user_id)

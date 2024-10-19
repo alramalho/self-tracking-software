@@ -37,7 +37,7 @@ def create_logger(level="INFO"):
         logger.log("AUTH", "AUTH logger created")
 
     if not log_level_exists("DB"):
-        logger.level("DB", no=20, color="<cyan>", icon="📊")
+        logger.level("DB", no=10, color="<cyan>", icon="📊")
         logger.log("DB", "DB logger created")
 
     logger.info(f"Using {ENVIRONMENT.capitalize()} enviroment! ⚠️")

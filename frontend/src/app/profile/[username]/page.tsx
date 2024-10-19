@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -281,42 +282,17 @@ const ProfilePage: React.FC = () => {
             {photosWithDetails.length > 0 ? (
               <div className="space-y-4">
                 {photosWithDetails.map((photo) => (
-                  <div
+                  <ActivityEntryPhotoCard
                     key={photo.id}
-                    className="border rounded-lg overflow-hidden"
-                  >
-                    <img
-                      src={photo.image.url}
-                      alt={photo.activityTitle}
-                      className="w-full h-full aspect-square object-contain"
-                    />
-                    <div className="p-4 flex flex-col">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="w-6 h-6">
-                            <AvatarImage
-                              src={user?.picture}
-                              alt={user?.name || ""}
-                            />
-                            <AvatarFallback>
-                              {(user?.name || "U")[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-semibold">
-                            {photo.activityTitle} –{" "}
-                            {photo.activityEntryQuantity}{" "}
-                            {photo.activityMeasure}
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {photo.formattedDate}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        Expires in {photo.daysUntilExpiration} days
-                      </span>
-                    </div>
-                  </div>
+                    imageUrl={photo.image.url!}
+                    activityTitle={photo.activityTitle}
+                    activityEntryQuantity={photo.activityEntryQuantity}
+                    activityMeasure={photo.activityMeasure}
+                    formattedDate={photo.formattedDate}
+                    daysUntilExpiration={photo.daysUntilExpiration}
+                    userPicture={user?.picture}
+                    userName={user?.name}
+                  />
                 ))}
               </div>
             ) : (

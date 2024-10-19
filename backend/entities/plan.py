@@ -13,6 +13,7 @@ class Plan(BaseModel):
     id: str
     user_id: str
     goal: str
+    goal_embedding: Optional[List[float]] = None
     emoji: str | None = None
     finishing_date: Optional[str] = None
     activity_ids: List[str]

@@ -7,6 +7,7 @@ import { useSession } from "@clerk/nextjs";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
+import TimelineRenderer from "@/components/TimelineRenderer";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -49,8 +50,8 @@ const HomePage: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="timeline">
-          <div className="text-center py-8">
-            <p className="text-gray-600">Timeline view is coming soon!</p>
+          <div className="py-8">
+            <TimelineRenderer />
           </div>
         </TabsContent>
       </Tabs>

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict
 
 
 class DBGateway(ABC):
@@ -21,4 +21,8 @@ class DBGateway(ABC):
 
     @abstractmethod
     def count(self, key: str, value: str) -> int:
+        pass
+
+    @abstractmethod
+    def vector_search(self, key: str, query: str, limit: int = 5) -> List[Dict]:
         pass

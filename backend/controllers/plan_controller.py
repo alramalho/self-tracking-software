@@ -6,6 +6,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, create_model
 from gateways.activities import ActivitiesGateway
 from datetime import datetime, timedelta
+from entities.user import User
 import concurrent.futures
 from loguru import logger
 
@@ -41,6 +42,50 @@ class PlanController:
         plan.activity_ids = activity_ids
         self.db_gateway.write(plan.dict())
         return plan
+    
+    def get_recommended_plans(self, user: User, limit: int = 5) -> List[Plan]:
+
+        # get all plans
+        all_plans = [Plan(**plan) for plan in self.db_gateway.scan() if plan["user_id"] != user.id]
+        user_plans = self.get_plans(user.plan_ids)
+
+        # get a list of plans for each user plan based on similarity search of that plan and the user plan (n x N)
+        results_map = []
+        for user_plan in user_plans:
+            top_goals_obj = self.db_gateway.vector_search("goal", user_plan.goal, exclude_ids=[plan.id for plan in user_plans], limit=limit)
+            results_map.append(top_goals_obj)
+                
+        # order the list based on the similarity of the plans (desc numerical order)
+        results_map = sorted(results_map, key=lambda x: x[0]["score"], reverse=True)
+        top_goals = [obj['goal'] for obj in results_map[:limit]]
+
+        top_plans = [plan for plan in all_plans if plan.goal in top_goals]
+
+        # todo: give importance to diveristy of data (multiple users & plan types) – penalty on similarity to cumulative result set?
+        # todo: give time penalty – prioritize activities that are closer to the current date
+
+        # return the list of plans
+        return top_plans
+    
+    def get_recommended_activities(self, user: User, limit: int = 5) -> List[Activity]:
+
+        # get all activities
+        user_activities = self.activities_gateway.get_all_activities_by_user_id(user.id)
+        user_activities_ids = [activity.id for activity in user_activities]
+
+        # get a list of activities for each user activity based on similarity search of that activity and the user activity (n x N)
+        results_map = []
+        for user_activity in user_activities:
+            top_activity_objs = self.activities_gateway.activities_db_gateway.vector_search("title", user_activity.title, exclude_ids=user_activities_ids, limit=limit)
+            results_map.extend(top_activity_objs)
+                
+
+        top_activities = [self.activities_gateway.get_activity_by_id(a['id']) for a in top_activity_objs]
+
+        # todo: give importance to diveristy of data (multiple users & plan types) – penalty on similarity to cumulative result set?
+
+        # return the list of activities
+        return top_activities
 
     def get_plan(self, plan_id: str) -> Optional[Plan]:
         data = self.db_gateway.query("id", plan_id)

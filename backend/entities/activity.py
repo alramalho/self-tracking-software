@@ -1,13 +1,14 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 from pydantic import field_validator
-from typing import Optional
+from typing import Optional, List
 from bson import ObjectId
 
 class Activity(BaseModel):
     id: str
     user_id: str
     title: str
+    title_embedding: Optional[List[float]] = None
     measure: str = Field(description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')")
     emoji: str
     created_at: str
@@ -29,10 +30,11 @@ class Activity(BaseModel):
         user_id: str,
         title: str,
         measure: str,
-        emoji: str
+        emoji: str,
+        id: Optional[str] = None
     ) -> "Activity":
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             user_id=user_id,
             title=title,
             measure=measure,
@@ -60,10 +62,11 @@ class ActivityEntry(BaseModel):
         cls,
         activity_id: str,
         quantity: str,
-        date: str
+        date: str,
+        id: Optional[str] = None
     ) -> "ActivityEntry":
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             activity_id=activity_id,
             quantity=quantity,
             date=date,

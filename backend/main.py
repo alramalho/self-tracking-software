@@ -6,12 +6,12 @@ if __name__ == "__main__":
     from pyngrok import ngrok
 
     port = 8000
-    public_url = ngrok.connect(port).public_url
-    logger.info(
-        "Webhook link to use (NGROK tunnel):\n"
-        + public_url
-        + "/clerk/webhook",
-    )
+    # public_url = ngrok.connect(port).public_url
+    # logger.info(
+    #     "Webhook link to use (NGROK tunnel):\n"
+    #     + public_url
+    #     + "/clerk/webhook",
+    # )
 
     ssl_keyfile = "../localhost.key"
     ssl_certfile = "../localhost.crt"

@@ -6,7 +6,6 @@ from loguru import logger
 from gateways.database.mongodb import MongoDBGateway
 from entities.friend_request import FriendRequest
 from gateways.friend_requests import FriendRequestGateway
-
 class UserDoesNotExistException(Exception):
     pass
 
@@ -68,13 +67,17 @@ class UsersGateway:
         self.db_gateway.write(user.dict())
         logger.info(f"User {user.id} ({user.name}) fields {fields} updated")
         return user
-
+    
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)
         user.deleted = True
         user.deleted_at = datetime.datetime.now(datetime.UTC).isoformat()
         self.db_gateway.write(user.dict())
         logger.info(f"User {user.id} ({user.name}) marked as deleted")
+
+    def permanently_delete_user(self, user_id: str):
+        self.db_gateway.delete_all('id', user_id)
+        logger.info(f"User {user_id} forever deleted")
 
     def update_field(self, user_id: str, field_name: str, new_value: Any) -> User:
         return self.update_fields(user_id, {field_name: new_value})
@@ -112,6 +115,7 @@ class UsersGateway:
         user = self.get_user_by_id(user_id)
         user.onboarding_progress[step] = data
         return self.update_user(user)
+    
 
     def set_selected_plan(self, user_id: str, plan_id: str) -> User:
         user = self.get_user_by_id(user_id)

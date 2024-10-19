@@ -25,6 +25,7 @@ from entities.message import Message
 from services.conversation_service import initiate_recurrent_checkin
 from entities.activity import Activity, ImageInfo
 from datetime import datetime, timedelta
+import random
 import json
 import traceback
 from controllers.processed_notification_controller import (
@@ -446,10 +447,35 @@ async def store_activity_photo(
         "presigned_url": presigned_url,
     }
 
+def get_recommended_activity_entries(current_user: User):
+    activities = plan_controller.get_recommended_activities(current_user, limit=10)
+    activities_dicts = [exclude_embedding_fields(activity.dict()) for activity in activities]
+
+    users = {}
+
+    for activity in activities:
+        user = users_gateway.get_user_by_id(activity.user_id)
+        if user:
+            users[user.id] = user.dict()
+
+    users = list(users.values())
+    
+    recommended_activity_entries = []
+    for activity in activities:
+        for entry in activities_gateway.get_all_activity_entries_by_activity_id(activity.id):
+            entry_dict = exclude_embedding_fields(entry.dict())
+            recommended_activity_entries.append(entry_dict)
+
+    # random.shuffle(recommended_activity_entries)    
+    return {
+        "recommended_activity_entries": recommended_activity_entries,
+        "recommended_activities": activities_dicts,
+        "recommended_users": users,
+    }
 
 @router.get("/load-all-user-data/{username}")
 async def load_all_user_data(
-    username: Optional[str] = None, current_user: User = Depends(is_clerk_user)
+    username: Optional[str] = None, include_timeline: bool = Query(False), current_user: User = Depends(is_clerk_user)
 ):
     try:
         # If username is not provided or is 'me', use the current user
@@ -476,10 +502,10 @@ async def load_all_user_data(
                 users_gateway.friend_request_gateway.get_pending_requests, user.id
             )
             # Wait for all futures to complete and convert to dicts
-            activities = [activity.dict() for activity in activities_future.result()]
+            activities = [exclude_embedding_fields(activity.dict()) for activity in activities_future.result()]
             entries = [entry.dict() for entry in entries_future.result()]
             mood_reports = [report.dict() for report in mood_reports_future.result()]
-            plans = [plan.dict() for plan in plans_future.result()]
+            plans = [exclude_embedding_fields(plan.dict()) for plan in plans_future.result()]
             friend_requests = [
                 request.dict() for request in friend_requests_future.result()
             ]
@@ -503,7 +529,7 @@ async def load_all_user_data(
             request["recipient_username"] = recipient.username
             request["recipient_picture"] = recipient.picture
 
-        return {
+        result ={
             "user": user,
             "activities": activities,
             "activity_entries": entries,
@@ -511,6 +537,10 @@ async def load_all_user_data(
             "plans": plans,
             "friend_requests": friend_requests,
         }
+        if include_timeline:
+            result.update(get_recommended_activity_entries(user))
+        
+        return result
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -636,3 +666,7 @@ async def friend_request_action(
 async def get_pending_friend_requests(current_user: User = Depends(is_clerk_user)):
     pending_requests = users_gateway.get_pending_friend_requests(current_user.id)
     return {"pending_requests": pending_requests}
+
+
+def exclude_embedding_fields(d: dict):
+    return {key: value for key, value in d.items() if not key.endswith("_embedding")}

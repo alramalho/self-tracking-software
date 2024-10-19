@@ -8,14 +8,14 @@ import React, {
 import { useApiWithAuth } from "@/api";
 import { parseISO, isSameDay, format, addDays, addSeconds } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
-import { useClerk } from "@clerk/nextjs";
-import { toast } from 'react-hot-toast';
+import { toast } from "react-hot-toast";
 
 export interface Activity {
   id: string;
   title: string;
   measure: string;
   emoji?: string;
+  user_id?: string;
 }
 
 export interface ActivityEntry {
@@ -29,7 +29,7 @@ export interface ActivityEntry {
     expires_at?: string;
     created_at?: string;
     keep_in_profile?: boolean;
-  }
+  };
 }
 
 export interface MoodReport {
@@ -93,19 +93,25 @@ export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
 
 interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}
 
-export interface UserData {
+export interface UserDataEntry {
   user: User | null;
   plans: ApiPlan[];
   activities: Activity[];
   activityEntries: ActivityEntry[];
+  recommendedUsers?: User[];
+  recommendedActivities?: Activity[];
+  recommendedActivityEntries?: ActivityEntry[];
   moodReports: MoodReport[];
   friendRequests: FriendRequest[];
   expiresAt: string;
 }
+export interface UserData {
+  [username: string]: UserDataEntry;
+}
 
 interface UserPlanContextType {
-  userData: { [username: string]: UserData };
-  setUserData: (username: string, data: UserData) => void;
+  userData: UserData;
+  setUserData: (username: string, data: UserDataEntry) => void;
   getCompletedSessions: (plan: ApiPlan) => CompletedSession[];
   loading: boolean;
   error: string | null;
@@ -146,7 +152,7 @@ export function convertPlanToApiPlan(plan: Plan): ApiPlan {
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [userData, setUserData] = useState<{ [username: string]: UserData }>({});
+  const [userData, setAllUserData] = useState<UserData>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useSession();
@@ -154,71 +160,81 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const api = useApiWithAuth();
 
   useEffect(() => {
+    const storedData = localStorage.getItem("userData");
+    if (storedData) {
+      setAllUserData(JSON.parse(storedData));
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("SETTING USER DATA");
+    console.log({userData});
     localStorage.setItem("userData", JSON.stringify(userData));
   }, [userData]);
 
-  const fetchUserData = useCallback(async (username: string = 'me') => {
-    if (!isSignedIn) return;
+  const fetchUserData = useCallback(
+    async (username: string = "me") => {
+      if (!isSignedIn) return;
 
-    try {
-      setLoading(true);
-      console.log("GETTING USER DATA");
+      try {
+        setLoading(true);
+        console.log("GETTING USER DATA");
 
-      // Check if data exists in local storage and is not expired
-      const storedData = localStorage.getItem(`userData_${username || 'me'}`);
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        if (new Date(parsedData.expiresAt) > new Date()) {
-          setUserData(prevData => ({
-            ...prevData,
-            [username]: parsedData
-          }));
+        // Check if data exists and is not expired
+        const currentTime = new Date();
+        if (userData[username] && new Date(userData[username].expiresAt) > currentTime) {
           setLoading(false);
           return;
         }
+
+        const response = await api.get(`/api/load-all-user-data/${username}`, {
+          params: {
+            include_timeline: username === "me",
+          },
+        });
+
+        const newUserData: UserDataEntry = {
+          user: response.data.user,
+          plans: response.data.plans,
+          activities: response.data.activities,
+          activityEntries: response.data.activity_entries,
+          moodReports: response.data.mood_reports,
+          friendRequests: response.data.friend_requests,
+          recommendedActivities: response.data.recommended_activities,
+          recommendedActivityEntries: response.data.recommended_activity_entries,
+          recommendedUsers: response.data.recommended_users,
+          expiresAt: addSeconds(new Date(), 1).toISOString(),
+        };
+
+        setAllUserData((prevData) => ({
+          ...prevData,
+          [username]: newUserData,
+        }));
+
+        console.log("Fetched user data:", response.data);
+      } catch (err: unknown) {
+        console.error("Error fetching data:", err);
+        toast.error("Failed to fetch user data. Please try again.");
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
+      } finally {
+        setLoading(false);
       }
-
-      const response = await api.get(`/api/load-all-user-data/${username}`);
-
-      const newUserData: UserData = {
-        user: response.data.user,
-        plans: response.data.plans,
-        activities: response.data.activities,
-        activityEntries: response.data.activity_entries,
-        moodReports: response.data.mood_reports,
-        friendRequests: response.data.friend_requests,
-        expiresAt: addSeconds(new Date(), 1).toISOString(),
-      };
-
-      setUserData(prevData => ({
-        ...prevData,
-        [username || 'me']: newUserData
-      }));
-
-      // Store in local storage
-      localStorage.setItem(`userData_${username || 'me'}`, JSON.stringify(newUserData));
-
-      console.log("Fetched user data:", response.data);
-    } catch (err: unknown) {
-      console.error("Error fetching data:", err);
-      toast.error("Failed to fetch user data. Please try again.");
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [isSignedIn]);
+    },
+    [isSignedIn, userData]
+  );
 
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
 
   const getCompletedSessions = (plan: ApiPlan): CompletedSession[] => {
-    const currentUserData = userData['me'];
-    if (!currentUserData || !plan || !currentUserData.activityEntries.length) return [];
+    const currentUserData = userData["me"];
+    if (!currentUserData || !plan || !currentUserData.activityEntries.length)
+      return [];
 
     return plan.sessions
       .filter((session) =>
@@ -245,8 +261,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     <UserPlanContext.Provider
       value={{
         userData,
-        setUserData: (username: string, data: UserData) => 
-          setUserData(prevData => ({ ...prevData, [username]: data })),
+        setUserData: (username: string, data: UserDataEntry) =>
+          setAllUserData((prevData) => ({ ...prevData, [username]: data })),
         getCompletedSessions,
         loading,
         error,
