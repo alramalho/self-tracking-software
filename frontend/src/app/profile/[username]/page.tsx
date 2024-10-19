@@ -123,13 +123,11 @@ const ProfilePage: React.FC = () => {
         const expiresAt = parseISO(entry.image.expires_at!);
         const daysUntilExpiration = differenceInDays(expiresAt, now);
         const activity = activities.find((a) => a.id === entry.activity_id);
-        const activityEntry = activityEntries.find(
-          (a) => a.id === entry.activity_id
-        );
+
         return {
           ...entry,
           activityTitle: activity?.title || "Unknown Activity",
-          activityEntryQuantity: activityEntry?.quantity || 0,
+          activityEntryQuantity: entry?.quantity || 0,
           activityMeasure: activity?.measure || "",
           formattedDate: format(parseISO(entry.date), "HH:mm"),
           daysUntilExpiration:
