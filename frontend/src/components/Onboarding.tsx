@@ -36,9 +36,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const api = useApiWithAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
-    undefined
-  );
+  const [selectedEmoji, setSelectedEmoji] = useState<string>("");
   const { userData, fetchUserData, setUserData } = useUserPlan();
   const { plans: userPlans = [], user } = userData["me"] || {};
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
@@ -230,7 +228,10 @@ const Onboarding: React.FC<OnboardingProps> = ({
               />
               <Button
                 className="w-full"
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  setStep(3);
+                  setSelectedEmoji(""); // Clear the emoji when moving to the next step
+                }}
                 disabled={!goal.trim()}
               >
                 Next
