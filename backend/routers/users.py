@@ -384,7 +384,7 @@ async def upsert_activity(
     activity_id = activity.get("id")
     if activity_id:
         # Update existing activity
-        updated_activity = activities_gateway.update_activity(activity_id, activity)
+        updated_activity = activities_gateway.update_activity(Activity(**activity))
         return updated_activity
     else:
         # Create new activity

@@ -166,27 +166,19 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  useEffect(() => {
-    console.log("SETTING USER DATA");
-    console.log({userData});
-    localStorage.setItem("userData", JSON.stringify(userData));
-  }, [userData]);
-
   const fetchUserData = useCallback(
     async (username: string = "me") => {
       if (!isSignedIn) return;
 
       try {
-        setLoading(true);
-        console.log("GETTING USER DATA");
-
+        
         // Check if data exists and is not expired
         const currentTime = new Date();
         if (userData[username] && new Date(userData[username].expiresAt) > currentTime) {
-          setLoading(false);
           return;
         }
-
+        
+        setLoading(true);
         const response = await api.get(`/api/load-all-user-data/${username}`, {
           params: {
             include_timeline: username === "me",

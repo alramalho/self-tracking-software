@@ -107,9 +107,9 @@ class ActivitiesGateway:
         if existing_activity is None:
             logger.info(f"Activity {activity.id} does not exist")
             raise ActivityDoesNotExistException()
-        updated_activity = self.activities_db_gateway.write(activity.dict())
+        self.activities_db_gateway.write(activity.dict())
         logger.info(f"Activity {activity.id} updated")
-        return Activity(**updated_activity)
+        return activity
 
     def update_activity_entry(self, activity_entry_id: str, updates: dict) -> ActivityEntry:
         activity_entry = self.get_activity_entry_by_id(activity_entry_id)

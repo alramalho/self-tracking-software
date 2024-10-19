@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 
 interface ActivityEditorProps {
   onClose: () => void;
@@ -21,15 +21,21 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
+  const { userData, setUserData} = useUserPlan();
   const api = useApiWithAuth();
 
   const handleSave = async () => {
     try {
       const response = await api.post("/api/upsert-activity", {
-        id: activity?.id,
+        ...activity,
+        emoji,
         title,
         measure,
-        emoji,
+      });
+      const updatedActivity = response.data;
+      setUserData("me", {
+        ...userData["me"],
+        activities: [...userData["me"].activities, updatedActivity],
       });
 
       const savedActivity = response.data;
