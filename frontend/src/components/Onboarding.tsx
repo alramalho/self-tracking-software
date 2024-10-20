@@ -25,7 +25,7 @@ import PlanRendererHeatmap from "./PlanRendererHeatmap";
 
 interface OnboardingProps {
   isNewPlan?: boolean;
-  onComplete?: (plan: Plan) => void;
+  onComplete?: (plan: ApiPlan) => void;
 }
 
 const Onboarding: React.FC<OnboardingProps> = ({
@@ -117,7 +117,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const handlePlanSelection = async (plan: GeneratedPlan) => {
     try {
       if (plan) {
-        setSelectedPlan(plan);
+        setSelectedPlan(convertGeneratedPlanToApiPlan(plan));
         setStep(7);
       }
     } catch (error) {
@@ -360,7 +360,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                   />
                   <Button
                     className="w-full mt-4"
-                    onClick={() => handlePlanSelection(convertGeneratedPlanToApiPlan(plan))}
+                    onClick={() => handlePlanSelection(plan)}
                   >
                     <CheckIcon className="mr-2 h-4 w-4" />
                     Select Plan
@@ -421,7 +421,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     ...userData["me"],
                     plans: [
                       ...userData["me"].plans,
-                      convertGeneratedPlanToApiPlan(selectedPlan!),
+                      selectedPlan!,
                     ],
                   }); 
                   onComplete?.(selectedPlan!);

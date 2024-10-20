@@ -3,17 +3,17 @@ import { format, parseISO, addDays } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plan } from "@/contexts/UserPlanContext";
+import { GeneratedPlan } from "@/contexts/UserPlanContext";
 
 interface PlanRendererProps {
-  plan: Plan;
+  plan: GeneratedPlan;
   title: string;
 }
 
 const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
 
-  const formatSessionsForHeatMap = (plan: Plan) => {
+  const formatSessionsForHeatMap = (plan: GeneratedPlan) => {
     const sessions = plan.sessions.map((session) => ({
       date: format(session.date, "yyyy/MM/dd"),
       count: session.quantity,
@@ -49,7 +49,7 @@ const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
     return row[Math.min(intensityLevel, row.length - 1)];
   };
 
-  const renderHeatMap = (plan: Plan) => {
+  const renderHeatMap = (plan: GeneratedPlan) => {
     const today = new Date();
     const endDate = plan.finishing_date
       ? addDays(plan.finishing_date, 1)
@@ -94,9 +94,7 @@ const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
 
                 if (session) {
                   const activityIndex = plan.activities.findIndex(
-                    (a) =>
-                      a.title.toLowerCase() ===
-                      session.activity_name.toLowerCase()
+                    (a) => a.id === session.activity_id
                   );
                   const intensityLevel = Math.min(
                     Math.floor(
@@ -136,7 +134,7 @@ const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
     );
   };
 
-  const renderActivityLegend = (plan: Plan) => {
+  const renderActivityLegend = (plan: GeneratedPlan) => {
     const colorMatrix = getActivityColorMatrix();
     return (
       <div className="flex flex-wrap justify-center gap-2 mt-2">
@@ -163,7 +161,7 @@ const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
     );
   };
 
-  const renderActivityViewer = (plan: Plan) => {
+  const renderActivityViewer = (plan: GeneratedPlan) => {
     if (!focusedDate) return null;
 
     const sessionsOnDate = plan.sessions.filter(
@@ -205,7 +203,7 @@ const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
                         (s) =>
                           format(s.date, "yyyy-MM-dd") ===
                             format(focusedDate, "yyyy-MM-dd") &&
-                          s.activity_name === activity.title
+                          s.activity_id === activity.id
                       )
                     ) {
                       return (
@@ -227,7 +225,7 @@ const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
                   Intensity: {session.quantity}{" "}
                   {
                     plan.activities.find(
-                      (a) => a.title === session.activity_name
+                      (a) => a.id === session.activity_id
                     )?.measure
                   }
                 </p>
