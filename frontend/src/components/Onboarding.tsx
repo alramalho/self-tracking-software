@@ -20,7 +20,7 @@ import {
 import UserSearch, { UserSearchResult } from "./UserSearch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
-import { convertPlanToApiPlan, Plan, useUserPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan, convertGeneratedPlanToApiPlan, GeneratedPlan, Plan, useUserPlan } from "@/contexts/UserPlanContext";
 import PlanRendererHeatmap from "./PlanRendererHeatmap";
 
 interface OnboardingProps {
@@ -39,8 +39,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [finishingDate, setFinishingDate] = useState<Date | undefined>(
     undefined
   );
-  const [generatedPlans, setGeneratedPlans] = useState<Plan[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [generatedPlans, setGeneratedPlans] = useState<GeneratedPlan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<ApiPlan | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
   const api = useApiWithAuth();
@@ -114,7 +114,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
     }
   };
 
-  const handlePlanSelection = async (plan: Plan) => {
+  const handlePlanSelection = async (plan: GeneratedPlan) => {
     try {
       if (plan) {
         setSelectedPlan(plan);
@@ -360,7 +360,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                   />
                   <Button
                     className="w-full mt-4"
-                    onClick={() => handlePlanSelection(plan)}
+                    onClick={() => handlePlanSelection(convertGeneratedPlanToApiPlan(plan))}
                   >
                     <CheckIcon className="mr-2 h-4 w-4" />
                     Select Plan
@@ -382,7 +382,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Invite People (Optional)</CardTitle>
+              <CardTitle>Challlenge People to do it wth you! (Optional)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-4 flex flex-wrap gap-2">
@@ -421,7 +421,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     ...userData["me"],
                     plans: [
                       ...userData["me"].plans,
-                      convertPlanToApiPlan(selectedPlan!),
+                      convertGeneratedPlanToApiPlan(selectedPlan!),
                     ],
                   }); 
                   onComplete?.(selectedPlan!);

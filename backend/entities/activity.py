@@ -7,6 +7,7 @@ from bson import ObjectId
 class Activity(BaseModel):
     id: str
     user_id: str
+    invitee_ids: List[str] = []
     title: str
     title_embedding: Optional[List[float]] = None
     measure: str = Field(description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')")

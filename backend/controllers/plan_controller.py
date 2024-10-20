@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from entities.user import User
 import concurrent.futures
 from loguru import logger
+from bson import ObjectId
 
 
 class PlanController:
@@ -16,39 +17,41 @@ class PlanController:
         self.db_gateway = MongoDBGateway("plans")
         self.activities_gateway = ActivitiesGateway()
 
-    def create_plan(self, user_id: str, plan_data: Dict[str, Any]) -> Plan:
-        sessions = [PlanSession(**session) for session in plan_data.get("sessions", [])]
+    def create_plan(self, plan: Plan) -> Plan:
+        self.db_gateway.write(plan.dict())
+        logger.info(f"Created plan for user {plan.user_id}: {plan.goal}")
+        return plan
+    
+    def create_plan_from_generated_plan(self, user_id: str, generated_plan_data: Dict[str, Any]) -> Plan:
+        sessions = [PlanSession(**session) for session in generated_plan_data.get("sessions", [])]
         plan = Plan.new(
             user_id=user_id,
-            goal=plan_data["goal"],
-            emoji=plan_data.get("emoji", ""),
-            finishing_date=plan_data.get("finishing_date", None),
+            goal=generated_plan_data["goal"],
+            emoji=generated_plan_data.get("emoji", ""),
+            finishing_date=generated_plan_data.get("finishing_date", None),
             invitees=[
-                PlanInvitee(**invitee) for invitee in plan_data.get("invitees", [])
+                PlanInvitee(**invitee) for invitee in generated_plan_data.get("invitees", [])
             ],
             sessions=sessions,
         )
 
-        # Create activities and get their IDs
-        activity_ids = []
-        for activity in plan_data.get("activities", []):
+        for activity in generated_plan_data.get("activities", []):
             converted_activity = Activity.new(
+                id=activity.get("activity_id"),
                 user_id=user_id,
                 title=activity.get("title"),
                 measure=activity.get("measure"),
                 emoji=activity.get("emoji"),
             )
             try:
-                created_activity = self.activities_gateway.create_activity(
+                self.activities_gateway.create_activity(
                     converted_activity
                 )
-                activity_ids.append(created_activity.id)
             except ActivityAlreadyExistsException:
                 logger.info(
                     f"Activity {converted_activity.id} ({converted_activity.title}) already exists"
                 )
 
-        plan.activity_ids = activity_ids
         self.db_gateway.write(plan.dict())
         return plan
 
@@ -114,6 +117,7 @@ class PlanController:
         ]
 
         # todo: give importance to diveristy of data (multiple users & plan types) – penalty on similarity to cumulative result set?
+        # todo: give time penalty – prioritize activities that are closer to the current date
 
         # return the list of activities
         return top_activities
@@ -205,14 +209,17 @@ class PlanController:
                 f"{system_prompt}\nThis plan should be a {intensity} intensity plan.",
                 GeneratePlansResponse,
             )
+
+            new_activities = [
+                {**activity.dict(), "id": activity.id}
+                for activity in response.plan.activities
+            ]
             return {
                 "goal": goal,
                 "finishing_date": finishing_date,
-                "activities": [
-                    activity.dict() for activity in response.plan.activities
-                ],
+                "activities": new_activities,      
                 "sessions": [
-                    session.dict()
+                    {**session.dict(), "activity_id": next((a["id"] for a in new_activities if a["title"].lower() == session.activity_name), None)}
                     for session_week in response.plan.sessions_weeks
                     for session in session_week.sessions
                     if session.date >= current_date
@@ -260,3 +267,7 @@ class PlanController:
             if plan:
                 plans.append(plan)
         return plans
+    
+    def permanently_delete_plan(self, plan_id: str) -> None:
+        self.db_gateway.delete_all('id', plan_id)
+        logger.info(f"Plan {plan_id} forever deleted")

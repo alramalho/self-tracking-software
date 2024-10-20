@@ -8,25 +8,34 @@ import {
   isFuture,
   startOfWeek,
   addWeeks,
+  subWeeks,
 } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { ApiPlan, Activity } from "@/contexts/UserPlanContext";
+import {
+  ApiPlan,
+  Activity,
+  useUserPlan,
+  CompletedSession,
+} from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
+import { Loader2 } from "lucide-react";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
   activities: Activity[];
-  getCompletedSessions: (plan: ApiPlan) => { date: string }[];
+  completedSessions: { [username: string]: CompletedSession[] };
+  loadingSessions: boolean;
 }
 
 export function PlanRendererv2({
   selectedPlan,
   activities,
-  getCompletedSessions,
+  completedSessions,
+  loadingSessions,
 }: PlanRendererv2Props) {
   const [sessionData, setSessionData] = useState<
-    { week: string; planned: number; completed: number | null }[]
+    { week: string; planned: number; [key: string]: number | string }[]
   >([]);
   const [selectedSession, setSelectedSession] = useState<
     ApiPlan["sessions"][0] | null
@@ -48,32 +57,40 @@ export function PlanRendererv2({
           : null
       );
 
-      const completedSessions = getCompletedSessions(selectedPlan);
       const currentDate = new Date();
 
       const allDates = [
         ...selectedPlan.sessions.map((s) => parseISO(s.date)),
-        ...completedSessions.map((s) => parseISO(s.date)),
+        ...Object.values(completedSessions)
+          .flat()
+          .map((s) => parseISO(s.date)),
       ].sort((a, b) => a.getTime() - b.getTime());
 
       if (allDates.length === 0) return;
 
-      const startDate = startOfWeek(allDates[0]);
+      // Start the chart one week before the first session date
+      const startDate = subWeeks(startOfWeek(allDates[0]), 1);
       const endDate = allDates[allDates.length - 1];
 
       let currentWeek = startDate;
       const weeklyData: {
-        [key: string]: { planned: number; completed: number };
+        [key: string]: { planned: number; [key: string]: number };
       } = {};
 
       while (currentWeek <= endDate) {
         const weekKey = format(currentWeek, "yyyy-MM-dd");
-        weeklyData[weekKey] = { planned: 0, completed: 0 };
+        weeklyData[weekKey] = { planned: 0 };
+        Object.keys(completedSessions).forEach((username) => {
+          weeklyData[weekKey][username] = 0;
+        });
         currentWeek = addWeeks(currentWeek, 1);
       }
 
       let cumulativePlanned = 0;
-      let cumulativeCompleted = 0;
+      const cumulativeCompleted: { [key: string]: number } = {};
+      Object.keys(completedSessions).forEach((username) => {
+        cumulativeCompleted[username] = 0;
+      });
 
       allDates.forEach((date) => {
         const weekKey = format(startOfWeek(date), "yyyy-MM-dd");
@@ -84,28 +101,38 @@ export function PlanRendererv2({
         ) {
           cumulativePlanned += 1;
         }
-        if (
-          completedSessions.some(
-            (s) => parseISO(s.date).getTime() === date.getTime()
-          )
-        ) {
-          if (!isAfter(date, currentDate)) {
-            cumulativeCompleted += 1;
+        Object.entries(completedSessions).forEach(([username, sessions]) => {
+          if (
+            sessions.some((s) => parseISO(s.date).getTime() === date.getTime())
+          ) {
+            if (!isAfter(date, currentDate)) {
+              cumulativeCompleted[username] += 1;
+            }
           }
-        }
+        });
         weeklyData[weekKey].planned = cumulativePlanned;
-        weeklyData[weekKey].completed = cumulativeCompleted;
+        Object.keys(completedSessions).forEach((username) => {
+          weeklyData[weekKey][username] = cumulativeCompleted[username];
+        });
       });
 
       const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
         week: format(parseISO(week), "MMM d, yyyy"),
         planned: data.planned,
-        completed: isAfter(parseISO(week), currentDate) ? null : data.completed,
+        ...Object.keys(completedSessions).reduce(
+          (acc, username) => ({
+            ...acc,
+            [username]: isAfter(parseISO(week), currentDate)
+              ? null
+              : data[username],
+          }),
+          {}
+        ),
         fullDate: week,
       }));
       setSessionData(formattedData);
     }
-  }, [selectedPlan, getCompletedSessions]);
+  }, [selectedPlan, completedSessions]);
 
   const prepareCalendarData = (plan: ApiPlan) => {
     const sessions = plan.sessions.map((session) => ({
@@ -134,7 +161,7 @@ export function PlanRendererv2({
         </h3>
         <ul className="list-disc list-inside mb-2">
           <li>
-            {session.quantity} {activity?.measure} of {session.activity_name}
+            {session.quantity} {activity?.measure} of {activity?.title}
           </li>
         </ul>
         <p className="text-sm text-gray-600">{session.descriptive_guide}</p>
@@ -146,30 +173,35 @@ export function PlanRendererv2({
     <div>
       {sessionData.length > 0 && (
         <div className="mt-8 max-w-4xl">
-          <LineChart
-            data={sessionData.map((item) => ({
-              ...item,
-              completed: item.completed ?? 0,
-            }))}
-            xAxisKey="week"
-            lines={[
-              {
-                dataKey: "planned",
-                name: "Planned Sessions",
-                color: "hsl(var(--chart-1))",
-              },
-              {
-                dataKey: "completed",
-                name: "Completed Sessions",
-                color: "hsl(var(--chart-2))",
-              },
-            ]}
-            title="Sessions Overview"
-            description={`${sessionData[0].week} - ${
-              sessionData[sessionData.length - 1].week
-            }`}
-            currentDate={new Date()}
-          />
+          {loadingSessions && (
+            <div className="flex items-center gap-2">
+              <Loader2 className="animate-spin" />
+              <span>Loading your friends plan data...</span>
+            </div>
+          )}
+          {!loadingSessions && (
+            <LineChart
+              data={sessionData}
+              xAxisKey="week"
+              lines={[
+                {
+                  dataKey: "planned",
+                  name: "Planned Sessions",
+                  color: "hsl(var(--chart-1))",
+                },
+                ...Object.keys(completedSessions).map((username, index) => ({
+                  dataKey: username,
+                  name: `${username}'s Completed Sessions`,
+                  color: `hsl(var(--chart-${index + 2}))`,
+                })),
+              ]}
+              title="Sessions Overview"
+              description={`${sessionData[0].week} - ${
+                sessionData[sessionData.length - 1].week
+              }`}
+              currentDate={new Date()}
+            />
+          )}
         </div>
       )}
 
@@ -181,11 +213,7 @@ export function PlanRendererv2({
               <>
                 {renderSessionDetails(
                   selectedSession,
-                  activities.find(
-                    (a) =>
-                      a.title.toLowerCase() ===
-                      selectedSession.activity_name.toLowerCase()
-                  )
+                  activities.find((a) => a.id === selectedSession.activity_id)
                 )}
               </>
             )}

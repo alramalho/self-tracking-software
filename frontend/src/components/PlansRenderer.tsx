@@ -1,27 +1,49 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import Link from "next/link";
-import { ApiPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan, CompletedSession } from "@/contexts/UserPlanContext";
 import {
   Avatar,
   AvatarImage,
   AvatarFallback,
-  AvatarGroup,
 } from "@/components/ui/avatar";
 
 const PlansRenderer: React.FC = () => {
   const { userData, getCompletedSessions } = useUserPlan();
+  const [loadingSessions, setLoadingSessions] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [completedSessions, setCompletedSessions] = useState<{[username: string]: CompletedSession[]}>({});
+
+  const fetchCompletedSessions = useCallback(async (plan: ApiPlan) => {
+    setLoadingSessions(true);
+    const sessionsMap: {[username: string]: CompletedSession[]} = {};
+    for (const invitee of plan.invitees!) {
+      const sessions = await getCompletedSessions(plan, invitee.username);
+      sessionsMap[invitee.username] = sessions;
+    }
+    sessionsMap["me"] = await getCompletedSessions(plan);
+    setCompletedSessions(sessionsMap);
+    setLoadingSessions(false);
+  }, []);
 
   useEffect(() => {
-    // Select the first plan when the component mounts or when userData changes
-    if (userData && userData.me && userData.me.plans.length > 0) {
-      setSelectedPlanId(userData.me.plans[0].id || null);
+    if (!selectedPlanId && userData && userData.me && userData.me.plans.length > 0) {
+      const firstPlan = userData.me.plans[0];
+      setSelectedPlanId(firstPlan.id || null);
     }
   }, [userData]);
+
+  useEffect(() => {
+    if (selectedPlanId) {
+      const selectedPlan = userData.me.plans.find(p => p.id === selectedPlanId);
+      if (selectedPlan) {
+        fetchCompletedSessions(selectedPlan);
+      }
+    }
+  }, [selectedPlanId]);
 
   if (!userData || !userData.me || userData.me.plans.length === 0) {
     return <div>No plans available.</div>;
@@ -55,12 +77,13 @@ const PlansRenderer: React.FC = () => {
                   : ""}
               </span>
             </div>
-            <div className="flex items-center space-x-4 justify-end">
-              {plan.invitees.map((invitee) => (
-                <div
-                  key={invitee.user_id}
-                  className="flex flex-row flex-nowrap ml-[30px] justify-content-end"
-                >
+            {plan.invitees && (
+              <div className="flex items-center space-x-4 justify-end">
+                {plan.invitees.map((invitee) => (
+                  <div
+                    key={invitee.user_id}
+                    className="flex flex-row flex-nowrap ml-[30px] justify-content-end"
+                  >
                   <Avatar className="border-[1px] border-gray-400 ml-[-30px]">
                     <AvatarImage
                       src={invitee.picture || ""}
@@ -71,8 +94,9 @@ const PlansRenderer: React.FC = () => {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         <Link href="/create-new-plan" passHref>
@@ -87,11 +111,14 @@ const PlansRenderer: React.FC = () => {
       </div>
 
       {selectedPlanId && (
+       <>
         <PlanRendererv2
           selectedPlan={plans.find((p) => p.id === selectedPlanId)!}
           activities={activities}
-          getCompletedSessions={getCompletedSessions}
+          completedSessions={completedSessions}
+          loadingSessions={loadingSessions}
         />
+       </>
       )}
     </div>
   );

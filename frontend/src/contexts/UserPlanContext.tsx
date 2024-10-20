@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  use,
 } from "react";
 import { useApiWithAuth } from "@/api";
 import { parseISO, isSameDay, format, addDays, addSeconds } from "date-fns";
@@ -31,6 +32,8 @@ export interface ActivityEntry {
     keep_in_profile?: boolean;
   };
 }
+
+export interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}
 
 export interface MoodReport {
   id: string;
@@ -70,7 +73,7 @@ export interface Plan {
   emoji?: string;
   goal: string;
   finishing_date?: Date;
-  invitees: {
+  invitees?: {
     user_id: string;
     username: string;
     name: string;
@@ -80,11 +83,14 @@ export interface Plan {
     date: Date;
     descriptive_guide: string;
     quantity: number;
-    activity_name: string;
+    activity_id?: string;
   }[];
-  activities: { id: string; title: string; measure: string }[];
-  intensity: string;
+}
+
+export interface GeneratedPlan extends Omit<Plan, "invitees">{
   overview: string;
+  activities: { id: string; emoji: string; title: string; measure: string }[];
+  intensity: string;
 }
 
 export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
@@ -93,11 +99,9 @@ export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
     date: string;
     descriptive_guide: string;
     quantity: number;
-    activity_name: string;
+    activity_id: string;
   }[];
 }
-
-interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}
 
 export interface UserDataEntry {
   user: User | null;
@@ -118,7 +122,7 @@ export interface UserData {
 interface UserPlanContextType {
   userData: UserData;
   setUserData: (username: string, data: UserDataEntry) => void;
-  getCompletedSessions: (plan: ApiPlan) => CompletedSession[];
+  getCompletedSessions: (plan: ApiPlan, username?: string) => Promise<CompletedSession[]>;
   loading: boolean;
   error: string | null;
   fetchUserData: (username?: string) => Promise<void>;
@@ -128,21 +132,20 @@ const UserPlanContext = createContext<UserPlanContextType | undefined>(
   undefined
 );
 
-export function convertApiPlansToPlans(apiPlans: ApiPlan[]): Plan[] {
-  return apiPlans.map((apiPlan) => ({
-    ...apiPlan,
-    finishing_date: apiPlan.finishing_date
-      ? parseISO(apiPlan.finishing_date)
-      : undefined,
-    sessions: apiPlan.sessions.map((session) => ({
-      ...session,
-      date: parseISO(session.date),
-      activity_name: session.activity_name,
-    })),
-  }));
-}
+// export function convertApiPlansToPlans(apiPlans: ApiPlan[]): Plan[] {
+//   return apiPlans.map((apiPlan) => ({
+//     ...apiPlan,
+//     finishing_date: apiPlan.finishing_date
+//       ? parseISO(apiPlan.finishing_date)
+//       : undefined,
+//     sessions: apiPlan.sessions.map((session) => ({
+//       ...session,
+//       date: parseISO(session.date),
+//     })),
+//   }));
+// }
 
-export function convertPlanToApiPlan(plan: Plan): ApiPlan {
+export function convertGeneratedPlanToApiPlan(plan: GeneratedPlan): ApiPlan {
   return {
     ...plan,
     finishing_date: plan.finishing_date
@@ -164,12 +167,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn } = useSession();
 
   const api = useApiWithAuth();
+  
+  useEffect(() => {
+    localStorage.setItem("userData", JSON.stringify(userData));
+  }, [userData]);
 
   useEffect(() => {
-    const storedData = localStorage.getItem("userData");
-    if (storedData) {
-      setAllUserData(JSON.parse(storedData));
-    }
+    fetchUserData();
   }, []);
 
   const fetchUserData = useCallback(
@@ -179,11 +183,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         
         // Check if data exists and is not expired
-        const currentTime = new Date();
-        if (userData[username] && new Date(userData[username].expiresAt) > currentTime) {
-          return;
+        const userDataFromLocalStorage = JSON.parse(localStorage.getItem("userData") || "{}");
+        if (userDataFromLocalStorage && Object.keys(userDataFromLocalStorage).length > 0) {
+          const currentTime = new Date();
+          if (new Date(userDataFromLocalStorage[username]?.expiresAt) > currentTime) {
+            return;
+          }
         }
-        
         setLoading(true);
         const response = await api.get(`/api/load-all-user-data/${username}`, {
           params: {
@@ -221,39 +227,33 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       } finally {
         setLoading(false);
       }
-    },
-    [isSignedIn, userData]
-  );
+    },[]);
 
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
 
-  const getCompletedSessions = (plan: ApiPlan): CompletedSession[] => {
-    const currentUserData = userData["me"];
-    if (!currentUserData || !plan || !currentUserData.activityEntries.length)
-      return [];
+  const getCompletedSessions = useCallback(async (plan: ApiPlan, username: string = "me"): Promise<CompletedSession[]> => {
+    if (!plan) return [];
+
+    await fetchUserData(username);
+
+    const userDataEntry = userData[username];
+    if (!userDataEntry || !userDataEntry.activityEntries.length) return [];
 
     return plan.sessions
       .filter((session) =>
-        currentUserData.activityEntries.some(
+        userDataEntry.activityEntries.some(
           (entry) =>
             isSameDay(parseISO(session.date), parseISO(entry.date)) &&
-            session.activity_name.toLowerCase() ===
-              currentUserData.activities
-                .find((a) => a.id === entry.activity_id)
-                ?.title.toLowerCase()
+            session.activity_id ===
+              userDataEntry.activities
+                .find((a) => a.id === entry.activity_id)?.id
         )
       )
       .map((session) => ({
         date: session.date,
-        activity_id:
-          currentUserData.activities.find(
-            (a) => a.title.toLowerCase() === session.activity_name.toLowerCase()
-          )?.id || "",
+        activity_id: session.activity_id,
         quantity: session.quantity,
-      }));
-  };
+      } as CompletedSession));
+  }, []);
 
   return (
     <UserPlanContext.Provider

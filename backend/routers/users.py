@@ -265,7 +265,7 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
 
 @router.post("/create-plan")
 async def create_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
-    created_plan = plan_controller.create_plan(user.id, plan)
+    created_plan = plan_controller.create_plan_from_generated_plan(user.id, plan)
     updated_user = users_gateway.add_plan_to_user(user.id, created_plan.id)
     return {
         "message": "Plan created and added to user",
@@ -294,13 +294,16 @@ async def get_user_plans(user: User = Depends(is_clerk_user)):
                 plans.append(plan_dict)
 
     activity_map = {
-        activity.id: {"title": activity.title, "measure": activity.measure}
+        activity.id: {"id": activity.id, "title": activity.title, "measure": activity.measure, "emoji": activity.emoji}
         for activity in activities_gateway.get_all_activities_by_user_id(user.id)
     }
+    activity_map_set = set(activity_map.keys())
 
     for plan in plans:
         plan["activities"] = [
-            activity_map[activity_id] for activity_id in plan["activity_ids"]
+            activity_map[session["activity_id"]]
+            for session in plan["sessions"]
+            if session["activity_id"] in activity_map_set
         ]
 
     return {"plans": plans}
@@ -315,11 +318,12 @@ async def get_user(user: User = Depends(is_clerk_user)):
 async def get_plan(plan_id: str, user: User = Depends(is_clerk_user)):
     plan = plan_controller.get_plan(plan_id).dict()
     activity_map = {
-        activity.id: {"title": activity.title, "measure": activity.measure}
+        activity.id: {"id": activity.id, "title": activity.title, "measure": activity.measure, "emoji": activity.emoji}
         for activity in activities_gateway.get_all_activities_by_user_id(user.id)
     }
+    plan_activity_ids = set(session["activity_id"] for session in plan["sessions"])
     plan["activities"] = [
-        activity_map[activity_id] for activity_id in plan["activity_ids"]
+        activity_map[activity_id] for activity_id in plan_activity_ids
     ]
     return plan
 
@@ -482,9 +486,9 @@ async def load_all_user_data(
         if not username or username == "me":
             user = current_user
         else:
-            user = users_gateway.get_user_by_safely("username", username)
+            user = users_gateway.get_user_by_safely("username", username.lower())
             if not user:
-                raise HTTPException(status_code=404, detail="User not found")
+                raise HTTPException(status_code=404, detail=f"User {username} not found")
 
         # Use concurrent.futures to run all database queries concurrently
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -511,12 +515,11 @@ async def load_all_user_data(
             ]
         # Process plans to include activities
         activity_map = {activity["id"]: activity for activity in activities}
+
+        # get it from sessions
         for plan in plans:
-            plan["activities"] = [
-                activity_map[activity_id]
-                for activity_id in plan["activity_ids"]
-                if activity_id in activity_map
-            ]
+            plan_activity_ids = set(session["activity_id"] for session in plan["sessions"])
+            plan["activities"] = [activity_map[activity_id] for activity_id in plan_activity_ids if activity_id in activity_map]
 
         # hydrate friend requests with sender and recipient data
         for request in friend_requests:

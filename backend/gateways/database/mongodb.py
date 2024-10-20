@@ -116,7 +116,7 @@ class MongoDBGateway(DBGateway):
                 logger.log("DB", f"Created vector search index: {index_name}")
             except Exception as e:
                 if "Duplicate Index" in str(e):
-                    logger.error(f"Error creating {key} vector search index: Duplicate Index, {e}")
+                    logger.error(f"Error creating {key} vector search index: Duplicate Index. Continuing...")
                 else:
                     raise
 

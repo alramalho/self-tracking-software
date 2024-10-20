@@ -4,7 +4,6 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import Onboarding from "@/components/Onboarding";
 import {
-  convertPlanToApiPlan,
   Plan,
   useUserPlan,
 } from "@/contexts/UserPlanContext";

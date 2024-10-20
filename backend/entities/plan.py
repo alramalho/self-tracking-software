@@ -6,7 +6,7 @@ from bson import ObjectId
 class PlanSession(BaseModel):
     date: str
     descriptive_guide: str
-    activity_name: str
+    activity_id: str
     quantity: int
 
 class PlanInvitee(BaseModel):
@@ -23,7 +23,6 @@ class Plan(BaseModel):
     goal_embedding: Optional[List[float]] = None
     emoji: str | None = None
     finishing_date: Optional[str] = None
-    activity_ids: List[str]
     sessions: List[PlanSession]
     created_at: str
 
@@ -36,7 +35,6 @@ class Plan(BaseModel):
             emoji=emoji,  # Add this line
             finishing_date=finishing_date,
             invitees=invitees,
-            activity_ids=[],  # This will be populated after creating activities
             sessions=sessions,
             created_at=datetime.now(UTC).isoformat(),
         )
