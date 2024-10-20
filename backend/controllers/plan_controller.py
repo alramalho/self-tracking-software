@@ -10,7 +10,7 @@ from entities.user import User
 import concurrent.futures
 from loguru import logger
 from bson import ObjectId
-
+from entities.activity import SAMPLE_SEARCH_ACTIVITY
 
 class PlanController:
     def __init__(self):
@@ -21,16 +21,22 @@ class PlanController:
         self.db_gateway.write(plan.dict())
         logger.info(f"Created plan for user {plan.user_id}: {plan.goal}")
         return plan
-    
-    def create_plan_from_generated_plan(self, user_id: str, generated_plan_data: Dict[str, Any]) -> Plan:
-        sessions = [PlanSession(**session) for session in generated_plan_data.get("sessions", [])]
+
+    def create_plan_from_generated_plan(
+        self, user_id: str, generated_plan_data: Dict[str, Any]
+    ) -> Plan:
+        sessions = [
+            PlanSession(**session)
+            for session in generated_plan_data.get("sessions", [])
+        ]
         plan = Plan.new(
             user_id=user_id,
             goal=generated_plan_data["goal"],
             emoji=generated_plan_data.get("emoji", ""),
             finishing_date=generated_plan_data.get("finishing_date", None),
             invitees=[
-                PlanInvitee(**invitee) for invitee in generated_plan_data.get("invitees", [])
+                PlanInvitee(**invitee)
+                for invitee in generated_plan_data.get("invitees", [])
             ],
             sessions=sessions,
         )
@@ -44,9 +50,7 @@ class PlanController:
                 emoji=activity.get("emoji"),
             )
             try:
-                self.activities_gateway.create_activity(
-                    converted_activity
-                )
+                self.activities_gateway.create_activity(converted_activity)
             except ActivityAlreadyExistsException:
                 logger.info(
                     f"Activity {converted_activity.id} ({converted_activity.title}) already exists"
@@ -95,7 +99,10 @@ class PlanController:
             user.id
         )[
             :5
-        ]  # limit to 5 to avoid too much data
+        ]
+        if len(user_activities) == 0:
+            user_activities = [SAMPLE_SEARCH_ACTIVITY]
+
         user_activities_ids = [activity.id for activity in user_activities]
 
         # get a list of activities for each user activity based on similarity search of that activity and the user activity (n x N)
@@ -217,9 +224,19 @@ class PlanController:
             return {
                 "goal": goal,
                 "finishing_date": finishing_date,
-                "activities": new_activities,      
+                "activities": new_activities,
                 "sessions": [
-                    {**session.dict(), "activity_id": next((a["id"] for a in new_activities if a["title"].lower() == session.activity_name), None)}
+                    {
+                        **session.dict(),
+                        "activity_id": next(
+                            (
+                                a["id"]
+                                for a in new_activities
+                                if a["title"].lower() == session.activity_name
+                            ),
+                            None,
+                        ),
+                    }
                     for session_week in response.plan.sessions_weeks
                     for session in session_week.sessions
                     if session.date >= current_date
@@ -267,7 +284,7 @@ class PlanController:
             if plan:
                 plans.append(plan)
         return plans
-    
+
     def permanently_delete_plan(self, plan_id: str) -> None:
-        self.db_gateway.delete_all('id', plan_id)
+        self.db_gateway.delete_all("id", plan_id)
         logger.info(f"Plan {plan_id} forever deleted")

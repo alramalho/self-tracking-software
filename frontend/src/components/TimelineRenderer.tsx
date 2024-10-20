@@ -7,14 +7,17 @@ import {
 } from "@/contexts/UserPlanContext";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import { format, differenceInDays } from "date-fns";
-import { useApiWithAuth } from "@/api";
 import {isBefore} from "date-fns"
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 
 const TimelineRenderer: React.FC = () => {
   const { userData } = useUserPlan();
   const router = useRouter();
+
+  useEffect(() => {
+    console.log("On timeline:");
+    console.log({ userData });
+  }, [userData]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -23,15 +26,6 @@ const TimelineRenderer: React.FC = () => {
         userData["me"].recommendedActivities &&
         userData["me"].recommendedActivityEntries.map(
           (entry: ActivityEntry) => {
-            if (!entry.image?.expires_at) {
-              return null;
-            }
-            if (isBefore(new Date(entry.image.expires_at), new Date())) {
-              console.log("Image expired");
-              console.log(entry.image.expires_at);
-              console.log(new Date());
-              return null;
-            }
             const activity: Activity | undefined = userData["me"].recommendedActivities!.find((a) => a.id === entry.activity_id);
             const user: User | undefined = userData["me"].recommendedUsers!.find((u) => u.id === activity?.user_id);
             if (!activity) return null;
@@ -47,12 +41,14 @@ const TimelineRenderer: React.FC = () => {
                 key={entry.id}
                 imageUrl={entry.image?.url}
                 activityTitle={activity.title}
+                activityEmoji={activity.emoji || ""}
                 activityEntryQuantity={entry.quantity}
                 activityMeasure={activity.measure}
                 formattedDate={formattedDate}
                 daysUntilExpiration={daysUntilExpiration}
                 userPicture={user?.picture}
                 userName={user?.name}
+                userUsername={user?.username}
                 onClick={() => {
                   router.push(`/profile/${user?.username}`);
                 }}

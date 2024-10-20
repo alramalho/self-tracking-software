@@ -127,6 +127,7 @@ const ProfilePage: React.FC = () => {
         return {
           ...entry,
           activityTitle: activity?.title || "Unknown Activity",
+          activityEmoji: activity?.emoji || "",
           activityEntryQuantity: entry?.quantity || 0,
           activityMeasure: activity?.measure || "",
           formattedDate: format(parseISO(entry.date), "HH:mm"),
@@ -284,12 +285,14 @@ const ProfilePage: React.FC = () => {
                     key={photo.id}
                     imageUrl={photo.image.url!}
                     activityTitle={photo.activityTitle}
+                    activityEmoji={photo.activityEmoji}
                     activityEntryQuantity={photo.activityEntryQuantity}
                     activityMeasure={photo.activityMeasure}
                     formattedDate={photo.formattedDate}
                     daysUntilExpiration={photo.daysUntilExpiration}
-                    userPicture={user?.picture}
+                    userPicture={user?.picture} 
                     userName={user?.name}
+                    userUsername={user?.username}
                   />
                 ))}
               </div>

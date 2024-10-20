@@ -236,9 +236,7 @@ export function PlanRendererv2({
                       session &&
                         isFuture(date) &&
                         "bg-blue-100 h-9 w-9 rounded-full cursor-pointer",
-                      session &&
-                        isToday(date) &&
-                        "bg-red-100 h-9 w-9 rounded-full",
+                      isToday(date) && "font-extrabold",
                       isBefore(date, new Date()) &&
                         !isToday(date) &&
                         "text-gray-400"

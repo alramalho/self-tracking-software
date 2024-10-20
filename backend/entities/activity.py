@@ -73,3 +73,10 @@ class ActivityEntry(BaseModel):
             date=date,
             created_at=datetime.now(UTC).isoformat(),
         )
+
+SAMPLE_SEARCH_ACTIVITY = Activity.new(
+    user_id="666666666666666666666666",
+    title="Running",
+    measure="kilometers",
+    emoji="🏃",
+)
