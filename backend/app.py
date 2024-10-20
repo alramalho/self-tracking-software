@@ -32,9 +32,11 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         async for chunk in response.body_iterator:
             response_body += chunk
         
-        # Log the response body
+        # Log the response body and traceback for errors
         if response.status_code >= 400:
-            logger.error(f"Error response body: {response_body.decode()}")
+            error_message = f"Error response body: {response_body.decode()}"
+            logger.error(error_message)
+            logger.error(f"Traceback: \n{traceback.format_exc()}")
         
         # Re-create the response with the consumed body
         return Response(content=response_body, status_code=response.status_code,
