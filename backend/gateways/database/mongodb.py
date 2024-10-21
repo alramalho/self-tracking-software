@@ -61,7 +61,6 @@ class MongoDBGateway(DBGateway):
             if embedding_key in data:
                 data[embedding_key] = self._get_embedding(value)
 
-        logger.log("DB", f"MongoDB: Writing to MongoDB ... {data}")
         try:
             result = self.collection.replace_one({'_id': data['_id']}, data, upsert=True)
             logger.log("DB", f"MongoDB: Upserted document with id: {data['_id']}")
