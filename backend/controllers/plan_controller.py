@@ -92,7 +92,7 @@ class PlanController:
         user_activities = self.activities_gateway.get_all_activities_by_user_id(
             user.id
         )[:5]
-        user_activities = []
+
         if len(user_activities) == 0:
             user_activities = [SAMPLE_SEARCH_ACTIVITY]
 
@@ -111,12 +111,12 @@ class PlanController:
             )
             logger.log("CONTROLLERS", f"Got {len(top_activity_objs)} activities for activity {user_activity.id} ({user_activity.title})")
 
-        top_activities = [
-            self.activities_gateway.get_activity_by_id(a["id"])
+        top_activities = {
+            a["id"]: self.activities_gateway.get_activity_by_id(a["id"])
             for a in top_activity_objs
-        ]
+        }
 
-        return top_activities
+        return list(top_activities.values())
 
     def get_plan(self, plan_id: str) -> Optional[Plan]:
         logger.log("CONTROLLERS", f"Getting plan: {plan_id}")

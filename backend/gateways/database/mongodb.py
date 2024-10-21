@@ -154,9 +154,7 @@ class MongoDBGateway(DBGateway):
             embedding_key = key
         else:
             embedding_key = f"{key}_embedding"
-
-        exclude_ids = [ObjectId(id) for id in exclude_ids if type(id) == str]
-
+            
         index_name = f"{embedding_key}_vector_index"
         query_embedding = self._get_embedding(query)
 
@@ -172,11 +170,6 @@ class MongoDBGateway(DBGateway):
                 }
             },
             {
-                "$match": {
-                    "_id": {"$nin": exclude_ids}
-                }
-            },
-            {
                 "$project": {
                     "_id": 0,
                     "id": {"$toString": "$_id"},
@@ -188,5 +181,6 @@ class MongoDBGateway(DBGateway):
         
         logger.log("DB", f"MongoDB: Doing vector search for index: {index_name}")
         results = list(self.collection.aggregate(pipeline))
+        results = [result for result in results if result["id"] not in exclude_ids]
         logger.log("DB", f"MongoDB: Vector search returned {len(results)} results")
         return results # co
