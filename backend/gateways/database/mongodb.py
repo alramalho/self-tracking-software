@@ -153,6 +153,8 @@ class MongoDBGateway(DBGateway):
             embedding_key = key
         else:
             embedding_key = f"{key}_embedding"
+
+        exclude_ids = [ObjectId(id) for id in exclude_ids if type(id) == str]
             
         index_name = f"{embedding_key}_vector_index"
         query_embedding = self._get_embedding(query)
@@ -165,7 +167,8 @@ class MongoDBGateway(DBGateway):
                     "queryVector": query_embedding,
                     "path": embedding_key,
                     "numCandidates": 100,
-                    "limit": len(exclude_ids) + limit
+                    "filter": {"_id": {"$nin": exclude_ids}},
+                    "limit": limit
                 }
             },
             {
@@ -179,6 +182,5 @@ class MongoDBGateway(DBGateway):
         ]
         
         results = list(self.collection.aggregate(pipeline))
-        filtered_results = [result for result in results if result["id"] not in exclude_ids][:limit]
-        logger.log("DB", f"MongoDB: Vector search returned {len(results)} results before excluding and {len(filtered_results)} results after excluding")
-        return filtered_results
+        logger.log("DB", f"MongoDB: Vector search returned {len(results)} results")
+        return results
