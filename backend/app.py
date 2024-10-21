@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, Request
 from shared.logger import create_logger
-create_logger(level="INFO")
+create_logger(level="DEBUG")
 
 from fastapi.middleware.cors import CORSMiddleware
 import base64
