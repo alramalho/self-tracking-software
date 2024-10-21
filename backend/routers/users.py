@@ -46,6 +46,7 @@ import concurrent.futures
 from pymongo.errors import DuplicateKeyError
 from entities.friend_request import FriendRequest
 from loguru import logger
+import re
 
 router = APIRouter(prefix="/api")
 processed_notification_controller = ProcessedNotificationController()
@@ -564,15 +565,50 @@ async def update_user(user_data: dict = Body(...), user: User = Depends(is_clerk
     return {"message": "User updated successfully", "user": updated_user}
 
 
+def search_users(username: str, limit: int = 3) -> List[dict]:
+    search_patterns = [
+        f"^{re.escape(username[:i])}.*" for i in range(len(username), 0, -1)
+    ]
+    
+    results = []
+    for pattern in search_patterns:
+        users = users_gateway.get_all_users_by_regex("username", pattern)
+        for user in users:
+            if user.dict() not in results:
+                results.append({
+                    "user_id": user.id,
+                    "username": user.username,
+                    "name": user.name,
+                    "picture": user.picture
+                })
+        
+        if len(results) >= limit:
+            break
+    
+    return results[:limit]
+
 @router.get("/search-users/{username}")
 async def search_username(username: str, user: User = Depends(is_clerk_user)):
-    if user.username == username:
-        return None
+    if user.username.lower() == username.lower():
+        return []
     
-    user = users_gateway.get_user_by_safely("username", username)
-    if user:
-        return {"user_id": user.id, "username": user.username, "name": user.name, "picture": user.picture}
-    return None
+    results = search_users(username)
+    
+    if not results:
+        # If no results, return all users (up to 3)
+        all_users = users_gateway.get_all_users()
+        results = [
+            {
+                "user_id": u.id,
+                "username": u.username,
+                "name": u.name,
+                "picture": u.picture
+            }
+            for u in all_users
+            if u.id != user.id
+        ][:3]
+    
+    return results
 
 # Add this new endpoint
 @router.get("/user/friend-count")
@@ -689,3 +725,5 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             status_code=500,
             detail=f"An error occurred while fetching timeline data: {str(e)}",
         )
+
+

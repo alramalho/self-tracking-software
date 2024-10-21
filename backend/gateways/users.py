@@ -37,6 +37,10 @@ class UsersGateway:
         data = self.db_gateway.query(keyname, keyvalue)
         return [User(**d) for d in data]
 
+    def get_all_users_by_regex(self, keyname: str, pattern: str) -> List[User]:
+        data = self.db_gateway.regex_query(keyname, pattern)
+        return [User(**d) for d in data]
+
     def get_user_by(self, keyname: str, keyvalue: str) -> User:
         data = self.db_gateway.query(keyname, keyvalue)
         if len(data) > 0:

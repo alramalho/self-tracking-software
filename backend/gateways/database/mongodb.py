@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Any
 from pymongo import MongoClient, ASCENDING
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError
@@ -9,10 +9,11 @@ from gateways.database.base import DBGateway
 from loguru import logger
 import requests
 import json
+import os
 
 class MongoDBGateway(DBGateway):
     def __init__(self, collection_name: str):
-        self.client = MongoClient(MONGO_DB_CONNECTION_STRING)
+        self.client = MongoClient(os.environ.get("MONGODB_URI"))
         db_name = f"{MONGO_DB_NAME.lower()}_{ENVIRONMENT.lower()}"
         self.db = self.client[db_name]
         self.collection: Collection = self.db[collection_name]
@@ -23,11 +24,7 @@ class MongoDBGateway(DBGateway):
             del data['_id']
         return data
 
-    def delete_all(self, key: str, value: str) -> None:
-        if key == 'id':
-            key = '_id'
-            if type(value) == str:
-                value = ObjectId(value)
+    def delete_all(self, key: str, value: Any) -> None:
         logger.log("DB", f'MongoDB: Deleting from MongoDB ... Key:"{key}" Value:"{value}"')
         result = self.collection.delete_many({key: value})
         logger.log("DB", f"MongoDB: Deleted {result.deleted_count} documents")
@@ -123,21 +120,12 @@ class MongoDBGateway(DBGateway):
         logger.log("DB", "MongoDB: Scanning from MongoDB ...")
         return [self._convert_from_mongo(doc) for doc in self.collection.find()]
 
-    def query(self, key: str, value: str) -> List[Dict]:
-        if key == 'id':
-            key = '_id'
-            if type(value) == str:
-                value = ObjectId(value)
-
+    def query(self, key: str, value: Any) -> List[Dict]:
         logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Key:"{key}" Value:"{value}"')
         result = [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
         return result
 
-    def count(self, key: str, value: str) -> int:
-        if key == 'id':
-            key = '_id'
-            if type(value) == str:
-                value = ObjectId(value)
+    def count(self, key: str, value: Any) -> int:
         logger.log("DB", f'MongoDB: Counting in MongoDB ... Key:"{key}" Value:"{value}"')
         return self.collection.count_documents({key: value})
 
@@ -183,3 +171,7 @@ class MongoDBGateway(DBGateway):
         results = list(self.collection.aggregate(pipeline))
         logger.log("DB", f"MongoDB: Vector search returned {len(results)} results for query: {query}")
         return results
+
+    def regex_query(self, key: str, pattern: str) -> List[Dict[str, Any]]:
+        logger.log("DB", f'MongoDB: Regex query in MongoDB "{self.collection.name}" ... Key:"{key}" Pattern:"{pattern}"')
+        return list(self.collection.find({key: {"$regex": pattern, "$options": "i"}}))
