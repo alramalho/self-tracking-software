@@ -40,8 +40,10 @@ export function PlanRendererv2({
   const [selectedSession, setSelectedSession] = useState<
     ApiPlan["sessions"][0] | null
   >(null);
+  
 
   useEffect(() => {
+
     if (selectedPlan) {
       const now = new Date();
       const nextSession = selectedPlan.sessions

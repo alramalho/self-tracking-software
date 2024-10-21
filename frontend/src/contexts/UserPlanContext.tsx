@@ -4,10 +4,9 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  use,
 } from "react";
 import { useApiWithAuth } from "@/api";
-import { parseISO, isSameDay, format, addDays, addSeconds, addMinutes } from "date-fns";
+import { parseISO, isSameDay, format, addMinutes } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 
@@ -140,19 +139,6 @@ const UserPlanContext = createContext<UserPlanContextType | undefined>(
   undefined
 );
 
-// export function convertApiPlansToPlans(apiPlans: ApiPlan[]): Plan[] {
-//   return apiPlans.map((apiPlan) => ({
-//     ...apiPlan,
-//     finishing_date: apiPlan.finishing_date
-//       ? parseISO(apiPlan.finishing_date)
-//       : undefined,
-//     sessions: apiPlan.sessions.map((session) => ({
-//       ...session,
-//       date: parseISO(session.date),
-//     })),
-//   }));
-// }
-
 export function convertGeneratedPlanToApiPlan(plan: GeneratedPlan): ApiPlan {
   return {
     ...plan,
@@ -176,36 +162,18 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn } = useSession();
 
   const api = useApiWithAuth();
-  
-  useEffect(() => {
-    localStorage.setItem("userData", JSON.stringify(userData));
-  }, [userData]);
-
-  useEffect(() => {
-    localStorage.setItem("timelineData", JSON.stringify(timelineData));
-  }, [timelineData]);
 
   useEffect(() => {
     fetchUserData();
     fetchTimelineData();
   }, []);
 
-  const fetchUserData = useCallback(
-    async (username: string = "me") => {
+  const fetchUserData = async (username: string = "me") => {
       if (!isSignedIn) return;
 
       try {
-        // Check if data is already in state
         if (userData[username]) {
           return;
-        }
-        // Check if data exists and is not expired
-        const userDataFromLocalStorage = JSON.parse(localStorage.getItem("userData") || "{}");
-        if (userDataFromLocalStorage && Object.keys(userDataFromLocalStorage).length > 0) {
-          const currentTime = new Date();
-          if (new Date(userDataFromLocalStorage[username]?.expiresAt) > currentTime) {
-            return;
-          }
         }
         setLoading(true);
         const response = await api.get(`/api/load-all-user-data/${username}`);
@@ -236,25 +204,14 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       } finally {
         setLoading(false);
-      }
-    },
-    [isSignedIn]
-  );
+    }
+  };
 
-  const fetchTimelineData = useCallback(async () => {
+  const fetchTimelineData = async () => {
     if (!isSignedIn) return;
 
     try {
       if (timelineData) return;
-
-      const timelineDataFromLocalStorage = JSON.parse(localStorage.getItem("timelineData") || "{}");
-      if (timelineDataFromLocalStorage && Object.keys(timelineDataFromLocalStorage).length > 0) {
-        const currentTime = new Date();
-        if (new Date(timelineDataFromLocalStorage.expiresAt) > currentTime) {
-          return;
-        }
-      }
-
 
       setLoading(true);
       const response = await api.get('/api/timeline');
@@ -280,10 +237,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn]);
+  };
 
-  const getCompletedSessions = useCallback(async (plan: ApiPlan, username: string = "me"): Promise<CompletedSession[]> => {
+  const getCompletedSessions = (async (plan: ApiPlan, username: string = "me"): Promise<CompletedSession[]> => {
     if (!plan) return [];
+
+    console.log(`Fetching completed sessions for ${username}`);
 
     await fetchUserData(username);
 
@@ -305,7 +264,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         activity_id: session.activity_id,
         quantity: session.quantity,
       } as CompletedSession));
-  }, []);
+  });
 
   return (
     <UserPlanContext.Provider
