@@ -8,6 +8,7 @@ from fastapi import (
     UploadFile,
     File,
     Form,
+    BackgroundTasks,
 )
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict
@@ -479,7 +480,8 @@ def get_recommended_activity_entries(current_user: User):
 
 @router.get("/load-all-user-data/{username}")
 async def load_all_user_data(
-    username: Optional[str] = None, include_timeline: bool = Query(False), current_user: User = Depends(is_clerk_user)
+    username: Optional[str] = None,
+    current_user: User = Depends(is_clerk_user)
 ):
     try:
         # If username is not provided or is 'me', use the current user
@@ -532,7 +534,7 @@ async def load_all_user_data(
             request["recipient_username"] = recipient.username
             request["recipient_picture"] = recipient.picture
 
-        result ={
+        result = {
             "user": user,
             "activities": activities,
             "activity_entries": entries,
@@ -540,8 +542,6 @@ async def load_all_user_data(
             "plans": plans,
             "friend_requests": friend_requests,
         }
-        if include_timeline:
-            result.update(get_recommended_activity_entries(user))
         
         return result
     except Exception as e:
@@ -676,3 +676,16 @@ async def get_pending_friend_requests(current_user: User = Depends(is_clerk_user
 
 def exclude_embedding_fields(d: dict):
     return {key: value for key, value in d.items() if not key.endswith("_embedding")}
+
+# Add a new endpoint for timeline data
+@router.get("/timeline")
+async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
+    try:
+        timeline_data = get_recommended_activity_entries(current_user)
+        return timeline_data
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while fetching timeline data: {str(e)}",
+        )

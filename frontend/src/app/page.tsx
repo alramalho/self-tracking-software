@@ -60,9 +60,7 @@ const HomePage: React.FC = () => {
         />
       </div>
 
-      <div className="py-8">
-        <TimelineRenderer />
-      </div>
+      <TimelineRenderer />
 
       {isPopoverOpen && (
         <AppleLikePopover onClose={() => setIsPopoverOpen(false)}>

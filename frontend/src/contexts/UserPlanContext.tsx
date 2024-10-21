@@ -108,24 +108,31 @@ export interface UserDataEntry {
   plans: ApiPlan[];
   activities: Activity[];
   activityEntries: ActivityEntry[];
-  recommendedUsers?: User[];
-  recommendedActivities?: Activity[];
-  recommendedActivityEntries?: ActivityEntry[];
   moodReports: MoodReport[];
   friendRequests: FriendRequest[];
   expiresAt: string;
 }
+
+export interface TimelineData {
+  recommendedUsers?: User[];
+  recommendedActivities?: Activity[];
+  recommendedActivityEntries?: ActivityEntry[];
+}
+
 export interface UserData {
   [username: string]: UserDataEntry;
 }
 
 interface UserPlanContextType {
   userData: UserData;
+  timelineData: TimelineData | null;
   setUserData: (username: string, data: UserDataEntry) => void;
+  setTimelineData: (data: TimelineData) => void;
   getCompletedSessions: (plan: ApiPlan, username?: string) => Promise<CompletedSession[]>;
   loading: boolean;
   error: string | null;
   fetchUserData: (username?: string) => Promise<void>;
+  fetchTimelineData: () => Promise<void>;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(
@@ -162,6 +169,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [userData, setAllUserData] = useState<UserData>({});
+  const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useSession();
@@ -181,7 +189,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!isSignedIn) return;
 
       try {
-        
         // Check if data exists and is not expired
         const userDataFromLocalStorage = JSON.parse(localStorage.getItem("userData") || "{}");
         if (userDataFromLocalStorage && Object.keys(userDataFromLocalStorage).length > 0) {
@@ -191,11 +198,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         }
         setLoading(true);
-        const response = await api.get(`/api/load-all-user-data/${username}`, {
-          params: {
-            include_timeline: username === "me",
-          },
-        });
+        const response = await api.get(`/api/load-all-user-data/${username}`);
 
         const newUserData: UserDataEntry = {
           user: response.data.user,
@@ -204,9 +207,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           activityEntries: response.data.activity_entries,
           moodReports: response.data.mood_reports,
           friendRequests: response.data.friend_requests,
-          recommendedActivities: response.data.recommended_activities,
-          recommendedActivityEntries: response.data.recommended_activity_entries,
-          recommendedUsers: response.data.recommended_users,
           expiresAt: addSeconds(new Date(), 1).toISOString(),
         };
 
@@ -227,8 +227,38 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       } finally {
         setLoading(false);
       }
-    },[]);
+    },
+    [isSignedIn]
+  );
 
+  const fetchTimelineData = useCallback(async () => {
+    if (!isSignedIn) return;
+
+    try {
+      setLoading(true);
+      const response = await api.get('/api/timeline');
+
+      const newTimelineData: TimelineData = {
+        recommendedUsers: response.data.recommended_users,
+        recommendedActivities: response.data.recommended_activities,
+        recommendedActivityEntries: response.data.recommended_activity_entries,
+      };
+
+      setTimelineData(newTimelineData);
+
+      console.log("Fetched timeline data:", response.data);
+    } catch (err: unknown) {
+      console.error("Error fetching timeline data:", err);
+      toast.error("Failed to fetch timeline data. Please try again.");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [isSignedIn]);
 
   const getCompletedSessions = useCallback(async (plan: ApiPlan, username: string = "me"): Promise<CompletedSession[]> => {
     if (!plan) return [];
@@ -259,12 +289,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     <UserPlanContext.Provider
       value={{
         userData,
+        timelineData,
         setUserData: (username: string, data: UserDataEntry) =>
           setAllUserData((prevData) => ({ ...prevData, [username]: data })),
+        setTimelineData,
         getCompletedSessions,
         loading,
         error,
         fetchUserData,
+        fetchTimelineData,
       }}
     >
       {children}

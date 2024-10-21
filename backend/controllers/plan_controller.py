@@ -98,18 +98,16 @@ class PlanController:
 
         user_activities_ids = [activity.id for activity in user_activities]
 
-        top_activity_objs = []
-
-        for user_activity in user_activities:
-            top_activity_objs.extend(
-                self.activities_gateway.activities_db_gateway.vector_search(
-                    "title",
-                    user_activity.title,
-                    exclude_ids=user_activities_ids,
-                    limit=limit,
-                )
+        query = ", ".join([activity.title for activity in user_activities])
+        top_activity_objs = (
+            self.activities_gateway.activities_db_gateway.vector_search(
+                "title",
+                query,
+                exclude_ids=user_activities_ids,
+                limit=limit,
             )
-            logger.log("CONTROLLERS", f"Got {len(top_activity_objs)} activities for activity {user_activity.id} ({user_activity.title})")
+        )
+        logger.log("CONTROLLERS", f"Got {len(top_activity_objs)} activities for query: {query}")
 
         top_activities = {
             a["id"]: self.activities_gateway.get_activity_by_id(a["id"])
