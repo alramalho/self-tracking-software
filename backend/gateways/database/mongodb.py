@@ -131,7 +131,6 @@ class MongoDBGateway(DBGateway):
 
         logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Key:"{key}" Value:"{value}"')
         result = [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
-        logger.log("DB", "Result: " + str(result))
         return result
 
     def count(self, key: str, value: str) -> int:
