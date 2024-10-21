@@ -181,5 +181,5 @@ class MongoDBGateway(DBGateway):
         ]
         
         results = list(self.collection.aggregate(pipeline))
-        logger.log("DB", f"MongoDB: Vector search returned {len(results)} results")
+        logger.log("DB", f"MongoDB: Vector search returned {len(results)} results for query: {query}")
         return results

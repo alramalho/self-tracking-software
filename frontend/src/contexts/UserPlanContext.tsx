@@ -9,6 +9,8 @@ import { useApiWithAuth } from "@/api";
 import { parseISO, isSameDay, format, addMinutes } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
+import { Router } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export interface Activity {
   id: string;
@@ -160,6 +162,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useSession();
+  const router = useRouter();
 
   const api = useApiWithAuth();
 
@@ -196,6 +199,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("Fetched user data:", response.data);
       } catch (err: unknown) {
         console.error("Error fetching data:", err);
+        router.push("/")
         toast.error("Failed to fetch user data. Please try again.");
         if (err instanceof Error) {
           setError(err.message);

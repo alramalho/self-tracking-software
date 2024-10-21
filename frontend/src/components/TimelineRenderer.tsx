@@ -56,11 +56,27 @@ const TimelineRenderer: React.FC = () => {
           );
           if (!activity) return null;
 
-          const formattedDate = format(new Date(entry.date), "MMM d, yyyy");
+          const formattedDate = (() => {
+            const entryDate = new Date(entry.date);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (entryDate.toDateString() === today.toDateString()) {
+              return "today";
+            } else if (entryDate.toDateString() === yesterday.toDateString()) {
+              return "yesterday";
+            } else {
+              return `last ${format(entryDate, "EEEE").toLowerCase()}`;
+            }
+          })();
           const daysUntilExpiration =
             entry.image && entry.image.expires_at
               ? differenceInDays(new Date(entry.image.expires_at), new Date())
               : 0;
+          const hasExpired = entry.image && entry.image.expires_at && new Date(entry.image.expires_at) < new Date();
+
+          if (hasExpired) return null;
 
           return (
             <ActivityEntryPhotoCard
@@ -71,8 +87,8 @@ const TimelineRenderer: React.FC = () => {
               activityEntryQuantity={entry.quantity}
               activityMeasure={activity.measure}
               formattedDate={formattedDate}
-              daysUntilExpiration={daysUntilExpiration}
               userPicture={user?.picture}
+              daysUntilExpiration={daysUntilExpiration}
               userName={user?.name}
               userUsername={user?.username}
               onClick={() => {

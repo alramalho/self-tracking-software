@@ -65,7 +65,8 @@ const HomePage: React.FC = () => {
           />
         </div>
       </div>
-
+      
+      <h1 className="text-lg font-bold mb-4">Last week</h1>
       <TimelineRenderer />
 
       {isPopoverOpen && (
