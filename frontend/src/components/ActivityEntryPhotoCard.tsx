@@ -66,9 +66,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </div>
           <span className="text-sm text-gray-500">{formattedDate}</span>
         </div>
-        <span className="text-xs text-gray-400">
-          Image expires in {daysUntilExpiration} days
-        </span>
+        {imageUrl && (
+          <span className="text-xs text-gray-400">
+            Image expires in {daysUntilExpiration} days
+          </span>
+        )}
       </div>
     </div>
   );

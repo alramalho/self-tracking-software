@@ -89,9 +89,10 @@ class PlanController:
 
     def get_recommended_activities(self, user: User, limit: int = 5) -> List[Activity]:
         logger.log("CONTROLLERS", f"Getting recommended activities for user {user.id}")
-        user_activities = self.activities_gateway.get_all_activities_by_user_id(
-            user.id
-        )[:5]
+        # user_activities = self.activities_gateway.get_all_activities_by_user_id(
+        #     user.id
+        # )[:5]
+        user_activities = []
         if len(user_activities) == 0:
             user_activities = [SAMPLE_SEARCH_ACTIVITY]
 
@@ -108,6 +109,7 @@ class PlanController:
                     limit=limit,
                 )
             )
+            logger.log("CONTROLLERS", f"Got {len(top_activity_objs)} activities for activity {user_activity.id} ({user_activity.title})")
 
         top_activities = [
             self.activities_gateway.get_activity_by_id(a["id"])
