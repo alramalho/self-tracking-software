@@ -16,15 +16,17 @@ class PlanController:
     def __init__(self):
         self.db_gateway = MongoDBGateway("plans")
         self.activities_gateway = ActivitiesGateway()
+        logger.log("CONTROLLERS", "PlanController initialized")
 
     def create_plan(self, plan: Plan) -> Plan:
+        logger.log("CONTROLLERS", f"Creating plan for user {plan.user_id}: {plan.goal}")
         self.db_gateway.write(plan.dict())
-        logger.info(f"Created plan for user {plan.user_id}: {plan.goal}")
         return plan
 
     def create_plan_from_generated_plan(
         self, user_id: str, generated_plan_data: Dict[str, Any]
     ) -> Plan:
+        logger.log("CONTROLLERS", f"Creating plan from generated plan for user {user_id}")
         sessions = [
             PlanSession(**session)
             for session in generated_plan_data.get("sessions", [])
@@ -60,8 +62,7 @@ class PlanController:
         return plan
 
     def get_recommended_plans(self, user: User, limit: int = 5) -> List[Plan]:
-
-        # get all plans
+        logger.log("CONTROLLERS", f"Getting recommended plans for user {user.id}")
         all_plans = [
             Plan(**plan)
             for plan in self.db_gateway.scan()
@@ -69,7 +70,6 @@ class PlanController:
         ]
         user_plans = self.get_plans(user.plan_ids)
 
-        # get a list of plans for each user plan based on similarity search of that plan and the user plan (n x N)
         results_map = []
         for user_plan in user_plans:
             top_goals_obj = self.db_gateway.vector_search(
@@ -80,32 +80,23 @@ class PlanController:
             )
             results_map.append(top_goals_obj)
 
-        # order the list based on the similarity of the plans (desc numerical order)
         results_map = sorted(results_map, key=lambda x: x[0]["score"], reverse=True)
         top_goals = [obj["goal"] for obj in results_map[:limit]]
 
         top_plans = [plan for plan in all_plans if plan.goal in top_goals]
 
-        # todo: give importance to diveristy of data (multiple users & plan types) – penalty on similarity to cumulative result set?
-        # todo: give time penalty – prioritize activities that are closer to the current date
-
-        # return the list of plans
         return top_plans
 
     def get_recommended_activities(self, user: User, limit: int = 5) -> List[Activity]:
-
-        # get all activities
+        logger.log("CONTROLLERS", f"Getting recommended activities for user {user.id}")
         user_activities = self.activities_gateway.get_all_activities_by_user_id(
             user.id
-        )[
-            :5
-        ]
+        )[:5]
         if len(user_activities) == 0:
             user_activities = [SAMPLE_SEARCH_ACTIVITY]
 
         user_activities_ids = [activity.id for activity in user_activities]
 
-        # get a list of activities for each user activity based on similarity search of that activity and the user activity (n x N)
         top_activity_objs = []
 
         for user_activity in user_activities:
@@ -123,13 +114,10 @@ class PlanController:
             for a in top_activity_objs
         ]
 
-        # todo: give importance to diveristy of data (multiple users & plan types) – penalty on similarity to cumulative result set?
-        # todo: give time penalty – prioritize activities that are closer to the current date
-
-        # return the list of activities
         return top_activities
 
     def get_plan(self, plan_id: str) -> Optional[Plan]:
+        logger.log("CONTROLLERS", f"Getting plan: {plan_id}")
         data = self.db_gateway.query("id", plan_id)
         if len(data) > 0:
             return Plan(**data[0])
@@ -143,6 +131,7 @@ class PlanController:
         finishing_date: Optional[str] = None,
         plan_description: Optional[str] = None,
     ) -> List[Dict]:
+        logger.log("CONTROLLERS", f"Generating plans for goal: {goal}")
         current_date = datetime.now().strftime("%Y-%m-%d, %A")
         if not finishing_date:
             finishing_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
@@ -274,6 +263,7 @@ class PlanController:
         return 0
 
     def update_plan(self, plan: Plan) -> Plan:
+        logger.log("CONTROLLERS", f"Updating plan: {plan.id}")
         self.db_gateway.write(plan.dict())
         return plan
 
@@ -286,5 +276,39 @@ class PlanController:
         return plans
 
     def permanently_delete_plan(self, plan_id: str) -> None:
+        logger.log("CONTROLLERS", f"Permanently deleting plan: {plan_id}")
         self.db_gateway.delete_all("id", plan_id)
-        logger.info(f"Plan {plan_id} forever deleted")
+
+    def update_plan_sessions_with_activity_ids(self, plan: Plan) -> Plan:
+        logger.log("CONTROLLERS", f"Updating plan sessions with activity IDs for plan: {plan.id}")
+        user_activities = self.activities_gateway.get_all_activities_by_user_id(plan.user_id)
+        
+        activity_dict = {activity.title.lower(): activity.id for activity in user_activities}
+        
+        updated_sessions = []
+        for session in plan.sessions:
+            if not session.activity_id:
+                matching_activity_id = activity_dict.get(session.descriptive_guide.lower())
+                if matching_activity_id:
+                    session.activity_id = matching_activity_id
+            updated_sessions.append(session)
+        
+        plan.sessions = updated_sessions
+        
+        self.update_plan(plan)
+        
+        return plan
+
+    def update_all_plans_with_activity_ids(self):
+        logger.log("CONTROLLERS", "Updating all plans with activity IDs")
+        all_plans = self.db_gateway.scan()
+        for plan_data in all_plans:
+            plan = Plan(**plan_data)
+            self.update_plan_sessions_with_activity_ids(plan)
+
+
+if __name__ == "__main__":
+    from shared.logger import create_logger
+    create_logger(level="INFO")
+    plan_controller = PlanController()
+    plan_controller.update_all_plans_with_activity_ids()

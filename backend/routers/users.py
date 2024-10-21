@@ -545,6 +545,7 @@ async def load_all_user_data(
         
         return result
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred while fetching user data: {str(e)}",
