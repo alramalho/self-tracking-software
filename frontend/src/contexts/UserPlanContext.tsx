@@ -7,7 +7,7 @@ import React, {
   use,
 } from "react";
 import { useApiWithAuth } from "@/api";
-import { parseISO, isSameDay, format, addDays, addSeconds } from "date-fns";
+import { parseISO, isSameDay, format, addDays, addSeconds, addMinutes } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 
@@ -117,6 +117,7 @@ export interface TimelineData {
   recommendedUsers?: User[];
   recommendedActivities?: Activity[];
   recommendedActivityEntries?: ActivityEntry[];
+  expiresAt: string;
 }
 
 export interface UserData {
@@ -181,7 +182,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [userData]);
 
   useEffect(() => {
+    localStorage.setItem("timelineData", JSON.stringify(timelineData));
+  }, [timelineData]);
+
+  useEffect(() => {
     fetchUserData();
+    fetchTimelineData();
   }, []);
 
   const fetchUserData = useCallback(
@@ -189,6 +195,10 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!isSignedIn) return;
 
       try {
+        // Check if data is already in state
+        if (userData[username]) {
+          return;
+        }
         // Check if data exists and is not expired
         const userDataFromLocalStorage = JSON.parse(localStorage.getItem("userData") || "{}");
         if (userDataFromLocalStorage && Object.keys(userDataFromLocalStorage).length > 0) {
@@ -207,7 +217,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           activityEntries: response.data.activity_entries,
           moodReports: response.data.mood_reports,
           friendRequests: response.data.friend_requests,
-          expiresAt: addSeconds(new Date(), 1).toISOString(),
+          expiresAt: addMinutes(new Date(), 10).toISOString(),
         };
 
         setAllUserData((prevData) => ({
@@ -235,6 +245,17 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isSignedIn) return;
 
     try {
+      if (timelineData) return;
+
+      const timelineDataFromLocalStorage = JSON.parse(localStorage.getItem("timelineData") || "{}");
+      if (timelineDataFromLocalStorage && Object.keys(timelineDataFromLocalStorage).length > 0) {
+        const currentTime = new Date();
+        if (new Date(timelineDataFromLocalStorage.expiresAt) > currentTime) {
+          return;
+        }
+      }
+
+
       setLoading(true);
       const response = await api.get('/api/timeline');
 
@@ -242,6 +263,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         recommendedUsers: response.data.recommended_users,
         recommendedActivities: response.data.recommended_activities,
         recommendedActivityEntries: response.data.recommended_activity_entries,
+        expiresAt: addMinutes(new Date(), 10).toISOString(),
       };
 
       setTimelineData(newTimelineData);

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ChevronRight, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -44,20 +45,25 @@ const HomePage: React.FC = () => {
   }
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Welcome to Your Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-4">Welcome{userData['me'].user?.name ? `, ${userData['me'].user.name}` : ""}</h1>
       
       <div 
-        className="bg-gray-100 p-4 rounded-lg mb-6 cursor-pointer hover:bg-gray-200 transition-colors duration-200 flex items-center justify-between"
+        className="bg-white border-2 border-gray-200 p-4 rounded-lg mb-6 cursor-pointer hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between shadow-md hover:shadow-lg"
         onClick={() => setIsPopoverOpen(true)}
       >
-        <div className="flex items-center">
-          <span className="text-3xl mr-2 flex items-center h-full">🧑</span>
+        <div className="flex items-center gap-3">
+          <Avatar>
+            <AvatarImage src={userData['me'].user?.picture} alt="User Avatar" />
+            <AvatarFallback>
+              {userData['me'].user?.name?.[0] || userData['me'].user?.username?.[0] || "U"}
+            </AvatarFallback>
+          </Avatar>
           <h2 className="text-lg font-semibold">Your plans</h2>
+          <ChevronRight 
+            className={`transition-transform duration-300 ${isPopoverOpen ? 'rotate-90' : ''} text-gray-500`} 
+            size={24}
+          />
         </div>
-        <ChevronRight 
-          className={`transition-transform duration-300 ${isPopoverOpen ? 'rotate-90' : ''}`} 
-          size={24}
-        />
       </div>
 
       <TimelineRenderer />
