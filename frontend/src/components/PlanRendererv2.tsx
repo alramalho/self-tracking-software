@@ -193,7 +193,7 @@ export function PlanRendererv2({
                 },
                 ...Object.keys(completedSessions).map((username, index) => ({
                   dataKey: username,
-                  name: `${username}'s Completed Sessions`,
+                  name: `Completed Sessions by ${username}`,
                   color: `hsl(var(--chart-${index + 2}))`,
                 })),
               ]}
