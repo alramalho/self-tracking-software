@@ -75,7 +75,8 @@ class PlanController:
             top_goals_obj = self.db_gateway.vector_search(
                 "goal",
                 user_plan.goal,
-                exclude_ids=[plan.id for plan in user_plans],
+                exclude_key="user_id",
+                exclude_value=user.id,
                 limit=limit,
             )
             results_map.append(top_goals_obj)
@@ -96,14 +97,13 @@ class PlanController:
         if len(user_activities) == 0:
             user_activities = [SAMPLE_SEARCH_ACTIVITY]
 
-        user_activities_ids = [activity.id for activity in user_activities]
-
         query = ", ".join([activity.title for activity in user_activities])
         top_activity_objs = (
             self.activities_gateway.activities_db_gateway.vector_search(
                 "title",
                 query,
-                exclude_ids=user_activities_ids,
+                exclude_key="user_id",
+                exclude_value=user.id,
                 limit=limit,
             )
         )
