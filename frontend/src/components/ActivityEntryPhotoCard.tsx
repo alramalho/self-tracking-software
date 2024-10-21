@@ -42,9 +42,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             alt={activityTitle}
             className="w-full h-full max-h-[400px] object-contain"
           />
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <Image className="w-1/2 h-1/2" />
-          </div>
         </div>
       )}
       <div className="p-4 flex flex-col">
