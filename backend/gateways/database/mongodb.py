@@ -158,7 +158,7 @@ class MongoDBGateway(DBGateway):
         index_name = f"{embedding_key}_vector_index"
         query_embedding = self._get_embedding(query)
 
-        logger.log("DB", f"MongoDB: Performing vector search in {self.collection.name}")
+        logger.log("DB", f"MongoDB: Performing vector search in {self.collection.name} for query: {query} (index: {index_name})")
         pipeline = [
             {
                 "$vectorSearch": {
@@ -166,7 +166,7 @@ class MongoDBGateway(DBGateway):
                     "queryVector": query_embedding,
                     "path": embedding_key,
                     "numCandidates": 100,
-                    "limit": limit
+                    "limit": len(exclude_ids) + limit
                 }
             },
             {
@@ -179,8 +179,7 @@ class MongoDBGateway(DBGateway):
             }
         ]
         
-        logger.log("DB", f"MongoDB: Doing vector search for index: {index_name}")
         results = list(self.collection.aggregate(pipeline))
-        results = [result for result in results if result["id"] not in exclude_ids]
-        logger.log("DB", f"MongoDB: Vector search returned {len(results)} results")
-        return results # co
+        filtered_results = [result for result in results if result["id"] not in exclude_ids][:limit]
+        logger.log("DB", f"MongoDB: Vector search returned {len(results)} results before excluding and {len(filtered_results)} results after excluding")
+        return filtered_results
