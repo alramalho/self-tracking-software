@@ -565,7 +565,7 @@ async def update_user(user_data: dict = Body(...), user: User = Depends(is_clerk
     return {"message": "User updated successfully", "user": updated_user}
 
 
-def search_users(username: str, limit: int = 3) -> List[dict]:
+def search_users(user:User, username: str, limit: int = 3) -> List[dict]:
     search_patterns = [
         f"^{re.escape(username[:i])}.*" for i in range(len(username), 0, -1)
     ]
@@ -574,7 +574,7 @@ def search_users(username: str, limit: int = 3) -> List[dict]:
     for pattern in search_patterns:
         users = users_gateway.get_all_users_by_regex("username", pattern)
         for user in users:
-            if user.dict() not in results:
+            if user.dict() not in results and user.id != user.id:
                 results.append({
                     "user_id": user.id,
                     "username": user.username,
@@ -592,7 +592,7 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
     if user.username.lower() == username.lower():
         return []
     
-    results = search_users(username)
+    results = search_users(user, username)
     
     if not results:
         # If no results, return all users (up to 3)
