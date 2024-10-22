@@ -1,7 +1,7 @@
 "use client"
 
 import { TrendingUp } from "lucide-react"
-import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
+import { Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts"
 
 import {
   Card,
@@ -35,7 +35,7 @@ interface LineChartProps {
   description?: string
   trendPercentage?: number
   dateRange?: string
-  currentDate?: Date // Add this new prop
+  currentDate?: Date
 }
 
 export function LineChart({
@@ -46,7 +46,7 @@ export function LineChart({
   description = "Data visualization",
   trendPercentage,
   dateRange,
-  currentDate, // Add this new prop
+  currentDate,
 }: LineChartProps) {
   const chartConfig = lines.reduce((config, line) => {
     config[line.dataKey] = {
@@ -56,9 +56,7 @@ export function LineChart({
     return config
   }, {} as ChartConfig)
 
-  // Find the week that contains the current date
   const currentWeek = currentDate ? data.find(item => {
-    // Parse the date string correctly
     const itemDate = parse(item.week.toString(), 'MMM d, yyyy', new Date());
     const weekStart = startOfWeek(itemDate);
     const weekEnd = endOfWeek(itemDate);
@@ -71,59 +69,76 @@ export function LineChart({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="h-[400px]">
         <ChartContainer config={chartConfig}>
-          <ResponsiveContainer width="100%" height={400}>
-            <RechartsLineChart
-              data={data}
-              margin={{
-                top: 20, // Increased top margin to accommodate the label
-                right: 30,
-                left: 20,
-                bottom: 20,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey={xAxisKey}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                angle={-45}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              {lines.map((line) => (
-                <Line
-                  key={line.dataKey}
-                  type="monotone"
-                  dataKey={line.dataKey}
-                  name={line.name}
-                  stroke={line.color}
-                  strokeWidth={2}
-                  dot={false}
+          <div className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsLineChart
+                data={data}
+                margin={{
+                  top: 20,
+                  right: 10,
+                  left: -10,
+                  bottom: 10,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey={xAxisKey}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
                 />
-              ))}
-              
-              {/* Updated ReferenceLine for the current week */}
-              {currentWeek && (
-                <ReferenceLine
-                  x={currentWeek.week}
-                  stroke="#888"
-                  strokeDasharray="3 3"
-                  label={{
-                    value: "This week",
-                    position: "top",
-                    fill: "#888",
-                    fontSize: 12,
-                    offset: 10, // Adjust this value to fine-tune the label position
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                {lines.map((line) => (
+                  <Line
+                    key={line.dataKey}
+                    type="monotone"
+                    dataKey={line.dataKey}
+                    name={line.name}
+                    stroke={line.color}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ))}
+                
+                {currentWeek && (
+                  <ReferenceLine
+                    x={currentWeek.week}
+                    stroke="#888"
+                    strokeDasharray="3 3"
+                    label={{
+                      value: "This week",
+                      position: "top",
+                      fill: "#888",
+                      fontSize: 12,
+                      offset: 10,
+                    }}
+                  />
+                )}
+                
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  iconType="line"
+                  iconSize={10}
+                  wrapperStyle={{ 
+                    paddingTop: '20px',
+                    bottom: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)'
                   }}
                 />
-              )}
-            </RechartsLineChart>
-          </ResponsiveContainer>
+              </RechartsLineChart>
+            </ResponsiveContainer>
+          </div>
         </ChartContainer>
       </CardContent>
       {(trendPercentage || dateRange) && (
