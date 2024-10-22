@@ -1,11 +1,13 @@
 from gateways.database.mongodb import MongoDBGateway
 from entities.plan import Plan, PlanSession, PlanInvitee
 from entities.activity import Activity
+from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, create_model
 from gateways.activities import ActivitiesGateway, ActivityAlreadyExistsException
-from datetime import datetime, timedelta
+from gateways.users import UsersGateway
+from datetime import datetime, timedelta, UTC
 from entities.user import User
 import concurrent.futures
 from loguru import logger
@@ -16,6 +18,8 @@ class PlanController:
     def __init__(self):
         self.db_gateway = MongoDBGateway("plans")
         self.activities_gateway = ActivitiesGateway()
+        self.users_gateway = UsersGateway()
+        self.plan_invitation_gateway = MongoDBGateway("plan_invitations")
         logger.log("CONTROLLERS", "PlanController initialized")
 
     def create_plan(self, plan: Plan) -> Plan:
@@ -207,7 +211,7 @@ class PlanController:
             )
 
             new_activities = [
-                {**activity.dict(), "id": activity.id}
+                {**activity.dict(), "id": str(ObjectId())}
                 for activity in response.plan.activities
             ]
             return {
@@ -221,7 +225,7 @@ class PlanController:
                             (
                                 a["id"]
                                 for a in new_activities
-                                if a["title"].lower() == session.activity_name
+                                if a["title"].lower() == session.activity_name.lower()
                             ),
                             None,
                         ),
@@ -305,6 +309,61 @@ class PlanController:
         for plan_data in all_plans:
             plan = Plan(**plan_data)
             self.update_plan_sessions_with_activity_ids(plan)
+
+    def invite_user_to_plan(self, plan_id: str, sender_id: str, recipient_id: str) -> PlanInvitation:
+        logger.log("CONTROLLERS", f"Inviting user {recipient_id} to plan {plan_id}")
+        invitation = PlanInvitation.new(plan_id, sender_id, recipient_id)
+        self.plan_invitation_gateway.write(invitation.dict())
+        
+        # Update recipient's pending_plan_invitations
+        recipient = self.users_gateway.get_user_by_id(recipient_id)
+        recipient.pending_plan_invitations.append(invitation.id)
+        self.users_gateway.update_user(recipient)
+        
+        return invitation
+
+    def accept_plan_invitation(self, invitation_id: str) -> Plan:
+        invitation = self.plan_invitation_gateway.query("id", invitation_id)[0]
+        invitation = PlanInvitation(**invitation)
+        
+        if invitation.status != "pending":
+            raise ValueError("Invitation is not pending")
+        
+        plan = self.get_plan(invitation.plan_id)
+        recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
+        
+        # Update invitation status
+        invitation.status = "accepted"
+        invitation.updated_at = datetime.now(UTC).isoformat()
+        self.plan_invitation_gateway.write(invitation.dict())
+        
+        # Add recipient to plan invitees
+        plan.invitees.append(PlanInvitee(user_id=recipient.id, name=recipient.name))
+        self.update_plan(plan)
+        
+        # Add plan to recipient's plan_ids
+        recipient.plan_ids.append(plan.id)
+        recipient.pending_plan_invitations.remove(invitation_id)
+        self.users_gateway.update_user(recipient)
+        
+        return plan
+
+    def reject_plan_invitation(self, invitation_id: str) -> None:
+        invitation = self.plan_invitation_gateway.query("id", invitation_id)[0]
+        invitation = PlanInvitation(**invitation)
+        
+        if invitation.status != "pending":
+            raise ValueError("Invitation is not pending")
+        
+        # Update invitation status
+        invitation.status = "rejected"
+        invitation.updated_at = datetime.now(UTC).isoformat()
+        self.plan_invitation_gateway.write(invitation.dict())
+        
+        # Remove invitation from recipient's pending_plan_invitations
+        recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
+        recipient.pending_plan_invitations.remove(invitation_id)
+        self.users_gateway.update_user(recipient)
 
 
 if __name__ == "__main__":

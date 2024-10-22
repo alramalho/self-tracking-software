@@ -85,6 +85,7 @@ export interface Plan {
     descriptive_guide: string;
     quantity: number;
     activity_id?: string;
+    activity_name?: string;
   }[];
 }
 
@@ -196,7 +197,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           [username]: newUserData,
         }));
 
-        console.log("Fetched user data:", response.data);
       } catch (err: unknown) {
         console.error("Error fetching data:", err);
         router.push("/")
@@ -229,7 +229,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setTimelineData(newTimelineData);
 
-      console.log("Fetched timeline data:", response.data);
     } catch (err: unknown) {
       console.error("Error fetching timeline data:", err);
       toast.error("Failed to fetch timeline data. Please try again.");

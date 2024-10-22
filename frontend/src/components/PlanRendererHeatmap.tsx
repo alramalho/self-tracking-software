@@ -19,6 +19,9 @@ const PlanRendererHeatmap: React.FC<PlanRendererProps> = ({ plan, title }) => {
       count: session.quantity,
     }));
 
+    console.log({plan});
+    console.log({sessions});
+
     if (plan.finishing_date) {
       sessions.push({
         date: format(plan.finishing_date, "yyyy/MM/dd"),

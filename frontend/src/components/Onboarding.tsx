@@ -117,18 +117,34 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const handlePlanSelection = async (plan: GeneratedPlan) => {
     try {
       if (plan) {
-        setSelectedPlan(convertGeneratedPlanToApiPlan(plan));
-        setStep(7);
+        const response = await api.post("/api/create-plan", {
+          ...plan,
+          emoji: selectedEmoji,
+        });
+        const createdPlan = response.data.plan;
+        setSelectedPlan(createdPlan);
+        setUserData("me", {
+          ...userData["me"],
+          plans: [
+            ...userData["me"].plans,
+            createdPlan,
+          ],
+        });
+        setStep(7); // Move to the invitation step
       }
     } catch (error) {
-      setStep(6);
       console.error("Plan creation error:", error);
+      toast.error("Failed to create plan. Please try again.");
     }
   };
 
   const handleUserInvite = (user: UserSearchResult) => {
     setSelectedPlan((prev) => {
       if (!prev) return null;
+      // Check if the user is already in the invitees list
+      if (prev.invitees?.some(invitee => invitee.user_id === user.user_id)) {
+        return prev; // User already in the list, don't add again
+      }
       return {
         ...prev,
         invitees: [...(prev.invitees || []), user],
@@ -363,7 +379,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     onClick={() => handlePlanSelection(plan)}
                   >
                     <CheckIcon className="mr-2 h-4 w-4" />
-                    Select Plan
+                    Select and Create Plan
                   </Button>
                 </div>
               ))}
@@ -382,13 +398,13 @@ const Onboarding: React.FC<OnboardingProps> = ({
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Challlenge People to do it wth you! (Optional)</CardTitle>
+              <CardTitle>Challenge People to do it with you! (Optional)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-4 flex flex-wrap gap-2">
                 {selectedPlan?.invitees?.map((invitee) => (
                   <Avatar
-                    key={invitee.username}
+                    key={invitee.user_id}
                     className="cursor-pointer"
                     onClick={() => removeInvitee(invitee)}
                   >
@@ -406,28 +422,20 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <Button
                 className="w-full mt-4"
                 onClick={async () => {
-                  await toast.promise(
-                    api.post("/api/create-plan", {
-                      ...selectedPlan,
-                      emoji: selectedEmoji,
-                    }),
-                    {
-                      loading: "Creating new plan...",
-                      success: "New plan created successfully!",
-                      error: "Failed to create plan. Please try again.",
-                    }
-                  );
-                  setUserData("me", {
-                    ...userData["me"],
-                    plans: [
-                      ...userData["me"].plans,
-                      selectedPlan!,
-                    ],
-                  }); 
-                  onComplete?.(selectedPlan!);
+                  try {
+                    // Send invitations for the already created plan
+                    await Promise.all(selectedPlan?.invitees?.map(invitee => 
+                      api.post(`/api/invite-to-plan/${selectedPlan.id}/${invitee.user_id}`)
+                    ) || []);
+                    toast.success("Invitations sent successfully!");
+                    onComplete?.(selectedPlan!);
+                  } catch (error) {
+                    console.error("Error sending invitations:", error);
+                    toast.error("Failed to send invitations. Please try again.");
+                  }
                 }}
               >
-                Done
+                Send Invitations
               </Button>
             </CardContent>
           </Card>

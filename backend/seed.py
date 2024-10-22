@@ -6,17 +6,19 @@ from datetime import timedelta
 from entities.user import User
 from entities.activity import Activity, ActivityEntry
 from entities.plan import Plan, PlanSession, PlanInvitee
+from entities.plan_invitation import PlanInvitation
+from entities.friend_request import FriendRequest
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
 from controllers.plan_controller import PlanController
-from bson.objectid import ObjectId
+from bson import ObjectId
 
 def generate_dummy_data():
     users_gateway = UsersGateway()
     activities_gateway = ActivitiesGateway()
     plans_controller = PlanController()
 
-    # Create 3 users
+    # Create 4 users
     users = [
         User.new(id=str(ObjectId("666666666666666666666665")), name="Alex", email="alexandre.ramalho.1998@gmail.com", clerk_id="user_2kUW1zytLj9ERvDqVDDFCvIp5Un", picture="https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c", username="alex"),
         User.new(id=str(ObjectId("666666666666666666666666")), name="Alice", email="alice@example.com", username="alice"),
@@ -105,6 +107,19 @@ def generate_dummy_data():
         )
     ]
 
+    # Create plan invitations
+    plan_invitations = [
+        PlanInvitation.new(plan_id=plans[0].id, sender_id=users[1].id, recipient_id=users[0].id),  # Alice invites Alex
+        PlanInvitation.new(plan_id=plans[1].id, sender_id=users[2].id, recipient_id=users[0].id),  # Bob invites Alex
+        PlanInvitation.new(plan_id=plans[2].id, sender_id=users[3].id, recipient_id=users[0].id),  # Charlie invites Alex
+    ]
+
+    # Create friend requests
+    friend_requests = [
+        FriendRequest.new(sender_id=users[1].id, recipient_id=users[0].id),  # Alice sends friend request to Alex
+        FriendRequest.new(sender_id=users[2].id, recipient_id=users[0].id),  # Bob sends friend request to Alex
+    ]
+
     for user in users:
         try:
             users_gateway.permanently_delete_user(user.id)
@@ -121,7 +136,6 @@ def generate_dummy_data():
             print(f"Error creating activity {activity.title}: {str(e)}")
             return
 
-
     for activity_entry in activity_entries:
         try:
             activities_gateway.permanently_delete_activity_entry(activity_entry.id)
@@ -129,7 +143,6 @@ def generate_dummy_data():
         except Exception as e:
             print(f"Error creating entry for {activity_entry.activity_id}: {str(e)}")
             return
-
 
     for plan in plans:
         try:
@@ -142,12 +155,34 @@ def generate_dummy_data():
             print(f"Error creating plan {plan.goal}: {str(e)}")
             return
 
+    for invitation in plan_invitations:
+        try:
+            plans_controller.plan_invitation_gateway.write(invitation.dict())
+            recipient = next((u for u in users if u.id == invitation.recipient_id), None)
+            recipient.pending_plan_invitations.append(invitation.id)
+            users_gateway.update_user(recipient)
+        except Exception as e:
+            print(f"Error creating plan invitation: {str(e)}")
+            return
+
+    for friend_request in friend_requests:
+        try:
+            users_gateway.friend_request_gateway.write(friend_request.dict())
+            recipient = next((u for u in users if u.id == friend_request.recipient_id), None)
+            recipient.pending_friend_requests.append(friend_request.id)
+            users_gateway.update_user(recipient)
+        except Exception as e:
+            print(f"Error creating friend request: {str(e)}")
+            return
+
     # Print out the final state
     print("\nFinal state:")
     for user in users:
         user_data = users_gateway.get_user_by_id(user.id)
         print(f"\nUser: {user_data.name} (username: {user_data.username})")
         print(f"Friends: {', '.join([users_gateway.get_user_by_id(friend_id).name for friend_id in user_data.friend_ids])}")
+        print(f"Pending Plan Invitations: {len(user_data.pending_plan_invitations)}")
+        print(f"Pending Friend Requests: {len(user_data.pending_friend_requests)}")
         
         user_activities = activities_gateway.get_all_activities_by_user_id(user.id)
         print("Activities:")

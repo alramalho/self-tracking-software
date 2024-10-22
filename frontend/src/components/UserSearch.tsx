@@ -17,7 +17,7 @@ interface UserSearchProps {
 const UserSearch: React.FC<UserSearchProps> = ({ onUserClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [searchResult, setSearchResult] = useState<UserSearchResult | null>(null);
+  const [searchResults, setSearchResults] = useState<UserSearchResult[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const api = useApiWithAuth();
 
@@ -27,15 +27,15 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick }) => {
         setIsLoading(true);
         try {
           const { data } = await api.get(`/api/search-users/${debouncedSearchTerm}`);
-          setSearchResult(data);
+          setSearchResults(data);
         } catch (error) {
           console.error('Error searching for user:', error);
-          setSearchResult(null);
+          setSearchResults(null);
         } finally {
           setIsLoading(false);
         }
       } else {
-        setSearchResult(null);
+        setSearchResults(null);
       }
     };
 
@@ -52,13 +52,14 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick }) => {
         className="w-full p-2 border border-gray-300 rounded-md mb-4"
       />
       {isLoading && <p className="text-center">Searching...</p>}
-      {!isLoading && searchTerm && !searchResult && (
+      {!isLoading && searchTerm && !searchResults  && (
         <p className="text-center text-sm text-gray-500">
           No user &apos;{searchTerm}&apos; found
         </p>
       )}
-      {searchResult && (
+      {searchResults && searchResults.map((searchResult) => (
         <div 
+          key={searchResult.user_id}
           className="flex items-center space-x-4 hover:bg-gray-100 p-2 rounded-md transition-colors cursor-pointer"
           onClick={() => onUserClick(searchResult)}
         >
@@ -71,7 +72,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick }) => {
             <p className="text-sm text-gray-600">@{searchResult.username}</p>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };

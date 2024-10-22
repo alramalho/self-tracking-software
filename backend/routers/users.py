@@ -726,4 +726,26 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             detail=f"An error occurred while fetching timeline data: {str(e)}",
         )
 
+@router.post("/invite-to-plan/{plan_id}/{recipient_id}")
+async def invite_to_plan(plan_id: str, recipient_id: str, user: User = Depends(is_clerk_user)):
+    try:
+        invitation = plan_controller.invite_user_to_plan(plan_id, user.id, recipient_id)
+        return {"message": "Invitation sent successfully", "invitation": invitation}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/accept-plan-invitation/{invitation_id}")
+async def accept_plan_invitation(invitation_id: str, user: User = Depends(is_clerk_user)):
+    try:
+        plan = plan_controller.accept_plan_invitation(invitation_id)
+        return {"message": "Invitation accepted successfully", "plan": plan}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/reject-plan-invitation/{invitation_id}")
+async def reject_plan_invitation(invitation_id: str, user: User = Depends(is_clerk_user)):
+    try:
+        plan_controller.reject_plan_invitation(invitation_id)
+        return {"message": "Invitation rejected successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

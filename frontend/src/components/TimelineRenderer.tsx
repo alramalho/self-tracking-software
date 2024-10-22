@@ -26,7 +26,6 @@ const TimelineRenderer: React.FC = () => {
   }, [fetchTimelineData]);
 
   useEffect(() => {
-    console.log("Timeline data:", timelineData);
   }, [timelineData]);
 
   if (isTimelineLoading) {
