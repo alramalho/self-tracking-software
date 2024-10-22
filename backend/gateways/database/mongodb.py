@@ -9,11 +9,10 @@ from gateways.database.base import DBGateway
 from loguru import logger
 import requests
 import json
-import os
 
 class MongoDBGateway(DBGateway):
     def __init__(self, collection_name: str):
-        self.client = MongoClient(os.environ.get("MONGODB_URI"))
+        self.client = MongoClient(MONGO_DB_CONNECTION_STRING)
         db_name = f"{MONGO_DB_NAME.lower()}_{ENVIRONMENT.lower()}"
         self.db = self.client[db_name]
         self.collection: Collection = self.db[collection_name]
@@ -25,6 +24,11 @@ class MongoDBGateway(DBGateway):
         return data
 
     def delete_all(self, key: str, value: Any) -> None:
+        if key == 'id':
+            key = '_id'
+            if type(value) == str:
+                value = ObjectId(value)
+
         logger.log("DB", f'MongoDB: Deleting from MongoDB ... Key:"{key}" Value:"{value}"')
         result = self.collection.delete_many({key: value})
         logger.log("DB", f"MongoDB: Deleted {result.deleted_count} documents")
@@ -121,11 +125,22 @@ class MongoDBGateway(DBGateway):
         return [self._convert_from_mongo(doc) for doc in self.collection.find()]
 
     def query(self, key: str, value: Any) -> List[Dict]:
+        if key == 'id':
+            key = '_id'
+            if type(value) == str:
+                value = ObjectId(value)
+
+
         logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Key:"{key}" Value:"{value}"')
         result = [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
         return result
 
     def count(self, key: str, value: Any) -> int:
+        if key == 'id':
+            key = '_id'
+            if type(value) == str:
+                value = ObjectId(value)
+
         logger.log("DB", f'MongoDB: Counting in MongoDB ... Key:"{key}" Value:"{value}"')
         return self.collection.count_documents({key: value})
 
