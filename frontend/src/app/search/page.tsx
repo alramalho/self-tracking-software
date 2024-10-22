@@ -9,7 +9,7 @@ import Link from 'next/link';
 const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [searchResult, setSearchResult] = useState<{ username: string; name: string; picture: string } | null>(null);
+  const [searchResults, setSearchResults] = useState<{ user_id: string; username: string; name: string; picture: string }[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const api = useApiWithAuth();
 
@@ -19,15 +19,16 @@ const SearchPage = () => {
         setIsLoading(true);
         try {
           const { data } = await api.get(`/api/search-users/${debouncedSearchTerm}`);
-          setSearchResult(data);
+          setSearchResults(data);
+          console.log({data});
         } catch (error) {
           console.error('Error searching for user:', error);
-          setSearchResult(null);
+          setSearchResults(null);
         } finally {
           setIsLoading(false);
         }
       } else {
-        setSearchResult(null);
+        setSearchResults(null);
       }
     };
 
@@ -45,25 +46,25 @@ const SearchPage = () => {
         className="w-full p-2 border border-gray-300 rounded-md mb-4"
       />
       {isLoading && <p className="text-center">Searching...</p>}
-      {!isLoading && searchTerm && !searchResult && (
+      {!isLoading && searchTerm && !searchResults && (
         <p className="text-center text-sm text-gray-500">
           No user &apos;{searchTerm}&apos; found
         </p>
       )}
-      {searchResult && (
-        <Link href={`/profile/${searchResult.username}`} className="block">
-          <div className="flex items-center space-x-4 hover:bg-gray-100 p-2 rounded-md transition-colors">
+      {searchResults != null && searchResults.map((result) => (
+        <Link key={result.user_id} href={`/profile/${result.username}`} className="block">
+          <div className="flex items-center space-x-4 hover:bg-gray-100 p-2 rounded-md transition-colors border-b border-gray-200">
             <Avatar>
-              <AvatarImage src={searchResult.picture || '/default-avatar.png'} alt={searchResult.name || searchResult.username} />
-              <AvatarFallback>{searchResult.name ? searchResult.name[0] : searchResult.username[0]}</AvatarFallback>
+              <AvatarImage src={result.picture || '/default-avatar.png'} alt={result.name || result.username} />
+              <AvatarFallback>{result.name ? result.name[0] : "U"}</AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-semibold">{searchResult.name}</p>
-              <p className="text-sm text-gray-600">@{searchResult.username}</p>
+              <p className="font-semibold">{result.name}</p>
+              <p className="text-sm text-gray-600">@{result.username}</p>
             </div>
           </div>
         </Link>
-      )}
+      ))}
     </div>
   );
 };
