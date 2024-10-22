@@ -41,6 +41,7 @@ const ProfilePage: React.FC = () => {
   const currentUserFriendRequests = userData["me"]?.friendRequests;
   const isOwnProfile = currentUser?.username === username || username === "me";
   const profileData = isOwnProfile ? userData["me"] : userData[username];
+  const { activityEntries, activities } = profileData;
   const api = useApiWithAuth();
 
   useEffect(() => {
@@ -110,13 +111,13 @@ const ProfilePage: React.FC = () => {
   const photosWithDetails = useMemo(() => {
     if (!profileData) return [];
     const now = new Date();
-    const { activityEntries, activities } = profileData;
     return activityEntries
       .filter(
         (entry) =>
           entry.image?.url &&
           entry.image?.created_at &&
           entry.image?.expires_at &&
+          new Date(entry.image.expires_at!) > now &&
           entry.image?.keep_in_profile
       )
       .map((entry) => {
@@ -135,7 +136,6 @@ const ProfilePage: React.FC = () => {
             daysUntilExpiration > 0 ? daysUntilExpiration : 0,
         };
       })
-      .filter((photo) => photo.daysUntilExpiration > 0)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [profileData]);
 
@@ -298,7 +298,7 @@ const ProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
-                No photos available yet.
+                {activityEntries.length === 0 ? "No activities available yet." : `${user?.name}'s ${activities.length} past activities photos have expired.`}
               </div>
             )}
           </TabsContent>
