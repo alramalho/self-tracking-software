@@ -1,5 +1,5 @@
 from shared.logger import create_logger
-create_logger(level="INFO")
+create_logger(level="DEBUG")
 import datetime
 from datetime import timedelta
 
@@ -10,13 +10,20 @@ from entities.plan_invitation import PlanInvitation
 from entities.friend_request import FriendRequest
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
+from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
+from services.notification_manager import NotificationManager
+from entities.mood_report import MoodReport
+from entities.notification import Notification
 from bson import ObjectId
+import random
 
 def generate_dummy_data():
     users_gateway = UsersGateway()
     activities_gateway = ActivitiesGateway()
-    plans_controller = PlanController()
+    moods_gateway = MoodsGateway()
+    plan_controller = PlanController()
+    notification_manager = NotificationManager()
 
     # Create 4 users
     users = [
@@ -120,6 +127,39 @@ def generate_dummy_data():
         FriendRequest.new(sender_id=users[2].id, recipient_id=users[0].id),  # Bob sends friend request to Alex
     ]
 
+    # Create notifications
+    notifications = [
+        # Friend request notifications
+        notification_manager.create_notification(
+            user_id=users[0].id,
+            message=f"{users[1].name} sent you a friend request",
+            notification_type="friend_request",
+            related_id=friend_requests[0].id
+        ),
+        notification_manager.create_notification(
+            user_id=users[0].id,
+            message=f"{users[2].name} sent you a friend request",
+            notification_type="friend_request",
+            related_id=friend_requests[1].id
+        ),
+        
+        # Plan invitation notifications
+        notification_manager.create_notification(
+            user_id=users[0].id,
+            message=f"{users[1].name} invited you to join the plan: {plans[0].goal}",
+            notification_type="plan_invitation",
+            related_id=plan_invitations[0].id
+        ),
+        notification_manager.create_notification(
+            user_id=users[0].id,
+            message=f"{users[2].name} invited you to join the plan: {plans[1].goal}",
+            notification_type="plan_invitation",
+            related_id=plan_invitations[1].id
+        ),
+        notification_manager.create_notification(
+            user_id=users[0].id,
+            message=f"{users[3].name} invited you to join the plan: {plans[2].goal}",
+            notification_type="plan_invitation",
     for user in users:
         try:
             users_gateway.permanently_delete_user(user.id)
@@ -146,8 +186,8 @@ def generate_dummy_data():
 
     for plan in plans:
         try:
-            plans_controller.permanently_delete_plan(plan.id)
-            plans_controller.create_plan(plan)
+            plan_controller.permanently_delete_plan(plan.id)
+            plan_controller.create_plan(plan)
             users_gateway.add_plan_to_user(plan.user_id, plan.id)
             user = next((u for u in users if u.id == plan.user_id), None)
             user.plan_ids.append(plan.id)
@@ -157,7 +197,7 @@ def generate_dummy_data():
 
     for invitation in plan_invitations:
         try:
-            plans_controller.plan_invitation_gateway.write(invitation.dict())
+            plan_controller.plan_invitation_gateway.write(invitation.dict())
             recipient = next((u for u in users if u.id == invitation.recipient_id), None)
             recipient.pending_plan_invitations.append(invitation.id)
             users_gateway.update_user(recipient)
@@ -167,7 +207,7 @@ def generate_dummy_data():
 
     for friend_request in friend_requests:
         try:
-            users_gateway.friend_request_gateway.write(friend_request.dict())
+            users_gateway.friend_request_gateway.create_friend_request(friend_request)
             recipient = next((u for u in users if u.id == friend_request.recipient_id), None)
             recipient.pending_friend_requests.append(friend_request.id)
             users_gateway.update_user(recipient)
@@ -192,7 +232,7 @@ def generate_dummy_data():
             for entry in entries:
                 print(f"  * {entry.date}: {entry.quantity} {activity.measure}")
         
-        user_plans = plans_controller.get_plans(user.plan_ids)
+        user_plans = plan_controller.get_plans(user.plan_ids)
         print("Plans:")
         for plan in user_plans:
             print(f"- {plan.goal} (Finishing date: {plan.finishing_date})")
@@ -203,3 +243,4 @@ def generate_dummy_data():
 
 if __name__ == "__main__":
     generate_dummy_data()
+

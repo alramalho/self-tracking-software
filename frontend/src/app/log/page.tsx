@@ -59,7 +59,7 @@ const LogPage: React.FC = () => {
     quantity: number
   ) => {
     try {
-      const response = await api.post("/api/log-activity", {
+      const response = await api.post("/log-activity", {
         activity_id: activityId,
         iso_date_string: date.toISOString(),
         quantity: quantity,

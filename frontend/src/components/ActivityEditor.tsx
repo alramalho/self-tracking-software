@@ -26,7 +26,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   const handleSave = async () => {
     try {
-      const response = await api.post("/api/upsert-activity", {
+      const response = await api.post("/upsert-activity", {
         ...activity,
         emoji,
         title,

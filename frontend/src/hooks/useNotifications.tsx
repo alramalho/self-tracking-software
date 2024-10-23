@@ -262,7 +262,7 @@ export const NotificationsProvider = ({
 
   const initiateUserRecurrentCheckin = async () => {
     try {
-      await api.post("/api/initiate-user-recurrent-checkin");
+      await api.post("/initiate-user-recurrent-checkin");
       console.log("Recurrent check-in initiated successfully");
     } catch (error) {
       console.error("Failed to initiate recurrent check-in:", error);
@@ -280,7 +280,7 @@ export const NotificationsProvider = ({
         const auth = await arrayBufferToBase64Async(
           subscription.getKey("auth")!
         );
-        await api.post("/api/update-pwa-status", {
+        await api.post("/update-pwa-status", {
           is_pwa_installed: true,
           is_pwa_notifications_enabled: true,
           pwa_subscription_endpoint: subscription.endpoint,
@@ -303,7 +303,7 @@ export const NotificationsProvider = ({
     url?: string
   ) => {
     try {
-      await api.post("/api/trigger-push-notification", {
+      await api.post("/trigger-push-notification", {
         title,
         body,
         icon,

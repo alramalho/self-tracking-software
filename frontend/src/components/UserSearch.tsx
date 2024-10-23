@@ -26,7 +26,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick }) => {
       if (debouncedSearchTerm) {
         setIsLoading(true);
         try {
-          const { data } = await api.get(`/api/search-users/${debouncedSearchTerm}`);
+          const { data } = await api.get(`/search-users/${debouncedSearchTerm}`);
           setSearchResults(data);
         } catch (error) {
           console.error('Error searching for user:', error);

@@ -323,6 +323,7 @@ class PlanController:
         return invitation
 
     def accept_plan_invitation(self, invitation_id: str) -> Plan:
+        logger.log("CONTROLLERS", f"Accepting plan invitation: {invitation_id}")
         invitation = self.plan_invitation_gateway.query("id", invitation_id)[0]
         invitation = PlanInvitation(**invitation)
         
@@ -349,6 +350,7 @@ class PlanController:
         return plan
 
     def reject_plan_invitation(self, invitation_id: str) -> None:
+        logger.log("CONTROLLERS", f"Rejecting plan invitation: {invitation_id}")
         invitation = self.plan_invitation_gateway.query("id", invitation_id)[0]
         invitation = PlanInvitation(**invitation)
         

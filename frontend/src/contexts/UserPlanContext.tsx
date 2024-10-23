@@ -105,6 +105,19 @@ export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
   }[];
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  message: string;
+  created_at: string;
+  processed_at: string | null;
+  opened_at: string | null;
+  concluded_at: string | null;
+  status: "pending" | "processed" | "opened" | "concluded";
+  type: "friend_request" | "plan_invitation" | "engagement";
+  related_id: string | null;
+}
+
 export interface UserDataEntry {
   user: User | null;
   plans: ApiPlan[];
@@ -112,6 +125,7 @@ export interface UserDataEntry {
   activityEntries: ActivityEntry[];
   moodReports: MoodReport[];
   friendRequests: FriendRequest[];
+  notifications: Notification[];
   expiresAt: string;
 }
 
@@ -180,7 +194,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         }
         setLoading(true);
-        const response = await api.get(`/api/load-all-user-data/${username}`);
+        const response = await api.get(`/load-all-user-data/${username}`);
+        const notificationsResponse = await api.get('/load-notifications');
 
         const newUserData: UserDataEntry = {
           user: response.data.user,
@@ -189,6 +204,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           activityEntries: response.data.activity_entries,
           moodReports: response.data.mood_reports,
           friendRequests: response.data.friend_requests,
+          notifications: notificationsResponse.data.notifications,
           expiresAt: addMinutes(new Date(), 10).toISOString(),
         };
 
@@ -218,7 +234,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       if (timelineData) return;
 
       setLoading(true);
-      const response = await api.get('/api/timeline');
+      const response = await api.get('/timeline');
 
       const newTimelineData: TimelineData = {
         recommendedUsers: response.data.recommended_users,

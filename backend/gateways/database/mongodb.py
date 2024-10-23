@@ -47,7 +47,10 @@ class MongoDBGateway(DBGateway):
             else:
                 # Document doesn't exist, create new ObjectId
                 try:
-                    data['_id'] = ObjectId(data['id'])
+                    if type(data['id']) == str:
+                        data['_id'] = ObjectId(data['id'])
+                    else:
+                        data['_id'] = data['id']
                 except Exception as e:
                     logger.error(f"Error creating ObjectId from {data['id']}: {e}. Creating new ObjectId.")
                     data['_id'] = ObjectId()

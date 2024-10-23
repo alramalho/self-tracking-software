@@ -78,7 +78,7 @@ const ProfilePage: React.FC = () => {
   const handleSendFriendRequest = async () => {
     if (profileData && profileData.user) {
       try {
-        await api.post(`/api/send-friend-request/${profileData.user.id}`);
+        await api.post(`/send-friend-request/${profileData.user.id}`);
 
         // Update the local state to reflect the sent friend request
         fetchUserData();
@@ -97,7 +97,7 @@ const ProfilePage: React.FC = () => {
           (req) => req.sender_id === profileData.user?.id && req.status === "pending"
         );
         if (request) {
-          await api.post(`/api/friend-requests/${request.id}/${action}`);
+          await api.post(`/friend-requests/${request.id}/${action}`);
           toast.success(`Friend request ${action}ed`);
           fetchUserData();
         }

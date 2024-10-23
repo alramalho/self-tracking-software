@@ -231,7 +231,7 @@ const LogPage: React.FC = () => {
       if (notificationId) {
         try {
           await authedApi.post(
-            `/api/mark-notification-opened?notification_id=${notificationId}`
+            `/mark-notification-opened?notification_id=${notificationId}`
           );
         } catch (error) {
           console.error("Error marking notification as opened:", error);

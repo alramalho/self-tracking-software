@@ -78,7 +78,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
     setIsCheckingUsername(true);
     try {
-      const response = await api.get(`/api/check-username/${username}`);
+      const response = await api.get(`/check-username/${username}`);
       setIsUsernameAvailable(!response.data.exists);
     } catch (error) {
       console.error("Error checking username:", error);
@@ -97,7 +97,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const handleGeneratePlans = async () => {
     setIsGenerating(true);
     try {
-      const response = await api.post("/api/generate-plans", {
+      const response = await api.post("/generate-plans", {
         goal,
         finishingDate: finishingDate?.toISOString().split("T")[0],
         planDescription: planDescription.trim() || undefined,
@@ -117,7 +117,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const handlePlanSelection = async (plan: GeneratedPlan) => {
     try {
       if (plan) {
-        const response = await api.post("/api/create-plan", {
+        const response = await api.post("/create-plan", {
           ...plan,
           emoji: selectedEmoji,
         });
@@ -182,7 +182,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 className="w-full"
                 onClick={() => {
                   if (!isNewPlan) {
-                    api.post("/api/update-user", { name });
+                    api.post("/update-user", { name });
                     setUserData("me", {
                       ...userData["me"],
                       // @ts-ignore
@@ -236,7 +236,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 className="w-full"
                 onClick={() => {
                   if (username.trim()) {
-                    api.post("/api/update-user", { username });
+                    api.post("/update-user", { username });
                     setUserData("me", {
                       ...userData["me"],
                       // @ts-ignore
@@ -425,7 +425,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                   try {
                     // Send invitations for the already created plan
                     await Promise.all(selectedPlan?.invitees?.map(invitee => 
-                      api.post(`/api/invite-to-plan/${selectedPlan.id}/${invitee.user_id}`)
+                      api.post(`/invite-to-plan/${selectedPlan.id}/${invitee.user_id}`)
                     ) || []);
                     toast.success("Invitations sent successfully!");
                     onComplete?.(selectedPlan!);

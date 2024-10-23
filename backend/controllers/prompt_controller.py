@@ -5,7 +5,6 @@ import pytz
 from gateways.activities import ActivitiesGateway
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
-from controllers.processed_notification_controller import ProcessedNotificationController
 
 
 class PromptController:
@@ -14,14 +13,16 @@ class PromptController:
             return self._get_user_recurrent_checkin_prompt(user_id)
         else:
             raise ValueError(f"Prompt tag {prompt_tag} not found")
+        
     def _get_user_recurrent_checkin_prompt(self, user_id: str) -> str:
+
+        from services.notification_manager import NotificationManager
+        notification_manager = NotificationManager()    
 
         activities_gateway = ActivitiesGateway()
         activities = activities_gateway.get_all_activities_by_user_id(user_id)
         
-        processed_notification_controller = ProcessedNotificationController()
-
-        notification_history = "\n".join([notification.message for notification in processed_notification_controller.get_last_notifications_sent_to_user(user_id, limit=5)])
+        notification_history = "\n".join([notification.message for notification in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)])
 
         return f"""
             You are Jarvis, a friendly AI assistant focused on engaging the user in conversations about their activities, mood, and personal growth.

@@ -40,7 +40,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     formData.append('keepInProfile', keepInProfile.toString());
 
     try {
-      await api.post('/api/store-activity-photo', formData, {
+      await api.post('/store-activity-photo', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

@@ -25,8 +25,9 @@ from fastapi import WebSocket
 import base64
 
 from shared.executor import executor
-from controllers.scheduled_notification_controller import ScheduledNotificationController, ScheduledNotification
 from gateways.users import UsersGateway
+from services.notification_manager import NotificationManager
+from entities.notification import Notification
 
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
@@ -305,10 +306,10 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
     
     return text_response, audio_response, activities, activity_entries, mood_report, notification_text
 
-def initiate_recurrent_checkin(user_id: str) -> ScheduledNotification:
-    notification_controller = ScheduledNotificationController()
+def initiate_recurrent_checkin(user_id: str) -> Notification:
+    notification_manager = NotificationManager()
     
-    return notification_controller.create(
+    return notification_manager.create_scheduled_notification(
         user_id=user_id,
         prompt_tag="user-recurrent-checkin",
         recurrence="daily",
