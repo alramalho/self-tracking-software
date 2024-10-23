@@ -27,9 +27,9 @@ class Plan(BaseModel):
     created_at: str
 
     @classmethod
-    def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: List[PlanSession], invitees: List[PlanInvitee] = []) -> "Plan":
+    def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: List[PlanSession], invitees: List[PlanInvitee] = [], id: Optional[str] = None) -> "Plan":
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             user_id=user_id,
             goal=goal,
             emoji=emoji,  # Add this line

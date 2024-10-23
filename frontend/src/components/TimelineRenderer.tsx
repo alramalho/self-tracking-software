@@ -23,10 +23,8 @@ const TimelineRenderer: React.FC = () => {
       setIsTimelineLoading(false);
     };
     fetchData();
-  }, [fetchTimelineData]);
+  }, []);
 
-  useEffect(() => {
-  }, [timelineData]);
 
   if (isTimelineLoading) {
     return (

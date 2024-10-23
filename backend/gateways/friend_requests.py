@@ -29,7 +29,6 @@ class FriendRequestGateway:
 
     def get_pending_requests(self, user_id: str) -> List[FriendRequest]:
         data = self.db_gateway.query("recipient_id", user_id)
-        data += self.db_gateway.query("sender_id", user_id)
         return [FriendRequest(**item) for item in data if item["status"] == "pending"]
 
     def delete_friend_request(self, request_id: str):

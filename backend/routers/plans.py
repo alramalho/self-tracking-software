@@ -6,6 +6,8 @@ from controllers.plan_controller import PlanController
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
 from services.notification_manager import NotificationManager
+from loguru import logger
+import traceback
 
 router = APIRouter()
 

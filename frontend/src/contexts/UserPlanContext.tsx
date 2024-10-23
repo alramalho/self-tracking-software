@@ -3,14 +3,14 @@ import React, {
   useContext,
   useState,
   useEffect,
-  useCallback,
 } from "react";
 import { useApiWithAuth } from "@/api";
 import { parseISO, isSameDay, format, addMinutes } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
-import { Router } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
+import axios from "axios";
 
 export interface Activity {
   id: string;
@@ -148,7 +148,7 @@ interface UserPlanContextType {
   getCompletedSessions: (plan: ApiPlan, username?: string) => Promise<CompletedSession[]>;
   loading: boolean;
   error: string | null;
-  fetchUserData: (username?: string) => Promise<void>;
+  fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<void>;
   fetchTimelineData: () => Promise<void>;
 }
 
@@ -178,6 +178,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useSession();
   const router = useRouter();
+  const { signOut } = useClerk();
 
   const api = useApiWithAuth();
 
@@ -186,11 +187,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchTimelineData();
   }, []);
 
-  const fetchUserData = async (username: string = "me") => {
+  const fetchUserData = async ({username = "me", forceUpdate = false}: {username?: string, forceUpdate?: boolean} = {}) => {
       if (!isSignedIn) return;
 
       try {
-        if (userData[username]) {
+        if (userData[username] && !forceUpdate) {
           return;
         }
         setLoading(true);
@@ -215,8 +216,17 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
       } catch (err: unknown) {
         console.error("Error fetching data:", err);
-        router.push("/")
-        toast.error("Failed to fetch user data. Please try again.");
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+          router.push("/signin");
+          toast.error("You are not authorized to access this page. Please log in again.", {
+            icon: '🔒',
+            duration: 5000,
+          });
+          signOut();
+        } else {
+          router.push("/");
+          toast.error("Failed to fetch user data. Please try again.");
+        }
         if (err instanceof Error) {
           setError(err.message);
         } else {
@@ -263,7 +273,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     console.log(`Fetching completed sessions for ${username}`);
 
-    await fetchUserData(username);
+    await fetchUserData({username});
 
     const userDataEntry = userData[username];
     if (!userDataEntry || !userDataEntry.activityEntries.length) return [];

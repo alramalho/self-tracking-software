@@ -12,7 +12,7 @@ class FriendRequest(BaseModel):
     updated_at: Optional[str] = None
 
     @classmethod
-    def new(cls, sender_id: str, recipient_id: str) -> "FriendRequest":
+    def new(cls, sender_id: str, recipient_id: str, id: Optional[str] = None) -> "FriendRequest":
         return cls(
             id=str(ObjectId()),
             sender_id=sender_id,

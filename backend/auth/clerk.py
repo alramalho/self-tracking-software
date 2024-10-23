@@ -91,10 +91,16 @@ async def is_clerk_user(token: str = Depends(get_token_from_request)) -> User:
     validated, clerk_id = await validate_token(token)
     print(f"Clerk ID: {clerk_id}")
     if validated:
-        return UsersGateway().get_user_by("clerk_id", clerk_id)
+        user = UsersGateway().get_user_by_safely("clerk_id", clerk_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
 
 async def is_clerk_user_ws(websocket: WebSocket) -> User:
     token = await get_token_from_websocket(websocket)
     validated, clerk_id = await validate_token(token)
     if validated:
-        return UsersGateway().get_user_by("clerk_id", clerk_id)
+        user = UsersGateway().get_user_by_safely("clerk_id", clerk_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user

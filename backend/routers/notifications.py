@@ -12,7 +12,11 @@ from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from fastapi import Request
 from typing import Optional
-from constants import VAPID_PRIVATE_KEY, VAPID_CLAIMS, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+from constants import (
+    VAPID_PRIVATE_KEY,
+    VAPID_CLAIMS,
+    SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
+)
 import json
 import traceback
 from loguru import logger
@@ -55,13 +59,11 @@ async def process_scheduled_notification(request: Request):
 
         # Send push notification
         try:
-            await send_push_notification(
-                PushNotificationPayload(
-                    title=f"hey {user.name}",
-                    body=processed_notification.message.lower(),
-                    url=f"/log?notification_id={processed_notification.id}",
-                ),
+            notification_manager.send_push_notification(
                 user,
+                title=f"hey {user.name}",
+                body=processed_notification.message.lower(),
+                url=f"/log?notification_id={processed_notification.id}",
             )
             logger.info(f"Sent push notification to {user.id}")
         except Exception as e:
@@ -79,13 +81,12 @@ async def process_scheduled_notification(request: Request):
             )
         )
 
-        return {
-            "message": "Notification processed and sent successfully"
-        }
+        return {"message": "Notification processed and sent successfully"}
     else:
         return JSONResponse(
             status_code=204, content={"message": "No notification processed"}
         )
+
 
 @router.post("/mark-notification-opened")
 async def mark_notification_opened(
@@ -108,6 +109,7 @@ async def mark_notification_opened(
         "notification": updated_notification,
     }
 
+
 @router.post("/initiate-recurrent-checkin")
 async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
     notification = notification_manager.create_notification(
@@ -116,26 +118,36 @@ async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
         notification_type="engagement",
         prompt_tag="user-recurrent-checkin",
         recurrence="daily",
-        time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+        time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
     )
-    return {"message": "Recurrent check-in initiated successfully", "notification": notification}
+    return {
+        "message": "Recurrent check-in initiated successfully",
+        "notification": notification,
+    }
+
 
 @router.get("/load-notifications")
 async def load_notifications(user: User = Depends(is_clerk_user)):
-    notifications = notification_manager.get_all_for_user(user.id)
+    notifications = [n for n in notification_manager.get_all_for_user(user.id) if n.status != "concluded"]
     for notification in notifications:
         if notification.status == "processed":
             notification_manager.mark_as_opened(notification.id)
     return {"notifications": notifications}
 
+
 @router.post("/conclude-notification/{notification_id}")
-async def conclude_notification(notification_id: str, user: User = Depends(is_clerk_user)):
+async def conclude_notification(
+    notification_id: str, user: User = Depends(is_clerk_user)
+):
     notification = notification_manager.get_notification(notification_id)
     if not notification or notification.user_id != user.id:
         raise HTTPException(status_code=404, detail="Notification not found")
-    
+
     concluded_notification = notification_manager.conclude_notification(notification_id)
-    return {"message": "Notification concluded", "notification": concluded_notification}
+    return {
+        "message": "Notification concluded",
+        "notification_id": concluded_notification.id,
+    }
 
 
 @router.post("/trigger-push-notification")
@@ -150,7 +162,9 @@ async def trigger_push_notification(
         url = body.get("url", None)
         icon = body.get("icon", None)
 
-        return await notification_manager.send_push_notification(user, title, body, url, icon)
+        return await notification_manager.send_push_notification(
+            user, title, body, url, icon
+        )
     except Exception as e:
         logger.error(f"Failed to send push notification: {e}")
         logger.error(traceback.format_exc())

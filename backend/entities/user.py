@@ -21,8 +21,7 @@ class User(BaseModel):
     pwa_subscription_auth_token: Optional[str] = None
     plan_ids: List[str] = Field(default_factory=list)
     friend_ids: List[str] = Field(default_factory=list)
-    pending_friend_requests: List[str] = Field(default_factory=list)
-    pending_plan_invitations: List[str] = Field(default_factory=list)
+    plan_invitations: List[str] = Field(default_factory=list)
 
     @classmethod
     def new(cls, email: str, clerk_id: Optional[str] = None, picture: Optional[str] = None, name: Optional[str] = None, id: Optional[str] = None, username: Optional[str] = None) -> "User":

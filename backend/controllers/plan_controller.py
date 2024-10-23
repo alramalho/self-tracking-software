@@ -1,4 +1,5 @@
 from gateways.database.mongodb import MongoDBGateway
+from gateways.plan_invitations import PlanInvitationsGateway
 from entities.plan import Plan, PlanSession, PlanInvitee
 from entities.activity import Activity
 from entities.plan_invitation import PlanInvitation
@@ -19,7 +20,7 @@ class PlanController:
         self.db_gateway = MongoDBGateway("plans")
         self.activities_gateway = ActivitiesGateway()
         self.users_gateway = UsersGateway()
-        self.plan_invitation_gateway = MongoDBGateway("plan_invitations")
+        self.plan_invitation_gateway = PlanInvitationsGateway()
         logger.log("CONTROLLERS", "PlanController initialized")
 
     def create_plan(self, plan: Plan) -> Plan:
@@ -64,6 +65,18 @@ class PlanController:
 
         self.db_gateway.write(plan.dict())
         return plan
+
+    def get_all_user_plans(self, user: User) -> List[Plan]:
+        logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
+        all_plan_ids = set([plan_invitation.plan_id for plan_invitation in self.plan_invitation_gateway.get_all_by_user_id(user.id)])
+        all_plan_ids.update(user.plan_ids)
+        all_plan_ids = list(all_plan_ids)
+        plans = []
+        for plan_id in all_plan_ids:
+            plan = self.get_plan(plan_id)
+            if plan:
+                plans.append(plan)
+        return plans
 
     def get_recommended_plans(self, user: User, limit: int = 5) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting recommended plans for user {user.id}")
@@ -315,21 +328,13 @@ class PlanController:
         invitation = PlanInvitation.new(plan_id, sender_id, recipient_id)
         self.plan_invitation_gateway.write(invitation.dict())
         
-        # Update recipient's pending_plan_invitations
-        recipient = self.users_gateway.get_user_by_id(recipient_id)
-        recipient.pending_plan_invitations.append(invitation.id)
-        self.users_gateway.update_user(recipient)
-        
         return invitation
 
     def accept_plan_invitation(self, invitation_id: str) -> Plan:
         logger.log("CONTROLLERS", f"Accepting plan invitation: {invitation_id}")
         invitation = self.plan_invitation_gateway.query("id", invitation_id)[0]
         invitation = PlanInvitation(**invitation)
-        
-        if invitation.status != "pending":
-            raise ValueError("Invitation is not pending")
-        
+
         plan = self.get_plan(invitation.plan_id)
         recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
         
@@ -339,13 +344,8 @@ class PlanController:
         self.plan_invitation_gateway.write(invitation.dict())
         
         # Add recipient to plan invitees
-        plan.invitees.append(PlanInvitee(user_id=recipient.id, name=recipient.name))
+        plan.invitees.append(PlanInvitee(user_id=recipient.id, name=recipient.name, username=recipient.username, picture=recipient.picture))
         self.update_plan(plan)
-        
-        # Add plan to recipient's plan_ids
-        recipient.plan_ids.append(plan.id)
-        recipient.pending_plan_invitations.remove(invitation_id)
-        self.users_gateway.update_user(recipient)
         
         return plan
 
@@ -362,11 +362,6 @@ class PlanController:
         invitation.updated_at = datetime.now(UTC).isoformat()
         self.plan_invitation_gateway.write(invitation.dict())
         
-        # Remove invitation from recipient's pending_plan_invitations
-        recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
-        recipient.pending_plan_invitations.remove(invitation_id)
-        self.users_gateway.update_user(recipient)
-
 
 if __name__ == "__main__":
     from shared.logger import create_logger

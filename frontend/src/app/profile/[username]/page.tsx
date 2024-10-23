@@ -41,12 +41,12 @@ const ProfilePage: React.FC = () => {
   const currentUserFriendRequests = userData["me"]?.friendRequests;
   const isOwnProfile = currentUser?.username === username || username === "me";
   const profileData = isOwnProfile ? userData["me"] : userData[username];
-  const { activityEntries, activities } = profileData;
+  const { activityEntries, activities } = profileData || {activityEntries: [], activities: []};
   const api = useApiWithAuth();
 
   useEffect(() => {
     if (!profileData) {
-      fetchUserData(isOwnProfile ? "me" : username);
+      fetchUserData({username: isOwnProfile ? "me" : username});
     }
   }, [username, fetchUserData, isOwnProfile, profileData]);
 
@@ -145,10 +145,9 @@ const ProfilePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center min-h-screen p-4">
-        <div className="w-full max-w-3xl">
-          <Loader2 className="w-20 h-20 animate-spin" />
-        </div>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <p className="mt-2">Loading profile</p>
       </div>
     );
   }

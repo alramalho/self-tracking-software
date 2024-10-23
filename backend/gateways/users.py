@@ -141,17 +141,15 @@ class UsersGateway:
     def send_friend_request(self, sender_id: str, recipient_id: str) -> FriendRequest:
         friend_request = FriendRequest.new(sender_id, recipient_id)
         created_request = self.friend_request_gateway.create_friend_request(friend_request)
-        self.append_to_field(recipient_id, "pending_friend_requests", created_request.id)
-        self.append_to_field(sender_id, "pending_friend_requests", created_request.id)
         return created_request
 
     def accept_friend_request(self, request_id: str) -> Tuple[User, User]:
         friend_request = self.friend_request_gateway.get_friend_request(request_id)
         if not friend_request:
-            raise Exception("Invalid friend request")
+            raise Exception(f"Invalid friend request '{request_id}'")
         
         if friend_request.status == "rejected":
-            raise Exception("Friend request is rejected")
+            raise Exception(f"Friend request '{request_id}' is rejected")
 
         sender = self.get_user_by_id(friend_request.sender_id)
         recipient = self.get_user_by_id(friend_request.recipient_id)
@@ -161,7 +159,6 @@ class UsersGateway:
 
         sender.friend_ids.append(recipient.id)
         recipient.friend_ids.append(sender.id)
-        recipient.pending_friend_requests.remove(request_id)
 
         self.update_user(sender)
         self.update_user(recipient)
@@ -173,18 +170,16 @@ class UsersGateway:
     def reject_friend_request(self, request_id: str) -> User:
         friend_request = self.friend_request_gateway.get_friend_request(request_id)
         if not friend_request:
-            raise Exception("Invalid friend request")
+            raise Exception(f"Invalid friend request '{request_id}'")
         
         if friend_request.status == "accepted":
-            raise Exception("Friend request is already accepted")
+            raise Exception(f"Friend request '{request_id}' is already accepted")
         
         recipient = self.get_user_by_id(friend_request.recipient_id)
 
         if friend_request.status == "rejected":
             return recipient
 
-        recipient.pending_friend_requests.remove(request_id)
-        self.update_user(recipient)
 
         self.friend_request_gateway.update_friend_request(request_id, "rejected")
 

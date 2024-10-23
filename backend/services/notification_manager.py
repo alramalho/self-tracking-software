@@ -83,16 +83,18 @@ class NotificationManager:
         if notification and notification.status == "processed":
             notification.opened_at = datetime.now()
             notification.status = "opened"
+            logger.info(f"Notification '{notification_id}' switched from {notification.status} to opened")
             self._update_notification(notification)
             return notification
         return None
 
     def conclude_notification(self, notification_id: str) -> Optional[Notification]:
         notification = self.get_notification(notification_id)
-        if notification and notification.status in ["processed", "opened"]:
+        if notification and notification.status != "concluded":
             notification.concluded_at = datetime.now()
             notification.status = "concluded"
             self._update_notification(notification)
+            logger.info(f"Notification '{notification_id}' switched from {notification.status} to concluded")
             return notification
         return None
 

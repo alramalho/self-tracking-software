@@ -108,6 +108,10 @@ class MongoDBGateway(DBGateway):
                             "path": key,
                             "similarity": "euclidean",
                             "numDimensions": 1024
+                        },
+                        {
+                            "path": "user_id",
+                            "type": "filter"
                         }
                     ]
                 },

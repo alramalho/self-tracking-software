@@ -13,10 +13,8 @@ from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
 from services.notification_manager import NotificationManager
-from entities.mood_report import MoodReport
-from entities.notification import Notification
+import traceback
 from bson import ObjectId
-import random
 
 def generate_dummy_data():
     users_gateway = UsersGateway()
@@ -66,6 +64,7 @@ def generate_dummy_data():
     # Create plans
     plans = [
         Plan.new(
+            id=str(ObjectId("666666666666666666666681")),
             user_id=users[0].id,
             goal="Run a marathon",
             emoji="🏃",
@@ -81,6 +80,7 @@ def generate_dummy_data():
             invitees=[PlanInvitee(user_id=users[1].id, username=users[1].username, name=users[1].name, picture=users[1].picture)]
         ),
         Plan.new(
+            id=str(ObjectId("666666666666666666666682")),
             user_id=users[1].id,
             goal="Meditate daily",
             emoji="🧘",
@@ -95,6 +95,7 @@ def generate_dummy_data():
             ]
         ),
         Plan.new(
+            id=str(ObjectId("666666666666666666666683")),
             user_id=users[2].id,
             goal="100 push-ups challenge",
             emoji="💪",
@@ -116,73 +117,76 @@ def generate_dummy_data():
 
     # Create plan invitations
     plan_invitations = [
-        PlanInvitation.new(plan_id=plans[0].id, sender_id=users[1].id, recipient_id=users[0].id),  # Alice invites Alex
-        PlanInvitation.new(plan_id=plans[1].id, sender_id=users[2].id, recipient_id=users[0].id),  # Bob invites Alex
-        PlanInvitation.new(plan_id=plans[2].id, sender_id=users[3].id, recipient_id=users[0].id),  # Charlie invites Alex
+        PlanInvitation.new(id=str(ObjectId("666666666666666666666684")), plan_id=plans[0].id, sender_id=users[1].id, recipient_id=users[0].id),  # Alice invites Alex
+        PlanInvitation.new(id=str(ObjectId("666666666666666666666685")), plan_id=plans[1].id, sender_id=users[2].id, recipient_id=users[0].id),  # Bob invites Alex
+        PlanInvitation.new(id=str(ObjectId("666666666666666666666686")), plan_id=plans[2].id, sender_id=users[3].id, recipient_id=users[0].id),  # Charlie invites Alex
     ]
 
     # Create friend requests
     friend_requests = [
-        FriendRequest.new(sender_id=users[1].id, recipient_id=users[0].id),  # Alice sends friend request to Alex
-        FriendRequest.new(sender_id=users[2].id, recipient_id=users[0].id),  # Bob sends friend request to Alex
+        FriendRequest.new(id=str(ObjectId("666666666666666666666687")), sender_id=users[1].id, recipient_id=users[0].id),  # Alice sends friend request to Alex
+        FriendRequest.new(id=str(ObjectId("666666666666666666666688")), sender_id=users[2].id, recipient_id=users[0].id),  # Bob sends friend request to Alex
     ]
 
     # Create notifications
-    notifications = [
-        # Friend request notifications
+    notifications = []
+
+    # Friend request notifications
+    for friend_request in friend_requests:
+        sender = next((u for u in users if u.id == friend_request.sender_id), None)
+        notifications.append(
+            notification_manager.create_notification(
+                user_id=friend_request.recipient_id,
+                message=f"{sender.name} sent you a friend request",
+                notification_type="friend_request",
+                related_id=friend_request.id
+            )
+        )
+
+    # Plan invitation notifications
+    for plan_invitation in plan_invitations:
+        sender = next((u for u in users if u.id == plan_invitation.sender_id), None)
+        plan = next((p for p in plans if p.id == plan_invitation.plan_id), None)
+        notifications.append(
+            notification_manager.create_notification(
+                user_id=plan_invitation.recipient_id,
+                message=f"{sender.name} invited you to join the plan: {plan.goal}",
+                notification_type="plan_invitation",
+                related_id=plan_invitation.id
+            )
+        )
+
+    # Engagement notifications (these are not based on existing data, so we'll keep them as is)
+    notifications.extend([
         notification_manager.create_notification(
             user_id=users[0].id,
-            message=f"{users[1].name} sent you a friend request",
-            notification_type="friend_request",
-            related_id=friend_requests[0].id
+            message="How's your training going? Let's check in on your progress!",
+            notification_type="engagement",
+            prompt_tag="user-recurrent-checkin",
+            recurrence="daily",
+            time_deviation_in_hours=2,
         ),
         notification_manager.create_notification(
             user_id=users[0].id,
-            message=f"{users[2].name} sent you a friend request",
-            notification_type="friend_request",
-            related_id=friend_requests[1].id
-        ),
-        
-        # Plan invitation notifications
-        notification_manager.create_notification(
-            user_id=users[0].id,
-            message=f"{users[1].name} invited you to join the plan: {plans[0].goal}",
-            notification_type="plan_invitation",
-            related_id=plan_invitations[0].id
-        ),
-        notification_manager.create_notification(
-            user_id=users[0].id,
-            message=f"{users[2].name} invited you to join the plan: {plans[1].goal}",
-            notification_type="plan_invitation",
-            related_id=plan_invitations[1].id
-        ),
-        notification_manager.create_notification(
-            user_id=users[0].id,
-            message=f"{users[3].name} invited you to join the plan: {plans[2].goal}",
-            notification_type="plan_invitation",
+            message="Time for your weekly reflection. What have you achieved this week?",
+            notification_type="engagement",
+            prompt_tag="weekly-reflection",
+            recurrence="weekly",
+            time_deviation_in_hours=4
+        )
+    ])
+
     for user in users:
-        try:
-            users_gateway.permanently_delete_user(user.id)
-            users_gateway.create_user(user)
-        except Exception as e:
-            print(f"Error creating user {user.name}: {str(e)}")
-            return
+        users_gateway.permanently_delete_user(user.id)
+        users_gateway.create_user(user)
         
     for activity in activities:
-        try:
-            activities_gateway.permanently_delete_activity(activity.id)
-            activities_gateway.create_activity(activity)
-        except Exception as e:
-            print(f"Error creating activity {activity.title}: {str(e)}")
-            return
+        activities_gateway.permanently_delete_activity(activity.id)
+        activities_gateway.create_activity(activity)
 
     for activity_entry in activity_entries:
-        try:
-            activities_gateway.permanently_delete_activity_entry(activity_entry.id)
-            activities_gateway.create_activity_entry(activity_entry)
-        except Exception as e:
-            print(f"Error creating entry for {activity_entry.activity_id}: {str(e)}")
-            return
+        activities_gateway.permanently_delete_activity_entry(activity_entry.id)
+        activities_gateway.create_activity_entry(activity_entry)
 
     for plan in plans:
         try:
@@ -196,33 +200,25 @@ def generate_dummy_data():
             return
 
     for invitation in plan_invitations:
-        try:
-            plan_controller.plan_invitation_gateway.write(invitation.dict())
-            recipient = next((u for u in users if u.id == invitation.recipient_id), None)
-            recipient.pending_plan_invitations.append(invitation.id)
-            users_gateway.update_user(recipient)
-        except Exception as e:
-            print(f"Error creating plan invitation: {str(e)}")
-            return
+        plan_controller.plan_invitation_gateway.create_plan_invitation(invitation)
 
     for friend_request in friend_requests:
-        try:
-            users_gateway.friend_request_gateway.create_friend_request(friend_request)
-            recipient = next((u for u in users if u.id == friend_request.recipient_id), None)
-            recipient.pending_friend_requests.append(friend_request.id)
-            users_gateway.update_user(recipient)
-        except Exception as e:
-            print(f"Error creating friend request: {str(e)}")
-            return
+        users_gateway.friend_request_gateway.create_friend_request(friend_request)
 
+    # Add notifications to the database
+    for notification in notifications:
+        notification_manager.db_gateway.write(notification.dict())
     # Print out the final state
+
     print("\nFinal state:")
     for user in users:
+        pending_plan_invitations = [invitation.id for invitation in plan_invitations if invitation.recipient_id == user.id and invitation.status == "pending"]
+        pending_friend_requests = [friend_request.id for friend_request in friend_requests if friend_request.recipient_id == user.id and friend_request.status == "pending"]
         user_data = users_gateway.get_user_by_id(user.id)
         print(f"\nUser: {user_data.name} (username: {user_data.username})")
         print(f"Friends: {', '.join([users_gateway.get_user_by_id(friend_id).name for friend_id in user_data.friend_ids])}")
-        print(f"Pending Plan Invitations: {len(user_data.pending_plan_invitations)}")
-        print(f"Pending Friend Requests: {len(user_data.pending_friend_requests)}")
+        print(f"Pending Plan Invitations: {len(pending_plan_invitations)}")
+        print(f"Pending Friend Requests: {len(pending_friend_requests)}")
         
         user_activities = activities_gateway.get_all_activities_by_user_id(user.id)
         print("Activities:")
@@ -239,8 +235,18 @@ def generate_dummy_data():
             print(f"  Invitees: {', '.join([invitee.name for invitee in plan.invitees])}")
             print(f"  Sessions: {len(plan.sessions)}")
 
+        user_notifications = notification_manager.get_all_for_user(user.id)
+        print("Notifications:")
+        for notification in user_notifications:
+            print(f"- Type: {notification.type}")
+            print(f"  Message: {notification.message}")
+            print(f"  Status: {notification.status}")
+
     print("Done! 🎉")
 
 if __name__ == "__main__":
-    generate_dummy_data()
-
+    try:
+        generate_dummy_data()
+    except Exception as e:
+        print(f"Error generating dummy data: {str(e)}")
+        print(traceback.format_exc())

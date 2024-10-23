@@ -13,7 +13,7 @@ class PlanInvitation(BaseModel):
     updated_at: Optional[str] = None
 
     @classmethod
-    def new(cls, plan_id: str, sender_id: str, recipient_id: str) -> "PlanInvitation":
+    def new(cls, plan_id: str, sender_id: str, recipient_id: str, id: Optional[str] = None) -> "PlanInvitation":
         return cls(
             id=str(ObjectId()),
             plan_id=plan_id,
