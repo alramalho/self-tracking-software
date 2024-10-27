@@ -69,7 +69,7 @@ interface FriendRequest {
   updated_at?: string;
 }
 
-interface PlanGroupMember {
+export interface PlanGroupMember {
   user_id: string;
   username: string;
   name: string;
@@ -84,6 +84,7 @@ export interface PlanGroup {
 
 export interface Plan {
   id?: string;
+  user_id?: string;
   emoji?: string;
   goal: string;
   finishing_date?: Date;

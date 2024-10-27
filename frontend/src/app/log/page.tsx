@@ -27,9 +27,10 @@ const LogPage: React.FC = () => {
   const [loggedActivityEntry, setLoggedActivityEntry] = useState<any>(null);
   const api = useApiWithAuth();
   const { addToNotificationCount } = useNotifications();
-  const [showBanner, setShowBanner] = useState(true);
+  // const [showBanner, setShowBanner] = useState(true);
 
   const handleSelectActivity = (activityId: string) => {
+    console.log({ activityId });
     setSelectedActivity(activityId);
     const activity = activities.find((a) => a.id === activityId);
     setMeasureType(activity?.measure || "");
@@ -74,6 +75,10 @@ const LogPage: React.FC = () => {
       return null;
     }
   };
+
+  useEffect(() => {
+    console.log({ selectedActivity });
+  }, [selectedActivity]);
 
   const handleLogActivity = async () => {
     if (!selectedActivity || !selectedDate) {

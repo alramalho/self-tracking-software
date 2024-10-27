@@ -342,10 +342,11 @@ class PlanController:
         recipients_plan = Plan(
             id=str(ObjectId()),
             user_id=recipient.id,
+            plan_group_id=plan.plan_group_id,
             goal=plan.goal,
             emoji=plan.emoji,
             finishing_date=plan.finishing_date,
-            sessions=plan.sessions,
+            sessions=new_sessions,
             created_at=datetime.now(UTC).isoformat()
         )
 
@@ -379,9 +380,9 @@ class PlanController:
                 created_activity = self.activities_gateway.create_activity(new_activity)
                 
                 # Update the plan with the new activity ID
-                for session in recipients_plan.sessions:
+                for i, session in enumerate(plan.sessions):
                     if session.activity_id == original_activity_id:
-                        session.activity_id = created_activity.id
+                        recipients_plan.sessions[i].activity_id = created_activity.id
                 
                 self.update_plan(recipients_plan)
             else:

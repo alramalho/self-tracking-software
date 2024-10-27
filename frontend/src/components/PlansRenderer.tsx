@@ -15,6 +15,10 @@ import InviteButton from "./InviteButton";
 const PlansRenderer: React.FC = () => {
   const { userData, fetchUserData } = useUserPlan();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    console.log({ selectedPlanId });
+  }, [selectedPlanId]);
 
   useEffect(() => {
     if (!selectedPlanId && userData && userData.me && userData.me.plans.length > 0) {
@@ -49,7 +53,10 @@ const PlansRenderer: React.FC = () => {
               className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
                 selectedPlanId === plan.id ? "border-blue-500" : "border-gray-200"
               }`}
-              onClick={() => setSelectedPlanId(plan.id || null)}
+              onClick={() => {
+                console.log("seleecing plan", plan.id);
+                setSelectedPlanId(plan.id || null);
+              }}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center">
@@ -105,7 +112,6 @@ const PlansRenderer: React.FC = () => {
       {selectedPlanId && (
         <PlanRendererv2
           selectedPlan={plans.find((p) => p.id === selectedPlanId)!}
-          activities={activities}
         />
       )}
     </div>
