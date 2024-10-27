@@ -20,7 +20,13 @@ import {
 import UserSearch, { UserSearchResult } from "./UserSearch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
-import { ApiPlan, convertGeneratedPlanToApiPlan, GeneratedPlan, Plan, useUserPlan } from "@/contexts/UserPlanContext";
+import {
+  ApiPlan,
+  convertGeneratedPlanToApiPlan,
+  GeneratedPlan,
+  Plan,
+  useUserPlan,
+} from "@/contexts/UserPlanContext";
 import PlanRendererHeatmap from "./PlanRendererHeatmap";
 import InviteButton from "./InviteButton";
 
@@ -126,10 +132,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         setSelectedPlan(createdPlan);
         setUserData("me", {
           ...userData["me"],
-          plans: [
-            ...userData["me"].plans,
-            createdPlan,
-          ],
+          plans: [...userData["me"].plans, createdPlan],
         });
         setStep(7); // Move to the invitation step
       }
@@ -138,7 +141,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
       toast.error("Failed to create plan. Please try again.");
     }
   };
-
 
   const renderStep = () => {
     switch (step) {
@@ -376,17 +378,26 @@ const Onboarding: React.FC<OnboardingProps> = ({
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Challenge People to do it with you! (Optional)</CardTitle>
+              <CardTitle>
+                Challenge People to do it with you! (Optional)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <InviteButton
+                embedded={true}
                 planId={selectedPlan!.id!}
                 onInviteSuccess={() => {
                   fetchUserData({ forceUpdate: true });
-                  onComplete?.(selectedPlan!);
+                  
                 }}
-                buttonText="Finish"
               />
+              <Button
+                className="w-full mt-4"
+                onClick={() => onComplete?.(selectedPlan!)}
+              >
+                <CheckIcon className="mr-2 h-4 w-4" />
+                Finish
+              </Button>
             </CardContent>
           </Card>
         );

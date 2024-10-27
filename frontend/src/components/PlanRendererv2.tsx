@@ -45,7 +45,7 @@ export function PlanRendererv2({
 
   const activityEntries = userData.me?.activityEntries || [];
 
-  const planActivityEntries = activityEntries.filter((entry) =>
+  const completedActivityEntries = activityEntries.filter((entry) =>
     selectedPlan.sessions.some(
       (session) => session.activity_id === entry.activity_id
     )
@@ -62,14 +62,14 @@ export function PlanRendererv2({
   useEffect(() => {
     const calculateSessionData = () => {
       setLoading(true);
-      if (!selectedPlan || !planActivityEntries.length) {
+      if (!selectedPlan) {
         setLoading(false);
         return;
       }
 
       const allDates = [
         ...selectedPlan.sessions.map((s) => parseISO(s.date)),
-        ...planActivityEntries.map((e) => parseISO(e.date)),
+        ...completedActivityEntries.map((e) => parseISO(e.date)),
       ].sort((a, b) => a.getTime() - b.getTime());
 
       if (allDates.length === 0) return;
@@ -94,7 +94,7 @@ export function PlanRendererv2({
         weeklyData[weekKey].planned += 1;
       });
 
-      planActivityEntries.forEach((entry) => {
+      completedActivityEntries.forEach((entry) => {
         const entryDate = parseISO(entry.date);
         const weekKey = format(startOfWeek(entryDate), "yyyy-MM-dd");
         if (weeklyData[weekKey]) {
@@ -113,7 +113,7 @@ export function PlanRendererv2({
     };
 
     calculateSessionData();
-  }, [selectedPlan, planActivityEntries]);
+  }, [selectedPlan]);
 
   const isSessionCompleted = (session: ApiPlan["sessions"][0]) => {
     const sessionDate = parseISO(session.date);
@@ -184,7 +184,7 @@ export function PlanRendererv2({
   };
 
   // Sort activity entries by date (most recent first) and limit to 7
-  const recentActivityEntries = planActivityEntries
+  const recentActivityEntries = completedActivityEntries
     .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())
     .slice(0, 7);
 
@@ -232,7 +232,7 @@ export function PlanRendererv2({
                 color: "hsl(var(--chart-2))",
               },
             ]}
-            title="Sessions Overview"
+            title={`Sessions Overview ${selectedPlan.emoji}`}
             description={`${sessionData[0].week} - ${
               sessionData[sessionData.length - 1].week
             }`}

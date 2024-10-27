@@ -27,14 +27,22 @@ const Notifications: React.FC<NotificationsProps> = () => {
           router.push(`/ai?notificationId=${notification.id}`);
         }
         await concludeNotification();
-      } else if (action === "accept" || action === "reject") {
+      } else if (notification.type === "plan_invitation") {
+        if (action === "accept") {
+          const invitationId = notification.related_id;
+          router.push(`/join-plan/${invitationId}`);
+        } else if (action === "reject") {
+          await api.post(`/reject-plan-invitation/${notification.related_id}`);
+        }
+        await concludeNotification();
+      } else {
         await api.post(
           `/${action}-${notification.type.replace("_", "-")}/${
             notification.related_id
           }`
         );
         await concludeNotification();
-      } 
+      }
     };
 
     toast.promise(actionPromise(), {
@@ -50,7 +58,8 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   const renderActionButtons = (notification: Notification) => {
-    const buttonClasses = "p-2 rounded-full transition-colors duration-200 flex items-center justify-center";
+    const buttonClasses =
+      "p-2 rounded-full transition-colors duration-200 flex items-center justify-center";
     const iconSize = 20;
 
     switch (notification.type) {
@@ -99,16 +108,14 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 mb-6">
       {userData["me"].notifications.map((notification) => (
         <div
           key={notification.id}
           className="bg-white shadow-sm border border-gray-200 p-4 rounded-lg flex items-center justify-between transition-shadow duration-200 hover:shadow-md"
         >
           <p className="text-gray-700">{notification.message}</p>
-          <div className="flex ml-4">
-            {renderActionButtons(notification)}
-          </div>
+          <div className="flex ml-4">{renderActionButtons(notification)}</div>
         </div>
       ))}
     </div>

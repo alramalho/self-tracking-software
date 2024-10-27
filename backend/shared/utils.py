@@ -41,3 +41,6 @@ def time_ago(iso_str):
         # If the difference is less than 1 minute, return "Just now" format.
         return "Just now"
 
+
+def exclude_embedding_fields(d: dict):
+    return {key: value for key, value in d.items() if not key.endswith("_embedding")}

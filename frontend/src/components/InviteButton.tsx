@@ -4,33 +4,44 @@ import { UserPlus } from "lucide-react";
 import UserSearch, { UserSearchResult } from "./UserSearch";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
+import AppleLikePopover from "./AppleLikePopover";
 
 interface InviteButtonProps {
   planId: string;
   onInviteSuccess: () => void;
   buttonText?: string;
+  embedded?: boolean;
 }
 
-const InviteButton: React.FC<InviteButtonProps> = ({ planId, onInviteSuccess, buttonText = "Invite" }) => {
+const InviteButton: React.FC<InviteButtonProps> = ({
+  planId,
+  onInviteSuccess,
+  buttonText = "Invite",
+  embedded = false,
+}) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
 
   const handleUserSelect = (user: UserSearchResult) => {
-    if (!invitees.some(invitee => invitee.user_id === user.user_id)) {
+    if (!invitees.some((invitee) => invitee.user_id === user.user_id)) {
       setInvitees([...invitees, user]);
     }
   };
 
   const removeInvitee = (userIdToRemove: string) => {
-    setInvitees(invitees.filter(invitee => invitee.user_id !== userIdToRemove));
+    setInvitees(
+      invitees.filter((invitee) => invitee.user_id !== userIdToRemove)
+    );
   };
 
   const handleInvite = async () => {
     try {
-      await Promise.all(invitees.map(invitee => 
-        api.post(`/invite-to-plan/${planId}/${invitee.user_id}`)
-      ));
+      await Promise.all(
+        invitees.map((invitee) =>
+          api.post(`/invite-to-plan/${planId}/${invitee.user_id}`)
+        )
+      );
       toast.success("Invitations sent successfully!");
       onInviteSuccess();
       setIsSearchOpen(false);
@@ -41,6 +52,15 @@ const InviteButton: React.FC<InviteButtonProps> = ({ planId, onInviteSuccess, bu
     }
   };
 
+  if (embedded) {
+    return (
+      <UserSearch
+        onUserClick={handleUserSelect}
+        selectedUsers={invitees}
+        onUserRemove={removeInvitee}
+      />
+    );
+  }
   return (
     <div className="relative">
       <Button
@@ -55,9 +75,9 @@ const InviteButton: React.FC<InviteButtonProps> = ({ planId, onInviteSuccess, bu
         {buttonText}
       </Button>
       {isSearchOpen && (
-        <div className="absolute z-10 mt-2 w-64 bg-white shadow-lg rounded-md overflow-hidden p-4">
-          <UserSearch 
-            onUserClick={handleUserSelect} 
+        <AppleLikePopover onClose={() => setIsSearchOpen(false)}>
+          <UserSearch
+            onUserClick={handleUserSelect}
             selectedUsers={invitees}
             onUserRemove={removeInvitee}
           />
@@ -68,7 +88,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({ planId, onInviteSuccess, bu
           >
             {buttonText} ({invitees.length})
           </Button>
-        </div>
+        </AppleLikePopover>
       )}
     </div>
   );

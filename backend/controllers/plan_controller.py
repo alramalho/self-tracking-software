@@ -67,11 +67,8 @@ class PlanController:
 
     def get_all_user_plans(self, user: User) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
-        all_plan_ids = set([plan_invitation.plan_id for plan_invitation in self.plan_invitation_gateway.get_all_by_user_id(user.id)])
-        all_plan_ids.update(user.plan_ids)
-        all_plan_ids = list(all_plan_ids)
         plans = []
-        for plan_id in all_plan_ids:
+        for plan_id in user.plan_ids:
             plan = self.get_plan(plan_id)
             if plan:
                 plans.append(plan)
@@ -322,18 +319,41 @@ class PlanController:
             plan = Plan(**plan_data)
             self.update_plan_sessions_with_activity_ids(plan)
 
-    def accept_plan_invitation(self, invitation_id: str) -> Plan:
+    def accept_plan_invitation(self, invitation_id: str, activity_associations: Dict[str, str]) -> Plan:
         logger.log("CONTROLLERS", f"Accepting plan invitation: {invitation_id}")
         invitation = self.plan_invitation_gateway.get(invitation_id)
 
         plan = self.get_plan(invitation.plan_id)
         recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
 
+
+        # Update sessions with associated activities
+        new_sessions = []
+        for session in plan.sessions:
+            if session.activity_id in activity_associations:
+                new_session = deepcopy(session)
+                new_session.activity_id = activity_associations[session.activity_id]
+                new_sessions.append(new_session)
+            else:
+                new_sessions.append(session)
+
+
         # duplicate plan to recipient
-        recipients_plan = deepcopy(plan)
-        recipients_plan.id = str(ObjectId())
-        recipients_plan.user_id = recipient.id
+        recipients_plan = Plan(
+            id=str(ObjectId()),
+            user_id=recipient.id,
+            goal=plan.goal,
+            emoji=plan.emoji,
+            finishing_date=plan.finishing_date,
+            sessions=plan.sessions,
+            created_at=datetime.now(UTC).isoformat()
+        )
+
+
         recipients_plan = self.create_plan(recipients_plan)
+
+        # add plan to user
+        self.users_gateway.add_plan_to_user(recipient.id, recipients_plan.id)
         
         # Update invitation status
         invitation.status = "accepted"
@@ -346,15 +366,30 @@ class PlanController:
         self.plan_groups_gateway.add_member(plan_group, PlanGroupMember(user_id=recipient.id, name=recipient.name, username=recipient.username, picture=recipient.picture))
         self.plan_groups_gateway.upsert_plan_group(plan_group)
 
-
-        plan_activity_ids = set(session.activity_id for session in plan.sessions)
-        activities = [self.activities_gateway.get_activity_by_id(activity_id) for activity_id in plan_activity_ids]
-
-        for activity in activities:
-            activity.invitee_ids.append(recipient.id)
-            self.activities_gateway.update_activity(activity)
+        # Create new activities if needed
+        for original_activity_id, associated_activity_id in activity_associations.items():
+            if associated_activity_id == "new":
+                original_activity = self.activities_gateway.get_activity_by_id(original_activity_id)
+                new_activity = Activity.new(
+                    user_id=recipient.id,
+                    title=original_activity.title,
+                    measure=original_activity.measure,
+                    emoji=original_activity.emoji
+                )
+                created_activity = self.activities_gateway.create_activity(new_activity)
+                
+                # Update the plan with the new activity ID
+                for session in recipients_plan.sessions:
+                    if session.activity_id == original_activity_id:
+                        session.activity_id = created_activity.id
+                
+                self.update_plan(recipients_plan)
+            else:
+                activity = self.activities_gateway.get_activity_by_id(associated_activity_id)
+                activity.invitee_ids.append(recipient.id)
+                self.activities_gateway.update_activity(activity)
         
-        return plan
+        return recipients_plan
 
     def reject_plan_invitation(self, invitation_id: str) -> None:
         logger.log("CONTROLLERS", f"Rejecting plan invitation: {invitation_id}")
@@ -375,3 +410,4 @@ if __name__ == "__main__":
     create_logger(level="INFO")
     plan_controller = PlanController()
     plan_controller.update_all_plans_with_activity_ids()
+

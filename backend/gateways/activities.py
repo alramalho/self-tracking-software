@@ -6,7 +6,7 @@ from loguru import logger
 from shared.utils import time_ago
 from typing import List
 from pymongo.errors import DuplicateKeyError
-
+from bson import ObjectId
 
 class ActivityDoesNotExistException(Exception):
     pass
@@ -46,6 +46,9 @@ class ActivitiesGateway:
         
     def get_all_activities(self) -> list[Activity]:
         return [Activity(**data) for data in self.activities_db_gateway.scan()]
+    
+    def get_all_activites_by_ids(self, activity_ids: list[str]) -> list[Activity]:
+        return [Activity(**data) for data in self.activities_db_gateway.query("id", {"$in": [ObjectId(activity_id) for activity_id in activity_ids]})]
         
     def get_all_activities_by_user_id(self, user_id:str) -> list[Activity]:
         return [Activity(**data) for data in self.activities_db_gateway.query("user_id", user_id)]

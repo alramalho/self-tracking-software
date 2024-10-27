@@ -57,10 +57,10 @@ const HomePage: React.FC = () => {
         {userData["me"].user?.name ? `, ${userData["me"].user.name}` : ""}
       </h1>
 
-      <Notifications />
+    <Notifications />
 
       <div
-        className="bg-white border-2 border-gray-200 p-4 rounded-lg mb-6 cursor-pointer hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between shadow-md hover:shadow-lg"
+        className="bg-white border-2 border-blue-200 p-4 rounded-lg mb-6 cursor-pointer hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between"
         onClick={() => setIsPopoverOpen(true)}
       >
         <div className="flex items-center gap-3">

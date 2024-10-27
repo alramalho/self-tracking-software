@@ -30,7 +30,7 @@ const PlansRenderer: React.FC = () => {
   const { plans = [], activities = [], planGroups = [] } = userData.me;
 
   const getPlanGroup = (planId: string): PlanGroup | undefined => {
-    return planGroups.find(group => group.plan_id === planId);
+    return planGroups.find(group => group.plan_ids.includes(planId));
   };
 
   const handleInviteSuccess = () => {
@@ -68,7 +68,7 @@ const PlansRenderer: React.FC = () => {
                     })
                   : ""}
               </span>
-              {planGroup && (
+              {planGroup && planGroup.members && (
                 <div className="flex items-center space-x-2">
                   {planGroup.members.map((member) => {
                     if (member.user_id === userData.me?.user?.id) {

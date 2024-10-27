@@ -5,9 +5,7 @@ from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
 from gateways.users import UsersGateway
-from .activities import router as activities_router
-from pywebpush import webpush, WebPushException
-from .plans import router as plans_router
+from shared.utils import exclude_embedding_fields
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
@@ -278,9 +276,6 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
             break
     
     return results[:limit]
-
-def exclude_embedding_fields(d: dict):
-    return {key: value for key, value in d.items() if not key.endswith("_embedding")}
 
 def get_recommended_activity_entries(current_user: User):
     activities = plan_controller.get_recommended_activities(current_user, limit=10)
