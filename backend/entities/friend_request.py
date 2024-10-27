@@ -14,7 +14,7 @@ class FriendRequest(BaseModel):
     @classmethod
     def new(cls, sender_id: str, recipient_id: str, id: Optional[str] = None) -> "FriendRequest":
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             sender_id=sender_id,
             recipient_id=recipient_id,
             status="pending",

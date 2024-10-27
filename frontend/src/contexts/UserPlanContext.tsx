@@ -69,17 +69,25 @@ interface FriendRequest {
   updated_at?: string;
 }
 
+interface PlanGroupMember {
+  user_id: string;
+  username: string;
+  name: string;
+  picture: string;
+}
+
+export interface PlanGroup {
+  id: string;
+  plan_ids: string[];
+  members?: PlanGroupMember[];
+}
+
 export interface Plan {
   id?: string;
   emoji?: string;
   goal: string;
   finishing_date?: Date;
-  invitees?: {
-    user_id: string;
-    username: string;
-    name: string;
-    picture: string;
-  }[];
+  plan_group_id?: string;
   sessions: {
     date: Date;
     descriptive_guide: string;
@@ -89,7 +97,7 @@ export interface Plan {
   }[];
 }
 
-export interface GeneratedPlan extends Omit<Plan, "invitees">{
+export interface GeneratedPlan extends Omit<Plan, "members">{
   overview: string;
   activities: { id: string; emoji: string; title: string; measure: string }[];
   intensity: string;
@@ -117,10 +125,10 @@ export interface Notification {
   type: "friend_request" | "plan_invitation" | "engagement";
   related_id: string | null;
 }
-
 export interface UserDataEntry {
   user: User | null;
   plans: ApiPlan[];
+  planGroups: PlanGroup[];
   activities: Activity[];
   activityEntries: ActivityEntry[];
   moodReports: MoodReport[];
@@ -145,7 +153,6 @@ interface UserPlanContextType {
   timelineData: TimelineData | null;
   setUserData: (username: string, data: UserDataEntry) => void;
   setTimelineData: (data: TimelineData) => void;
-  getCompletedSessions: (plan: ApiPlan, username?: string) => Promise<CompletedSession[]>;
   loading: boolean;
   error: string | null;
   fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<void>;
@@ -187,6 +194,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchTimelineData();
   }, []);
 
+
   const fetchUserData = async ({username = "me", forceUpdate = false}: {username?: string, forceUpdate?: boolean} = {}) => {
       if (!isSignedIn) return;
 
@@ -201,6 +209,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         const newUserData: UserDataEntry = {
           user: response.data.user,
           plans: response.data.plans,
+          planGroups: response.data.plan_groups,
           activities: response.data.activities,
           activityEntries: response.data.activity_entries,
           moodReports: response.data.mood_reports,
@@ -268,33 +277,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const getCompletedSessions = (async (plan: ApiPlan, username: string = "me"): Promise<CompletedSession[]> => {
-    if (!plan) return [];
-
-    console.log(`Fetching completed sessions for ${username}`);
-
-    await fetchUserData({username});
-
-    const userDataEntry = userData[username];
-    if (!userDataEntry || !userDataEntry.activityEntries.length) return [];
-
-    return plan.sessions
-      .filter((session) =>
-        userDataEntry.activityEntries.some(
-          (entry) =>
-            isSameDay(parseISO(session.date), parseISO(entry.date)) &&
-            session.activity_id ===
-              userDataEntry.activities
-                .find((a) => a.id === entry.activity_id)?.id
-        )
-      )
-      .map((session) => ({
-        date: session.date,
-        activity_id: session.activity_id,
-        quantity: session.quantity,
-      } as CompletedSession));
-  });
-
   return (
     <UserPlanContext.Provider
       value={{
@@ -303,7 +285,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         setUserData: (username: string, data: UserDataEntry) =>
           setAllUserData((prevData) => ({ ...prevData, [username]: data })),
         setTimelineData,
-        getCompletedSessions,
         loading,
         error,
         fetchUserData,

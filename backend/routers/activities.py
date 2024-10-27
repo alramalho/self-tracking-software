@@ -42,6 +42,7 @@ async def log_activity(
     user: User = Depends(is_clerk_user),
 ):
     activity_entry = ActivityEntry.new(
+        user_id=user.id,
         activity_id=activity_id,
         quantity=quantity,
         date=iso_date_string,

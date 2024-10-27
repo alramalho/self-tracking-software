@@ -69,7 +69,7 @@ export function LineChart({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="h-[400px]">
+      <CardContent className="h-[450px]">
         <ChartContainer config={chartConfig}>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -95,6 +95,7 @@ export function LineChart({
                 <YAxis 
                   axisLine={false}
                   tickLine={false}
+                  allowDecimals={false}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 {lines.map((line) => (

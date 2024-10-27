@@ -22,17 +22,19 @@ const Notifications: React.FC<NotificationsProps> = () => {
     };
 
     const actionPromise = async () => {
-      if (action === "accept" || action === "reject") {
+      if (notification.type === "engagement") {
+        if (action === "respond") {
+          router.push(`/ai?notificationId=${notification.id}`);
+        }
+        await concludeNotification();
+      } else if (action === "accept" || action === "reject") {
         await api.post(
           `/${action}-${notification.type.replace("_", "-")}/${
             notification.related_id
           }`
         );
         await concludeNotification();
-      } else if (action === "respond") {
-        await concludeNotification();
-        router.push(`/ai?notificationId=${notification.id}`);
-      }
+      } 
     };
 
     toast.promise(actionPromise(), {

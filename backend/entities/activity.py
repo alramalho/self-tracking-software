@@ -53,6 +53,7 @@ class ImageInfo(BaseModel):
 class ActivityEntry(BaseModel):
     id: str
     activity_id: str
+    user_id: Optional[str] = None
     quantity: int = Field(description="Way to quantify it, must be > 0.")
     date: str = Field(description="The YYYY-MM-DD date of the activity.")
     created_at: str
@@ -62,12 +63,14 @@ class ActivityEntry(BaseModel):
     def new(
         cls,
         activity_id: str,
+        user_id: str,
         quantity: str,
         date: str,
         id: Optional[str] = None
     ) -> "ActivityEntry":
         return cls(
             id=id or str(ObjectId()),
+            user_id=user_id,
             activity_id=activity_id,
             quantity=quantity,
             date=date,

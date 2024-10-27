@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   format,
   parseISO,
-  isAfter,
   isToday,
   isBefore,
   isFuture,
   startOfWeek,
+  endOfWeek,
   addWeeks,
   subWeeks,
 } from "date-fns";
@@ -16,125 +16,137 @@ import {
   ApiPlan,
   Activity,
   useUserPlan,
-  CompletedSession,
 } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import {
+  ActivityEntryCard,
+  Entry,
+} from "@/components/ActivityEntryCard";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
   activities: Activity[];
-  completedSessions: { [username: string]: CompletedSession[] };
-  loadingSessions: boolean;
 }
 
 export function PlanRendererv2({
   selectedPlan,
   activities,
-  completedSessions,
-  loadingSessions,
 }: PlanRendererv2Props) {
+  const { userData } = useUserPlan();
   const [sessionData, setSessionData] = useState<
-    { week: string; planned: number; [key: string]: number | string }[]
+    { week: string; planned: number; completed: number }[]
   >([]);
   const [selectedSession, setSelectedSession] = useState<
     ApiPlan["sessions"][0] | null
   >(null);
-  
+  const [loading, setLoading] = useState(true);
+
+  const activityEntries = userData.me?.activityEntries || [];
+
+  const planActivityEntries = activityEntries.filter((entry) =>
+    selectedPlan.sessions.some(
+      (session) => session.activity_id === entry.activity_id
+    )
+  );
+
+  const selectedPlanGroupMembers = useMemo(() => {
+    console.log({userDataPlanGroupsIds: userData.me?.planGroups.map(group => group.id)});
+    console.log({selectedPlanPlanGroupId: selectedPlan.plan_group_id});
+    const result = selectedPlan.plan_group_id ? userData.me?.planGroups.find(group => group.id === selectedPlan.plan_group_id)?.members : [];
+    console.log({selectedPlanGroupMembers: result});
+    return result
+  }, [userData]);
 
   useEffect(() => {
-
-    if (selectedPlan) {
-      const now = new Date();
-      const nextSession = selectedPlan.sessions
-        .map((session) => ({ ...session, date: parseISO(session.date) }))
-        .filter(
-          (session) => isAfter(session.date, now) || isToday(session.date)
-        )
-        .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
-
-      setSelectedSession(
-        nextSession
-          ? { ...nextSession, date: format(nextSession.date, "yyyy-MM-dd") }
-          : null
-      );
-
-      const currentDate = new Date();
+    const calculateSessionData = () => {
+      setLoading(true);
+      if (!selectedPlan || !planActivityEntries.length) {
+        setLoading(false);
+        return;
+      }
 
       const allDates = [
         ...selectedPlan.sessions.map((s) => parseISO(s.date)),
-        ...Object.values(completedSessions)
-          .flat()
-          .map((s) => parseISO(s.date)),
+        ...planActivityEntries.map((e) => parseISO(e.date)),
       ].sort((a, b) => a.getTime() - b.getTime());
 
       if (allDates.length === 0) return;
 
-      // Start the chart one week before the first session date
       const startDate = subWeeks(startOfWeek(allDates[0]), 1);
-      const endDate = allDates[allDates.length - 1];
+      const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
 
       let currentWeek = startDate;
       const weeklyData: {
-        [key: string]: { planned: number; [key: string]: number };
+        [key: string]: { planned: number; completed: number };
       } = {};
 
       while (currentWeek <= endDate) {
         const weekKey = format(currentWeek, "yyyy-MM-dd");
-        weeklyData[weekKey] = { planned: 0 };
-        Object.keys(completedSessions).forEach((username) => {
-          weeklyData[weekKey][username] = 0;
-        });
+        weeklyData[weekKey] = { planned: 0, completed: 0 };
         currentWeek = addWeeks(currentWeek, 1);
       }
 
-      let cumulativePlanned = 0;
-      const cumulativeCompleted: { [key: string]: number } = {};
-      Object.keys(completedSessions).forEach((username) => {
-        cumulativeCompleted[username] = 0;
+      selectedPlan.sessions.forEach((session) => {
+        const sessionDate = parseISO(session.date);
+        const weekKey = format(startOfWeek(sessionDate), "yyyy-MM-dd");
+        weeklyData[weekKey].planned += 1;
       });
 
-      allDates.forEach((date) => {
-        const weekKey = format(startOfWeek(date), "yyyy-MM-dd");
-        if (
-          selectedPlan.sessions.some(
-            (s) => parseISO(s.date).getTime() === date.getTime()
-          )
-        ) {
-          cumulativePlanned += 1;
+      planActivityEntries.forEach((entry) => {
+        const entryDate = parseISO(entry.date);
+        const weekKey = format(startOfWeek(entryDate), "yyyy-MM-dd");
+        if (weeklyData[weekKey]) {
+          weeklyData[weekKey].completed += 1;
         }
-        Object.entries(completedSessions).forEach(([username, sessions]) => {
-          if (
-            sessions.some((s) => parseISO(s.date).getTime() === date.getTime())
-          ) {
-            if (!isAfter(date, currentDate)) {
-              cumulativeCompleted[username] += 1;
-            }
-          }
-        });
-        weeklyData[weekKey].planned = cumulativePlanned;
-        Object.keys(completedSessions).forEach((username) => {
-          weeklyData[weekKey][username] = cumulativeCompleted[username];
-        });
       });
 
       const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
         week: format(parseISO(week), "MMM d, yyyy"),
         planned: data.planned,
-        ...Object.keys(completedSessions).reduce(
-          (acc, username) => ({
-            ...acc,
-            [username]: isAfter(parseISO(week), currentDate)
-              ? null
-              : data[username],
-          }),
-          {}
-        ),
-        fullDate: week,
+        completed: data.completed,
       }));
+
       setSessionData(formattedData);
-    }
-  }, [selectedPlan, completedSessions]);
+      setLoading(false);
+    };
+
+    calculateSessionData();
+  }, [selectedPlan, planActivityEntries]);
+
+  const isSessionCompleted = (session: ApiPlan["sessions"][0]) => {
+    const sessionDate = parseISO(session.date);
+    const weekStart = startOfWeek(sessionDate);
+    const weekEnd = endOfWeek(sessionDate);
+
+    const plannedSessionsThisWeek = selectedPlan.sessions
+      .filter((s) => {
+        const sDate = parseISO(s.date);
+        return (
+          s.activity_id === session.activity_id &&
+          sDate >= weekStart &&
+          sDate <= weekEnd
+        );
+      })
+      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+
+    const completedSessionsThisWeek = activityEntries
+      .filter((entry) => {
+        const entryDate = parseISO(entry.date);
+        return (
+          entry.activity_id === session.activity_id &&
+          entryDate >= weekStart &&
+          entryDate <= weekEnd
+        );
+      })
+      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+
+    const sessionIndex = plannedSessionsThisWeek.findIndex(
+      (s) => s.date === session.date
+    );
+    return completedSessionsThisWeek.length > sessionIndex;
+  };
 
   const prepareCalendarData = (plan: ApiPlan) => {
     const sessions = plan.sessions.map((session) => ({
@@ -171,44 +183,121 @@ export function PlanRendererv2({
     );
   };
 
+  // Sort activity entries by date (most recent first) and limit to 7
+  const recentActivityEntries = planActivityEntries
+    .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())
+    .slice(0, 7);
+
   return (
     <div>
-      {sessionData.length > 0 && (
-        <div className="mt-8 max-w-4xl">
-          {loadingSessions && (
-            <div className="flex items-center gap-2">
-              <Loader2 className="animate-spin" />
-              <span>Loading your friends plan data...</span>
+      {selectedPlanGroupMembers && selectedPlanGroupMembers.length > 0 && (
+        <>
+          <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
+          {selectedPlanGroupMembers.map((member) => (
+            <div
+              key={member.user_id} 
+              className="flex flex-row flex-nowrap gap-2 items-center"
+            >
+              <Avatar className="w-16 h-16 text-2xl">
+                <AvatarImage
+                  src={member.picture || ""}
+                  alt={member.name || member.username}
+                />
+                <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
+              </Avatar>
+              <div className="text-lg text-gray-800">{userData.me?.user?.username === member.username ? "You" : member.name}</div>
             </div>
-          )}
-          {!loadingSessions && (
-            <LineChart
-              data={sessionData}
-              xAxisKey="week"
-              lines={[
-                {
-                  dataKey: "planned",
-                  name: "Planned Sessions",
-                  color: "hsl(var(--chart-1))",
-                },
-                ...Object.keys(completedSessions).map((username, index) => ({
-                  dataKey: username,
-                  name: `Completed Sessions by ${username}`,
-                  color: `hsl(var(--chart-${index + 2}))`,
-                })),
-              ]}
-              title="Sessions Overview"
-              description={`${sessionData[0].week} - ${
-                sessionData[sessionData.length - 1].week
-              }`}
-              currentDate={new Date()}
-            />
-          )}
-        </div>
+          ))}
+        </>
       )}
+      {loading ? (
+        <div className="flex items-center justify-center mt-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading session data...</span>
+        </div>
+      ) : sessionData.length > 0 ? (
+        <div className="mt-8 max-w-4xl">
+          <LineChart
+            data={sessionData}
+            xAxisKey="week"
+            lines={[
+              {
+                dataKey: "planned",
+                name: "Planned Sessions",
+                color: "hsl(var(--chart-1))",
+              },
+              {
+                dataKey: "completed",
+                name: "Completed Sessions",
+                color: "hsl(var(--chart-2))",
+              },
+            ]}
+            title="Sessions Overview"
+            description={`${sessionData[0].week} - ${
+              sessionData[sessionData.length - 1].week
+            }`}
+            currentDate={new Date()}
+          />
+        </div>
+      ) : null}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Activity History</h2>
+        <div className="flex flex-row flex-wrap gap-4">
+          {recentActivityEntries.map((entry) => {
+            const activity = activities.find((a) => a.id === entry.activity_id);
+            if (!activity) return null;
+
+            return (
+              <ActivityEntryCard
+                key={`${entry.date}-${entry.activity_id}`}
+                entry={entry}
+                activity={activity}
+                completed={true}
+              />
+            );
+          })}
+        </div>
+      </div>
 
       <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Upcoming Sessions</h2>
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold">Coming up next</h2>
+          <span className="text-sm text-gray-500 ">
+            Completed activities are calculated on a per week count basis.
+          </span>
+        </div>
+        <div className="flex flex-row flex-wrap gap-4">
+          {selectedPlan.sessions
+            .filter((session) => {
+              const sessionDate = parseISO(session.date);
+              const oneWeekFromNow = addWeeks(new Date(), 1);
+              return (
+                (isToday(sessionDate) || isFuture(sessionDate)) &&
+                isBefore(sessionDate, oneWeekFromNow)
+              );
+            })
+            .map((session) => {
+              const activity = activities.find(
+                (a) => a.id === session.activity_id
+              );
+              const completed = isSessionCompleted(session);
+              if (!activity) return null;
+
+              return (
+                <ActivityEntryCard
+                  key={`${session.date}-${session.activity_id}`}
+                  entry={session as Entry}
+                  activity={activity}
+                  onClick={() => setSelectedSession(session)}
+                  completed={completed}
+                />
+              );
+            })}
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Calendar</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
             {selectedSession && (
@@ -236,8 +325,8 @@ export function PlanRendererv2({
                       "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
                       "relative flex items-center justify-center",
                       session &&
-                        isFuture(date) &&
-                        "bg-blue-100 h-9 w-9 rounded-full cursor-pointer",
+                        "bg-blue-50 h-9 w-9 rounded-full cursor-pointer",
+                      session && isFuture(date) && "bg-blue-100",
                       isToday(date) && "font-extrabold",
                       isBefore(date, new Date()) &&
                         !isToday(date) &&

@@ -11,6 +11,7 @@ from .plans import router as plans_router
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
+from gateways.plan_groups import PlanGroupsGateway
 from .notifications import router as notifications_router
 from services.notification_manager import NotificationManager
 import re
@@ -25,7 +26,7 @@ activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
 plan_controller = PlanController()
 notification_manager = NotificationManager()
-
+plan_groups_gateway = PlanGroupsGateway()
 
 @router.get("/user-health")
 async def health():
@@ -61,6 +62,7 @@ async def load_all_user_data(
             )
             
             plans_future = executor.submit(plan_controller.get_all_user_plans, user)
+            plan_groups_future = executor.submit(plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids)
             friend_requests_future = executor.submit(
                 users_gateway.friend_request_gateway.get_pending_requests, user.id
             )
@@ -69,6 +71,7 @@ async def load_all_user_data(
             entries = [entry.dict() for entry in entries_future.result()]
             mood_reports = [report.dict() for report in mood_reports_future.result()]
             plans = [exclude_embedding_fields(plan.dict()) for plan in plans_future.result()]
+            plan_groups = [plan_group.dict() for plan_group in plan_groups_future.result()]
             friend_requests = [
                 request.dict() for request in friend_requests_future.result()
             ]
@@ -97,6 +100,7 @@ async def load_all_user_data(
             "activity_entries": entries,
             "mood_reports": mood_reports,
             "plans": plans,
+            "plan_groups": plan_groups,
         }
 
         if current_user.id == user.id:

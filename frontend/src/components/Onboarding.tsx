@@ -22,6 +22,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 import { ApiPlan, convertGeneratedPlanToApiPlan, GeneratedPlan, Plan, useUserPlan } from "@/contexts/UserPlanContext";
 import PlanRendererHeatmap from "./PlanRendererHeatmap";
+import InviteButton from "./InviteButton";
 
 interface OnboardingProps {
   isNewPlan?: boolean;
@@ -138,29 +139,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
     }
   };
 
-  const handleUserInvite = (user: UserSearchResult) => {
-    setSelectedPlan((prev) => {
-      if (!prev) return null;
-      // Check if the user is already in the invitees list
-      if (prev.invitees?.some(invitee => invitee.user_id === user.user_id)) {
-        return prev; // User already in the list, don't add again
-      }
-      return {
-        ...prev,
-        invitees: [...(prev.invitees || []), user],
-      };
-    });
-  };
-
-  const removeInvitee = (invitee_to_remove: UserSearchResult) => {
-    setSelectedPlan((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        invitees: prev.invitees?.filter((invitee) => invitee.user_id !== invitee_to_remove.user_id),
-      };
-    });
-  };
 
   const renderStep = () => {
     switch (step) {
@@ -401,42 +379,14 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <CardTitle>Challenge People to do it with you! (Optional)</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 flex flex-wrap gap-2">
-                {selectedPlan?.invitees?.map((invitee) => (
-                  <Avatar
-                    key={invitee.user_id}
-                    className="cursor-pointer"
-                    onClick={() => removeInvitee(invitee)}
-                  >
-                    <AvatarImage
-                      src={invitee.picture || "/default-avatar.png"}
-                      alt={invitee.name || invitee.username}
-                    />
-                    <AvatarFallback>
-                      {invitee.name ? invitee.name[0] : invitee.username[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-              <UserSearch onUserClick={handleUserInvite} />
-              <Button
-                className="w-full mt-4"
-                onClick={async () => {
-                  try {
-                    // Send invitations for the already created plan
-                    await Promise.all(selectedPlan?.invitees?.map(invitee => 
-                      api.post(`/invite-to-plan/${selectedPlan.id}/${invitee.user_id}`)
-                    ) || []);
-                    toast.success("Invitations sent successfully!");
-                    onComplete?.(selectedPlan!);
-                  } catch (error) {
-                    console.error("Error sending invitations:", error);
-                    toast.error("Failed to send invitations. Please try again.");
-                  }
+              <InviteButton
+                planId={selectedPlan!.id!}
+                onInviteSuccess={() => {
+                  fetchUserData({ forceUpdate: true });
+                  onComplete?.(selectedPlan!);
                 }}
-              >
-                Send Invitations
-              </Button>
+                buttonText="Finish"
+              />
             </CardContent>
           </Card>
         );

@@ -21,7 +21,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
-  const { userData, setUserData} = useUserPlan();
+  const { userData, setUserData } = useUserPlan();
   const api = useApiWithAuth();
 
   const handleSave = async () => {
@@ -80,11 +80,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <Input
-          placeholder="Measure (e.g., minutes, times)"
-          value={measure}
-          onChange={(e) => setMeasure(e.target.value)}
-        />
+        {!activity && (
+          <Input
+            placeholder="Measure (e.g., minutes, times)"
+            value={measure}
+            onChange={(e) => setMeasure(e.target.value)}
+          />
+        )}
         <Button onClick={handleSave} className="w-full">
           Save Activity
         </Button>

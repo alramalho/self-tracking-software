@@ -15,7 +15,7 @@ class PlanInvitation(BaseModel):
     @classmethod
     def new(cls, plan_id: str, sender_id: str, recipient_id: str, id: Optional[str] = None) -> "PlanInvitation":
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             plan_id=plan_id,
             sender_id=sender_id,
             recipient_id=recipient_id,

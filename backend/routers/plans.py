@@ -8,6 +8,10 @@ from gateways.activities import ActivitiesGateway
 from services.notification_manager import NotificationManager
 from loguru import logger
 import traceback
+from entities.plan_group import PlanGroup, PlanGroupMember
+from gateways.plan_groups import PlanGroupsGateway
+from gateways.plan_invitations import PlanInvitationsGateway
+from entities.plan_invitation import PlanInvitation
 
 router = APIRouter()
 
@@ -15,6 +19,8 @@ plan_controller = PlanController()
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
+plan_groups_gateway = PlanGroupsGateway()
+plan_invitations_gateway = PlanInvitationsGateway()
 
 @router.post("/generate-plans")
 async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_user)):
@@ -31,14 +37,26 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
     return {"plans": plans}
 
 @router.post("/create-plan")
-async def create_plan(plan: Dict = Body(...), user: User = Depends(is_clerk_user)):
-    created_plan = plan_controller.create_plan_from_generated_plan(user.id, plan)
-    updated_user = users_gateway.add_plan_to_user(user.id, created_plan.id)
-    return {
-        "message": "Plan created and added to user",
-        "user": updated_user,
-        "plan": created_plan,
-    }
+async def create_plan(plan_data: dict = Body(...), current_user: User = Depends(is_clerk_user)):
+    new_plan = plan_controller.create_plan(current_user, plan_data)
+    
+    # Create a PlanGroup for the new plan
+    plan_group = PlanGroup.new(
+        plan_id=new_plan.id,
+        members=[PlanGroupMember(
+            user_id=current_user.id,
+            username=current_user.username,
+            name=current_user.name,
+            picture=current_user.picture
+        )]
+    )
+    plan_groups_gateway.update_plan_group(plan_group)
+    
+    # Update the plan with the plan_group_id
+    new_plan.plan_group_id = plan_group.id
+    plan_controller.update_plan(new_plan)
+    
+    return {"plan": new_plan, "plan_group": plan_group}
 
 @router.delete("/remove-plan/{plan_id}")
 async def remove_plan(plan_id: str, user: User = Depends(is_clerk_user)):
@@ -86,23 +104,62 @@ async def get_plan(plan_id: str, user: User = Depends(is_clerk_user)):
     ]
     return plan
 
-@router.post("/invite-to-plan/{plan_id}/{recipient_id}")
-async def invite_to_plan(plan_id: str, recipient_id: str, user: User = Depends(is_clerk_user)):
-    try:
-        invitation = plan_controller.invite_user_to_plan(plan_id, user.id, recipient_id)
-        notification = notification_manager.create_notification(
-            user_id=recipient_id,
-            message=f"{user.name} invited you to join a plan",
-            notification_type="plan_invitation",
-            related_id=invitation.id
-        )
-        return {
-            "message": "Invitation sent successfully",
-            "invitation": invitation,
-            "notification": notification
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+@router.post("/invite-to-plan/{plan_id}/{invitee_id}")
+async def invite_to_plan(
+    plan_id: str, invitee_id: str, current_user: User = Depends(is_clerk_user)
+):
+    plan = plan_controller.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    if plan.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to invite to this plan")
+    
+    invitee = users_gateway.get_user_by_id(invitee_id)
+    if not invitee:
+        raise HTTPException(status_code=404, detail="Invitee not found")
+    
+    plan_group = plan_groups_gateway.get_plan_group_by_plan_id(plan.id)
+    if not plan_group:
+        raise HTTPException(status_code=404, detail="Plan group not found")
+
+    # Update plan with plan group id
+    plan.plan_group_id = plan_group.id
+    plan_controller.update_plan(plan)
+    
+    # Update plan group members
+    invited_member = PlanGroupMember(
+        user_id=invitee.id,
+        username=invitee.username,
+        name=invitee.name,
+        picture=invitee.picture
+    )
+    current_user_member = PlanGroupMember(
+        user_id=current_user.id,
+        username=current_user.username,
+        name=current_user.name,
+        picture=current_user.picture
+    )
+
+    plan_groups_gateway.add_member(plan_group, invited_member)
+    plan_groups_gateway.add_member(plan_group, current_user_member)
+    # Create a plan invitation
+    plan_invitation = PlanInvitation.new(
+        plan_id=plan.id,
+        recipient_id=invitee_id,
+        sender_id=current_user.id
+    )
+    plan_invitations_gateway.upsert_plan_invitation(plan_invitation)
+    
+    # Create a notification for the invitee
+    notification = notification_manager.create_notification(
+        user_id=invitee_id,
+        message=f"{current_user.name} invited you to join their plan: {plan.goal}",
+        notification_type="plan_invitation",
+        related_id=plan_invitation.id
+    )
+    
+    return {"message": "Invitation sent successfully", "notification": notification}
 
 @router.post("/accept-plan-invitation/{invitation_id}")
 async def accept_plan_invitation(invitation_id: str, user: User = Depends(is_clerk_user)):
@@ -123,3 +180,18 @@ async def reject_plan_invitation(invitation_id: str, user: User = Depends(is_cle
         logger.error(f"Failed to reject plan invitation: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/plan-group/{plan_id}")
+async def get_plan_group(plan_id: str, current_user: User = Depends(is_clerk_user)):
+    plan = plan_controller.get_plan_by_id(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    if plan.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this plan group")
+    
+    plan_group = plan_groups_gateway.get_plan_group_by_plan_id(plan_id)
+    if not plan_group:
+        return {"members": []}
+    
+    return plan_group

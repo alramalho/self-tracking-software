@@ -1,78 +1,94 @@
 import React, { useState, useEffect } from 'react';
-import { useDebounce } from 'use-debounce';
 import { useApiWithAuth } from '@/api';
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { X } from "lucide-react";
 
 export interface UserSearchResult {
   user_id: string;
   username: string;
   name: string;
-  picture: string;
+  picture?: string;
 }
 
 interface UserSearchProps {
   onUserClick: (user: UserSearchResult) => void;
+  selectedUsers?: UserSearchResult[];
+  onUserRemove?: (userId: string) => void;
 }
 
-const UserSearch: React.FC<UserSearchProps> = ({ onUserClick }) => {
+const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = [], onUserRemove }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [searchResults, setSearchResults] = useState<UserSearchResult[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
 
   useEffect(() => {
-    const searchUser = async () => {
-      if (debouncedSearchTerm) {
-        setIsLoading(true);
-        try {
-          const { data } = await api.get(`/search-users/${debouncedSearchTerm}`);
-          setSearchResults(data);
-        } catch (error) {
-          console.error('Error searching for user:', error);
-          setSearchResults(null);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setSearchResults(null);
+    const searchUsers = async () => {
+      if (searchTerm.trim() === "") {
+        setSearchResults([]);
+        return;
+      }
+
+      try {
+        const response = await api.get(`/search-users/${searchTerm}`);
+        setSearchResults(response.data);
+      } catch (error) {
+        console.error("Error searching users:", error);
       }
     };
 
-    searchUser();
-  }, [debouncedSearchTerm]);
+    const debounce = setTimeout(() => {
+      searchUsers();
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchTerm]);
 
   return (
     <div>
-      <input
+      <div className="mb-4 flex flex-wrap gap-2">
+        {selectedUsers.map((user) => (
+          <Avatar
+            key={user.user_id}
+            className="cursor-pointer relative"
+            onClick={() => onUserRemove && onUserRemove(user.user_id)}
+          >
+            <AvatarImage
+              src={user.picture || "/default-avatar.png"}
+              alt={user.name || user.username}
+            />
+            <AvatarFallback>
+              {user.name ? user.name[0] : user.username[0]}
+            </AvatarFallback>
+          </Avatar>
+        ))}
+      </div>
+      <Input
         type="text"
+        placeholder="Search users..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Enter username"
-        className="w-full p-2 border border-gray-300 rounded-md mb-4"
       />
-      {isLoading && <p className="text-center">Searching...</p>}
-      {!isLoading && searchTerm && !searchResults  && (
-        <p className="text-center text-sm text-gray-500">
-          No user &apos;{searchTerm}&apos; found
-        </p>
-      )}
-      {searchResults && searchResults.map((searchResult) => (
-        <div 
-          key={searchResult.user_id}
-          className="flex items-center space-x-4 hover:bg-gray-100 p-2 rounded-md transition-colors cursor-pointer"
-          onClick={() => onUserClick(searchResult)}
-        >
-          <Avatar>
-            <AvatarImage src={searchResult.picture || '/default-avatar.png'} alt={searchResult.name || searchResult.username} />
-            <AvatarFallback>{searchResult.name ? searchResult.name[0] : searchResult.username[0]}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold">{searchResult.name}</p>
-            <p className="text-sm text-gray-600">@{searchResult.username}</p>
-          </div>
-        </div>
-      ))}
+      <ul className="mt-2">
+        {searchResults.map((user) => (
+          <li
+            key={user.user_id}
+            className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+            onClick={() => onUserClick(user)}
+          >
+            <Avatar className="mr-2">
+              <AvatarImage
+                src={user.picture || "/default-avatar.png"}
+                alt={user.name || user.username}
+              />
+              <AvatarFallback>
+                {user.name ? user.name[0] : user.username[0]}
+              </AvatarFallback>
+            </Avatar>
+            <span>{user.name || user.username}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

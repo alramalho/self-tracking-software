@@ -105,7 +105,7 @@ def get_activity_entries_from_conversation(user_id: str) -> Tuple[List[ActivityE
 
     response = ask_schema("Go!", prompt, ResponseModel)
     activity_entries = [
-        ActivityEntry.new(activity_id=a.activity_id, quantity=a.quantity, date=a.date)
+        ActivityEntry.new(activity_id=a.activity_id, quantity=a.quantity, date=a.date, user_id=user_id)
         for a in response.activity_entries
     ]
 

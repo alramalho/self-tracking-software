@@ -1,33 +1,37 @@
 from shared.logger import create_logger
-create_logger(level="DEBUG")
+create_logger(level="INFO")
 import datetime
 from datetime import timedelta
 
 from entities.user import User
 from entities.activity import Activity, ActivityEntry
-from entities.plan import Plan, PlanSession, PlanInvitee
+from entities.plan import Plan, PlanSession
 from entities.plan_invitation import PlanInvitation
 from entities.friend_request import FriendRequest
+from entities.plan_group import PlanGroup, PlanGroupMember
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
+from gateways.plan_groups import PlanGroupsGateway
 from services.notification_manager import NotificationManager
 import traceback
 from bson import ObjectId
+import random
 
 def generate_dummy_data():
     users_gateway = UsersGateway()
     activities_gateway = ActivitiesGateway()
     moods_gateway = MoodsGateway()
     plan_controller = PlanController()
+    plan_groups_gateway = PlanGroupsGateway()
     notification_manager = NotificationManager()
 
     # Create 4 users
     users = [
         User.new(id=str(ObjectId("666666666666666666666665")), name="Alex", email="alexandre.ramalho.1998@gmail.com", clerk_id="user_2kUW1zytLj9ERvDqVDDFCvIp5Un", picture="https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c", username="alex"),
         User.new(id=str(ObjectId("666666666666666666666666")), name="Alice", email="alice@example.com", username="alice"),
-        User.new(id=str(ObjectId("666666666666666666666667")), name="Bob", email="bob@example.com", username="bob"),
+        User.new(id=str(ObjectId("666666666666666666666667")), name="Bob Ramalho", email="bob@example.com", username="bob", clerk_id="user_2lFLPuOKZXzSeGqQnH97Pz5kaAW"),
         User.new(id=str(ObjectId("666666666666666666666668")), name="Charlie", email="charlie@example.com", username="charlie")
     ]
     # Create activities
@@ -43,22 +47,30 @@ def generate_dummy_data():
         Activity.new(id=str(ObjectId("666666666666666666666671")), user_id=users[0].id, title="Gardening", measure="minutes", emoji="🌱")
     ]
 
+    # Generate dates within the last month
+    def random_date_last_month():
+        end = datetime.datetime.now()
+        start = end - timedelta(days=30)
+        return start + timedelta(
+            seconds=int((end - start).total_seconds() * random.random())
+        )
+
     activity_entries = [
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666672")), activity_id=activities[0].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666673")), activity_id=activities[1].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666674")), activity_id=activities[2].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666675")), activity_id=activities[3].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666676")), activity_id=activities[4].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666677")), activity_id=activities[5].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666678")), activity_id=activities[0].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666679")), activity_id=activities[1].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667a")), activity_id=activities[2].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667b")), activity_id=activities[3].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667c")), activity_id=activities[4].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667d")), activity_id=activities[5].id, quantity=10, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667e")), activity_id=activities[6].id, quantity=50, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667f")), activity_id=activities[7].id, quantity=2, date=datetime.datetime.now().isoformat()),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666680")), activity_id=activities[8].id, quantity=30, date=datetime.datetime.now().isoformat()),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666672")), activity_id=activities[0].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666673")), activity_id=activities[1].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666674")), activity_id=activities[2].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[2].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666675")), activity_id=activities[3].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[3].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666676")), activity_id=activities[4].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666677")), activity_id=activities[5].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666678")), activity_id=activities[0].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[2].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666679")), activity_id=activities[1].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[3].id),
+        ActivityEntry.new(id=str(ObjectId("66666666666666666666667a")), activity_id=activities[2].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id),
+        ActivityEntry.new(id=str(ObjectId("66666666666666666666667b")), activity_id=activities[3].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[2].id),
+        ActivityEntry.new(id=str(ObjectId("66666666666666666666667c")), activity_id=activities[4].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[3].id),
+        ActivityEntry.new(id=str(ObjectId("66666666666666666666667d")), activity_id=activities[5].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),
+        ActivityEntry.new(id=str(ObjectId("66666666666666666666667e")), activity_id=activities[6].id, quantity=50, date=random_date_last_month().isoformat(), user_id=users[0].id),
+        ActivityEntry.new(id=str(ObjectId("66666666666666666666667f")), activity_id=activities[7].id, quantity=2, date=datetime.datetime.now().isoformat(), user_id=users[2].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666680")), activity_id=activities[8].id, quantity=30, date=random_date_last_month().isoformat(), user_id=users[3].id),
     ]
 
     # Create plans
@@ -77,7 +89,6 @@ def generate_dummy_data():
                     quantity=5 + i
                 ) for i in range(0, 90, 3)
             ],
-            invitees=[PlanInvitee(user_id=users[1].id, username=users[1].username, name=users[1].name, picture=users[1].picture)]
         ),
         Plan.new(
             id=str(ObjectId("666666666666666666666682")),
@@ -108,34 +119,59 @@ def generate_dummy_data():
                     quantity=20 + i*3
                 ) for i in range(30)
             ],
-            invitees=[
-                PlanInvitee(user_id=users[0].id, username=users[0].username, name=users[0].name, picture=users[0].picture),
-                PlanInvitee(user_id=users[3].id, username=users[3].username, name=users[3].name, picture=users[3].picture)
-            ]
         )
+    ]
+
+    # Create plan groups
+    plan_groups = [
+        PlanGroup.new(
+            id=str(ObjectId("666666666666666666666684")),
+            plan_ids=[plans[0].id],
+            members=[
+                PlanGroupMember(user_id=users[0].id, username=users[0].username, name=users[0].name, picture=users[0].picture),
+            ],
+        ),
+        PlanGroup.new(
+            id=str(ObjectId("666666666666666666666685")),
+            plan_ids=[plans[1].id],
+            members=[
+                PlanGroupMember(user_id=users[1].id, username=users[1].username, name=users[1].name, picture=users[1].picture),
+            ],
+        ),
+        PlanGroup.new(
+            id=str(ObjectId("666666666666666666666686")),
+            plan_ids=[plans[2].id],
+            members=[
+                PlanGroupMember(user_id=users[2].id, username=users[2].username, name=users[2].name, picture=users[2].picture),
+                PlanGroupMember(user_id=users[0].id, username=users[0].username, name=users[0].name, picture=users[0].picture),
+            ],
+        ),
     ]
 
     # Create plan invitations
     plan_invitations = [
-        PlanInvitation.new(id=str(ObjectId("666666666666666666666684")), plan_id=plans[0].id, sender_id=users[1].id, recipient_id=users[0].id),  # Alice invites Alex
-        PlanInvitation.new(id=str(ObjectId("666666666666666666666685")), plan_id=plans[1].id, sender_id=users[2].id, recipient_id=users[0].id),  # Bob invites Alex
-        PlanInvitation.new(id=str(ObjectId("666666666666666666666686")), plan_id=plans[2].id, sender_id=users[3].id, recipient_id=users[0].id),  # Charlie invites Alex
+        PlanInvitation.new(id=str(ObjectId("666666666666666666666687")), plan_id=plans[0].id, sender_id=users[0].id, recipient_id=users[1].id),
+        PlanInvitation.new(id=str(ObjectId("666666666666666666666688")), plan_id=plans[1].id, sender_id=users[1].id, recipient_id=users[2].id),
+        PlanInvitation.new(id=str(ObjectId("666666666666666666666689")), plan_id=plans[2].id, sender_id=users[2].id, recipient_id=users[3].id),
     ]
 
     # Create friend requests
     friend_requests = [
-        FriendRequest.new(id=str(ObjectId("666666666666666666666687")), sender_id=users[1].id, recipient_id=users[0].id),  # Alice sends friend request to Alex
-        FriendRequest.new(id=str(ObjectId("666666666666666666666688")), sender_id=users[2].id, recipient_id=users[0].id),  # Bob sends friend request to Alex
+        FriendRequest.new(id=str(ObjectId("66666666666666666666668a")), sender_id=users[1].id, recipient_id=users[0].id),
+        FriendRequest.new(id=str(ObjectId("66666666666666666666668b")), sender_id=users[2].id, recipient_id=users[0].id),
     ]
 
     # Create notifications
     notifications = []
 
     # Friend request notifications
-    for friend_request in friend_requests:
+    for i, friend_request in enumerate(friend_requests):
+        users_gateway.friend_request_gateway.create_friend_request(friend_request)
+
         sender = next((u for u in users if u.id == friend_request.sender_id), None)
         notifications.append(
             notification_manager.create_notification(
+                id=str(ObjectId(f"66666666666666666666668{i}")),
                 user_id=friend_request.recipient_id,
                 message=f"{sender.name} sent you a friend request",
                 notification_type="friend_request",
@@ -144,11 +180,14 @@ def generate_dummy_data():
         )
 
     # Plan invitation notifications
-    for plan_invitation in plan_invitations:
+    for i, plan_invitation in enumerate(plan_invitations):
+        plan_controller.plan_invitation_gateway.upsert_plan_invitation(plan_invitation)
+
         sender = next((u for u in users if u.id == plan_invitation.sender_id), None)
         plan = next((p for p in plans if p.id == plan_invitation.plan_id), None)
         notifications.append(
             notification_manager.create_notification(
+                id=str(ObjectId(f"66666666666666666666669{i}")),
                 user_id=plan_invitation.recipient_id,
                 message=f"{sender.name} invited you to join the plan: {plan.goal}",
                 notification_type="plan_invitation",
@@ -156,9 +195,10 @@ def generate_dummy_data():
             )
         )
 
-    # Engagement notifications (these are not based on existing data, so we'll keep them as is)
+    # Engagement notifications
     notifications.extend([
         notification_manager.create_notification(
+            id=str(ObjectId("66666666666666666666668c")),
             user_id=users[0].id,
             message="How's your training going? Let's check in on your progress!",
             notification_type="engagement",
@@ -167,6 +207,7 @@ def generate_dummy_data():
             time_deviation_in_hours=2,
         ),
         notification_manager.create_notification(
+            id=str(ObjectId("66666666666666666666668d")),
             user_id=users[0].id,
             message="Time for your weekly reflection. What have you achieved this week?",
             notification_type="engagement",
@@ -199,16 +240,13 @@ def generate_dummy_data():
             print(f"Error creating plan {plan.goal}: {str(e)}")
             return
 
-    for invitation in plan_invitations:
-        plan_controller.plan_invitation_gateway.create_plan_invitation(invitation)
-
-    for friend_request in friend_requests:
-        users_gateway.friend_request_gateway.create_friend_request(friend_request)
-
-    # Add notifications to the database
-    for notification in notifications:
-        notification_manager.db_gateway.write(notification.dict())
-    # Print out the final state
+    for plan_group in plan_groups:
+        plan_groups_gateway.delete_plan_group(plan_group.id)
+        plan_groups_gateway.upsert_plan_group(plan_group)
+        for plan in plans:
+            if plan.id in plan_group.plan_ids:
+                plan.plan_group_id = plan_group.id
+                plan_controller.update_plan(plan)
 
     print("\nFinal state:")
     for user in users:
@@ -232,7 +270,9 @@ def generate_dummy_data():
         print("Plans:")
         for plan in user_plans:
             print(f"- {plan.goal} (Finishing date: {plan.finishing_date})")
-            print(f"  Invitees: {', '.join([invitee.name for invitee in plan.invitees])}")
+            plan_group = plan_groups_gateway.get_plan_group_by_plan_id(plan.id)
+            if plan_group:
+                print(f"  Members: {', '.join([member.name for member in plan_group.members])}")
             print(f"  Sessions: {len(plan.sessions)}")
 
         user_notifications = notification_manager.get_all_for_user(user.id)
@@ -245,8 +285,13 @@ def generate_dummy_data():
     print("Done! 🎉")
 
 if __name__ == "__main__":
-    try:
-        generate_dummy_data()
-    except Exception as e:
-        print(f"Error generating dummy data: {str(e)}")
-        print(traceback.format_exc())
+    from constants import ENVIRONMENT
+
+    if ENVIRONMENT == "dev":
+        try:
+            generate_dummy_data()
+        except Exception as e:
+            print(f"Error generating dummy data: {str(e)}")
+            print(traceback.format_exc())
+    else:
+        print("This script is only available in the dev environment.")

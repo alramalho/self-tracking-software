@@ -1,6 +1,7 @@
 from gateways.database.mongodb import MongoDBGateway
 from gateways.plan_invitations import PlanInvitationsGateway
-from entities.plan import Plan, PlanSession, PlanInvitee
+from entities.plan import Plan, PlanSession
+from entities.plan_group import PlanGroupMember
 from entities.activity import Activity
 from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
@@ -14,13 +15,15 @@ import concurrent.futures
 from loguru import logger
 from bson import ObjectId
 from entities.activity import SAMPLE_SEARCH_ACTIVITY
-
+from copy import deepcopy
+from gateways.plan_groups import PlanGroupsGateway
 class PlanController:
     def __init__(self):
         self.db_gateway = MongoDBGateway("plans")
         self.activities_gateway = ActivitiesGateway()
         self.users_gateway = UsersGateway()
         self.plan_invitation_gateway = PlanInvitationsGateway()
+        self.plan_groups_gateway = PlanGroupsGateway()
         logger.log("CONTROLLERS", "PlanController initialized")
 
     def create_plan(self, plan: Plan) -> Plan:
@@ -41,10 +44,6 @@ class PlanController:
             goal=generated_plan_data["goal"],
             emoji=generated_plan_data.get("emoji", ""),
             finishing_date=generated_plan_data.get("finishing_date", None),
-            invitees=[
-                PlanInvitee(**invitee)
-                for invitee in generated_plan_data.get("invitees", [])
-            ],
             sessions=sessions,
         )
 
@@ -323,29 +322,37 @@ class PlanController:
             plan = Plan(**plan_data)
             self.update_plan_sessions_with_activity_ids(plan)
 
-    def invite_user_to_plan(self, plan_id: str, sender_id: str, recipient_id: str) -> PlanInvitation:
-        logger.log("CONTROLLERS", f"Inviting user {recipient_id} to plan {plan_id}")
-        invitation = PlanInvitation.new(plan_id, sender_id, recipient_id)
-        self.plan_invitation_gateway.write(invitation.dict())
-        
-        return invitation
-
     def accept_plan_invitation(self, invitation_id: str) -> Plan:
         logger.log("CONTROLLERS", f"Accepting plan invitation: {invitation_id}")
-        invitation = self.plan_invitation_gateway.query("id", invitation_id)[0]
-        invitation = PlanInvitation(**invitation)
+        invitation = self.plan_invitation_gateway.get(invitation_id)
 
         plan = self.get_plan(invitation.plan_id)
         recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
+
+        # duplicate plan to recipient
+        recipients_plan = deepcopy(plan)
+        recipients_plan.id = str(ObjectId())
+        recipients_plan.user_id = recipient.id
+        recipients_plan = self.create_plan(recipients_plan)
         
         # Update invitation status
         invitation.status = "accepted"
         invitation.updated_at = datetime.now(UTC).isoformat()
-        self.plan_invitation_gateway.write(invitation.dict())
+        self.plan_invitation_gateway.upsert_plan_invitation(invitation)
         
-        # Add recipient to plan invitees
-        plan.invitees.append(PlanInvitee(user_id=recipient.id, name=recipient.name, username=recipient.username, picture=recipient.picture))
-        self.update_plan(plan)
+        # update plan group members
+        plan_group = self.plan_groups_gateway.get(plan.plan_group_id)
+        plan_group.plan_ids.append(recipients_plan.id)
+        self.plan_groups_gateway.add_member(plan_group, PlanGroupMember(user_id=recipient.id, name=recipient.name, username=recipient.username, picture=recipient.picture))
+        self.plan_groups_gateway.upsert_plan_group(plan_group)
+
+
+        plan_activity_ids = set(session.activity_id for session in plan.sessions)
+        activities = [self.activities_gateway.get_activity_by_id(activity_id) for activity_id in plan_activity_ids]
+
+        for activity in activities:
+            activity.invitee_ids.append(recipient.id)
+            self.activities_gateway.update_activity(activity)
         
         return plan
 

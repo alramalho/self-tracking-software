@@ -6,6 +6,7 @@ from ai.llm import ask_text
 from datetime import datetime, timedelta
 from typing import List, Optional, Literal
 import pytz
+from bson.objectid import ObjectId
 import random
 from constants import VAPID_PRIVATE_KEY, VAPID_CLAIMS, CHRON_PROXY_LAMBDA_TARGET_ARN, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 from gateways.users import UsersGateway
@@ -33,8 +34,10 @@ class NotificationManager:
         prompt_tag: Optional[str] = None,
         recurrence: Optional[Literal["daily", "weekly"]] = None,
         time_deviation_in_hours: Optional[int] = None,
+        id: Optional[str] = None,
     ) -> Notification:
         notification = Notification(
+            id=id or str(ObjectId()),
             user_id=user_id,
             message=message,
             type=notification_type,
