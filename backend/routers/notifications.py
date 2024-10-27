@@ -7,7 +7,7 @@ from gateways.users import UsersGateway
 from entities.message import Message
 from gateways.database.mongodb import MongoDBGateway
 from ai.assistant.memory import DatabaseMemory
-from pywebpush import webpush, WebPushException
+from entities.notification import Notification
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from fastapi import Request
@@ -112,13 +112,15 @@ async def mark_notification_opened(
 
 @router.post("/initiate-recurrent-checkin")
 async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
-    notification = notification_manager.create_notification(
-        user_id=user.id,
-        message="",  # This will be filled when processed
-        notification_type="engagement",
-        prompt_tag="user-recurrent-checkin",
-        recurrence="daily",
-        time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
+    notification = notification_manager.create_and_process_notification(
+        Notification.new(
+            user_id=user.id,
+            message="",  # This will be filled when processed
+            notification_type="engagement",
+            prompt_tag="user-recurrent-checkin",
+            recurrence="daily",
+            time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
+        )
     )
     return {
         "message": "Recurrent check-in initiated successfully",

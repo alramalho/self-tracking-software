@@ -8,6 +8,7 @@ from entities.activity import Activity, ActivityEntry
 from entities.plan import Plan, PlanSession
 from entities.plan_invitation import PlanInvitation
 from entities.friend_request import FriendRequest
+from entities.notification import Notification
 from entities.plan_group import PlanGroup, PlanGroupMember
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
@@ -171,11 +172,13 @@ def generate_dummy_data():
         sender = next((u for u in users if u.id == friend_request.sender_id), None)
         notifications.append(
             notification_manager.create_notification(
-                id=str(ObjectId(f"66666666666666666666668{i}")),
-                user_id=friend_request.recipient_id,
-                message=f"{sender.name} sent you a friend request",
-                notification_type="friend_request",
-                related_id=friend_request.id
+                Notification.new(
+                    id=str(ObjectId(f"66666666666666666666668{i}")),
+                    user_id=friend_request.recipient_id,
+                    message=f"{sender.name} sent you a friend request",
+                    notification_type="friend_request",
+                    related_id=friend_request.id
+                )
             )
         )
 
@@ -187,33 +190,39 @@ def generate_dummy_data():
         plan = next((p for p in plans if p.id == plan_invitation.plan_id), None)
         notifications.append(
             notification_manager.create_notification(
-                id=str(ObjectId(f"66666666666666666666669{i}")),
-                user_id=plan_invitation.recipient_id,
-                message=f"{sender.name} invited you to join the plan: {plan.goal}",
-                notification_type="plan_invitation",
-                related_id=plan_invitation.id
+                Notification.new(
+                    id=str(ObjectId(f"66666666666666666666669{i}")),
+                    user_id=plan_invitation.recipient_id,
+                    message=f"{sender.name} invited you to join the plan: {plan.goal}",
+                    notification_type="plan_invitation",
+                    related_id=plan_invitation.id
+                )
             )
         )
 
     # Engagement notifications
     notifications.extend([
         notification_manager.create_notification(
-            id=str(ObjectId("66666666666666666666668c")),
-            user_id=users[0].id,
-            message="How's your training going? Let's check in on your progress!",
-            notification_type="engagement",
-            prompt_tag="user-recurrent-checkin",
-            recurrence="daily",
-            time_deviation_in_hours=2,
+            Notification.new(
+                id=str(ObjectId("66666666666666666666668c")),
+                user_id=users[0].id,
+                message="How's your training going? Let's check in on your progress!",
+                notification_type="engagement",
+                prompt_tag="user-recurrent-checkin",
+                recurrence="daily",
+                time_deviation_in_hours=2,
+            )
         ),
         notification_manager.create_notification(
-            id=str(ObjectId("66666666666666666666668d")),
-            user_id=users[0].id,
-            message="Time for your weekly reflection. What have you achieved this week?",
-            notification_type="engagement",
-            prompt_tag="weekly-reflection",
-            recurrence="weekly",
-            time_deviation_in_hours=4
+            Notification.new(
+                id=str(ObjectId("66666666666666666666668d")),
+                user_id=users[0].id,
+                message="Time for your weekly reflection. What have you achieved this week?",
+                notification_type="engagement",
+                prompt_tag="weekly-reflection",
+                recurrence="weekly",
+                time_deviation_in_hours=4
+            )
         )
     ])
 

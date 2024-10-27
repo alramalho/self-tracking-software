@@ -97,7 +97,7 @@ const ProfilePage: React.FC = () => {
           (req) => req.sender_id === profileData.user?.id && req.status === "pending"
         );
         if (request) {
-          await api.post(`/friend-requests/${request.id}/${action}`);
+          await api.post(`${action}-friend-request/${request.id}`);
           toast.success(`Friend request ${action}ed`);
           fetchUserData();
         }

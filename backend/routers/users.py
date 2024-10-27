@@ -10,6 +10,7 @@ from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
 from gateways.plan_groups import PlanGroupsGateway
+from entities.notification import Notification
 from .notifications import router as notifications_router
 from services.notification_manager import NotificationManager
 import re
@@ -175,11 +176,13 @@ async def send_friend_request(
         friend_request = users_gateway.send_friend_request(
             current_user.id, recipient_id
         )
-        notification = notification_manager.create_notification(
-            user_id=recipient_id,
-            message=f"{current_user.name} sent you a friend request",
-            notification_type="friend_request",
-            related_id=friend_request.id
+        notification = notification_manager.create_and_process_notification(
+            Notification.new(
+                user_id=recipient_id,
+                message=f"{current_user.name} sent you a friend request",
+                notification_type="friend_request",
+                related_id=friend_request.id
+            )
         )
         return {
             "message": "Friend request sent successfully",
@@ -188,6 +191,7 @@ async def send_friend_request(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
 @router.post("/accept-friend-request/{request_id}")
 async def accept_friend_request(
     request_id: str, current_user: User = Depends(is_clerk_user)
@@ -195,10 +199,13 @@ async def accept_friend_request(
     try:
         sender, recipient = users_gateway.accept_friend_request(request_id)
         try:
-            notification_manager.send_push_notification(
-                sender,
-                title="🤝 Friend Request Accepted",
-                body=f"{current_user.name} accepted your friend request. You can now see their activities!",
+            notification_manager.create_and_process_notification(
+                Notification.new(
+                    user_id=sender.id,
+                    message=f"{current_user.name} accepted your friend request. You can now see their activities!",
+                    notification_type="friend_request",
+                    related_id=request_id
+                )
             )
             logger.info(f"Sent push notification to {sender.id}")
         except Exception as e:
@@ -220,10 +227,13 @@ async def reject_friend_request(
     try:
         recipient = users_gateway.reject_friend_request(request_id)
         try:
-            notification_manager.send_push_notification(
-                recipient,
-                title="😔 Friend Request Rejected",
-                body=f"{current_user.name} rejected your friend request.",
+            notification_manager.create_and_process_notification(
+                Notification.new(
+                    user_id=recipient.id,
+                    message=f"{current_user.name} rejected your friend request.",
+                    notification_type="friend_request",
+                    related_id=request_id
+                )
             )
             logger.info(f"Sent push notification to {recipient.id}")
         except Exception as e:

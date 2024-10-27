@@ -18,7 +18,7 @@ const FriendRequestsPage: React.FC = () => {
 
   const handleFriendRequest = async (requestId: string, action: "accept" | "reject") => {
     try {
-      await api.post(`/friend-requests/${requestId}/${action}`);
+      await api.post(`${action}-friend-request/${requestId}`);
       toast.success(`Friend request ${action}ed`);
       fetchUserData();
     } catch (error) {

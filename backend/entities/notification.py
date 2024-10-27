@@ -18,3 +18,7 @@ class Notification(BaseModel):
     status: Literal["pending", "processed", "opened", "concluded"] = "pending"
     type: Literal["friend_request", "plan_invitation", "engagement"] = "engagement"
     related_id: Optional[str] = None  # For storing friend request or plan invitation IDs
+
+    @classmethod
+    def new(cls, **kwargs):
+        return cls(**kwargs)

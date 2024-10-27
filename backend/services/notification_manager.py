@@ -27,27 +27,20 @@ class NotificationManager:
 
     def create_notification(
         self,
-        user_id: str,
-        message: str,
-        notification_type: Literal["friend_request", "plan_invitation", "engagement"],
-        related_id: Optional[str] = None,
-        prompt_tag: Optional[str] = None,
-        recurrence: Optional[Literal["daily", "weekly"]] = None,
-        time_deviation_in_hours: Optional[int] = None,
-        id: Optional[str] = None,
+        notification: Notification
     ) -> Notification:
         notification = Notification(
-            id=id or str(ObjectId()),
-            user_id=user_id,
-            message=message,
-            type=notification_type,
-            related_id=related_id,
-            prompt_tag=prompt_tag,
-            recurrence=recurrence,
+            id=notification.id or str(ObjectId()),
+            user_id=notification.user_id,
+            message=notification.message,
+            type=notification.type,
+            related_id=notification.related_id,
+            prompt_tag=notification.prompt_tag,
+            recurrence=notification.recurrence,
         )
 
-        if recurrence:
-            cron_str = self._generate_cron_string(recurrence, time_deviation_in_hours)
+        if notification.recurrence:
+            cron_str = self._generate_cron_string(notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS)
             notification.scheduled_for = self._get_next_occurrence(cron_str)
             aws_cronjob_id = self.cron_gateway.create(
                 cron_str,
@@ -63,6 +56,7 @@ class NotificationManager:
         return notification
 
     def process_notification(self, notification_id: str) -> Optional[Notification]:
+
         notification = self.get_notification(notification_id)
         if not notification or notification.status != "pending":
             return None
@@ -79,7 +73,15 @@ class NotificationManager:
         if notification.recurrence:
             self._reschedule_notification(notification)
 
+        user = self.users_gateway.get_user_by_id(notification.user_id)
+        if user.pwa_subscription_endpoint:
+            self.send_push_notification(user, title=f"hey {user.name}", body=notification.message.lower())
+
         return notification
+    
+    def create_and_process_notification(self, notification: Notification) -> Optional[Notification]:
+        notification = self.create_notification(notification)
+        return self.process_notification(notification.id)
 
     def mark_as_opened(self, notification_id: str) -> Optional[Notification]:
         notification = self.get_notification(notification_id)

@@ -6,6 +6,7 @@ from controllers.plan_controller import PlanController
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
 from services.notification_manager import NotificationManager
+from entities.notification import Notification
 from loguru import logger
 from fastapi import Request
 import traceback
@@ -157,11 +158,13 @@ async def invite_to_plan(
     plan_invitations_gateway.upsert_plan_invitation(plan_invitation)
     
     # Create a notification for the invitee
-    notification = notification_manager.create_notification(
-        user_id=invitee_id,
-        message=f"{current_user.name} invited you to join their plan: {plan.goal}",
-        notification_type="plan_invitation",
-        related_id=plan_invitation.id
+    notification = notification_manager.create_and_process_notification(
+        Notification.new(
+            user_id=invitee_id,
+            message=f"{current_user.name} invited you to join their plan: {plan.goal}",
+            notification_type="plan_invitation",
+            related_id=plan_invitation.id
+        )
     )
     
     return {"message": "Invitation sent successfully", "notification": notification}
