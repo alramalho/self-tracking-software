@@ -1,4 +1,4 @@
-import { format, isPast, parseISO } from "date-fns";
+import { format, isPast, isToday, parseISO } from "date-fns";
 import { Check } from "lucide-react";
 import { ActivityEntry, Activity } from "@/contexts/UserPlanContext";
 
@@ -20,7 +20,7 @@ export const ActivityEntryCard = ({
   completed?: boolean;
 }) => {
   const dateInfoStr = (isoDate: string) => {
-    if (isPast(parseISO(isoDate))) {
+    if (!isToday(parseISO(isoDate)) && isPast(parseISO(isoDate))) {
       return format(parseISO(isoDate), "MMM d, yyyy");
     }
     const date = parseISO(isoDate);
