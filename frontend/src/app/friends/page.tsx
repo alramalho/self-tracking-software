@@ -56,7 +56,7 @@ const FriendsPage: React.FC = () => {
           ))}
         </ul>
       ) : (
-        <p className="text-center text-gray-500">You don't have any friends yet.</p>
+        <p className="text-center text-gray-500">You don&apos;t have any friends yet.</p>
       )}
     </div>
   );
