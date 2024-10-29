@@ -37,12 +37,22 @@ class ActivitiesGateway:
         else:
             return None
     
-    def get_activity_entry_by_id(self, activity_entry_id:str) -> Activity:
+    def get_activity_entry_by_id(self, activity_entry_id:str) -> ActivityEntry:
         data = self.activity_entries_db_gateway.query("id", activity_entry_id)
         if len(data) > 0:
             return ActivityEntry(**data[0])
         else:
             return None
+        
+    def get_activity_entry(self, activity_id: str, date: str) -> ActivityEntry:
+        entries = self.activity_entries_db_gateway.query("activity_id", activity_id)
+        for entry in entries:
+            if entry["date"] == date:
+                return ActivityEntry(**entry)
+        return None
+
+    def get_all_activity_entries_by_user_id(self, user_id: str) -> List[ActivityEntry]:
+        return [ActivityEntry(**data) for data in self.activity_entries_db_gateway.query("user_id", user_id)]
         
     def get_all_activities(self) -> list[Activity]:
         return [Activity(**data) for data in self.activities_db_gateway.scan()]
@@ -148,21 +158,6 @@ class ActivitiesGateway:
     def permanently_delete_activity_entry(self, activity_entry_id: str):
         self.activity_entries_db_gateway.delete_all('id', activity_entry_id)
         logger.info(f"ActivityEntry {activity_entry_id} forever deleted")
-
-    def get_all_activity_entries_by_user_id(self, user_id: str) -> List[ActivityEntry]:
-        activities = self.get_all_activities_by_user_id(user_id)
-        all_entries = []
-        for activity in activities:
-            entries = self.get_all_activity_entries_by_activity_id(activity.id)
-            all_entries.extend(entries)
-        return all_entries
-
-    def get_activity_entry(self, activity_id: str, date: str) -> ActivityEntry:
-        entries = self.activity_entries_db_gateway.query("activity_id", activity_id)
-        for entry in entries:
-            if entry["date"] == date:
-                return ActivityEntry(**entry)
-        return None
 
 if __name__ == "__main__":
     from gateways.database.mongodb import MongoDBGateway

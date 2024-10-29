@@ -163,7 +163,13 @@ async def invite_to_plan(
             user_id=invitee_id,
             message=f"{current_user.name} invited you to join their plan: {plan.goal}",
             type="plan_invitation",
-            related_id=plan_invitation.id
+            related_id=plan_invitation.id,
+            related_data={
+                "id": current_user.id,
+                "name": current_user.name,
+                "username": current_user.username,
+                "picture": current_user.picture
+            }
         )
     )
     

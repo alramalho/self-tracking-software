@@ -29,15 +29,6 @@ class NotificationManager:
         self,
         notification: Notification
     ) -> Notification:
-        notification = Notification(
-            id=notification.id or str(ObjectId()),
-            user_id=notification.user_id,
-            message=notification.message,
-            type=notification.type,
-            related_id=notification.related_id,
-            prompt_tag=notification.prompt_tag,
-            recurrence=notification.recurrence,
-        )
 
         if notification.recurrence:
             cron_str = self._generate_cron_string(notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS)

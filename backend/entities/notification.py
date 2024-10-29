@@ -3,6 +3,7 @@ from datetime import datetime
 from bson import ObjectId
 from typing import Optional, Literal
 
+
 class Notification(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     user_id: str
@@ -18,6 +19,7 @@ class Notification(BaseModel):
     status: Literal["pending", "processed", "opened", "concluded"] = "pending"
     type: Literal["friend_request", "plan_invitation", "engagement", "info"] = "info"
     related_id: Optional[str] = None  # For storing friend request or plan invitation IDs
+    related_data: Optional[dict] = None
 
     @classmethod
     def new(cls, **kwargs):

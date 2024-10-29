@@ -17,8 +17,27 @@ from controllers.plan_controller import PlanController
 from gateways.plan_groups import PlanGroupsGateway
 from services.notification_manager import NotificationManager
 import traceback
+from pymongo import MongoClient
+from constants import MONGO_DB_CONNECTION_STRING, MONGO_DB_NAME, ENVIRONMENT
 from bson import ObjectId
+from loguru import logger
 import random
+
+def delete_all_data():
+    if ENVIRONMENT != "dev":
+        logger.error("This script is only available in the dev environment.")
+        return
+    
+    client = MongoClient(MONGO_DB_CONNECTION_STRING)
+    db_name = f"{MONGO_DB_NAME.lower()}_{ENVIRONMENT.lower()}"
+    db = client[db_name]
+    collections = ["users", "activities", "mood_reports", "plans", "plan_groups", "friend_requests", "notifications"]   
+    logger.info(f"Cleaning all data from {db_name}...")
+    for collection in collections:
+        logger.info(f"Cleaning {collection}...")
+        result = db[collection].delete_many({})
+        logger.info(f"Cleaned {result.deleted_count} documents from {collection}")
+
 
 def generate_dummy_data():
     users_gateway = UsersGateway()
@@ -177,7 +196,13 @@ def generate_dummy_data():
                     user_id=friend_request.recipient_id,
                     message=f"{sender.name} sent you a friend request",
                     type="friend_request",
-                    related_id=friend_request.id
+                    related_id=friend_request.id,
+                    related_data={
+                        "id": friend_request.sender_id,
+                         "name": sender.name,
+                        "username": sender.username,
+                        "picture": sender.picture
+                    }
                 )
             )
         )
@@ -195,7 +220,13 @@ def generate_dummy_data():
                     user_id=plan_invitation.recipient_id,
                     message=f"{sender.name} invited you to join the plan: {plan.goal}",
                     type="plan_invitation",
-                    related_id=plan_invitation.id
+                    related_id=plan_invitation.id,
+                    related_data={
+                        "id": sender.id,
+                        "name": sender.name,
+                        "username": sender.username,
+                        "picture": sender.picture
+                    }
                 )
             )
         )
@@ -221,7 +252,7 @@ def generate_dummy_data():
                 type="engagement",
                 prompt_tag="weekly-reflection",
                 recurrence="weekly",
-                time_deviation_in_hours=4
+                time_deviation_in_hours=4,
             )
         )
     ])
@@ -298,6 +329,7 @@ if __name__ == "__main__":
 
     if ENVIRONMENT == "dev":
         try:
+            delete_all_data()
             generate_dummy_data()
         except Exception as e:
             print(f"Error generating dummy data: {str(e)}")

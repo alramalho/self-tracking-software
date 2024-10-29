@@ -123,8 +123,9 @@ export interface Notification {
   opened_at: string | null;
   concluded_at: string | null;
   status: "pending" | "processed" | "opened" | "concluded";
-  type: "friend_request" | "plan_invitation" | "engagement";
+  type: "friend_request" | "plan_invitation" | "engagement" | "plan_session";
   related_id: string | null;
+  related_data: Record<string, string> | null;
 }
 export interface UserDataEntry {
   user: User | null;

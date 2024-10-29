@@ -195,7 +195,13 @@ async def send_friend_request(
                 user_id=recipient_id,
                 message=f"{current_user.name} sent you a friend request",
                 type="friend_request",
-                related_id=friend_request.id
+                related_id=friend_request.id,
+                related_data={
+                    "id": current_user.id,
+                    "name": current_user.name,
+                    "username": current_user.username,
+                    "picture": current_user.picture
+                }
             )
         )
         return {
@@ -220,7 +226,13 @@ async def accept_friend_request(
                     user_id=sender.id,
                     message=f"{current_user.name} accepted your friend request. You can now see their activities!",
                     type="friend_request",
-                    related_id=request_id
+                    related_id=request_id,
+                    related_data={
+                        "id": current_user.id,
+                        "name": current_user.name,
+                        "username": current_user.username,
+                        "picture": current_user.picture
+                    }
                 )
             )
             logger.info(f"Sent push notification to {sender.id}")
@@ -248,7 +260,13 @@ async def reject_friend_request(
                     user_id=sender.id,
                     message=f"{current_user.name} rejected your friend request.",
                     type="info",
-                    related_id=request_id
+                    related_id=request_id,
+                    related_data={
+                        "id": sender.id,
+                        "name": sender.name,
+                        "username": sender.username,
+                        "picture": sender.picture
+                    }
                 )
             )
             logger.info(f"Sent push notification to {sender.id}")

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
 import { Check, X, MessageSquare } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import Link from "next/link";
 
 interface NotificationsProps {}
 
@@ -112,9 +114,30 @@ const Notifications: React.FC<NotificationsProps> = () => {
       {userData["me"].notifications.map((notification) => (
         <div
           key={notification.id}
-          className="bg-white shadow-sm border border-gray-200 p-4 rounded-lg flex items-center justify-between transition-shadow duration-200 hover:shadow-md"
+          className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-full flex items-center justify-between transition-shadow duration-200 hover:shadow-md"
         >
-          <p className="text-gray-700">{notification.message}</p>
+          <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+            {["friend_request", "plan_invitation"].includes(
+              notification.type
+            ) &&
+              notification.related_data && (
+                <Link href={`/profile/${notification.related_data.username}`}>
+                  <Avatar>
+                    <AvatarImage
+                      src={notification.related_data.picture}
+                      alt={notification.related_data.name || ""}
+                    />
+                    <AvatarFallback>
+                      {(notification.related_data.name || "U")[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              )}
+            {["engagement"].includes(notification.type) && (
+              <p className="text-4xl text-gray-700 font-medium">💭</p>
+            )}
+            <p className="text-gray-700">{notification.message}</p>
+          </div>
           <div className="flex ml-4">{renderActionButtons(notification)}</div>
         </div>
       ))}
