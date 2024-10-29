@@ -139,10 +139,6 @@ const ProfilePage: React.FC = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [profileData]);
 
-  const pendingFriendRequests = currentUserFriendRequests?.filter(
-    (request) => request.status === "pending" && request.recipient_id === currentUser?.id
-  );
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
@@ -166,19 +162,14 @@ const ProfilePage: React.FC = () => {
             <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
             <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
           </Avatar>
-          <div className="text-center">
-            <p className="text-2xl font-bold">
+          <Link href="/friends">
+            <div className="text-center">
+              <p className="text-2xl font-bold">
               {user?.friend_ids?.length || 0}
             </p>
-            <p className="text-sm text-gray-500">Friends</p>
-            {pendingFriendRequests?.length > 0 && (
-              <Link href="/friend-requests">
-                <Badge variant="secondary" className="cursor-pointer bg-red-500 text-white">
-                  {pendingFriendRequests?.length || 0} Requests
-                  </Badge>
-                </Link>
-              )}
-          </div>
+              <p className="text-sm text-gray-500">Friends</p>
+            </div>
+          </Link>
           {isOwnProfile ? (
             <div className="flex items-center space-x-4">
               

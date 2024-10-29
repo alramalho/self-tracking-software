@@ -176,7 +176,7 @@ def generate_dummy_data():
                     id=str(ObjectId(f"66666666666666666666668{i}")),
                     user_id=friend_request.recipient_id,
                     message=f"{sender.name} sent you a friend request",
-                    notification_type="friend_request",
+                    type="friend_request",
                     related_id=friend_request.id
                 )
             )
@@ -194,7 +194,7 @@ def generate_dummy_data():
                     id=str(ObjectId(f"66666666666666666666669{i}")),
                     user_id=plan_invitation.recipient_id,
                     message=f"{sender.name} invited you to join the plan: {plan.goal}",
-                    notification_type="plan_invitation",
+                    type="plan_invitation",
                     related_id=plan_invitation.id
                 )
             )
@@ -207,7 +207,7 @@ def generate_dummy_data():
                 id=str(ObjectId("66666666666666666666668c")),
                 user_id=users[0].id,
                 message="How's your training going? Let's check in on your progress!",
-                notification_type="engagement",
+                type="engagement",
                 prompt_tag="user-recurrent-checkin",
                 recurrence="daily",
                 time_deviation_in_hours=2,
@@ -218,7 +218,7 @@ def generate_dummy_data():
                 id=str(ObjectId("66666666666666666666668d")),
                 user_id=users[0].id,
                 message="Time for your weekly reflection. What have you achieved this week?",
-                notification_type="engagement",
+                type="engagement",
                 prompt_tag="weekly-reflection",
                 recurrence="weekly",
                 time_deviation_in_hours=4

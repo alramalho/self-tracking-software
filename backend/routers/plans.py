@@ -162,7 +162,7 @@ async def invite_to_plan(
         Notification.new(
             user_id=invitee_id,
             message=f"{current_user.name} invited you to join their plan: {plan.goal}",
-            notification_type="plan_invitation",
+            type="plan_invitation",
             related_id=plan_invitation.id
         )
     )

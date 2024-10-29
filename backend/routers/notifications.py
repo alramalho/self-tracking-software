@@ -116,7 +116,7 @@ async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
         Notification.new(
             user_id=user.id,
             message="",  # This will be filled when processed
-            notification_type="engagement",
+            type="engagement",
             prompt_tag="user-recurrent-checkin",
             recurrence="daily",
             time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,

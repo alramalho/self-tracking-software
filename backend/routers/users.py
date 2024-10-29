@@ -114,6 +114,20 @@ async def load_all_user_data(
             detail=f"An error occurred while fetching user data: {str(e)}",
         )
 
+@router.get("/friends")
+async def get_user_friends(user: User = Depends(is_clerk_user)):
+    friends = [users_gateway.get_user_by_id(friend_id) for friend_id in user.friend_ids]
+    
+    return {
+        "friends": [
+            {
+                "picture": friend.picture,
+                "username": friend.username,
+                "name": friend.name
+            } for friend in friends
+        ]
+    }
+
 @router.get("/check-username/{username}")
 async def check_username(username: str):
     user = users_gateway.get_user_by_safely("username", username)
@@ -180,7 +194,7 @@ async def send_friend_request(
             Notification.new(
                 user_id=recipient_id,
                 message=f"{current_user.name} sent you a friend request",
-                notification_type="friend_request",
+                type="friend_request",
                 related_id=friend_request.id
             )
         )
@@ -190,6 +204,8 @@ async def send_friend_request(
             "notification": notification
         }
     except Exception as e:
+        logger.error(f"Failed to send friend request: {e}")
+        logger.error(f"Traceback: \n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
     
 @router.post("/accept-friend-request/{request_id}")
@@ -203,7 +219,7 @@ async def accept_friend_request(
                 Notification.new(
                     user_id=sender.id,
                     message=f"{current_user.name} accepted your friend request. You can now see their activities!",
-                    notification_type="friend_request",
+                    type="friend_request",
                     related_id=request_id
                 )
             )
@@ -225,33 +241,29 @@ async def reject_friend_request(
     request_id: str, current_user: User = Depends(is_clerk_user)
 ):
     try:
-        recipient = users_gateway.reject_friend_request(request_id)
+        sender = users_gateway.reject_friend_request(request_id)
         try:
             notification_manager.create_and_process_notification(
                 Notification.new(
-                    user_id=recipient.id,
+                    user_id=sender.id,
                     message=f"{current_user.name} rejected your friend request.",
-                    notification_type="friend_request",
+                    type="info",
                     related_id=request_id
                 )
             )
-            logger.info(f"Sent push notification to {recipient.id}")
+            logger.info(f"Sent push notification to {sender.id}")
         except Exception as e:
             logger.error(f"Failed to send push notification: {e}")
 
         return {
             "message": "Friend request rejected",
-            "recipient": recipient,
+            "sender": sender,
         }
     except Exception as e:
         logger.error(f"Failed to reject friend request: {e}")
         logger.error(f"Traceback: \n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/pending-friend-requests")
-async def get_pending_friend_requests(current_user: User = Depends(is_clerk_user)):
-    pending_requests = users_gateway.get_pending_friend_requests(current_user.id)
-    return {"pending_requests": pending_requests}
 
 @router.get("/timeline")
 async def get_timeline_data(current_user: User = Depends(is_clerk_user)):

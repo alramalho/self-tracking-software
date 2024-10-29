@@ -75,7 +75,7 @@ class NotificationManager:
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
         if user.pwa_subscription_endpoint:
-            self.send_push_notification(user, title=f"hey {user.name}", body=notification.message.lower())
+            self.send_push_notification(user, title=f"hey {user.name} 👋", body=notification.message.lower())
 
         return notification
     

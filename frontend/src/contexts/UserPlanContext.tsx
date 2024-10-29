@@ -128,6 +128,7 @@ export interface Notification {
 }
 export interface UserDataEntry {
   user: User | null;
+  user_friends?: {picture: string, name: string, username: string}[];
   plans: ApiPlan[];
   planGroups: PlanGroup[];
   activities: Activity[];

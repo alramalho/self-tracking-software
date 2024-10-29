@@ -175,15 +175,15 @@ class UsersGateway:
         if friend_request.status == "accepted":
             raise Exception(f"Friend request '{request_id}' is already accepted")
         
-        recipient = self.get_user_by_id(friend_request.recipient_id)
+        sender = self.get_user_by_id(friend_request.sender_id)
 
         if friend_request.status == "rejected":
-            return recipient
+            return sender
 
 
         self.friend_request_gateway.update_friend_request(request_id, "rejected")
 
-        return recipient
+        return sender
 
     def get_friend_count(self, user_id: str) -> int:
         user = self.get_user_by_id(user_id)
