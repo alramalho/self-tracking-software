@@ -45,29 +45,30 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         </div>
       )}
       <div className="p-4 flex flex-col">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Avatar className="w-10 h-10">
+            <Avatar className="w-8 h-8">
               <AvatarImage src={userPicture} alt={userName || ""} />
               <AvatarFallback>{(userName || "U")[0]}</AvatarFallback>
             </Avatar>
-            <span className="text-6xl h-full text-gray-400">
+            <span className="text-5xl h-full text-gray-400">
               {activityEmoji}
             </span>
             <div className="flex flex-col">
-              <span className="text-md text-gray-500">@{userUsername}</span>
+              <span className="text-sm text-gray-500">@{userUsername}</span>
               <span className="font-semibold">
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>
+              <span className="text-xs text-gray-500">{formattedDate}</span>
             </div>
           </div>
-          <span className="text-sm text-gray-500">{formattedDate}</span>
         </div>
         {imageUrl && (
-          <span className="text-xs text-gray-400">
-            Image expires in {daysUntilExpiration > 0 ? `${daysUntilExpiration} days` : "today"}
+          <span className="text-xs text-gray-400 mt-2">
+            Image expires{" "}
+            {daysUntilExpiration > 0 ? `in ${daysUntilExpiration} days` : "today"}
           </span>
-        )}
+        )} 
       </div>
     </div>
   );

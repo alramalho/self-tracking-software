@@ -107,37 +107,21 @@ const ProfilePage: React.FC = () => {
       }
     }
   };
-
-  const photosWithDetails = useMemo(() => {
-    if (!profileData) return [];
+  const getFormattedDate = (date: string) => {
+    const parsedDate = parseISO(date);
     const now = new Date();
-    return activityEntries
-      .filter(
-        (entry) =>
-          entry.image?.url &&
-          entry.image?.created_at &&
-          entry.image?.expires_at &&
-          new Date(entry.image.expires_at!) > now &&
-          entry.image?.keep_in_profile
-      )
-      .map((entry) => {
-        const expiresAt = parseISO(entry.image.expires_at!);
-        const daysUntilExpiration = differenceInDays(expiresAt, now);
-        const activity = activities.find((a) => a.id === entry.activity_id);
-
-        return {
-          ...entry,
-          activityTitle: activity?.title || "Unknown Activity",
-          activityEmoji: activity?.emoji || "",
-          activityEntryQuantity: entry?.quantity || 0,
-          activityMeasure: activity?.measure || "",
-          formattedDate: format(parseISO(entry.date), "HH:mm"),
-          daysUntilExpiration:
-            daysUntilExpiration > 0 ? daysUntilExpiration : 0,
-        };
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [profileData]);
+    const diffInDays = differenceInDays(now, parsedDate);
+    
+    if (diffInDays === 1) {
+      return `yesterday at ${format(parsedDate, "HH:mm")}`;
+    }
+    
+    if (diffInDays <= 7) {
+      return `last ${format(parsedDate, "EEEE")} at ${format(parsedDate, "HH:mm")}`;
+    }
+    
+    return format(parsedDate, "MMM d HH:mm");
+  };
 
   if (loading) {
     return (
@@ -258,33 +242,36 @@ const ProfilePage: React.FC = () => {
 
         <Tabs defaultValue="activities" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="activities">Activities</TabsTrigger>
-            <TabsTrigger value="photos">Photos</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
-          <TabsContent value="activities">
+          <TabsContent value="overview">
             <ActivitiesRenderer
               activities={profileData.activities}
               activityEntries={profileData.activityEntries}
             />
           </TabsContent>
-          <TabsContent value="photos">
-            {photosWithDetails.length > 0 ? (
+          <TabsContent value="history">
+            {activityEntries.length > 0 ? (
               <div className="space-y-4">
-                {photosWithDetails.map((photo) => (
-                  <ActivityEntryPhotoCard
-                    key={photo.id}
-                    imageUrl={photo.image.url!}
-                    activityTitle={photo.activityTitle}
-                    activityEmoji={photo.activityEmoji}
-                    activityEntryQuantity={photo.activityEntryQuantity}
-                    activityMeasure={photo.activityMeasure}
-                    formattedDate={photo.formattedDate}
-                    daysUntilExpiration={photo.daysUntilExpiration}
-                    userPicture={user?.picture} 
-                    userName={user?.name}
-                    userUsername={user?.username}
-                  />
-                ))}
+                {activityEntries.map((entry) => {
+                  const activity = activities.find((a) => a.id === entry.activity_id);
+                  return (
+                    <ActivityEntryPhotoCard
+                      key={entry.id}
+                      imageUrl={entry.image?.url}
+                      activityTitle={activity?.title || "Unknown Activity"}
+                      activityEmoji={activity?.emoji || ""}
+                      activityEntryQuantity={entry.quantity}
+                      activityMeasure={activity?.measure || ""}
+                      formattedDate={getFormattedDate(entry.date)}
+                      daysUntilExpiration={entry.image?.expires_at ? differenceInDays(parseISO(entry.image.expires_at!), new Date()) : 0}
+                      userPicture={user?.picture} 
+                      userName={user?.name}
+                      userUsername={user?.username}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
