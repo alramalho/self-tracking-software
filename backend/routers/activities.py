@@ -50,12 +50,8 @@ async def log_activity(
 
     try:
         logged_entry = activities_gateway.create_activity_entry(activity_entry)
-        return ActivityEntryResponse(
-            id=logged_entry.id,
-            activity_id=logged_entry.activity_id,
-            quantity=logged_entry.quantity,
-            date=logged_entry.date,
-        )
+
+        return logged_entry
     except ActivityEntryAlreadyExistsException:
         existing_entry = activities_gateway.get_activity_entry(
             activity_id, iso_date_string

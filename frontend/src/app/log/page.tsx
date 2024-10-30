@@ -15,7 +15,7 @@ import { Loader2, X } from "lucide-react";
 
 const LogPage: React.FC = () => {
   const router = useRouter();
-  const { userData, loading, error } = useUserPlan();
+  const { userData, setUserData, loading, error } = useUserPlan();
   const activities = userData["me"]?.activities || [];
   const [selectedActivity, setSelectedActivity] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -64,6 +64,11 @@ const LogPage: React.FC = () => {
         activity_id: activityId,
         iso_date_string: date.toISOString(),
         quantity: quantity,
+      });
+
+      setUserData("me", {
+        ...userData.me,
+        activityEntries: [...userData.me.activityEntries, response.data],
       });
 
       toast.success("Activity logged successfully!");
