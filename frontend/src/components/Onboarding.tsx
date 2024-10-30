@@ -29,6 +29,7 @@ import {
   useUserPlan,
 } from "@/contexts/UserPlanContext";
 import PlanRendererHeatmap from "./PlanRendererHeatmap";
+import { useNotifications } from "@/hooks/useNotifications";
 import InviteButton from "./InviteButton";
 
 interface OnboardingProps {
