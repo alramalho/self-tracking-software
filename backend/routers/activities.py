@@ -154,3 +154,32 @@ async def store_activity_photo(
         "updated_entry": updated_entry,
         "presigned_url": presigned_url,
     }
+
+@router.put("/activity-entries/{activity_entry_id}")
+async def update_activity_entry(
+    activity_entry_id: str,
+    update_data: dict = Body(...),
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        # Get the existing entry to verify ownership
+        existing_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        if not existing_entry:
+            raise HTTPException(status_code=404, detail="Activity entry not found")
+        
+        if existing_entry.user_id != user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this entry")
+
+        # Update the entry
+        updated_entry = activities_gateway.update_activity_entry(
+            activity_entry_id,
+            {
+                "quantity": update_data.get("quantity", existing_entry.quantity),
+                "date": update_data.get("date", existing_entry.date),
+            }
+        )
+        
+        return updated_entry
+    except Exception as e:
+        logger.error(f"Error updating activity entry: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to update activity entry")

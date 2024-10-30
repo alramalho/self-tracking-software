@@ -1,6 +1,6 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Image } from "lucide-react";
+import { Edit, Image } from "lucide-react";
 
 interface ActivityEntryPhotoCardProps {
   imageUrl?: string;
@@ -13,6 +13,8 @@ interface ActivityEntryPhotoCardProps {
   userPicture?: string;
   userName?: string;
   userUsername?: string;
+  editable?: boolean;
+  onEditClick?: () => void;
   onClick?: () => void;
 }
 
@@ -27,14 +29,16 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   userPicture,
   userName,
   userUsername,
+  editable,
   onClick,
+  onEditClick,
 }) => {
   if (daysUntilExpiration < 0) {
     return null;
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden" onClick={onClick}>
+    <div className="border rounded-lg overflow-hidden relative" onClick={onClick}>
       {imageUrl && (
         <div className="max-h-full max-w-full mx-auto">
           <img
@@ -70,6 +74,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </span>
         )} 
       </div>
+      {editable && onEditClick && (
+        <button onClick={onEditClick} className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100">
+          <Edit className="h-4 w-4 text-gray-500" />
+        </button>
+      )}
     </div>
   );
 };

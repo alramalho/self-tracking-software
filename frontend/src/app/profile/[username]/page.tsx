@@ -27,6 +27,8 @@ import { useApiWithAuth } from "@/api";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
+import { Input } from "@/components/ui/input";
+import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -43,6 +45,9 @@ const ProfilePage: React.FC = () => {
   const profileData = isOwnProfile ? userData["me"] : userData[username];
   const { activityEntries, activities } = profileData || {activityEntries: [], activities: []};
   const api = useApiWithAuth();
+  const [showEditActivityEntry, setShowEditActivityEntry] = useState<string | null>(null);
+
+  const isOnesOwnProfile = currentUser?.username === username || username === "me";
 
   useEffect(() => {
     if (!profileData) {
@@ -275,6 +280,10 @@ const ProfilePage: React.FC = () => {
                         userPicture={user?.picture} 
                         userName={user?.name}
                         userUsername={user?.username}
+                        editable={isOnesOwnProfile}
+                        onEditClick={() => {
+                          setShowEditActivityEntry(entry.id);
+                        }}
                       />
                     );
                   })}
@@ -287,6 +296,12 @@ const ProfilePage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      {showEditActivityEntry && isOnesOwnProfile && (
+        <ActivityEntryEditor 
+          activityEntry={activityEntries.find(entry => entry.id === showEditActivityEntry)!}
+          onClose={() => setShowEditActivityEntry(null)} 
+        />
+      )}
     </div>
   );
 };
