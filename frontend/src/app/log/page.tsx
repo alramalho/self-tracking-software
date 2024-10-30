@@ -27,7 +27,6 @@ const LogPage: React.FC = () => {
   const [loggedActivityEntry, setLoggedActivityEntry] = useState<any>(null);
   const api = useApiWithAuth();
   const { addToNotificationCount } = useNotifications();
-  // const [showBanner, setShowBanner] = useState(true);
 
   const handleSelectActivity = (activityId: string) => {
     console.log({ activityId });
@@ -54,58 +53,21 @@ const LogPage: React.FC = () => {
     setQuantity(value);
   };
 
-  const logActivity = async (
-    activityId: string,
-    date: Date,
-    quantity: number
-  ) => {
-    try {
-      const response = await api.post("/log-activity", {
-        activity_id: activityId,
-        iso_date_string: date.toISOString(),
-        quantity: quantity,
-      });
-
-      setUserData("me", {
-        ...userData.me,
-        activityEntries: [...userData.me.activityEntries, response.data],
-      });
-
-      toast.success("Activity logged successfully!");
-      addToNotificationCount(1);
-      return response.data;
-    } catch (error) {
-      console.error("Error logging activity:", error);
-      toast.error("Failed to log activity. Please try again.");
-      return null;
-    }
-  };
-
   useEffect(() => {
     console.log({ selectedActivity });
   }, [selectedActivity]);
 
-  const handleLogActivity = async () => {
+  const handleLogActivity = () => {
     if (!selectedActivity || !selectedDate) {
       toast.error("Please select an activity and date.");
       return;
     }
 
-    const loggedEntry = await logActivity(
-      selectedActivity,
-      selectedDate,
-      quantity
-    );
-
-    if (loggedEntry) {
-      setLoggedActivityEntry(loggedEntry);
-      setShowPhotoUploader(true);
-    }
+    setShowPhotoUploader(true);
   };
 
-  const handlePhotoUploaded = () => {
+  const handleActivityLogged = () => {
     setShowPhotoUploader(false);
-    setLoggedActivityEntry(null);
     // Reset form
     setSelectedActivity("");
     setSelectedDate(new Date());
@@ -220,11 +182,15 @@ const LogPage: React.FC = () => {
           </Button>
         </div>
       </div>
-      {showPhotoUploader && loggedActivityEntry && (
+      {showPhotoUploader && (
         <ActivityPhotoUploader
-          activityEntry={loggedActivityEntry}
+          activityData={{
+            activityId: selectedActivity,
+            date: selectedDate!,
+            quantity: quantity,
+          }}
           onClose={() => setShowPhotoUploader(false)}
-          onPhotoUploaded={handlePhotoUploaded}
+          onSuccess={handleActivityLogged}
         />
       )}
       <BottomNav />

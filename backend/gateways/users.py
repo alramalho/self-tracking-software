@@ -156,12 +156,14 @@ class UsersGateway:
 
         if friend_request.status == "accepted":
             return sender, recipient
-
-        sender.friend_ids.append(recipient.id)
-        recipient.friend_ids.append(sender.id)
-
-        self.update_user(sender)
-        self.update_user(recipient)
+        
+        if recipient.id not in sender.friend_ids:
+            sender.friend_ids.append(recipient.id)
+            self.update_user(sender)
+    
+        if sender.id not in recipient.friend_ids:
+            recipient.friend_ids.append(sender.id)
+            self.update_user(recipient)
 
         self.friend_request_gateway.update_friend_request(request_id, "accepted")
 

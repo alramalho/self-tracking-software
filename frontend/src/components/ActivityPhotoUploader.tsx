@@ -5,21 +5,28 @@ import { toast } from 'react-hot-toast';
 import AppleLikePopover from './AppleLikePopover';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface ActivityPhotoUploaderProps {
-  activityEntry: any;
+  activityData: {
+    activityId: string;
+    date: Date;
+    quantity: number;
+  };
   onClose: () => void;
-  onPhotoUploaded: () => void;
+  onSuccess: () => void;
 }
 
 const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
-  activityEntry,
+  activityData,
   onClose,
-  onPhotoUploaded,
+  onSuccess,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [keepInProfile, setKeepInProfile] = useState(false);
-  const { fetchUserData } = useUserPlan();
+  const [isUploading, setIsUploading] = useState(false);
+  const { fetchUserData, setUserData, userData } = useUserPlan();
+  const { addToNotificationCount } = useNotifications();
   const api = useApiWithAuth();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,31 +35,52 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     }
   };
 
-  const handleSubmit = async () => {
-    if (!selectedFile) {
-      toast.error('Please select a photo to upload');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('photo', selectedFile);
-    formData.append('activityEntryId', activityEntry.id);
-    formData.append('keepInProfile', keepInProfile.toString());
-
+  const logActivity = async (withPhoto: boolean = false) => {
+    setIsUploading(true);
     try {
-      await api.post('/store-activity-photo', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      // First log the activity
+      const response = await api.post("/log-activity", {
+        activity_id: activityData.activityId,
+        iso_date_string: activityData.date.toISOString(),
+        quantity: activityData.quantity,
+        has_photo: withPhoto,
       });
 
-      fetchUserData();
+      if (!withPhoto) {
+        // If no photo, we're done
+        setUserData("me", {
+          ...userData.me,
+          activityEntries: [...userData.me.activityEntries, response.data],
+        });
+        toast.success("Activity logged successfully!");
+        addToNotificationCount(1);
+        onSuccess();
+        return;
+      }
 
-      toast.success('Photo uploaded successfully!');
-      onPhotoUploaded();
+      // If we have a photo, upload it
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('photo', selectedFile);
+        formData.append('activityEntryId', response.data.id);
+        formData.append('keepInProfile', keepInProfile.toString());
+
+        await api.post('/store-activity-photo', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
+      fetchUserData();
+      toast.success('Activity logged with photo successfully!');
+      addToNotificationCount(1);
+      onSuccess();
     } catch (error) {
-      console.error('Error uploading photo:', error);
-      toast.error('Failed to upload photo. Please try again.');
+      console.error('Error:', error);
+      toast.error('Failed to log activity. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -87,21 +115,27 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           onChange={handleFileChange}
           className="hidden"
         />
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="keep-in-profile"
-            checked={keepInProfile}
-            onCheckedChange={(checked) => setKeepInProfile(checked as boolean)}
-          />
-          <label
-            htmlFor="keep-in-profile"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Keep in profile
-          </label>
-        </div>
-        <Button onClick={handleSubmit} className="w-full">
-          Upload Photo
+        {selectedFile && (
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="keep-in-profile"
+              checked={keepInProfile}
+              onCheckedChange={(checked) => setKeepInProfile(checked as boolean)}
+            />
+            <label
+              htmlFor="keep-in-profile"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Keep in profile
+            </label>
+          </div>
+        )}
+        <Button 
+          onClick={() => logActivity(!!selectedFile)} 
+          className="w-full" 
+          loading={isUploading}
+        >
+          {selectedFile ? 'Upload with photo' : 'Upload without photo'}
         </Button>
       </div>
     </AppleLikePopover>

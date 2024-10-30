@@ -24,7 +24,12 @@ const Notifications: React.FC<NotificationsProps> = () => {
     };
 
     const actionPromise = async () => {
-      if (notification.type === "engagement") {
+      if (notification.type === "info") {
+        if (action === "dismiss") {
+          await concludeNotification();
+        }
+        await concludeNotification();
+      } else if (notification.type === "engagement") {
         if (action === "respond") {
           router.push(`/ai?notificationId=${notification.id}`);
         }
@@ -104,6 +109,18 @@ const Notifications: React.FC<NotificationsProps> = () => {
             </button>
           </>
         );
+      case "info":
+        return (
+          <>
+            <button
+              onClick={() => handleNotificationAction(notification, "dismiss")}
+              className={`${buttonClasses} bg-gray-100 text-gray-600 hover:bg-gray-200 ml-2`}
+              aria-label="Dismiss"
+            >
+              <X size={iconSize} />
+            </button>
+          </>
+        );
       default:
         return null;
     }
@@ -117,10 +134,12 @@ const Notifications: React.FC<NotificationsProps> = () => {
           className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-full flex items-center justify-between transition-shadow duration-200 hover:shadow-md"
         >
           <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-            {["friend_request", "plan_invitation"].includes(
+            {["friend_request", "plan_invitation", "info"].includes(
               notification.type
             ) &&
-              notification.related_data && (
+              notification.related_data &&
+              notification.related_data.picture &&
+              notification.related_data.name && (
                 <Link href={`/profile/${notification.related_data.username}`}>
                   <Avatar>
                     <AvatarImage

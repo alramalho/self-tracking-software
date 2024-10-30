@@ -66,7 +66,7 @@ class NotificationManager:
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
         if user.pwa_subscription_endpoint:
-            self.send_push_notification(user, title=f"hey {user.name} 👋", body=notification.message.lower())
+            self.send_push_notification(user.id, title=f"hey {user.name} 👋", body=notification.message.lower())
 
         return notification
     
@@ -86,7 +86,10 @@ class NotificationManager:
 
     def conclude_notification(self, notification_id: str) -> Optional[Notification]:
         notification = self.get_notification(notification_id)
-        if notification and notification.status != "concluded":
+        if notification:
+            if notification.status == "concluded":
+                logger.info(f"Notification '{notification_id}' already concluded")
+                return notification
             notification.concluded_at = datetime.now()
             notification.status = "concluded"
             self._update_notification(notification)
@@ -162,11 +165,11 @@ class NotificationManager:
         # This is a placeholder and should be replaced with actual implementation
         return datetime.now() + timedelta(days=1)
     
-    async def send_push_notification(self, user: User, title: str, body: str, url: str = None, icon: str = None):
-        subscription_info = self.users_gateway.get_subscription_info(user.id)
+    async def send_push_notification(self, user_id: str, title: str, body: str, url: str = None, icon: str = None):
+        subscription_info = self.users_gateway.get_subscription_info(user_id)
         if not subscription_info:
-            logger.error(f"Subscription not found for {user.id}")
-            raise Exception(f"Subscription not found for {user.id}")
+            logger.error(f"Subscription not found for {user_id}")
+            raise Exception(f"Subscription not found for {user_id}")
 
         print(f"Sending push notification to: {subscription_info}")
         print(f"Payload: title: {title}, body: {body}, url: {url}, icon: {icon}")
@@ -195,7 +198,7 @@ class NotificationManager:
 
     async def send_test_push_notification(self, user_id: str):
         user = self.users_gateway.get_user_by_id(user_id)
-        await self.send_push_notification(user, "Test Notification", "This is a test notification")
+        await self.send_push_notification(user_id, "Test Notification", "This is a test notification", url="/log")
 
     
 if __name__ == "__main__":

@@ -8,11 +8,16 @@ from entities.activity import Activity, ActivityEntry, ImageInfo
 from gateways.aws.s3 import S3Gateway
 import uuid
 import os
+from services.notification_manager import NotificationManager
+from gateways.users import UsersGateway
 from datetime import datetime, timedelta
+from entities.notification import Notification
 
 router = APIRouter()
 
 activities_gateway = ActivitiesGateway()
+notification_manager = NotificationManager()
+users_gateway = UsersGateway()
 
 class ActivityEntryResponse(BaseModel):
     id: str
@@ -39,6 +44,7 @@ async def log_activity(
     activity_id: str = Body(...),
     iso_date_string: str = Body(...),
     quantity: int = Body(...),
+    has_photo: bool = Body(False),
     user: User = Depends(is_clerk_user),
 ):
     activity_entry = ActivityEntry.new(
@@ -50,7 +56,6 @@ async def log_activity(
 
     try:
         logged_entry = activities_gateway.create_activity_entry(activity_entry)
-
         return logged_entry
     except ActivityEntryAlreadyExistsException:
         existing_entry = activities_gateway.get_activity_entry(
@@ -58,8 +63,30 @@ async def log_activity(
         )
         if existing_entry:
             updated_entry = activities_gateway.update_activity_entry(
-                existing_entry.id, {"quantity": quantity + existing_entry.quantity}
+                existing_entry.id, {
+                    "quantity": quantity + existing_entry.quantity,
+                    "has_photo": has_photo
+                }
             )
+
+            for friend_id in user.friend_ids:
+                friend = users_gateway.get_user_by_id(friend_id)
+                activity = activities_gateway.get_activity_by_id(activity_id)
+                message = f"your friend {friend.name} just logged {quantity} {activity.measure} of {activity.emoji} {activity.title} "
+                if has_photo:
+                    message = message.replace("just logged", "just uploaded a photo 📸 after logging")
+
+                notification_manager.create_and_process_notification(Notification.new(
+                    user_id=friend_id,
+                    message=message,
+                    type="info",
+                    url=f"/profile/{user.id}",
+                    related_data={
+                        "picture": user.picture,
+                        "name": user.name,
+                        "username": user.username,
+                    }
+                ))
             return ActivityEntryResponse(
                 id=updated_entry.id,
                 activity_id=updated_entry.activity_id,

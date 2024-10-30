@@ -21,10 +21,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
+  const [isSaving, setIsSaving] = useState(false);
   const { userData, setUserData } = useUserPlan();
   const api = useApiWithAuth();
 
   const handleSave = async () => {
+    setIsSaving(true);
     try {
       const response = await api.post("/upsert-activity", {
         ...activity,
@@ -45,6 +47,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     } catch (error) {
       console.error("Error saving activity:", error);
       toast.error("Failed to save activity. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -87,7 +91,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             onChange={(e) => setMeasure(e.target.value)}
           />
         )}
-        <Button onClick={handleSave} className="w-full">
+        <Button onClick={handleSave} className="w-full" loading={isSaving}>
           Save Activity
         </Button>
       </div>

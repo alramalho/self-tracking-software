@@ -60,7 +60,7 @@ async def process_scheduled_notification(request: Request):
         # Send push notification
         try:
             notification_manager.send_push_notification(
-                user,
+                user.id,
                 title=f"hey {user.name}",
                 body=processed_notification.message.lower(),
                 url=f"/log?notification_id={processed_notification.id}",
@@ -165,7 +165,7 @@ async def trigger_push_notification(
         icon = body.get("icon", None)
 
         return await notification_manager.send_push_notification(
-            user, title, body, url, icon
+            user.id, title, body, url, icon
         )
     except Exception as e:
         logger.error(f"Failed to send push notification: {e}")
