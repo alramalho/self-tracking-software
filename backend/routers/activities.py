@@ -71,13 +71,13 @@ async def log_activity(
             )
 
     for friend_id in user.friend_ids:
-        friend = users_gateway.get_user_by_id(friend_id)
+        logger.info(f"Creating notification for friend '{friend_id}'")
         activity = activities_gateway.get_activity_by_id(activity_id)
         message = f"Your friend {user.name} just logged {quantity} {activity.measure} of {activity.emoji} {activity.title} "
         if has_photo:
             message = message.replace("just logged", "just uploaded a photo 📸 after logging")
 
-        notification_manager.create_and_process_notification(Notification.new(
+        await notification_manager.create_and_process_notification(Notification.new(
             user_id=friend_id,
             message=message,
             type="info",

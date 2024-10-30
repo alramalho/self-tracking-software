@@ -31,6 +31,7 @@ self.addEventListener("push", function (event: any) {
         data: { url: data.url },
       })
     );
+    data.badge && navigator.setAppBadge && navigator.setAppBadge(data.badge);
   }
 });
 

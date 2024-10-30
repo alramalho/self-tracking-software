@@ -18,7 +18,6 @@
             "id": "moduleName",
             "type": "promptString",
             "description": "Module Name",
-            "default": "main"
         },
     ]
 }

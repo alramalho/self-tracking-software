@@ -52,7 +52,7 @@ async def process_scheduled_notification(request: Request):
     if not notification_id:
         raise HTTPException(status_code=400, detail="Notification ID is required")
 
-    processed_notification = notification_manager.process_notification(notification_id)
+    processed_notification = await notification_manager.process_notification(notification_id)
 
     if processed_notification:
         user = users_gateway.get_user_by_id(processed_notification.user_id)
@@ -112,7 +112,7 @@ async def mark_notification_opened(
 
 @router.post("/initiate-recurrent-checkin")
 async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
-    notification = notification_manager.create_and_process_notification(
+    notification = await notification_manager.create_and_process_notification(
         Notification.new(
             user_id=user.id,
             message="",  # This will be filled when processed

@@ -195,7 +195,7 @@ async def send_friend_request(
         friend_request = users_gateway.send_friend_request(
             current_user.id, recipient_id
         )
-        notification = notification_manager.create_and_process_notification(
+        notification = await notification_manager.create_and_process_notification(
             Notification.new(
                 user_id=recipient_id,
                 message=f"{current_user.name} sent you a friend request",
@@ -226,7 +226,7 @@ async def accept_friend_request(
     try:
         sender, recipient = users_gateway.accept_friend_request(request_id)
         try:
-            notification_manager.create_and_process_notification(
+            await notification_manager.create_and_process_notification(
                 Notification.new(
                     user_id=sender.id,
                     message=f"{current_user.name} accepted your friend request. You can now see their activities!",
@@ -260,7 +260,7 @@ async def reject_friend_request(
     try:
         sender = users_gateway.reject_friend_request(request_id)
         try:
-            notification_manager.create_and_process_notification(
+            await notification_manager.create_and_process_notification(
                 Notification.new(
                     user_id=sender.id,
                     message=f"{current_user.name} rejected your friend request.",

@@ -158,7 +158,7 @@ async def invite_to_plan(
     plan_invitations_gateway.upsert_plan_invitation(plan_invitation)
     
     # Create a notification for the invitee
-    notification = notification_manager.create_and_process_notification(
+    notification = await notification_manager.create_and_process_notification(
         Notification.new(
             user_id=invitee_id,
             message=f"{current_user.name} invited you to join their plan: {plan.goal}",

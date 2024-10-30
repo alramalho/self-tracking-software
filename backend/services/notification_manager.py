@@ -46,7 +46,7 @@ class NotificationManager:
         self.db_gateway.write(notification.dict())
         return notification
 
-    def process_notification(self, notification_id: str) -> Optional[Notification]:
+    async def process_notification(self, notification_id: str) -> Optional[Notification]:
 
         notification = self.get_notification(notification_id)
         if not notification or notification.status != "pending":
@@ -66,13 +66,13 @@ class NotificationManager:
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
         if user.pwa_subscription_endpoint:
-            self.send_push_notification(user.id, title=f"hey {user.name} 👋", body=notification.message.lower())
+            await self.send_push_notification(user.id, title=f"hey {user.name} 👋", body=notification.message.lower())
 
         return notification
     
-    def create_and_process_notification(self, notification: Notification) -> Optional[Notification]:
+    async def create_and_process_notification(self, notification: Notification) -> Optional[Notification]:
         notification = self.create_notification(notification)
-        return self.process_notification(notification.id)
+        return await self.process_notification(notification.id)
 
     def mark_as_opened(self, notification_id: str) -> Optional[Notification]:
         notification = self.get_notification(notification_id)
@@ -171,8 +171,8 @@ class NotificationManager:
             logger.error(f"Subscription not found for {user_id}")
             raise Exception(f"Subscription not found for {user_id}")
 
-        print(f"Sending push notification to: {subscription_info}")
-        print(f"Payload: title: {title}, body: {body}, url: {url}, icon: {icon}")
+        logger.info(f"Sending push notification to: {subscription_info}")
+        logger.info(f"Payload: title: {title}, body: {body}, url: {url}, icon: {icon}")
 
         try:
             response = webpush(
@@ -183,22 +183,30 @@ class NotificationManager:
                         "body": body,
                         "icon": icon,
                         "url": url,
+                        "badge": self.get_pending_notifications_count(user_id),
                     }
                 ),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS,
             )
-            print(f"WebPush response: {response.text}")
+            logger.info(f"WebPush response: {response.text}")
             return {"message": "Push notification sent successfully"}
         except WebPushException as ex:
-            print(f"WebPush error: {ex}")
-            traceback.print_exc()
+            logger.error(f"WebPush error: {ex}")
+            logger.error(traceback.format_exc())
             raise Exception(f"Failed to send push notification: {ex}")
 
+    def get_pending_notifications_count(self, user_id: str) -> int:
+        notifications = self.get_all_for_user(user_id)
+        return len([notification for notification in notifications if notification.status != "concluded"])
 
     async def send_test_push_notification(self, user_id: str):
-        user = self.users_gateway.get_user_by_id(user_id)
-        await self.send_push_notification(user_id, "Test Notification", "This is a test notification", url="/log")
+        await self.create_and_process_notification(Notification.new(
+            user_id=user_id,
+            message="This is a test notification",
+            type="info",
+            related_id=None,
+        ))
 
     
 if __name__ == "__main__":
@@ -207,6 +215,6 @@ if __name__ == "__main__":
     import asyncio
 
     notification_manager = NotificationManager()
-    asyncio.run(notification_manager.send_test_push_notification("67122237238e1560e7c2b6cc"))
+    asyncio.run(notification_manager.send_test_push_notification("670fb420158ba86def604e67"))
 
     logger.info("Done")
