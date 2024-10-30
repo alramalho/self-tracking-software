@@ -7,33 +7,30 @@ import Link from "next/link";
 import { useApiWithAuth } from "@/api";
 import { Loader2 } from "lucide-react";
 
-const FriendsPage: React.FC = () => {
+const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => {
   const { userData, setUserData, loading } = useUserPlan();
   const [friends, setFriends] = useState<{picture: string, name: string, username: string}[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(true);
   const api = useApiWithAuth();
 
   const fetchFriends = async () => {
-    const response = await api.get("/friends");
+    const response = await api.get(`/friends/${params.username}`);
     return response.data.friends;
   }
 
   useEffect(() => {
+      setFriendsLoading(true);
       if (userData && userData["me"]?.user_friends) {
         setFriends(userData["me"]?.user_friends );
+        setFriendsLoading(false);
       } else {
         fetchFriends().then(friends => {
           setFriends(friends);
           setUserData("me", {...userData["me"], user_friends: friends});
+          setFriendsLoading(false);
         });
       }
   }, [userData]);
-
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen" >
-      <Loader2 className="animate-spin" />
-      <span className="ml-2">Loading friends...</span>
-    </div>
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -56,7 +53,11 @@ const FriendsPage: React.FC = () => {
           ))}
         </ul>
       ) : (
-        <p className="text-center text-gray-500">You don&apos;t have any friends yet.</p>
+        (friendsLoading || loading) ? (
+          <p className="text-center text-gray-500">Loading friends...</p>
+        ) : (
+          <p className="text-center text-gray-500">You don&apos;t have any friends yet.</p>
+        )
       )}
     </div>
   );

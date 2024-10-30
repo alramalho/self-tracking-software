@@ -114,8 +114,13 @@ async def load_all_user_data(
             detail=f"An error occurred while fetching user data: {str(e)}",
         )
 
-@router.get("/friends")
-async def get_user_friends(user: User = Depends(is_clerk_user)):
+@router.get("/friends/{username}")
+async def get_user_friends(username: str, current_user: User = Depends(is_clerk_user)):
+    if username == "me":
+        user = current_user
+    else:
+        user = users_gateway.get_user_by_safely("username", username.lower())
+
     friends = [users_gateway.get_user_by_id(friend_id) for friend_id in user.friend_ids]
     
     return {
@@ -225,7 +230,7 @@ async def accept_friend_request(
                 Notification.new(
                     user_id=sender.id,
                     message=f"{current_user.name} accepted your friend request. You can now see their activities!",
-                    type="friend_request",
+                    type="info",
                     related_id=request_id,
                     related_data={
                         "id": current_user.id,

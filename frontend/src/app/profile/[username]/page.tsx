@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { User, useUserPlan } from "@/contexts/UserPlanContext";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -138,6 +138,10 @@ const ProfilePage: React.FC = () => {
 
   const user = profileData.user;
 
+  const getUsername = (user: User | null) => {
+    return user?.username === userData["me"]?.user?.username ? "me" : user?.username;
+  }
+
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
@@ -146,7 +150,7 @@ const ProfilePage: React.FC = () => {
             <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
             <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
           </Avatar>
-          <Link href="/friends">
+          <Link href={`/friends/${getUsername(user)}`}>
             <div className="text-center">
               <p className="text-2xl font-bold">
               {user?.friend_ids?.length || 0}
