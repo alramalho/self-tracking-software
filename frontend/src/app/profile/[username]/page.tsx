@@ -240,7 +240,7 @@ const ProfilePage: React.FC = () => {
           </AppleLikePopover>
         )}
 
-        <Tabs defaultValue="activities" className="w-full">
+        <Tabs defaultValue="history" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
@@ -254,24 +254,26 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="history">
             {activityEntries.length > 0 ? (
               <div className="space-y-4">
-                {activityEntries.map((entry) => {
-                  const activity = activities.find((a) => a.id === entry.activity_id);
-                  return (
-                    <ActivityEntryPhotoCard
-                      key={entry.id}
-                      imageUrl={entry.image?.url}
-                      activityTitle={activity?.title || "Unknown Activity"}
-                      activityEmoji={activity?.emoji || ""}
-                      activityEntryQuantity={entry.quantity}
-                      activityMeasure={activity?.measure || ""}
-                      formattedDate={getFormattedDate(entry.date)}
-                      daysUntilExpiration={entry.image?.expires_at ? differenceInDays(parseISO(entry.image.expires_at!), new Date()) : 0}
-                      userPicture={user?.picture} 
-                      userName={user?.name}
-                      userUsername={user?.username}
-                    />
-                  );
-                })}
+                {activityEntries
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((entry) => {
+                    const activity = activities.find((a) => a.id === entry.activity_id);
+                    return (
+                      <ActivityEntryPhotoCard
+                        key={entry.id}
+                        imageUrl={entry.image?.url}
+                        activityTitle={activity?.title || "Unknown Activity"}
+                        activityEmoji={activity?.emoji || ""}
+                        activityEntryQuantity={entry.quantity}
+                        activityMeasure={activity?.measure || ""}
+                        formattedDate={getFormattedDate(entry.date)}
+                        daysUntilExpiration={entry.image?.expires_at ? differenceInDays(parseISO(entry.image.expires_at!), new Date()) : 0}
+                        userPicture={user?.picture} 
+                        userName={user?.name}
+                        userUsername={user?.username}
+                      />
+                    );
+                  })}
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
