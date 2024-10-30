@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from bson import ObjectId
 from typing import Optional, Literal
-
+from pytz import UTC
 
 class Notification(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
@@ -23,4 +23,8 @@ class Notification(BaseModel):
 
     @classmethod
     def new(cls, **kwargs):
+        if "id" not in kwargs:
+            kwargs["id"] = str(ObjectId())
+        if "created_at" not in kwargs:
+            kwargs["created_at"] = datetime.now(UTC).isoformat()
         return cls(**kwargs)

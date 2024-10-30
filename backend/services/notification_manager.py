@@ -193,5 +193,17 @@ class NotificationManager:
             raise Exception(f"Failed to send push notification: {ex}")
 
 
+    async def send_test_push_notification(self, user_id: str):
+        user = self.users_gateway.get_user_by_id(user_id)
+        await self.send_push_notification(user, "Test Notification", "This is a test notification")
 
     
+if __name__ == "__main__":
+    from shared.logger import create_logger
+    create_logger()
+    import asyncio
+
+    notification_manager = NotificationManager()
+    asyncio.run(notification_manager.send_test_push_notification("67122237238e1560e7c2b6cc"))
+
+    logger.info("Done")
