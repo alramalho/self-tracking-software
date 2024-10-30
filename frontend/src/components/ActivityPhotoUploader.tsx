@@ -85,10 +85,10 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   };
 
   return (
-    <AppleLikePopover onClose={onClose}>
+    <AppleLikePopover onClose={onClose} unclosable>
       <h2 className="text-2xl font-bold mb-4">📸 Add a proof!</h2>
       <p className="text-sm text-gray-500 mb-4">
-        Only you and the people on a joint activity plan will see this photo.
+        Only you and your friends can see this photo.
       </p>
       <div className="space-y-4">
         <div
@@ -135,7 +135,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           className="w-full" 
           loading={isUploading}
         >
-          {selectedFile ? 'Upload with photo' : 'Upload without photo'}
+          {selectedFile ? 'Upload' : 'Log without photo'}
         </Button>
       </div>
     </AppleLikePopover>

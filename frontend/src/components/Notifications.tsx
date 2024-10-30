@@ -126,6 +126,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
     }
   };
 
+  const hasPictureData = (notification: Notification) => {
+    return notification.related_data && notification.related_data.name;
+  }
+
   return (
     <div className="space-y-4 mb-6">
       {userData["me"].notifications.map((notification) => (
@@ -137,17 +141,15 @@ const Notifications: React.FC<NotificationsProps> = () => {
             {["friend_request", "plan_invitation", "info"].includes(
               notification.type
             ) &&
-              notification.related_data &&
-              notification.related_data.picture &&
-              notification.related_data.name && (
-                <Link href={`/profile/${notification.related_data.username}`}>
+              hasPictureData(notification) && (
+                <Link href={`/profile/${notification.related_data!.username}`}>
                   <Avatar>
                     <AvatarImage
-                      src={notification.related_data.picture}
-                      alt={notification.related_data.name || ""}
+                      src={notification.related_data!.picture}
+                      alt={notification.related_data!.name || ""}
                     />
                     <AvatarFallback>
-                      {(notification.related_data.name || "U")[0]}
+                      {(notification.related_data!.name || "U")[0]}
                     </AvatarFallback>
                   </Avatar>
                 </Link>
@@ -155,7 +157,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             {["engagement"].includes(notification.type) && (
               <p className="text-4xl text-gray-700 font-medium">💭</p>
             )}
-            <p className="text-gray-700">{notification.message}</p>
+            <p className={`text-gray-700 ${hasPictureData(notification) ? "" : "ml-4"}`}>{notification.message}</p>
           </div>
           <div className="flex ml-4">{renderActionButtons(notification)}</div>
         </div>

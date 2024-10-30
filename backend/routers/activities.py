@@ -11,6 +11,8 @@ import os
 from services.notification_manager import NotificationManager
 from gateways.users import UsersGateway
 from datetime import datetime, timedelta
+from loguru import logger
+import traceback
 from entities.notification import Notification
 
 router = APIRouter()
@@ -54,51 +56,41 @@ async def log_activity(
         date=iso_date_string,
     )
 
+    entry = None
     try:
-        logged_entry = activities_gateway.create_activity_entry(activity_entry)
-        return logged_entry
+        entry = activities_gateway.create_activity_entry(activity_entry)
     except ActivityEntryAlreadyExistsException:
-        existing_entry = activities_gateway.get_activity_entry(
+        entry = activities_gateway.get_activity_entry(
             activity_id, iso_date_string
         )
-        if existing_entry:
-            updated_entry = activities_gateway.update_activity_entry(
-                existing_entry.id, {
-                    "quantity": quantity + existing_entry.quantity,
-                    "has_photo": has_photo
+        if entry:
+            entry = activities_gateway.update_activity_entry(
+                entry.id, {
+                    "quantity": quantity + entry.quantity,
                 }
             )
 
-            for friend_id in user.friend_ids:
-                friend = users_gateway.get_user_by_id(friend_id)
-                activity = activities_gateway.get_activity_by_id(activity_id)
-                message = f"your friend {friend.name} just logged {quantity} {activity.measure} of {activity.emoji} {activity.title} "
-                if has_photo:
-                    message = message.replace("just logged", "just uploaded a photo 📸 after logging")
+    for friend_id in user.friend_ids:
+        friend = users_gateway.get_user_by_id(friend_id)
+        activity = activities_gateway.get_activity_by_id(activity_id)
+        message = f"Your friend {user.name} just logged {quantity} {activity.measure} of {activity.emoji} {activity.title} "
+        if has_photo:
+            message = message.replace("just logged", "just uploaded a photo 📸 after logging")
 
-                notification_manager.create_and_process_notification(Notification.new(
-                    user_id=friend_id,
-                    message=message,
-                    type="info",
-                    url=f"/profile/{user.id}",
-                    related_data={
-                        "picture": user.picture,
-                        "name": user.name,
-                        "username": user.username,
-                    }
-                ))
-            return ActivityEntryResponse(
-                id=updated_entry.id,
-                activity_id=updated_entry.activity_id,
-                quantity=updated_entry.quantity,
-                date=updated_entry.date,
-            )
-        else:
-            raise HTTPException(
-                status_code=500, detail="Failed to update existing activity entry"
-            )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        notification_manager.create_and_process_notification(Notification.new(
+            user_id=friend_id,
+            message=message,
+            type="info",
+            related_data={
+                "picture": user.picture,
+                "name": user.name,
+                "username": user.username,
+            }
+        ))
+
+    return entry
+
+
 
 @router.get("/recent-activities")
 async def get_recent_activities(user: User = Depends(is_clerk_user)):

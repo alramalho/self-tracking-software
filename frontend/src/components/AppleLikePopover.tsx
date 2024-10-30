@@ -5,11 +5,13 @@ import { X } from "lucide-react";
 interface AppleLikePopoverProps {
   onClose: () => void;
   children: React.ReactNode;
+  unclosable?: boolean;
 }
 
 const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   onClose,
   children,
+  unclosable = false,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,14 +42,16 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
         }`}
       >
         <div className="w-12 h-1 bg-gray-300 rounded mx-auto mb-6" />
-        <Button
-          variant="ghost"
+        {!unclosable && (
+          <Button
+            variant="ghost"
           size="icon"
           className="absolute top-4 right-4"
           onClick={handleClose}
         >
           <X className="h-6 w-6" />
-        </Button>
+          </Button>
+        )}
         {children}
       </div>
     </div>

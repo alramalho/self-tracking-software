@@ -256,7 +256,7 @@ const ProfilePage: React.FC = () => {
             />
           </TabsContent>
           <TabsContent value="history">
-            {activityEntries.length > 0 ? (
+            {activityEntries && activityEntries.length > 0 ? (
               <div className="space-y-4">
                 {activityEntries
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())

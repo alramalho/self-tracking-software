@@ -20,13 +20,13 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => 
 
   useEffect(() => {
       setFriendsLoading(true);
-      if (userData && userData["me"]?.user_friends) {
-        setFriends(userData["me"]?.user_friends );
+      if (userData && userData[params.username]?.user_friends) {
+        setFriends(userData[params.username]?.user_friends || []); 
         setFriendsLoading(false);
       } else {
         fetchFriends().then(friends => {
           setFriends(friends);
-          setUserData("me", {...userData["me"], user_friends: friends});
+          setUserData(params.username, {...userData[params.username], user_friends: friends});
           setFriendsLoading(false);
         });
       }
