@@ -5,7 +5,7 @@ import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
@@ -16,6 +16,7 @@ import {
   CheckIcon,
   ChevronLeft,
   ChevronRight,
+  BellIcon,
 } from "lucide-react";
 import UserSearch, { UserSearchResult } from "./UserSearch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -58,6 +59,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const { plans: userPlans = [], user } = userData["me"] || {};
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const { requestPermission } = useNotifications();
 
   useEffect(() => {
     try {
@@ -393,10 +395,36 @@ const Onboarding: React.FC<OnboardingProps> = ({
               />
               <Button
                 className="w-full mt-4"
-                onClick={() => onComplete?.(selectedPlan!)}
+                onClick={() => setStep(8)}
               >
                 <CheckIcon className="mr-2 h-4 w-4" />
-                Finish
+                Next
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      case 8:
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Enable the Integrated Experience</CardTitle>
+              <CardDescription>
+                Get notifications to stay on top of your friends&apos; progress and receive proactive engagement from our AI coach.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                You can always adjust notification settings in your profile later.
+              </div>
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  onComplete?.(selectedPlan!);
+                  requestPermission();
+                }}
+              >
+                <BellIcon className="mr-2 h-4 w-4" />
+                Enable Notifications
               </Button>
             </CardContent>
           </Card>
