@@ -40,7 +40,26 @@ self.addEventListener("notificationclick", function (event: any) {
   event.notification.close();
 
   if (event.notification.data && event.notification.data.url) {
-    // @ts-ignore clients is not defined in the service worker global scope
-    event.waitUntil(clients.openWindow(event.notification.data.url));
+    event.waitUntil(
+      // @ts-ignore clients is not defined in the service worker global scope
+      clients.matchAll({ type: "window" }).then(function (clientList: any) {
+        for (const client of clientList) {
+          if (
+            client.url ===
+              "https://app.tracking.so" + event.notification.data.url &&
+            "focus" in client
+          ) {
+            return client.focus();
+          }
+        }
+        // @ts-ignore clients is not defined in the service worker global scope
+        if (clients.openWindow) {
+          // @ts-ignore clients is not defined in the service worker global scope
+          return clients.openWindow(
+            "https://app.tracking.so" + event.notification.data.url
+          );
+        }
+      })
+    );
   }
 });
