@@ -13,7 +13,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export function DatePicker({ selected, onSelect }: { selected?: Date; onSelect: (date: Date | undefined) => void }) {
+export function DatePicker({ selected, onSelect, disablePastDates = false, disableFutureDates = false }: { selected?: Date; onSelect: (date: Date | undefined) => void, disablePastDates?: boolean, disableFutureDates?: boolean }) {
+  const today = new Date();
+  const disabledDays = [];
+  if (disablePastDates) {
+    disabledDays.push({ from: new Date(0), to: new Date(today.getTime() - 86400000) });
+  }
+  if (disableFutureDates) {
+    disabledDays.push({ from: new Date(today.getTime() + 86400000), to: new Date(2100, 0, 1) });
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -34,6 +43,7 @@ export function DatePicker({ selected, onSelect }: { selected?: Date; onSelect: 
           selected={selected}
           onSelect={onSelect}
           initialFocus
+          disabled={disabledDays}
         />
       </PopoverContent>
     </Popover>

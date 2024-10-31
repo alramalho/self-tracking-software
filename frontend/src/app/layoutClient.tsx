@@ -7,6 +7,7 @@ import { UserPlanProviderWrapper } from "@/components/UserPlanProviderWrapper";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { UserPlanProvider } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
 
 export default function ClientLayout({
@@ -25,11 +26,12 @@ export default function ClientLayout({
     );
   }
 
-
   return (
     <>
       <main className="pb-16">
-        <UserPlanProviderWrapper>{children}</UserPlanProviderWrapper>
+        <UserPlanProvider>
+          <UserPlanProviderWrapper>{children}</UserPlanProviderWrapper>
+        </UserPlanProvider>
       </main>
       <Toaster
         position="bottom-center"

@@ -34,7 +34,7 @@ import InviteButton from "./InviteButton";
 
 interface OnboardingProps {
   isNewPlan?: boolean;
-  onComplete?: (plan: ApiPlan) => void;
+  onComplete: () => void;
 }
 
 const Onboarding: React.FC<OnboardingProps> = ({
@@ -60,7 +60,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const { plans: userPlans = [], user } = userData["me"] || {};
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const { requestPermission } = useNotifications();
+  const { requestPermission, isPushGranted } = useNotifications();
 
   useEffect(() => {
     try {
@@ -295,6 +295,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <DatePicker
                 selected={finishingDate}
                 onSelect={(date: Date | undefined) => setFinishingDate(date)}
+                disablePastDates={true}
               />
               <Button className="w-full mt-4" onClick={() => setStep(5)}>
                 Next
@@ -391,20 +392,25 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 planId={selectedPlan!.id!}
                 onInviteSuccess={() => {
                   fetchUserData({ forceUpdate: true });
-                  
                 }}
               />
               <Button
+                variant="outline"
                 className="w-full mt-4"
                 onClick={() => setStep(8)}
               >
-                <CheckIcon className="mr-2 h-4 w-4" />
-                Next
+                <ChevronRight className="mr-2 h-4 w-4" />
+                Skip
               </Button>
             </CardContent>
           </Card>
         );
       case 8:
+        if (isPushGranted) {
+          onComplete();
+          return <></>;
+        }
+
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
@@ -420,7 +426,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <Button 
                 className="w-full"
                 onClick={() => {
-                  onComplete?.(selectedPlan!);
+                  onComplete();
                   requestPermission();
                 }}
               >

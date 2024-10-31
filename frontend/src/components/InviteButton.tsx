@@ -54,11 +54,20 @@ const InviteButton: React.FC<InviteButtonProps> = ({
 
   if (embedded) {
     return (
-      <UserSearch
-        onUserClick={handleUserSelect}
-        selectedUsers={invitees}
-        onUserRemove={removeInvitee}
-      />
+      <>
+        <UserSearch
+          onUserClick={handleUserSelect}
+          selectedUsers={invitees}
+          onUserRemove={removeInvitee}
+        />
+        <Button
+          className="w-full mt-4"
+          onClick={handleInvite}
+          disabled={invitees.length === 0}
+        >
+          {buttonText} ({invitees.length})
+        </Button>
+      </>
     );
   }
   return (

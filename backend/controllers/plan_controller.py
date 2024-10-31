@@ -49,7 +49,7 @@ class PlanController:
 
         for activity in generated_plan_data.get("activities", []):
             converted_activity = Activity.new(
-                id=activity.get("activity_id"),
+                id=activity.get("id"),
                 user_id=user_id,
                 title=activity.get("title"),
                 measure=activity.get("measure"),

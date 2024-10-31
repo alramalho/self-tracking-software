@@ -178,7 +178,7 @@ def generate_dummy_data():
     # Create friend requests
     friend_requests = [
         FriendRequest.new(id=str(ObjectId("66666666666666666666668a")), sender_id=users[1].id, recipient_id=users[0].id),
-        FriendRequest.new(id=str(ObjectId("66666666666666666666668b")), sender_id=users[2].id, recipient_id=users[0].id),
+        # FriendRequest.new(id=str(ObjectId("66666666666666666666668b")), sender_id=users[2].id, recipient_id=users[0].id),
     ]
 
     # Create notifications

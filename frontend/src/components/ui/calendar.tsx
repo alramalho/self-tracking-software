@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  disablePastDates?: boolean;
   disableFutureDates?: boolean;
 };
 
@@ -15,12 +16,21 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  disablePastDates = false,
   disableFutureDates = false,
   ...props
 }: CalendarProps) {
-  const disabledDays = disableFutureDates
-    ? [{ from: new Date(new Date().setHours(0, 0, 0, 0) + 86400000), to: new Date(2100, 0, 1) }]
-    : undefined;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const disabledDays = [];
+  if (disablePastDates) {
+    disabledDays.push({ from: new Date(0), to: new Date(today.getTime() - 86400000) });
+  }
+  if (disableFutureDates) {
+    disabledDays.push({ from: new Date(today.getTime() + 86400000), to: new Date(2100, 0, 1) });
+  }
+    
 
   return (
     <DayPicker

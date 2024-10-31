@@ -25,10 +25,10 @@ export const ActivityCard = ({
         {activity.emoji && (
           <span className="text-4xl mb-2">{activity.emoji}</span>
         )}
-        <span className="text-xl font-medium text-center">
+        <span className="text-xl font-medium text-left">
           {activity.title}
         </span>
-        <span className="text-sm text-gray-500 text-center">
+        <span className="text-sm text-gray-500 text-left">
           {activity.measure}
         </span>
       </button>

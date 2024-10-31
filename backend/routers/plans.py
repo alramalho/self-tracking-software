@@ -246,7 +246,7 @@ async def get_plan_from_invitation_id(invitation_id: str, user: User = Depends(i
         
         user_activities = activities_gateway.get_all_activities_by_user_id(invitation.recipient_id)
         plan_activity_ids = list(set([session.activity_id for session in plan.sessions]))
-        plan_activities = [a for a in activities_gateway.get_all_activites_by_ids(plan_activity_ids) if a is not None]
+        plan_activities = activities_gateway.get_all_activites_by_ids(plan_activity_ids)
         
         return {
             "plan": exclude_embedding_fields(plan.dict()),

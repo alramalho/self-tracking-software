@@ -35,9 +35,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         measure,
       });
       const updatedActivity = response.data;
+      const replacedActivities = userData["me"].activities.map((activity) =>
+        activity.id === updatedActivity.id ? updatedActivity : activity
+      );
       setUserData("me", {
         ...userData["me"],
-        activities: [...userData["me"].activities, updatedActivity],
+        activities: replacedActivities,
       });
 
       const savedActivity = response.data;
