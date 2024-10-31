@@ -46,14 +46,15 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   // Get plan group members and their associated plans
   const { planGroupMembers, memberPlans } = useMemo(() => {
-    if (!selectedPlan.plan_group_id) return { planGroupMembers: [], memberPlans: new Map() };
+    if (!selectedPlan.plan_group_id)
+      return { planGroupMembers: [], memberPlans: new Map() };
 
     const group = userData.me?.planGroups.find(
       (group) => group.id === selectedPlan.plan_group_id
     );
-    
+
     // Fetch data for all members except current user
-    group?.members?.forEach(member => {
+    group?.members?.forEach((member) => {
       if (member.username !== userData.me?.user?.username) {
         fetchUserData({ username: member.username });
       }
@@ -61,50 +62,59 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
     // Get each member's plan from the plan group
     const memberPlans = new Map<string, ApiPlan>();
-    group?.members?.forEach(member => {
-      const memberData = userData[member.username === userData.me?.user?.username ? 'me' : member.username];
-      const memberPlan = memberData?.plans.find(p => p.plan_group_id === selectedPlan.plan_group_id);
+    group?.members?.forEach((member) => {
+      const memberData =
+        userData[
+          member.username === userData.me?.user?.username
+            ? "me"
+            : member.username
+        ];
+      const memberPlan = memberData?.plans.find(
+        (p) => p.plan_group_id === selectedPlan.plan_group_id
+      );
       if (memberPlan) {
         memberPlans.set(member.username, memberPlan);
       }
     });
 
-    return { 
+    return {
       planGroupMembers: group?.members || [],
-      memberPlans
+      memberPlans,
     };
   }, [selectedPlan, userData.me?.planGroups]);
 
   // Add this helper function near the top of the component
-  const getCompletedSessionsForPlan = useCallback((
-    plan: ApiPlan,
-    startDate?: Date,
-    endDate?: Date
-  ) => {
-    const userId = plan.user_id;
-    const username = planGroupMembers.find(m => m.user_id === userId)?.username;
-    if (!username) return [];
-    
-    const memberData = userData[username === userData.me?.user?.username ? 'me' : username];
-    if (!memberData) return [];
+  const getCompletedSessionsForPlan = useCallback(
+    (plan: ApiPlan, startDate?: Date, endDate?: Date) => {
+      const userId = plan.user_id;
+      const username = planGroupMembers.find(
+        (m) => m.user_id === userId
+      )?.username;
+      if (!username) return [];
 
-    // Get all completed entries that match plan activities
-    const planActivityIds = new Set(plan.sessions.map(s => s.activity_id));
-    
-    let completedEntries = memberData.activityEntries.filter(entry => 
-      planActivityIds.has(entry.activity_id)
-    );
+      const memberData =
+        userData[username === userData.me?.user?.username ? "me" : username];
+      if (!memberData) return [];
 
-    // Filter by date range if provided
-    if (startDate && endDate) {
-      completedEntries = completedEntries.filter(entry => {
-        const entryDate = parseISO(entry.date);
-        return entryDate >= startDate && entryDate <= endDate;
-      });
-    }
+      // Get all completed entries that match plan activities
+      const planActivityIds = new Set(plan.sessions.map((s) => s.activity_id));
 
-    return completedEntries;
-  }, [userData, planGroupMembers]);
+      let completedEntries = memberData.activityEntries.filter((entry) =>
+        planActivityIds.has(entry.activity_id)
+      );
+
+      // Filter by date range if provided
+      if (startDate && endDate) {
+        completedEntries = completedEntries.filter((entry) => {
+          const entryDate = parseISO(entry.date);
+          return entryDate >= startDate && entryDate <= endDate;
+        });
+      }
+
+      return completedEntries;
+    },
+    [userData, planGroupMembers]
+  );
 
   // Simplified session data calculation
   useEffect(() => {
@@ -116,15 +126,28 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       }
 
       // Get all plans in the group
-      const groupPlans = planGroupMembers.map(member => {
-        const memberData = userData[member.username === userData.me?.user?.username ? 'me' : member.username];
-        return memberData?.plans.find(p => p.plan_group_id === selectedPlan.plan_group_id);
-      }).filter((p): p is ApiPlan => p !== undefined);
+      const groupPlans = planGroupMembers
+        .map((member) => {
+          const memberData =
+            userData[
+              member.username === userData.me?.user?.username
+                ? "me"
+                : member.username
+            ];
+          return memberData?.plans.find(
+            (p) => p.plan_group_id === selectedPlan.plan_group_id
+          );
+        })
+        .filter((p): p is ApiPlan => p !== undefined);
 
       // Get all dates from plans and completed entries
       const allDates = [
-        ...groupPlans.flatMap(plan => plan.sessions.map(s => parseISO(s.date))),
-        ...groupPlans.flatMap(plan => getCompletedSessionsForPlan(plan).map(e => parseISO(e.date)))
+        ...groupPlans.flatMap((plan) =>
+          plan.sessions.map((s) => parseISO(s.date))
+        ),
+        ...groupPlans.flatMap((plan) =>
+          getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
+        ),
       ].sort((a, b) => a.getTime() - b.getTime());
 
       if (allDates.length === 0) {
@@ -135,22 +158,26 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       // Calculate weekly data
       const startDate = subWeeks(startOfWeek(allDates[0]), 1);
       const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
-      const weeklyData: { [key: string]: { [username: string]: number; planned: number } } = {};
+      const weeklyData: {
+        [key: string]: { [username: string]: number; planned: number };
+      } = {};
 
       let currentWeek = startDate;
       while (currentWeek <= endDate) {
-        const weekKey = format(currentWeek, 'yyyy-MM-dd');
+        const weekKey = format(currentWeek, "yyyy-MM-dd");
         const weekEnd = endOfWeek(currentWeek);
-        
+
         weeklyData[weekKey] = { planned: 0 };
-        
+
         // Calculate data for each plan in the group
-        groupPlans.forEach(plan => {
-          const member = planGroupMembers.find(m => m.user_id === plan.user_id);
+        groupPlans.forEach((plan) => {
+          const member = planGroupMembers.find(
+            (m) => m.user_id === plan.user_id
+          );
           if (!member) return;
 
           // Count planned sessions this week
-          const plannedThisWeek = plan.sessions.filter(session => {
+          const plannedThisWeek = plan.sessions.filter((session) => {
             const sessionDate = parseISO(session.date);
             return sessionDate >= currentWeek && sessionDate <= weekEnd;
           }).length;
@@ -170,12 +197,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
       // Format data for chart
       const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
-        week: format(parseISO(week), 'MMM d, yyyy'),
+        week: format(parseISO(week), "MMM d, yyyy"),
         planned: data.planned,
         ...Object.fromEntries(
-          planGroupMembers.map(member => [
+          planGroupMembers.map((member) => [
             member.username,
-            data[member.username] || 0
+            data[member.username] || 0,
           ])
         ),
       }));
@@ -273,28 +300,30 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   return (
     <div>
       {planGroupMembers && planGroupMembers.length > 0 && (
-        <>
+        <div className="border border-gray-200 rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
-          {planGroupMembers.map((member) => (
-            <div
-              key={member.user_id}
-              className="flex flex-row flex-nowrap gap-2 items-center"
-            >
-              <Avatar className="w-16 h-16 text-2xl">
-                <AvatarImage
-                  src={member.picture || ""}
-                  alt={member.name || member.username}
-                />
-                <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
-              </Avatar>
-              <div className="text-lg text-gray-800">
-                {userData.me?.user?.username === member.username
-                  ? "You"
-                  : member.name}
+          <div className="flex flex-row flex-wrap gap-6">
+            {planGroupMembers.map((member) => (
+              <div
+                key={member.user_id}
+                className="flex flex-row flex-nowrap gap-2 items-center"
+              >
+                <Avatar className="w-12 h-12 text-2xl">
+                  <AvatarImage
+                    src={member.picture || ""}
+                    alt={member.name || member.username}
+                  />
+                  <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
+                </Avatar>
+                <div className="text-lg text-gray-800">
+                  {userData.me?.user?.username === member.username
+                    ? "You"
+                    : member.name}
+                </div>
               </div>
-            </div>
-          ))}
-        </>
+            ))}
+          </div>
+        </div>
       )}
       {loading ? (
         <div className="flex items-center justify-center mt-8">
@@ -326,9 +355,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           />
         </div>
       ) : null}
-      <div className="mt-8">
+      <div className="border border-gray-200 rounded-lg p-4 mt-8">
         <h2 className="text-2xl font-bold mb-4">Activity History</h2>
         <div className="flex flex-row flex-wrap gap-4">
+          {recentActivityEntries.length === 0 && (
+            <div className="text-sm text-gray-500">
+              No activity history yet.
+            </div>
+          )}
           {recentActivityEntries.map((entry) => {
             const activity = activities.find((a) => a.id === entry.activity_id);
             if (!activity) return null;
@@ -343,46 +377,46 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             );
           })}
         </div>
+
+        <div className="mt-8">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold">Coming up next</h2>
+            <span className="text-sm text-gray-500 ">
+              Completed activities are calculated on a per week count basis.
+            </span>
+          </div>
+          <div className="flex flex-row flex-wrap gap-4">
+            {selectedPlan.sessions
+              .filter((session) => {
+                const sessionDate = parseISO(session.date);
+                const oneWeekFromNow = addWeeks(new Date(), 1);
+                return (
+                  (isToday(sessionDate) || isFuture(sessionDate)) &&
+                  isBefore(sessionDate, oneWeekFromNow)
+                );
+              })
+              .map((session) => {
+                const activity = activities.find(
+                  (a) => a.id === session.activity_id
+                );
+                const completed = isSessionCompleted(session);
+                if (!activity) return null;
+
+                return (
+                  <ActivityEntryCard
+                    key={`${session.date}-${session.activity_id}`}
+                    entry={session as Entry}
+                    activity={activity}
+                    onClick={() => setSelectedSession(session)}
+                    completed={completed}
+                  />
+                );
+              })}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-8">
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold">Coming up next</h2>
-          <span className="text-sm text-gray-500 ">
-            Completed activities are calculated on a per week count basis.
-          </span>
-        </div>
-        <div className="flex flex-row flex-wrap gap-4">
-          {selectedPlan.sessions
-            .filter((session) => {
-              const sessionDate = parseISO(session.date);
-              const oneWeekFromNow = addWeeks(new Date(), 1);
-              return (
-                (isToday(sessionDate) || isFuture(sessionDate)) &&
-                isBefore(sessionDate, oneWeekFromNow)
-              );
-            })
-            .map((session) => {
-              const activity = activities.find(
-                (a) => a.id === session.activity_id
-              );
-              const completed = isSessionCompleted(session);
-              if (!activity) return null;
-
-              return (
-                <ActivityEntryCard
-                  key={`${session.date}-${session.activity_id}`}
-                  entry={session as Entry}
-                  activity={activity}
-                  onClick={() => setSelectedSession(session)}
-                  completed={completed}
-                />
-              );
-            })}
-        </div>
-      </div>
-
-      <div className="mt-8">
+      <div className="mt-8 border border-gray-200 rounded-lg p-4">
         <h2 className="text-2xl font-bold mb-4">Calendar</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
