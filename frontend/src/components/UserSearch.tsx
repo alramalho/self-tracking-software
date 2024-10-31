@@ -58,7 +58,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = []
               alt={user.name || user.username}
             />
             <AvatarFallback>
-              {user.name ? user.name[0] : user.username[0]}
+              {user.name ? user.name[0] : "U"}
             </AvatarFallback>
           </Avatar>
         ))}
@@ -82,7 +82,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = []
                 alt={user.name || user.username}
               />
               <AvatarFallback>
-                {user.name ? user.name[0] : user.username[0]}
+                {user.name ? user.name[0] : "U"}
               </AvatarFallback>
             </Avatar>
             <span>{user.name || user.username}</span>
