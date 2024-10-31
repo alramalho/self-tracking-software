@@ -157,7 +157,13 @@ const Notifications: React.FC<NotificationsProps> = () => {
             {["engagement"].includes(notification.type) && (
               <p className="text-4xl text-gray-700 font-medium">💭</p>
             )}
-            <p className={`text-gray-700 ${hasPictureData(notification) ? "" : "ml-4"}`}>{notification.message}</p>
+            {hasPictureData(notification) ? (
+              <Link href={`/profile/${notification.related_data!.username}`}>
+                <p className="text-gray-700">{notification.message}</p>
+              </Link>
+            ) : (
+              <p className="text-gray-700 ml-4">{notification.message}</p>
+            )}
           </div>
           <div className="flex ml-4">{renderActionButtons(notification)}</div>
         </div>
