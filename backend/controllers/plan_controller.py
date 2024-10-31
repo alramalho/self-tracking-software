@@ -49,7 +49,7 @@ class PlanController:
 
         for activity in generated_plan_data.get("activities", []):
             converted_activity = Activity.new(
-                id=activity.get("id"),
+                id=activity.get("activity_id"),
                 user_id=user_id,
                 title=activity.get("title"),
                 measure=activity.get("measure"),
@@ -363,9 +363,7 @@ class PlanController:
         
         # update plan group members
         plan_group = self.plan_groups_gateway.get(plan.plan_group_id)
-        plan_group.plan_ids.append(recipients_plan.id)
         self.plan_groups_gateway.add_member(plan_group, PlanGroupMember(user_id=recipient.id, name=recipient.name, username=recipient.username, picture=recipient.picture))
-        self.plan_groups_gateway.upsert_plan_group(plan_group)
 
         # Create new activities if needed
         for original_activity_id, associated_activity_id in activity_associations.items():

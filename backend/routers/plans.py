@@ -151,12 +151,6 @@ async def invite_to_plan(
     plan_controller.update_plan(plan)
     
     # Update plan group members
-    invited_member = PlanGroupMember(
-        user_id=invitee.id,
-        username=invitee.username,
-        name=invitee.name,
-        picture=invitee.picture
-    )
     current_user_member = PlanGroupMember(
         user_id=current_user.id,
         username=current_user.username,
@@ -164,7 +158,6 @@ async def invite_to_plan(
         picture=current_user.picture
     )
 
-    plan_groups_gateway.add_member(plan_group, invited_member)
     plan_groups_gateway.add_member(plan_group, current_user_member)
     # Create a plan invitation
     plan_invitation = PlanInvitation.new(
