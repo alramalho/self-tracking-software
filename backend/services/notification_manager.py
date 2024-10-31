@@ -16,6 +16,7 @@ import json
 import traceback
 from loguru import logger
 from pydantic import BaseModel
+from pymongo.errors import DuplicateKeyError
 
 
 class NotificationManager:
@@ -29,6 +30,19 @@ class NotificationManager:
         self,
         notification: Notification
     ) -> Notification:
+        
+        existing_notifications = self.db_gateway.query('user_id', notification.user_id)
+        
+        # Get the date of the new notification
+        notification_date = notification.created_at.date()
+        
+        # Check for duplicates on same date with same message
+        for existing in existing_notifications:
+            existing_date = existing.get('created_at', datetime.now()).date()
+            if (existing_date == notification_date and 
+                existing.get('message') == notification.message):
+                logger.info(f"Duplicate notification found for user {notification.user_id} with message: {notification.message}")
+                return None
 
         if notification.recurrence:
             cron_str = self._generate_cron_string(notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS)
@@ -44,7 +58,8 @@ class NotificationManager:
             notification.aws_cronjob_id = aws_cronjob_id
 
         self.db_gateway.write(notification.dict())
-        return notification
+        return notification 
+
 
     async def process_notification(self, notification_id: str) -> Optional[Notification]:
 
