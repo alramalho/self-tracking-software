@@ -106,7 +106,7 @@ const ProfilePage: React.FC = () => {
   const handleFriendRequest = async (action: "accept" | "reject") => {
     if (profileData && profileData.user) {
       try {
-        const request = currentUserFriendRequests?.find(
+        const request = currentUserReceivedFriendRequests?.find(
           (req) =>
             req.sender_id === profileData.user?.id && req.status === "pending"
         );
