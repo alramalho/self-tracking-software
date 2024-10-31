@@ -185,7 +185,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Choose a username (optional)</CardTitle>
+              <CardTitle>Choose a username</CardTitle>
             </CardHeader>
             <CardContent>
               <Input
@@ -228,7 +228,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                   }
                   setStep(2);
                 }}
-                disabled={!isUsernameAvailable && username.trim() !== ""}
+                disabled={username.trim() === "" || !isUsernameAvailable}
               >
                 Next
               </Button>
