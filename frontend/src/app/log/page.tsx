@@ -132,7 +132,6 @@ const LogPage: React.FC = () => {
             onSelect={(date) => {
               handleSelectDate(date);
             }}
-            disab
             className="rounded-md border"
             disableFutureDates={true}
           />
