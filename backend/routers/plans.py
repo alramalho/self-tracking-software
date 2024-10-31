@@ -128,6 +128,23 @@ async def invite_to_plan(
     plan_group = plan_groups_gateway.get_plan_group_by_plan_id(plan.id)
     if not plan_group:
         raise HTTPException(status_code=404, detail="Plan group not found")
+    
+    if invitee.id not in current_user.friend_ids:
+        friend_request = users_gateway.send_friend_request(current_user.id, invitee.id)
+        notification = await notification_manager.create_and_process_notification(
+            Notification.new(
+                user_id=invitee.id,
+                message=f"{current_user.name} sent you a friend request",
+                type="friend_request",
+                related_id=friend_request.id,
+                related_data={
+                    "id": current_user.id,
+                    "name": current_user.name,
+                    "username": current_user.username,
+                    "picture": current_user.picture,
+                },
+            )
+        )
 
     # Update plan with plan group id
     plan.plan_group_id = plan_group.id

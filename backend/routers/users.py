@@ -27,18 +27,20 @@ plan_controller = PlanController()
 notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
 
+
 @router.get("/user-health")
 async def health():
     return {"status": "ok"}
+
 
 @router.get("/user")
 async def get_user(user: User = Depends(is_clerk_user)):
     return user
 
+
 @router.get("/load-all-user-data/{username}")
 async def load_all_user_data(
-    username: Optional[str] = None,
-    current_user: User = Depends(is_clerk_user)
+    username: Optional[str] = None, current_user: User = Depends(is_clerk_user)
 ):
     try:
         if not username or username == "me":
@@ -46,7 +48,9 @@ async def load_all_user_data(
         else:
             user = users_gateway.get_user_by_safely("username", username.lower())
             if not user:
-                raise HTTPException(status_code=404, detail=f"User {username} not found")
+                raise HTTPException(
+                    status_code=404, detail=f"User {username} not found"
+                )
 
         # Use concurrent.futures to run all database queries concurrently
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -59,28 +63,43 @@ async def load_all_user_data(
             mood_reports_future = executor.submit(
                 moods_gateway.get_all_mood_reports_by_user_id, user.id
             )
-            
+
             plans_future = executor.submit(plan_controller.get_all_user_plans, user)
-            plan_groups_future = executor.submit(plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids)
+            plan_groups_future = executor.submit(
+                plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
+            )
             friend_requests_future = executor.submit(
                 users_gateway.friend_request_gateway.get_pending_requests, user.id
             )
-            
-            activities = [exclude_embedding_fields(activity.dict()) for activity in activities_future.result()]
+
+            activities = [
+                exclude_embedding_fields(activity.dict())
+                for activity in activities_future.result()
+            ]
             entries = [entry.dict() for entry in entries_future.result()]
             mood_reports = [report.dict() for report in mood_reports_future.result()]
-            plans = [exclude_embedding_fields(plan.dict()) for plan in plans_future.result()]
-            plan_groups = [plan_group.dict() for plan_group in plan_groups_future.result()]
+            plans = [
+                exclude_embedding_fields(plan.dict()) for plan in plans_future.result()
+            ]
+            plan_groups = [
+                plan_group.dict() for plan_group in plan_groups_future.result()
+            ]
             friend_requests = [
                 request.dict() for request in friend_requests_future.result()
             ]
-        
+
         # Process plans to include activities
         activity_map = {activity["id"]: activity for activity in activities}
 
         for plan in plans:
-            plan_activity_ids = set(session["activity_id"] for session in plan["sessions"])
-            plan["activities"] = [activity_map[activity_id] for activity_id in plan_activity_ids if activity_id in activity_map]
+            plan_activity_ids = set(
+                session["activity_id"] for session in plan["sessions"]
+            )
+            plan["activities"] = [
+                activity_map[activity_id]
+                for activity_id in plan_activity_ids
+                if activity_id in activity_map
+            ]
 
         # hydrate friend requests with sender and recipient data
         for request in friend_requests:
@@ -104,7 +123,7 @@ async def load_all_user_data(
 
         if current_user.id == user.id:
             result["friend_requests"] = friend_requests
-        
+
         return result
     except Exception as e:
         logger.error(f"Failed to load all user data: {e}")
@@ -114,6 +133,7 @@ async def load_all_user_data(
             detail=f"An error occurred while fetching user data: {str(e)}",
         )
 
+
 @router.get("/friends/{username}")
 async def get_user_friends(username: str, current_user: User = Depends(is_clerk_user)):
     if username == "me":
@@ -122,34 +142,38 @@ async def get_user_friends(username: str, current_user: User = Depends(is_clerk_
         user = users_gateway.get_user_by_safely("username", username.lower())
 
     friends = [users_gateway.get_user_by_id(friend_id) for friend_id in user.friend_ids]
-    
+
     return {
         "friends": [
             {
                 "picture": friend.picture,
                 "username": friend.username,
-                "name": friend.name
-            } for friend in friends
+                "name": friend.name,
+            }
+            for friend in friends
         ]
     }
+
 
 @router.get("/check-username/{username}")
 async def check_username(username: str):
     user = users_gateway.get_user_by_safely("username", username)
     return {"exists": user is not None or username == "me"}
 
+
 @router.post("/update-user")
 async def update_user(user_data: dict = Body(...), user: User = Depends(is_clerk_user)):
     updated_user = users_gateway.update_fields(user.id, user_data)
     return {"message": "User updated successfully", "user": updated_user}
 
+
 @router.get("/search-users/{username}")
 async def search_username(username: str, user: User = Depends(is_clerk_user)):
     if user.username.lower() == username.lower():
         return []
-    
+
     results = search_users(user, username)
-    
+
     if not results:
         # If no results, return all users (up to 3)
         all_users = users_gateway.get_all_users()
@@ -158,18 +182,20 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
                 "user_id": u.id,
                 "username": u.username,
                 "name": u.name,
-                "picture": u.picture
+                "picture": u.picture,
             }
             for u in all_users
             if u.id != user.id
         ][:3]
-    
+
     return results
+
 
 @router.get("/user/friend-count")
 async def get_friend_count(user: User = Depends(is_clerk_user)):
     friend_count = users_gateway.get_friend_count(user.id)
     return {"friendCount": friend_count}
+
 
 @router.get("/user/{username}")
 async def get_user_profile(username: str, current_user: User = Depends(is_clerk_user)):
@@ -181,9 +207,7 @@ async def get_user_profile(username: str, current_user: User = Depends(is_clerk_
         raise HTTPException(status_code=404, detail="User not found")
 
     # Remove sensitive information
-    user_dict = user.dict(
-        exclude={"email", "clerk_id", "plan_ids"}
-    )
+    user_dict = user.dict(exclude={"email", "clerk_id", "plan_ids"})
 
     return user_dict
 
@@ -192,9 +216,7 @@ async def send_friend_request(
     recipient_id: str, current_user: User = Depends(is_clerk_user)
 ):
     try:
-        friend_request = users_gateway.send_friend_request(
-            current_user.id, recipient_id
-        )
+        friend_request = users_gateway.send_friend_request(current_user.id, recipient_id)
         notification = await notification_manager.create_and_process_notification(
             Notification.new(
                 user_id=recipient_id,
@@ -205,20 +227,21 @@ async def send_friend_request(
                     "id": current_user.id,
                     "name": current_user.name,
                     "username": current_user.username,
-                    "picture": current_user.picture
-                }
+                    "picture": current_user.picture,
+                },
             )
         )
         return {
             "message": "Friend request sent successfully",
             "request": friend_request,
-            "notification": notification
+            "notification": notification,
         }
     except Exception as e:
         logger.error(f"Failed to send friend request: {e}")
         logger.error(f"Traceback: \n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
-    
+
+
 @router.post("/accept-friend-request/{request_id}")
 async def accept_friend_request(
     request_id: str, current_user: User = Depends(is_clerk_user)
@@ -236,8 +259,8 @@ async def accept_friend_request(
                         "id": current_user.id,
                         "name": current_user.name,
                         "username": current_user.username,
-                        "picture": current_user.picture
-                    }
+                        "picture": current_user.picture,
+                    },
                 )
             )
             logger.info(f"Sent push notification to {sender.id}")
@@ -252,6 +275,7 @@ async def accept_friend_request(
         logger.error(f"Failed to accept friend request: {e}")
         logger.error(f"Traceback: \n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.post("/reject-friend-request/{request_id}")
 async def reject_friend_request(
@@ -270,8 +294,8 @@ async def reject_friend_request(
                         "id": sender.id,
                         "name": sender.name,
                         "username": sender.username,
-                        "picture": sender.picture
-                    }
+                        "picture": sender.picture,
+                    },
                 )
             )
             logger.info(f"Sent push notification to {sender.id}")
@@ -300,31 +324,37 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             detail=f"An error occurred while fetching timeline data: {str(e)}",
         )
 
+
 def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
     search_patterns = [
         f"^{re.escape(username[:i])}.*" for i in range(len(username), 0, -1)
     ]
-    
+
     results = []
     for pattern in search_patterns:
         users = users_gateway.get_all_users_by_regex("username", pattern)
         for user in users:
             if user.dict() not in results and user.id != user.id:
-                results.append({
-                    "user_id": user.id,
-                    "username": user.username,
-                    "name": user.name,
-                    "picture": user.picture
-                })
-        
+                results.append(
+                    {
+                        "user_id": user.id,
+                        "username": user.username,
+                        "name": user.name,
+                        "picture": user.picture,
+                    }
+                )
+
         if len(results) >= limit:
             break
-    
+
     return results[:limit]
+
 
 def get_recommended_activity_entries(current_user: User):
     activities = plan_controller.get_recommended_activities(current_user, limit=10)
-    activities_dicts = [exclude_embedding_fields(activity.dict()) for activity in activities]
+    activities_dicts = [
+        exclude_embedding_fields(activity.dict()) for activity in activities
+    ]
 
     users = {}
 
@@ -334,10 +364,12 @@ def get_recommended_activity_entries(current_user: User):
             users[user.id] = user.dict()
 
     users = list(users.values())
-    
+
     recommended_activity_entries = []
     for activity in activities:
-        for entry in activities_gateway.get_all_activity_entries_by_activity_id(activity.id):
+        for entry in activities_gateway.get_all_activity_entries_by_activity_id(
+            activity.id
+        ):
             entry_dict = exclude_embedding_fields(entry.dict())
             recommended_activity_entries.append(entry_dict)
 
