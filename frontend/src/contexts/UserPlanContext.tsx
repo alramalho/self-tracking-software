@@ -57,13 +57,7 @@ export interface User {
 interface FriendRequest {
   id: string;
   sender_id: string;
-  sender_username: string;
-  sender_name: string;
-  sender_picture: string;
   recipient_id: string;
-  recipient_username: string;
-  recipient_name: string;
-  recipient_picture: string;
   status: "pending" | "accepted" | "rejected";
   created_at: string;
   updated_at?: string;
@@ -135,7 +129,8 @@ export interface UserDataEntry {
   activities: Activity[];
   activityEntries: ActivityEntry[];
   moodReports: MoodReport[];
-  friendRequests: FriendRequest[];
+  sentFriendRequests: FriendRequest[];
+  receivedFriendRequests: FriendRequest[];
   notifications: Notification[];
   expiresAt: string;
 }
@@ -216,7 +211,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           activities: response.data.activities,
           activityEntries: response.data.activity_entries,
           moodReports: response.data.mood_reports,
-          friendRequests: response.data.friend_requests,
+          sentFriendRequests: response.data.sent_friend_requests,
+          receivedFriendRequests: response.data.received_friend_requests,
           notifications: notificationsResponse.data.notifications,
           expiresAt: addMinutes(new Date(), 10).toISOString(),
         };

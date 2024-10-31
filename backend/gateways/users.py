@@ -191,9 +191,6 @@ class UsersGateway:
         user = self.get_user_by_id(user_id)
         return len(user.friend_ids)
 
-    def get_pending_friend_requests(self, user_id: str) -> List[FriendRequest]:
-        return self.friend_request_gateway.get_pending_requests(user_id)
-
 
 if __name__ == "__main__":
     from shared.logger import create_logger

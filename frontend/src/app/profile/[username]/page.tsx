@@ -40,18 +40,26 @@ const ProfilePage: React.FC = () => {
   const params = useParams();
   const username = params.username as string;
   const currentUser = userData["me"]?.user;
-  const currentUserFriendRequests = userData["me"]?.friendRequests;
+  const currentUserSentFriendRequests = userData["me"]?.sentFriendRequests;
+  const currentUserReceivedFriendRequests =
+    userData["me"]?.receivedFriendRequests;
   const isOwnProfile = currentUser?.username === username || username === "me";
   const profileData = isOwnProfile ? userData["me"] : userData[username];
-  const { activityEntries, activities } = profileData || {activityEntries: [], activities: []};
+  const { activityEntries, activities } = profileData || {
+    activityEntries: [],
+    activities: [],
+  };
   const api = useApiWithAuth();
-  const [showEditActivityEntry, setShowEditActivityEntry] = useState<string | null>(null);
+  const [showEditActivityEntry, setShowEditActivityEntry] = useState<
+    string | null
+  >(null);
 
-  const isOnesOwnProfile = currentUser?.username === username || username === "me";
+  const isOnesOwnProfile =
+    currentUser?.username === username || username === "me";
 
   useEffect(() => {
     if (!profileData) {
-      fetchUserData({username: isOwnProfile ? "me" : username});
+      fetchUserData({ username: isOwnProfile ? "me" : username });
     }
   }, [username, fetchUserData, isOwnProfile, profileData]);
 
@@ -99,7 +107,8 @@ const ProfilePage: React.FC = () => {
     if (profileData && profileData.user) {
       try {
         const request = currentUserFriendRequests?.find(
-          (req) => req.sender_id === profileData.user?.id && req.status === "pending"
+          (req) =>
+            req.sender_id === profileData.user?.id && req.status === "pending"
         );
         if (request) {
           await api.post(`${action}-friend-request/${request.id}`);
@@ -116,15 +125,18 @@ const ProfilePage: React.FC = () => {
     const parsedDate = parseISO(date);
     const now = new Date();
     const diffInDays = differenceInDays(now, parsedDate);
-    
+
     if (diffInDays === 1) {
       return `yesterday at ${format(parsedDate, "HH:mm")}`;
     }
-    
+
     if (diffInDays <= 7) {
-      return `last ${format(parsedDate, "EEEE")} at ${format(parsedDate, "HH:mm")}`;
+      return `last ${format(parsedDate, "EEEE")} at ${format(
+        parsedDate,
+        "HH:mm"
+      )}`;
     }
-    
+
     return format(parsedDate, "MMM d HH:mm");
   };
 
@@ -144,13 +156,35 @@ const ProfilePage: React.FC = () => {
   const user = profileData.user;
 
   const getUsername = (user: User | null) => {
-    return user?.username === userData["me"]?.user?.username ? "me" : user?.username;
-  }
+    return user?.username === userData["me"]?.user?.username
+      ? "me"
+      : user?.username;
+  };
+
+  const hasPendingReceivedFriendRequest = () => {
+    return currentUserReceivedFriendRequests?.some(
+      (request) =>
+        request.sender_id === profileData.user?.id &&
+        request.status === "pending"
+    );
+  };
+
+  const hasPendingSentFriendRequest = () => {
+    return currentUserSentFriendRequests?.some(
+      (request) =>
+        request.recipient_id === profileData.user?.id &&
+        request.status === "pending"
+    );
+  };
+
+  const isFriend = () => {
+    return currentUser?.friend_ids?.includes(profileData.user?.id || "");
+  };
 
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-around gap-4 items-center mb-8">
           <Avatar className="w-20 h-20">
             <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
             <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
@@ -158,14 +192,13 @@ const ProfilePage: React.FC = () => {
           <Link href={`/friends/${getUsername(user)}`}>
             <div className="text-center">
               <p className="text-2xl font-bold">
-              {user?.friend_ids?.length || 0}
-            </p>
+                {user?.friend_ids?.length || 0}
+              </p>
               <p className="text-sm text-gray-500">Friends</p>
             </div>
           </Link>
-          {isOwnProfile ? (
+          {isOwnProfile && (
             <div className="flex items-center space-x-4">
-              
               <div className="flex items-center space-x-2">
                 <Bell size={20} />
                 <Switch
@@ -187,13 +220,10 @@ const ProfilePage: React.FC = () => {
                 <LogOut size={24} className="cursor-pointer" />
               </Button>
             </div>
-          ) : (
+          )}
+          {!isOwnProfile && !isFriend() && (
             <>
-              {currentUserFriendRequests?.some(
-                (request) =>
-                  request.sender_id === profileData.user?.id &&
-                  request.status === "pending"
-              ) ? (
+              {hasPendingReceivedFriendRequest() && (
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
@@ -212,31 +242,25 @@ const ProfilePage: React.FC = () => {
                     <span>Reject</span>
                   </Button>
                 </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                  onClick={handleSendFriendRequest}
-                  disabled={currentUserFriendRequests?.some(
-                    (request) => request.recipient_id === profileData.user?.id
-                  )}
-                >
-                  {currentUserFriendRequests?.some(
-                    (request) => request.recipient_id === profileData.user?.id
-                  ) ? (
-                    <Check size={20} />
-                  ) : (
-                    <UserPlus size={20} />
-                  )}
-                  <span>
-                    {currentUserFriendRequests?.some(
-                      (request) => request.recipient_id === profileData.user?.id
-                    )
-                      ? "Request Sent"
-                      : "Add Friend"}
-                  </span>
-                </Button>
               )}
+              <Button
+                variant="outline"
+                className="flex items-center space-x-2"
+                onClick={handleSendFriendRequest}
+                disabled={hasPendingSentFriendRequest()}
+              >
+                {hasPendingSentFriendRequest() ? (
+                  <>
+                    <Check size={20} />
+                    <span>Request Sent</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={20} />
+                    <span>Add Friend</span>
+                  </>
+                )}
+              </Button>
             </>
           )}
         </div>
@@ -261,12 +285,17 @@ const ProfilePage: React.FC = () => {
             />
           </TabsContent>
           <TabsContent value="history">
-            {activityEntries && activityEntries.length > 0 ? (
+            {activityEntries?.length > 0 ? (
               <div className="space-y-4">
                 {activityEntries
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .sort(
+                    (a, b) =>
+                      new Date(b.date).getTime() - new Date(a.date).getTime()
+                  )
                   .map((entry) => {
-                    const activity = activities.find((a) => a.id === entry.activity_id);
+                    const activity = activities.find(
+                      (a) => a.id === entry.activity_id
+                    );
                     return (
                       <ActivityEntryPhotoCard
                         key={entry.id}
@@ -276,8 +305,15 @@ const ProfilePage: React.FC = () => {
                         activityEntryQuantity={entry.quantity}
                         activityMeasure={activity?.measure || ""}
                         formattedDate={getFormattedDate(entry.date)}
-                        daysUntilExpiration={entry.image?.expires_at ? differenceInDays(parseISO(entry.image.expires_at!), new Date()) : 0}
-                        userPicture={user?.picture} 
+                        daysUntilExpiration={
+                          entry.image?.expires_at
+                            ? differenceInDays(
+                                parseISO(entry.image.expires_at!),
+                                new Date()
+                              )
+                            : 0
+                        }
+                        userPicture={user?.picture}
                         userName={user?.name}
                         userUsername={user?.username}
                         editable={isOnesOwnProfile}
@@ -290,16 +326,20 @@ const ProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
-                {activityEntries.length === 0 ? "No activities available yet." : `${user?.name}'s ${activities.length} past activities photos have expired.`}
+                {activityEntries?.length === 0
+                  ? "No activities available yet."
+                  : `${user?.name}'s ${activities.length} past activities photos have expired.`}
               </div>
             )}
           </TabsContent>
         </Tabs>
       </div>
       {showEditActivityEntry && isOnesOwnProfile && (
-        <ActivityEntryEditor 
-          activityEntry={activityEntries.find(entry => entry.id === showEditActivityEntry)!}
-          onClose={() => setShowEditActivityEntry(null)} 
+        <ActivityEntryEditor
+          activityEntry={
+            activityEntries.find((entry) => entry.id === showEditActivityEntry)!
+          }
+          onClose={() => setShowEditActivityEntry(null)}
         />
       )}
     </div>

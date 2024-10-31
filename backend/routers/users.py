@@ -68,8 +68,11 @@ async def load_all_user_data(
             plan_groups_future = executor.submit(
                 plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
             )
-            friend_requests_future = executor.submit(
-                users_gateway.friend_request_gateway.get_pending_requests, user.id
+            friend_requests_sent_future = executor.submit(
+                users_gateway.friend_request_gateway.get_pending_sent_requests, user.id
+            )
+            friend_requests_received_future = executor.submit(
+                users_gateway.friend_request_gateway.get_pending_received_requests, user.id
             )
 
             activities = [
@@ -84,8 +87,11 @@ async def load_all_user_data(
             plan_groups = [
                 plan_group.dict() for plan_group in plan_groups_future.result()
             ]
-            friend_requests = [
-                request.dict() for request in friend_requests_future.result()
+            sent_friend_requests = [
+                request.dict() for request in friend_requests_sent_future.result()
+            ]
+            received_friend_requests = [
+                request.dict() for request in friend_requests_received_future.result()
             ]
 
         # Process plans to include activities
@@ -101,16 +107,6 @@ async def load_all_user_data(
                 if activity_id in activity_map
             ]
 
-        # hydrate friend requests with sender and recipient data
-        for request in friend_requests:
-            sender = users_gateway.get_user_by_id(request["sender_id"])
-            recipient = users_gateway.get_user_by_id(request["recipient_id"])
-            request["sender_name"] = sender.name
-            request["sender_username"] = sender.username
-            request["sender_picture"] = sender.picture
-            request["recipient_name"] = recipient.name
-            request["recipient_username"] = recipient.username
-            request["recipient_picture"] = recipient.picture
 
         result = {
             "user": user,
@@ -121,8 +117,9 @@ async def load_all_user_data(
             "plan_groups": plan_groups,
         }
 
-        if current_user.id == user.id:
-            result["friend_requests"] = friend_requests
+        if current_user.id == user.id: # only show friend requests to the user themselves
+            result["sent_friend_requests"] = sent_friend_requests
+            result["received_friend_requests"] = received_friend_requests
 
         return result
     except Exception as e:
