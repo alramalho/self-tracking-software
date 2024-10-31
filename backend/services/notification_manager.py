@@ -26,23 +26,22 @@ class NotificationManager:
         self.cron_gateway = EventBridgeCronGateway()
         self.prompt_controller = PromptController()
 
-    def create_notification(
+    def create_or_get_notification(
         self,
         notification: Notification
     ) -> Notification:
         
-        existing_notifications = self.db_gateway.query('user_id', notification.user_id)
+        existing_notifications = self.get_all_for_user(notification.user_id)
         
         # Get the date of the new notification
         notification_date = notification.created_at.date()
         
         # Check for duplicates on same date with same message
         for existing in existing_notifications:
-            existing_date = existing.get('created_at', datetime.now()).date()
-            if (existing_date == notification_date and 
-                existing.get('message') == notification.message):
+            if (existing.created_at.date() == notification_date and 
+                existing.message == notification.message):
                 logger.info(f"Duplicate notification found for user {notification.user_id} with message: {notification.message}")
-                return None
+                return existing
 
         if notification.recurrence:
             cron_str = self._generate_cron_string(notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS)
@@ -86,7 +85,7 @@ class NotificationManager:
         return notification
     
     async def create_and_process_notification(self, notification: Notification) -> Optional[Notification]:
-        notification = self.create_notification(notification)
+        notification = self.create_or_get_notification(notification)
         return await self.process_notification(notification.id)
 
     def mark_as_opened(self, notification_id: str) -> Optional[Notification]:
