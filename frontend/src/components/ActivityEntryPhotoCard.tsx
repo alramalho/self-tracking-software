@@ -10,6 +10,7 @@ interface ActivityEntryPhotoCardProps {
   activityEmoji: string;
   formattedDate: string;
   daysUntilExpiration: number;
+  hasImageExpired?: boolean;
   userPicture?: string;
   userName?: string;
   userUsername?: string;
@@ -26,6 +27,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityEmoji,
   formattedDate,
   daysUntilExpiration,
+  hasImageExpired,
   userPicture,
   userName,
   userUsername,
@@ -33,13 +35,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   onClick,
   onEditClick,
 }) => {
-  if (daysUntilExpiration < 0) {
-    return null;
-  }
-
   return (
     <div className="border rounded-lg overflow-hidden relative" onClick={onClick}>
-      {imageUrl && (
+      {imageUrl && !hasImageExpired && (
         <div className="max-h-full max-w-full mx-auto">
           <img
             src={imageUrl}

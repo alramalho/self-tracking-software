@@ -74,9 +74,7 @@ const TimelineRenderer: React.FC = () => {
             entry.image && entry.image.expires_at
               ? differenceInDays(new Date(entry.image.expires_at), new Date())
               : 0;
-          const hasExpired = entry.image && entry.image.expires_at && new Date(entry.image.expires_at) < new Date();
-
-          if (hasExpired) return null;
+          const hasImageExpired = !entry.image || !entry.image.expires_at || new Date(entry.image.expires_at) < new Date();
 
           return (
             <ActivityEntryPhotoCard
@@ -89,6 +87,7 @@ const TimelineRenderer: React.FC = () => {
               formattedDate={formattedDate}
               userPicture={user?.picture}
               daysUntilExpiration={daysUntilExpiration}
+              hasImageExpired={hasImageExpired}
               userName={user?.name}
               userUsername={user?.username}
               onClick={() => {
