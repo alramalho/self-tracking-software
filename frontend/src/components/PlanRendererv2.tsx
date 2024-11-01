@@ -9,6 +9,7 @@ import {
   endOfWeek,
   addWeeks,
   subWeeks,
+  isAfter,
 } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -255,6 +256,40 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     return completedSessionsThisWeek.length > sessionIndex;
   };
 
+  const getCompletedOn = (session: ApiPlan["sessions"][0]) => {
+    const sessionDate = parseISO(session.date);
+    const weekStart = startOfWeek(sessionDate);
+    const weekEnd = endOfWeek(sessionDate);
+
+    const plannedSessionsThisWeek = selectedPlan.sessions
+      .filter((s) => {
+        const sDate = parseISO(s.date);
+        return (
+          s.activity_id === session.activity_id &&
+          sDate >= weekStart &&
+          sDate <= weekEnd
+        );
+      })
+      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+
+    const completedSessionsThisWeek = activityEntries
+      .filter(
+        (entry) =>
+          entry.activity_id === session.activity_id &&
+          parseISO(entry.date) >= weekStart &&
+          parseISO(entry.date) <= weekEnd
+      )
+      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+
+    const sessionIndex = plannedSessionsThisWeek.findIndex(
+      (s) => s.date === session.date
+    );
+
+    return completedSessionsThisWeek[sessionIndex]?.date
+      ? parseISO(completedSessionsThisWeek[sessionIndex]?.date)
+      : null;
+  };
+
   const prepareCalendarData = (plan: ApiPlan) => {
     const sessions = plan.sessions.map((session) => ({
       ...session,
@@ -412,8 +447,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               .filter((session) => {
                 const sessionDate = parseISO(session.date);
                 const endOfCurrentWeek = endOfWeek(new Date());
+                const beginningOfCurrentWeek = startOfWeek(new Date());
                 return (
-                  (isToday(sessionDate) || isFuture(sessionDate)) &&
+                  isAfter(sessionDate, beginningOfCurrentWeek) &&
                   isBefore(sessionDate, endOfCurrentWeek)
                 );
               })
@@ -422,6 +458,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   (a) => a.id === session.activity_id
                 );
                 const completed = isSessionCompleted(session);
+                const completedOn = getCompletedOn(session)
                 if (!activity) return null;
 
                 return (
@@ -431,6 +468,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                     activity={activity}
                     onClick={() => setSelectedSession(session)}
                     completed={completed}
+                    completedOn={completedOn}
                   />
                 );
               })}

@@ -1,4 +1,4 @@
-import { format, isPast, isToday, parseISO } from "date-fns";
+import { format, isPast, isToday, parseISO, differenceInDays, isYesterday, isSameDay } from "date-fns";
 import { Check } from "lucide-react";
 import { ActivityEntry, Activity } from "@/contexts/UserPlanContext";
 
@@ -13,16 +13,15 @@ export const ActivityEntryCard = ({
   activity,
   onClick,
   completed,
+  completedOn,
 }: {
   entry: Entry;
   activity: Activity;
   onClick?: () => void;
   completed?: boolean;
+  completedOn?: Date;
 }) => {
   const dateInfoStr = (isoDate: string) => {
-    if (!isToday(parseISO(isoDate)) && isPast(parseISO(isoDate))) {
-      return format(parseISO(isoDate), "MMM d, yyyy");
-    }
     const date = parseISO(isoDate);
     const today = new Date();
     const diffInDays = Math.ceil(
@@ -30,8 +29,20 @@ export const ActivityEntryCard = ({
     );
     if (diffInDays === 0) return "Today";
     if (diffInDays === 1) return "Tomorrow";
-    return `In ${diffInDays} days (${format(date, "EEEE")})`;
+    return format(date, "EEEE");
   };
+
+  const completedOnStr = (date: Date) => {
+    if (isToday(date)) return "today";
+    if (isYesterday(date)) return "yesterday";
+    
+    const daysDiff = differenceInDays(new Date(), date);
+    if (daysDiff <= 7) {
+      return format(date, "EEEE").toLowerCase();
+    }
+    return `${daysDiff} days ago`;
+  };
+
   return (
     <div
       key={`${entry.date}-${entry.activity_id}`}
@@ -54,9 +65,14 @@ export const ActivityEntryCard = ({
       <span className="text-lg font-medium text-center text-gray-800">
         {activity?.title || "Unknown Activity"}
       </span>
-      <span className="text-xs text-gray-800 text-center">
+      <span className="text-xs text-gray-800 text-center mb-3">
         {entry.quantity} {activity?.measure}
       </span>
+      {completedOn && !isSameDay(completedOn, parseISO(entry.date)) && (
+        <span className="text-xs text-green-600 text-center">
+          done {completedOnStr(completedOn)}
+        </span>
+      )}
     </div>
   );
 };
