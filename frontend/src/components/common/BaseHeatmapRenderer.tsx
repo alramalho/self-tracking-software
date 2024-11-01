@@ -55,29 +55,23 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         (endDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
       )
     : 52;
-
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix();
     return (
-      <div className="flex flex-col flex-nowrap justify-center gap-2 mt-2">
-        <div className="flex flex-col items-center">
-          <span className="text-sm font-semibold mb-1">Today</span>
-          <div className="flex">
-            <div
-              className="w-4 h-4 mr-1"
-              style={{
-                border: "2px solid #FF0000",
-              }}
-              title="Today's date"
-            />
-          </div>
+      <div className="grid grid-cols-2 gap-4 mt-2">
+        <div className="flex items-center justify-end gap-2">
+          <div
+            className="w-4 h-4"
+            style={{
+              border: "2px solid #FF0000",
+            }}
+            title="Today's date"
+          />
         </div>
+        <span className="text-sm font-semibold">Today</span>
         {activities.map((activity, index) => (
-          <div key={index} className="flex flex-col items-center">
-            <span className="text-sm font-semibold mb-1">
-              {activity.title} ({activity.measure})
-            </span>
-            <div className="flex">
+          <React.Fragment key={index}>
+            <div className="flex flex-row gap-0 items-center justify-end">
               {colorMatrix[index % colorMatrix.length].map(
                 (color, intensityIndex) => (
                   <div
@@ -89,7 +83,15 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                 )
               )}
             </div>
-          </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold mb-1">
+                {activity.emoji} {activity.title}
+              </span>
+              <span className="text-xs text-gray-500">
+                ({activity.measure})
+              </span>
+            </div>
+          </React.Fragment>
         ))}
       </div>
     );
