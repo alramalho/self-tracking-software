@@ -23,7 +23,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   onSuccess,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [keepInProfile, setKeepInProfile] = useState(false);
+  const [isPublic, setisPublic] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { fetchUserData, setUserData, userData } = useUserPlan();
   const { addToNotificationCount } = useNotifications();
@@ -63,7 +63,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         const formData = new FormData();
         formData.append('photo', selectedFile);
         formData.append('activityEntryId', response.data.id);
-        formData.append('keepInProfile', keepInProfile.toString());
+        formData.append('isPublic', isPublic.toString());
 
         await api.post('/store-activity-photo', formData, {
           headers: {
@@ -118,15 +118,15 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         {selectedFile && (
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="keep-in-profile"
-              checked={keepInProfile}
-              onCheckedChange={(checked) => setKeepInProfile(checked as boolean)}
+              id="is-public"
+              checked={isPublic}
+              onCheckedChange={(checked) => setisPublic(checked as boolean)}
             />
             <label
-              htmlFor="keep-in-profile"
+              htmlFor="is-public"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Keep in profile
+              Make public
             </label>
           </div>
         )}

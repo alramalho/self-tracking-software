@@ -75,6 +75,8 @@ const TimelineRenderer: React.FC = () => {
 
           if (hasExpired) return null;
 
+          if (!entry.image?.is_public) return null;
+
           return (
             <ActivityEntryPhotoCard
               key={entry.id}

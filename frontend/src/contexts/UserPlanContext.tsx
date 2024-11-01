@@ -30,7 +30,7 @@ export interface ActivityEntry {
     url?: string;
     expires_at?: string;
     created_at?: string;
-    keep_in_profile?: boolean;
+    is_public?: boolean;
   };
 }
 

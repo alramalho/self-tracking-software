@@ -351,7 +351,7 @@ def get_recommended_activity_entries(current_user: User):
     activities = plan_controller.get_recommended_activities(current_user, limit=10)
     activities_dicts = [
         exclude_embedding_fields(activity.dict()) for activity in activities
-    ]
+]
 
     users = {}
 

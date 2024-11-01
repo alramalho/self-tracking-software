@@ -48,7 +48,7 @@ class ImageInfo(BaseModel):
     url: Optional[str] = None
     expires_at: Optional[str] = None
     created_at: Optional[str] = None
-    keep_in_profile: bool = False
+    is_public: bool = False
 
 class ActivityEntry(BaseModel):
     id: str

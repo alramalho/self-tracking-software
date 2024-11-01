@@ -121,7 +121,7 @@ async def upsert_activity(
 async def store_activity_photo(
     photo: UploadFile = File(...),
     activityEntryId: str = Form(...),
-    keepInProfile: bool = Form(...),
+    isPublic: bool = Form(...),
     user: User = Depends(is_clerk_user),
 ):
     s3_gateway = S3Gateway()
@@ -132,7 +132,7 @@ async def store_activity_photo(
 
     s3_gateway.upload(await photo.read(), s3_path)
 
-    expiration = 604799 if keepInProfile else 86400
+    expiration = 604799 # 7 days (max for s3 presigned url)
     presigned_url = s3_gateway.generate_presigned_url(s3_path, expiration)
 
     image_expires_at = datetime.now() + timedelta(seconds=expiration)
@@ -142,7 +142,7 @@ async def store_activity_photo(
         url=presigned_url,
         expires_at=image_expires_at.isoformat(),
         created_at=datetime.now().isoformat(),
-        keep_in_profile=keepInProfile,
+        is_public=isPublic,
     )
 
     updated_entry = activities_gateway.update_activity_entry(
