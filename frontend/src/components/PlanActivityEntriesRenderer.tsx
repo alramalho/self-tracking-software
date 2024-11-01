@@ -6,16 +6,16 @@ import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 
 interface PlanActivityEntriesRendererProps {
   plan: Plan;
+  activities: Activity[];
+  activityEntries: ActivityEntry[];
 }
 
 const PlanActivityEntriesRenderer: React.FC<PlanActivityEntriesRendererProps> = ({
   plan,
+  activities,
+  activityEntries,
 }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
-  const {userData} = useUserPlan();
-
-  const activityEntries = useMemo(() => userData?.me?.activityEntries || [], [userData]);
-  const activities = useMemo(() => userData?.me?.activities || [], [userData]);
 
   const planActivities = useMemo(() => activities.filter(a => plan.sessions.some(s => s.activity_id === a.id)), [activities, plan.sessions]);
   const planActivityEntries = useMemo(() => activityEntries.filter(e => planActivities.some(a => a.id === e.activity_id)), [activityEntries, planActivities]);

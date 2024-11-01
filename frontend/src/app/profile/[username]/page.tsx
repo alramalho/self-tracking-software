@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { User, useUserPlan } from "@/contexts/UserPlanContext";
+import { convertApiPlanToPlan, User, useUserPlan } from "@/contexts/UserPlanContext";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import Link from "next/link";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import { Input } from "@/components/ui/input";
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
+import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -279,10 +280,22 @@ const ProfilePage: React.FC = () => {
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
-            <ActivitiesRenderer
-              activities={profileData.activities}
-              activityEntries={profileData.activityEntries}
-            />
+            <div className="space-y-4">
+              {profileData.plans?.map((plan) => (
+                <div key={plan.id} className="p-4 border rounded-lg bg-white">
+                  <div className="flex flex-row items-center gap-2 mb-4">
+                    <span className="text-4xl">{plan.emoji}</span>
+                    <h3 className="text-lg font-semibold">{plan.goal}</h3>
+                  </div>
+                  <PlanActivityEntriesRenderer plan={convertApiPlanToPlan(plan, activities)} activities={activities} activityEntries={activityEntries} />
+                </div>
+              ))}
+              {(!profileData.plans || profileData.plans.length === 0) && (
+                <div className="text-center text-gray-500 py-8">
+                  No active plans available.
+                </div>
+              )}
+            </div>
           </TabsContent>
           <TabsContent value="history">
             {activityEntries?.length > 0 ? (

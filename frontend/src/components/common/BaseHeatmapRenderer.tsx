@@ -106,7 +106,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             startDate={startDate}
             endDate={endDate}
             width={30 + 18 * numberOfWeeks}
-            height={200}
+            height={150}
             rectSize={14}
             legendRender={() => <></>}
             rectProps={{
@@ -117,21 +117,20 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               let stroke = "none";
               let strokeWidth = 0;
               const dateObj = new Date(data.date);
+              const intensity = getIntensityForDate(
+                format(dateObj, "yyyy-MM-dd")
+              );
+              if (intensity && intensity.activityIndex !== -1) {
+                color = getActivityColor(
+                  intensity.activityIndex,
+                  intensity.intensity
+                );
+              }
 
               // Check if the date is today
               if (isToday(dateObj)) {
                 stroke = "#FF0000"; // Red border
                 strokeWidth = 2;
-              } else {
-                const intensity = getIntensityForDate(
-                  format(dateObj, "yyyy-MM-dd")
-                );
-                if (intensity && intensity.activityIndex !== -1) {
-                  color = getActivityColor(
-                    intensity.activityIndex,
-                    intensity.intensity
-                  );
-                }
               }
 
               return (
