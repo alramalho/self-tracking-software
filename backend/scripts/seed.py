@@ -190,7 +190,7 @@ def generate_dummy_data():
 
         sender = next((u for u in users if u.id == friend_request.sender_id), None)
         notifications.append(
-            notification_manager.create_notification(
+            notification_manager.create_or_get_notification(
                 Notification.new(
                     id=str(ObjectId(f"66666666666666666666668{i}")),
                     user_id=friend_request.recipient_id,
@@ -214,7 +214,7 @@ def generate_dummy_data():
         sender = next((u for u in users if u.id == plan_invitation.sender_id), None)
         plan = next((p for p in plans if p.id == plan_invitation.plan_id), None)
         notifications.append(
-            notification_manager.create_notification(
+            notification_manager.create_or_get_notification(
                 Notification.new(
                     id=str(ObjectId(f"66666666666666666666669{i}")),
                     user_id=plan_invitation.recipient_id,
@@ -233,7 +233,7 @@ def generate_dummy_data():
 
     # Engagement notifications
     notifications.extend([
-        notification_manager.create_notification(
+        notification_manager.create_or_get_notification(
             Notification.new(
                 id=str(ObjectId("66666666666666666666668c")),
                 user_id=users[0].id,
@@ -244,7 +244,7 @@ def generate_dummy_data():
                 time_deviation_in_hours=2,
             )
         ),
-        notification_manager.create_notification(
+        notification_manager.create_or_get_notification(
             Notification.new(
                 id=str(ObjectId("66666666666666666666668d")),
                 user_id=users[0].id,

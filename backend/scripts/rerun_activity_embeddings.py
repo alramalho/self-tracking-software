@@ -3,7 +3,7 @@ from constants import MONGO_DB_CONNECTION_STRING, MONGO_DB_NAME, ENVIRONMENT
 from loguru import logger
 from bson import ObjectId
 from typing import List, Optional
-from do_mongo_query import get_embedding
+from scripts.do_mongo_query import get_embedding
 
 def rerun_activity_embeddings(user_id: Optional[str] = None):
     client = MongoClient(MONGO_DB_CONNECTION_STRING)

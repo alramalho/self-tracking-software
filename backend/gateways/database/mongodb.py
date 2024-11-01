@@ -158,11 +158,15 @@ class MongoDBGateway(DBGateway):
     def __del__(self):
         self.close()
 
-    def vector_search(self, key: str, query: str, exclude_key: str = None, exclude_value: str = None, limit: int = 5) -> List[Dict]:
+    def vector_search(self, key: str, query: str, include_key: str = None, include_values: List[str] = None, limit: int = 5) -> List[Dict]:
         if key.endswith("_embedding"):
             embedding_key = key
         else:
             embedding_key = f"{key}_embedding"
+
+        if include_key == "id":
+            include_values = [ObjectId(value) for value in include_values if value is not None and type(value) == str]
+            
 
             
         index_name = f"{embedding_key}_vector_index"
@@ -173,7 +177,7 @@ class MongoDBGateway(DBGateway):
             {
                 "$vectorSearch": {
                     "index": index_name,
-                    "filter": {exclude_key: {"$ne": exclude_value}},
+                    "filter": {include_key: {"$in": include_values}},
                     "path": embedding_key,
                     "queryVector": query_embedding,
                     "numCandidates": 100,

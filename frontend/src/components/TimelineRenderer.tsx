@@ -36,7 +36,7 @@ const TimelineRenderer: React.FC = () => {
   }
 
   if (!timelineData) {
-    return <div className="text-center mt-8">No timeline data available.</div>;
+    return <div className="text-center mt-8">No timeline data available. Try adding some friends!</div>;
   }
 
   return (
@@ -74,8 +74,6 @@ const TimelineRenderer: React.FC = () => {
           const hasExpired = entry.image && entry.image.expires_at && new Date(entry.image.expires_at) < new Date();
 
           if (hasExpired) return null;
-
-          if (!entry.image?.is_public) return null;
 
           return (
             <ActivityEntryPhotoCard
