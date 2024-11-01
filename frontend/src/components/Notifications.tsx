@@ -132,7 +132,11 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
   return (
     <div className="space-y-4 mb-6">
-      {userData["me"].notifications.map((notification) => (
+      <h2 className="text-lg font-semibold mb-4">Notifications</h2>
+      {userData["me"]?.notifications.length === 0 && (
+        <p className="text-gray-500">No notifications yet.</p>
+      )}
+      {userData["me"]?.notifications && userData["me"].notifications.map((notification) => (
         <div
           key={notification.id}
           className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-full flex items-center justify-between transition-shadow duration-200 hover:shadow-md"

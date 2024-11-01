@@ -1,26 +1,27 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import PlansRenderer from "@/components/PlansRenderer";
 import { useSession } from "@clerk/nextjs";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import TimelineRenderer from "@/components/TimelineRenderer";
+import AppleLikePopover from "@/components/AppleLikePopover";
+import { ChevronRight, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Notifications from "@/components/Notifications";
 
 const PlansPage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { userData} = useUserPlan();
+  const { userData, setUserData, fetchUserData } = useUserPlan();
 
   useEffect(() => {
-    if (isSignedIn && userData && userData["me"]) {
-      if (userData["me"].plans.length === 0) {
-        router.push("/onboarding");
-      } else {
-        router.push("/feed");
-      }
+    if (userData && userData["me"] && userData["me"].plans.length == 0) {
+      router.push("/onboarding");
     }
-  }, [userData, router, isSignedIn]);
+  }, [userData]);
 
   if (!isSignedIn) {
     return (
@@ -47,7 +48,16 @@ const PlansPage: React.FC = () => {
     );
   }
 
-  return null;
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">
+        Welcome
+        {userData["me"].user?.name ? `, ${userData["me"].user.name}` : ""}. Here are your plans:
+      </h1>
+
+      <PlansRenderer />
+    </div>
+  );
 };
 
 export default PlansPage;

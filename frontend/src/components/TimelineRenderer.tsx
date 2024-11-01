@@ -39,12 +39,15 @@ const TimelineRenderer: React.FC = () => {
     return <div className="text-center mt-8">No timeline data available. Try adding some friends!</div>;
   }
 
+  const sortedEntries = [...(timelineData.recommendedActivityEntries || [])].sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {timelineData.recommendedActivityEntries &&
-        timelineData.recommendedActivities &&
+      {timelineData.recommendedActivities &&
         timelineData.recommendedUsers &&
-        timelineData.recommendedActivityEntries.map((entry: ActivityEntry) => {
+        sortedEntries.map((entry: ActivityEntry) => {
           const activity: Activity | undefined = timelineData.recommendedActivities!.find(
             (a) => a.id === entry.activity_id
           );

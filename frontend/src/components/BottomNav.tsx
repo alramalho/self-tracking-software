@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Eye, Flame, Home, Pencil, Search, Sparkle, User } from "lucide-react";
+import { ChartGantt, Eye, Flame, Home, Pencil, Route, Search, Sparkle, Sprout, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
@@ -16,15 +16,15 @@ const BottomNav = () => {
           href="/feed"
           className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500"
         >
-          <Flame size={24} />
+          <Flame size={24}/>
           <span className="text-xs mt-1">Feed</span>
         </Link>
         <Link
-          href="/"
+          href="/plans"
           className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500"
         >
-          <Home size={24} />
-          <span className="text-xs mt-1">Home</span>
+          <ChartGantt size={24} />
+          <span className="text-xs mt-1">Plans</span>
         </Link>
         <Link
           href="/log"

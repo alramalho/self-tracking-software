@@ -30,12 +30,11 @@ const FeedPage = () => {
       </div>
 
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-4">Notifications</h2>
         <Notifications />
       </div>
 
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-4">Feed</h2>
+        <h2 className="text-lg font-semibold mb-4">Friend&apos;s last activities</h2>
         <TimelineRenderer />
       </div>
 
