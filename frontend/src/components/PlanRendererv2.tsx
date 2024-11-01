@@ -390,7 +390,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 color: `hsl(var(--chart-${index + 2}))`,
               })),
             ]}
-            title={`Intensity Overview 📈`}
+            title={`Sessions Overview 📈`}
             description={`${sessionData[0].week} - ${
               sessionData[sessionData.length - 1].week
             }`}
