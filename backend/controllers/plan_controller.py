@@ -37,7 +37,7 @@ class PlanController:
         logger.log("CONTROLLERS", f"Creating plan from generated plan for user {user_id}")
         sessions = [
             PlanSession(**session)
-            for session in generated_plan_data.get("sessions", [])
+            for session in generated_plan_data.get("sessions", []) if session.get("activity_id")
         ]
         plan = Plan.new(
             user_id=user_id,
@@ -46,10 +46,9 @@ class PlanController:
             finishing_date=generated_plan_data.get("finishing_date", None),
             sessions=sessions,
         )
-
         for activity in generated_plan_data.get("activities", []):
             converted_activity = Activity.new(
-                id=activity.get("activity_id"),
+                id=activity.get("id"),
                 user_id=user_id,
                 title=activity.get("title"),
                 measure=activity.get("measure"),
@@ -157,6 +156,7 @@ class PlanController:
         
         The plan should be progressive (intensities or recurrence of activities should increase over time).
         The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
+        It is absolutely mandatory that all present sessions activity names are contained in the list of activities.
         """
 
         user_prompt = f"Please generate me a plan to achieve the goal of {goal} by {finishing_date}."

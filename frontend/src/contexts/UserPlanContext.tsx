@@ -174,6 +174,18 @@ export function convertGeneratedPlanToApiPlan(plan: GeneratedPlan): ApiPlan {
   } as ApiPlan;
 }
 
+export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]): Plan {
+  return {
+    ...plan,
+    finishing_date: plan.finishing_date ? parseISO(plan.finishing_date) : undefined,
+    sessions: plan.sessions.map((session) => ({
+      ...session,
+      date: parseISO(session.date),
+      activity_name: planActivities.find(a => a.id === session.activity_id)?.title,
+    })),
+  } as Plan;
+}
+
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {

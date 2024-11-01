@@ -18,12 +18,14 @@ import {
   useUserPlan,
   UserDataEntry,
   PlanGroupMember,
+  convertApiPlanToPlan,
 } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
 import { Loader2, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ActivityEntryCard, Entry } from "@/components/ActivityEntryCard";
-import { constants } from "buffer";
+import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
+import PlanSessionsRenderer from "./PlanSessionsRenderer";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -347,7 +349,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 color: `hsl(var(--chart-${index + 2}))`,
               })),
             ]}
-            title={`Sessions Overview ${selectedPlan.emoji}`}
+            title={`Intensity Overview 📈`}
             description={`${sessionData[0].week} - ${
               sessionData[sessionData.length - 1].week
             }`}
@@ -356,8 +358,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       ) : null}
       <div className="border border-gray-200 rounded-lg p-4 mt-8">
-        <h2 className="text-2xl font-bold mb-4">Activity History</h2>
-        <div className="flex flex-row flex-wrap gap-4">
+        <h2 className="text-2xl font-bold mb-4">Activity Overview {selectedPlan.emoji}</h2>
+        {/* <div className="flex flex-row flex-wrap gap-4">
           {recentActivityEntries.length === 0 && (
             <div className="text-sm text-gray-500">
               No activity history yet.
@@ -376,11 +378,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               />
             );
           })}
-        </div>
-
+        </div> */}
+        <PlanSessionsRenderer
+          plan={convertApiPlanToPlan(selectedPlan, activities.filter(a => selectedPlan.sessions.some(s => s.activity_id === a.id)))}
+          activities={activities.filter(a => selectedPlan.sessions.some(s => s.activity_id === a.id))}
+        />
         <div className="mt-8">
           <div className="mb-4">
-            <h2 className="text-2xl font-bold">Coming up next</h2>
+            <h2 className="text-lg font-semibold text-gray-800">Coming up next</h2>
             <span className="text-sm text-gray-500 ">
               Completed activities are calculated on a per week count basis.
             </span>

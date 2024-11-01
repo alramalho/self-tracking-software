@@ -16,14 +16,12 @@ const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
   const { userData, setUserData, fetchUserData } = useUserPlan();
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   useEffect(() => {
     if (userData && userData["me"] && userData["me"].plans.length == 0) {
       router.push("/onboarding");
     }
   }, [userData]);
-
 
   if (!isSignedIn) {
     return (
@@ -54,42 +52,10 @@ const HomePage: React.FC = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">
         Welcome
-        {userData["me"].user?.name ? `, ${userData["me"].user.name}` : ""}
+        {userData["me"].user?.name ? `, ${userData["me"].user.name}` : ""}. Here are your plans:
       </h1>
 
-    <Notifications />
-
-      <div
-        className="bg-white border-2 border-blue-200 p-4 rounded-lg mb-6 cursor-pointer hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between"
-        onClick={() => setIsPopoverOpen(true)}
-      >
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={userData["me"].user?.picture} alt="User Avatar" />
-            <AvatarFallback>
-              {userData["me"].user?.name?.[0] ||
-                userData["me"].user?.username?.[0] ||
-                "U"}
-            </AvatarFallback>
-          </Avatar>
-          <h2 className="text-lg font-semibold">Your plans</h2>
-          <ChevronRight
-            className={`transition-transform duration-300 ${
-              isPopoverOpen ? "rotate-90" : ""
-            } text-gray-500`}
-            size={24}
-          />
-        </div>
-      </div>
-
-      <h1 className="text-lg font-bold mb-4">Last week</h1>
-      <TimelineRenderer />
-
-      {isPopoverOpen && (
-        <AppleLikePopover onClose={() => setIsPopoverOpen(false)}>
-          <PlansRenderer />
-        </AppleLikePopover>
-      )}
+      <PlansRenderer />
     </div>
   );
 };

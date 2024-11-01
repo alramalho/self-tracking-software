@@ -28,7 +28,7 @@ import {
   Plan,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import PlanRendererHeatmap from "./PlanRendererHeatmap";
+import GeneratedPlanRenderer from "./GeneratedPlanRenderer";
 import { useNotifications } from "@/hooks/useNotifications";
 import InviteButton from "./InviteButton";
 
@@ -125,6 +125,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   };
 
   const handlePlanSelection = async (plan: GeneratedPlan) => {
+    console.log({planToBeCreated: plan }) 
     try {
       if (plan) {
         const response = await api.post("/create-plan", {
@@ -354,7 +355,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
             <CardContent>
               {generatedPlans.map((plan) => (
                 <div key={plan.id} className="mb-6 border p-4 rounded-md">
-                  <PlanRendererHeatmap
+                  <GeneratedPlanRenderer
                     title={`${name} - ${plan.intensity} intensity`}
                     plan={plan}
                   />
