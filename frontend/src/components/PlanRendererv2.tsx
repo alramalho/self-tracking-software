@@ -401,7 +401,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <div className="mt-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-800">
-              Coming up next
+              This week
             </h2>
             <span className="text-sm text-gray-500 ">
               Completed activities are calculated on a per week count basis.
@@ -411,10 +411,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             {selectedPlan.sessions
               .filter((session) => {
                 const sessionDate = parseISO(session.date);
-                const oneWeekFromNow = addWeeks(new Date(), 1);
+                const endOfCurrentWeek = endOfWeek(new Date());
                 return (
                   (isToday(sessionDate) || isFuture(sessionDate)) &&
-                  isBefore(sessionDate, oneWeekFromNow)
+                  isBefore(sessionDate, endOfCurrentWeek)
                 );
               })
               .map((session) => {
