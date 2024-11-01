@@ -46,6 +46,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     return userData.me?.activities || [];
   }, [userData]);
 
+  const activityEntries = useMemo(() => {
+    return userData.me?.activityEntries || [];
+  }, [userData]);
+
   // Get plan group members and their associated plans
   const { planGroupMembers, memberPlans } = useMemo(() => {
     if (!selectedPlan.plan_group_id)
@@ -232,20 +236,22 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       })
       .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
 
-    const completedSessionsThisWeek = planGroupMembers
-      .flatMap((member) =>
-        (userData[member.username]?.activityEntries || []).filter(
-          (entry) =>
-            entry.activity_id === session.activity_id &&
-            parseISO(entry.date) >= weekStart &&
-            parseISO(entry.date) <= weekEnd
-        )
+    const completedSessionsThisWeek = activityEntries
+      .filter(
+        (entry) =>
+          entry.activity_id === session.activity_id &&
+          parseISO(entry.date) >= weekStart &&
+          parseISO(entry.date) <= weekEnd
       )
       .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
 
     const sessionIndex = plannedSessionsThisWeek.findIndex(
       (s) => s.date === session.date
     );
+    console.log({ plannedSessionsThisWeek: plannedSessionsThisWeek.length });
+    console.log({
+      completedSessionsThisWeek: completedSessionsThisWeek.length,
+    });
     return completedSessionsThisWeek.length > sessionIndex;
   };
 
@@ -358,7 +364,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       ) : null}
       <div className="border border-gray-200 rounded-lg p-4 mt-8">
-        <h2 className="text-2xl font-bold mb-4">Activity Overview {selectedPlan.emoji}</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          Activity Overview {selectedPlan.emoji}
+        </h2>
         {/* <div className="flex flex-row flex-wrap gap-4">
           {recentActivityEntries.length === 0 && (
             <div className="text-sm text-gray-500">
@@ -380,12 +388,21 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           })}
         </div> */}
         <PlanSessionsRenderer
-          plan={convertApiPlanToPlan(selectedPlan, activities.filter(a => selectedPlan.sessions.some(s => s.activity_id === a.id)))}
-          activities={activities.filter(a => selectedPlan.sessions.some(s => s.activity_id === a.id))}
+          plan={convertApiPlanToPlan(
+            selectedPlan,
+            activities.filter((a) =>
+              selectedPlan.sessions.some((s) => s.activity_id === a.id)
+            )
+          )}
+          activities={activities.filter((a) =>
+            selectedPlan.sessions.some((s) => s.activity_id === a.id)
+          )}
         />
         <div className="mt-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Coming up next</h2>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Coming up next
+            </h2>
             <span className="text-sm text-gray-500 ">
               Completed activities are calculated on a per week count basis.
             </span>
