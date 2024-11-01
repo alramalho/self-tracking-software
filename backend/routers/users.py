@@ -348,6 +348,7 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
 
 
 def get_recommended_activity_entries(current_user: User):
+    limit=30
     activities = plan_controller.get_recommended_activities(current_user, limit=10)
     activities_dicts = [
         exclude_embedding_fields(activity.dict()) for activity in activities
@@ -369,6 +370,10 @@ def get_recommended_activity_entries(current_user: User):
         ):
             entry_dict = exclude_embedding_fields(entry.dict())
             recommended_activity_entries.append(entry_dict)
+            if len(recommended_activity_entries) >= limit:
+                break
+        if len(recommended_activity_entries) >= limit:
+            break
 
     return {
         "recommended_activity_entries": recommended_activity_entries,
