@@ -115,7 +115,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           onChange={handleFileChange}
           className="hidden"
         />
-        {selectedFile && (
+        {/* {selectedFile && (
           <div className="flex items-center space-x-2">
             <Checkbox
               id="is-public"
@@ -129,7 +129,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
               Make public
             </label>
           </div>
-        )}
+        )} */}
         <Button 
           onClick={() => logActivity(!!selectedFile)} 
           className="w-full" 
