@@ -324,7 +324,11 @@ const ProfilePage: React.FC = () => {
                                 parseISO(entry.image.expires_at!),
                                 new Date()
                               )
-                            : 0
+                            : -1
+                        }
+                        hasImageExpired={
+                          !entry.image?.expires_at ||
+                          new Date(entry.image.expires_at!) < new Date()
                         }
                         userPicture={user?.picture}
                         userName={user?.name}
