@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ActivityEntryCard, Entry } from "@/components/ActivityEntryCard";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
+import { Switch } from "./ui/switch";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -41,6 +42,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     ApiPlan["sessions"][0] | null
   >(null);
   const [loading, setLoading] = useState(true);
+  const [displayFutureActivities, setDisplayFutureActivities] = useState(true);
 
   // Get current user's activities
   const activities = useMemo(() => {
@@ -400,7 +402,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       ) : null}
       <div className="border border-gray-200 rounded-lg p-4 mt-8">
         <h2 className="text-2xl font-bold mb-4">
-          Activity Overview {selectedPlan.emoji}
+          Activities Overview {selectedPlan.emoji}
         </h2>
         {/* <div className="flex flex-row flex-wrap gap-4">
           {recentActivityEntries.length === 0 && (
@@ -422,22 +424,36 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             );
           })}
         </div> */}
-        <PlanSessionsRenderer
-          plan={convertApiPlanToPlan(
-            selectedPlan,
-            activities.filter((a) =>
+        <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
+          <span className="text-xs text-gray-500">Completed</span>
+          <Switch
+          checked={displayFutureActivities}
+            onCheckedChange={setDisplayFutureActivities}
+          />
+          <span className="text-xs text-gray-500">Planned</span>
+        </div>
+        {displayFutureActivities ? (
+          <PlanSessionsRenderer
+            plan={convertApiPlanToPlan(
+              selectedPlan,
+              activities.filter((a) =>
+                selectedPlan.sessions.some((s) => s.activity_id === a.id)
+              )
+            )}
+            activities={activities.filter((a) =>
               selectedPlan.sessions.some((s) => s.activity_id === a.id)
-            )
-          )}
-          activities={activities.filter((a) =>
-            selectedPlan.sessions.some((s) => s.activity_id === a.id)
-          )}
-        />
+            )}
+          />
+        ) : (
+          <PlanActivityEntriesRenderer
+            plan={convertApiPlanToPlan(selectedPlan, activities)}
+            activities={activities}
+            activityEntries={activityEntries}
+          />
+        )}
         <div className="mt-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">
-              This week
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-800">This week</h2>
             <span className="text-sm text-gray-500 ">
               Completed activities are calculated on a per week count basis.
             </span>
@@ -458,7 +474,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   (a) => a.id === session.activity_id
                 );
                 const completed = isSessionCompleted(session);
-                const completedOn = getCompletedOn(session)
+                const completedOn = getCompletedOn(session);
                 if (!activity) return null;
 
                 return (
