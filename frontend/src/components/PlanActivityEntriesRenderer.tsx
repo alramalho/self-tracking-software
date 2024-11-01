@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { Activity, Plan, ActivityEntry, useUserPlan } from "@/contexts/UserPlanContext";
 import { Badge } from "./ui/badge";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
@@ -20,6 +20,18 @@ const PlanActivityEntriesRenderer: React.FC<PlanActivityEntriesRendererProps> = 
   const planActivities = useMemo(() => activities.filter(a => plan.sessions.some(s => s.activity_id === a.id)), [activities, plan.sessions]);
   const planActivityEntries = useMemo(() => activityEntries.filter(e => planActivities.some(a => a.id === e.activity_id)), [activityEntries, planActivities]);
 
+
+  const beginingOfWeekOfFirstActivityEntry = useMemo(() => {
+    if (planActivityEntries.length === 0) return new Date();
+    const sortedPlanActivityEntries = planActivityEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const firstActivityEntry = sortedPlanActivityEntries[0];
+    return startOfWeek(firstActivityEntry.date);
+  }, [planActivityEntries]);
+
+
+  useEffect(() => {
+    console.log({beginingOfWeekOfFirstActivityEntry})
+  }, [beginingOfWeekOfFirstActivityEntry])
 
   const formatEntriesForHeatMap = () => {
     return planActivityEntries.map((entry) => ({
@@ -116,7 +128,7 @@ const PlanActivityEntriesRenderer: React.FC<PlanActivityEntriesRendererProps> = 
     <>
       <BaseHeatmapRenderer
         activities={planActivities}
-        startDate={new Date()}
+        startDate={beginingOfWeekOfFirstActivityEntry}
         endDate={plan.finishing_date}
         heatmapData={formatEntriesForHeatMap()}
         onDateClick={setFocusedDate}
