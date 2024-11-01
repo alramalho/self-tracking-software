@@ -287,7 +287,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
     return completedSessionsThisWeek[sessionIndex]?.date
       ? parseISO(completedSessionsThisWeek[sessionIndex]?.date)
-      : null;
+      : undefined;
   };
 
   const prepareCalendarData = (plan: ApiPlan) => {
