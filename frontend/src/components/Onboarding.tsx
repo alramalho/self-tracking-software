@@ -133,10 +133,12 @@ const Onboarding: React.FC<OnboardingProps> = ({
           emoji: selectedEmoji,
         });
         const createdPlan = response.data.plan;
+        const createdActivities = response.data.activities;
         setSelectedPlan(createdPlan);
         setUserData("me", {
           ...userData["me"],
           plans: [...userData["me"].plans, createdPlan],
+          activities: [...userData["me"].activities, ...createdActivities],
         });
         setStep(7); // Move to the invitation step
       }

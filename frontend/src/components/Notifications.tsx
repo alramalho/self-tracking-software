@@ -128,51 +128,60 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
   const hasPictureData = (notification: Notification) => {
     return notification.related_data && notification.related_data.name;
-  }
+  };
 
   return (
-    <div className="space-y-4 mb-6">
-      <h2 className="text-lg font-semibold mb-4">Notifications</h2>
-      {userData["me"]?.notifications.length === 0 && (
-        <p className="text-gray-500">No notifications yet.</p>
+    <>
+      {userData["me"]?.notifications.length > 0 && (
+        <>
+          <h2 className="text-lg font-semibold mb-4">Notifications</h2>
+
+          {userData["me"]?.notifications &&
+            userData["me"].notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-full flex items-center justify-between transition-shadow duration-200 hover:shadow-md mb-4"
+              >
+                <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+                  {["friend_request", "plan_invitation", "info"].includes(
+                    notification.type
+                  ) &&
+                    hasPictureData(notification) && (
+                      <Link
+                        href={`/profile/${notification.related_data!.username}`}
+                      >
+                        <Avatar>
+                          <AvatarImage
+                            src={notification.related_data!.picture}
+                            alt={notification.related_data!.name || ""}
+                          />
+                          <AvatarFallback>
+                            {(notification.related_data!.name || "U")[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Link>
+                    )}
+                  {["engagement"].includes(notification.type) && (
+                    <p className="text-4xl text-gray-700 font-medium">💭</p>
+                  )}
+                  {hasPictureData(notification) ? (
+                    <Link
+                      href={`/profile/${notification.related_data!.username}`}
+                    >
+                      <p className="text-sm text-gray-700">{notification.message}</p>
+                    </Link>
+                  ) : (
+                    <p className="text-sm text-gray-700">{notification.message}</p>
+                  )}
+                </div>
+                <div className="flex ml-4">
+                  {renderActionButtons(notification)}
+                </div>
+              </div>
+            ))}
+        </>
       )}
-      {userData["me"]?.notifications && userData["me"].notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-full flex items-center justify-between transition-shadow duration-200 hover:shadow-md"
-        >
-          <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-            {["friend_request", "plan_invitation", "info"].includes(
-              notification.type
-            ) &&
-              hasPictureData(notification) && (
-                <Link href={`/profile/${notification.related_data!.username}`}>
-                  <Avatar>
-                    <AvatarImage
-                      src={notification.related_data!.picture}
-                      alt={notification.related_data!.name || ""}
-                    />
-                    <AvatarFallback>
-                      {(notification.related_data!.name || "U")[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                </Link>
-              )}
-            {["engagement"].includes(notification.type) && (
-              <p className="text-4xl text-gray-700 font-medium">💭</p>
-            )}
-            {hasPictureData(notification) ? (
-              <Link href={`/profile/${notification.related_data!.username}`}>
-                <p className="text-gray-700">{notification.message}</p>
-              </Link>
-            ) : (
-              <p className="text-gray-700 ml-4">{notification.message}</p>
-            )}
-          </div>
-          <div className="flex ml-4">{renderActionButtons(notification)}</div>
-        </div>
-      ))}
-    </div>
+    </>
   );
 };
 

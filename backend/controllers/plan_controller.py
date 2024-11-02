@@ -5,7 +5,7 @@ from entities.plan_group import PlanGroupMember
 from entities.activity import Activity
 from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from pydantic import BaseModel, Field, create_model
 from gateways.activities import ActivitiesGateway, ActivityAlreadyExistsException
 from gateways.users import UsersGateway
@@ -33,7 +33,7 @@ class PlanController:
 
     def create_plan_from_generated_plan(
         self, user_id: str, generated_plan_data: Dict[str, Any]
-    ) -> Plan:
+    ) -> Tuple[Plan, List[Activity]]:
         logger.log("CONTROLLERS", f"Creating plan from generated plan for user {user_id}")
         sessions = [
             PlanSession(**session)
@@ -46,6 +46,7 @@ class PlanController:
             finishing_date=generated_plan_data.get("finishing_date", None),
             sessions=sessions,
         )
+        created_activities = []
         for activity in generated_plan_data.get("activities", []):
             converted_activity = Activity.new(
                 id=activity.get("id"),
@@ -55,14 +56,14 @@ class PlanController:
                 emoji=activity.get("emoji"),
             )
             try:
-                self.activities_gateway.create_activity(converted_activity)
+                created_activities.append(self.activities_gateway.create_activity(converted_activity))
             except ActivityAlreadyExistsException:
                 logger.info(
                     f"Activity {converted_activity.id} ({converted_activity.title}) already exists"
                 )
 
         self.db_gateway.write(plan.dict())
-        return plan
+        return plan, created_activities
 
     def get_all_user_plans(self, user: User) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")

@@ -41,7 +41,7 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
 
 @router.post("/create-plan")
 async def create_plan(plan_data: dict = Body(...), current_user: User = Depends(is_clerk_user)):
-    new_plan = plan_controller.create_plan_from_generated_plan(current_user.id, plan_data)
+    new_plan, created_activities = plan_controller.create_plan_from_generated_plan(current_user.id, plan_data)
     
     # Create a PlanGroup for the new plan
     plan_group = PlanGroup.new(
@@ -62,7 +62,7 @@ async def create_plan(plan_data: dict = Body(...), current_user: User = Depends(
     # Update the user with the new plan_id
     users_gateway.add_plan_to_user(current_user.id, new_plan.id)
     
-    return {"plan": new_plan, "plan_group": plan_group}
+    return {"plan": new_plan, "plan_group": plan_group, "activities": created_activities}
 
 @router.delete("/remove-plan/{plan_id}")
 async def remove_plan(plan_id: str, user: User = Depends(is_clerk_user)):
