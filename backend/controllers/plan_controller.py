@@ -153,8 +153,8 @@ class PlanController:
         system_prompt = f"""
         You will act as a personal coach for the goal of {goal}, given the finishing date of {finishing_date} and that today is {current_date}.
         No date should be before today ({current_date}).
-        For that, wll you will develop a progressive plan over the course of {number_of_weeks} weeks.
-        
+        For that, you will develop a progressive plan over the course of {number_of_weeks} weeks.
+        Keep the activties to a minimum.
         The plan should be progressive (intensities or recurrence of activities should increase over time).
         The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
         It is absolutely mandatory that all present sessions activity names are contained in the list of activities.
