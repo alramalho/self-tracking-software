@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 
 const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => {
   const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
+  const userDataQuery = useUserDataQuery(params.username || "me");
   const userData = userDataQuery.data;
   const [friends, setFriends] = useState<{picture: string, name: string, username: string}[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
@@ -22,8 +22,8 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => 
 
   useEffect(() => {
       setFriendsLoading(true);
-      if (userData && userData[params.username]?.user_friends) {
-        setFriends(userData[params.username]?.user_friends || []); 
+      if (userData && userData?.user_friends) {
+        setFriends(userData?.user_friends || []); 
         setFriendsLoading(false);
       } else {
         fetchFriends().then(friends => {
@@ -55,7 +55,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => 
           ))}
         </ul>
       ) : (
-        (friendsLoading || loading) ? (
+        (friendsLoading || userDataQuery.isLoading) ? (
           <p className="text-center text-gray-500">Loading friends...</p>
         ) : (
           <p className="text-center text-gray-500">You don&apos;t have any friends yet.</p>
