@@ -60,6 +60,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const { plans: userPlans = [], user } = userData["me"] || {};
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [selectedPlanLoading, setSelectedPlanLoading] = useState(false);
   const { requestPermission, isPushGranted } = useNotifications();
 
   useEffect(() => {
@@ -363,9 +364,12 @@ const Onboarding: React.FC<OnboardingProps> = ({
                   />
                   <Button
                     className="w-full mt-4"
-                    onClick={() => handlePlanSelection(plan)}
+                    onClick={() => {
+                      setSelectedPlanLoading(true);
+                      handlePlanSelection(plan)
+                    }}
                   >
-                    <CheckIcon className="mr-2 h-4 w-4" />
+                    {selectedPlanLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckIcon className="mr-2 h-4 w-4" />}
                     Select and Create Plan
                   </Button>
                 </div>
