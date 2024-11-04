@@ -13,8 +13,6 @@ from fastapi.responses import JSONResponse
 from fastapi import Request
 from typing import Optional
 from constants import (
-    VAPID_PRIVATE_KEY,
-    VAPID_CLAIMS,
     SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
 )
 import json

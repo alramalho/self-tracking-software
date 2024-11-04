@@ -18,9 +18,6 @@ CLERK_JWT_PUBLIC_KEY=os.getenv("CLERK_JWT_PUBLIC_KEY")
 SVIX_SECRET=os.getenv("SVIX_SECRET")
 
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
-VAPID_CLAIMS = {
-    "sub": "mailto:alexandre.ramalho.1998@gmail.com"
-}
 
 CHRON_PROXY_LAMBDA_TARGET_ARN=os.getenv("CHRON_PROXY_LAMBDA_TARGET_ARN")
 AWS_ACCESS_KEY_ID=os.getenv("AWS_ACCESS_KEY_ID")

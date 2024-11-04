@@ -8,16 +8,16 @@ from typing import List, Optional, Literal
 import pytz
 from bson.objectid import ObjectId
 import random
-from constants import VAPID_PRIVATE_KEY, VAPID_CLAIMS, CHRON_PROXY_LAMBDA_TARGET_ARN, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+from constants import VAPID_PRIVATE_KEY, CHRON_PROXY_LAMBDA_TARGET_ARN, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 from gateways.users import UsersGateway
 from entities.user import User
 from pywebpush import webpush, WebPushException
 import json
 import traceback
 from loguru import logger
-from pydantic import BaseModel
-from pymongo.errors import DuplicateKeyError
-
+from typing import Dict
+import time
+from urllib.parse import urlparse
 
 class NotificationManager:
     def __init__(self):
@@ -178,6 +178,16 @@ class NotificationManager:
         # Implement logic to calculate the next occurrence based on the cron string
         # This is a placeholder and should be replaced with actual implementation
         return datetime.now() + timedelta(days=1)
+
+    def _get_vapid_claims(self, subscription_endpoint: str) -> Dict[str, str]:
+        parsed = urlparse(subscription_endpoint)
+        audience = f"{parsed.scheme}://{parsed.netloc}"
+        
+        return {
+            "sub": "mailto:alexandre.ramalho.1998@gmail.com",
+            "aud": audience,
+            "exp": int(time.time()) + 12 * 60 * 60  # 12 hour expiration
+        }
     
     async def send_push_notification(self, user_id: str, title: str, body: str, url: str = None, icon: str = None):
         subscription_info = self.users_gateway.get_subscription_info(user_id)
@@ -201,14 +211,13 @@ class NotificationManager:
                     }
                 ),
                 vapid_private_key=VAPID_PRIVATE_KEY,
-                vapid_claims=VAPID_CLAIMS,
+                vapid_claims=self._get_vapid_claims(subscription_info['endpoint']),
             )
             logger.info(f"WebPush response: {response.text}")
             return {"message": "Push notification sent successfully"}
         except WebPushException as ex:
             logger.error(f"WebPush error: {ex}")
             logger.error(traceback.format_exc())
-            raise Exception(f"Failed to send push notification: {ex}")
 
     def get_pending_notifications_count(self, user_id: str) -> int:
         notifications = self.get_all_for_user(user_id)
