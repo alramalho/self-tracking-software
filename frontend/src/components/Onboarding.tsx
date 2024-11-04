@@ -317,7 +317,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <Textarea
                 value={planDescription}
                 onChange={(e) => setPlanDescription(e.target.value)}
-                placeholder="I want my plan to be with just a simple 'gym' activity measured in sessions"
+                placeholder="I want my plan to include just one 'gym' activity measured in sessions and one 'running' activity measured in kilometers"
                 className="mb-4"
               />
               <Button
