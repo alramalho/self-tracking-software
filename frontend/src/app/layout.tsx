@@ -25,9 +25,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ClerkProvider>
           <NotificationsProvider>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
+            <ClientLayout>{children}</ClientLayout>
           </NotificationsProvider>
         </ClerkProvider>
       </body>

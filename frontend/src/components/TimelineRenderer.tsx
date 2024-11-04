@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   useUserPlan,
   ActivityEntry,
@@ -10,23 +10,11 @@ import { format, differenceInDays } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-
 const TimelineRenderer: React.FC = () => {
-  const [isTimelineLoading, setIsTimelineLoading] = useState(false);
-  const { timelineData, fetchTimelineData } = useUserPlan();
+  const { timelineData } = useUserPlan();
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsTimelineLoading(true);
-      await fetchTimelineData();
-      setIsTimelineLoading(false);
-    };
-    fetchData();
-  }, []);
-
-
-  if (isTimelineLoading) {
+  if (timelineData.isLoading) {
     return (
       <div className="flex justify-center items-center w-full">
         <Loader2 className="animate-spin text-gray-500" />
@@ -35,24 +23,24 @@ const TimelineRenderer: React.FC = () => {
     );
   }
 
-  if (!timelineData) {
+  if (!timelineData.data) {
     return <div className="text-center mt-8">No timeline data available. Try adding some friends!</div>;
   }
 
-  const sortedEntries = [...(timelineData.recommendedActivityEntries || [])].sort((a, b) => {
+  const sortedEntries = [...(timelineData.data.recommendedActivityEntries || [])].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {timelineData.recommendedActivities &&
-        timelineData.recommendedUsers &&
+      {timelineData.isFetched && timelineData.data?.recommendedActivities &&
+        timelineData.data?.recommendedUsers &&
         sortedEntries.map((entry: ActivityEntry) => {
-          const activity: Activity | undefined = timelineData.recommendedActivities!.find(
-            (a) => a.id === entry.activity_id
+          const activity: Activity | undefined = timelineData.data!.recommendedActivities!.find(
+            (a: Activity) => a.id === entry.activity_id
           );
-          const user: User | undefined = timelineData.recommendedUsers!.find(
-            (u) => u.id === activity?.user_id
+          const user: User | undefined = timelineData.data!.recommendedUsers!.find(
+            (u: User) => u.id === activity?.user_id
           );
           if (!activity) return null;
 

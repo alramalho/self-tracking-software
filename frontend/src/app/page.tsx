@@ -16,16 +16,15 @@ import { Loader2 } from "lucide-react";
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { userData} = useUserPlan();
+  const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
+  const { data: userData } = useUserDataQuery("me");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
-    if (isSignedIn && userData && userData["me"]) {
-      if (userData["me"].plans.length === 0) {
-        router.push("/onboarding");
-      } 
+    if (isSignedIn && hasLoadedUserData && userData?.plans?.length === 0) {
+      router.push("/onboarding");
     }
-  }, [userData, router, isSignedIn]);
+  }, [userData, router, isSignedIn, hasLoadedUserData]);
 
   if (!isSignedIn) {
     return (
@@ -43,7 +42,7 @@ const HomePage: React.FC = () => {
     );
   }
 
-  if (!userData || !userData["me"]) {
+  if (!userData) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin" />

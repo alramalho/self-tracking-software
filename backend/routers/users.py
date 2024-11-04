@@ -38,97 +38,94 @@ async def get_user(user: User = Depends(is_clerk_user)):
     return user
 
 
-@router.get("/load-all-user-data/{username}")
-async def load_all_user_data(
-    username: Optional[str] = None, current_user: User = Depends(is_clerk_user)
+@router.get("/load-users-data")
+async def load_users_data(
+    usernames: str = Query(...), 
+    current_user: User = Depends(is_clerk_user)
 ):
     try:
-        if not username or username == "me":
-            user = current_user
-        else:
-            user = users_gateway.get_user_by_safely("username", username.lower())
-            if not user:
-                raise HTTPException(
-                    status_code=404, detail=f"User {username} not found"
+        results = {}
+        usernames = usernames.split(",")
+        for username in usernames:
+            if username == "me":
+                user = current_user
+            else:
+                user = users_gateway.get_user_by_safely("username", username.lower())
+                if not user:
+                    continue
+
+            # Reuse existing concurrent fetching logic
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                activities_future = executor.submit(
+                    activities_gateway.get_all_activities_by_user_id, user.id
+                )
+                entries_future = executor.submit(
+                    activities_gateway.get_all_activity_entries_by_user_id, user.id
+                )
+                mood_reports_future = executor.submit(
+                    moods_gateway.get_all_mood_reports_by_user_id, user.id
                 )
 
-        # Use concurrent.futures to run all database queries concurrently
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            activities_future = executor.submit(
-                activities_gateway.get_all_activities_by_user_id, user.id
-            )
-            entries_future = executor.submit(
-                activities_gateway.get_all_activity_entries_by_user_id, user.id
-            )
-            mood_reports_future = executor.submit(
-                moods_gateway.get_all_mood_reports_by_user_id, user.id
-            )
+                plans_future = executor.submit(plan_controller.get_all_user_plans, user)
+                plan_groups_future = executor.submit(
+                    plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
+                )
+                friend_requests_sent_future = executor.submit(
+                    users_gateway.friend_request_gateway.get_pending_sent_requests, user.id
+                )
+                friend_requests_received_future = executor.submit(
+                    users_gateway.friend_request_gateway.get_pending_received_requests, user.id
+                )
 
-            plans_future = executor.submit(plan_controller.get_all_user_plans, user)
-            plan_groups_future = executor.submit(
-                plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
-            )
-            friend_requests_sent_future = executor.submit(
-                users_gateway.friend_request_gateway.get_pending_sent_requests, user.id
-            )
-            friend_requests_received_future = executor.submit(
-                users_gateway.friend_request_gateway.get_pending_received_requests, user.id
-            )
+                activities = [
+                    exclude_embedding_fields(activity.dict())
+                    for activity in activities_future.result()
+                ]
+                entries = [entry.dict() for entry in entries_future.result()]
+                mood_reports = [report.dict() for report in mood_reports_future.result()]
+                plans = [
+                    exclude_embedding_fields(plan.dict()) for plan in plans_future.result()
+                ]
+                plan_groups = [
+                    plan_group.dict() for plan_group in plan_groups_future.result()
+                ]
+                sent_friend_requests = [
+                    request.dict() for request in friend_requests_sent_future.result()
+                ]
+                received_friend_requests = [
+                    request.dict() for request in friend_requests_received_future.result()
+                ]
 
-            activities = [
-                exclude_embedding_fields(activity.dict())
-                for activity in activities_future.result()
-            ]
-            entries = [entry.dict() for entry in entries_future.result()]
-            mood_reports = [report.dict() for report in mood_reports_future.result()]
-            plans = [
-                exclude_embedding_fields(plan.dict()) for plan in plans_future.result()
-            ]
-            plan_groups = [
-                plan_group.dict() for plan_group in plan_groups_future.result()
-            ]
-            sent_friend_requests = [
-                request.dict() for request in friend_requests_sent_future.result()
-            ]
-            received_friend_requests = [
-                request.dict() for request in friend_requests_received_future.result()
-            ]
+            # Process plans to include activities
+            activity_map = {activity["id"]: activity for activity in activities}
 
-        # Process plans to include activities
-        activity_map = {activity["id"]: activity for activity in activities}
+            for plan in plans:
+                plan_activity_ids = set(
+                    session["activity_id"] for session in plan["sessions"]
+                )
+                plan["activities"] = [
+                    activity_map[activity_id]
+                    for activity_id in plan_activity_ids
+                    if activity_id in activity_map
+                ]
 
-        for plan in plans:
-            plan_activity_ids = set(
-                session["activity_id"] for session in plan["sessions"]
-            )
-            plan["activities"] = [
-                activity_map[activity_id]
-                for activity_id in plan_activity_ids
-                if activity_id in activity_map
-            ]
+            results[username] = {
+                "user": user,
+                "activities": activities,
+                "activity_entries": entries,
+                "mood_reports": mood_reports,
+                "plans": plans,
+                "plan_groups": plan_groups,
+            }
+            
+            if current_user.id == user.id:
+                results[username]["sent_friend_requests"] = sent_friend_requests
+                results[username]["received_friend_requests"] = received_friend_requests
 
-
-        result = {
-            "user": user,
-            "activities": activities,
-            "activity_entries": entries,
-            "mood_reports": mood_reports,
-            "plans": plans,
-            "plan_groups": plan_groups,
-        }
-
-        if current_user.id == user.id: # only show friend requests to the user themselves
-            result["sent_friend_requests"] = sent_friend_requests
-            result["received_friend_requests"] = received_friend_requests
-
-        return result
+        return results
     except Exception as e:
-        logger.error(f"Failed to load all user data: {e}")
-        logger.error(f"Traceback: \n{traceback.format_exc()}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while fetching user data: {str(e)}",
-        )
+        logger.error(f"Failed to load multiple users data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/friends/{username}")
@@ -315,7 +312,8 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
         timeline_data = get_recommended_activity_entries(current_user)
         return timeline_data
     except Exception as e:
-        traceback.print_exc()
+        logger.error(f"Failed to get timeline data: {e}")
+        logger.error(f"Traceback: \n{traceback.format_exc()}")
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred while fetching timeline data: {str(e)}",

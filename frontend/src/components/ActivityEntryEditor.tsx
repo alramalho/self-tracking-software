@@ -28,7 +28,8 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
     format(new Date(activityEntry.date), "yyyy-MM-dd'T'HH:mm")
   );
   const [isSaving, setIsSaving] = useState(false);
-  const { fetchUserData, setUserData, userData } = useUserPlan();
+  const { fetchUserData, useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
   const api = useApiWithAuth();
 
   const handleSave = async () => {
@@ -39,18 +40,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         date: new Date(date).toISOString(),
       });
 
-      setUserData("me", {
-        ...userData["me"],
-        activityEntries: userData["me"]?.activityEntries.map((e) =>
-          e.id === activityEntry.id
-            ? {
-                ...e,
-                quantity: Number(quantity),
-                date: new Date(date).toISOString(),
-              }
-            : e
-        ),
-      });
+      userDataQuery.refetch();
 
       await fetchUserData();
       toast.success("Activity entry updated successfully!");

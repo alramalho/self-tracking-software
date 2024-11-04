@@ -28,6 +28,8 @@ class PlanGroupsGateway:
         return None
     
     def get_all_plan_groups_by_plan_ids(self, plan_group_ids: List[str]) -> List[PlanGroup]:
+        if len(plan_group_ids) == 0:
+            return []
         plan_groups_data = self.db_gateway.query("plan_ids", {"$elemMatch": {"$in": plan_group_ids}})
         return [PlanGroup(**plan_group_data) for plan_group_data in plan_groups_data]
 

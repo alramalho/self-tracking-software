@@ -53,11 +53,10 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [planDescription, setPlanDescription] = useState("");
   const api = useApiWithAuth();
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState<string>("");
-  const { userData, fetchUserData, setUserData } = useUserPlan();
-  const { plans: userPlans = [], user } = userData["me"] || {};
+  const { useUserDataQuery, } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [selectedPlanLoading, setSelectedPlanLoading] = useState(false);
@@ -65,13 +64,13 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
   useEffect(() => {
     try {
-      if (user && step < 2) {
-        if (user.name) {
-          setName(user.name);
+      if (userData && step < 2) {
+        if (userData.user?.name) {
+          setName(userData.user.name);
           setStep(1);
         }
-        if (user.username) {
-          setUsername(user.username);
+        if (userData.user?.username) {
+          setUsername(userData.user.username);
           setStep(2);
         }
       }
@@ -79,7 +78,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
       console.error("Error loading user data:", error);
       toast.error("Error loading user data");
     }
-  }, [user]);
+  }, [userData]);
 
   const checkUsername = async (username: string) => {
     if (!username.trim()) {
@@ -136,11 +135,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         const createdPlan = response.data.plan;
         const createdActivities = response.data.activities;
         setSelectedPlan(createdPlan);
-        setUserData("me", {
-          ...userData["me"],
-          plans: [...userData["me"].plans, createdPlan],
-          activities: [...userData["me"].activities, ...createdActivities],
-        });
+        userDataQuery.refetch();
         setStep(7); // Move to the invitation step
       }
     } catch (error) {
@@ -170,11 +165,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 onClick={() => {
                   if (!isNewPlan) {
                     api.post("/update-user", { name });
-                    setUserData("me", {
-                      ...userData["me"],
-                      // @ts-ignore
-                      user: { ...userData["me"].user, name },
-                    });
+                    userDataQuery.refetch();
                     setStep(1);
                   }
                 }}
@@ -224,11 +215,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 onClick={() => {
                   if (username.trim()) {
                     api.post("/update-user", { username });
-                    setUserData("me", {
-                      ...userData["me"],
-                      // @ts-ignore
-                      user: { ...userData["me"].user, username },
-                    });
+                    userDataQuery.refetch();
                   }
                   setStep(2);
                 }}
@@ -398,7 +385,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 embedded={true}
                 planId={selectedPlan!.id!}
                 onInviteSuccess={() => {
-                  fetchUserData({ forceUpdate: true });
+                  userDataQuery.refetch();
                 }}
               />
               <Button
@@ -455,7 +442,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
           ? "Create New Plan"
           : "Welcome to the Self Tracking App! Let's get you started."}
       </h1>
-      {isLoading ? (
+      {userDataQuery.isLoading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin">
           Loading your progress..
         </Loader2>

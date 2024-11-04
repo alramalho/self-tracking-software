@@ -22,7 +22,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
   const [isSaving, setIsSaving] = useState(false);
-  const { userData, setUserData } = useUserPlan();
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const api = useApiWithAuth();
 
   const handleSave = async () => {
@@ -35,13 +37,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         measure,
       });
       const updatedActivity = response.data;
-      const replacedActivities = userData["me"].activities.map((activity) =>
+      userData?.activities.map((activity) =>
         activity.id === updatedActivity.id ? updatedActivity : activity
       );
-      setUserData("me", {
-        ...userData["me"],
-        activities: replacedActivities,
-      });
+      userDataQuery.refetch();
 
       const savedActivity = response.data;
       onSave(savedActivity);

@@ -8,6 +8,9 @@ import { NotificationsProvider } from "@/hooks/useNotifications";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
 
 export default function ClientLayout({
   children,
@@ -26,7 +29,7 @@ export default function ClientLayout({
   }
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <main className="pb-16">
         <UserPlanProviderWrapper>{children}</UserPlanProviderWrapper>
       </main>
@@ -37,6 +40,6 @@ export default function ClientLayout({
         }}
       />
       {isSignedIn && <BottomNav />}
-    </>
+    </QueryClientProvider>
   );
 }

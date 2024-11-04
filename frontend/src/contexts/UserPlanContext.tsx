@@ -1,16 +1,12 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-} from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
-import { parseISO, isSameDay, format, addMinutes } from "date-fns";
+import { parseISO, format, addMinutes } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import axios from "axios";
+import { useQuery, useQueryClient, UseQueryResult } from "@tanstack/react-query";
 
 export interface Activity {
   id: string;
@@ -147,19 +143,15 @@ export interface UserData {
 }
 
 interface UserPlanContextType {
-  userData: UserData;
-  timelineData: TimelineData | null;
-  setUserData: (username: string, data: UserDataEntry) => void;
-  setTimelineData: (data: TimelineData) => void;
-  loading: boolean;
-  error: string | null;
-  fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<void>;
-  fetchTimelineData: () => Promise<void>;
+  useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
+  useMultipleUsersDataQuery: (usernames: string[]) => UseQueryResult<Record<string, UserDataEntry>>;
+  hasLoadedUserData: boolean; 
+  hasLoadedTimelineData: boolean;
+  timelineData: UseQueryResult<TimelineData | null>;
+  fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<UserDataEntry>;
 }
 
-const UserPlanContext = createContext<UserPlanContextType | undefined>(
-  undefined
-);
+const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
 
 export function convertGeneratedPlanToApiPlan(plan: GeneratedPlan): ApiPlan {
   return {
@@ -189,118 +181,150 @@ export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]):
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [userData, setAllUserData] = useState<UserData>({});
-  const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useSession();
   const router = useRouter();
   const { signOut } = useClerk();
-
   const api = useApiWithAuth();
 
-  useEffect(() => {
-    fetchUserData();
-    fetchTimelineData();
-  }, []);
 
+  const fetchUserData = async ({username = "me"}: {username?: string} = {}): Promise<UserDataEntry> => {
+    if (!isSignedIn) {
+      throw new Error("User not signed in");
+    }
 
-  const fetchUserData = async ({username = "me", forceUpdate = false}: {username?: string, forceUpdate?: boolean} = {}) => {
-      if (!isSignedIn) return;
+    try {
+      const response = await api.get('/load-users-data', {
+        params: { usernames: username }
+      });
+      
+      const userData = response.data[username];
+      
+      if (!userData) {
+        console.error('No user data found in response:', response.data);
+        throw new Error('No user data found in response');
+      }
 
-      try {
-        if (userData[username] && !forceUpdate) {
-          return;
-        }
-        setLoading(true);
-        const response = await api.get(`/load-all-user-data/${username}`);
-        const notificationsResponse = await api.get('/load-notifications');
+      const notificationsResponse = username === "me" 
+        ? await api.get('/load-notifications')
+        : { data: { notifications: [] } };
 
-        const newUserData: UserDataEntry = {
-          user: response.data.user,
-          plans: response.data.plans,
-          planGroups: response.data.plan_groups,
-          activities: response.data.activities,
-          activityEntries: response.data.activity_entries,
-          moodReports: response.data.mood_reports,
-          sentFriendRequests: response.data.sent_friend_requests,
-          receivedFriendRequests: response.data.received_friend_requests,
-          notifications: notificationsResponse.data.notifications,
-          expiresAt: addMinutes(new Date(), 10).toISOString(),
-        };
+      const transformedData: UserDataEntry = {
+        user: userData.user || null,
+        plans: userData.plans || [],
+        planGroups: userData.plan_groups || [],
+        activities: userData.activities || [],
+        activityEntries: userData.activity_entries || [],
+        moodReports: userData.mood_reports || [],
+        sentFriendRequests: userData.sent_friend_requests || [],
+        receivedFriendRequests: userData.received_friend_requests || [],
+        notifications: notificationsResponse.data.notifications || [],
+        expiresAt: addMinutes(new Date(), 10).toISOString(),
+      };
 
-        setAllUserData((prevData) => ({
-          ...prevData,
-          [username]: newUserData,
-        }));
+      console.log('Transformed User Data:', transformedData);
 
-      } catch (err: unknown) {
-        console.error("Error fetching data:", err);
-        if (axios.isAxiosError(err) && err.response?.status === 401) {
-          router.push("/signin");
-          toast.error("You are not authorized to access this page. Please log in again.", {
-            icon: '🔒',
-            duration: 5000,
-          });
-          signOut();
-        } else {
-          router.push("/");
-          toast.error("Failed to fetch user data. Please try again.");
-        }
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("An unknown error occurred");
-        }
-      } finally {
-        setLoading(false);
+      return transformedData;
+    } catch (err: unknown) {
+      console.error('Error in fetchUserData:', err);
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        router.push("/signin");
+        toast.error("You are not authorized to access this page. Please log in again.", {
+          icon: '🔒',
+          duration: 5000,
+        });
+        signOut();
+      } else {
+        router.push("/");
+        toast.error("Failed to fetch user data. Please try again.");
+      }
+      throw err;
     }
   };
 
-  const fetchTimelineData = async () => {
-    if (!isSignedIn) return;
+  const fetchTimelineDataFn = async () => {
+    if (!isSignedIn) return null;
 
     try {
-      if (timelineData) return;
-
-      setLoading(true);
       const response = await api.get('/timeline');
-
-      const newTimelineData: TimelineData = {
+      return {
         recommendedUsers: response.data.recommended_users,
         recommendedActivities: response.data.recommended_activities,
         recommendedActivityEntries: response.data.recommended_activity_entries,
         expiresAt: addMinutes(new Date(), 10).toISOString(),
-      };
-
-      setTimelineData(newTimelineData);
-
-    } catch (err: unknown) {
-      console.error("Error fetching timeline data:", err);
+      } as TimelineData;
+    } catch (err) {
       toast.error("Failed to fetch timeline data. Please try again.");
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred");
-      }
-    } finally {
-      setLoading(false);
+      throw err;
     }
+  };
+
+  const useUserDataQuery = (username: string) => useQuery({
+    queryKey: ['userData', username],
+    queryFn: () => fetchUserData({ username }),
+    enabled: isSignedIn,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const timelineData = useQuery({
+    queryKey: ['timelineData'],
+    queryFn: fetchTimelineDataFn,
+    enabled: isSignedIn,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const useMultipleUsersDataQuery = (usernames: string[]) => useQuery({
+    queryKey: ['multipleUsersData', usernames.sort().join(',')],
+    queryFn: async () => {
+      const response = await api.get('/load-users-data', {
+        params: { usernames: usernames.join(',') }
+      });
+      const transformedData: Record<string, UserDataEntry> = {};
+      for (const [key, value] of Object.entries(response.data)) {
+        const typedValue = value as {
+          user: any;
+          activities: any[];
+          activity_entries: any[];
+          mood_reports: any[];
+          plans: any[];
+          plan_groups: any[];
+          sent_friend_requests?: any[];
+          received_friend_requests?: any[];
+        };
+
+        transformedData[key] = {
+          user: typedValue.user,
+          activities: typedValue.activities,
+          activityEntries: typedValue.activity_entries,
+          moodReports: typedValue.mood_reports,
+          plans: typedValue.plans,
+          planGroups: typedValue.plan_groups,
+          sentFriendRequests: typedValue.sent_friend_requests || [],
+          receivedFriendRequests: typedValue.received_friend_requests || [],
+          notifications: [],
+          expiresAt: addMinutes(new Date(), 10).toISOString(),
+        };
+      }
+      return transformedData;
+    },
+    enabled: isSignedIn && usernames.length > 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const userDataQuery = useUserDataQuery("me");
+
+  const context = {
+    userDataQuery,  // Export the whole query result
+    useUserDataQuery,
+    useMultipleUsersDataQuery,
+    hasLoadedUserData: userDataQuery.isSuccess && !!userDataQuery.data,
+    hasLoadedTimelineData: timelineData.isSuccess,
+    timelineData,
+    fetchUserData,
   };
 
   return (
     <UserPlanContext.Provider
-      value={{
-        userData,
-        timelineData,
-        setUserData: (username: string, data: UserDataEntry) =>
-          setAllUserData((prevData) => ({ ...prevData, [username]: data })),
-        setTimelineData,
-        loading,
-        error,
-        fetchUserData,
-        fetchTimelineData,
-      }}
+      value={context}
     >
       {children}
     </UserPlanContext.Provider>

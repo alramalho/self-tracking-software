@@ -34,23 +34,47 @@ interface PlanRendererv2Props {
 }
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
-  const { userData, fetchUserData } = useUserPlan();
+  const { useUserDataQuery, useMultipleUsersDataQuery, fetchUserData } =
+    useUserPlan();
+  const { data: userData } = useUserDataQuery("me");
+  const [loading, setLoading] = useState(true);
+
+  // Get usernames of all plan group members except current user
+  const memberUsernames = useMemo(() => {
+    if (!selectedPlan.plan_group_id || !userData?.user?.username) return [];
+
+    const group = userData?.planGroups.find(
+      (group) => group.id === selectedPlan.plan_group_id
+    );
+
+    return (group?.members || [])
+      .map((member) => member.username)
+      .filter((username) => username !== userData?.user?.username);
+  }, [selectedPlan.plan_group_id, userData]);
+
+  const { data: membersData } = useMultipleUsersDataQuery(memberUsernames);
+
+  // Replace getUserData function with this helper
+  const getMemberData = (username: string): UserDataEntry | undefined => {
+    if (username === "me" || username === userData?.user?.username) return userData;
+    return membersData?.[username];
+  };
+
   const [sessionData, setSessionData] = useState<
     { week: string; [key: string]: number | string }[]
   >([]);
   const [selectedSession, setSelectedSession] = useState<
     ApiPlan["sessions"][0] | null
   >(null);
-  const [loading, setLoading] = useState(true);
   const [displayFutureActivities, setDisplayFutureActivities] = useState(true);
 
   // Get current user's activities
   const activities = useMemo(() => {
-    return userData.me?.activities || [];
+    return userData?.activities || [];
   }, [userData]);
 
   const activityEntries = useMemo(() => {
-    return userData.me?.activityEntries || [];
+    return userData?.activityEntries || [];
   }, [userData]);
 
   // Get plan group members and their associated plans
@@ -58,13 +82,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     if (!selectedPlan.plan_group_id)
       return { planGroupMembers: [], memberPlans: new Map() };
 
-    const group = userData.me?.planGroups.find(
+    const group = userData?.planGroups.find(
       (group) => group.id === selectedPlan.plan_group_id
     );
 
     // Fetch data for all members except current user
     group?.members?.forEach((member) => {
-      if (member.username !== userData.me?.user?.username) {
+      if (member.username !== userData?.user?.username) {
         fetchUserData({ username: member.username });
       }
     });
@@ -72,12 +96,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     // Get each member's plan from the plan group
     const memberPlans = new Map<string, ApiPlan>();
     group?.members?.forEach((member) => {
-      const memberData =
-        userData[
-          member.username === userData.me?.user?.username
-            ? "me"
-            : member.username
-        ];
+      const memberData = getMemberData(member.username);
       const memberPlan = memberData?.plans.find(
         (p) => p.plan_group_id === selectedPlan.plan_group_id
       );
@@ -90,7 +109,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       planGroupMembers: group?.members || [],
       memberPlans,
     };
-  }, [selectedPlan, userData.me?.planGroups]);
+  }, [selectedPlan, userData?.planGroups, membersData]);
 
   // Add this helper function near the top of the component
   const getCompletedSessionsForPlan = useCallback(
@@ -101,8 +120,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       )?.username;
       if (!username) return [];
 
-      const memberData =
-        userData[username === userData.me?.user?.username ? "me" : username];
+      const memberData = getMemberData(username);
       if (!memberData) return [];
 
       // Get all completed entries that match plan activities
@@ -122,7 +140,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
       return completedEntries;
     },
-    [userData, planGroupMembers]
+    [userData, planGroupMembers, membersData]
   );
 
   // Simplified session data calculation
@@ -133,21 +151,16 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         setLoading(false);
         return;
       }
-
       // Get all plans in the group
       const groupPlans = planGroupMembers
         .map((member) => {
-          const memberData =
-            userData[
-              member.username === userData.me?.user?.username
-                ? "me"
-                : member.username
-            ];
+          const memberData = getMemberData(member.username);
           return memberData?.plans.find(
             (p) => p.plan_group_id === selectedPlan.plan_group_id
           );
         })
         .filter((p): p is ApiPlan => p !== undefined);
+
 
       // Get all dates from plans and completed entries
       const allDates = [
@@ -158,6 +171,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
         ),
       ].sort((a, b) => a.getTime() - b.getTime());
+
 
       if (allDates.length === 0) {
         setLoading(false);
@@ -178,19 +192,19 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
         weeklyData[weekKey] = { planned: 0 };
 
-        // Calculate data for each plan in the group
+        // Count planned sessions this week
+        const plannedThisWeek = selectedPlan.sessions.filter((session) => {
+          const sessionDate = parseISO(session.date);
+          return sessionDate >= currentWeek && sessionDate <= weekEnd;
+        }).length;
+        weeklyData[weekKey].planned += plannedThisWeek;
+
+        // Calculate data for user in the plan group and his respective plan
         groupPlans.forEach((plan) => {
           const member = planGroupMembers.find(
             (m) => m.user_id === plan.user_id
           );
           if (!member) return;
-
-          // Count planned sessions this week
-          const plannedThisWeek = plan.sessions.filter((session) => {
-            const sessionDate = parseISO(session.date);
-            return sessionDate >= currentWeek && sessionDate <= weekEnd;
-          }).length;
-          weeklyData[weekKey].planned += plannedThisWeek;
 
           // Count completed sessions this week
           const completedThisWeek = getCompletedSessionsForPlan(
@@ -215,13 +229,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           ])
         ),
       }));
-
       setSessionData(formattedData);
       setLoading(false);
     };
 
     calculateSessionData();
-  }, [selectedPlan, userData, planGroupMembers, getCompletedSessionsForPlan]);
+  }, [selectedPlan, userData, membersData]);
 
   const isSessionCompleted = (session: ApiPlan["sessions"][0]) => {
     const sessionDate = parseISO(session.date);
@@ -251,10 +264,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     const sessionIndex = plannedSessionsThisWeek.findIndex(
       (s) => s.date === session.date
     );
-    console.log({ plannedSessionsThisWeek: plannedSessionsThisWeek.length });
-    console.log({
-      completedSessionsThisWeek: completedSessionsThisWeek.length,
-    });
     return completedSessionsThisWeek.length > sessionIndex;
   };
 
@@ -328,19 +337,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   };
 
   function getMemberUsername(member: PlanGroupMember) {
-    return member.username === userData.me?.user?.username
+    return member.username === userData?.user?.username
       ? "me"
       : member.username;
   }
-  // Sort activity entries by date (most recent first) and limit to 7
-  const recentActivityEntries = planGroupMembers.flatMap((member) =>
-    (userData[getMemberUsername(member)]?.activityEntries || [])
-      .filter((entry) =>
-        selectedPlan.sessions.some((s) => s.activity_id === entry.activity_id)
-      )
-      .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())
-      .slice(0, 7)
-  );
 
   return (
     <div>
@@ -361,7 +361,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
                 </Avatar>
                 <div className="text-lg text-gray-800">
-                  {userData.me?.user?.username === member.username
+                  {userData?.user?.username === member.username
                     ? "You"
                     : member.name}
                 </div>
@@ -427,7 +427,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
           <span className="text-xs text-gray-500">Completed</span>
           <Switch
-          checked={displayFutureActivities}
+            checked={displayFutureActivities}
             onCheckedChange={setDisplayFutureActivities}
           />
           <span className="text-xs text-gray-500">Planned</span>

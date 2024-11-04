@@ -37,15 +37,18 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const { userData, fetchUserData, loading } = useUserPlan();
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const params = useParams();
   const username = params.username as string;
-  const currentUser = userData["me"]?.user;
-  const currentUserSentFriendRequests = userData["me"]?.sentFriendRequests;
+  const currentUser = userDataQuery.data?.user;
+  const currentUserSentFriendRequests = userDataQuery.data?.sentFriendRequests;
   const currentUserReceivedFriendRequests =
-    userData["me"]?.receivedFriendRequests;
+  userDataQuery.data?.receivedFriendRequests;
   const isOwnProfile = currentUser?.username === username || username === "me";
-  const profileData = isOwnProfile ? userData["me"] : userData[username];
+  const profileDataQuery = useUserDataQuery(username);
+  const profileData = profileDataQuery.data;
   const { activityEntries, activities } = profileData || {
     activityEntries: [],
     activities: [],
@@ -60,9 +63,9 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (!profileData) {
-      fetchUserData({ username: isOwnProfile ? "me" : username });
+      isOwnProfile ? userDataQuery.refetch() : profileDataQuery.refetch();
     }
-  }, [username, fetchUserData, isOwnProfile, profileData]);
+  }, [username, userDataQuery, isOwnProfile, profileDataQuery ]);
 
   useEffect(() => {
     if (isOwnProfile) {
@@ -95,7 +98,7 @@ const ProfilePage: React.FC = () => {
         await api.post(`/send-friend-request/${profileData.user.id}`);
 
         // Update the local state to reflect the sent friend request
-        fetchUserData();
+        userDataQuery.refetch();
         toast.success("Friend request sent successfully");
       } catch (error) {
         console.error("Error sending friend request:", error);
@@ -114,7 +117,7 @@ const ProfilePage: React.FC = () => {
         if (request) {
           await api.post(`${action}-friend-request/${request.id}`);
           toast.success(`Friend request ${action}ed`);
-          fetchUserData();
+          userDataQuery.refetch();
         }
       } catch (error) {
         console.error(`Error ${action}ing friend request:`, error);
@@ -141,7 +144,7 @@ const ProfilePage: React.FC = () => {
     return format(parsedDate, "MMM d HH:mm");
   };
 
-  if (loading) {
+  if (userDataQuery.isLoading || profileDataQuery.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -157,7 +160,7 @@ const ProfilePage: React.FC = () => {
   const user = profileData.user;
 
   const getUsername = (user: User | null) => {
-    return user?.username === userData["me"]?.user?.username
+    return user?.username === userDataQuery.data?.user?.username
       ? "me"
       : user?.username;
   };

@@ -8,7 +8,9 @@ import { useApiWithAuth } from "@/api";
 import { Loader2 } from "lucide-react";
 
 const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => {
-  const { userData, setUserData, loading } = useUserPlan();
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const [friends, setFriends] = useState<{picture: string, name: string, username: string}[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
   const api = useApiWithAuth();
@@ -26,7 +28,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => 
       } else {
         fetchFriends().then(friends => {
           setFriends(friends);
-          setUserData(params.username, {...userData[params.username], user_friends: friends});
+          userDataQuery.refetch();
           setFriendsLoading(false);
         });
       }

@@ -15,8 +15,10 @@ import { Loader2, X } from "lucide-react";
 
 const LogPage: React.FC = () => {
   const router = useRouter();
-  const { userData, setUserData, loading, error } = useUserPlan();
-  const activities = userData["me"]?.activities || [];
+  const { useUserDataQuery, fetchUserData } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
+  const activities = userData?.activities || [];
   const [selectedActivity, setSelectedActivity] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
@@ -75,7 +77,7 @@ const LogPage: React.FC = () => {
     setMeasureType("");
   };
 
-  if (loading) {
+  if (userDataQuery.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -84,8 +86,8 @@ const LogPage: React.FC = () => {
     );
   }
 
-  if (error) {
-    return <div>Error: {error}</div>;
+  if (userDataQuery.isError) {
+    return <div>Error: {userDataQuery.error.message}</div>;
   }
 
   return (

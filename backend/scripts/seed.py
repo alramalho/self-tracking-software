@@ -145,13 +145,6 @@ def generate_dummy_data():
     # Create plan groups
     plan_groups = [
         PlanGroup.new(
-            id=str(ObjectId("666666666666666666666684")),
-            plan_ids=[plans[0].id],
-            members=[
-                PlanGroupMember(user_id=users[0].id, username=users[0].username, name=users[0].name, picture=users[0].picture),
-            ],
-        ),
-        PlanGroup.new(
             id=str(ObjectId("666666666666666666666685")),
             plan_ids=[plans[1].id],
             members=[
@@ -160,7 +153,7 @@ def generate_dummy_data():
         ),
         PlanGroup.new(
             id=str(ObjectId("666666666666666666666686")),
-            plan_ids=[plans[2].id],
+            plan_ids=[plans[2].id, plans[0].id],
             members=[
                 PlanGroupMember(user_id=users[2].id, username=users[2].username, name=users[2].name, picture=users[2].picture),
                 PlanGroupMember(user_id=users[0].id, username=users[0].username, name=users[0].name, picture=users[0].picture),

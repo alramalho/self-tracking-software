@@ -13,7 +13,9 @@ import {
 import InviteButton from "./InviteButton";
 
 const PlansRenderer: React.FC = () => {
-  const { userData, fetchUserData } = useUserPlan();
+  const { useUserDataQuery, fetchUserData } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   
   useEffect(() => {
@@ -21,20 +23,22 @@ const PlansRenderer: React.FC = () => {
   }, [selectedPlanId]);
 
   useEffect(() => {
-    if (!selectedPlanId && userData && userData.me && userData.me.plans.length > 0) {
-      const firstPlan = userData.me.plans[0];
+    console.log({ userData });
+    if (!selectedPlanId && userData && userData.plans &&userData.plans.length > 0) {
+      const firstPlan = userData.plans[0];
       setSelectedPlanId(firstPlan.id || null);
     }
   }, [userData]);
 
-  if (!userData || !userData.me || userData.me.plans.length === 0) {
+
+  if (userData?.plans && userData.plans.length === 0) {
     return <div>No plans available.</div>;
   }
 
-  const { plans = [], activities = [], planGroups = [] } = userData.me;
+  const { plans = [], activities = [], planGroups = [] } = userData!;
 
   const getPlanGroup = (planId: string): PlanGroup | undefined => {
-    return planGroups.find(group => group.plan_ids.includes(planId));
+      return planGroups.find(group => group.plan_ids.includes(planId));
   };
 
   const handleInviteSuccess = () => {
@@ -77,7 +81,7 @@ const PlansRenderer: React.FC = () => {
               {planGroup && planGroup.members && (
                 <div className="flex items-center space-x-2">
                   {planGroup.members.map((member) => {
-                    if (member.user_id === userData.me?.user?.id) {
+                    if (!userData?.user?.id || member.user_id === userData.user.id) {
                       return null;
                     }
                     return (

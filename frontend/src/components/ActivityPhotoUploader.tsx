@@ -25,7 +25,9 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isPublic, setisPublic] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const { fetchUserData, setUserData, userData } = useUserPlan();
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const { addToNotificationCount } = useNotifications();
   const api = useApiWithAuth();
 
@@ -48,13 +50,10 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
 
       if (!withPhoto) {
         // If no photo, we're done
-        setUserData("me", {
-          ...userData.me,
-          activityEntries: [...userData.me.activityEntries, response.data],
-        });
         toast.success("Activity logged successfully!");
         addToNotificationCount(1);
         onSuccess();
+        userDataQuery.refetch();
         return;
       }
 
@@ -72,7 +71,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         });
       }
 
-      fetchUserData();
+      userDataQuery.refetch();
       toast.success('Activity logged with photo successfully!');
       addToNotificationCount(1);
       onSuccess();
