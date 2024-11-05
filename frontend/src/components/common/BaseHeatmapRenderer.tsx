@@ -98,9 +98,9 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   };
 
   return (
-    <div className="mb-4">
-      <div className="flex justify-center">
-        <div className="flex flex-col">
+    <div className="mb-4 grid gap-4">
+      <div className="overflow-x-auto">
+        <div className="relative">
           <HeatMap
             value={heatmapData}
             startDate={startDate}
