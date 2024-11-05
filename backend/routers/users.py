@@ -168,7 +168,7 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
 
     results = search_users(user, username)
 
-    if not results:
+    if len(results) == 0:
         # If no results, return all users (up to 3)
         all_users = users_gateway.get_all_users()
         results = [
@@ -329,7 +329,7 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
     for pattern in search_patterns:
         users = users_gateway.get_all_users_by_regex("username", pattern)
         for user in users:
-            if user.dict() not in results and user.id != user.id:
+            if user.dict() not in results:
                 results.append(
                     {
                         "user_id": user.id,
@@ -339,7 +339,7 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
                     }
                 )
 
-        if len(results) >= limit:
+        if len(results) >= limit or user.username == username:
             break
 
     return results[:limit]

@@ -47,12 +47,13 @@ def generate_dummy_data():
     plan_groups_gateway = PlanGroupsGateway()
     notification_manager = NotificationManager()
 
-    # Create 4 users
+    # Create 5 users
     users = [
         User.new(id=str(ObjectId("666666666666666666666665")), name="Alex", email="alexandre.ramalho.1998@gmail.com", clerk_id="user_2kUW1zytLj9ERvDqVDDFCvIp5Un", picture="https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c", username="alex"),
         User.new(id=str(ObjectId("666666666666666666666666")), name="Alice", email="alice@example.com", username="alice"),
         User.new(id=str(ObjectId("666666666666666666666667")), name="Bob Ramalho", email="bob@example.com", username="bob", clerk_id="user_2lFLPuOKZXzSeGqQnH97Pz5kaAW"),
-        User.new(id=str(ObjectId("666666666666666666666668")), name="Charlie", email="charlie@example.com", username="charlie")
+        User.new(id=str(ObjectId("666666666666666666666668")), name="Charlie", email="charlie@example.com", username="charlie"),
+        User.new(id=str(ObjectId("666666666666666666666669")), name="Tomas", email="tomas@example.com", username="tomas", picture="https://example.com/tomas.jpg")
     ]
     # Create activities
     activities = [
@@ -64,7 +65,8 @@ def generate_dummy_data():
         Activity.new(id=str(ObjectId("66666666666666666666666e")), user_id=users[1].id, title="Yoga", measure="minutes", emoji="🧘‍♀️"),
         Activity.new(id=str(ObjectId("66666666666666666666666f")), user_id=users[2].id, title="Reading", measure="pages", emoji="📚"),
         Activity.new(id=str(ObjectId("666666666666666666666670")), user_id=users[3].id, title="Cooking", measure="dishes", emoji="👨‍🍳"),
-        Activity.new(id=str(ObjectId("666666666666666666666671")), user_id=users[0].id, title="Gardening", measure="minutes", emoji="🌱")
+        Activity.new(id=str(ObjectId("666666666666666666666671")), user_id=users[0].id, title="Gardening", measure="minutes", emoji="🌱"),
+        Activity.new(id=str(ObjectId("666666666666666666666672")), user_id=users[4].id, title="Guitar", measure="minutes", emoji="🎸")
     ]
 
     # Generate dates within the last month
@@ -91,6 +93,7 @@ def generate_dummy_data():
         ActivityEntry.new(id=str(ObjectId("66666666666666666666667e")), activity_id=activities[6].id, quantity=50, date=random_date_last_month().isoformat(), user_id=users[0].id),
         ActivityEntry.new(id=str(ObjectId("66666666666666666666667f")), activity_id=activities[7].id, quantity=2, date=datetime.datetime.now().isoformat(), user_id=users[2].id),
         ActivityEntry.new(id=str(ObjectId("666666666666666666666680")), activity_id=activities[8].id, quantity=30, date=random_date_last_month().isoformat(), user_id=users[3].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666681")), activity_id=activities[9].id, quantity=45, date=random_date_last_month().isoformat(), user_id=users[4].id),
     ]
 
     # Create plans
@@ -139,6 +142,21 @@ def generate_dummy_data():
                     quantity=20 + i*3
                 ) for i in range(30)
             ],
+        ),
+        Plan.new(
+            id=str(ObjectId("666666666666666666666684")),
+            user_id=users[4].id,
+            goal="Learn guitar",
+            emoji="🎸",
+            finishing_date=(datetime.datetime.now() + timedelta(days=60)).isoformat(),
+            sessions=[
+                PlanSession(
+                    date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
+                    descriptive_guide="Practice guitar for 30 minutes",
+                    activity_id=activities[9].id,
+                    quantity=30
+                ) for i in range(60)
+            ],
         )
     ]
 
@@ -166,12 +184,14 @@ def generate_dummy_data():
         PlanInvitation.new(id=str(ObjectId("666666666666666666666687")), plan_id=plans[0].id, sender_id=users[0].id, recipient_id=users[1].id),
         PlanInvitation.new(id=str(ObjectId("666666666666666666666688")), plan_id=plans[1].id, sender_id=users[1].id, recipient_id=users[2].id),
         PlanInvitation.new(id=str(ObjectId("666666666666666666666689")), plan_id=plans[2].id, sender_id=users[2].id, recipient_id=users[3].id),
+        PlanInvitation.new(id=str(ObjectId("66666666666666666666668a")), plan_id=plans[3].id, sender_id=users[4].id, recipient_id=users[0].id),
     ]
 
     # Create friend requests
     friend_requests = [
         FriendRequest.new(id=str(ObjectId("66666666666666666666668a")), sender_id=users[1].id, recipient_id=users[0].id),
         # FriendRequest.new(id=str(ObjectId("66666666666666666666668b")), sender_id=users[2].id, recipient_id=users[0].id),
+        FriendRequest.new(id=str(ObjectId("66666666666666666666668c")), sender_id=users[4].id, recipient_id=users[0].id),
     ]
 
     # Create notifications

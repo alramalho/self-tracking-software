@@ -199,6 +199,6 @@ class MongoDBGateway(DBGateway):
         return results
 
     def regex_query(self, key: str, pattern: str) -> List[Dict[str, Any]]:
-        logger.log("DB", f'MongoDB: Regex query in MongoDB "{self.collection.name}" ... Key:"{key}" Pattern:"{pattern}"')
         results = [self._convert_from_mongo(e) for e in list(self.collection.find({key: {"$regex": pattern, "$options": "i"}}))]
+        logger.log("DB", f'MongoDB: Regex query in MongoDB "{self.collection.name}" ... Key:"{key}" Pattern:"{pattern}" returned {len(results)} results.')
         return results
