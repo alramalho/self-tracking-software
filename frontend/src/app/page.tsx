@@ -5,20 +5,24 @@ import UserSearch, { UserSearchResult } from '@/components/UserSearch';
 import { useRouter } from 'next/navigation';
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { Search } from 'lucide-react';
+import { Apple, MoreVertical, Search, Share, Share2, Smartphone, X } from 'lucide-react';
 import Notifications from '@/components/Notifications';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useSession } from "@clerk/nextjs";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { Loader2 } from "lucide-react";
+import { useNotifications } from '@/hooks/useNotifications';
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
   const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
+  const { isAppInstalled } = useNotifications();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAppInstallModalOpen, setIsAppInstallModalOpen] = useState(!isAppInstalled);
 
   useEffect(() => {
     if (isSignedIn && hasLoadedUserData && userData?.plans?.length === 0) {
@@ -47,6 +51,49 @@ const HomePage: React.FC = () => {
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin" />
         <p className="ml-3">Loading your data...</p>
+      </div>
+    );
+  }
+  if (isAppInstallModalOpen) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center px-4 relative">
+        <button 
+          onClick={() => setIsAppInstallModalOpen(false)}
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+          aria-label="Close"
+        >
+          <X className="w-6 h-6 text-white" />
+        </button>
+        <Smartphone className="w-16 h-16 mb-6 text-gray-600" />
+        <h2 className="text-2xl font-semibold mb-4 text-center">Install Our App</h2>
+        <p className="text-gray-600 text-center mb-8 max-w-md">
+          self.tracking.so works best when installed as an app on your device. You&apos;ll get a better experience and access to features like notifications.
+        </p>
+        
+        <div className="w-full max-w-md">
+          <Tabs defaultValue="ios" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="ios"><Apple size={16} className="inline mr-2" />iPhone / iPad</TabsTrigger>
+              <TabsTrigger value="android"><Smartphone size={16} className="inline mr-2" />Android</TabsTrigger>
+            </TabsList>
+            <TabsContent value="ios" className="bg-gray-50 p-4 rounded-lg mt-4">
+              <ol className="list-decimal list-inside space-y-2 text-gray-600">
+                <li>Open Safari browser</li>
+                <li>Tap the Share button <Share className="inline w-4 h-4" /></li>
+                <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
+                <li>Tap &quot;Add&quot; to confirm</li>
+              </ol>
+            </TabsContent>
+            <TabsContent value="android" className="bg-gray-50 p-4 rounded-lg mt-4">
+              <ol className="list-decimal list-inside space-y-2 text-gray-600">
+                <li>Open Chrome browser</li>
+                <li>Tap the menu <MoreVertical className="inline w-4 h-4" /></li>
+                <li>Tap &quot;Install app&quot; or &quot;Add to Home screen&quot;</li>
+                <li>Follow the prompts to install</li>
+              </ol>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     );
   }
