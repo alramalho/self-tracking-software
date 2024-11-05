@@ -130,6 +130,9 @@ const ProfilePage: React.FC = () => {
     const now = new Date();
     const diffInDays = differenceInDays(now, parsedDate);
 
+    if (diffInDays === 0) {
+      return `today at ${format(parsedDate, "HH:mm")}`;
+    }
     if (diffInDays === 1) {
       return `yesterday at ${format(parsedDate, "HH:mm")}`;
     }
