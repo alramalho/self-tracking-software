@@ -2,7 +2,7 @@ import json
 import uuid
 from botocore.exceptions import ClientError
 import boto3
-from constants import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from constants import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, ENVIRONMENT
 from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
@@ -59,7 +59,7 @@ class EventBridgeCronGateway:
             Name=cron_id,
             ScheduleExpression=aws_cron_string,
             State="ENABLED",
-            Description=f"Task created by Tracking Software on {datetime.now().isoformat()}.",
+            Description=f"Task created by Tracking Software on {datetime.now().isoformat()} ({ENVIRONMENT}).",
         )
 
         self.client.put_targets(
@@ -83,7 +83,7 @@ class EventBridgeCronGateway:
             Name=cron_id,
             ScheduleExpression=aws_cron_string,
             State="ENABLED",
-            Description=f"Task created by Tracking Software on {datetime.now().isoformat()}.",
+            Description=f"Task created by Tracking Software on {datetime.now().isoformat()} ({ENVIRONMENT}).",
         )
 
         self.client.put_targets(
