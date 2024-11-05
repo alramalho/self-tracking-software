@@ -55,7 +55,6 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
 
     return { activityIndex, intensity };
   };
-
   const renderActivityViewer = () => {
     if (!focusedDate) return null;
 
@@ -64,61 +63,39 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
         format(session.date, "yyyy-MM-dd") === format(focusedDate, "yyyy-MM-dd")
     );
 
-    const isFinishingDate =
-      plan.finishing_date &&
-      format(plan.finishing_date, "yyyy-MM-dd") ===
-        format(focusedDate, "yyyy-MM-dd");
-
     return (
-      <div className="mt-4 p-4 border rounded-lg bg-white w-full max-w-md w-96">
-        <h3 className="text-lg font-semibold mb-2">
-          {isFinishingDate ? (
-            <span>
-              🎉 Finishing Date: {format(focusedDate, "MMMM d, yyyy")}
-            </span>
-          ) : (
-            `Sessions on ${format(focusedDate, "MMMM d, yyyy")}`
-          )}
+      <div className="mt-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
+        <h3 className="text-lg font-semibold mb-4 text-left">
+          Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
-        {isFinishingDate ? (
-          <p>This is your goal completion date!</p>
-        ) : sessionsOnDate.length === 0 ? (
-          <p>No sessions scheduled for this date.</p>
+        {sessionsOnDate.length === 0 ? (
+          <p className="text-center text-gray-500">
+            No sessions scheduled for this date.
+          </p>
         ) : (
-          <div>
-            {sessionsOnDate.map((session, index) => (
-              <div
-                key={index}
-                className="p-2 mb-2 rounded border border-gray-200"
-              >
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {activities.map((activity, actIndex) => {
-                    if (session.activity_id === activity.id) {
-                      const intensity = getIntensityForDate(format(session.date, "yyyy-MM-dd"));
-                      return (
-                        <Badge
-                          key={actIndex}
-                          className={intensity ? `bg-[${intensity}]` : ""}
-                        >
-                          {activity.title}
-                        </Badge>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-                <p className="text-sm font-semibold">
-                  Intensity: {session.quantity}{" "}
-                  {
-                    activities.find(
-                      (a) => a.id === session.activity_id
-                    )?.measure
-                  }
-                </p>
-                <p className="text-sm">{session.descriptive_guide}</p>
-              </div>
-            ))}
-          </div>
+          <ul className="list-none space-y-4">
+            {sessionsOnDate.map((session, index) => {
+              const activity = activities.find(
+                (a) => a.id === session.activity_id
+              );
+              if (!activity) return null;
+
+              return (
+                <li key={index}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-3xl">{activity.emoji}</span>
+                    <span className="text-md">{activity.title}</span>
+                    <span className="text-sm mt-1 text-gray-600">
+                      ({session.quantity} {activity.measure})
+                    </span>
+                  </div>
+                  <p className="text-sm mt-1 text-gray-600">
+                    {session.descriptive_guide}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     );
@@ -134,11 +111,9 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}
       />
-      <div className="flex justify-center mt-4">
-        {renderActivityViewer()}
-      </div>
+      <div className="flex justify-center mt-4">{renderActivityViewer()}</div>
     </>
   );
 };
 
-export default PlanSessionsRenderer; 
+export default PlanSessionsRenderer;
