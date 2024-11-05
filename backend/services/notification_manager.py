@@ -50,7 +50,7 @@ class NotificationManager:
                 cron_str,
                 target=CHRON_PROXY_LAMBDA_TARGET_ARN,
                 payload={
-                    "endpoint": "/api/process-scheduled-notification",
+                    "endpoint": "/process-scheduled-notification",
                     "request_body": {"notification_id": notification.id},
                 },
             )
@@ -132,7 +132,7 @@ class NotificationManager:
             new_cron_str,
             target=CHRON_PROXY_LAMBDA_TARGET_ARN,
             payload={
-                "endpoint": "/api/process-scheduled-notification",
+                "endpoint": "/process-scheduled-notification",
                 "request_body": {"notification_id": notification.id},
             },
         )
