@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { format, addDays, isToday } from "date-fns";
+import { format, addDays, isToday, subMonths } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { Activity } from "@/contexts/UserPlanContext";
 
@@ -50,15 +50,20 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   onDateClick,
   getIntensityForDate,
 }) => {
-  const numberOfWeeks = endDate
+  // Convert dates to UTC
+  const utcStartDate = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
+  const utcEndDate = endDate ? new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())) : undefined;
+
+  const numberOfWeeks = utcEndDate
     ? Math.ceil(
-        (endDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+        (utcEndDate.getTime() - utcStartDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
       )
     : 52;
+
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix();
     return (
-      <div className="grid grid-cols-2 gap-4 mt-2">
+      <div className="grid grid-cols-2 gap-4 mt-2 ml-2">
         <div className="flex items-center justify-end gap-2">
           <div
             className="w-4 h-4"
@@ -103,8 +108,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         <div className="relative">
           <HeatMap
             value={heatmapData}
-            startDate={startDate}
-            endDate={endDate}
+            startDate={utcStartDate}
+            endDate={utcEndDate}
             width={30 + 18 * numberOfWeeks}
             height={150}
             rectSize={14}
@@ -113,18 +118,10 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               rx: 3,
             }}
             rectRender={(props, data) => {
-              const dateObj = new Date(data.date);
+              // Convert date string to UTC Date object
+              const [year, month, day] = data.date.split('/').map(Number);
+              const dateObj = new Date(Date.UTC(year, month - 1, day));
               
-              // Calculate positions manually to avoid DST issues
-              // y position is based on day of week (0-6)
-              props.y = dateObj.getDay() * 16;
-              
-              // x position is based on weeks since start date
-              // Using Math.floor ensures consistent week boundaries regardless of DST
-              props.x = 20 + Math.floor(
-                (dateObj.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
-              ) * 16; // 20 is the left side margin for day descriptiions
-
               let color = "#EBEDF0";
               let stroke = "none";
               let strokeWidth = 0;
@@ -139,7 +136,10 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                 );
               }
 
-              if (isToday(dateObj)) {
+              // Compare UTC dates for today check
+              const today = new Date();
+              const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+              if (dateObj.getTime() === todayUTC.getTime()) {
                 stroke = "#FF0000";
                 strokeWidth = 2;
               }
@@ -162,7 +162,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
           />
         </div>
       </div>
-      <div className="flex justify-center mt-4">{renderActivityLegend()}</div>
+      <div className="flex justify-start mt-4">{renderActivityLegend()}</div>
     </div>
   );
 };
