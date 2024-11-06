@@ -121,9 +121,9 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               
               // x position is based on weeks since start date
               // Using Math.floor ensures consistent week boundaries regardless of DST
-              props.x = Math.floor(
+              props.x = 20 + Math.floor(
                 (dateObj.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
-              ) * 16;
+              ) * 16; // 20 is the left side margin for day descriptiions
 
               let color = "#EBEDF0";
               let stroke = "none";
