@@ -104,9 +104,9 @@ const PlansRenderer: React.FC = () => {
         <Link href="/create-new-plan" passHref>
           <Button
             variant="outline"
-            className="w-full h-full flex flex-col items-center justify-center"
+            className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
           >
-            <Plus className="h-8 w-8 mb-2" />
+            <Plus className="h-8 w-8 mb-2 text-gray-400" />
             <span>Create New Plan</span>
           </Button>
         </Link>
