@@ -113,10 +113,22 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               rx: 3,
             }}
             rectRender={(props, data) => {
+              const dateObj = new Date(data.date);
+              
+              // Calculate positions manually to avoid DST issues
+              // y position is based on day of week (0-6)
+              props.y = dateObj.getDay() * 16;
+              
+              // x position is based on weeks since start date
+              // Using Math.floor ensures consistent week boundaries regardless of DST
+              props.x = Math.floor(
+                (dateObj.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+              ) * 16;
+
               let color = "#EBEDF0";
               let stroke = "none";
               let strokeWidth = 0;
-              const dateObj = new Date(data.date);
+              
               const intensity = getIntensityForDate(
                 format(dateObj, "yyyy-MM-dd")
               );
@@ -127,9 +139,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                 );
               }
 
-              // Check if the date is today
               if (isToday(dateObj)) {
-                stroke = "#FF0000"; // Red border
+                stroke = "#FF0000";
                 strokeWidth = 2;
               }
 
@@ -141,9 +152,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   stroke={stroke}
                   strokeWidth={strokeWidth}
                   onClick={() => {
-                    const clickedDate = new Date(data.date);
-                    if (!isNaN(clickedDate.getTime())) {
-                      onDateClick(clickedDate);
+                    if (!isNaN(dateObj.getTime())) {
+                      onDateClick(dateObj);
                     }
                   }}
                 />
