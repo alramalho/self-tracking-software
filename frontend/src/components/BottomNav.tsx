@@ -24,11 +24,11 @@ const BottomNav = () => {
   }, [pathname]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[1000]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[1000] pb-1">
       <div className="flex justify-around">
         <Link
           href="/"
-          className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500"
+          className="flex flex-col items-center p-2 text-gray-600"
           onClick={() =>{
             if (pathname !== "/")  {
               setIsLoadingFeed(true)
@@ -40,7 +40,7 @@ const BottomNav = () => {
         </Link>
         <Link
           href="/plans"
-          className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500"
+          className="flex flex-col items-center p-2 text-gray-600"
           onClick={() => {
             if (pathname !== "/plans") {
               setIsLoadingPlans(true)
@@ -52,7 +52,7 @@ const BottomNav = () => {
         </Link>
         <Link
           href="/log"
-          className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500"
+          className="flex flex-col items-center p-2 text-gray-600"
           onClick={() => {
             if (pathname !== "/log") {
               setIsLoadingLog(true)
@@ -64,7 +64,7 @@ const BottomNav = () => {
         </Link>
         <Link
           href={`/profile/me`}
-          className="flex flex-col items-center p-2 text-gray-600 hover:text-blue-500 relative"
+          className="flex flex-col items-center p-2 text-gray-600 relative"
           onClick={() => {
             if (pathname !== "/profile/me") {
               setIsLoadingProfile(true)
