@@ -41,7 +41,9 @@ const PlanActivityEntriesRenderer: React.FC<
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     const firstActivityEntry = sortedPlanActivityEntries[0];
-    return startOfWeek(firstActivityEntry.date);
+    const beginingOfWeek = startOfWeek(firstActivityEntry.date);
+    console.log({ beginingOfWeek });
+    return beginingOfWeek;
   }, [planActivityEntries]);
 
   useEffect(() => {
@@ -49,10 +51,12 @@ const PlanActivityEntriesRenderer: React.FC<
   }, [beginingOfWeekOfFirstActivityEntry]);
 
   const formatEntriesForHeatMap = () => {
-    return planActivityEntries.map((entry) => ({
+    const formattedEntries = planActivityEntries.map((entry) => ({
       date: format(entry.date, "yyyy/MM/dd"),
       count: entry.quantity,
     }));
+    console.log({ formattedEntries });
+    return formattedEntries;
   };
 
   const getIntensityForDate = (dateStr: string) => {

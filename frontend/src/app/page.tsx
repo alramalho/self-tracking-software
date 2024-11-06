@@ -28,7 +28,7 @@ const HomePage: React.FC = () => {
     if (isSignedIn && hasLoadedUserData && userData?.plans?.length === 0) {
       router.push("/onboarding");
     }
-  }, [userData, router, isSignedIn, hasLoadedUserData]);
+  }, [userData, isSignedIn, hasLoadedUserData]);
 
   if (!isSignedIn) {
     return (
@@ -56,7 +56,7 @@ const HomePage: React.FC = () => {
   }
   if (isAppInstallModalOpen) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center px-4 relative">
+      <div className="h-screen w-screen absolute flex flex-col items-center justify-center px-4 z-50 bg-white overflow-hidden">
         <button 
           onClick={() => setIsAppInstallModalOpen(false)}
           className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
@@ -65,9 +65,9 @@ const HomePage: React.FC = () => {
           <X className="w-6 h-6 text-white" />
         </button>
         <Smartphone className="w-16 h-16 mb-6 text-gray-600" />
-        <h2 className="text-2xl font-semibold mb-4 text-center">Install Our App</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-center">Install the App</h2>
         <p className="text-gray-600 text-center mb-8 max-w-md">
-          self.tracking.so works best when installed as an app on your device. You&apos;ll get a better experience and access to features like notifications.
+          <code>self.tracking.so</code> works best when installed as an app on your device. You&apos;ll get a better experience and access to features like notifications.
         </p>
         
         <div className="w-full max-w-md">

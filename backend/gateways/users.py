@@ -60,6 +60,20 @@ class UsersGateway:
         self.db_gateway.write(user.dict())
         logger.info(f"User {user.id} ({user.name}) updated")
         return user
+    
+    def add_friend(self, user_id: str, friend_id: str) -> User:
+        user = self.get_user_by_id(user_id)
+        friend = self.get_user_by_id(friend_id)
+        
+        if friend_id not in user.friend_ids:
+            user.friend_ids.append(friend_id)
+            self.update_user(user)
+
+        if user_id not in friend.friend_ids:
+            friend.friend_ids.append(user_id)
+            self.update_user(friend)
+
+        return user
 
     def update_fields(self, user_id: str, fields: dict) -> User:
         user = self.get_user_by_id(user_id)
@@ -158,12 +172,10 @@ class UsersGateway:
             return sender, recipient
         
         if recipient.id not in sender.friend_ids:
-            sender.friend_ids.append(recipient.id)
-            self.update_user(sender)
+            self.add_friend(sender.id, recipient.id)
     
         if sender.id not in recipient.friend_ids:
-            recipient.friend_ids.append(sender.id)
-            self.update_user(recipient)
+            self.add_friend(recipient.id, sender.id)
 
         self.friend_request_gateway.update_friend_request(request_id, "accepted")
 

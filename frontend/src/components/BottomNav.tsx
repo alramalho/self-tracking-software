@@ -24,7 +24,7 @@ const BottomNav = () => {
   }, [pathname]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[1000] pb-1">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[49] pb-1">
       <div className="flex justify-around">
         <Link
           href="/"

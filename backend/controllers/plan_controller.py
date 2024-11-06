@@ -341,13 +341,21 @@ class PlanController:
             self.update_plan_sessions_with_activity_ids(plan)
 
     def accept_plan_invitation(
-        self, invitation_id: str, activity_associations: Dict[str, str]
+        self, invitation: PlanInvitation, activity_associations: Dict[str, str]
     ) -> Plan:
-        logger.log("CONTROLLERS", f"Accepting plan invitation: {invitation_id}")
-        invitation = self.plan_invitation_gateway.get(invitation_id)
+        logger.log("CONTROLLERS", f"Accepting plan invitation: {invitation.id}")
 
-        plan = self.get_plan(invitation.plan_id)
         recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
+
+
+       # skip if user already has a plan with the same group
+        all_plans = self.get_all_user_plans(recipient)
+        for plan in all_plans:
+            if plan.plan_group_id == invitation.plan_group_id:
+                logger.info(f"User already has a plan with the same group: {plan.id}")
+                return plan
+            
+        plan = self.get_plan(invitation.plan_id)
 
         # Update sessions with associated activities
         new_sessions = []
@@ -393,6 +401,10 @@ class PlanController:
             ),
         )
 
+        # add user as a friend if he was not already
+        if invitation.sender_id not in recipient.friend_ids:
+            self.users_gateway.add_friend(recipient.id, invitation.sender_id)
+
         # Create new activities if needed
         for (
             original_activity_id,
@@ -425,10 +437,8 @@ class PlanController:
 
         return recipients_plan
 
-    def reject_plan_invitation(self, invitation_id: str) -> None:
-        logger.log("CONTROLLERS", f"Rejecting plan invitation: {invitation_id}")
-        invitation = self.plan_invitation_gateway.query("id", invitation_id)[0]
-        invitation = PlanInvitation(**invitation)
+    def reject_plan_invitation(self, invitation: PlanInvitation) -> None:
+        logger.log("CONTROLLERS", f"Rejecting plan invitation: {invitation.id}")
 
         if invitation.status != "pending":
             raise ValueError("Invitation is not pending")

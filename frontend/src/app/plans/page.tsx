@@ -11,11 +11,11 @@ import { Loader2 } from "lucide-react";
 const PlansPage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { useUserDataQuery } = useUserPlan();
+  const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
 
   useEffect(() => {
-    if (userData && userData.plans && userData.plans.length == 0) {
+    if (userData && hasLoadedUserData && userData.plans && userData.plans.length == 0) {
       router.push("/onboarding");
     }
   }, [userData]);

@@ -39,6 +39,7 @@ async def user_event_webhook(request: Request):
         email_address = data["email_addresses"][0]["email_address"]
         first_name = data["first_name"]
         last_name = data["last_name"]
+        username = data["username"]
         picture = None
         if data.get("external_accounts"):
             picture = data.get("external_accounts")[0].get("picture")
@@ -60,6 +61,7 @@ async def user_event_webhook(request: Request):
                         "email": email_address,
                         "name": f"{first_name} {last_name}",
                         "clerk_id": user_clerk_id,
+                        "username": username,
                         "picture": picture,  # Add the picture field
                     },
                 )
@@ -71,6 +73,8 @@ async def user_event_webhook(request: Request):
                 users_gateway.create_user(
                     User.new(
                         email=email_address,
+                        name=f"{first_name} {last_name}",
+                        username=username,
                         clerk_id=user_clerk_id,
                         picture=picture,  # Add the picture field
                     )
@@ -78,12 +82,15 @@ async def user_event_webhook(request: Request):
             return {"status": "success", "message": "User created successfully"}
         elif event_type == "user.updated":
             user = users_gateway.get_user_by_safely("clerk_id", user_clerk_id)
-            user = users_gateway.get_user_by_safely("email", email_address)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
             users_gateway.update_fields(
                 user.id,
                 {
                     "email": email_address,
                     "name": f"{first_name} {last_name}",
+                    "username": username,
                     "clerk_id": user_clerk_id,
                     "picture": picture,  # Add the picture field
                 },

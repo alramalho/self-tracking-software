@@ -41,6 +41,7 @@
     "recharts": "^2.13.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
+    "use-clipboard-copy": "^0.2.0",
     "use-debounce": "^10.0.4"
   },
   "devDependencies": {

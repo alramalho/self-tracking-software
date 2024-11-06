@@ -15,7 +15,7 @@ from gateways.plan_groups import PlanGroupsGateway
 from gateways.plan_invitations import PlanInvitationsGateway
 from shared.utils import exclude_embedding_fields
 from entities.plan_invitation import PlanInvitation
-
+from constants import URL
 router = APIRouter()
 
 plan_controller = PlanController()
@@ -24,6 +24,12 @@ activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
 plan_invitations_gateway = PlanInvitationsGateway()
+
+@router.get("/generate-invitation-link")
+async def generate_copy_link(plan_id: str, user: User = Depends(is_clerk_user)):
+    plan_invitation = PlanInvitation.new(plan_id, user.id, 'external')
+    plan_invitations_gateway.upsert_plan_invitation(plan_invitation)
+    return {"link": f"{URL}/join-plan/{plan_invitation.id}"}
 
 @router.post("/generate-plans")
 async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_user)):
@@ -189,12 +195,27 @@ async def invite_to_plan(
 async def accept_plan_invitation(
     invitation_id: str,
     request: Request,
-    user: User = Depends(is_clerk_user)
+    current_user: User = Depends(is_clerk_user)
 ):
     try:
         body = await request.json()
         activity_associations = body.get("activity_associations", [])
-        plan = plan_controller.accept_plan_invitation(invitation_id, activity_associations)
+        
+        invitation = plan_invitations_gateway.get(invitation_id)
+        if not invitation:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+                
+        if invitation.recipient_id == "external":
+            logger.info(f"Plan invitation recipient is external, creating new invitation to {current_user.id}")
+            invitation = plan_invitations_gateway.upsert_plan_invitation(
+                PlanInvitation.new(
+                    plan_id=invitation.plan_id,
+                    sender_id=invitation.sender_id,
+                    recipient_id=current_user.id,
+                )
+            )
+
+        plan = plan_controller.accept_plan_invitation(invitation, activity_associations)
         return {"message": "Invitation accepted successfully", "plan": plan}
     except Exception as e:
         logger.error(f"Failed to accept plan invitation: {e}")
@@ -202,9 +223,23 @@ async def accept_plan_invitation(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/reject-plan-invitation/{invitation_id}")
-async def reject_plan_invitation(invitation_id: str, user: User = Depends(is_clerk_user)):
+async def reject_plan_invitation(invitation_id: str, current_user: User = Depends(is_clerk_user)):
     try:
-        plan_controller.reject_plan_invitation(invitation_id)
+        invitation = plan_invitations_gateway.get(invitation_id)
+        if not invitation:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        
+        if invitation.recipient_id == "external":
+            logger.info(f"Plan invitation recipient is external, creating new invitation to {current_user.id}")
+            invitation = plan_invitations_gateway.upsert_plan_invitation(
+                PlanInvitation.new(
+                    plan_id=invitation.plan_id,
+                    sender_id=invitation.sender_id,
+                    recipient_id=current_user.id,
+                )
+            )
+
+        plan_controller.reject_plan_invitation(invitation)
         return {"message": "Invitation rejected successfully"}
     except Exception as e:
         logger.error(f"Failed to reject plan invitation: {e}")
@@ -227,7 +262,7 @@ async def get_plan_group(plan_id: str, current_user: User = Depends(is_clerk_use
     return plan_group
 
 @router.get("/get-plan-from-invitation-id/{invitation_id}")
-async def get_plan_from_invitation_id(invitation_id: str, user: User = Depends(is_clerk_user)):
+async def get_plan_from_invitation_id(invitation_id: str):
     try:
         invitation = plan_invitations_gateway.get(invitation_id)
         if not invitation:
@@ -237,14 +272,18 @@ async def get_plan_from_invitation_id(invitation_id: str, user: User = Depends(i
         if not plan:
             raise ValueError("Plan not found")
         
-        user_activities = activities_gateway.get_all_activities_by_user_id(invitation.recipient_id)
         plan_activity_ids = list(set([session.activity_id for session in plan.sessions]))
         plan_activities = activities_gateway.get_all_activites_by_ids(plan_activity_ids)
-        
+        inviter = users_gateway.get_user_by_id(invitation.sender_id)
         return {
             "plan": exclude_embedding_fields(plan.dict()),
             "plan_activities": [exclude_embedding_fields(activity.dict()) for activity in plan_activities],
-            "user_activities": [exclude_embedding_fields(activity.dict()) for activity in user_activities],
+            "inviter": {
+                "id": inviter.id,
+                "name": inviter.name,
+                "username": inviter.username,
+                "picture": inviter.picture
+            },
             "invitation": invitation.dict()
         }
     except Exception as e:

@@ -2,10 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
-import { useRouter } from "next/navigation";
+import { useClipboard } from "use-clipboard-copy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import toast from "react-hot-toast";
@@ -17,6 +23,8 @@ import {
   ChevronLeft,
   ChevronRight,
   BellIcon,
+  Link,
+  Copy,
 } from "lucide-react";
 import UserSearch, { UserSearchResult } from "./UserSearch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -31,11 +39,13 @@ import {
 import GeneratedPlanRenderer from "./GeneratedPlanRenderer";
 import { useNotifications } from "@/hooks/useNotifications";
 import InviteButton from "./InviteButton";
+import Divider from "./Divider";
 
 interface OnboardingProps {
   isNewPlan?: boolean;
   onComplete: () => void;
 }
+
 
 const Onboarding: React.FC<OnboardingProps> = ({
   isNewPlan = false,
@@ -54,13 +64,15 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [planDescription, setPlanDescription] = useState("");
   const api = useApiWithAuth();
   const [selectedEmoji, setSelectedEmoji] = useState<string>("");
-  const { useUserDataQuery, } = useUserPlan();
+  const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [selectedPlanLoading, setSelectedPlanLoading] = useState(false);
   const { requestPermission, isPushGranted } = useNotifications();
+  const [isCopyingLink, setIsCopyingLink] = useState(false);
+  const clipboard = useClipboard();
 
   useEffect(() => {
     try {
@@ -74,6 +86,11 @@ const Onboarding: React.FC<OnboardingProps> = ({
           setStep(2);
         }
       }
+      if (userData?.plans && userData.plans.length > 0) {
+        setSelectedPlan(userData.plans[0]);
+        setStep(7);
+      }
+
     } catch (error) {
       console.error("Error loading user data:", error);
       toast.error("Error loading user data");
@@ -125,7 +142,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   };
 
   const handlePlanSelection = async (plan: GeneratedPlan) => {
-    console.log({planToBeCreated: plan }) 
+    console.log({ planToBeCreated: plan });
     try {
       if (plan) {
         const response = await api.post("/create-plan", {
@@ -353,10 +370,14 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     className="w-full mt-4"
                     onClick={() => {
                       setSelectedPlanLoading(true);
-                      handlePlanSelection(plan)
+                      handlePlanSelection(plan);
                     }}
                   >
-                    {selectedPlanLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckIcon className="mr-2 h-4 w-4" />}
+                    {selectedPlanLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckIcon className="mr-2 h-4 w-4" />
+                    )}
                     Select and Create Plan
                   </Button>
                 </div>
@@ -410,14 +431,16 @@ const Onboarding: React.FC<OnboardingProps> = ({
             <CardHeader>
               <CardTitle>Enable the Integrated Experience</CardTitle>
               <CardDescription>
-                Get notifications to stay on top of your friends&apos; progress and receive proactive engagement from our AI coach.
+                Get notifications to stay on top of your friends&apos; progress
+                and receive proactive engagement from our AI coach.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                You can always adjust notification settings in your profile later.
+                You can always adjust notification settings in your profile
+                later.
               </div>
-              <Button 
+              <Button
                 className="w-full"
                 onClick={() => {
                   onComplete();

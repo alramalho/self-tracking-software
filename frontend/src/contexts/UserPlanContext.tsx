@@ -178,6 +178,10 @@ export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]):
   } as Plan;
 }
 
+export function convertPlanToApiPlan(plan: Plan): ApiPlan {
+  return convertGeneratedPlanToApiPlan(plan as GeneratedPlan);
+}
+
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -232,7 +236,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           icon: '🔒',
           duration: 5000,
         });
-        signOut();
+        signOut({ redirectUrl: window.location.pathname });
       } else {
         router.push("/");
         toast.error("Failed to fetch user data. Please try again.");

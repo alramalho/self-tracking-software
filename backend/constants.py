@@ -25,3 +25,5 @@ AWS_SECRET_ACCESS_KEY=os.getenv("AWS_SECRET_ACCESS_KEY")
 S3_BUCKET_NAME=f"tracking-software-bucket-{ENVIRONMENT.replace('dev', 'sandbox')}" # theres no aws dev env yet
 SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS=3
 JINA_API_KEY=os.getenv("JINA_API_KEY")
+
+URL = "http://localhost:3000" if ENVIRONMENT == "dev" else "https://app.tracking.so"

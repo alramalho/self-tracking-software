@@ -11,6 +11,7 @@ import {
   AvatarFallback,
 } from "@/components/ui/avatar";
 import InviteButton from "./InviteButton";
+import PlanCard from "./PlanCard";
 
 const PlansRenderer: React.FC = () => {
   const { useUserDataQuery, fetchUserData } = useUserPlan();
@@ -48,59 +49,17 @@ const PlansRenderer: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        {plans.map((plan) => {
-          const planGroup = getPlanGroup(plan.id!);
-          return (
-            <div
-              key={plan.id}
-              className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
-                selectedPlanId === plan.id ? "border-blue-500" : "border-gray-200"
-              }`}
-              onClick={() => {
-                console.log("seleecing plan", plan.id);
-                setSelectedPlanId(plan.id || null);
-              }}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center">
-                  {plan.emoji && <span className="text-4xl mr-2">{plan.emoji}</span>}
-                  <span className="text-xl font-medium">{plan.goal}</span>
-                </div>
-                <InviteButton planId={plan.id!} onInviteSuccess={handleInviteSuccess} />
-              </div>
-              <span className="text-sm text-gray-500 mb-4">
-                📍{" "}
-                {plan.finishing_date
-                  ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : ""}
-              </span>
-              {planGroup && planGroup.members && (
-                <div className="flex items-center space-x-2">
-                  {planGroup.members.map((member) => {
-                    if (!userData?.user?.id || member.user_id === userData.user.id) {
-                      return null;
-                    }
-                    return (
-                      <Avatar key={member.user_id} className="w-8 h-8">
-                        <AvatarImage
-                          src={member.picture || ""}
-                          alt={member.name || member.username}
-                        />
-                        <AvatarFallback>
-                          {member.name?.[0] || member.username?.[0] || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {plans.map((plan) => (
+          <PlanCard
+            key={plan.id}
+            plan={plan}
+            planGroup={getPlanGroup(plan.id!)}
+            isSelected={selectedPlanId === plan.id}
+            currentUserId={userData?.user?.id}
+            onSelect={(planId) => setSelectedPlanId(planId)}
+            onInviteSuccess={handleInviteSuccess}
+          />
+        ))}
         <Link href="/create-new-plan" passHref>
           <Button
             variant="outline"
