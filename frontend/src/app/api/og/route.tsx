@@ -10,10 +10,6 @@ export async function GET(request: NextRequest) {
     const inviterName = searchParams.get("inviterName");
     const emoji = searchParams.get("emoji");
 
-    const interRegular = await fetch(
-      new URL("../../../../public/fonts/Inter-Regular.ttf", import.meta.url)
-    ).then((res) => res.arrayBuffer());
-
     const interBold = await fetch(
       new URL("../../../../public/fonts/Inter-Bold.ttf", import.meta.url)
     ).then((res) => res.arrayBuffer());
@@ -27,80 +23,74 @@ export async function GET(request: NextRequest) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            border: "2px solid #e5e7eb",
             background: "white",
+            fontFamily: 'system-ui',
+            fontWeight: 400,
             borderRadius: "16px",
-            fontFamily: '"Inter"',
           }}
         >
           <div
             style={{
               display: "flex",
-              padding: "54px",
-              flexDirection: "column",
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: "32px",
+              alignSelf: "center",
             }}
           >
+            <span
+              style={{
+                fontSize: "240px",
+                marginRight: "64px",
+                alignSelf: "center",
+              }}
+            >
+              {emoji ?? "🎯"}
+            </span>
             <div
               style={{
                 display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                marginBottom: "32px",
-                alignSelf: "flex-start",
+                flexDirection: "column",
+                gap: "32px",
               }}
             >
               <span
                 style={{
-                  fontSize: "240px",
-                  marginRight: "64px",
-                  alignSelf: "center",
+                  fontSize: "64px",
+                  color: "#A5A9B4",
+                  wordBreak: "break-word",
+                  maxWidth: "750px",
+                  lineHeight: "1.1",
+                  fontFamily: 'system-ui',
                 }}
               >
-                {emoji ?? "🎯"}
+                Join me in my plan
               </span>
-              <div
+              <span
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "32px",
+                  maxWidth: "750px",
+                  overflow: "hidden",
+                  fontSize: "75px",
+                  fontWeight: 700,
+                  color: "#111827",
+                  wordBreak: "break-word",
+                  lineHeight: "1.1",
+                  margin: "0px 0px 16px 0px",
+                  fontFamily: '"Inter"',
                 }}
               >
-                <span
-                  style={{
-                    fontSize: "64px",
-                    color: "#898F9C",
-                    wordBreak: "break-word",
-                    maxWidth: "750px",
-                    lineHeight: "1.1",
-                  }}
-                >
-                  Join me in my plan
-                </span>
-                <span
-                  style={{
-                    maxWidth: "750px",
-                    overflow: "hidden",
-                    fontSize: "75px",
-                    fontWeight: 700,
-                    color: "#111827",
-                    wordBreak: "break-word",
-                    lineHeight: "1.1",
-                    margin: "0px 0px 16px 0px",
-                  }}
-                >
-                  {planName}
-                </span>
-                <span
-                  style={{
-                    fontSize: "48px",
-                    color: "#898F9C",
-                    wordBreak: "break-word",
-                    maxWidth: "750px",
-                  }}
-                >
-                  By {inviterName}
-                </span>
-              </div>
+                {planName}
+              </span>
+              <span
+                style={{
+                  fontSize: "48px",
+                  color: "#898F9C",
+                  wordBreak: "break-word",
+                  maxWidth: "750px",
+                }}
+              >
+                By {inviterName}
+              </span>
             </div>
           </div>
         </div>
@@ -109,11 +99,6 @@ export async function GET(request: NextRequest) {
         width: 1200,
         height: 630,
         fonts: [
-          {
-            name: "Inter",
-            data: interRegular,
-            weight: 400,
-          },
           {
             name: "Inter",
             data: interBold,
