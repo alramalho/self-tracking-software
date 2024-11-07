@@ -6,29 +6,18 @@ export function useClipboard(): [boolean, CopyFn] {
   const [copied, setCopied] = useState(false);
 
   const copy: CopyFn = async (text) => {
-    // 1. Try Share API first (best for mobile PWAs)
-    if (navigator.share) {
-      try {
-        await navigator.share({ text });
-        setCopied(true);
-        return true;
-      } catch (error) {
-        // User might have cancelled - try next method
-      }
-    }
-
-    // 2. Try Clipboard API
+    // Try Clipboard API first
     if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
         return true;
       } catch (error) {
-        // Clipboard API failed - try next method
+        // Clipboard API failed - try fallback
       }
     }
 
-    // 3. Selection API fallback
+    // Selection API fallback
     try {
       const range = document.createRange();
       const selection = window.getSelection();

@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Link, UserPlus } from "lucide-react";
+import { Link, Share, UserPlus } from "lucide-react";
 import UserSearch, { UserSearchResult } from "./UserSearch";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import Divider from "./Divider";
 import { useClipboard } from "@/hooks/useClipboard";
+import { useShare } from "@/hooks/useShare";
 
 interface InviteButtonProps {
   planId: string;
@@ -25,6 +26,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
   const [copied, copyToClipboard] = useClipboard();
+  const { share, isSupported: isShareSupported } = useShare();
 
   const handleUserSelect = (user: UserSearchResult) => {
     if (!invitees.some((invitee) => invitee.user_id === user.user_id)) {
@@ -62,37 +64,55 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     }
   };
 
-  const handleCopyLink = async () => {
+  const handleShareOrCopy = async () => {
     toast.promise(
       (async () => {
         const link = await generateCopyLink();
-        const success = await copyToClipboard(link);
-        if (!success) throw new Error("Failed to copy");
+        
+        if (isShareSupported) {
+          const success = await share(link);
+          if (!success) throw new Error("Failed to share");
+        } else {
+          const success = await copyToClipboard(link);
+          if (!success) throw new Error("Failed to copy");
+        }
+        
         onInviteSuccess();
         setIsSearchOpen(false);
-        return "Copied invite link to clipboard";
+        return isShareSupported ? "Shared invite link" : "Copied invite link to clipboard";
       })(),
       {
         loading: "Generating invite link...",
         success: (message) => message,
-        error: "Failed to copy invite link",
+        error: isShareSupported ? "Failed to share invite link" : "Failed to copy invite link",
       }
     );
   };
 
+  const shareOrCopyButton = (
+    <Button
+      variant="outline"
+      className="mt-4 text-md w-full p-6 bg-gray-100"
+      onClick={handleShareOrCopy}
+    >
+      {isShareSupported ? (
+        <>
+          <Share className="mr-3 h-7 w-7" />
+          <span className="text-sm">Share Invite</span>
+        </>
+      ) : (
+        <>
+          <Link className="mr-3 h-7 w-7" />
+          <span className="text-sm">Copy Invite Link</span>
+        </>
+      )}
+    </Button>
+  );
+
   if (embedded) {
     return (
       <>
-        <Button
-          variant="outline"
-          className="mt-4 text-md w-full p-6 bg-gray-100"
-          onClick={async () => {
-            await handleCopyLink();
-          }}
-        >
-          <Link className="mr-3 h-7 w-7" />
-          Copy Invite Link
-        </Button>
+        {shareOrCopyButton}
         <Divider text="OR" />
         <UserSearch
           onUserClick={handleUserSelect}
@@ -124,16 +144,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
       </Button>
       {isSearchOpen && (
         <AppleLikePopover onClose={() => setIsSearchOpen(false)}>
-          <Button
-            variant="outline"
-            className="mt-4 text-md w-full p-6 bg-gray-100"
-            onClick={async () => {
-              await handleCopyLink();
-            }}
-          >
-            <Link className="mr-3 h-7 w-7" />
-            Copy Invite Link
-          </Button>
+          {shareOrCopyButton}
           <Divider text="OR" />
           <UserSearch
             onUserClick={handleUserSelect}
