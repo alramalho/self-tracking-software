@@ -10,8 +10,9 @@ import Link from "next/link";
 interface NotificationsProps {}
 
 const Notifications: React.FC<NotificationsProps> = () => {
-  const { useUserDataQuery, fetchUserData } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");  
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const router = useRouter();
   const api = useApiWithAuth();
 
@@ -20,8 +21,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
     action: string
   ) => {
     const concludeNotification = async () => {
-      await api.post(`/conclude-notification/${notification.id}`);
-      await fetchUserData({ forceUpdate: true });
+      userDataQuery.refetch();
     };
 
     const actionPromise = async () => {
