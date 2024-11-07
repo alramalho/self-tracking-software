@@ -5,39 +5,29 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useApiWithAuth } from "@/api";
+import { useQuery } from "@tanstack/react-query";
 
 const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => {
   const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery(params.username || "me");
   const userData = userDataQuery.data;
-  const [friends, setFriends] = useState<{picture: string, name: string, username: string}[]>([]);
-  const [friendsLoading, setFriendsLoading] = useState(true);
-  const [hasLoadedFriends, setHasLoadedFriends] = useState(false);
   const api = useApiWithAuth();
 
-  const fetchFriends = async () => {
-    const response = await api.get(`/friends/${params.username}`);
-    return response.data.friends;
-  }
-
-  useEffect(() => {
-    if (hasLoadedFriends) {
-      return;
-    }
-    setFriendsLoading(true);
-    if (userData && userData?.user_friends) {
-        setFriends(userData?.user_friends || []); 
-        setFriendsLoading(false);
-        setHasLoadedFriends(true);
-      } else {
-        fetchFriends().then(friends => {
-          setFriends(friends);
-          userDataQuery.refetch();
-          setFriendsLoading(false);
-          setHasLoadedFriends(true);
-        });
+  const friendsQuery = useQuery<{picture: string, name: string, username: string}[]>({
+    queryKey: ['friends', params.username],
+    queryFn: async () => {
+      if (userData?.user_friends) {
+        return userData.user_friends;
       }
-  }, [userData]);
+      const response = await api.get(`/friends/${params.username}`);
+      userDataQuery.refetch();
+      return response.data.friends;
+    },
+    enabled: !!params.username
+  });
+
+  const friends = friendsQuery.data || [];
+  const friendsLoading = friendsQuery.isLoading;
 
   return (
     <div className="container mx-auto px-4 py-8">
