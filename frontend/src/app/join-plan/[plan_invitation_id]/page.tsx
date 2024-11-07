@@ -1,11 +1,23 @@
 import { Metadata, ResolvingMetadata } from "next";
 import ClientPage from "./ClientPage";
+import { ApiPlan, Plan, Activity, countAverageSessionsPerWeek } from "@/contexts/UserPlanContext";
 
 type Props = {
   params: { plan_invitation_id: string }
 }
 
 export const dynamic = 'force-dynamic'
+
+interface PlanData {
+  plan: ApiPlan;
+  plan_activities: Activity[];
+  inviter: {
+    id: string;
+    name: string;
+    username: string;
+    picture: string;
+  };
+}
 
 export async function generateMetadata(
   { params }: Props,
@@ -27,6 +39,8 @@ export async function generateMetadata(
     ogImageUrl.searchParams.append("planName", planData.plan.goal);
     ogImageUrl.searchParams.append("inviterName", planData.inviter.name);
     ogImageUrl.searchParams.append("emoji", planData.plan.emoji);
+    const averageSessionsPerWeek = countAverageSessionsPerWeek(planData.plan);
+    ogImageUrl.searchParams.append("sessionsPerWeekCount", averageSessionsPerWeek.toString());
 
     return {
       title,

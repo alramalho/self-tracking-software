@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const planName = searchParams.get("planName");
     const inviterName = searchParams.get("inviterName");
     const emoji = searchParams.get("emoji");
+    const sessionsPerWeekCount = searchParams.get("sessionsPerWeekCount");
 
     const interBold = await fetch(
       new URL("../../../../public/fonts/Inter-Bold.ttf", import.meta.url)
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "white",
+            background: "linear-gradient(135deg, #F5F5F5 0%, #E5E5E5 100%)",
             fontFamily: 'system-ui',
             fontWeight: 400,
             borderRadius: "16px",
@@ -64,13 +65,13 @@ export async function GET(request: NextRequest) {
                   fontFamily: 'system-ui',
                 }}
               >
-                Join me in my plan
+                Join {inviterName}&apos;s plan
               </span>
               <span
                 style={{
                   maxWidth: "750px",
                   overflow: "hidden",
-                  fontSize: "75px",
+                  fontSize: "92px",
                   fontWeight: 700,
                   color: "#111827",
                   wordBreak: "break-word",
@@ -79,18 +80,20 @@ export async function GET(request: NextRequest) {
                   fontFamily: '"Inter"',
                 }}
               >
-                {planName}
+                {planName ? planName.slice(0, 25) + (planName.length > 25 ? "..." : "") : ""}
               </span>
-              <span
-                style={{
+              {sessionsPerWeekCount && parseInt(sessionsPerWeekCount) > 0 && (
+                <span
+                  style={{
                   fontSize: "48px",
                   color: "#898F9C",
                   wordBreak: "break-word",
                   maxWidth: "750px",
                 }}
               >
-                By {inviterName}
+                📌 {sessionsPerWeekCount} times per week
               </span>
+            )}
             </div>
           </div>
         </div>
