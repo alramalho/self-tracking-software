@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
                   maxWidth: "750px",
                 }}
                 >
-                  You&apos;re invited by {inviterName} Braganca
+                  You&apos;re invited by {inviterName}
                 </span>
               </div>
             </div>
