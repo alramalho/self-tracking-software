@@ -10,6 +10,14 @@ export async function GET(request: NextRequest) {
     const inviterName = searchParams.get("inviterName");
     const emoji = searchParams.get("emoji");
 
+    const interRegular = await fetch(
+      new URL("../../../../public/fonts/Inter-Regular.ttf", import.meta.url)
+    ).then((res) => res.arrayBuffer());
+
+    const interBold = await fetch(
+      new URL("../../../../public/fonts/Inter-Bold.ttf", import.meta.url)
+    ).then((res) => res.arrayBuffer());
+
     return new ImageResponse(
       (
         <div
@@ -19,7 +27,10 @@ export async function GET(request: NextRequest) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "transparent",
+            border: "2px solid #e5e7eb",
+            background: "white",
+            borderRadius: "16px",
+            fontFamily: '"Inter"',
           }}
         >
           <div
@@ -27,13 +38,6 @@ export async function GET(request: NextRequest) {
               display: "flex",
               padding: "54px",
               flexDirection: "column",
-              background: "white",
-              borderRadius: "16px",
-              border: "2px solid #e5e7eb",
-              boxShadow:
-                "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 20px -6px rgba(0, 0, 0, 0.15)",
-              width: "95%",
-              height: "95%",
             }}
           >
             <div
@@ -49,34 +53,52 @@ export async function GET(request: NextRequest) {
                 style={{
                   fontSize: "240px",
                   marginRight: "64px",
-                  alignSelf: "flex-start",
+                  alignSelf: "center",
                 }}
               >
                 {emoji ?? "🎯"}
               </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-              <span
+              <div
                 style={{
-                  maxWidth: "750px",
-                  overflow: "hidden",
-                  fontSize: "75px",
-                  fontWeight: 900,
-                  color: "#111827",
-                  wordBreak: "break-word",
-                  lineHeight: "1.1",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "32px",
                 }}
               >
-                {planName?.slice(0, 20)}
-              </span>
-              <span
-                style={{
-                  fontSize: "64px",
-                  color: "#898F9C",
-                  wordBreak: "break-word",
-                  maxWidth: "750px",
-                }}
+                <span
+                  style={{
+                    fontSize: "64px",
+                    color: "#898F9C",
+                    wordBreak: "break-word",
+                    maxWidth: "750px",
+                    lineHeight: "1.1",
+                  }}
                 >
-                  You&apos;re invited by {inviterName}
+                  Join me in my plan
+                </span>
+                <span
+                  style={{
+                    maxWidth: "750px",
+                    overflow: "hidden",
+                    fontSize: "75px",
+                    fontWeight: 700,
+                    color: "#111827",
+                    wordBreak: "break-word",
+                    lineHeight: "1.1",
+                    margin: "0px 0px 16px 0px",
+                  }}
+                >
+                  {planName}
+                </span>
+                <span
+                  style={{
+                    fontSize: "48px",
+                    color: "#898F9C",
+                    wordBreak: "break-word",
+                    maxWidth: "750px",
+                  }}
+                >
+                  By {inviterName}
                 </span>
               </div>
             </div>
@@ -86,14 +108,27 @@ export async function GET(request: NextRequest) {
       {
         width: 1200,
         height: 630,
+        fonts: [
+          {
+            name: "Inter",
+            data: interRegular,
+            weight: 400,
+          },
+          {
+            name: "Inter",
+            data: interBold,
+            weight: 700,
+          },
+        ],
       }
     );
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.log(error.message);
     }
-    return new Response(`Failed to generate the image`, {
-      status: 500,
+    return new ImageResponse(<div>Failed to generate the image</div>, {
+      width: 1200,
+      height: 630,
     });
   }
 }
