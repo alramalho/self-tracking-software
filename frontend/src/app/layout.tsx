@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { NotificationsProvider } from "@/hooks/useNotifications";
+import { validateEnv } from '@/lib/env';
 
 const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 
@@ -20,6 +21,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  if (process.env.NODE_ENV !== 'production') {
+    validateEnv();
+  }
+
   return (
     <html lang="en">
       <head>
