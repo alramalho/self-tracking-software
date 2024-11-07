@@ -1,73 +1,63 @@
-import React, { useState, useCallback } from "react";
-import { Copy, Check } from "lucide-react";
+import { useState } from "react";
 
-interface UseClipboardOptions {
-  duration?: number;
-  onCopy?: () => void;
-  onError?: (error: Error) => void;
-}
+type CopyFn = (text: string) => Promise<boolean>;
 
-interface UseClipboardReturn {
-  copied: boolean;
-  copy: (text: string) => Promise<boolean>;
-  reset: () => void;
-}
+export function useClipboard(): [boolean, CopyFn] {
+  const [copied, setCopied] = useState(false);
 
-export const useClipboard = (
-  options: UseClipboardOptions = {}
-): UseClipboardReturn => {
-  const { duration = 2000, onCopy, onError } = options;
+  const copy: CopyFn = async (text) => {
+    // 1. Try Share API first (best for mobile PWAs)
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+        setCopied(true);
+        return true;
+      } catch (error) {
+        // User might have cancelled - try next method
+      }
+    }
 
-  const [copied, setCopied] = useState<boolean>(false);
-
-  const reset = useCallback(() => {
-    setCopied(false);
-  }, []);
-
-  const copy = useCallback(
-    async (text: string): Promise<boolean> => {
-      if (!text) return false;
-
+    // 2. Try Clipboard API
+    if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
-        onCopy?.();
-        setTimeout(reset, duration);
         return true;
-      } catch (err) {
-        // Fallback for older browsers
-        try {
-          const textArea = document.createElement("textarea");
-          textArea.value = text;
-          textArea.style.position = "fixed";
-          textArea.style.opacity = "0";
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-
-          const success = document.execCommand("copy");
-          document.body.removeChild(textArea);
-
-          if (success) {
-            setCopied(true);
-            onCopy?.();
-            setTimeout(reset, duration);
-            return true;
-          }
-          throw new Error("execCommand failed");
-        } catch (fallbackErr) {
-          const error =
-            fallbackErr instanceof Error
-              ? fallbackErr
-              : new Error("Failed to copy text");
-          console.error(error);
-          onError?.(error);
-          return false;
-        }
+      } catch (error) {
+        // Clipboard API failed - try next method
       }
-    },
-    [duration, onCopy, onError, reset]
-  );
+    }
 
-  return { copied, copy, reset };
-};
+    // 3. Selection API fallback
+    try {
+      const range = document.createRange();
+      const selection = window.getSelection();
+
+      const tempElement = document.createElement("div");
+      tempElement.innerHTML = text;
+      tempElement.style.position = "absolute";
+      tempElement.style.left = "-9999px";
+      document.body.appendChild(tempElement);
+
+      range.selectNodeContents(tempElement);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      const successful = document.execCommand("copy");
+      selection?.removeAllRanges();
+      document.body.removeChild(tempElement);
+
+      if (successful) {
+        setCopied(true);
+        return true;
+      }
+    } catch (err) {
+      console.warn("Copy failed:", err);
+    }
+
+    setCopied(false);
+    return false;
+  };
+
+  return [copied, copy];
+}

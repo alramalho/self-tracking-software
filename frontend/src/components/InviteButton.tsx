@@ -24,7 +24,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
-  const { copy } = useClipboard();
+  const [copied, copyToClipboard] = useClipboard();
 
   const handleUserSelect = (user: UserSearchResult) => {
     if (!invitees.some((invitee) => invitee.user_id === user.user_id)) {
@@ -66,7 +66,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     toast.promise(
       (async () => {
         const link = await generateCopyLink();
-        const success = await copy(link);
+        const success = await copyToClipboard(link);
         if (!success) throw new Error("Failed to copy");
         onInviteSuccess();
         setIsSearchOpen(false);
@@ -74,8 +74,8 @@ const InviteButton: React.FC<InviteButtonProps> = ({
       })(),
       {
         loading: "Generating invite link...",
-        success: "Copied invite link to clipboard",
-        error: "Failed to generate invite link",
+        success: (message) => message,
+        error: "Failed to copy invite link",
       }
     );
   };
