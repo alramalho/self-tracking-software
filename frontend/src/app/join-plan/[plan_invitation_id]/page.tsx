@@ -19,8 +19,8 @@ export async function generateMetadata(
       return res.json();
     });
 
-    const title = `Join ${planData.inviter.name}'s ${planData.plan.goal} ${planData.plan.emoji}!`;
-    const description = `${planData.inviter.name} has invited you to join their plan '${planData.plan.goal} ${planData.plan.emoji}' on self.tracking.so`;
+    const title = `Join ${planData.inviter.name}'s on '${planData.plan.goal}' ${planData.plan.emoji}`;
+    const description = `${planData.inviter.name} has invited you to join their plan '${planData.plan.goal}' ${planData.plan.emoji} on self.tracking.so`;
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://self.tracking.so";
     const ogImageUrl = new URL("/api/og", baseUrl);
