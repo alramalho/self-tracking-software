@@ -6,7 +6,7 @@ import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import Divider from "./Divider";
-import { useClipboard } from "use-clipboard-copy";
+import { useClipboard } from "@/hooks/useClipboard";
 
 interface InviteButtonProps {
   planId: string;
@@ -24,7 +24,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
-  const clipboard = useClipboard(); 
+  const [, copyToClipboard] = useClipboard();
 
   const handleUserSelect = (user: UserSearchResult) => {
     if (!invitees.some((invitee) => invitee.user_id === user.user_id)) {
@@ -62,6 +62,22 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     }
   };
 
+  const handleCopyLink = async () => {
+    toast.promise(
+      (async () => {
+        const link = await generateCopyLink();
+        const success = await copyToClipboard(link);
+        if (!success) throw new Error("Failed to copy");
+        return "Copied invite link to clipboard";
+      })(),
+      {
+        loading: "Generating invite link...",
+        success: "Copied invite link to clipboard",
+        error: "Failed to generate invite link",
+      }
+    );
+  };
+
   if (embedded) {
     return (
       <>
@@ -69,23 +85,12 @@ const InviteButton: React.FC<InviteButtonProps> = ({
           variant="outline"
           className="mt-4 text-md w-full p-6 bg-gray-100"
           onClick={async () => {
-            toast.promise(
-              (async () => {
-                const link = await generateCopyLink();
-                clipboard.copy(link);
-                return "Copied invite link to clipboard";
-              })(),
-              {
-                loading: "Generating invite link...",
-                success: "Copied invite link to clipboard",
-                error: "Failed to generate invite link",
-              }
-            );
+            await handleCopyLink();
             onInviteSuccess();
           }}
         >
           <Link className="mr-3 h-7 w-7" />
-          Copy External Invite Link
+          Copy Invite Link
         </Button>
         <Divider text="OR" />
         <UserSearch
@@ -122,18 +127,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
             variant="outline"
             className="mt-4 text-md w-full p-6 bg-gray-100"
             onClick={async () => {
-              toast.promise(
-                (async () => {
-                  const link = await generateCopyLink();
-                  clipboard.copy(link);
-                  return "Copied invite link to clipboard";
-                })(),
-                {
-                  loading: "Generating invite link...",
-                  success: "Copied invite link to clipboard",
-                  error: "Failed to generate invite link",
-                }
-              );
+              await handleCopyLink();
               onInviteSuccess();
               setIsSearchOpen(false);
             }}
