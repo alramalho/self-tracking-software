@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
-import { useClipboard } from "use-clipboard-copy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,23 +22,15 @@ import {
   ChevronLeft,
   ChevronRight,
   BellIcon,
-  Link,
-  Copy,
 } from "lucide-react";
-import UserSearch, { UserSearchResult } from "./UserSearch";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-
 import {
   ApiPlan,
-  convertGeneratedPlanToApiPlan,
   GeneratedPlan,
-  Plan,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
 import GeneratedPlanRenderer from "./GeneratedPlanRenderer";
 import { useNotifications } from "@/hooks/useNotifications";
 import InviteButton from "./InviteButton";
-import Divider from "./Divider";
 
 interface OnboardingProps {
   isNewPlan?: boolean;
@@ -71,8 +62,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [selectedPlanLoading, setSelectedPlanLoading] = useState(false);
   const { requestPermission, isPushGranted } = useNotifications();
-  const [isCopyingLink, setIsCopyingLink] = useState(false);
-  const clipboard = useClipboard();
 
   useEffect(() => {
     try {

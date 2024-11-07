@@ -79,7 +79,7 @@ const HomePage: React.FC = () => {
             <TabsContent value="ios" className="bg-gray-50 p-4 rounded-lg mt-4">
               <ol className="list-decimal list-inside space-y-2 text-gray-600">
                 <li>Open Safari browser</li>
-                <li>Tap the Share button <Share className="inline w-4 h-4" /></li>
+                <li>Tap the Share button <Share className="inline w-4 h-4" /> on top right corner of this page</li>
                 <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
                 <li>Tap &quot;Add&quot; to confirm</li>
               </ol>
