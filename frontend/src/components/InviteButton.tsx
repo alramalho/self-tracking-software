@@ -24,7 +24,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
-  const [, copyToClipboard] = useClipboard();
+  const { copy } = useClipboard();
 
   const handleUserSelect = (user: UserSearchResult) => {
     if (!invitees.some((invitee) => invitee.user_id === user.user_id)) {
@@ -66,8 +66,10 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     toast.promise(
       (async () => {
         const link = await generateCopyLink();
-        const success = await copyToClipboard(link);
+        const success = await copy(link);
         if (!success) throw new Error("Failed to copy");
+        onInviteSuccess();
+        setIsSearchOpen(false);
         return "Copied invite link to clipboard";
       })(),
       {
@@ -86,7 +88,6 @@ const InviteButton: React.FC<InviteButtonProps> = ({
           className="mt-4 text-md w-full p-6 bg-gray-100"
           onClick={async () => {
             await handleCopyLink();
-            onInviteSuccess();
           }}
         >
           <Link className="mr-3 h-7 w-7" />
@@ -128,8 +129,6 @@ const InviteButton: React.FC<InviteButtonProps> = ({
             className="mt-4 text-md w-full p-6 bg-gray-100"
             onClick={async () => {
               await handleCopyLink();
-              onInviteSuccess();
-              setIsSearchOpen(false);
             }}
           >
             <Link className="mr-3 h-7 w-7" />
