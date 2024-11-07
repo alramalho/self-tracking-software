@@ -5,7 +5,6 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useApiWithAuth } from "@/api";
-import { Loader2 } from "lucide-react";
 
 const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => {
   const { useUserDataQuery } = useUserPlan();
@@ -13,6 +12,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => 
   const userData = userDataQuery.data;
   const [friends, setFriends] = useState<{picture: string, name: string, username: string}[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
+  const [hasLoadedFriends, setHasLoadedFriends] = useState(false);
   const api = useApiWithAuth();
 
   const fetchFriends = async () => {
@@ -21,15 +21,20 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({ params }) => 
   }
 
   useEffect(() => {
-      setFriendsLoading(true);
-      if (userData && userData?.user_friends) {
+    if (hasLoadedFriends) {
+      return;
+    }
+    setFriendsLoading(true);
+    if (userData && userData?.user_friends) {
         setFriends(userData?.user_friends || []); 
         setFriendsLoading(false);
+        setHasLoadedFriends(true);
       } else {
         fetchFriends().then(friends => {
           setFriends(friends);
           userDataQuery.refetch();
           setFriendsLoading(false);
+          setHasLoadedFriends(true);
         });
       }
   }, [userData]);
