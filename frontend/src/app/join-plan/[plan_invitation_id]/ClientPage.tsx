@@ -39,7 +39,8 @@ export default function ClientPage({ params }: { params: { plan_invitation_id: s
   const { useUserDataQuery } = useUserPlan();
   const { isSignedIn } = useSession();
 
-  const userData = useUserDataQuery("me");
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
   const [planData, setPlanData] = useState<PlanInvitationData | null>(null);
   const [activityAssociations, setActivityAssociations] = useState<{
     [key: string]: string;
@@ -81,7 +82,7 @@ export default function ClientPage({ params }: { params: { plan_invitation_id: s
       await api.post(`/accept-plan-invitation/${params.plan_invitation_id}`, {
         activity_associations: activityAssociations,
       });
-      userData.refetch();
+      userDataQuery.refetch();
       toast.success("Plan invitation accepted successfully!");
       router.push("/plans");
     } catch (error) {
@@ -148,7 +149,7 @@ export default function ClientPage({ params }: { params: { plan_invitation_id: s
     );
   }
 
-  if (userData.isLoading) {
+  if (userDataQuery.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -157,7 +158,7 @@ export default function ClientPage({ params }: { params: { plan_invitation_id: s
     );
   }
   const hasUserActivities =
-    planData && userData.data && userData.data.activities?.length > 0;
+    planData && userData && userData.activities?.length > 0;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -241,7 +242,7 @@ export default function ClientPage({ params }: { params: { plan_invitation_id: s
                   <option value="" disabled>
                     Select an activity
                   </option>
-                  {userData.data?.activities.map((userActivity) => (
+                  {userData?.activities.map((userActivity) => (
                     <option key={userActivity.id} value={userActivity.id}>
                       {userActivity.title}
                     </option>
