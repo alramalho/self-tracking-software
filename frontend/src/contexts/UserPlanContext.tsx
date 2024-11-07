@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext } from "react";
 import { useApiWithAuth } from "@/api";
 import { parseISO, format, addMinutes, differenceInDays } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import axios from "axios";
-import { useQuery, useQueryClient, UseQueryResult } from "@tanstack/react-query";
+import { useQuery, UseQueryResult } from "@tanstack/react-query";
 
 export interface Activity {
   id: string;
@@ -176,11 +176,6 @@ export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]):
       activity_name: planActivities.find(a => a.id === session.activity_id)?.title,
     })),
   } as Plan;
-}
-export function countAverageSessionsPerWeek(plan: Plan): number {
-  const totalSessions = plan.sessions.length;
-  const totalDays = differenceInDays(plan.finishing_date || new Date(), new Date());
-  return Math.round(totalSessions / totalDays);
 }
 
 export function convertPlanToApiPlan(plan: Plan): ApiPlan {

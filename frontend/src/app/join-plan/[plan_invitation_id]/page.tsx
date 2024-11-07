@@ -1,6 +1,6 @@
 import { Metadata, ResolvingMetadata } from "next";
 import ClientPage from "./ClientPage";
-import { ApiPlan, Plan, Activity, countAverageSessionsPerWeek } from "@/contexts/UserPlanContext";
+import { differenceInDays } from "date-fns";
 
 type Props = {
   params: { plan_invitation_id: string }
@@ -8,15 +8,11 @@ type Props = {
 
 export const dynamic = 'force-dynamic'
 
-interface PlanData {
-  plan: ApiPlan;
-  plan_activities: Activity[];
-  inviter: {
-    id: string;
-    name: string;
-    username: string;
-    picture: string;
-  };
+// we can't improve actual types as this component must be server side and dont rely on client side apis (like createContext)
+export function countAverageSessionsPerWeek(plan: {sessions: any[], finishing_date: string}): number {
+  const totalSessions = plan.sessions.length;
+  const totalDays = differenceInDays(plan.finishing_date || new Date(), new Date());
+  return Math.round(totalSessions / totalDays);
 }
 
 export async function generateMetadata(
