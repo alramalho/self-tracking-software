@@ -3,6 +3,8 @@ from datetime import datetime, UTC
 from pydantic import field_validator
 from typing import Optional, List
 from bson import ObjectId
+from datetime import timedelta
+
 
 class Activity(BaseModel):
     id: str
@@ -10,15 +12,17 @@ class Activity(BaseModel):
     invitee_ids: List[str] = []
     title: str
     title_embedding: Optional[List[float]] = None
-    measure: str = Field(description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')")
+    measure: str = Field(
+        description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')"
+    )
     emoji: str
     created_at: str
 
-    @field_validator('title')
+    @field_validator("title")
     def title_must_be_lowercase(cls, v):
         return v.lower()
 
-    @field_validator('measure')
+    @field_validator("measure")
     def measure_must_be_lowercase(cls, v):
         return v.lower()
 
@@ -32,7 +36,7 @@ class Activity(BaseModel):
         title: str,
         measure: str,
         emoji: str,
-        id: Optional[str] = None
+        id: Optional[str] = None,
     ) -> "Activity":
         return cls(
             id=id or str(ObjectId()),
@@ -43,12 +47,23 @@ class Activity(BaseModel):
             created_at=datetime.now(UTC).isoformat(),
         )
 
+
 class ImageInfo(BaseModel):
     s3_path: Optional[str] = None
     url: Optional[str] = None
     expires_at: Optional[str] = None
     created_at: Optional[str] = None
     is_public: bool = False
+
+    @classmethod
+    def new(cls, url: str, is_public: bool = False) -> "ImageInfo":
+        return cls(
+            url=url,
+            is_public=is_public,
+            created_at=datetime.now(UTC).isoformat(),
+            expires_at=(datetime.now(UTC) + timedelta(days=7)).isoformat(),
+        )
+
 
 class ActivityEntry(BaseModel):
     id: str
@@ -66,7 +81,8 @@ class ActivityEntry(BaseModel):
         user_id: str,
         quantity: str,
         date: str,
-        id: Optional[str] = None
+        id: Optional[str] = None,
+        image: Optional[ImageInfo] = None,
     ) -> "ActivityEntry":
         return cls(
             id=id or str(ObjectId()),
@@ -75,7 +91,9 @@ class ActivityEntry(BaseModel):
             quantity=quantity,
             date=date,
             created_at=datetime.now(UTC).isoformat(),
+            image=image,
         )
+
 
 SAMPLE_SEARCH_ACTIVITY = Activity.new(
     user_id="666666666666666666666666",

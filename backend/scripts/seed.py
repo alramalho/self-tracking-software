@@ -4,7 +4,7 @@ import datetime
 from datetime import timedelta
 
 from entities.user import User
-from entities.activity import Activity, ActivityEntry
+from entities.activity import Activity, ActivityEntry, ImageInfo
 from entities.plan import Plan, PlanSession
 from entities.plan_invitation import PlanInvitation
 from entities.friend_request import FriendRequest
@@ -51,7 +51,7 @@ def generate_dummy_data():
     users = [
         User.new(id=str(ObjectId("666666666666666666666665")), name="Alex", email="alexandre.ramalho.1998@gmail.com", clerk_id="user_2kUW1zytLj9ERvDqVDDFCvIp5Un", picture="https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c", username="alex"),
         User.new(id=str(ObjectId("666666666666666666666666")), name="Alice", email="alice@example.com", username="alice"),
-        User.new(id=str(ObjectId("666666666666666666666667")), name="Bob Ramalho", email="bob@example.com", username="bob", clerk_id="user_2lFLPuOKZXzSeGqQnH97Pz5kaAW"),
+        User.new(id=str(ObjectId("666666666666666666666667")), name="Bob Ramalho", email="tyvmgldzsifhjcpuwn@hthlm.com", username="bob", clerk_id="user_2oUKXciL3h0y3QFcNOqHM9GTwUp"),
         User.new(id=str(ObjectId("666666666666666666666668")), name="Charlie", email="charlie@example.com", username="charlie"),
         User.new(id=str(ObjectId("666666666666666666666669")), name="Tomas", email="tomas@example.com", username="tomas", picture="https://example.com/tomas.jpg")
     ]
@@ -80,7 +80,7 @@ def generate_dummy_data():
     activity_entries = [
         ActivityEntry.new(id=str(ObjectId("666666666666666666666672")), activity_id=activities[0].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id),
         ActivityEntry.new(id=str(ObjectId("666666666666666666666673")), activity_id=activities[1].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666674")), activity_id=activities[2].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[2].id),
+        ActivityEntry.new(id=str(ObjectId("666666666666666666666674")), activity_id=activities[2].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[2].id, image=ImageInfo.new(url="https://media.istockphoto.com/id/578104104/vector/step-to-instruction-in-push-up.jpg?s=612x612&w=0&k=20&c=AYSyhYJB-98AZL2Euig4fygTjdxliyE8TWHGfXNO6go=")),
         ActivityEntry.new(id=str(ObjectId("666666666666666666666675")), activity_id=activities[3].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[3].id),
         ActivityEntry.new(id=str(ObjectId("666666666666666666666676")), activity_id=activities[4].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id),
         ActivityEntry.new(id=str(ObjectId("666666666666666666666677")), activity_id=activities[5].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),

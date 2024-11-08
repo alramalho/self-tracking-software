@@ -202,6 +202,10 @@ class UsersGateway:
     def get_friend_count(self, user_id: str) -> int:
         user = self.get_user_by_id(user_id)
         return len(user.friend_ids)
+    
+    def are_friends(self, user_id: str, friend_id: str) -> bool:
+        user = self.get_user_by_id(user_id)
+        return friend_id in user.friend_ids
 
 
 if __name__ == "__main__":

@@ -109,6 +109,12 @@ async def load_users_data(
                     if activity_id in activity_map
                 ]
 
+            if current_user.id != user.id and not users_gateway.are_friends(current_user.id, user.id):
+                logger.info(f"Removing photos from activity entries for {user.id} because {current_user.id} is not friends with them")
+                # remove photos from activity entries
+                for entry in entries:
+                    entry.pop("image", None)
+
             results[username] = {
                 "user": user,
                 "activities": activities,
@@ -121,7 +127,7 @@ async def load_users_data(
             if current_user.id == user.id:
                 results[username]["sent_friend_requests"] = sent_friend_requests
                 results[username]["received_friend_requests"] = received_friend_requests
-
+ 
         return results
     except Exception as e:
         logger.error(f"Failed to load multiple users data: {e}")
