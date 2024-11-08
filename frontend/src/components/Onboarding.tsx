@@ -75,10 +75,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
           setStep(2);
         }
       }
-      if (userData?.plans && userData.plans.length > 0) {
-        setSelectedPlan(userData.plans[0]);
-        setStep(7);
-      }
 
     } catch (error) {
       console.error("Error loading user data:", error);
