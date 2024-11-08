@@ -117,7 +117,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
       });
 
       setGeneratedPlans(response.data.plans);
-      setStep(6);
     } catch (error) {
       console.error("Error generating plan:", error);
       toast.error("Failed to generate plan. Please try again.");
@@ -138,7 +137,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         const createdActivities = response.data.activities;
         setSelectedPlan(createdPlan);
         userDataQuery.refetch();
-        setStep(7); // Move to the invitation step
+        setStep(7); // Move directly to the invitation step
       }
     } catch (error) {
       console.error("Plan creation error:", error);
@@ -298,9 +297,9 @@ const Onboarding: React.FC<OnboardingProps> = ({
         );
       case 5:
         return (
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-2xl">
             <CardHeader>
-              <CardTitle>Additional Plan Description (Optional)</CardTitle>
+              <CardTitle>Plan Description & Generation</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -319,66 +318,44 @@ const Onboarding: React.FC<OnboardingProps> = ({
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Generating Plans...
                   </>
-                ) : generatedPlans.length > 0 ? (
-                  "Regenerate Plans"
                 ) : (
-                  "Generate Plans"
+                  <>
+                    {generatedPlans.length > 0 ? "Regenerate" : "Generate"} Plans
+                  </>
                 )}
               </Button>
+
               {generatedPlans.length > 0 && (
-                <Button
-                  className="w-full mt-4"
-                  onClick={() => setStep(6)}
-                  variant="outline"
-                >
-                  <ChevronRight className="mr-2 h-4 w-4" />
-                  See plans again
-                </Button>
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold mb-4">Generated Plans</h3>
+                  {generatedPlans.map((plan) => (
+                    <div key={plan.id} className="mb-6 border p-4 rounded-md">
+                      <GeneratedPlanRenderer
+                        title={`${name} - ${plan.intensity} intensity`}
+                        plan={plan}
+                      />
+                      <Button
+                        className="w-full mt-4"
+                        onClick={() => {
+                          setSelectedPlanLoading(true);
+                          handlePlanSelection(plan);
+                        }}
+                      >
+                        {selectedPlanLoading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckIcon className="mr-2 h-4 w-4" />
+                        )}
+                        Select and Create Plan
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
         );
       case 6:
-        return (
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <CardTitle>Review Your Plan</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {generatedPlans.map((plan) => (
-                <div key={plan.id} className="mb-6 border p-4 rounded-md">
-                  <GeneratedPlanRenderer
-                    title={`${name} - ${plan.intensity} intensity`}
-                    plan={plan}
-                  />
-                  <Button
-                    className="w-full mt-4"
-                    onClick={() => {
-                      setSelectedPlanLoading(true);
-                      handlePlanSelection(plan);
-                    }}
-                  >
-                    {selectedPlanLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckIcon className="mr-2 h-4 w-4" />
-                    )}
-                    Select and Create Plan
-                  </Button>
-                </div>
-              ))}
-              <Button
-                className="w-full mt-4"
-                onClick={() => setStep(5)}
-                variant="outline"
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Edit Plan Description
-              </Button>
-            </CardContent>
-          </Card>
-        );
-      case 7:
         return (
           <Card className="w-full max-w-md">
             <CardHeader>
@@ -397,7 +374,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
               <Button
                 variant="outline"
                 className="w-full mt-4"
-                onClick={() => setStep(8)}
+                onClick={() => setStep(7)}
               >
                 <ChevronRight className="mr-2 h-4 w-4" />
                 Skip
@@ -405,7 +382,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
             </CardContent>
           </Card>
         );
-      case 8:
+      case 7:
         if (isPushGranted) {
           onComplete();
           return <></>;
