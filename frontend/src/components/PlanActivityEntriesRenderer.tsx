@@ -127,7 +127,7 @@ const PlanActivityEntriesRenderer: React.FC<
   };
 
   return (
-    <>
+    <div className="px-4">
       <BaseHeatmapRenderer
         activities={planActivities}
         startDate={beginingOfWeekOfFirstActivityEntry}
@@ -137,7 +137,7 @@ const PlanActivityEntriesRenderer: React.FC<
         getIntensityForDate={getIntensityForDate}
       />
       <div className="flex justify-center mt-4">{renderActivityViewer()}</div>
-    </>
+    </div>
   );
 };
 
