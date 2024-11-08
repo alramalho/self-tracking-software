@@ -240,7 +240,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
                 placeholder="I want to gain the habit to go to the gym 3 times a week on Mondays, Wednesdays and Tuesdays"
-                className="mb-4"
+                className="mb-4 text-[16px]"
               />
               <Button
                 className="w-full"
@@ -268,8 +268,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 value={selectedEmoji}
                 onChange={(e) => setSelectedEmoji(e.target.value)}
                 placeholder="Enter an emoji"
-                className="mb-4"
-                maxLength={2}
+                className="mb-4 text-[16px]"
+                maxLength={5}
               />
               <Button className="w-full" onClick={() => setStep(4)}>
                 Next
@@ -306,7 +306,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
                 value={planDescription}
                 onChange={(e) => setPlanDescription(e.target.value)}
                 placeholder="I want my plan to include just one 'gym' activity measured in sessions and one 'running' activity measured in kilometers"
-                className="mb-4"
+                className="mb-4 text-[16px"
               />
               <Button
                 className="w-full"
