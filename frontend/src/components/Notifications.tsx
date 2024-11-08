@@ -3,7 +3,7 @@ import { useUserPlan, Notification } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
-import { Check, X, MessageSquare } from "lucide-react";
+import { Check, X, MessageSquare, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 
@@ -21,6 +21,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
     action: string
   ) => {
     const concludeNotification = async () => {
+      await api.post(`/conclude-notification/${notification.id}`);
       userDataQuery.refetch();
     };
 
@@ -36,14 +37,8 @@ const Notifications: React.FC<NotificationsProps> = () => {
         }
         await concludeNotification();
       } else if (notification.type === "plan_invitation") {
-        if (action === "accept") {
-          const invitationId = notification.related_id;
-          router.push(`/join-plan/${invitationId}`);
-        } else if (action === "reject") {
-          await api.post(`/reject-plan-invitation/${notification.related_id}`);
-        }
-        await concludeNotification();
-      } else {
+        router.push(`/join-plan/${notification.related_id}`);
+      } else if (notification.type === "friend_request") {
         await api.post(
           `/${action}-${notification.type.replace("_", "-")}/${
             notification.related_id
@@ -72,7 +67,6 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
     switch (notification.type) {
       case "friend_request":
-      case "plan_invitation":
         return (
           <>
             <button
@@ -90,6 +84,16 @@ const Notifications: React.FC<NotificationsProps> = () => {
               <X size={iconSize} />
             </button>
           </>
+        );
+      case "plan_invitation":
+        return (
+          <button
+            onClick={() => handleNotificationAction(notification, "view")}
+            className={`${buttonClasses} bg-blue-100 text-blue-600 hover:bg-blue-200`}
+            aria-label="View"
+          >
+            <Eye size={iconSize} />
+          </button>
         );
       case "engagement":
         return (

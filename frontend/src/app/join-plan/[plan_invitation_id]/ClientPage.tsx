@@ -16,7 +16,7 @@ import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import { ActivityCard } from "@/components/ActivityCard";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import PlanCard from "@/components/PlanCard"
+import PlanCard from "@/components/PlanCard";
 import { Badge } from "@/components/ui/badge";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { useSession } from "@clerk/clerk-react";
@@ -33,7 +33,11 @@ interface PlanInvitationData {
   invitation: any;
 }
 
-export default function ClientPage({ params }: { params: { plan_invitation_id: string } }) {
+export default function ClientPage({
+  params,
+}: {
+  params: { plan_invitation_id: string };
+}) {
   const router = useRouter();
   const api = useApiWithAuth();
   const { useUserDataQuery } = useUserPlan();
@@ -256,13 +260,31 @@ export default function ClientPage({ params }: { params: { plan_invitation_id: s
             <p>No activities to associate</p>
           )}
         </div>
-        <div className="mt-8 w-full">
+        <div className="mt-8 w-full flex gap-4">
+          <Button
+            onClick={async () => {
+              try {
+                await api.post(
+                  `/reject-plan-invitation/${params.plan_invitation_id}`
+                );
+                toast.success("Plan invitation rejected");
+                router.push("/dashboard");
+              } catch (error) {
+                console.error("Error rejecting plan invitation:", error);
+                toast.error("Failed to reject plan invitation");
+              }
+            }}
+            variant="destructive"
+            className="flex-1"
+          >
+            Reject Invitation
+          </Button>
           <Button
             onClick={handleAcceptInvitation}
-            className="w-full bg-black text-white"
+            className="flex-1 bg-black text-white"
             disabled={
               Object.keys(activityAssociations).length !==
-                planData?.plan_activities.length
+              planData?.plan_activities.length
             }
           >
             {isAcceptingInvitation ? (

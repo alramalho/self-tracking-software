@@ -26,7 +26,7 @@ class Plan(BaseModel):
         return cls(
             id=id or str(ObjectId()),
             user_id=user_id,
-            plan_group_id=plan_group_id,
+            plan_group_id=plan_group_id or str(ObjectId()),
             goal=goal,
             emoji=emoji, 
             finishing_date=finishing_date,

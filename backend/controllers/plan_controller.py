@@ -350,16 +350,15 @@ class PlanController:
 
        # skip if user already has a plan with the same group
         all_plans = self.get_all_user_plans(recipient)
+        invitation_plan = self.get_plan(invitation.plan_id)
         for plan in all_plans:
-            if plan.plan_group_id == invitation.plan_group_id:
+            if plan.plan_group_id == invitation_plan.plan_group_id:
                 logger.info(f"User already has a plan with the same group: {plan.id}")
                 return plan
             
-        plan = self.get_plan(invitation.plan_id)
-
         # Update sessions with associated activities
         new_sessions = []
-        for session in plan.sessions:
+        for session in invitation_plan.sessions:
             if session.activity_id in activity_associations:
                 new_session = deepcopy(session)
                 new_session.activity_id = activity_associations[session.activity_id]
@@ -371,10 +370,10 @@ class PlanController:
         recipients_plan = Plan(
             id=str(ObjectId()),
             user_id=recipient.id,
-            plan_group_id=plan.plan_group_id,
-            goal=plan.goal,
-            emoji=plan.emoji,
-            finishing_date=plan.finishing_date,
+            plan_group_id=invitation_plan.plan_group_id,
+            goal=invitation_plan.goal,
+            emoji=invitation_plan.emoji,
+            finishing_date=invitation_plan.finishing_date,
             sessions=new_sessions,
             created_at=datetime.now(UTC).isoformat(),
         )
@@ -390,7 +389,7 @@ class PlanController:
         self.plan_invitation_gateway.upsert_plan_invitation(invitation)
 
         # update plan group members
-        plan_group = self.plan_groups_gateway.get(plan.plan_group_id)
+        plan_group = self.plan_groups_gateway.get(invitation_plan.plan_group_id)
         self.plan_groups_gateway.add_member(
             plan_group,
             PlanGroupMember(
