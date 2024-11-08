@@ -1,7 +1,7 @@
 import React from "react";
 import { format } from "date-fns";
-import { GeneratedPlan } from "@/contexts/UserPlanContext";
-import PlanHeatmapRenderer from "./PlanHeatmapRenderer";
+import { GeneratedPlan, convertGeneratedPlanToPlan } from "@/contexts/UserPlanContext";
+import PlanSessionsRenderer from "./PlanSessionsRenderer";
 
 interface GeneratedPlanRendererProps {
   plan: GeneratedPlan;
@@ -25,7 +25,7 @@ const GeneratedPlanRenderer: React.FC<GeneratedPlanRendererProps> = ({ plan, tit
           <h3 className="text-lg font-semibold mb-2">Plan Overview:</h3>
           <p className="text-sm text-gray-600">{plan.overview}</p>
         </div>
-        <PlanHeatmapRenderer plan={plan} activities={plan.activities} />
+        <PlanSessionsRenderer plan={convertGeneratedPlanToPlan(plan)} activities={plan.activities} />
       </div>
     </>
   );

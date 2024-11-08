@@ -46,13 +46,12 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
     const minQuantity = Math.min(...quantities);
     const maxQuantity = Math.max(...quantities);
     const intensityLevels = 5;
-    const intensityStep = (maxQuantity - minQuantity) / intensityLevels;
+    const intensityStep = (Math.max(maxQuantity-minQuantity, 1) / intensityLevels);
 
     const intensity = Math.min(
       Math.floor((session.quantity - minQuantity) / intensityStep),
       intensityLevels - 1
     );
-
     return { activityIndex, intensity };
   };
   const renderActivityViewer = () => {

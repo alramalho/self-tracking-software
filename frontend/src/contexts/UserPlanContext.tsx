@@ -88,8 +88,9 @@ export interface Plan {
   }[];
 }
 
-export interface GeneratedPlan extends Omit<Plan, "members">{
+export interface GeneratedPlan extends Omit<Plan, "finishing_date" | "members">{
   overview: string;
+  finishing_date?: string;
   activities: { id: string; emoji: string; title: string; measure: string }[];
   intensity: string;
 }
@@ -152,6 +153,13 @@ interface UserPlanContextType {
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
+
+export function convertGeneratedPlanToPlan(plan: GeneratedPlan): Plan {
+  return {
+    ...plan,
+    finishing_date: plan.finishing_date ? parseISO(plan.finishing_date) : undefined,
+  } as Plan;
+}
 
 export function convertGeneratedPlanToApiPlan(plan: GeneratedPlan): ApiPlan {
   return {
