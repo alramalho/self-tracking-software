@@ -1,8 +1,8 @@
 {
   "id": "2",
-  "name": "Self Tracking Software",
-  "short_name": "app.tracking.so",
-  "description": "Your app for AI powered self tracking & improvement.",
+  "name": "Tracking Software",
+  "short_name": "Tracking Software",
+  "description": "Know yourself better.",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
