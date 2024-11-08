@@ -24,10 +24,9 @@ export async function GET(request: NextRequest) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg, #F5F5F5 0%, #E5E5E5 100%)",
+            background: "linear-gradient(180deg, #FFFFFF 0%, #CACACA 100%)",
             fontFamily: 'system-ui',
             fontWeight: 400,
-            borderRadius: "16px",
           }}
         >
           <div
@@ -78,6 +77,7 @@ export async function GET(request: NextRequest) {
                   lineHeight: "1.1",
                   margin: "0px 0px 16px 0px",
                   fontFamily: '"Inter"',
+                  minWidth: "700px",
                 }}
               >
                 {planName ? planName.slice(0, 25) + (planName.length > 25 ? "..." : "") : ""}
