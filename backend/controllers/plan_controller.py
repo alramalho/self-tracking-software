@@ -351,10 +351,10 @@ class PlanController:
        # skip if user already has a plan with the same group
         all_plans = self.get_all_user_plans(recipient)
         inviters_plan = self.get_plan(invitation.plan_id)
-        # for plan in all_plans:
-        #     if plan.plan_group_id == invitation_plan.plan_group_id and plan.id != invitation_plan.id:
-        #         logger.info(f"User already has a plan with the same group: {plan.id}")
-        #         raise ValueError("User already has a plan with the same group")
+        for plan in all_plans:
+            if plan.plan_group_id == inviters_plan.plan_group_id and plan.id != inviters_plan.id:
+                logger.info(f"User already has a plan with the same group: {plan.id}")
+                raise ValueError("User already has a plan with the same group")
             
         # Update sessions with associated activities
         new_sessions = []
