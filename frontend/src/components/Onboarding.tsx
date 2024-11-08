@@ -137,7 +137,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         const createdActivities = response.data.activities;
         setSelectedPlan(createdPlan);
         userDataQuery.refetch();
-        setStep(7); // Move directly to the invitation step
+        setStep(6);
       }
     } catch (error) {
       console.error("Plan creation error:", error);

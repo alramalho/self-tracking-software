@@ -101,7 +101,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   };
 
   return (
-    <>
+    <div className="px-4">
       <BaseHeatmapRenderer
         activities={activities}
         startDate={new Date()}
@@ -111,7 +111,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
         getIntensityForDate={getIntensityForDate}
       />
       <div className="flex justify-center mt-4">{renderActivityViewer()}</div>
-    </>
+    </div>
   );
 };
 

@@ -59,12 +59,11 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         (utcEndDate.getTime() - utcStartDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
       )
     : 52;
-
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix();
     return (
-      <div className="grid grid-cols-2 gap-4 mt-2 ml-2">
-        <div className="flex items-center justify-end gap-2">
+      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 mt-2">
+        <div className="flex items-center gap-2">
           <div
             className="w-4 h-4"
             style={{
@@ -76,12 +75,12 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         <span className="text-sm font-semibold">Today</span>
         {activities.map((activity, index) => (
           <React.Fragment key={index}>
-            <div className="flex flex-row gap-0 items-center justify-end">
+            <div className="flex flex-row gap-0 items-center">
               {colorMatrix[index % colorMatrix.length].map(
                 (color, intensityIndex) => (
                   <div
                     key={intensityIndex}
-                    className="w-4 h-4 mr-1"
+                    className="w-4 h-4"
                     style={{ backgroundColor: color }}
                     title={`Intensity level ${intensityIndex + 1}`}
                   />

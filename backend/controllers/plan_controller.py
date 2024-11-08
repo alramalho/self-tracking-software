@@ -388,7 +388,7 @@ class PlanController:
         invitation.updated_at = datetime.now(UTC).isoformat()
         self.plan_invitation_gateway.upsert_plan_invitation(invitation)
 
-        # update plan group members
+        # update plan group members and plan ids
         plan_group = self.plan_groups_gateway.get(invitation_plan.plan_group_id)
         self.plan_groups_gateway.add_member(
             plan_group,
@@ -399,6 +399,8 @@ class PlanController:
                 picture=recipient.picture,
             ),
         )
+        plan_group.plan_ids.append(recipients_plan.id)
+        self.plan_groups_gateway.upsert_plan_group(plan_group)
 
         # add user as a friend if he was not already
         if invitation.sender_id not in recipient.friend_ids:
