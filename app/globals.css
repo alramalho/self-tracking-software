@@ -1,6 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  touch-action: pan-x pan-y;
+}
  
 @layer base {
   :root {
