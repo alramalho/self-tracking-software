@@ -5,7 +5,7 @@ import UserSearch, { UserSearchResult } from '@/components/UserSearch';
 import { useRouter } from 'next/navigation';
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { Apple, MoreVertical, Search, Share, Share2, Smartphone, X } from 'lucide-react';
+import { Apple, MoreVertical, Plus, PlusSquare, Search, Share, Share2, Smartphone, X } from 'lucide-react';
 import Notifications from '@/components/Notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -78,8 +78,8 @@ const HomePage: React.FC = () => {
             </TabsList>
             <TabsContent value="ios" className="bg-gray-50 p-4 rounded-lg mt-4">
               <ol className="list-decimal list-inside space-y-2 text-gray-600">
-                <li>Tap the Share button <Share className="inline w-4 h-4" /> on top right corner of this page</li>
-                <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
+                <li>Click on the <Share className="inline w-4 h-4" /> button on top right corner of this page</li>
+                <li>Scroll down and click on &quot;Add to Home Screen <PlusSquare className="inline w-4 h-4" /></li>
                 <li>Tap &quot;Add&quot; to confirm</li>
               </ol>
             </TabsContent>
