@@ -28,6 +28,7 @@ import { ActivityEntryCard, Entry } from "@/components/ActivityEntryCard";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { Switch } from "./ui/switch";
+import Link from "next/link";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -56,7 +57,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   // Replace getUserData function with this helper
   const getMemberData = (username: string): UserDataEntry | undefined => {
-    if (username === "me" || username === userData?.user?.username) return userData;
+    if (username === "me" || username === userData?.user?.username)
+      return userData;
     return membersData?.[username];
   };
 
@@ -161,7 +163,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         })
         .filter((p): p is ApiPlan => p !== undefined);
 
-
       // Get all dates from plans and completed entries
       const allDates = [
         ...groupPlans.flatMap((plan) =>
@@ -171,7 +172,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
         ),
       ].sort((a, b) => a.getTime() - b.getTime());
-
 
       if (allDates.length === 0) {
         setLoading(false);
@@ -353,13 +353,15 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 key={member.user_id}
                 className="flex flex-row flex-nowrap gap-2 items-center"
               >
-                <Avatar className="w-12 h-12 text-2xl">
-                  <AvatarImage
-                    src={member.picture || ""}
-                    alt={member.name || member.username}
-                  />
-                  <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
-                </Avatar>
+                <Link href={`/profile/${member.username}`}>
+                  <Avatar className="w-12 h-12 text-2xl">
+                    <AvatarImage
+                      src={member.picture || ""}
+                      alt={member.name || member.username}
+                    />
+                    <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
+                  </Avatar>
+                </Link>
                 <div className="text-lg text-gray-800">
                   {userData?.user?.username === member.username
                     ? "You"
