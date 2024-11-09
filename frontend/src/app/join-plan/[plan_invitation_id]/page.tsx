@@ -28,9 +28,9 @@ export async function generateMetadata(
     });
 
     const title = `Join ${planData.inviter.name}'s on '${planData.plan.goal}' ${planData.plan.emoji}`;
-    const description = `${planData.inviter.name} has invited you to join their plan '${planData.plan.goal}' ${planData.plan.emoji} on self.tracking.so`;
+    const description = `${planData.inviter.name} has invited you to join their plan '${planData.plan.goal}' ${planData.plan.emoji} on tracking.so`;
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://self.tracking.so";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://tracking.so";
     const ogImageUrl = new URL("/api/og", baseUrl);
     ogImageUrl.searchParams.append("planName", planData.plan.goal);
     ogImageUrl.searchParams.append("inviterName", planData.inviter.name);
@@ -45,7 +45,7 @@ export async function generateMetadata(
         title,
         description,
         type: "website",
-        url: `https://self.tracking.so/join-plan/${params.plan_invitation_id}`,
+        url: `https://tracking.so/join-plan/${params.plan_invitation_id}`,
         images: [{
           url: ogImageUrl.toString(),
           width: 1200,
@@ -63,8 +63,8 @@ export async function generateMetadata(
   } catch (error) {
     console.error("Error generating metadata:", error);
     return {
-      title: "Join Plan - self.tracking.so",
-      description: "Join a plan on self.tracking.so",
+      title: "Join Plan - tracking.so",
+      description: "Join a plan on tracking.so",
     };
   }
 }
