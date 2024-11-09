@@ -16,7 +16,7 @@ from services.notification_manager import NotificationManager
 import re
 import concurrent.futures
 import traceback
-import logging
+from constants import POSTHOG_API_KEY, POSTHOG_HOST
 
 router = APIRouter()
 
@@ -26,6 +26,14 @@ moods_gateway = MoodsGateway()
 plan_controller = PlanController()
 notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
+
+from posthog import Posthog
+
+posthog = Posthog(
+    project_api_key=POSTHOG_API_KEY,
+    host=POSTHOG_HOST,
+)
+
 
 
 @router.get("/user-health")
@@ -40,8 +48,7 @@ async def get_user(user: User = Depends(is_clerk_user)):
 
 @router.get("/load-users-data")
 async def load_users_data(
-    usernames: str = Query(...), 
-    current_user: User = Depends(is_clerk_user)
+    usernames: str = Query(...), current_user: User = Depends(is_clerk_user)
 ):
     try:
         results = {}
@@ -71,10 +78,12 @@ async def load_users_data(
                     plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
                 )
                 friend_requests_sent_future = executor.submit(
-                    users_gateway.friend_request_gateway.get_pending_sent_requests, user.id
+                    users_gateway.friend_request_gateway.get_pending_sent_requests,
+                    user.id,
                 )
                 friend_requests_received_future = executor.submit(
-                    users_gateway.friend_request_gateway.get_pending_received_requests, user.id
+                    users_gateway.friend_request_gateway.get_pending_received_requests,
+                    user.id,
                 )
 
                 activities = [
@@ -82,9 +91,12 @@ async def load_users_data(
                     for activity in activities_future.result()
                 ]
                 entries = [entry.dict() for entry in entries_future.result()]
-                mood_reports = [report.dict() for report in mood_reports_future.result()]
+                mood_reports = [
+                    report.dict() for report in mood_reports_future.result()
+                ]
                 plans = [
-                    exclude_embedding_fields(plan.dict()) for plan in plans_future.result()
+                    exclude_embedding_fields(plan.dict())
+                    for plan in plans_future.result()
                 ]
                 plan_groups = [
                     plan_group.dict() for plan_group in plan_groups_future.result()
@@ -93,7 +105,8 @@ async def load_users_data(
                     request.dict() for request in friend_requests_sent_future.result()
                 ]
                 received_friend_requests = [
-                    request.dict() for request in friend_requests_received_future.result()
+                    request.dict()
+                    for request in friend_requests_received_future.result()
                 ]
 
             # Process plans to include activities
@@ -109,8 +122,12 @@ async def load_users_data(
                     if activity_id in activity_map
                 ]
 
-            if current_user.id != user.id and not users_gateway.are_friends(current_user.id, user.id):
-                logger.info(f"Removing photos from activity entries for {user.id} because {current_user.id} is not friends with them")
+            if current_user.id != user.id and not users_gateway.are_friends(
+                current_user.id, user.id
+            ):
+                logger.info(
+                    f"Removing photos from activity entries for {user.id} because {current_user.id} is not friends with them"
+                )
                 # remove photos from activity entries
                 for entry in entries:
                     entry.pop("image", None)
@@ -123,11 +140,28 @@ async def load_users_data(
                 "plans": plans,
                 "plan_groups": plan_groups,
             }
-            
+
             if current_user.id == user.id:
                 results[username]["sent_friend_requests"] = sent_friend_requests
                 results[username]["received_friend_requests"] = received_friend_requests
- 
+
+            if username == "me" or username == current_user.username:
+                try:
+                    posthog.capture(
+                        user.id,
+                        "load-user-data",
+                        {
+                            "$set": {
+                                "plans_count": len(plans),
+                                "plan_groups_count": len(plan_groups),
+                                "activities_count": len(activities),
+                                "activity_entries_count": len(entries),
+                            }
+                        },
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to capture pageview: {e}")
+
         return results
     except Exception as e:
         logger.error(f"Failed to load multiple users data: {e}")
@@ -211,12 +245,15 @@ async def get_user_profile(username: str, current_user: User = Depends(is_clerk_
 
     return user_dict
 
+
 @router.post("/send-friend-request/{recipient_id}")
 async def send_friend_request(
     recipient_id: str, current_user: User = Depends(is_clerk_user)
 ):
     try:
-        friend_request = users_gateway.send_friend_request(current_user.id, recipient_id)
+        friend_request = users_gateway.send_friend_request(
+            current_user.id, recipient_id
+        )
         notification = await notification_manager.create_and_process_notification(
             Notification.new(
                 user_id=recipient_id,
@@ -352,11 +389,11 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
 
 
 def get_recommended_activity_entries(current_user: User):
-    limit=30
+    limit = 30
     activities = plan_controller.get_recommended_activities(current_user, limit=10)
     activities_dicts = [
         exclude_embedding_fields(activity.dict()) for activity in activities
-]
+    ]
 
     users = {}
 
@@ -380,7 +417,9 @@ def get_recommended_activity_entries(current_user: User):
             break
 
     for entry in recommended_activity_entries:
-        entry["is_week_finisher"], entry["plan_finished_name"] = plan_controller.is_week_finisher_of_any_plan(entry["id"])
+        entry["is_week_finisher"], entry["plan_finished_name"] = (
+            plan_controller.is_week_finisher_of_any_plan(entry["id"])
+        )
 
     return {
         "recommended_activity_entries": recommended_activity_entries,
