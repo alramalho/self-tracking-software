@@ -5,6 +5,7 @@ from entities.user import User
 from loguru import logger
 from gateways.database.mongodb import MongoDBGateway
 from entities.friend_request import FriendRequest
+from gateways.plan_groups import PlanGroupsGateway
 from gateways.friend_requests import FriendRequestGateway
 class UserDoesNotExistException(Exception):
     pass
@@ -19,6 +20,7 @@ class UsersGateway:
     def __init__(self):
         self.db_gateway = MongoDBGateway("users")
         self.friend_request_gateway = FriendRequestGateway()
+        self.plan_groups_gateway = PlanGroupsGateway()
 
     def get_all_users(self) -> list[User]:
         return [User(**data) for data in self.db_gateway.scan()]
@@ -77,6 +79,8 @@ class UsersGateway:
 
     def update_fields(self, user_id: str, fields: dict) -> User:
         user = self.get_user_by_id(user_id)
+
+        self._propagate_relevant_fields(user, fields)
         for field_name, new_value in fields.items():
             if not hasattr(user, field_name):
                 raise Exception(f"User does not have field {field_name}")
@@ -86,6 +90,21 @@ class UsersGateway:
         logger.info(f"User {user.id} ({user.name}) fields {fields} updated")
         return user
     
+    def _propagate_relevant_fields(self, user: User, fields: dict):
+        if any(field in fields.keys() for field in ("username", "name", "picture")):
+            new_username = fields.get("username", None)
+            new_name = fields.get("name", None)
+            new_picture = fields.get("picture", None)
+            plan_groups = self.plan_groups_gateway.get_all_plan_groups_by_user_id(user.id)
+            for plan_group in plan_groups:
+                for member in plan_group.members:
+                    if member.user_id == user.id:
+                        member.username = new_username or member.username
+                        member.name = new_name or member.name
+                        member.picture = new_picture or member.picture
+                        
+                self.plan_groups_gateway.upsert_plan_group(plan_group)
+
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)
         user.deleted = True

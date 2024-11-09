@@ -28,9 +28,11 @@ router = APIRouter(prefix="/clerk", dependencies=[Depends(is_svix_verified)])  #
 @router.post("/webhook")
 async def user_event_webhook(request: Request):
     try:
-        logger.info("Received clerk webhook")
         payload = await request.json()
         event_type = payload.get("type")
+
+        logger.info(f"Received clerk webhook {event_type}")
+        
         data = payload.get("data")
         if not event_type or not data:
             raise HTTPException(status_code=400, detail="Missing event type or data")

@@ -32,6 +32,10 @@ class PlanGroupsGateway:
             return []
         plan_groups_data = self.db_gateway.query("plan_ids", {"$elemMatch": {"$in": plan_group_ids}})
         return [PlanGroup(**plan_group_data) for plan_group_data in plan_groups_data]
+    
+    def get_all_plan_groups_by_user_id(self, user_id: str) -> List[PlanGroup]:
+        plan_groups_data = self.db_gateway.query("members.user_id", user_id)
+        return [PlanGroup(**plan_group_data) for plan_group_data in plan_groups_data]
 
     def delete_plan_group(self, plan_group_id: str):
         self.db_gateway.delete_all("id", plan_group_id)
