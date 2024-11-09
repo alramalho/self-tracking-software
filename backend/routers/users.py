@@ -156,6 +156,7 @@ async def load_users_data(
                                 "plan_groups_count": len(plan_groups),
                                 "activities_count": len(activities),
                                 "activity_entries_count": len(entries),
+                                "friend_count": len(current_user.friend_ids),
                             }
                         },
                     )
