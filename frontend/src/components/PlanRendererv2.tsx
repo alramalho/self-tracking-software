@@ -22,13 +22,14 @@ import {
   convertApiPlanToPlan,
 } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Plus, PencilLine } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ActivityEntryCard, Entry } from "@/components/ActivityEntryCard";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { Switch } from "./ui/switch";
 import Link from "next/link";
+import { Button } from "./ui/button";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -494,7 +495,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       </div>
 
-      <div className="mt-8 border border-gray-200 rounded-lg p-4">
+      <div className="mt-8 border border-gray-200 rounded-lg p-4 mb-8">
         <h2 className="text-2xl font-bold mb-4">Calendar</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
@@ -553,6 +554,16 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           />
         </div>
       </div>
+
+      <Link href="/log" passHref>
+        <Button
+          variant="outline"
+          className="w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+          >
+            <PencilLine className="h-8 w-8 mb-2 text-gray-400" />
+            <span>Log Activity</span>
+          </Button>
+        </Link>
     </div>
   );
 }
