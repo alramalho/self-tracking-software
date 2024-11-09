@@ -44,7 +44,11 @@ async def user_event_webhook(request: Request):
         username = data["username"]
         picture = None
         if data.get("external_accounts"):
-            picture = data.get("external_accounts")[0].get("picture")
+            picture = data.get("profile_image_url")
+            
+            if not picture:
+                picture = data.get("external_accounts")[0].get("picture")
+
             if picture:
                 logger.info(f"Picture found!")
                 picture = picture.strip('"')
