@@ -23,7 +23,10 @@ export default function PostHogPageView() : null {
         '$pageview',
         {
           '$current_url': url,
-          'isAppInstalled': isAppInstalled
+          'isAppInstalled': isAppInstalled,
+          '$set': {
+            'isAppInstalled': isAppInstalled
+          }
         }
       )
     }
