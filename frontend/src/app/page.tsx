@@ -67,7 +67,7 @@ const HomePage: React.FC = () => {
         <Smartphone className="w-16 h-16 mb-6 text-gray-600" />
         <h2 className="text-2xl font-semibold mb-4 text-center">Install the App</h2>
         <p className="text-gray-600 text-center mb-8 max-w-md">
-          <code>self.tracking.so</code> works best when installed as an app on your device. You&apos;ll get a better experience and access to features like notifications.
+          <code>tracking.so</code> works best when installed as an app on your device. You&apos;ll get a better experience and access to features like notifications.
         </p>
         
         <div className="w-full max-w-md">
