@@ -25,7 +25,7 @@ const HomePage: React.FC = () => {
   const [isAppInstallModalOpen, setIsAppInstallModalOpen] = useState(!isAppInstalled);
 
   useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && userData?.plans?.length === 0) {
+    if (isSignedIn && hasLoadedUserData && !isAppInstalled && userData?.plans?.length === 0) {
       router.push("/onboarding");
     }
   }, [userData, isSignedIn, hasLoadedUserData]);
