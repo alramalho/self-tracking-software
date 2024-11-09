@@ -379,6 +379,9 @@ def get_recommended_activity_entries(current_user: User):
         if len(recommended_activity_entries) >= limit:
             break
 
+    for entry in recommended_activity_entries:
+        entry["is_week_finisher"], entry["plan_finished_name"] = plan_controller.is_week_finisher_of_any_plan(entry["id"])
+
     return {
         "recommended_activity_entries": recommended_activity_entries,
         "recommended_activities": activities_dicts,

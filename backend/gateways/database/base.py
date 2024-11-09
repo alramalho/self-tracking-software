@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Any
 
 
 class DBGateway(ABC):
@@ -17,6 +17,10 @@ class DBGateway(ABC):
 
     @abstractmethod
     def query(self, key: str, value: str) -> List:
+        pass
+
+    @abstractmethod
+    def query_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict]:
         pass
 
     @abstractmethod

@@ -4,7 +4,7 @@ from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
 from shared.utils import time_ago
-from typing import List
+from typing import List, Tuple, Optional
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 

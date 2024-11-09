@@ -348,18 +348,22 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const areAllWeeklyActivitiesCompleted = useCallback(() => {
     const currentWeekStart = startOfWeek(new Date());
     const currentWeekEnd = endOfWeek(new Date());
-    
-    const thisWeekSessions = selectedPlan.sessions.filter(session => {
+
+    const thisWeekSessions = selectedPlan.sessions.filter((session) => {
       const sessionDate = parseISO(session.date);
       return sessionDate >= currentWeekStart && sessionDate <= currentWeekEnd;
     });
 
-    return thisWeekSessions.length > 0 && 
-      thisWeekSessions.every(session => isSessionCompleted(session));
+    return (
+      thisWeekSessions.length > 0 &&
+      thisWeekSessions.every((session) => isSessionCompleted(session))
+    );
   }, [selectedPlan.sessions, isSessionCompleted]);
 
   return (
     <div>
+      {areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
+
       {planGroupMembers && planGroupMembers.length > 0 && (
         <div className="border border-gray-200 rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
@@ -469,7 +473,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             activityEntries={activityEntries}
           />
         )}
-        {areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
         <div className="mt-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-800">This week</h2>
@@ -575,11 +578,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <Button
           variant="outline"
           className="w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
-          >
-            <PencilLine className="h-8 w-8 mb-2 text-gray-400" />
-            <span>Log Activity</span>
-          </Button>
-        </Link>
+        >
+          <PencilLine className="h-8 w-8 mb-2 text-gray-400" />
+          <span>Log Activity</span>
+        </Button>
+      </Link>
     </div>
   );
 }

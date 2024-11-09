@@ -132,10 +132,16 @@ export interface UserDataEntry {
   expiresAt: string;
 }
 
+export interface TaggedActivityEntry extends ActivityEntry {
+  is_week_finisher: boolean;
+  plan_finished_name?: string;
+  
+}
+
 export interface TimelineData {
   recommendedUsers?: User[];
   recommendedActivities?: Activity[];
-  recommendedActivityEntries?: ActivityEntry[];
+  recommendedActivityEntries?: TaggedActivityEntry[];
   expiresAt: string;
 }
 

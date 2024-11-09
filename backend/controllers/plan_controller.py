@@ -450,6 +450,52 @@ class PlanController:
         self.plan_invitation_gateway.write(invitation.dict())
 
 
+    def is_week_finisher_of_any_plan(self, activity_entry_id: str) -> Tuple[bool, Optional[str]]:
+        # Get the activity entry
+        activity_entry = self.activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        if not activity_entry:
+            return False, None
+
+        # Get the current week's start and end dates
+        today = datetime.now(UTC)
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+
+        # Get all plans that contain this activity
+        plans = [Plan(**plan) for plan in self.db_gateway.query_by_criteria({'sessions.activity_id': activity_entry.activity_id})]
+        for plan in plans:
+            # Filter sessions for current week and matching activity
+            week_sessions = [
+                session for session in plan.sessions 
+                if (week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end
+                    and session.activity_id == activity_entry.activity_id)
+            ]
+            
+            if not week_sessions:
+                continue
+
+            # Count required sessions for this week
+            required_sessions = len(week_sessions)
+
+            # Get all activity entries for this week
+            week_entries = self.activities_gateway.activity_entries_db_gateway.query_by_criteria({
+                'activity_id': activity_entry.activity_id,
+                'date': {
+                    '$gte': week_start.isoformat(),
+                    '$lte': week_end.isoformat()
+                }
+            })
+            
+            # Sort entries by creation time to check if current entry is the last one
+            sorted_entries = sorted(week_entries, key=lambda x: x['created_at'])
+            
+            # Check if this entry is the last one and completes all required sessions
+            if (len(sorted_entries) == required_sessions and 
+                sorted_entries[-1]['id'] == activity_entry_id):
+                return True, plan.goal
+
+        return False, None
+
 if __name__ == "__main__":
     from shared.logger import create_logger
 

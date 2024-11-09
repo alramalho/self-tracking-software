@@ -141,6 +141,11 @@ class MongoDBGateway(DBGateway):
         logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Key:"{key}" Value:"{value}"')
         result = [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
         return result
+    
+    def query_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict]:
+        logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Criteria:"{criteria}"')
+        result = [self._convert_from_mongo(doc) for doc in self.collection.find(criteria)]
+        return result
 
     def count(self, key: str, value: Any) -> int:
         if key == 'id':
