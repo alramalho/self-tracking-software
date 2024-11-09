@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import axios from "axios";
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
+import { usePostHog } from "posthog-js/react";
 
 export interface Activity {
   id: string;
@@ -203,7 +204,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const router = useRouter();
   const { signOut } = useClerk();
   const api = useApiWithAuth();
-
+  const posthog = usePostHog();
 
   const fetchUserData = async ({username = "me"}: {username?: string} = {}): Promise<UserDataEntry> => {
     if (!isSignedIn) {
@@ -251,6 +252,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           duration: 5000,
         });
         signOut({ redirectUrl: window.location.pathname });
+        posthog.reset()
       } else {
         router.push("/");
         toast.error("Failed to fetch user data. Please try again.");

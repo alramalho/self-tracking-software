@@ -30,6 +30,7 @@ import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import { Input } from "@/components/ui/input";
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
+import { usePostHog } from "posthog-js/react";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -55,8 +56,9 @@ const ProfilePage: React.FC = () => {
   };
   const api = useApiWithAuth();
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
-    string | null
+  string | null
   >(null);
+  const posthog = usePostHog();
 
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -222,6 +224,7 @@ const ProfilePage: React.FC = () => {
                 variant="ghost"
                 onClick={() => {
                   signOut();
+                  posthog.reset()
                 }}
               >
                 <LogOut size={24} className="cursor-pointer" />

@@ -5,6 +5,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { validateEnv } from '@/lib/env';
+import { PHProvider } from "./providers";
+import PostHogPageView from "./PostHogPageView";
 
 const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 
@@ -33,13 +35,17 @@ export default function RootLayout({
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
         />
       </head>
+      <PHProvider>
+
       <body className={inter.className}>
-        <ClerkProvider>
-          <NotificationsProvider>
-            <ClientLayout>{children}</ClientLayout>
-          </NotificationsProvider>
+          <ClerkProvider>
+            <NotificationsProvider>
+              <PostHogPageView />
+              <ClientLayout>{children}</ClientLayout>
+            </NotificationsProvider>
         </ClerkProvider>
-      </body>
+        </body>
+      </PHProvider>
     </html>
   );
 }
