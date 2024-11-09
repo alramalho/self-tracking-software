@@ -17,3 +17,4 @@ aws_cron_expression_validator
 pytz
 aiohttp
 python-multipart
+posthog
