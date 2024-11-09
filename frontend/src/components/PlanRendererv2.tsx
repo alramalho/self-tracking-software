@@ -30,6 +30,7 @@ import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { Switch } from "./ui/switch";
 import Link from "next/link";
 import { Button } from "./ui/button";
+import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -343,6 +344,20 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       : member.username;
   }
 
+  // Add this helper function near other helper functions
+  const areAllWeeklyActivitiesCompleted = useCallback(() => {
+    const currentWeekStart = startOfWeek(new Date());
+    const currentWeekEnd = endOfWeek(new Date());
+    
+    const thisWeekSessions = selectedPlan.sessions.filter(session => {
+      const sessionDate = parseISO(session.date);
+      return sessionDate >= currentWeekStart && sessionDate <= currentWeekEnd;
+    });
+
+    return thisWeekSessions.length > 0 && 
+      thisWeekSessions.every(session => isSessionCompleted(session));
+  }, [selectedPlan.sessions, isSessionCompleted]);
+
   return (
     <div>
       {planGroupMembers && planGroupMembers.length > 0 && (
@@ -454,6 +469,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             activityEntries={activityEntries}
           />
         )}
+        {areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
         <div className="mt-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-800">This week</h2>
