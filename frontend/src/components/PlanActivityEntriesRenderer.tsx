@@ -74,7 +74,7 @@ const PlanActivityEntriesRenderer: React.FC<
     const minQuantity = Math.min(...quantities);
     const maxQuantity = Math.max(...quantities);
     const intensityLevels = 5;
-    const intensityStep = (maxQuantity - minQuantity) / intensityLevels;
+    const intensityStep = (Math.max(maxQuantity - minQuantity, 1) / intensityLevels);
 
     const intensity = Math.min(
       Math.floor((entry.quantity - minQuantity) / intensityStep),
