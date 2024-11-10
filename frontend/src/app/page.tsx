@@ -103,8 +103,7 @@ const HomePage: React.FC = () => {
             <TabsContent value="ios" className="bg-gray-50 p-4 rounded-lg mt-4">
               <ol className="list-decimal list-inside space-y-2 text-gray-600">
                 <li>
-                  Click on the <Share className="inline w-5 h-5" /> button on
-                  top right corner of this page
+                  Click on the <Share className="inline w-5 h-5" /> button
                 </li>
                 <li>
                   Scroll down and click on &quot;Add to Home Screen{" "}
