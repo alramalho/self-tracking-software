@@ -78,7 +78,7 @@ const FloatingActionMenu = () => {
 
   return (
     <>
-      <div className="fixed bottom-20 right-4 z-50">
+      <div className="fixed bottom-20 right-4 z-[20]">
         <div
           className={`flex flex-col-reverse gap-3 items-end transition-all duration-200 mb-3
             ${

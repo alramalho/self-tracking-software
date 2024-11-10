@@ -174,10 +174,10 @@ const LogPage: React.FC = () => {
         )}
       </div>
       <div className="mt-8">
-        <div className="fixed bottom-0 left-0 right-0 p-4 pb-20 bg-white border-t">
+        <div className="fixed bottom-0 left-0 right-0 p-4 pb-20 bg-white border-t z-[30]">
           <Button
             onClick={handleLogActivity}
-            className="w-full bg-black text-white"
+            className="w-full bg-black text-white h-10"
             disabled={!selectedActivity || !selectedDate || quantity === 0}
           >
             Log Activity
