@@ -39,14 +39,6 @@ const HomePage: React.FC = () => {
   const posthog = usePostHog();
 
   useEffect(() => {
-    if (isSignedIn && userData?.user) {
-      console.log("identified user in posthog ", userData?.user.id);
-      posthog.identify(userData?.user.id, {
-        email: userData?.user.email,
-        name: userData?.user.name,
-        username: userData?.user.username,
-      });
-    }
     if (
       isSignedIn &&
       hasLoadedUserData &&

@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import PosthogInitializer from "@/components/PosthogInitializer";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ export default function ClientLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
+        <PosthogInitializer />
         <main className="pb-16">{children}</main>
         <Toaster
           position="bottom-center"
