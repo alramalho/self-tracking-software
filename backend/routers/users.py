@@ -17,9 +17,8 @@ import re
 import concurrent.futures
 import requests
 import traceback
-from constants import POSTHOG_API_KEY, POSTHOG_HOST
 from gateways.aws.ses import SESGateway, get_email_template_string
-
+from analytics.posthog import posthog
 router = APIRouter()
 
 users_gateway = UsersGateway()
@@ -29,13 +28,6 @@ plan_controller = PlanController()
 notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
 ses_gateway = SESGateway()
-
-from posthog import Posthog
-
-posthog = Posthog(
-    project_api_key=POSTHOG_API_KEY,
-    host=POSTHOG_HOST,
-)
 
 
 

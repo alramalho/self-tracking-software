@@ -40,7 +40,7 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     if (isSignedIn && userData?.user) {
-      console.log("identified user in poosthog ", userData?.user.id);
+      console.log("identified user in posthog ", userData?.user.id);
       posthog.identify(userData?.user.id, {
         email: userData?.user.email,
         name: userData?.user.name,

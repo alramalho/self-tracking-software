@@ -17,7 +17,7 @@ from routers.plans import router as plans_router
 from routers.notifications import router as notifications_router
 from routers.ai import router as ai_router
 from starlette.middleware.base import BaseHTTPMiddleware
-from constants import POSTHOG_API_KEY, POSTHOG_HOST
+from analytics.posthog import posthog
 from fastapi.responses import Response
 from auth.clerk import get_token_from_request, validate_token
 from gateways.users import UsersGateway
@@ -25,13 +25,6 @@ from entities.user import User
 from typing import Optional
 app = FastAPI()
 
-
-from posthog import Posthog
-
-posthog = Posthog(
-    project_api_key=POSTHOG_API_KEY,
-    host=POSTHOG_HOST,
-)
 
 
 async def get_user_from_request(request: Request) -> Optional[User]:

@@ -22,6 +22,7 @@ from loguru import logger
 from typing import Dict
 import time
 from urllib.parse import urlparse
+from analytics.posthog import posthog
 
 
 class NotificationManager:
@@ -261,6 +262,12 @@ class NotificationManager:
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=self._get_vapid_claims(subscription_info["endpoint"]),
             )
+
+            posthog.capture(
+                distinct_id=user_id,
+                event="push-notification-sent",
+                properties={"title": title, "body": body, "url": url, "icon": icon},
+            )
             logger.info(f"WebPush response: {response.text}")
             return {"message": "Push notification sent successfully"}
         except WebPushException as ex:
@@ -296,7 +303,7 @@ if __name__ == "__main__":
     notification_manager = NotificationManager()
 
     for user in UsersGateway().get_all_users():
-        if user.username == "alex":
+        if user.is_pwa_notifications_enabled:
             notification = asyncio.run(
                 notification_manager.create_and_process_notification(
                     Notification.new(
@@ -307,5 +314,5 @@ if __name__ == "__main__":
                         recurrence="daily",
                         time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
                     )
-                )
+                )   
             )
