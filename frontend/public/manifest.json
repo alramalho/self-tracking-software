@@ -31,5 +31,5 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "permissions": ["notifications", "periodicSync", "clipboardRead", "clipboardWrite"]
+  "permissions": ["notifications", "periodicSync"]
 }
