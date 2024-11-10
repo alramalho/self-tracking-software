@@ -57,19 +57,7 @@ const HomePage: React.FC = () => {
   }, [userData, isSignedIn, hasLoadedUserData]);
 
   if (!isSignedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
-        <h1 className="text-3xl font-light text-gray-800 mb-6">
-          welcome to tracking.so
-        </h1>
-        <Link
-          href="/signin"
-          className="bg-black text-white font-normal py-2 px-6 rounded hover:bg-gray-800 transition-colors duration-200"
-        >
-          Sign in
-        </Link>
-      </div>
-    );
+    router.push("/signin");
   }
 
   if (!userData) {
