@@ -8,7 +8,11 @@ from typing import List, Optional, Literal
 import pytz
 from bson.objectid import ObjectId
 import random
-from constants import VAPID_PRIVATE_KEY, CHRON_PROXY_LAMBDA_TARGET_ARN, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+from constants import (
+    VAPID_PRIVATE_KEY,
+    CHRON_PROXY_LAMBDA_TARGET_ARN,
+    SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
+)
 from gateways.users import UsersGateway
 from entities.user import User
 from pywebpush import webpush, WebPushException
@@ -19,6 +23,7 @@ from typing import Dict
 import time
 from urllib.parse import urlparse
 
+
 class NotificationManager:
     def __init__(self):
         self.db_gateway = MongoDBGateway("notifications")
@@ -26,25 +31,45 @@ class NotificationManager:
         self.cron_gateway = EventBridgeCronGateway()
         self.prompt_controller = PromptController()
 
-    def create_or_get_notification(
-        self,
-        notification: Notification
-    ) -> Notification:
-        
+    def delete_notification(self, notification_id: str):
+        notification = self.get_notification(notification_id)
+        if notification:
+            if notification.aws_cronjob_id:
+                self.cron_gateway.delete(notification.aws_cronjob_id)
+            self.db_gateway.delete_all("id", notification_id)
+        else:
+            logger.error(f"Notification {notification_id} not found")
+            raise Exception(f"Notification {notification_id} not found")
+
+    def create_or_get_notification(self, notification: Notification) -> Notification:
+
         existing_notifications = self.get_all_for_user(notification.user_id)
-        
+
         # Get the date of the new notification
         notification_date = notification.created_at.date()
-        
-        # Check for duplicates on same date with same message
+
         for existing in existing_notifications:
-            if (existing.created_at.date() == notification_date and 
-                existing.message == notification.message):
-                logger.info(f"Duplicate notification found for user {notification.user_id} with message: {notification.message}")
-                return existing
+            # avoid double creation
+            same_date_and_message = (
+                existing.created_at.date() == notification_date
+                and existing.message == notification.message
+            )
+            same_scheduled_type = (
+                notification.prompt_tag == existing.prompt_tag
+                and notification.type == existing.type
+                and notification.recurrence == existing.recurrence
+                and notification.recurrence is not None
+            )
+            if same_date_and_message or same_scheduled_type:
+                logger.info(
+                    f"Duplicate notification found for user {notification.user_id} with message: {notification.message}. Deleting and recreating."
+                )
+                self.delete_notification(existing.id)
 
         if notification.recurrence:
-            cron_str = self._generate_cron_string(notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS)
+            cron_str = self._generate_cron_string(
+                notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+            )
             notification.scheduled_for = self._get_next_occurrence(cron_str)
             aws_cronjob_id = self.cron_gateway.create(
                 cron_str,
@@ -57,17 +82,20 @@ class NotificationManager:
             notification.aws_cronjob_id = aws_cronjob_id
 
         self.db_gateway.write(notification.dict())
-        return notification 
+        return notification
 
-
-    async def process_notification(self, notification_id: str) -> Optional[Notification]:
+    async def process_notification(
+        self, notification_id: str
+    ) -> Optional[Notification]:
 
         notification = self.get_notification(notification_id)
         if not notification or notification.status != "pending":
             return None
 
         if notification.type == "engagement":
-            prompt = self.prompt_controller.get_prompt(notification.user_id, notification.prompt_tag)
+            prompt = self.prompt_controller.get_prompt(
+                notification.user_id, notification.prompt_tag
+            )
             message = ask_text(prompt, "").strip('"')
             notification.message = message
 
@@ -80,11 +108,15 @@ class NotificationManager:
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
         if user.pwa_subscription_endpoint:
-            await self.send_push_notification(user.id, title=f"hey {user.name} 👋", body=notification.message.lower())
+            await self.send_push_notification(
+                user.id, title=f"hey {user.name} 👋", body=notification.message.lower()
+            )
 
         return notification
-    
-    async def create_and_process_notification(self, notification: Notification) -> Optional[Notification]:
+
+    async def create_and_process_notification(
+        self, notification: Notification
+    ) -> Optional[Notification]:
         notification = self.create_or_get_notification(notification)
         return await self.process_notification(notification.id)
 
@@ -93,7 +125,9 @@ class NotificationManager:
         if notification and notification.status == "processed":
             notification.opened_at = datetime.now()
             notification.status = "opened"
-            logger.info(f"Notification '{notification_id}' switched from {notification.status} to opened")
+            logger.info(
+                f"Notification '{notification_id}' switched from {notification.status} to opened"
+            )
             self._update_notification(notification)
             return notification
         return None
@@ -107,7 +141,9 @@ class NotificationManager:
             notification.concluded_at = datetime.now()
             notification.status = "concluded"
             self._update_notification(notification)
-            logger.info(f"Notification '{notification_id}' switched from {notification.status} to concluded")
+            logger.info(
+                f"Notification '{notification_id}' switched from {notification.status} to concluded"
+            )
             return notification
         return None
 
@@ -116,18 +152,28 @@ class NotificationManager:
         return Notification(**data[0]) if data else None
 
     def get_all_for_user(self, user_id: str) -> List[Notification]:
-        return [Notification(**item) for item in self.db_gateway.query("user_id", user_id) if item["status"] != "concluded"]
-    
-    def get_last_notifications_sent_to_user(self, user_id: str, limit: int = 10) -> List[Notification]:
-        notifications = self.get_all_for_user(user_id)
-        ordered_notifications = sorted(notifications, key=lambda x: x.processed_at, reverse=True)
+        return [
+            Notification(**item)
+            for item in self.db_gateway.query("user_id", user_id)
+            if item["status"] != "concluded"
+        ]
+
+    def get_last_notifications_sent_to_user(
+        self, user_id: str, limit: int = 10
+    ) -> List[Notification]:
+        notifications = [n for n in self.get_all_for_user(user_id) if n.processed_at]
+        ordered_notifications = sorted(
+            notifications, key=lambda x: x.processed_at, reverse=True
+        )
         return ordered_notifications[:limit]
 
     def _update_notification(self, notification: Notification):
         self.db_gateway.write(notification.dict())
 
     def _reschedule_notification(self, notification: Notification):
-        new_cron_str = self._generate_cron_string(notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS)
+        new_cron_str = self._generate_cron_string(
+            notification.recurrence, SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+        )
         new_aws_cronjob_id = self.cron_gateway.create(
             new_cron_str,
             target=CHRON_PROXY_LAMBDA_TARGET_ARN,
@@ -137,7 +183,7 @@ class NotificationManager:
             },
         )
         self.cron_gateway.delete(notification.aws_cronjob_id)
-        
+
         notification.aws_cronjob_id = new_aws_cronjob_id
         notification.scheduled_for = self._get_next_occurrence(new_cron_str)
         notification.status = "pending"
@@ -182,14 +228,16 @@ class NotificationManager:
     def _get_vapid_claims(self, subscription_endpoint: str) -> Dict[str, str]:
         parsed = urlparse(subscription_endpoint)
         audience = f"{parsed.scheme}://{parsed.netloc}"
-        
+
         return {
             "sub": "mailto:alexandre.ramalho.1998@gmail.com",
             "aud": audience,
-            "exp": int(time.time()) + 12 * 60 * 60  # 12 hour expiration
+            "exp": int(time.time()) + 12 * 60 * 60,  # 12 hour expiration
         }
-    
-    async def send_push_notification(self, user_id: str, title: str, body: str, url: str = None, icon: str = None):
+
+    async def send_push_notification(
+        self, user_id: str, title: str, body: str, url: str = None, icon: str = None
+    ):
         subscription_info = self.users_gateway.get_subscription_info(user_id)
         if not subscription_info:
             logger.error(f"Subscription not found for {user_id}")
@@ -211,7 +259,7 @@ class NotificationManager:
                     }
                 ),
                 vapid_private_key=VAPID_PRIVATE_KEY,
-                vapid_claims=self._get_vapid_claims(subscription_info['endpoint']),
+                vapid_claims=self._get_vapid_claims(subscription_info["endpoint"]),
             )
             logger.info(f"WebPush response: {response.text}")
             return {"message": "Push notification sent successfully"}
@@ -221,23 +269,43 @@ class NotificationManager:
 
     def get_pending_notifications_count(self, user_id: str) -> int:
         notifications = self.get_all_for_user(user_id)
-        return len([notification for notification in notifications if notification.status != "concluded"])
+        return len(
+            [
+                notification
+                for notification in notifications
+                if notification.status != "concluded"
+            ]
+        )
 
     async def send_test_push_notification(self, user_id: str):
-        await self.create_and_process_notification(Notification.new(
-            user_id=user_id,
-            message="This is a test notification",
-            type="info",
-            related_id=None,
-        ))
+        await self.create_and_process_notification(
+            Notification.new(
+                user_id=user_id,
+                message="This is a test notification",
+                type="info",
+                related_id=None,
+            )
+        )
 
-    
+
 if __name__ == "__main__":
     from shared.logger import create_logger
-    create_logger()
     import asyncio
 
+    create_logger()
     notification_manager = NotificationManager()
-    asyncio.run(notification_manager.send_test_push_notification("670fb420158ba86def604e67"))
 
-    logger.info("Done")
+    for user in UsersGateway().get_all_users():
+        if user.username == "alex":
+            notification = asyncio.run(
+                notification_manager.create_and_process_notification(
+                    Notification.new(
+                        user_id=user.id,
+                        message="",  # This will be filled when processed
+                        type="engagement",
+                        prompt_tag="user-recurrent-checkin",
+                        recurrence="daily",
+                        time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
+                    )
+                )
+            )

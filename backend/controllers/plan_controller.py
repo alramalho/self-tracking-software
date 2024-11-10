@@ -28,6 +28,44 @@ class PlanController:
         self.plan_groups_gateway = PlanGroupsGateway()
         logger.log("CONTROLLERS", "PlanController initialized")
 
+    def _get_readable_plan(self, plan: Plan) -> str:
+        # Get unique activities for this plan
+        activity_ids = {session.activity_id for session in plan.sessions}
+        activities = [self.activities_gateway.get_activity_by_id(aid) for aid in activity_ids]
+        activity_names = [a.title for a in activities if a]
+        
+        # Get current week's activity entries
+        today = datetime.now(UTC)
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        
+        # Check if all activities were completed this week
+        all_activities_for_plan = []
+        for activity_id in activity_ids:
+            all_activities_for_plan.extend(self.activities_gateway.get_all_activity_entries_by_activity_id(activity_id))
+
+        this_week_activity_entries_for_plan = [entry for entry in all_activities_for_plan if week_start <= datetime.fromisoformat(entry.date).replace(tzinfo=UTC) <= week_end]
+
+        is_week_completed = any([self.is_week_finisher_of_plan(entry.id, plan) for entry in this_week_activity_entries_for_plan])
+        
+        activities_str = "', '".join(activity_names)
+        completion_str = "completed all of these activities!" if is_week_completed else "didn't complete all their planned activities"
+        
+        return f"'{plan.goal}' - with activities '{activities_str}'. Last week user {completion_str}"
+
+    def get_readable_plans(self, user_id: str) -> str:
+        logger.log("CONTROLLERS", f"Getting readable plans for user {user_id}")
+        
+        user = self.users_gateway.get_user_by_id(user_id)
+        if not user:
+            return []
+            
+        plans = self.get_all_user_plans(user)
+        if not plans:
+            return []
+
+        return "\n".join([f"{i+1}. {self._get_readable_plan(plan)}" for i, plan in enumerate(plans)])
+
     def create_plan(self, plan: Plan) -> Plan:
         logger.log("CONTROLLERS", f"Creating plan for user {plan.user_id}: {plan.goal}")
         self.db_gateway.write(plan.dict())
@@ -449,6 +487,45 @@ class PlanController:
         invitation.updated_at = datetime.now(UTC).isoformat()
         self.plan_invitation_gateway.write(invitation.dict())
 
+    def is_week_finisher_of_plan(self, activity_entry_id: str, plan: Plan) -> bool:
+        # Get the activity entry
+        activity_entry = self.activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        if not activity_entry:
+            return False
+
+        # Get the current week's start and end dates
+        today = datetime.now(UTC)
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+
+        # Filter sessions for current week and matching activity
+        week_sessions = [
+            session for session in plan.sessions 
+            if (week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end
+                and session.activity_id == activity_entry.activity_id)
+        ]
+        
+        if not week_sessions:
+            return False
+
+        # Count required sessions for this week
+        required_sessions = len(week_sessions)
+
+        # Get all activity entries for this week
+        week_entries = self.activities_gateway.activity_entries_db_gateway.query_by_criteria({
+            'activity_id': activity_entry.activity_id,
+            'date': {
+                '$gte': week_start.isoformat(),
+                '$lte': week_end.isoformat()
+            }
+        })
+        
+        # Sort entries by creation time to check if current entry is the last one
+        sorted_entries = sorted(week_entries, key=lambda x: x['created_at'])
+        
+        # Check if this entry is the last one and completes all required sessions
+        return (len(sorted_entries) == required_sessions and 
+                sorted_entries[-1]['id'] == activity_entry_id)
 
     def is_week_finisher_of_any_plan(self, activity_entry_id: str) -> Tuple[bool, Optional[str]]:
         # Get the activity entry
@@ -456,42 +533,11 @@ class PlanController:
         if not activity_entry:
             return False, None
 
-        # Get the current week's start and end dates
-        today = datetime.now(UTC)
-        week_start = today - timedelta(days=today.weekday())
-        week_end = week_start + timedelta(days=6)
-
         # Get all plans that contain this activity
         plans = [Plan(**plan) for plan in self.db_gateway.query_by_criteria({'sessions.activity_id': activity_entry.activity_id})]
+        
         for plan in plans:
-            # Filter sessions for current week and matching activity
-            week_sessions = [
-                session for session in plan.sessions 
-                if (week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end
-                    and session.activity_id == activity_entry.activity_id)
-            ]
-            
-            if not week_sessions:
-                continue
-
-            # Count required sessions for this week
-            required_sessions = len(week_sessions)
-
-            # Get all activity entries for this week
-            week_entries = self.activities_gateway.activity_entries_db_gateway.query_by_criteria({
-                'activity_id': activity_entry.activity_id,
-                'date': {
-                    '$gte': week_start.isoformat(),
-                    '$lte': week_end.isoformat()
-                }
-            })
-            
-            # Sort entries by creation time to check if current entry is the last one
-            sorted_entries = sorted(week_entries, key=lambda x: x['created_at'])
-            
-            # Check if this entry is the last one and completes all required sessions
-            if (len(sorted_entries) == required_sessions and 
-                sorted_entries[-1]['id'] == activity_entry_id):
+            if self.is_week_finisher_of_plan(activity_entry_id, plan):
                 return True, plan.goal
 
         return False, None
@@ -501,4 +547,4 @@ if __name__ == "__main__":
 
     create_logger(level="INFO")
     plan_controller = PlanController()
-    plan_controller.update_all_plans_with_activity_ids()
+    print(plan_controller.get_readable_plans("670fb420158ba86def604e67"))

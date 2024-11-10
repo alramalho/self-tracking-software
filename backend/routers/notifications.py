@@ -108,8 +108,8 @@ async def mark_notification_opened(
     }
 
 
-@router.post("/initiate-recurrent-checkin")
-async def route_initiate_recurrent_checkin(user: User = Depends(is_clerk_user)):
+@router.post("/initiate-user-recurrent-checkin")
+async def route_initiate_user_recurrent_checkin(user: User = Depends(is_clerk_user)):
     notification = await notification_manager.create_and_process_notification(
         Notification.new(
             user_id=user.id,

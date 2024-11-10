@@ -155,6 +155,9 @@ async def load_users_data(
                         event="load-user-data",
                         properties={
                             "$set": {
+                                "email": user.email,
+                                "name": user.name,
+                                "username": user.username,
                                 "plans_count": len(plans),
                                 "plan_groups_count": len(plan_groups),
                                 "activities_count": len(activities),
