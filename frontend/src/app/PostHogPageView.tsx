@@ -10,7 +10,6 @@ export default function PostHogPageView() : null {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const posthog = usePostHog();
-  const { isAppInstalled } = useNotifications();
   
   useEffect(() => {
     // Track pageviews
@@ -23,10 +22,6 @@ export default function PostHogPageView() : null {
         '$pageview',
         {
           '$current_url': url,
-          'isAppInstalled': isAppInstalled,
-          '$set': {
-            'isAppInstalled': isAppInstalled
-          }
         }
       )
     }
