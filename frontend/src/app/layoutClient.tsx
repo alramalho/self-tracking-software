@@ -30,16 +30,16 @@ export default function ClientLayout({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <main className="pb-16">
-        <UserPlanProviderWrapper>{children}</UserPlanProviderWrapper>
-      </main>
-      <Toaster
-        position="bottom-center"
-        containerStyle={{
-          bottom: "5rem",
-        }}
-      />
-      {isSignedIn && <BottomNav />}
+      <UserPlanProviderWrapper>
+        <main className="pb-16">{children}</main>
+        <Toaster
+          position="bottom-center"
+          containerStyle={{
+            bottom: "5rem",
+          }}
+        />
+        {isSignedIn && <BottomNav />}
+      </UserPlanProviderWrapper>
     </QueryClientProvider>
   );
 }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body, HTTPException, Query
+from fastapi import APIRouter, Depends, Body, HTTPException, Query, Request
 from loguru import logger
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -15,8 +15,10 @@ from .notifications import router as notifications_router
 from services.notification_manager import NotificationManager
 import re
 import concurrent.futures
+import requests
 import traceback
 from constants import POSTHOG_API_KEY, POSTHOG_HOST
+from gateways.aws.ses import SESGateway, get_email_template_string
 
 router = APIRouter()
 
@@ -26,6 +28,7 @@ moods_gateway = MoodsGateway()
 plan_controller = PlanController()
 notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
+ses_gateway = SESGateway()
 
 from posthog import Posthog
 
@@ -148,9 +151,9 @@ async def load_users_data(
             if username == "me" or username == current_user.username:
                 try:
                     posthog.capture(
-                        user.id,
-                        "load-user-data",
-                        {
+                        distinct_id=user.id,
+                        event="load-user-data",
+                        properties={
                             "$set": {
                                 "plans_count": len(plans),
                                 "plan_groups_count": len(plan_groups),
@@ -427,3 +430,51 @@ def get_recommended_activity_entries(current_user: User):
         "recommended_activities": activities_dicts,
         "recommended_users": users,
     }
+
+
+@router.post("/report-feedback")
+async def report_feedback(request: Request, user: User = Depends(is_clerk_user)):
+    try:
+        body = await request.json()
+        email = body.get("email")
+        text = body.get("text")
+        type_ = body.get("type")
+
+        email_type_map = {
+            "bug_report": "🐞 Bug Report", 
+            "help_request": "🆘 Help Request",
+            "feature_request": "💡 Feature Request"
+        }
+        
+        subject = f"[Tracking.so] New {email_type_map[type_]} from {email}"
+        
+        html_content = get_email_template_string(
+            header=email_type_map[type_],
+            content=f"""
+            <p><strong>From:</strong> {email}</p>
+            <p><strong>Message:</strong></p>
+            <p>{text}</p>
+            """
+        )
+        
+        ses_gateway.send_email(
+            to="alexandre.ramalho.1998@gmail.com",
+            subject=subject,
+            html_body=html_content
+        )
+
+        # Track in PostHog
+        posthog.capture(
+            distinct_id=user.id,
+            event=type_,
+            properties={
+                "email": email,
+                "text": text
+            }
+        )
+
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Traceback: \n{traceback.format_exc()}")
+        logger.error(f"Failed to send feedback email: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -7,6 +7,7 @@ import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { usePathname, useRouter } from "next/navigation";
+import FloatingActionMenu from "./FloatingActionMenu";
 
 const BottomNav = () => {
   const { notificationCount } = useNotifications();
@@ -24,63 +25,66 @@ const BottomNav = () => {
   }, [pathname]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[49] pb-2">
-      <div className="flex justify-around">
-        <Link
-          href="/"
-          className="flex flex-col items-center p-2 text-gray-600"
-          onClick={() =>{
-            if (pathname !== "/")  {
-              setIsLoadingFeed(true)
-            }
-          }}
-        >
-          {isLoadingFeed ? <Loader2 size={24} className="animate-spin" /> : <Home size={24} />}
-          <span className="text-xs mt-1">Home</span>
-        </Link>
-        <Link
-          href="/plans"
-          className="flex flex-col items-center p-2 text-gray-600"
-          onClick={() => {
-            if (pathname !== "/plans") {
-              setIsLoadingPlans(true)
-            }
-          }}
-        >
-          {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartGantt size={24} />}
-          <span className="text-xs mt-1">Plans</span>
-        </Link>
-        <Link
-          href="/log"
-          className="flex flex-col items-center p-2 text-gray-600"
-          onClick={() => {
-            if (pathname !== "/log") {
-              setIsLoadingLog(true)
-            }
-          }}
-        >
-          {isLoadingLog ? <Loader2 size={24} className="animate-spin" /> : <Pencil size={24} />}
-          <span className="text-xs mt-1">Log</span>
-        </Link>
-        <Link
-          href={`/profile/me`}
-          className="flex flex-col items-center p-2 text-gray-600 relative"
-          onClick={() => {
-            if (pathname !== "/profile/me") {
-              setIsLoadingProfile(true)
-            }
-          }}
-        >
-          {isLoadingProfile ? <Loader2 size={24} className="animate-spin" /> : <User size={24} />}
-          {notificationCount > 0 && (
-            <div className="absolute top-1 right-1 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-[14px] font-bold -mt-1 -mr-1">
-              {notificationCount > 99 ? '99+' : notificationCount}
-            </div>
-          )}
-          <span className="text-xs mt-1">Profile</span>
-        </Link>
-      </div>
-    </nav>
+    <>
+      <FloatingActionMenu />
+      <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 z-[49] pb-2">
+        <div className="flex justify-around">
+          <Link
+            href="/"
+            className="flex flex-col items-center p-2 text-gray-600"
+            onClick={() =>{
+              if (pathname !== "/")  {
+                setIsLoadingFeed(true)
+              }
+            }}
+          >
+            {isLoadingFeed ? <Loader2 size={24} className="animate-spin" /> : <Home size={24} />}
+            <span className="text-xs mt-1">Home</span>
+          </Link>
+          <Link
+            href="/plans"
+            className="flex flex-col items-center p-2 text-gray-600"
+            onClick={() => {
+              if (pathname !== "/plans") {
+                setIsLoadingPlans(true)
+              }
+            }}
+          >
+            {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartGantt size={24} />}
+            <span className="text-xs mt-1">Plans</span>
+          </Link>
+          <Link
+            href="/log"
+            className="flex flex-col items-center p-2 text-gray-600"
+            onClick={() => {
+              if (pathname !== "/log") {
+                setIsLoadingLog(true)
+              }
+            }}
+          >
+            {isLoadingLog ? <Loader2 size={24} className="animate-spin" /> : <Pencil size={24} />}
+            <span className="text-xs mt-1">Log</span>
+          </Link>
+          <Link
+            href={`/profile/me`}
+            className="flex flex-col items-center p-2 text-gray-600 relative"
+            onClick={() => {
+              if (pathname !== "/profile/me") {
+                setIsLoadingProfile(true)
+              }
+            }}
+          >
+            {isLoadingProfile ? <Loader2 size={24} className="animate-spin" /> : <User size={24} />}
+            {notificationCount > 0 && (
+              <div className="absolute top-1 right-1 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-[14px] font-bold -mt-1 -mr-1">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </div>
+            )}
+            <span className="text-xs mt-1">Profile</span>
+          </Link>
+        </div>
+      </nav>
+    </>
   );
 };
 

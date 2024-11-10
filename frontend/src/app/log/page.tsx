@@ -195,7 +195,6 @@ const LogPage: React.FC = () => {
           onSuccess={handleActivityLogged}
         />
       )}
-      <BottomNav />
     </div>
   );
 };
