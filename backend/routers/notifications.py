@@ -61,7 +61,7 @@ async def process_scheduled_notification(request: Request):
                 user.id,
                 title=f"hey {user.name}",
                 body=processed_notification.message.lower(),
-                url=f"/log?notification_id={processed_notification.id}",
+                url=f"/add?notification_id={processed_notification.id}",
             )
             logger.info(f"Sent push notification to {user.id}")
         except Exception as e:

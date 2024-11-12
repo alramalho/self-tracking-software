@@ -4,7 +4,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import {
   Bell,
+  ChartArea,
   Check,
+  History,
   Loader2,
   LogOut,
   Settings,
@@ -284,11 +286,21 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="history" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-13">
+            <TabsTrigger value="plans">
+              <div className="flex flex-col items-center">
+                <ChartArea size={22} />
+                <span>Plans</span>
+              </div>
+          </TabsTrigger>
+            <TabsTrigger value="history">
+              <div className="flex flex-col items-center">
+                <History size={22} />
+                <span>History</span>
+              </div>
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="overview">
+          <TabsContent value="plans">
             <div className="space-y-4">
               {profileData.plans?.map((plan) => (
                 <div key={plan.id} className="p-4 border rounded-lg bg-white">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChartGantt, Eye, Flame, Home, Loader2, Pencil, Route, Search, Sparkle, Sprout, User } from "lucide-react";
+import { ChartArea, ChartGantt, Eye, Flame, Home, Loader2, Pencil, PlusSquare, Route, Search, Sparkle, Sprout, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
@@ -50,20 +50,20 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartGantt size={24} />}
+            {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartArea size={24} />}
             <span className="text-xs mt-1">Plans</span>
           </Link>
           <Link
-            href="/log"
+            href="/add"
             className="flex flex-col items-center p-2 text-gray-600"
             onClick={() => {
-              if (pathname !== "/log") {
+              if (pathname !== "/add") {
                 setIsLoadingLog(true)
               }
             }}
           >
-            {isLoadingLog ? <Loader2 size={24} className="animate-spin" /> : <Pencil size={24} />}
-            <span className="text-xs mt-1">Log</span>
+            {isLoadingLog ? <Loader2 size={24} className="animate-spin" /> : <PlusSquare size={24} />}
+            <span className="text-xs mt-1">Add</span>
           </Link>
           <Link
             href={`/profile/me`}

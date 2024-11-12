@@ -22,7 +22,7 @@ import {
   convertApiPlanToPlan,
 } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
-import { Loader2, Check, Plus, PencilLine } from "lucide-react";
+import { Loader2, PlusSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ActivityEntryCard, Entry } from "@/components/ActivityEntryCard";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
@@ -574,12 +574,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       </div>
 
-      <Link href="/log" passHref>
+      <Link href="/add" passHref>
         <Button
           variant="outline"
           className="w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
         >
-          <PencilLine className="h-8 w-8 mb-2 text-gray-400" />
+          <PlusSquare className="h-8 w-8 mb-2 text-gray-400" />
           <span>Log Activity</span>
         </Button>
       </Link>
