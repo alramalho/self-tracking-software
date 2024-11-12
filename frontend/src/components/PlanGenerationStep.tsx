@@ -34,13 +34,22 @@ const PlanGenerationStep: React.FC<PlanGenerationStepProps> = ({
   const [selectedPlanLoading, setSelectedPlanLoading] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<Activity[]>([]);
   const [onlyTheseActivities, setOnlyTheseActivities] = useState(false);
-  const [internalPlanDescription, setInternalPlanDescription] = useState(planDescription);
+  const [internalPlanDescription, setInternalPlanDescription] =
+    useState(planDescription);
   const [activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
-    const selectedActivitiesText = activities.length > 0
-      ? `Please ${onlyTheseActivities ? 'only include' : 'include (but not only)'} these activities in plan:\n${activities.map(activity => `- "${activity.title}" measured in "${activity.measure}"`).join('\n')}\n\n`
-      : '';
+    const selectedActivitiesText =
+      activities.length > 0
+        ? `Please ${
+            onlyTheseActivities ? "only include" : "include (but not only)"
+          } these activities in plan:\n${activities
+            .map(
+              (activity) =>
+                `- "${activity.title}" measured in "${activity.measure}"`
+            )
+            .join("\n")}\n\n`
+        : "";
 
     setPlanDescription(selectedActivitiesText + internalPlanDescription);
   }, [activities, onlyTheseActivities]);
@@ -65,23 +74,27 @@ const PlanGenerationStep: React.FC<PlanGenerationStepProps> = ({
           </h3>
           <p className="text-sm text-gray-500 mb-2">
             Here you can specify any activities you want to include in your plan
-            for sure, if you know them
+            for sure, if you know them.
           </p>
           <div className="flex items-center gap-2 mb-4">
             <Switch
               checked={onlyTheseActivities}
               onCheckedChange={setOnlyTheseActivities}
             />
-            <span className="text-sm text-gray-500">
-              Only these activities
-            </span>
+            <span className="text-sm text-gray-500">Only these activities</span>
           </div>
           <ActivitySelector
             activities={activities}
             selectedActivity={undefined}
             onSelectActivity={handleActivitySelect}
-            onSaveActivity={(activity) => setActivities((prev) => [...prev, activity])}
+            onSaveActivity={(activity) =>
+              setActivities((prev) => [...prev, activity])
+            }
           />
+          <p className="text-xs text-gray-500 mb-2">
+            all of these activities will be be created as new activities
+            immediately and included in the plan
+          </p>
         </div>
 
         <div className="mb-8">
