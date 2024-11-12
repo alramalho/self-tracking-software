@@ -7,10 +7,16 @@ import {
   TaggedActivityEntry,
 } from "@/contexts/UserPlanContext";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
+
+function isInCurrentWeek(date: string) {
+  const entryDate = new Date(date);
+  const today = new Date();
+  return isWithinInterval(entryDate, { start: startOfWeek(today), end: endOfWeek(today) });
+}
 
 const TimelineRenderer: React.FC = () => {
   const { timelineData } = useUserPlan();
@@ -85,7 +91,7 @@ const TimelineRenderer: React.FC = () => {
                 router.push(`/profile/${user?.username}`);
               }}
             />
-            {entry.is_week_finisher && (
+            {entry.is_week_finisher && isInCurrentWeek(entry.date) && (
               <WeeklyCompletionCard
                 small
                 username={user?.name}
