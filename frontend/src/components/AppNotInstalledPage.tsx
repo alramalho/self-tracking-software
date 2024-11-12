@@ -15,7 +15,7 @@ import { usePathname } from "next/navigation";
 const AppNotInstalledPage: React.FC = () => {
   const [isAppInstallModalOpen, setIsAppInstallModalOpen] = useState(true);
   const pathname = usePathname();
-  const excludedRoutes = ["/signin", "/signup", "/join-plan"];
+  const excludedRoutes = ["/signin", "/signup", "/join-plan", "/onboarding"];
 
   if (excludedRoutes.some(route => pathname.startsWith(route))) {
     return null;
