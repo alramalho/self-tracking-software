@@ -20,40 +20,117 @@ interface OnboardingProps {
   onComplete: () => void;
 }
 
+interface OnboardingState {
+  step: number;
+  name: string;
+  username: string;
+  goal: string;
+  finishingDate?: Date;
+  selectedEmoji: string;
+  planDescription: string;
+  generatedPlans: GeneratedPlan[];
+}
+
 const Onboarding: React.FC<OnboardingProps> = ({
   isNewPlan = false,
   onComplete,
 }) => {
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [goal, setGoal] = useState("");
-  const [finishingDate, setFinishingDate] = useState<Date | undefined>(
-    undefined
-  );
-  const [generatedPlans, setGeneratedPlans] = useState<GeneratedPlan[]>([]);
+  // Load initial state from localStorage or use defaults
+  const loadInitialState = (): OnboardingState => {
+    if (typeof window === 'undefined') return getDefaultState();
+    
+    const saved = localStorage.getItem('onboardingState');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...parsed,
+        finishingDate: parsed.finishingDate ? new Date(parsed.finishingDate) : undefined,
+      };
+    }
+    return getDefaultState();
+  };
+
+  const getDefaultState = (): OnboardingState => ({
+    step: 0,
+    name: '',
+    username: '',
+    goal: '',
+    finishingDate: undefined,
+    selectedEmoji: '',
+    planDescription: '',
+    generatedPlans: [],
+  });
+
+  // Replace individual state declarations with a single state object
+  const [state, setState] = useState<OnboardingState>(loadInitialState);
   const [selectedPlan, setSelectedPlan] = useState<ApiPlan | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [planDescription, setPlanDescription] = useState("");
-  const api = useApiWithAuth();
-  const [selectedEmoji, setSelectedEmoji] = useState<string>("");
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const { requestPermission, isPushGranted } = useNotifications();
+  const api = useApiWithAuth();
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;  
 
+  // Destructure state for easier access
+  const {
+    step,
+    name,
+    username,
+    goal,
+    finishingDate,
+    selectedEmoji,
+    planDescription,
+    generatedPlans,
+  } = state;
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboardingState', JSON.stringify(state));
+    }
+  }, [state]);
+
+  // Helper function to update state
+  const updateState = (updates: Partial<OnboardingState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  };
+
+  // Update the step setter
+  const setStep = (newStep: number) => {
+    updateState({ step: newStep });
+  };
+
+  // Modify other setters to use updateState
+  const setName = (newName: string) => updateState({ name: newName });
+  const setUsername = (newUsername: string) => updateState({ username: newUsername });
+  const setGoal = (newGoal: string) => updateState({ goal: newGoal });
+  const setFinishingDate = (date: Date | undefined) => updateState({ finishingDate: date });
+  const setSelectedEmoji = (emoji: string) => updateState({ selectedEmoji: emoji });
+  const setPlanDescription = (desc: string) => updateState({ planDescription: desc });
+  const setGeneratedPlans = (plans: GeneratedPlan[]) => updateState({ generatedPlans: plans });
+
+  // Clear localStorage when onboarding is complete
+  const handleComplete = () => {
+    localStorage.removeItem('onboardingState');
+    onComplete();
+  };
+
+  // Modify the existing useEffect for userData
   useEffect(() => {
     try {
       if (userData && step < 2) {
         if (userData.user?.name) {
-          setName(userData.user.name);
-          setStep(1);
+          updateState({
+            name: userData.user.name,
+            step: 1
+          });
         }
         if (userData.user?.username) {
-          setUsername(userData.user.username);
-          setStep(2);
+          updateState({
+            username: userData.user.username,
+            step: 2
+          });
         }
       }
     } catch (error) {
@@ -62,30 +139,37 @@ const Onboarding: React.FC<OnboardingProps> = ({
     }
   }, [userData]);
 
-  const checkUsername = async (username: string) => {
-    if (!username.trim()) {
-      setIsUsernameAvailable(true);
-      return;
-    }
+  // Add back the notifications context
+  const { requestPermission, isPushGranted } = useNotifications();
 
-    setIsCheckingUsername(true);
+  // Add back the handlePlanSelection function
+  const handlePlanSelection = async (plan: GeneratedPlan) => {
+    console.log({ planToBeCreated: plan });
     try {
-      const response = await api.get(`/check-username/${username}`);
-      setIsUsernameAvailable(!response.data.exists);
+      if (plan) {
+        const response = await api.post("/create-plan", {
+          ...plan,
+          emoji: selectedEmoji,
+        });
+        const createdPlan = response.data.plan;
+        setSelectedPlan(createdPlan);
+        userDataQuery.refetch();
+        setStep(6);
+      }
     } catch (error) {
-      console.error("Error checking username:", error);
-      toast.error("Failed to check username availability");
-    } finally {
-      setIsCheckingUsername(false);
+      console.error("Plan creation error:", error);
+      toast.error("Failed to create plan. Please try again.");
     }
   };
 
+  // Update handleGeneratePlans to handle Date object correctly
   const handleGeneratePlans = async () => {
     setIsGenerating(true);
     try {
       const response = await api.post("/generate-plans", {
         goal,
-        finishingDate: finishingDate?.toISOString().split("T")[0],
+        // Only call toISOString if finishingDate is defined
+        finishingDate: finishingDate ? finishingDate.toISOString().split("T")[0] : undefined,
         planDescription: planDescription.trim() || undefined,
         emoji: selectedEmoji,
       });
@@ -99,26 +183,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
     }
   };
 
-  const handlePlanSelection = async (plan: GeneratedPlan) => {
-    console.log({ planToBeCreated: plan });
-    try {
-      if (plan) {
-        const response = await api.post("/create-plan", {
-          ...plan,
-          emoji: selectedEmoji,
-        });
-        const createdPlan = response.data.plan;
-        const createdActivities = response.data.activities;
-        setSelectedPlan(createdPlan);
-        userDataQuery.refetch();
-        setStep(6);
-      }
-    } catch (error) {
-      console.error("Plan creation error:", error);
-      toast.error("Failed to create plan. Please try again.");
-    }
-  };
-
+  // Update the final NotificationStep to use handleComplete
   const renderStep = () => {
     switch (step) {
       case 0:
@@ -191,7 +256,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
       case 7:
         return (
           <NotificationStep
-            onComplete={onComplete}
+            onComplete={handleComplete}
             requestPermission={requestPermission}
             isPushGranted={isPushGranted}
           />

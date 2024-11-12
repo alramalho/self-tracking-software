@@ -33,7 +33,7 @@ const PlanGenerationStep: React.FC<PlanGenerationStepProps> = ({
 }) => {
   const [selectedPlanLoading, setSelectedPlanLoading] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<Activity[]>([]);
-  const [onlyTheseActivities, setOnlyTheseActivities] = useState(false);
+  const [onlyTheseActivities, setOnlyTheseActivities] = useState(true);
   const [internalPlanDescription, setInternalPlanDescription] =
     useState(planDescription);
   const [activities, setActivities] = useState<Activity[]>([]);
