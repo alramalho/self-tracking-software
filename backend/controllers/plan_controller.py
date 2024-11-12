@@ -494,8 +494,8 @@ class PlanController:
             return False
 
         # Get the current week's start and end dates
-        today = datetime.now(UTC)
-        week_start = today - timedelta(days=today.weekday())
+        activity_entry_date = datetime.fromisoformat(activity_entry.date).replace(tzinfo=UTC)
+        week_start = activity_entry_date - timedelta(days=activity_entry_date.weekday())
         week_end = week_start + timedelta(days=6)
 
         # Filter sessions for current week and matching activity
