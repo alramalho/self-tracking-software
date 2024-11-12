@@ -2,41 +2,23 @@
 
 import React, { useState, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import toast from "react-hot-toast";
-import {
-  Check,
-  X,
-  Loader2,
-  CheckIcon,
-  ChevronLeft,
-  ChevronRight,
-  BellIcon,
-} from "lucide-react";
-import {
-  ApiPlan,
-  GeneratedPlan,
-  useUserPlan,
-} from "@/contexts/UserPlanContext";
-import GeneratedPlanRenderer from "./GeneratedPlanRenderer";
+import { Loader2 } from "lucide-react";
+import { ApiPlan, GeneratedPlan, useUserPlan } from "@/contexts/UserPlanContext";
 import { useNotifications } from "@/hooks/useNotifications";
-import InviteButton from "./InviteButton";
+import NameStep from "./NameStep";
+import UsernameStep from "./UsernameStep";
+import GoalStep from "./GoalStep";
+import EmojiStep from "./EmojiStep";
+import FinishingDateStep from "./FinishingDateStep";
+import PlanGenerationStep from "./PlanGenerationStep";
+import InviteStep from "./InviteStep";
+import NotificationStep from "./NotificationStep";
+import toast from "react-hot-toast";
 
 interface OnboardingProps {
   isNewPlan?: boolean;
   onComplete: () => void;
 }
-
 
 const Onboarding: React.FC<OnboardingProps> = ({
   isNewPlan = false,
@@ -60,7 +42,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const userData = userDataQuery.data;
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const [selectedPlanLoading, setSelectedPlanLoading] = useState(false);
   const { requestPermission, isPushGranted } = useNotifications();
 
   useEffect(() => {
@@ -75,7 +56,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
           setStep(2);
         }
       }
-
     } catch (error) {
       console.error("Error loading user data:", error);
       toast.error("Error loading user data");
@@ -98,12 +78,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
     } finally {
       setIsCheckingUsername(false);
     }
-  };
-
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUsername = e.target.value.toLowerCase();
-    setUsername(newUsername);
-    checkUsername(newUsername);
   };
 
   const handleGeneratePlans = async () => {
@@ -149,271 +123,78 @@ const Onboarding: React.FC<OnboardingProps> = ({
     switch (step) {
       case 0:
         return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>What is your name?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
-                className="mb-4"
-              />
-              <Button
-                className="w-full"
-                onClick={() => {
-                  if (!isNewPlan) {
-                    api.post("/update-user", { name });
-                    userDataQuery.refetch();
-                    setStep(1);
-                  }
-                }}
-                disabled={!name.trim()}
-              >
-                Next
-              </Button>
-            </CardContent>
-          </Card>
+          <NameStep
+            name={name}
+            setName={setName}
+            onNext={() => setStep(1)}
+            isNewPlan={isNewPlan}
+            api={api}
+            userDataQuery={userDataQuery}
+          />
         );
       case 1:
         return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Choose a username</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Input
-                type="text"
-                value={username}
-                onChange={handleUsernameChange}
-                placeholder="Enter a username"
-                className="mb-4"
-              />
-              {username.trim() !== "" && (
-                <div className="flex items-center text-sm mb-4">
-                  {isCheckingUsername ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <p>Checking username availability...</p>
-                    </>
-                  ) : isUsernameAvailable ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4 text-lime-500" />
-                      <p className="text-green-500">Username is available</p>
-                    </>
-                  ) : (
-                    <>
-                      <X className="mr-2 h-4 w-4 text-red-500" />
-                      <p className="text-red-500">Username is already taken</p>
-                    </>
-                  )}
-                </div>
-              )}
-              <Button
-                className="w-full"
-                onClick={() => {
-                  if (username.trim()) {
-                    api.post("/update-user", { username });
-                    userDataQuery.refetch();
-                  }
-                  setStep(2);
-                }}
-                disabled={username.trim() === "" || !isUsernameAvailable}
-              >
-                Next
-              </Button>
-            </CardContent>
-          </Card>
+          <UsernameStep
+            username={username}
+            setUsername={setUsername}
+            isUsernameAvailable={isUsernameAvailable}
+            isCheckingUsername={isCheckingUsername}
+            onNext={() => setStep(2)}
+            api={api}
+            userDataQuery={userDataQuery}
+          />
         );
       case 2:
         return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>What goal do you want to accomplish?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Input
-                id="goal"
-                type="text"
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                placeholder="I want to gain the habit to go to the gym 3 times a week on Mondays, Wednesdays and Tuesdays"
-                className="mb-4 text-[16px]"
-              />
-              <Button
-                className="w-full"
-                onClick={() => {
-                  setStep(3);
-                  setSelectedEmoji(""); // Clear the emoji when moving to the next step
-                }}
-                disabled={!goal.trim()}
-              >
-                Next
-              </Button>
-            </CardContent>
-          </Card>
+          <GoalStep
+            goal={goal}
+            setGoal={setGoal}
+            onNext={() => setStep(3)}
+          />
         );
       case 3:
         return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Choose an emoji for your plan (Optional)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Input
-                id="emoji"
-                type="text"
-                value={selectedEmoji}
-                onChange={(e) => setSelectedEmoji(e.target.value)}
-                placeholder="Enter an emoji"
-                className="mb-4 text-[16px]"
-                maxLength={5}
-              />
-              <Button className="w-full" onClick={() => setStep(4)}>
-                Next
-              </Button>
-            </CardContent>
-          </Card>
+          <EmojiStep
+            selectedEmoji={selectedEmoji}
+            setSelectedEmoji={setSelectedEmoji}
+            onNext={() => setStep(4)}
+          />
         );
       case 4:
         return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Do you have a finishing date? (Optional)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DatePicker
-                selected={finishingDate}
-                onSelect={(date: Date | undefined) => setFinishingDate(date)}
-                disablePastDates={true}
-              />
-              <Button className="w-full mt-4" onClick={() => setStep(5)}>
-                Next
-              </Button>
-            </CardContent>
-          </Card>
+          <FinishingDateStep
+            finishingDate={finishingDate}
+            setFinishingDate={setFinishingDate}
+            onNext={() => setStep(5)}
+          />
         );
       case 5:
         return (
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <CardTitle>Plan Description & Generation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={planDescription}
-                onChange={(e) => setPlanDescription(e.target.value)}
-                placeholder="I want my plan to include just one 'gym' activity measured in sessions and one 'running' activity measured in kilometers"
-                className="mb-4 text-[16px"
-              />
-              <Button
-                className="w-full"
-                onClick={handleGeneratePlans}
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Plans...
-                  </>
-                ) : (
-                  <>
-                    {generatedPlans.length > 0 ? "Regenerate" : "Generate"} Plans
-                  </>
-                )}
-              </Button>
-
-              {generatedPlans.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold mb-4">Generated Plans</h3>
-                  {generatedPlans.map((plan) => (
-                    <div key={plan.id} className="mb-6 border p-4 rounded-md">
-                      <GeneratedPlanRenderer
-                        title={`${name} - ${plan.intensity} intensity`}
-                        plan={plan}
-                      />
-                      <Button
-                        className="w-full mt-4"
-                        onClick={() => {
-                          setSelectedPlanLoading(true);
-                          handlePlanSelection(plan);
-                        }}
-                      >
-                        {selectedPlanLoading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckIcon className="mr-2 h-4 w-4" />
-                        )}
-                        Select and Create Plan
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PlanGenerationStep
+            planDescription={planDescription}
+            setPlanDescription={setPlanDescription}
+            handleGeneratePlans={handleGeneratePlans}
+            isGenerating={isGenerating}
+            generatedPlans={generatedPlans}
+            handlePlanSelection={handlePlanSelection}
+            name={name}
+          />
         );
       case 6:
         return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>
-                Challenge People to do it with you! (Optional)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <InviteButton
-                embedded={true}
-                planId={selectedPlan!.id!}
-                onInviteSuccess={() => {
-                  userDataQuery.refetch();
-                }}
-              />
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={() => setStep(7)}
-              >
-                <ChevronRight className="mr-2 h-4 w-4" />
-                Skip
-              </Button>
-            </CardContent>
-          </Card>
+          <InviteStep
+            selectedPlan={selectedPlan}
+            onNext={() => setStep(7)}
+            userDataQuery={userDataQuery}
+          />
         );
       case 7:
-        if (isPushGranted) {
-          onComplete();
-          return <></>;
-        }
-
         return (
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Enable the Integrated Experience</CardTitle>
-              <CardDescription>
-                Get notifications to stay on top of your friends&apos; progress
-                and receive proactive engagement from our AI coach.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                You can always adjust notification settings in your profile
-                later.
-              </div>
-              <Button
-                className="w-full"
-                onClick={() => {
-                  onComplete();
-                  requestPermission();
-                }}
-              >
-                <BellIcon className="mr-2 h-4 w-4" />
-                Enable Notifications
-              </Button>
-            </CardContent>
-          </Card>
+          <NotificationStep
+            onComplete={onComplete}
+            requestPermission={requestPermission}
+            isPushGranted={isPushGranted}
+          />
         );
       default:
         return null;

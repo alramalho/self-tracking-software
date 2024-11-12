@@ -6,14 +6,16 @@ import { ActivityCard } from "./ActivityCard";
 
 interface ActivitySelectorProps {
   activities: Activity[];
-  selectedActivity: string;
-  onSelectActivity: (activityId: string) => void;
+  selectedActivity: Activity | undefined;
+  onSelectActivity: (activity: Activity) => void;
+  onSaveActivity?: (activity: Activity) => void;
 }
 
 const ActivitySelector: React.FC<ActivitySelectorProps> = ({
   activities,
   selectedActivity,
   onSelectActivity,
+  onSaveActivity,
 }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -29,6 +31,9 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
   };
 
   const handleSaveActivity = (savedActivity: Activity) => {
+    if (onSaveActivity) {
+      onSaveActivity(savedActivity);
+    }
     setShowEditor(false);
     setEditingActivity(null);
   };
@@ -40,9 +45,9 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
           <ActivityCard
             key={activity.id}
             activity={activity}
-            onClick={() => onSelectActivity(activity.id)}
+            onClick={() => onSelectActivity(activity)}
             onEditClick={() => handleEditActivity(activity)}
-            selected={selectedActivity === activity.id}
+            selected={selectedActivity?.id === activity.id}
           />
         ))}
         <button

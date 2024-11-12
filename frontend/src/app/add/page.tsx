@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import ActivitySelector from "@/components/ActivitySelector";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
@@ -19,7 +19,7 @@ const LogPage: React.FC = () => {
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const activities = userData?.activities || [];
-  const [selectedActivity, setSelectedActivity] = useState<string>("");
+  const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
@@ -30,11 +30,9 @@ const LogPage: React.FC = () => {
   const api = useApiWithAuth();
   const { addToNotificationCount } = useNotifications();
 
-  const handleSelectActivity = (activityId: string) => {
-    console.log({ activityId });
-    setSelectedActivity(activityId);
-    const activity = activities.find((a) => a.id === activityId);
-    setMeasureType(activity?.measure || "");
+  const handleSelectActivity = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setMeasureType(activity.measure || "");
     setQuantity(0); // Reset quantity when changing activity
   };
 
@@ -55,10 +53,6 @@ const LogPage: React.FC = () => {
     setQuantity(value);
   };
 
-  useEffect(() => {
-    console.log({ selectedActivity });
-  }, [selectedActivity]);
-
   const handleLogActivity = () => {
     if (!selectedActivity || !selectedDate) {
       toast.error("Please select an activity and date.");
@@ -71,7 +65,7 @@ const LogPage: React.FC = () => {
   const handleActivityLogged = () => {
     setShowPhotoUploader(false);
     // Reset form
-    setSelectedActivity("");
+    setSelectedActivity(undefined);
     setSelectedDate(new Date());
     setQuantity(0);
     setMeasureType("");
@@ -115,8 +109,8 @@ const LogPage: React.FC = () => {
       <ActivitySelector
         activities={activities}
         selectedActivity={selectedActivity}
-        onSelectActivity={(aId) => {
-          handleSelectActivity(aId);
+        onSelectActivity={(a) => {
+          handleSelectActivity(a);
           // scroll to quantity
           const quantity = document.getElementById("quantity");
           if (quantity) {
@@ -187,7 +181,7 @@ const LogPage: React.FC = () => {
       {showPhotoUploader && (
         <ActivityPhotoUploader
           activityData={{
-            activityId: selectedActivity,
+            activityId: selectedActivity!.id,
             date: selectedDate!,
             quantity: quantity,
           }}

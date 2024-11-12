@@ -24,7 +24,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
   const api = useApiWithAuth();
 
   const handleSave = async () => {
@@ -36,10 +35,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         title,
         measure,
       });
-      const updatedActivity = response.data;
-      userData?.activities.map((activity) =>
-        activity.id === updatedActivity.id ? updatedActivity : activity
-      );
       userDataQuery.refetch();
 
       const savedActivity = response.data;
