@@ -65,8 +65,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
   const [state, setState] = useState<OnboardingState>(loadInitialState);
   const [selectedPlan, setSelectedPlan] = useState<ApiPlan | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
-  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const api = useApiWithAuth();
   const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
@@ -202,10 +200,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
           <UsernameStep
             username={username}
             setUsername={setUsername}
-            isUsernameAvailable={isUsernameAvailable}
-            isCheckingUsername={isCheckingUsername}
             onNext={() => setStep(2)}
-            api={api}
             userDataQuery={userDataQuery}
           />
         );

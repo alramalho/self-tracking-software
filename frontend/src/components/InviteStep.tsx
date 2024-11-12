@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import InviteButton from "./InviteButton";
+import { ApiPlan } from "@/contexts/UserPlanContext";
 
 interface InviteStepProps {
   selectedPlan: ApiPlan | null;

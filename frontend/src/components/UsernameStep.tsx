@@ -1,28 +1,46 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, X, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import { useApiWithAuth } from "@/api";
 
 interface UsernameStepProps {
   username: string;
   setUsername: (username: string) => void;
-  isUsernameAvailable: boolean;
-  isCheckingUsername: boolean;
   onNext: () => void;
-  api: any;
   userDataQuery: any;
 }
 
 const UsernameStep: React.FC<UsernameStepProps> = ({
   username,
   setUsername,
-  isUsernameAvailable,
-  isCheckingUsername,
   onNext,
-  api,
   userDataQuery,
 }) => {
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState(true);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const api = useApiWithAuth();
+
+  const checkUsername = async (username: string) => {
+    if (!username.trim()) {
+      setIsUsernameAvailable(true);
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    try {
+      const response = await api.get(`/check-username/${username}`);
+      setIsUsernameAvailable(!response.data.exists);
+    } catch (error) {
+      console.error("Error checking username:", error);
+      toast.error("Failed to check username availability");
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUsername = e.target.value.toLowerCase();
     setUsername(newUsername);
