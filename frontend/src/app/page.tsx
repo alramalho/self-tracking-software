@@ -20,11 +20,9 @@ import Notifications from "@/components/Notifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useSession } from "@clerk/nextjs";
-import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { Loader2 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
-import { usePostHog } from "posthog-js/react";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -66,7 +64,14 @@ const HomePage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Feed</h1>
+        <div className="flex flex-row gap-3 items-center text-center">
+          <span className="text-[40px]">🎯</span>
+          <h2 className="mt-2 text-xl font-bold tracking-tight text-gray-900">
+            <span className="text-blue-500 break-normal text-nowrap">
+              tracking.so<span className="text-blue-300">ftware</span>
+            </span>
+          </h2>
+        </div>
         <button
           onClick={() => setIsSearchOpen(true)}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
