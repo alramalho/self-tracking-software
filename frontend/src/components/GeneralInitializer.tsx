@@ -8,7 +8,6 @@ import { useNotifications } from "@/hooks/useNotifications";
 import AppNotInstalledPage from "./AppNotInstalledPage";
 
 export default function GeneralInitializer() {
-  console.log("GeneralInitializer rendered");
 
   const { isSignedIn } = useSession();
   const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
@@ -32,10 +31,8 @@ export default function GeneralInitializer() {
   }, [isSignedIn, hasLoadedUserData, userData, hasRan]);
 
   if (!isAppInstalled) {
-    console.log("App not installed, rendering AppNotInstalledPage");
     return <AppNotInstalledPage />;
   }
 
-  console.log("Rendering empty fragment");
   return <></>;
 }
