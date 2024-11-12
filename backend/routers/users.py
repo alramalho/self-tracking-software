@@ -371,7 +371,7 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
     for pattern in search_patterns:
         users = users_gateway.get_all_users_by_regex("username", pattern)
         for user in users:
-            if user.dict() not in results:
+            if user.id not in [result["user_id"] for result in results]:
                 results.append(
                     {
                         "user_id": user.id,
