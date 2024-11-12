@@ -28,6 +28,7 @@ interface MoodReport {
   score: number; // 0-10
 }
 
+// deprecated: don't delete, it's gonna comeback 
 const SeePage: React.FC = () => {
   const [moodReports, setMoodReports] = useState<MoodReport[]>([]);
   const [timeRange, setTimeRange] = useState("Last 3 Months");
