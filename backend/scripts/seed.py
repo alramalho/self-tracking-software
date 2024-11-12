@@ -49,9 +49,9 @@ def generate_dummy_data():
 
     # Create 5 users
     users = [
-        User.new(id=str(ObjectId("666666666666666666666665")), name="Alex", email="alexandre.ramalho.1998@gmail.com", clerk_id="user_2kUW1zytLj9ERvDqVDDFCvIp5Un", picture="https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c", username="alex"),
+        User.new(id=str(ObjectId("666666666666666666666665")), name="Alex", email="alexandre.ramalho.1998@gmail.com", clerk_id="user_2kUW1zytLj9ERvDqVDDFCvIp5Un", picture="https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c", username="alex", friend_ids=["666666666666666666666667"]),
         User.new(id=str(ObjectId("666666666666666666666666")), name="Alice", email="alice@example.com", username="alice"),
-        User.new(id=str(ObjectId("666666666666666666666667")), name="Bob Ramalho", email="tyvmgldzsifhjcpuwn@hthlm.com", username="bob", clerk_id="user_2oUKXciL3h0y3QFcNOqHM9GTwUp"),
+        User.new(id=str(ObjectId("666666666666666666666667")), name="Bob Ramalho", email="tyvmgldzsifhjcpuwn@hthlm.com", username="bob", clerk_id="user_2oUKXciL3h0y3QFcNOqHM9GTwUp", friend_ids=["666666666666666666666665"]),
         User.new(id=str(ObjectId("666666666666666666666668")), name="Charlie", email="charlie@example.com", username="charlie"),
         User.new(id=str(ObjectId("666666666666666666666669")), name="Tomas", email="tomas@example.com", username="tomas", picture="https://example.com/tomas.jpg")
     ]
@@ -271,20 +271,16 @@ def generate_dummy_data():
     ])
 
     for user in users:
-        users_gateway.permanently_delete_user(user.id)
         users_gateway.create_user(user)
         
     for activity in activities:
-        activities_gateway.permanently_delete_activity(activity.id)
         activities_gateway.create_activity(activity)
 
     for activity_entry in activity_entries:
-        activities_gateway.permanently_delete_activity_entry(activity_entry.id)
         activities_gateway.create_activity_entry(activity_entry)
 
     for plan in plans:
         try:
-            plan_controller.permanently_delete_plan(plan.id)
             plan_controller.create_plan(plan)
             users_gateway.add_plan_to_user(plan.user_id, plan.id)
             user = next((u for u in users if u.id == plan.user_id), None)
@@ -294,8 +290,6 @@ def generate_dummy_data():
             return
 
     for plan_group in plan_groups:
-        plan_groups_gateway.delete_plan_group(plan_group.id)
-        plan_groups_gateway.upsert_plan_group(plan_group)
         for plan in plans:
             if plan.id in plan_group.plan_ids:
                 plan.plan_group_id = plan_group.id
