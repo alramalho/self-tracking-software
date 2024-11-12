@@ -501,8 +501,7 @@ class PlanController:
         # Filter sessions for current week and matching activity
         week_sessions = [
             session for session in plan.sessions 
-            if (week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end
-                and session.activity_id == activity_entry.activity_id)
+            if (week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end)
         ]
         
         if not week_sessions:
