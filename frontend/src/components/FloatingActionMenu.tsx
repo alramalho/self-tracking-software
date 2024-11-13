@@ -78,7 +78,7 @@ const FloatingActionMenu = () => {
 
   return (
     <>
-      <div className={`fixed bottom-20 right-4 ${isOpen ? 'z-[20]' : 'z-[-1]'}`}>
+      <div className={`fixed bottom-20 right-4 z-[20]`}>
         <div
           className={`flex flex-col-reverse gap-3 items-end transition-all duration-200 mb-3
             ${
@@ -87,44 +87,46 @@ const FloatingActionMenu = () => {
                 : "opacity-0 translate-y-4 pointer-events-none"
             }`}
         >
-          <div className={buttonContainerClasses}>
-            <span className={labelClasses}>Get Help</span>
-            <button
-              className={buttonClasses}
-              onClick={() => setShowHelpForm(true)}
-            >
-              <HelpCircle
-                size={24}
-                className="text-gray-600 hover:text-gray-800"
-              />
-            </button>
-          </div>
+          <div className={`${!isOpen && "hidden"}`}>
+            <div>
+              <span className={labelClasses}>Get Help</span>
+              <button
+                className={buttonClasses}
+                onClick={() => setShowHelpForm(true)}
+              >
+                <HelpCircle
+                  size={24}
+                  className="text-gray-600 hover:text-gray-800"
+                />
+              </button>
+            </div>
 
-          <div className={buttonContainerClasses}>
-            <span className={labelClasses}>Report Bug</span>
-            <button
-              className={buttonClasses}
-              onClick={() => setShowBugForm(true)}
-            >
-              <Bug size={24} className="text-gray-600 hover:text-gray-800" />
-            </button>
-          </div>
+            <div className={buttonContainerClasses}>
+              <span className={labelClasses}>Report Bug</span>
+              <button
+                className={buttonClasses}
+                onClick={() => setShowBugForm(true)}
+              >
+                <Bug size={24} className="text-gray-600 hover:text-gray-800" />
+              </button>
+            </div>
 
-          <div className={buttonContainerClasses}>
-            <span className={labelClasses}>Suggest Feature</span>
-            <button
-              className={buttonClasses}
-              onClick={() => setShowFeatureForm(true)}
-            >
-              <MessageSquarePlus
-                size={24}
-                className="text-gray-600 hover:text-gray-800"
-              />
-            </button>
+            <div className={buttonContainerClasses}>
+              <span className={labelClasses}>Suggest Feature</span>
+              <button
+                className={buttonClasses}
+                onClick={() => setShowFeatureForm(true)}
+              >
+                <MessageSquarePlus
+                  size={24}
+                  className="text-gray-600 hover:text-gray-800"
+                />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className={`${buttonContainerClasses} ${!isOpen && 'pointer-events-none'}`}>
+        <div>
           {isOpen && <span className={labelClasses}>Close Menu</span>}
           <button
             className={`${mainButtonClasses} ${
