@@ -15,11 +15,12 @@ import {
   Volume2,
   VolumeX,
   Trash2,
+  Router,
 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 
 import {
@@ -29,6 +30,8 @@ import {
 } from "@/components/ui/chat/chat-bubble";
 import { Switch } from "@/components/ui/switch";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import posthog from "posthog-js";
 
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
@@ -38,6 +41,16 @@ const LogPage: React.FC = () => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const { addToQueue } = useSpeaker();
   const { addToNotificationCount, sendPushNotification } = useNotifications();
+
+  const { useUserDataQuery } = useUserPlan();
+  const { data: userData } = useUserDataQuery("me");
+
+  function isUserWhitelisted(): boolean {
+    if (posthog.isFeatureEnabled("ai-bot-access")) {
+      return true;
+    }
+    return false;
+  }
 
   const searchParams = useSearchParams();
   const notificationId = searchParams.get("notification_id");
@@ -223,10 +236,6 @@ const LogPage: React.FC = () => {
   }, [socket, isConnected, outputMode, toggleRecording]);
 
   useEffect(() => {
-    console.log({ messages });
-  }, [messages]);
-
-  useEffect(() => {
     const markNotificationOpened = async () => {
       if (notificationId) {
         try {
@@ -242,14 +251,20 @@ const LogPage: React.FC = () => {
     markNotificationOpened();
   }, [notificationId, authedApi]);
 
+  const router = useRouter();
   return (
     <>
-      <AppleLikePopover onClose={() => {}}>
+      <AppleLikePopover
+        onClose={() => {
+          isUserWhitelisted() ? null : router.push("/");
+        }}
+      >
         <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
         <p className="text-base text-gray-700 mb-4">
-          This is an experimental feature and quite buggy, if you&apos;d like to
-          use this please please send me your feedback after you do. otherwise
-          fuck you bitch freeloader ass
+          This is an experimental feature and quite buggy.
+          {isUserWhitelisted()
+            ? "Thank you for being a part of the beta, please send me your feedback as you try it out."
+            : "If you'd like to use this, get in contact using the bubble in the bottom right."}
         </p>
 
       </AppleLikePopover>

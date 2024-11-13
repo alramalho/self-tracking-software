@@ -14,6 +14,11 @@ export function PHProvider({ children }: { children: React.ReactNode }) {
         ui_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
         person_profiles: "identified_only",
         capture_pageview: false,
+        bootstrap: {
+          featureFlags: {
+            "ai-bot-access": false,
+          },
+        },
       });
     } 
     }, []);
