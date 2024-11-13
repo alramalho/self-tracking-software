@@ -224,7 +224,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           )}
         </div>
       )}
-      <div className="p-4 flex flex-row flex-nowrap items-center justify-between">
+      <div className="p-4 flex flex-col flex-nowrap items-start justify-between">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Avatar className="w-8 h-8" onClick={onAvatarClick}>
