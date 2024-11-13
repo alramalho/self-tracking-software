@@ -21,15 +21,18 @@ activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
 users_gateway = UsersGateway()
 
+
 class ActivityEntryResponse(BaseModel):
     id: str
     activity_id: str
     quantity: int
     date: str
 
+
 @router.get("/activities", response_model=List[Activity])
 async def get_activities(user: User = Depends(is_clerk_user)):
     return activities_gateway.get_all_activities_by_user_id(user.id)
+
 
 @router.get("/activity-entries", response_model=List[ActivityEntryResponse])
 async def get_activity_entries(user: User = Depends(is_clerk_user)):
@@ -40,6 +43,7 @@ async def get_activity_entries(user: User = Depends(is_clerk_user)):
         )
         for e in entries
     ]
+
 
 @router.post("/log-activity", response_model=ActivityEntryResponse)
 async def log_activity(
@@ -60,14 +64,13 @@ async def log_activity(
     try:
         entry = activities_gateway.create_activity_entry(activity_entry)
     except ActivityEntryAlreadyExistsException:
-        entry = activities_gateway.get_activity_entry(
-            activity_id, iso_date_string
-        )
+        entry = activities_gateway.get_activity_entry(activity_id, iso_date_string)
         if entry:
             entry = activities_gateway.update_activity_entry(
-                entry.id, {
+                entry.id,
+                {
                     "quantity": quantity + entry.quantity,
-                }
+                },
             )
 
     for friend_id in user.friend_ids:
@@ -75,21 +78,24 @@ async def log_activity(
         activity = activities_gateway.get_activity_by_id(activity_id)
         message = f"Your friend {user.name} just logged {quantity} {activity.measure} of {activity.emoji} {activity.title} "
         if has_photo:
-            message = message.replace("just logged", "just uploaded a photo 📸 after logging")
+            message = message.replace(
+                "just logged", "just uploaded a photo 📸 after logging"
+            )
 
-        await notification_manager.create_and_process_notification(Notification.new(
-            user_id=friend_id,
-            message=message,
-            type="info",
-            related_data={
-                "picture": user.picture,
-                "name": user.name,
-                "username": user.username,
-            }
-        ))
+        await notification_manager.create_and_process_notification(
+            Notification.new(
+                user_id=friend_id,
+                message=message,
+                type="info",
+                related_data={
+                    "picture": user.picture,
+                    "name": user.name,
+                    "username": user.username,
+                },
+            )
+        )
 
     return entry
-
 
 
 @router.get("/recent-activities")
@@ -98,6 +104,7 @@ async def get_recent_activities(user: User = Depends(is_clerk_user)):
         user.id, limit=5
     )
     return {"recent_activities": recent_activities}
+
 
 @router.post("/upsert-activity")
 async def upsert_activity(
@@ -117,6 +124,7 @@ async def upsert_activity(
         created_activity = activities_gateway.create_activity(new_activity)
         return created_activity
 
+
 @router.post("/store-activity-photo")
 async def store_activity_photo(
     photo: UploadFile = File(...),
@@ -132,7 +140,7 @@ async def store_activity_photo(
 
     s3_gateway.upload(await photo.read(), s3_path)
 
-    expiration = 604799 # 7 days (max for s3 presigned url)
+    expiration = 604799  # 7 days (max for s3 presigned url)
     presigned_url = s3_gateway.generate_presigned_url(s3_path, expiration)
 
     image_expires_at = datetime.now() + timedelta(seconds=expiration)
@@ -155,6 +163,7 @@ async def store_activity_photo(
         "presigned_url": presigned_url,
     }
 
+
 @router.put("/activity-entries/{activity_entry_id}")
 async def update_activity_entry(
     activity_entry_id: str,
@@ -166,9 +175,11 @@ async def update_activity_entry(
         existing_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
         if not existing_entry:
             raise HTTPException(status_code=404, detail="Activity entry not found")
-        
+
         if existing_entry.user_id != user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to update this entry")
+            raise HTTPException(
+                status_code=403, detail="Not authorized to update this entry"
+            )
 
         # Update the entry
         updated_entry = activities_gateway.update_activity_entry(
@@ -176,13 +187,16 @@ async def update_activity_entry(
             {
                 "quantity": update_data.get("quantity", existing_entry.quantity),
                 "date": update_data.get("date", existing_entry.date),
-            }
+            },
         )
-        
+
         return updated_entry
     except Exception as e:
-        logger.error(f"Error updating activity entry: {str(e)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Error updating activity entry: {str(e)}\n{traceback.format_exc()}"
+        )
         raise HTTPException(status_code=500, detail="Failed to update activity entry")
+
 
 @router.post("/activity-entries/{activity_entry_id}/reactions")
 async def add_activity_reaction(
@@ -194,22 +208,27 @@ async def add_activity_reaction(
     try:
         if operation == "add":
             updated_entry = activities_gateway.add_reaction(
-                activity_entry_id=activity_entry_id,
-                emoji=emoji,
-                user=user
+                activity_entry_id=activity_entry_id, emoji=emoji, user=user
             )
-            activity_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
-            notification_manager.create_and_process_notification(Notification.new(
-                user_id=activity_entry.user_id,
-                message="your friend {user.name} just reacted to your activity",
-                type="info",
-            ))
+            activity_entry = activities_gateway.get_activity_entry_by_id(
+                activity_entry_id
+            )
+            await notification_manager.create_and_process_notification(
+                Notification.new(
+                    user_id=activity_entry.user_id,
+                    message=f"Your friend @{user.username} just reacted to your activity",
+                    type="info",
+                    related_data={
+                        "picture": user.picture,
+                        "name": user.name,
+                        "username": user.username,
+                    },
+                )   
+            )
             return {"message": "Reaction added successfully", "entry": updated_entry}
         elif operation == "remove":
             updated_entry = activities_gateway.remove_reaction(
-                activity_entry_id=activity_entry_id,
-                emoji=emoji,
-                user=user
+                activity_entry_id=activity_entry_id, emoji=emoji, user=user
             )
             return {"message": "Reaction removed successfully", "entry": updated_entry}
         else:
@@ -217,6 +236,7 @@ async def add_activity_reaction(
     except Exception as e:
         logger.error(f"Error adding reaction: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to add reaction")
+
 
 @router.get("/activity-entries/{activity_entry_id}/reactions")
 async def get_activity_reactions(
@@ -227,12 +247,12 @@ async def get_activity_reactions(
         entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
         if not entry:
             raise HTTPException(status_code=404, detail="Activity entry not found")
-        
+
         # Convert user_ids to usernames for the frontend
         reactions_with_usernames = {}
         for emoji, usernames in entry.reactions.items():
             reactions_with_usernames[emoji] = usernames
-        
+
         return {"reactions": reactions_with_usernames}
     except Exception as e:
         logger.error(f"Error getting reactions: {str(e)}\n{traceback.format_exc()}")
