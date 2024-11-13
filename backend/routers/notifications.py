@@ -50,7 +50,9 @@ async def process_scheduled_notification(request: Request):
     if not notification_id:
         raise HTTPException(status_code=400, detail="Notification ID is required")
 
-    processed_notification = await notification_manager.process_notification(notification_id)
+    processed_notification = await notification_manager.process_notification(
+        notification_id
+    )
 
     if processed_notification:
         user = users_gateway.get_user_by_id(processed_notification.user_id)
@@ -79,13 +81,14 @@ async def process_scheduled_notification(request: Request):
             )
         )
 
-        posthog.capture(
-            distinct_id=user.id,
-            event="scheduled-notification-processed",
-            properties={
-                "notification_id": processed_notification.id,
-            },
-        )
+        if processed_notification.type == "engagement":
+            posthog.capture(
+                distinct_id=user.id,
+                event="scheduled-engagement-notification-processed",
+                properties={
+                    "notification_id": processed_notification.id,
+                },
+            )
         return {"message": "Notification processed and sent successfully"}
     else:
         return JSONResponse(
@@ -135,7 +138,11 @@ async def route_initiate_user_recurrent_checkin(user: User = Depends(is_clerk_us
 
 @router.get("/load-notifications")
 async def load_notifications(user: User = Depends(is_clerk_user)):
-    notifications = [n for n in notification_manager.get_all_for_user(user.id) if n.status != "concluded"]
+    notifications = [
+        n
+        for n in notification_manager.get_all_for_user(user.id)
+        if n.status != "concluded"
+    ]
     for notification in notifications:
         if notification.status == "processed":
             notification_manager.mark_as_opened(notification.id)

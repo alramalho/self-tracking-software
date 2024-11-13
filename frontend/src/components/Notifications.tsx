@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { Check, X, MessageSquare, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
+import posthog from "posthog-js";
 
 interface NotificationsProps {}
 
@@ -33,6 +34,9 @@ const Notifications: React.FC<NotificationsProps> = () => {
         await concludeNotification();
       } else if (notification.type === "engagement") {
         if (action === "respond") {
+          posthog.capture("engagement-notification-responded", {
+            notification_id: notification.id,
+          });
           router.push(`/ai?notificationId=${notification.id}`);
         }
         await concludeNotification();

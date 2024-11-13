@@ -14,6 +14,7 @@ from routers.clerk import router as clerk_router
 from routers.users import router as users_router
 from routers.activities import router as activities_router
 from routers.plans import router as plans_router
+from routers.admin import router as admin_router
 from routers.notifications import router as notifications_router
 from routers.ai import router as ai_router
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -91,6 +92,7 @@ app.include_router(activities_router)
 app.include_router(plans_router)
 app.include_router(notifications_router)
 app.include_router(ai_router)
+app.include_router(admin_router)
 
 app.add_middleware(
     CORSMiddleware,
