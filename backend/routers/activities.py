@@ -183,3 +183,53 @@ async def update_activity_entry(
     except Exception as e:
         logger.error(f"Error updating activity entry: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to update activity entry")
+
+@router.post("/activity-entries/{activity_entry_id}/reactions")
+async def add_activity_reaction(
+    activity_entry_id: str,
+    emoji: str = Body(...),
+    operation: str = Body(...),
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        if operation == "add":
+            updated_entry = activities_gateway.add_reaction(
+                activity_entry_id=activity_entry_id,
+                emoji=emoji,
+                user_id=user.id
+            )
+            return {"message": "Reaction added successfully", "entry": updated_entry}
+        elif operation == "remove":
+            updated_entry = activities_gateway.remove_reaction(
+                activity_entry_id=activity_entry_id,
+                emoji=emoji,
+                user_id=user.id
+            )
+            return {"message": "Reaction removed successfully", "entry": updated_entry}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid operation")
+    except Exception as e:
+        logger.error(f"Error adding reaction: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to add reaction")
+
+@router.get("/activity-entries/{activity_entry_id}/reactions")
+async def get_activity_reactions(
+    activity_entry_id: str,
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        entry = activities_gateway.get_activity_entry_with_reactions(activity_entry_id)
+        # Convert user_ids to usernames for the frontend
+        reactions_with_usernames = {}
+        for emoji, user_ids in entry.reactions.items():
+            usernames = []
+            for user_id in user_ids:
+                user_data = users_gateway.get_user_by_id(user_id)
+                if user_data:
+                    usernames.append(user_data.username)
+            reactions_with_usernames[emoji] = {"usernames": usernames}
+        
+        return {"reactions": reactions_with_usernames}
+    except Exception as e:
+        logger.error(f"Error getting reactions: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to get reactions")

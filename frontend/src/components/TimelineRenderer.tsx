@@ -77,6 +77,7 @@ const TimelineRenderer: React.FC = () => {
             <ActivityEntryPhotoCard
               key={entry.id}
               imageUrl={entry.image?.url}
+              activityEntryId={entry.id}
               activityTitle={activity.title}
               activityEmoji={activity.emoji || ""}
               activityEntryQuantity={entry.quantity}

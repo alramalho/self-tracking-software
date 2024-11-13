@@ -334,6 +334,7 @@ const ProfilePage: React.FC = () => {
                       <ActivityEntryPhotoCard
                         key={entry.id}
                         imageUrl={entry.image?.url}
+                        activityEntryId={entry.id}
                         activityTitle={activity?.title || "Unknown Activity"}
                         activityEmoji={activity?.emoji || ""}
                         activityEntryQuantity={entry.quantity}

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Image, Slack, Smile } from "lucide-react";
-import EmojiPicker from "emoji-picker-react";
-import { ReactionBarSelector, ReactionCounterObject, SlackCounter } from "@charkour/react-reactions";
-import { EmojiClickData, } from "emoji-picker-react";
-
+import { Loader2, Smile } from "lucide-react";
+  import { ReactionBarSelector } from "@charkour/react-reactions";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { useApiWithAuth } from "@/api";
 interface ActivityEntryPhotoCardProps {
   imageUrl?: string;
   activityTitle: string;
@@ -20,6 +21,7 @@ interface ActivityEntryPhotoCardProps {
   editable?: boolean;
   onEditClick?: () => void;
   onClick?: () => void;
+  activityEntryId: string;
 }
 
 interface ReactionCount {
@@ -49,22 +51,78 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   editable,
   onClick,
   onEditClick,
+  activityEntryId,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
+  const {useUserDataQuery} = useUserPlan();
+  const userData = useUserDataQuery("me").data;
+  const currentUserUsername = userData?.user?.username;
+  const [isLoading, setIsLoading] = useState(false);
+  const isOwnActivityEntry = userData?.user?.username === userUsername;
+  const api = useApiWithAuth();
 
-  const handleEmojiClick = (emojiName: string) => {
-    const emoji = REACTION_EMOJI_MAPPING[emojiName as keyof typeof REACTION_EMOJI_MAPPING];
-    if (reactions[emoji]?.usernames.includes(userUsername!)) {
-      return;
+  useEffect(() => {
+    const fetchInitialReactions = async () => {
+      try {
+        const response = await api.get(`/activity-entries/${activityEntryId}/reactions`);
+        setReactions(response.data.reactions);
+      } catch (error) {
+        toast.error("Failed to load reactions");
+      }
+    };
+
+    if (activityEntryId) {
+      fetchInitialReactions();
     }
-    setReactions((prev) => {
-      const newReactions = { ...prev };
-      newReactions[emoji] = {
-        usernames: [...(newReactions[emoji]?.usernames || []), userUsername!],
-      };
-      return newReactions;
-    });
+  }, [activityEntryId]);
+
+  const handleEmojiClick = async (emojiName: string) => {
+    const emoji = REACTION_EMOJI_MAPPING[emojiName as keyof typeof REACTION_EMOJI_MAPPING];
+    if (!currentUserUsername) return;
+
+    setShowEmojiPicker(false);
+
+    try {
+      setIsLoading(true);
+      const hasReacted = reactions[emoji]?.usernames.includes(currentUserUsername);
+      
+      if (hasReacted) {
+        await api.post(`/activity-entries/${activityEntryId}/reactions`, {
+          operation: "remove",
+          emoji
+        });
+        
+        setReactions((prev) => {
+          const newReactions = { ...prev };
+          newReactions[emoji].usernames = newReactions[emoji].usernames.filter(
+            u => u !== currentUserUsername
+          );
+          if (newReactions[emoji].usernames.length === 0) {
+            delete newReactions[emoji];
+          }
+          return newReactions;
+        });
+      } else {
+        await api.post(`/activity-entries/${activityEntryId}/reactions`, {
+          operation: "add",
+          emoji
+        });
+        
+        setReactions((prev) => {
+          const newReactions = { ...prev };
+          newReactions[emoji] = {
+            usernames: [...(newReactions[emoji]?.usernames || []), currentUserUsername],
+          };
+          return newReactions;
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to update reaction");
+    } finally {
+      setIsLoading(false);
+    }
+    
     setShowEmojiPicker(false);
   };
 
@@ -87,13 +145,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   const reactionUsernames = reactions[emoji]?.usernames || [];
-                  if (reactionUsernames.includes(userUsername!)) {
+                  if (reactionUsernames.includes(currentUserUsername!)) {
                     return;
                   }
                   setReactions((prev) => ({
                     ...prev,
                     [emoji]: {
-                      usernames: [...prev[emoji].usernames, userUsername!],
+                      usernames: [...prev[emoji].usernames, currentUserUsername!],
                     },
                   }));
                 }}
@@ -104,7 +162,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               </button>
             ))}
           </div>
-          {imageUrl && !hasImageExpired && (
+          {imageUrl && !hasImageExpired && !isOwnActivityEntry && (
             <>
               <div className="absolute bottom-0 right-2">
                 {showEmojiPicker ? (
@@ -126,11 +184,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      console.log("clicked");
                       setShowEmojiPicker(!showEmojiPicker);
                     }}
                     className="inline-flex items-center space-x-1 bg-white rounded-full p-2 transition-all shadow-md"
                   >
-                    <Smile className="h-6 w-6 text-gray-500" />
+                    {isLoading ? <Loader2 className="h-6 w-6 text-gray-500 animate-spin" /> : <Smile className="h-6 w-6 text-gray-500" />}
                   </button>
                 )}
               </div>

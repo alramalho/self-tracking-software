@@ -78,7 +78,7 @@ const FloatingActionMenu = () => {
 
   return (
     <>
-      <div className="fixed bottom-20 right-4 z-[20]">
+      <div className={`fixed bottom-20 right-4 ${isOpen ? 'z-[20]' : 'z-[-1]'}`}>
         <div
           className={`flex flex-col-reverse gap-3 items-end transition-all duration-200 mb-3
             ${
@@ -124,12 +124,12 @@ const FloatingActionMenu = () => {
           </div>
         </div>
 
-        <div className={buttonContainerClasses}>
+        <div className={`${buttonContainerClasses} ${!isOpen && 'pointer-events-none'}`}>
           {isOpen && <span className={labelClasses}>Close Menu</span>}
           <button
             className={`${mainButtonClasses} ${
               isOpen ? "bg-gray-50" : "bg-white"
-            }`}
+            } pointer-events-auto`}
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? (
