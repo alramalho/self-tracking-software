@@ -62,7 +62,8 @@ const FloatingActionMenu = () => {
     );
   };
 
-  const buttonContainerClasses = "flex items-center gap-3 group";
+  const buttonContainerClasses =
+    "flex items-center gap-3 grou" + `${!isOpen && "hidden"}`;
   const buttonClasses =
     "w-12 h-12 bg-white rounded-full flex items-center justify-center " +
     "text-gray-600 shadow-md hover:shadow-lg border border-gray-200 " +
@@ -87,8 +88,7 @@ const FloatingActionMenu = () => {
                 : "opacity-0 translate-y-4 pointer-events-none"
             }`}
         >
-          <div className={`${!isOpen && "hidden"}`}>
-            <div>
+            <div className={buttonContainerClasses}>
               <span className={labelClasses}>Get Help</span>
               <button
                 className={buttonClasses}
@@ -124,7 +124,6 @@ const FloatingActionMenu = () => {
               </button>
             </div>
           </div>
-        </div>
 
         <div>
           {isOpen && <span className={labelClasses}>Close Menu</span>}
