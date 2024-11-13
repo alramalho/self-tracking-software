@@ -15,7 +15,7 @@ from typing import Optional
 from constants import (
     SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
 )
-import json
+from analytics.posthog import posthog
 import traceback
 from loguru import logger
 
@@ -79,6 +79,13 @@ async def process_scheduled_notification(request: Request):
             )
         )
 
+        posthog.capture(
+            distinct_id=user.id,
+            event="scheduled-notification-processed",
+            properties={
+                "notification_id": processed_notification.id,
+            },
+        )
         return {"message": "Notification processed and sent successfully"}
     else:
         return JSONResponse(
