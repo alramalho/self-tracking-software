@@ -198,6 +198,11 @@ async def add_activity_reaction(
                 emoji=emoji,
                 user=user
             )
+            notification_manager.create_and_process_notification(Notification.new(
+                user_id=user.id,
+                message="your friend {user.name} just reacted to your activity",
+                type="info",
+            ))
             return {"message": "Reaction added successfully", "entry": updated_entry}
         elif operation == "remove":
             updated_entry = activities_gateway.remove_reaction(
