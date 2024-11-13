@@ -255,6 +255,7 @@ const LogPage: React.FC = () => {
   return (
     <>
       <AppleLikePopover
+        className="z-[10000]"
         onClose={() => {
           isUserWhitelisted() ? null : router.push("/");
         }}
@@ -264,7 +265,7 @@ const LogPage: React.FC = () => {
           This is an experimental feature and quite buggy.
           {isUserWhitelisted()
             ? "Thank you for being a part of the beta, please send me your feedback as you try it out."
-            : "If you'd like to use this, get in contact using the bubble in the bottom right."}
+            : "If you'd like to use this, get in contact using the bubble in the bottom right under the 'Feature Requests' section."}
         </p>
 
       </AppleLikePopover>

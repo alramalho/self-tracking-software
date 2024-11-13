@@ -6,12 +6,14 @@ interface AppleLikePopoverProps {
   onClose: () => void;
   children: React.ReactNode;
   unclosable?: boolean;
+  className?: string;
 }
 
 const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   onClose,
   children,
   unclosable = false,
+  className,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,7 +35,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
     <div
       className={`fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity duration-300 ${
         isVisible ? "opacity-100" : "opacity-0"
-      }`}
+      } ${className}`}
     >
       <div
         ref={containerRef}

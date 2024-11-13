@@ -29,6 +29,7 @@ const LogPage: React.FC = () => {
   const [loggedActivityEntry, setLoggedActivityEntry] = useState<any>(null);
   const api = useApiWithAuth();
   const { addToNotificationCount } = useNotifications();
+  const [showBanner, setShowBanner] = useState(true);
 
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
@@ -86,7 +87,7 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
-      {/* {showBanner && (
+      {showBanner && (
         <div
           className="fixed top-0 left-0 right-0 bg-gradient-to-r from-purple-500 to-blue-500 text-white p-4 text-center z-50 cursor-pointer"
           onClick={() => router.push("/ai")}
@@ -104,7 +105,7 @@ const LogPage: React.FC = () => {
             <X size={24} />
           </button>
         </div>
-      )} */}
+      )}
       <h1 className="text-2xl font-bold mb-6 mt-16">Log Activity</h1>
       <ActivitySelector
         activities={activities}
