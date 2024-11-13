@@ -198,8 +198,9 @@ async def add_activity_reaction(
                 emoji=emoji,
                 user=user
             )
+            activity_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
             notification_manager.create_and_process_notification(Notification.new(
-                user_id=user.id,
+                user_id=activity_entry.user_id,
                 message="your friend {user.name} just reacted to your activity",
                 type="info",
             ))
