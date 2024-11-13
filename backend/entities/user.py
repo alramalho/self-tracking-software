@@ -3,6 +3,7 @@ from datetime import datetime, UTC
 from typing import Optional, Dict, Any, List
 from bson import ObjectId
 
+
 class User(BaseModel):
     id: str
     name: Optional[str] = None
@@ -24,7 +25,16 @@ class User(BaseModel):
     plan_invitations: List[str] = Field(default_factory=list)
 
     @classmethod
-    def new(cls, email: str, clerk_id: Optional[str] = None, picture: Optional[str] = None, name: Optional[str] = None, id: Optional[str] = None, username: Optional[str] = None) -> "User":
+    def new(
+        cls,
+        email: str,
+        clerk_id: Optional[str] = None,
+        picture: Optional[str] = None,
+        name: Optional[str] = None,
+        id: Optional[str] = None,
+        username: Optional[str] = None,
+        friend_ids: Optional[List[str]] = [],
+    ) -> "User":
         return cls(
             id=id or str(ObjectId()),
             email=email,
@@ -33,4 +43,5 @@ class User(BaseModel):
             picture=picture,
             name=name,
             username=username,
+            friend_ids=friend_ids,
         )

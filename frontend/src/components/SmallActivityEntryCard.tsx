@@ -8,7 +8,7 @@ export interface Entry {
   quantity: number;
 }
 
-export const ActivityEntryCard = ({
+export const SmallActivityEntryCard = ({
   entry,
   activity,
   onClick,

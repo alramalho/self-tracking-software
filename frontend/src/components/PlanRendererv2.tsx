@@ -24,7 +24,7 @@ import {
 import { LineChart } from "@/components/charts/line";
 import { Loader2, PlusSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { ActivityEntryCard, Entry } from "@/components/ActivityEntryCard";
+import { SmallActivityEntryCard, Entry } from "@/components/SmallActivityEntryCard";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { Switch } from "./ui/switch";
@@ -500,7 +500,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 if (!activity) return null;
 
                 return (
-                  <ActivityEntryCard
+                  <SmallActivityEntryCard
                     key={`${session.date}-${session.activity_id}`}
                     entry={session as Entry}
                     activity={activity}

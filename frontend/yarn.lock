@@ -23,6 +23,11 @@
   dependencies:
     regenerator-runtime "^0.14.0"
 
+"@charkour/react-reactions@^0.11.0":
+  version "0.11.0"
+  resolved "https://registry.yarnpkg.com/@charkour/react-reactions/-/react-reactions-0.11.0.tgz#cde3614de5a954ee733c0d8c855be473ad003e7c"
+  integrity sha512-a1AnfUzZ1jZZUvMI8w4D8EfwMohByKhW6RTnY4xQ1VFwNfYbcVbRT6MUO7Gkk9Q+LqyVsNNW9fU9rG58hOvGmg==
+
 "@clerk/backend@1.7.0":
   version "1.7.0"
   resolved "https://registry.yarnpkg.com/@clerk/backend/-/backend-1.7.0.tgz#fc9e435bb0bfbf14f98ff65214cfdf8b5ae0726b"
