@@ -262,7 +262,7 @@ const LogPage: React.FC = () => {
       >
         <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
         <p className="text-base text-gray-700 mb-4">
-          This is an experimental feature and quite buggy.
+          This is an experimental feature exclusive for whitelisted BETA users.
           {isUserWhitelisted()
             ? "Thank you for being a part of the beta, please send me your feedback as you try it out."
             : "If you'd like to use this, get in contact using the bubble in the bottom right under the 'Feature Requests' section."}
