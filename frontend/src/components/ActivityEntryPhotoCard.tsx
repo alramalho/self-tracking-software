@@ -26,7 +26,7 @@ interface ActivityEntryPhotoCardProps {
 }
 
 interface ReactionCount {
-    [key: string]: string[];
+  [key: string]: string[];
 }
 
 const REACTION_EMOJI_MAPPING = {
@@ -56,11 +56,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityEntryId,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [reactions, setReactions] = useState<ReactionCount>(activityEntryReactions);
+  const [reactions, setReactions] = useState<ReactionCount>(
+    activityEntryReactions
+  );
   const { useUserDataQuery } = useUserPlan();
   const userData = useUserDataQuery("me").data;
   const currentUserUsername = userData?.user?.username;
-  const [isLoading, setIsLoading] = useState(false);
   const isOwnActivityEntry = userData?.user?.username === userUsername;
   const api = useApiWithAuth();
   const [showUserList, setShowUserList] = useState<{ [key: string]: boolean }>(
@@ -78,39 +79,43 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   }
 
   async function addReaction(emoji: string) {
-    try {
-      setIsLoading(true);
-      setShowEmojiPicker(false);
+    setShowEmojiPicker(false);
 
-      await api.post(`/activity-entries/${activityEntryId}/reactions`, {
+    await toast.promise(
+      api.post(`/activity-entries/${activityEntryId}/reactions`, {
         operation: "add",
         emoji,
-      });
-    } catch (error) {
-      toast.error("Failed to add reaction");
-    } finally {
-      setIsLoading(false);
-      getReactions();
-    }
-  }
+      }),
+      {
+        loading: "Adding reaction...",
+        success: "Reaction added successfully!",
+        error: "Failed to add reaction",
+      }
+    );
 
+    getReactions();
+  }
   async function removeReaction(emoji: string) {
     try {
-      setIsLoading(true);
       setShowEmojiPicker(false);
 
-      await api.post(`/activity-entries/${activityEntryId}/reactions`, {
-        operation: "remove",
-        emoji,
-      });
+      await toast.promise(
+        api.post(`/activity-entries/${activityEntryId}/reactions`, {
+          operation: "remove",
+          emoji,
+        }),
+        {
+          loading: "Removing reaction...",
+          success: "Reaction removed successfully!",
+          error: "Failed to remove reaction",
+        }
+      );
     } catch (error) {
       toast.error("Failed to remove reaction");
     } finally {
-      setIsLoading(false);
       getReactions();
     }
   }
-
 
   // own profile
   // numbers -> usernames -> numbers
@@ -146,9 +151,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   };
 
   return (
-    <div
-      className="border rounded-lg overflow-hidden relative"
-    >
+    <div className="border rounded-lg overflow-hidden relative">
       {imageUrl && !hasImageExpired && (
         <div className="relative max-h-full max-w-full mx-auto">
           <img
@@ -163,7 +166,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 <button
                   key={emoji}
                   onClick={() => handleReactionClick(emoji)}
-                  className={`inline-flex items-center border border-gray-200 border-gray-100 rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${usernames.includes(currentUserUsername || "") ? "border-blue-400 bg-blue-50" : "bg-white "}`}
+                  className={`inline-flex items-center border border-gray-200 border-gray-100 rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
+                    usernames.includes(currentUserUsername || "")
+                      ? "border-blue-400 bg-blue-50"
+                      : "bg-white "
+                  }`}
                 >
                   <span className="text-base">{emoji}</span>
                   {showUserList[emoji] ? (
@@ -176,7 +183,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     </span>
                   )}
                 </button>
-              )
+              );
             })}
           </div>
           {imageUrl && !hasImageExpired && !isOwnActivityEntry && (
@@ -212,11 +219,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     }}
                     className="inline-flex items-center space-x-1 bg-white rounded-full p-2 transition-all shadow-md"
                   >
-                    {isLoading ? (
-                      <Loader2 className="h-6 w-6 text-gray-500 animate-spin" />
-                    ) : (
-                      <Smile className="h-6 w-6 text-gray-500" />
-                    )}
+                    <Smile className="h-6 w-6 text-gray-500" />
                   </button>
                 )}
               </div>
