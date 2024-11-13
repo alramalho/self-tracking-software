@@ -196,14 +196,14 @@ async def add_activity_reaction(
             updated_entry = activities_gateway.add_reaction(
                 activity_entry_id=activity_entry_id,
                 emoji=emoji,
-                user_id=user.id
+                user=user
             )
             return {"message": "Reaction added successfully", "entry": updated_entry}
         elif operation == "remove":
             updated_entry = activities_gateway.remove_reaction(
                 activity_entry_id=activity_entry_id,
                 emoji=emoji,
-                user_id=user.id
+                user=user
             )
             return {"message": "Reaction removed successfully", "entry": updated_entry}
         else:
@@ -218,16 +218,14 @@ async def get_activity_reactions(
     user: User = Depends(is_clerk_user),
 ):
     try:
-        entry = activities_gateway.get_activity_entry_with_reactions(activity_entry_id)
+        entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        if not entry:
+            raise HTTPException(status_code=404, detail="Activity entry not found")
+        
         # Convert user_ids to usernames for the frontend
         reactions_with_usernames = {}
-        for emoji, user_ids in entry.reactions.items():
-            usernames = []
-            for user_id in user_ids:
-                user_data = users_gateway.get_user_by_id(user_id)
-                if user_data:
-                    usernames.append(user_data.username)
-            reactions_with_usernames[emoji] = {"usernames": usernames}
+        for emoji, usernames in entry.reactions.items():
+            reactions_with_usernames[emoji] = usernames
         
         return {"reactions": reactions_with_usernames}
     except Exception as e:

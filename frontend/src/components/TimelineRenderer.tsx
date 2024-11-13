@@ -81,6 +81,7 @@ const TimelineRenderer: React.FC = () => {
               activityTitle={activity.title}
               activityEmoji={activity.emoji || ""}
               activityEntryQuantity={entry.quantity}
+              activityEntryReactions={entry.reactions}
               activityMeasure={activity.measure}
               formattedDate={formattedDate}
               userPicture={user?.picture}
@@ -88,7 +89,7 @@ const TimelineRenderer: React.FC = () => {
               hasImageExpired={hasImageExpired}
               userName={user?.name}
               userUsername={user?.username}
-              onClick={() => {
+              onAvatarClick={() => {
                 router.push(`/profile/${user?.username}`);
               }}
             />

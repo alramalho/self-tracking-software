@@ -338,6 +338,7 @@ const ProfilePage: React.FC = () => {
                         activityTitle={activity?.title || "Unknown Activity"}
                         activityEmoji={activity?.emoji || ""}
                         activityEntryQuantity={entry.quantity}
+                        activityEntryReactions={entry.reactions}
                         activityMeasure={activity?.measure || ""}
                         formattedDate={getFormattedDate(entry.date)}
                         daysUntilExpiration={

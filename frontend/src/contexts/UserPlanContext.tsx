@@ -22,6 +22,7 @@ export interface ActivityEntry {
   activity_id: string;
   quantity: number;
   date: string;
+  reactions: Record<string, string[]>; // emoji -> usernames
   image: {
     s3_path?: string;
     url?: string;

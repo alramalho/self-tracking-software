@@ -7,6 +7,9 @@ from gateways.database.mongodb import MongoDBGateway
 from entities.friend_request import FriendRequest
 from gateways.plan_groups import PlanGroupsGateway
 from gateways.friend_requests import FriendRequestGateway
+from gateways.activities import ActivitiesGateway
+
+
 class UserDoesNotExistException(Exception):
     pass
 
@@ -21,6 +24,7 @@ class UsersGateway:
         self.db_gateway = MongoDBGateway("users")
         self.friend_request_gateway = FriendRequestGateway()
         self.plan_groups_gateway = PlanGroupsGateway()
+        self.activities_gateway = ActivitiesGateway()
 
     def get_all_users(self) -> list[User]:
         return [User(**data) for data in self.db_gateway.scan()]
@@ -62,11 +66,11 @@ class UsersGateway:
         self.db_gateway.write(user.dict())
         logger.info(f"User {user.id} ({user.name}) updated")
         return user
-    
+
     def add_friend(self, user_id: str, friend_id: str) -> User:
         user = self.get_user_by_id(user_id)
         friend = self.get_user_by_id(friend_id)
-        
+
         if friend_id not in user.friend_ids:
             user.friend_ids.append(friend_id)
             self.update_user(user)
@@ -89,21 +93,38 @@ class UsersGateway:
         self.db_gateway.write(user.dict())
         logger.info(f"User {user.id} ({user.name}) fields {fields} updated")
         return user
-    
+
     def _propagate_relevant_fields(self, user: User, fields: dict):
         if any(field in fields.keys() for field in ("username", "name", "picture")):
             new_username = fields.get("username", None)
             new_name = fields.get("name", None)
             new_picture = fields.get("picture", None)
-            plan_groups = self.plan_groups_gateway.get_all_plan_groups_by_user_id(user.id)
+            plan_groups = self.plan_groups_gateway.get_all_plan_groups_by_user_id(
+                user.id
+            )
             for plan_group in plan_groups:
                 for member in plan_group.members:
                     if member.user_id == user.id:
                         member.username = new_username or member.username
                         member.name = new_name or member.name
                         member.picture = new_picture or member.picture
-                        
+
                 self.plan_groups_gateway.upsert_plan_group(plan_group)
+
+        # change every actvity entry username if field changed is username
+        if "username" in fields:
+            activity_entries = (
+                self.activities_gateway.get_all_activity_entries_by_user_id(user.id)
+            )
+            for activity_entry in activity_entries:
+                activity_entry.reactions = {
+                    emoji: [
+                        new_username if username == user.username else username
+                        for username in usernames
+                    ]
+                    for emoji, usernames in activity_entry.reactions.items()
+                }
+                self.activities_gateway.upsert_activity_entry(activity_entry)
 
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)
@@ -113,7 +134,7 @@ class UsersGateway:
         logger.info(f"User {user.id} ({user.name}) marked as deleted")
 
     def permanently_delete_user(self, user_id: str):
-        self.db_gateway.delete_all('id', user_id)
+        self.db_gateway.delete_all("id", user_id)
         logger.info(f"User {user_id} forever deleted")
 
     def update_field(self, user_id: str, field_name: str, new_value: Any) -> User:
@@ -127,7 +148,7 @@ class UsersGateway:
         field = getattr(user, field_name)
         if type(field) != list:
             raise Exception(f"Field {field_name} is not a list")
-        
+
         if field is None:
             setattr(user, field_name, [])
 
@@ -144,15 +165,14 @@ class UsersGateway:
             "endpoint": user.pwa_subscription_endpoint,
             "keys": {
                 "p256dh": user.pwa_subscription_key,
-                "auth": user.pwa_subscription_auth_token
-            }
+                "auth": user.pwa_subscription_auth_token,
+            },
         }
-    
+
     def update_onboarding_progress(self, user_id: str, step: str, data: Any) -> User:
         user = self.get_user_by_id(user_id)
         user.onboarding_progress[step] = data
         return self.update_user(user)
-    
 
     def set_selected_plan(self, user_id: str, plan_id: str) -> User:
         user = self.get_user_by_id(user_id)
@@ -173,14 +193,16 @@ class UsersGateway:
 
     def send_friend_request(self, sender_id: str, recipient_id: str) -> FriendRequest:
         friend_request = FriendRequest.new(sender_id, recipient_id)
-        created_request = self.friend_request_gateway.create_friend_request(friend_request)
+        created_request = self.friend_request_gateway.create_friend_request(
+            friend_request
+        )
         return created_request
 
     def accept_friend_request(self, request_id: str) -> Tuple[User, User]:
         friend_request = self.friend_request_gateway.get_friend_request(request_id)
         if not friend_request:
             raise Exception(f"Invalid friend request '{request_id}'")
-        
+
         if friend_request.status == "rejected":
             raise Exception(f"Friend request '{request_id}' is rejected")
 
@@ -189,10 +211,10 @@ class UsersGateway:
 
         if friend_request.status == "accepted":
             return sender, recipient
-        
+
         if recipient.id not in sender.friend_ids:
             self.add_friend(sender.id, recipient.id)
-    
+
         if sender.id not in recipient.friend_ids:
             self.add_friend(recipient.id, sender.id)
 
@@ -204,15 +226,14 @@ class UsersGateway:
         friend_request = self.friend_request_gateway.get_friend_request(request_id)
         if not friend_request:
             raise Exception(f"Invalid friend request '{request_id}'")
-        
+
         if friend_request.status == "accepted":
             raise Exception(f"Friend request '{request_id}' is already accepted")
-        
+
         sender = self.get_user_by_id(friend_request.sender_id)
 
         if friend_request.status == "rejected":
             return sender
-
 
         self.friend_request_gateway.update_friend_request(request_id, "rejected")
 
@@ -221,7 +242,7 @@ class UsersGateway:
     def get_friend_count(self, user_id: str) -> int:
         user = self.get_user_by_id(user_id)
         return len(user.friend_ids)
-    
+
     def are_friends(self, user_id: str, friend_id: str) -> bool:
         user = self.get_user_by_id(user_id)
         return friend_id in user.friend_ids

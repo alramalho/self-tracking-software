@@ -73,7 +73,7 @@ class ActivityEntry(BaseModel):
     date: str = Field(description="The YYYY-MM-DD date of the activity.")
     created_at: str
     image: Optional[ImageInfo] = None
-    reactions: dict[str, List[str]] = Field(default_factory=dict, description="Mapping of emoji to list of user_ids")
+    reactions: dict[str, List[str]] = Field(default_factory=dict, description="Mapping of emoji to list of user")
 
     @classmethod
     def new(

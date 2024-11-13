@@ -7,7 +7,7 @@ from shared.utils import time_ago
 from typing import List, Tuple, Optional
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
-
+from entities.user import User
 class ActivityDoesNotExistException(Exception):
     pass
 
@@ -159,8 +159,7 @@ class ActivitiesGateway:
         self.activity_entries_db_gateway.delete_all('id', activity_entry_id)
         logger.info(f"ActivityEntry {activity_entry_id} forever deleted")
 
-    def add_reaction(self, activity_entry_id: str, emoji: str, user_id: str) -> ActivityEntry:
-        """Add a reaction to an activity entry"""
+    def add_reaction(self, activity_entry_id: str, emoji: str, user: User) -> ActivityEntry:
         activity_entry = self.get_activity_entry_by_id(activity_entry_id)
         if activity_entry is None:
             raise ActivityEntryDoesNotExistException()
@@ -170,20 +169,19 @@ class ActivitiesGateway:
             activity_entry.reactions[emoji] = []
         
         # Add user_id if not already reacted
-        if user_id not in activity_entry.reactions[emoji]:
-            activity_entry.reactions[emoji].append(user_id)
+        if user.username not in activity_entry.reactions[emoji]:
+            activity_entry.reactions[emoji].append(user.username)
             self.activity_entries_db_gateway.write(activity_entry.dict())
         
         return activity_entry
 
-    def remove_reaction(self, activity_entry_id: str, emoji: str, user_id: str) -> ActivityEntry:
-        """Remove a reaction from an activity entry"""
+    def remove_reaction(self, activity_entry_id: str, emoji: str, user: User) -> ActivityEntry:
         activity_entry = self.get_activity_entry_by_id(activity_entry_id)
         if activity_entry is None:
             raise ActivityEntryDoesNotExistException()
         
-        if emoji in activity_entry.reactions and user_id in activity_entry.reactions[emoji]:
-            activity_entry.reactions[emoji].remove(user_id)
+        if emoji in activity_entry.reactions and user.username in activity_entry.reactions[emoji]:
+            activity_entry.reactions[emoji].remove(user.username)
             # Remove the emoji key if no users are left
             if not activity_entry.reactions[emoji]:
                 del activity_entry.reactions[emoji]
@@ -191,12 +189,6 @@ class ActivitiesGateway:
         
         return activity_entry
 
-    def get_activity_entry_with_reactions(self, activity_entry_id: str) -> ActivityEntry:
-        """Get an activity entry including its reactions"""
-        activity_entry = self.get_activity_entry_by_id(activity_entry_id)
-        if activity_entry is None:
-            raise ActivityEntryDoesNotExistException()
-        return activity_entry
 
 if __name__ == "__main__":
     from gateways.database.mongodb import MongoDBGateway
