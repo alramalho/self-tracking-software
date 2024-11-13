@@ -113,6 +113,7 @@ class NotificationManager:
                 user.id, title=f"hey {user.name} 👋", body=notification.message.lower()
             )
 
+        logger.info(f"Notification '{notification.id}' processed")
         return notification
 
     async def create_and_process_notification(
