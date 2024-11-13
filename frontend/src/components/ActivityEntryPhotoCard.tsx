@@ -163,7 +163,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 <button
                   key={emoji}
                   onClick={() => handleReactionClick(emoji)}
-                  className="bg-white inline-flex items-center border border-gray-200 border-gray-100 rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto"
+                  className={`inline-flex items-center border border-gray-200 border-gray-100 rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${usernames.includes(currentUserUsername || "") ? "border-blue-400 bg-blue-50" : "bg-white "}`}
                 >
                   <span className="text-base">{emoji}</span>
                   {showUserList[emoji] ? (
