@@ -15,12 +15,12 @@ import InviteStep from "./InviteStep";
 import NotificationStep from "./NotificationStep";
 import toast from "react-hot-toast";
 
-interface OnboardingProps {
-  isNewPlan?: boolean;
+interface CreatePlanCardJourneyProps {
+  children?: React.ReactNode;
   onComplete: () => void;
 }
 
-interface OnboardingState {
+interface CreatePlanCardJourneyState {
   step: number;
   name: string;
   username: string;
@@ -31,15 +31,15 @@ interface OnboardingState {
   generatedPlans: GeneratedPlan[];
 }
 
-const Onboarding: React.FC<OnboardingProps> = ({
-  isNewPlan = false,
+const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
+  children,
   onComplete,
 }) => {
   // Load initial state from localStorage or use defaults
-  const loadInitialState = (): OnboardingState => {
+  const loadInitialState = (): CreatePlanCardJourneyState => {
     if (typeof window === 'undefined') return getDefaultState();
     
-    const saved = localStorage.getItem('onboardingState');
+    const saved = localStorage.getItem('createPlanCardJourneyState');
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
@@ -50,7 +50,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
     return getDefaultState();
   };
 
-  const getDefaultState = (): OnboardingState => ({
+  const getDefaultState = (): CreatePlanCardJourneyState => ({
     step: 0,
     name: '',
     username: '',
@@ -62,7 +62,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
   });
 
   // Replace individual state declarations with a single state object
-  const [state, setState] = useState<OnboardingState>(loadInitialState);
+  const [state, setState] = useState<CreatePlanCardJourneyState>(loadInitialState);
   const [selectedPlan, setSelectedPlan] = useState<ApiPlan | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const api = useApiWithAuth();
@@ -85,12 +85,12 @@ const Onboarding: React.FC<OnboardingProps> = ({
   // Save to localStorage whenever state changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('onboardingState', JSON.stringify(state));
+      localStorage.setItem('createPlanCardJourneyState', JSON.stringify(state));
     }
   }, [state]);
 
   // Helper function to update state
-  const updateState = (updates: Partial<OnboardingState>) => {
+  const updateState = (updates: Partial<CreatePlanCardJourneyState>) => {
     setState(prev => ({ ...prev, ...updates }));
   };
 
@@ -100,42 +100,17 @@ const Onboarding: React.FC<OnboardingProps> = ({
   };
 
   // Modify other setters to use updateState
-  const setName = (newName: string) => updateState({ name: newName });
-  const setUsername = (newUsername: string) => updateState({ username: newUsername });
   const setGoal = (newGoal: string) => updateState({ goal: newGoal });
   const setFinishingDate = (date: Date | undefined) => updateState({ finishingDate: date });
   const setSelectedEmoji = (emoji: string) => updateState({ selectedEmoji: emoji });
   const setPlanDescription = (desc: string) => updateState({ planDescription: desc });
   const setGeneratedPlans = (plans: GeneratedPlan[]) => updateState({ generatedPlans: plans });
 
-  // Clear localStorage when onboarding is complete
+  // Clear localStorage when createPlanCardJourney is complete
   const handleComplete = () => {
-    localStorage.removeItem('onboardingState');
+    localStorage.removeItem('createPlanCardJourneyState');
     onComplete();
   };
-
-  // Modify the existing useEffect for userData
-  useEffect(() => {
-    try {
-      if (userData && step < 2) {
-        if (userData.user?.name) {
-          updateState({
-            name: userData.user.name,
-            step: 1
-          });
-        }
-        if (userData.user?.username) {
-          updateState({
-            username: userData.user.username,
-            step: 2
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error loading user data:", error);
-      toast.error("Error loading user data");
-    }
-  }, [userData]);
 
   // Add back the notifications context
   const { requestPermission, isPushGranted } = useNotifications();
@@ -152,7 +127,7 @@ const Onboarding: React.FC<OnboardingProps> = ({
         const createdPlan = response.data.plan;
         setSelectedPlan(createdPlan);
         userDataQuery.refetch();
-        setStep(6);
+        setStep(4);
       }
     } catch (error) {
       console.error("Plan creation error:", error);
@@ -186,49 +161,29 @@ const Onboarding: React.FC<OnboardingProps> = ({
     switch (step) {
       case 0:
         return (
-          <NameStep
-            name={name}
-            setName={setName}
+          <GoalStep
+            goal={goal}
+            setGoal={setGoal}
             onNext={() => setStep(1)}
-            isNewPlan={isNewPlan}
-            api={api}
-            userDataQuery={userDataQuery}
           />
         );
       case 1:
         return (
-          <UsernameStep
-            username={username}
-            setUsername={setUsername}
+          <EmojiStep
+            selectedEmoji={selectedEmoji}
+            setSelectedEmoji={setSelectedEmoji}
             onNext={() => setStep(2)}
-            userDataQuery={userDataQuery}
           />
         );
       case 2:
         return (
-          <GoalStep
-            goal={goal}
-            setGoal={setGoal}
+          <FinishingDateStep
+            finishingDate={finishingDate}
+            setFinishingDate={setFinishingDate}
             onNext={() => setStep(3)}
           />
         );
       case 3:
-        return (
-          <EmojiStep
-            selectedEmoji={selectedEmoji}
-            setSelectedEmoji={setSelectedEmoji}
-            onNext={() => setStep(4)}
-          />
-        );
-      case 4:
-        return (
-          <FinishingDateStep
-            finishingDate={finishingDate}
-            setFinishingDate={setFinishingDate}
-            onNext={() => setStep(5)}
-          />
-        );
-      case 5:
         return (
           <PlanGenerationStep
             planDescription={planDescription}
@@ -240,15 +195,15 @@ const Onboarding: React.FC<OnboardingProps> = ({
             name={name}
           />
         );
-      case 6:
+      case 4:
         return (
           <InviteStep
             selectedPlan={selectedPlan}
-            onNext={() => setStep(7)}
+            onNext={() => setStep(5)}
             userDataQuery={userDataQuery}
           />
         );
-      case 7:
+      case 5:
         return (
           <NotificationStep
             onComplete={handleComplete}
@@ -263,11 +218,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <h1 className="text-2xl font-bold mb-8">
-        {isNewPlan
-          ? "Create New Plan"
-          : "Welcome to the Self Tracking App! Let's get you started."}
-      </h1>
+      {children}
+
       {userDataQuery.isLoading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin">
           Loading your progress..
@@ -279,4 +231,4 @@ const Onboarding: React.FC<OnboardingProps> = ({
   );
 };
 
-export default Onboarding;
+export default CreatePlanCardJourney;

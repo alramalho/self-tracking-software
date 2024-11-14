@@ -24,17 +24,17 @@ const AppNotInstalledPage: React.FC = () => {
   return (
     <>
       {isAppInstallModalOpen && (
-        <div className="h-screen w-screen absolute flex flex-col items-center justify-center px-4 z-50 bg-white overflow-hidden">
+        <div className="h-screen w-screen absolute flex z-[60] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto">
           <button
             onClick={() => setIsAppInstallModalOpen(false)}
-            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 z-[51]"
             aria-label="Close"
           >
             <X className="w-6 h-6 text-white" />
           </button>
           <Smartphone className="w-16 h-16 mb-6 text-gray-600" />
           <h2 className="text-2xl font-semibold mb-4 text-center">
-            Please install the App to see this page
+            Please continue in the App
           </h2>
           <p className="text-gray-600 text-center mb-8 max-w-md">
             This will also enhance your experience and allow you to access
@@ -42,6 +42,9 @@ const AppNotInstalledPage: React.FC = () => {
           </p>
 
           <div className="w-full max-w-md">
+          <h2 className="text-xl font-semibold mb-4 text-center">
+            To install, just follow these steps 👇
+          </h2>
             <Tabs defaultValue="ios" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="ios">

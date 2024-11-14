@@ -7,7 +7,7 @@ import FeedbackForm from "./FeedbackForm";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 
-const FloatingActionMenu = () => {
+const FloatingActionMenu = ({ className }: { className?: string }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showBugForm, setShowBugForm] = useState(false);
   const [showHelpForm, setShowHelpForm] = useState(false);
@@ -79,7 +79,7 @@ const FloatingActionMenu = () => {
 
   return (
     <>
-      <div className={`fixed bottom-20 right-4 z-[20]`}>
+      <div className={`fixed bottom-20 right-4 ${className} z-[40]`}>
         <div
           className={`flex flex-col-reverse gap-3 items-end transition-all duration-200 mb-3
             ${
@@ -136,7 +136,7 @@ const FloatingActionMenu = () => {
             {isOpen ? (
               <X size={24} className="text-gray-600 hover:text-gray-800" />
             ) : (
-              <MessageSquarePlus
+              <HelpCircle
                 size={24}
                 className="text-gray-600 hover:text-gray-800"
               />

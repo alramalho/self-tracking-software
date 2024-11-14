@@ -82,10 +82,37 @@ const config = {
             height: "0",
           },
         },
+        wiggle: {
+          "0%, 15%, 100%": {
+            transform: "rotate(0deg)",
+            transformOrigin: "bottom right",
+          },
+          "20%": {
+            transform: "rotate(-10deg)",
+            transformOrigin: "bottom right",
+          },
+          "25%": {
+            transform: "rotate(10deg)",
+            transformOrigin: "bottom right",
+          },
+          "30%": {
+            transform: "rotate(-10deg)",
+            transformOrigin: "bottom right",
+          },
+          "35%": {
+            transform: "rotate(10deg)",
+            transformOrigin: "bottom right",
+          },
+          "40%, 100%": {
+            transform: "rotate(0deg)",
+            transformOrigin: "bottom right",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        wiggle: "wiggle 3s ease-in-out infinite",
       },
     },
   },

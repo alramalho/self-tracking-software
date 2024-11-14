@@ -61,6 +61,8 @@ const LogPage: React.FC = () => {
   const { isRecording, toggleRecording } = useMicrophone();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { messages, addMessage, clearMessages } = useMessageHistory(); // Update this line
+  const router = useRouter();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(true);
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -251,13 +253,13 @@ const LogPage: React.FC = () => {
     markNotificationOpened();
   }, [notificationId, authedApi]);
 
-  const router = useRouter();
   return (
     <>
       <AppleLikePopover
-        className="z-[10000]"
+        className={`z-[10000] ${isPopoverOpen ? "" : "hidden"}`}
         onClose={() => {
           isUserWhitelisted() ? null : router.push("/");
+          setIsPopoverOpen(false);
         }}
       >
         <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>

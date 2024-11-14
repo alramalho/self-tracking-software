@@ -36,7 +36,6 @@ const HomePage: React.FC = () => {
     if (
       isSignedIn &&
       hasLoadedUserData &&
-      !isAppInstalled &&
       userData?.plans?.length === 0
     ) {
       router.push("/onboarding");
@@ -47,7 +46,7 @@ const HomePage: React.FC = () => {
     router.push("/signin");
   }
 
-  if (!userData) {
+  if (!hasLoadedUserData) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin" />
