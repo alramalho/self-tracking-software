@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎯
+<span style="font-size: 120px">🎯</span>
 
 # Welcome to your<br/>**tracking.so*ftware***
 
