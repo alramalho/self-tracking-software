@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Smile } from "lucide-react";
+import { Edit, Loader2, Smile } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import axios from "axios";
@@ -255,14 +255,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </span>
         )}
         <div>
-          {/* {editable && onEditClick && (
+          {editable && onEditClick && (
             <button
               onClick={onEditClick}
               className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
             >
               <Edit className="h-4 w-4 text-gray-500" />
             </button>
-          )} */}
+          )}
         </div>
       </div>
     </div>
