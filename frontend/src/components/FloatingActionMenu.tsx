@@ -62,8 +62,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
     );
   };
 
-  const buttonContainerClasses =
-    "flex items-center gap-3 grou" + `${!isOpen && "hidden"}`;
+  const buttonContainerClasses = isOpen ? "flex items-center gap-3 group" : "hidden";
   const buttonClasses =
     "w-12 h-12 bg-white rounded-full flex items-center justify-center " +
     "text-gray-600 shadow-md hover:shadow-lg border border-gray-200 " +
