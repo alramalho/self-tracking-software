@@ -27,6 +27,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const api = useApiWithAuth();
 
   const handleSave = async () => {
+    if (!title || !measure || !emoji) {
+      toast.error("Title, measure, and emoji are required.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const response = await api.post("/upsert-activity", {
