@@ -33,8 +33,8 @@ const REACTION_EMOJI_MAPPING = {
   fire: "🔥",
   rocket: "🚀",
   laugh: "😂",
-  tada: "❓",
-  poo: "💩",
+  aubergine: "🍆",
+  surprise: "😮",
 };
 
 const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
