@@ -485,7 +485,7 @@ class PlanController:
         # Update invitation status
         invitation.status = "rejected"
         invitation.updated_at = datetime.now(UTC).isoformat()
-        self.plan_invitation_gateway.write(invitation.dict())
+        self.plan_invitation_gateway.upsert_plan_invitation(invitation)
 
     def is_week_finisher_of_plan(self, activity_entry_id: str, plan: Plan) -> bool:
         # Get the activity entry
