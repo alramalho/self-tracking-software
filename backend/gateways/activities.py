@@ -146,7 +146,6 @@ class ActivitiesGateway:
     
     def delete_activity(self, activity_id: str):
         activity = self.get_activity_by_id(activity_id)
-        activity.deleted = True
         activity.deleted_at = datetime.datetime.now(datetime.UTC).isoformat()
         self.activities_db_gateway.write(activity.dict())
         logger.info(f"Activity {activity.id} ({activity.title}) marked as deleted")
@@ -188,6 +187,14 @@ class ActivitiesGateway:
             self.activity_entries_db_gateway.write(activity_entry.dict())
         
         return activity_entry
+
+    def is_activity_in_any_active_plan(self, activity_id: str) -> bool:
+        plans_db_gateway = MongoDBGateway("plans")
+        
+        current_date = datetime.datetime.now(datetime.UTC).isoformat()
+        active_plans = plans_db_gateway.query_by_criteria({'sessions.activity_id': activity_id, 'finishing_date': {'$gte': current_date}})
+        
+        return len(active_plans) > 0
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ class Activity(BaseModel):
     )
     emoji: str
     created_at: str
+    deleted_at: Optional[str] = None
 
     @field_validator("title")
     def title_must_be_lowercase(cls, v):
