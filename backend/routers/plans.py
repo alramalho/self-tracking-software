@@ -328,3 +328,29 @@ async def leave_plan(plan_id: str, current_user: User = Depends(is_clerk_user)):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/plans/{plan_id}/update")
+async def update_plan(
+    plan_id: str,
+    data: Dict = Body(...),
+    current_user: User = Depends(is_clerk_user)
+):
+    plan = plan_controller.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    if plan.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this plan")
+    
+    updated_plan_data = data.get("updatedPlan")
+    if not updated_plan_data:
+        raise HTTPException(status_code=400, detail="Updated plan data is required")
+    
+    # Update the plan while preserving its ID and user_id
+    updated_plan = plan_controller.update_plan_from_generated(
+        plan_id=plan_id,
+        user_id=current_user.id,
+        generated_plan=updated_plan_data
+    )
+    
+    return {"plan": updated_plan}
+
