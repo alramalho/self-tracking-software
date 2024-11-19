@@ -18,13 +18,8 @@ const PlansRenderer: React.FC = () => {
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  
-  useEffect(() => {
-    console.log({ selectedPlanId });
-  }, [selectedPlanId]);
 
   useEffect(() => {
-    console.log({ userData });
     if (!selectedPlanId && userData && userData.plans &&userData.plans.length > 0) {
       const firstPlan = userData.plans[0];
       setSelectedPlanId(firstPlan.id || null);
@@ -76,7 +71,7 @@ const PlansRenderer: React.FC = () => {
         </Link>
       </div>
 
-      {selectedPlanId && (
+      {selectedPlanId && plans.find((p) => p.id === selectedPlanId) && (
         <PlanRendererv2
           selectedPlan={plans.find((p) => p.id === selectedPlanId)!}
         />
