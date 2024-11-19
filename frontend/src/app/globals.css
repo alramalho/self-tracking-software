@@ -12,7 +12,7 @@ ol {
   list-style-position: inside;
 }
 
-.markdown p {
+.markdown p:not(:first-of-type) {
   margin-top: 0.6rem;
 }
 
