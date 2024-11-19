@@ -137,14 +137,15 @@ class MongoDBGateway(DBGateway):
             if type(value) == str:
                 value = ObjectId(value)
 
-
+        query_filter = {key: value, "deleted_at": {"$eq": None}}
         logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Key:"{key}" Value:"{value}"')
-        result = [self._convert_from_mongo(doc) for doc in self.collection.find({key: value})]
+        result = [self._convert_from_mongo(doc) for doc in self.collection.find(query_filter)]
         return result
     
     def query_by_criteria(self, criteria: Dict[str, Any]) -> List[Dict]:
+        query_filter = {**criteria, "deleted_at": {"$eq": None}}
         logger.log("DB", f'MongoDB: Querying from MongoDB "{self.collection.name}" ... Criteria:"{criteria}"')
-        result = [self._convert_from_mongo(doc) for doc in self.collection.find(criteria)]
+        result = [self._convert_from_mongo(doc) for doc in self.collection.find(query_filter)]
         return result
 
     def count(self, key: str, value: Any) -> int:

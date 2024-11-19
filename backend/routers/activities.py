@@ -257,3 +257,36 @@ async def get_activity_reactions(
     except Exception as e:
         logger.error(f"Error getting reactions: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to get reactions")
+
+
+@router.delete("/activities/{activity_id}")
+async def delete_activity(
+    activity_id: str,
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        # Get the activity to verify ownership
+        activity = activities_gateway.get_activity_by_id(activity_id)
+        if not activity:
+            raise HTTPException(status_code=404, detail="Activity not found")
+
+        if activity.user_id != user.id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to delete this activity"
+            )
+            
+        # Check if activity is used in any active plans
+        if activities_gateway.is_activity_in_any_active_plan(activity_id):
+            raise HTTPException(
+                status_code=400, 
+                detail="Please remove this activity from all active plans before deleting it."
+            )
+
+        # Delete the activity
+        activities_gateway.delete_activity(activity_id)
+        return {"message": "Activity deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting activity: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to delete activity")
