@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useUserPlan, Notification } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
@@ -7,6 +7,7 @@ import { Check, X, MessageSquare, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import posthog from "posthog-js";
+import { Remark } from 'react-remark';
 
 interface NotificationsProps {}
 
@@ -170,7 +171,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             userData.notifications.map((notification) => (
               <div
                 key={notification.id}
-                className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-full flex items-center justify-between transition-shadow duration-200 hover:shadow-md mb-4"
+                className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 hover:shadow-md mb-4"
               >
                 <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
                   {["friend_request", "plan_invitation", "info"].includes(
@@ -198,10 +199,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
                     <Link
                       href={`/profile/${notification.related_data!.username}`}
                     >
-                      <p className="text-sm text-gray-700">{notification.message}</p>
+                      <p className="text-sm text-gray-700"><div className="markdown"><Remark>{notification.message}</Remark></div></p>
                     </Link>
                   ) : (
-                    <p className="text-sm text-gray-700">{notification.message}</p>
+                    <p className="text-sm text-gray-700"><div className="markdown"><Remark>{notification.message}</Remark></div></p>
                   )}
                 </div>
                 <div className="flex ml-4">
