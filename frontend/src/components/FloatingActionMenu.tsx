@@ -73,7 +73,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
 
   const mainButtonClasses =
     "w-14 h-14 bg-white rounded-full flex items-center justify-center " +
-    "text-gray-600 shadow-md hover:shadow-lg border border-gray-200 " +
+    "text-gray-600 shadow-md hover:shadow-lg border border-red-200 " +
     "transition-all duration-200 hover:scale-105";
 
   return (
