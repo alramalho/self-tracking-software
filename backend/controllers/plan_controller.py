@@ -338,6 +338,13 @@ class PlanController:
                 plans.append(plan)
         return plans
 
+    def delete_plan(self, plan_id: str) -> None:
+        logger.log("CONTROLLERS", f"Deleting plan: {plan_id}")
+        plan = self.get_plan(plan_id)
+        if plan:
+            plan.deleted_at = datetime.now(UTC).isoformat()
+            self.update_plan(plan)
+
     def permanently_delete_plan(self, plan_id: str) -> None:
         logger.log("CONTROLLERS", f"Permanently deleting plan: {plan_id}")
         self.db_gateway.delete_all("id", plan_id)

@@ -20,7 +20,8 @@ class Plan(BaseModel):
     finishing_date: Optional[str] = None
     sessions: List[PlanSession]
     created_at: str
-
+    deleted_at: Optional[str] = None
+    
     @classmethod
     def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: List[PlanSession], plan_group_id: Optional[str] = None, id: Optional[str] = None) -> "Plan":
         return cls(

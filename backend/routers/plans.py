@@ -291,3 +291,40 @@ async def get_plan_from_invitation_id(invitation_id: str):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/plans/{plan_id}/leave")
+async def leave_plan(plan_id: str, current_user: User = Depends(is_clerk_user)):
+    try:
+        plan = plan_controller.get_plan(plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        
+        if plan.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to leave this plan")
+        
+        # Remove plan from user
+        users_gateway.remove_plan_from_user(current_user.id, plan_id)
+        
+        # Remove user from plan group
+        plan_group = plan_groups_gateway.get_plan_group_by_plan_id(plan_id)
+        if plan_group:
+            # Remove member from plan group
+            plan_group.members = [m for m in plan_group.members if m.user_id != current_user.id]
+            # Remove plan from plan group
+            plan_group.plan_ids = [p for p in plan_group.plan_ids if p != plan_id]
+            
+            if len(plan_group.members) == 0:
+                # If no members left, delete the plan group
+                plan_groups_gateway.delete_plan_group(plan_group.id)
+            else:
+                # Otherwise update the plan group
+                plan_groups_gateway.upsert_plan_group(plan_group)
+        
+        # Delete the plan
+        plan_controller.delete_plan(plan_id)
+        
+        return {"message": "Successfully left plan"}
+    except Exception as e:
+        logger.error(f"Failed to leave plan: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))
+

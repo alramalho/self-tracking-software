@@ -158,6 +158,7 @@ interface UserPlanContextType {
   hasLoadedTimelineData: boolean;
   timelineData: UseQueryResult<TimelineData | null>;
   fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<UserDataEntry>;
+  refetchUserData: () => Promise<UserDataEntry>;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
@@ -333,6 +334,20 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const userDataQuery = useUserDataQuery("me");
 
+  const refetchUserData = async () => {
+    return toast.promise(
+      userDataQuery.refetch().then(result => {
+        if (result.error) throw result.error;
+        return result.data;
+      }),
+      {
+        loading: 'Updating...',
+        success: 'Updated successfully',
+        error: 'Failed to update'
+      }
+    );
+  };
+
   const context = {
     userDataQuery,  // Export the whole query result
     useUserDataQuery,
@@ -341,6 +356,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     hasLoadedTimelineData: timelineData.isSuccess,
     timelineData,
     fetchUserData,
+    refetchUserData,
   };
 
   return (

@@ -1,7 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { ApiPlan, PlanGroup } from "@/contexts/UserPlanContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import InviteButton from "./InviteButton";
+import { Settings } from "lucide-react";
+import AppleLikePopover from "./AppleLikePopover";
+import { Button } from "./ui/button";
+import toast from "react-hot-toast";
+import { useApiWithAuth } from "@/api";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -11,6 +16,7 @@ interface PlanCardProps {
   onSelect: (planId: string) => void;
   onInviteSuccess: () => void;
   hideInviteButton?: boolean;
+  onPlanRemoved?: () => void;
 }
 
 const PlanCard: React.FC<PlanCardProps> = ({
@@ -21,55 +27,108 @@ const PlanCard: React.FC<PlanCardProps> = ({
   onSelect,
   onInviteSuccess,
   hideInviteButton = false,
+  onPlanRemoved,
 }) => {
+  const [showSettings, setShowSettings] = useState(false);
+  const api = useApiWithAuth();
+
+  const handleLeavePlan = async () => {
+    toast.promise(
+      api.post(`/plans/${plan.id}/leave`).then(() => {
+        setShowSettings(false);
+        onPlanRemoved?.();
+      }),
+      {
+        loading: "Leaving plan...",
+        success: "You have left the plan",
+        error: "Failed to leave plan",
+      }
+    );
+  };
+
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowSettings(true);
+  };
+
   return (
-    <div
-      className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
-        isSelected ? "border-blue-500" : "border-gray-200"
-      }`}
-      onClick={() => onSelect(plan.id!)}
-    >
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center">
-          {plan.emoji && <span className="text-4xl mr-2">{plan.emoji}</span>}
-          <span className="text-xl font-medium">{plan.goal}</span>
+    <>
+      <div
+        className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
+          isSelected ? "border-blue-500" : "border-gray-200"
+        }`}
+        onClick={() => onSelect(plan.id!)}
+      >
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center">
+            {plan.emoji && <span className="text-4xl mr-2">{plan.emoji}</span>}
+            <span className="text-xl font-medium">{plan.goal}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {!hideInviteButton && (
+              <InviteButton
+                planId={plan.id!}
+                onInviteSuccess={onInviteSuccess}
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSettingsClick}
+              className="h-8 w-8"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        {!hideInviteButton && (
-          <InviteButton planId={plan.id!} onInviteSuccess={onInviteSuccess} />
+        <span className="text-sm text-gray-500 mb-4">
+          📍{" "}
+          {plan.finishing_date
+            ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
+            : ""}
+        </span>
+        {planGroup && planGroup.members && (
+          <div className="flex items-center space-x-2">
+            {planGroup.members.map((member) => {
+              if (!currentUserId || member.user_id === currentUserId) {
+                return null;
+              }
+              return (
+                <Avatar key={member.user_id} className="w-8 h-8">
+                  <AvatarImage
+                    src={member.picture || ""}
+                    alt={member.name || member.username}
+                  />
+                  <AvatarFallback>
+                    {member.name?.[0] || member.username?.[0] || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              );
+            })}
+          </div>
         )}
       </div>
-      <span className="text-sm text-gray-500 mb-4">
-        📍{" "}
-        {plan.finishing_date
-          ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })
-          : ""}
-      </span>
-      {planGroup && planGroup.members && (
-        <div className="flex items-center space-x-2">
-          {planGroup.members.map((member) => {
-            if (!currentUserId || member.user_id === currentUserId) {
-              return null;
-            }
-            return (
-              <Avatar key={member.user_id} className="w-8 h-8">
-                <AvatarImage
-                  src={member.picture || ""}
-                  alt={member.name || member.username}
-                />
-                <AvatarFallback>
-                  {member.name?.[0] || member.username?.[0] || "U"}
-                </AvatarFallback>
-              </Avatar>
-            );
-          })}
-        </div>
+
+      {showSettings && (
+        <AppleLikePopover onClose={() => setShowSettings(false)}>
+          <div className="flex flex-col gap-4">
+            <h2 className="text-xl font-semibold mb-4">Plan Settings</h2>
+            <Button
+              variant="destructive"
+              onClick={handleLeavePlan}
+              className="w-full"
+            >
+              Leave Plan
+            </Button>
+          </div>
+        </AppleLikePopover>
       )}
-    </div>
+    </>
   );
 };
 
-export default PlanCard; 
+export default PlanCard;
