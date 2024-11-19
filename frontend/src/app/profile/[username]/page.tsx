@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import { usePostHog } from "posthog-js/react";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -61,6 +62,7 @@ const ProfilePage: React.FC = () => {
   string | null
   >(null);
   const posthog = usePostHog();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -151,6 +153,11 @@ const ProfilePage: React.FC = () => {
     return format(parsedDate, "MMM d HH:mm");
   };
 
+  const handleLogout = () => {
+    signOut();
+    posthog.reset();
+  };
+
   if (userDataQuery.isLoading || profileDataQuery.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
@@ -224,10 +231,7 @@ const ProfilePage: React.FC = () => {
               />
               <Button
                 variant="ghost"
-                onClick={() => {
-                  signOut();
-                  posthog.reset()
-                }}
+                onClick={() => setShowLogoutConfirm(true)}
               >
                 <LogOut size={24} className="cursor-pointer" />
               </Button>
@@ -382,6 +386,16 @@ const ProfilePage: React.FC = () => {
           onClose={() => setShowEditActivityEntry(null)}
         />
       )}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Confirm Logout"
+        description="Are you sure you want to log out?"
+        confirmText="Logout"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 };
