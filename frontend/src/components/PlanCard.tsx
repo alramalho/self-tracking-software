@@ -34,7 +34,12 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userPlans = userDataQuery.data?.plans;
   const api = useApiWithAuth();
+
+  const canLeavePlan = userPlans && userPlans.length > 1;
 
   const handleLeavePlan = async () => {
     toast.promise(
@@ -139,15 +144,22 @@ const PlanCard: React.FC<PlanCardProps> = ({
                 setShowLeaveConfirm(true);
               }}
               className="w-full"
+              disabled={!canLeavePlan}
+              title={!canLeavePlan ? "You must have at least one plan" : undefined}
             >
               Leave Plan
             </Button>
+            {!canLeavePlan && (
+              <span className="text-sm text-gray-500">
+                You must have at least one plan.
+              </span>
+            )}
           </div>
         </AppleLikePopover>
       )}
 
       <ConfirmDialog
-        isOpen={showLeaveConfirm}
+        isOpen={showLeaveConfirm && canLeavePlan}
         onClose={() => setShowLeaveConfirm(false)}
         onConfirm={handleLeavePlan}
         title="Leave Plan"
