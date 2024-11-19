@@ -183,3 +183,11 @@ async def trigger_push_notification(
         logger.error(f"Failed to send push notification: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/clear-all-notifications")
+async def clear_all_notifications(user: User = Depends(is_clerk_user)):
+    notifications = notification_manager.get_all_for_user(user.id)
+    for notification in notifications:
+        if notification.status != "concluded":
+            notification_manager.conclude_notification(notification.id)
+    return {"message": "All notifications cleared"}
