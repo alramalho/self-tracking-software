@@ -338,6 +338,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     return toast.promise(
       userDataQuery.refetch().then(result => {
         if (result.error) throw result.error;
+        if (!result.data) throw new Error("User data is undefined");
         return result.data;
       }),
       {
