@@ -71,24 +71,12 @@ class PlanController:
         self.db_gateway.write(plan.dict())
         return plan
 
-    def create_plan_from_generated_plan(
-        self, user_id: str, generated_plan_data: Dict[str, Any]
-    ) -> Tuple[Plan, List[Activity]]:
-        logger.log(
-            "CONTROLLERS", f"Creating plan from generated plan for user {user_id}"
-        )
-        sessions = [
-            PlanSession(**session)
-            for session in generated_plan_data.get("sessions", [])
-            if session.get("activity_id")
-        ]
-        plan = Plan.new(
-            user_id=user_id,
-            goal=generated_plan_data["goal"],
-            emoji=generated_plan_data.get("emoji", ""),
-            finishing_date=generated_plan_data.get("finishing_date", None),
-            sessions=sessions,
-        )
+    def _process_generated_plan_activities(
+        self,
+        user_id: str,
+        generated_plan_data: Dict[str, Any]
+    ) -> List[Activity]:
+        """Helper method to process and create activities from generated plan data"""
         created_activities = []
         for activity in generated_plan_data.get("activities", []):
             converted_activity = Activity.new(
@@ -106,7 +94,41 @@ class PlanController:
                 logger.info(
                     f"Activity {converted_activity.id} ({converted_activity.title}) already exists"
                 )
+        return created_activities
 
+    def _create_plan_sessions(
+        self,
+        generated_plan_data: Dict[str, Any]
+    ) -> List[PlanSession]:
+        """Helper method to create plan sessions from generated plan data"""
+        return [
+            PlanSession(**session)
+            for session in generated_plan_data.get("sessions", [])
+            if session.get("activity_id")
+        ]
+
+    def create_plan_from_generated_plan(
+        self,
+        user_id: str,
+        generated_plan_data: Dict[str, Any]
+    ) -> Tuple[Plan, List[Activity]]:
+        logger.log(
+            "CONTROLLERS", f"Creating plan from generated plan for user {user_id}"
+        )
+        
+        # Process activities and sessions
+        created_activities = self._process_generated_plan_activities(user_id, generated_plan_data)
+        sessions = self._create_plan_sessions(generated_plan_data)
+        
+        # Create new plan
+        plan = Plan.new(
+            user_id=user_id,
+            goal=generated_plan_data["goal"],
+            emoji=generated_plan_data.get("emoji", ""),
+            finishing_date=generated_plan_data.get("finishing_date", None),
+            sessions=sessions,
+        )
+        
         self.db_gateway.write(plan.dict())
         return plan, created_activities
 
@@ -297,7 +319,7 @@ class PlanController:
                 "overview": response.plan.overview,
             }
 
-        intensities = ["low", "medium", "high"]
+        intensities = ["medium"]
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             future_to_intensity = {
@@ -321,7 +343,10 @@ class PlanController:
     def _count_number_of_weeks_till(self, finishing_date: Optional[str] = None) -> int:
         if finishing_date:
             current_date = datetime.now()
-            finishing_date = datetime.strptime(finishing_date, "%Y-%m-%d")
+            try:
+                finishing_date = datetime.strptime(finishing_date, "%Y-%m-%d")
+            except ValueError:
+                finishing_date = datetime.fromisoformat(finishing_date)
             return (finishing_date - current_date).days // 7 + 1
         return 0
 
@@ -547,6 +572,35 @@ class PlanController:
                 return True, plan.goal
 
         return False, None
+
+    def update_plan_from_generated(
+        self,
+        plan_id: str,
+        user_id: str,
+        generated_plan: Dict[str, Any]
+    ) -> Plan:
+        logger.log("CONTROLLERS", f"Updating plan {plan_id} from generated plan")
+        
+        # Get the existing plan
+        existing_plan = self.get_plan(plan_id)
+        if not existing_plan:
+            raise ValueError("Plan not found")
+        
+        if existing_plan.user_id != user_id:
+            raise ValueError("Not authorized to update this plan")
+        
+        # Process activities and sessions using shared methods
+        self._process_generated_plan_activities(user_id, generated_plan)
+        new_sessions = self._create_plan_sessions(generated_plan)
+        
+        # Update the existing plan with new data while preserving important fields
+        existing_plan.sessions = new_sessions
+        existing_plan.emoji = generated_plan.get("emoji", existing_plan.emoji)
+        
+        # Save the updated plan
+        self.update_plan(existing_plan)
+        
+        return existing_plan
 
 if __name__ == "__main__":
     from shared.logger import create_logger

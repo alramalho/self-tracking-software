@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ApiPlan, PlanGroup } from "@/contexts/UserPlanContext";
+import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserPlanContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import InviteButton from "./InviteButton";
 import { Settings } from "lucide-react";
@@ -7,6 +7,7 @@ import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
+import PlanEditStep from "./PlanEditStep";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -30,6 +31,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   onPlanRemoved,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const api = useApiWithAuth();
 
   const handleLeavePlan = async () => {
@@ -118,6 +120,16 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <div className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold mb-4">Plan Settings</h2>
             <Button
+              variant="outline"
+              onClick={() => {
+                setShowSettings(false);
+                setShowEditModal(true);
+              }}
+              className="w-full"
+            >
+              Edit Plan
+            </Button>
+            <Button
               variant="destructive"
               onClick={handleLeavePlan}
               className="w-full"
@@ -125,6 +137,19 @@ const PlanCard: React.FC<PlanCardProps> = ({
               Leave Plan
             </Button>
           </div>
+        </AppleLikePopover>
+      )}
+
+      {showEditModal && (
+        <AppleLikePopover onClose={() => setShowEditModal(false)}>
+          <PlanEditStep
+            plan={plan}
+            onClose={() => setShowEditModal(false)}
+            onPlanUpdated={() => {
+              setShowEditModal(false);
+              onPlanRemoved?.();
+            }}
+          />
         </AppleLikePopover>
       )}
     </>
