@@ -139,11 +139,32 @@ const Notifications: React.FC<NotificationsProps> = () => {
     return notification.related_data && notification.related_data.name;
   };
 
+  const handleClearAll = async () => {
+    const clearPromise = async () => {
+      await api.post('/clear-all-notifications');
+      userDataQuery.refetch();
+    };
+
+    toast.promise(clearPromise(), {
+      loading: 'Clearing all notifications...',
+      success: 'All notifications cleared!',
+      error: 'Failed to clear notifications',
+    });
+  };
+
   return (
     <>
       {userData && userData.notifications && userData.notifications.length > 0 && (
         <>
-          <h2 className="text-lg font-semibold mb-4">Notifications</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Notifications</h2>
+            <button
+              onClick={handleClearAll}
+              className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
+            >
+              Clear All
+            </button>
+          </div>
 
           {userData?.notifications &&
             userData.notifications.map((notification) => (
