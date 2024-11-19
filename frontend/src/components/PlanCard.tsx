@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import PlanEditStep from "./PlanEditStep";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -32,12 +33,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
 }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const api = useApiWithAuth();
 
   const handleLeavePlan = async () => {
     toast.promise(
       api.post(`/plans/${plan.id}/leave`).then(() => {
         setShowSettings(false);
+        setShowLeaveConfirm(false);
         onPlanRemoved?.();
       }),
       {
@@ -131,7 +134,10 @@ const PlanCard: React.FC<PlanCardProps> = ({
             </Button>
             <Button
               variant="destructive"
-              onClick={handleLeavePlan}
+              onClick={() => {
+                setShowSettings(false);
+                setShowLeaveConfirm(true);
+              }}
               className="w-full"
             >
               Leave Plan
@@ -139,6 +145,17 @@ const PlanCard: React.FC<PlanCardProps> = ({
           </div>
         </AppleLikePopover>
       )}
+
+      <ConfirmDialog
+        isOpen={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        onConfirm={handleLeavePlan}
+        title="Leave Plan"
+        description="Are you sure you want to leave this plan? This action cannot be undone."
+        confirmText="Leave Plan"
+        cancelText="Cancel"
+        variant="destructive"
+      />
 
       {showEditModal && (
         <AppleLikePopover onClose={() => setShowEditModal(false)}>
