@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+ul {
+  list-style-type: disc;
+  list-style-position: inside;
+}
+
+ol {
+  list-style-type: decimal;
+  list-style-position: inside;
+}
+
+.markdown p {
+  margin-top: 0.6rem;
+}
+
+.markdown ul, ol {
+  margin-top: 0.6rem;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
