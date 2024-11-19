@@ -64,17 +64,23 @@ def get_activities_from_conversation(user_id: str) -> Tuple[List[Activity], str]
     (today is {current_date})
     """
 
+    class PartialActivity(BaseModel):
+        measure: str
+        title: str
+        emoji: str
+
     class ResponseModel(BaseModel):
         reasonings: str = Field(
             description="Your reasoning justifying each created activity against the conversation history. Must not be emtpy or null."
         )
-        activities: list[Activity]
+        activities: list[PartialActivity]
 
     response = ask_schema("Go!", prompt, ResponseModel)
+
     activities = [
-        Activity.new(user_id=user_id, measure=a.measure, title=a.title)
+        Activity.new(user_id=user_id, measure=a.measure, title=a.title, emoji=a.emoji)
         for a in response.activities
-    ]
+    ]   
     return activities, response.reasonings
 
 
@@ -97,11 +103,16 @@ def get_activity_entries_from_conversation(user_id: str) -> Tuple[List[ActivityE
     (today is {current_date})
     """
 
+    class PartialActivityEntry(BaseModel):
+        activity_id: str
+        quantity: float
+        date: str
+
     class ResponseModel(BaseModel):
         reasonings: str = Field(
             description="Your reasoning justifying each activity and its full data entry against the conversation history. Must not be emtpy or null."
         )
-        activity_entries: list[ActivityEntry]
+        activity_entries: list[PartialActivityEntry]
 
     response = ask_schema("Go!", prompt, ResponseModel)
     activity_entries = [

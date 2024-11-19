@@ -67,28 +67,42 @@ const LogPage: React.FC = () => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = useCallback(async () => {
-    const token = await getToken();
-    const newSocket = new WebSocket(
-      `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}?token=${token}`
-    );
+    try {
+        const token = await getToken();
+        if (!token) {
+            toast.error("No authentication token available");
+            return;
+        }
 
-    newSocket.onopen = () => {
-      setIsConnected(true);
-      toast.success("WebSocket connected");
-    };
+        const newSocket = new WebSocket(
+            `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}/ai/connect?token=${token}`
+        );
 
-    newSocket.onclose = () => {
-      setIsConnected(false);
-      toast.error("WebSocket disconnected");
-    };
+        newSocket.onopen = () => {
+            setIsConnected(true);
+            toast.success("WebSocket connected");
+        };
 
-    newSocket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      toast.error("WebSocket error occurred");
-    };
+        newSocket.onclose = (event) => {
+            setIsConnected(false);
+            if (event.code === 1008) {
+                toast.error("Authentication failed");
+            } else {
+                toast.error("WebSocket disconnected");
+            }
+        };
 
-    setSocket(newSocket);
-  }, []);
+        newSocket.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            toast.error("WebSocket error occurred");
+        };
+
+        setSocket(newSocket);
+    } catch (error) {
+        console.error("Error connecting to WebSocket:", error);
+        toast.error("Failed to connect to WebSocket");
+    }
+  }, [getToken]);
 
   useEffect(() => {
     connectWebSocket();

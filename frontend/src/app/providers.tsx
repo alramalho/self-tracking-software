@@ -16,7 +16,7 @@ export function PHProvider({ children }: { children: React.ReactNode }) {
         capture_pageview: false,
         bootstrap: {
           featureFlags: {
-            "ai-bot-access": false,
+            "ai-bot-access": process.env.NEXT_PUBLIC_AI_BOT_ACCESS === "true",
           },
         },
       });
