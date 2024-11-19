@@ -2,12 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-ul {
+.markdown ul {
   list-style-type: disc;
   list-style-position: inside;
 }
 
-ol {
+.markdown ol {
   list-style-type: decimal;
   list-style-position: inside;
 }
