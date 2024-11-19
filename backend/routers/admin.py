@@ -5,22 +5,22 @@ from entities.user import User
 from services.notification_manager import NotificationManager
 from constants import ADMIN_API_KEY
 from entities.notification import Notification
+from gateways.users import UsersGateway
 
 router = APIRouter()
 security = HTTPBearer()
-
+users_gateway = UsersGateway()
 notification_manager = NotificationManager()
 
 
-async def admin_auth(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+async def admin_auth(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> User:
     token = credentials.credentials
 
     if not ADMIN_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="Admin API key not set"
-        )
-    
+        raise HTTPException(status_code=500, detail="Admin API key not set")
+
     # Verify admin token
     if token != ADMIN_API_KEY:
         raise HTTPException(
@@ -30,6 +30,7 @@ async def admin_auth(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
 
     return True
+
 
 @router.post("/send-notification")
 async def send_notification(request: Request, verified: User = Depends(admin_auth)):
@@ -46,3 +47,22 @@ async def send_notification(request: Request, verified: User = Depends(admin_aut
     return {"message": "Notification sent successfully"}
 
 
+@router.post("/send-notification-to-all-users")
+async def send_notification_to_all_users(
+    request: Request, verified: User = Depends(admin_auth)
+):
+    body = await request.json()
+    users = users_gateway.get_all_users()
+    sent = 0
+    for user in users:
+        notification = Notification.new(
+            user_id=user.id,
+            message=body.get("message"),
+            type=body.get("type", "info"),
+            related_id=body.get("related_id", None),
+            prompt_tag=body.get("prompt_tag", None),
+            related_data=body.get("related_data", None),
+        )
+        await notification_manager.create_and_process_notification(notification)
+        sent += 1
+    return {"message": f"Notification sent successfully to {sent} users"}
