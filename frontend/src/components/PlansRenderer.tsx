@@ -14,7 +14,7 @@ import InviteButton from "./InviteButton";
 import PlanCard from "./PlanCard";
 
 const PlansRenderer: React.FC = () => {
-  const { useUserDataQuery, fetchUserData } = useUserPlan();
+  const { useUserDataQuery, refetchUserData } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -43,7 +43,11 @@ const PlansRenderer: React.FC = () => {
   };
 
   const handleInviteSuccess = () => {
-    fetchUserData({ forceUpdate: true });
+    refetchUserData();
+  };
+
+  const handlePlanRemoved = () => {
+    refetchUserData();
   };
 
   return (
@@ -58,6 +62,7 @@ const PlansRenderer: React.FC = () => {
             currentUserId={userData?.user?.id}
             onSelect={(planId) => setSelectedPlanId(planId)}
             onInviteSuccess={handleInviteSuccess}
+            onPlanRemoved={handlePlanRemoved}
           />
         ))}
         <Link href="/create-new-plan" passHref>

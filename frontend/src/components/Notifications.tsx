@@ -11,7 +11,7 @@ import posthog from "posthog-js";
 interface NotificationsProps {}
 
 const Notifications: React.FC<NotificationsProps> = () => {
-  const { useUserDataQuery } = useUserPlan();
+  const { useUserDataQuery, refetchUserData } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const router = useRouter();
@@ -23,7 +23,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
   ) => {
     const concludeNotification = async () => {
       await api.post(`/conclude-notification/${notification.id}`);
-      userDataQuery.refetch();
+      refetchUserData();
     };
 
     const actionPromise = async () => {
@@ -142,7 +142,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
   const handleClearAll = async () => {
     const clearPromise = async () => {
       await api.post('/clear-all-notifications');
-      userDataQuery.refetch();
+      refetchUserData(); 
     };
 
     toast.promise(clearPromise(), {
