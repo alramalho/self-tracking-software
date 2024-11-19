@@ -70,6 +70,15 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;  
 
+  useEffect(() => {
+    if (userData?.user?.username) {
+      updateState({ username: userData.user.username });
+    }
+    if (userData?.user?.name) {
+      updateState({ name: userData.user.name });
+    }
+  }, [userData]);
+
   // Destructure state for easier access
   const {
     step,
@@ -115,48 +124,24 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
   // Add back the notifications context
   const { requestPermission, isPushGranted } = useNotifications();
 
-  // Add back the handlePlanSelection function
+  // Simplify the plan selection handler
   const handlePlanSelection = async (plan: GeneratedPlan) => {
-    console.log({ planToBeCreated: plan });
     try {
-      if (plan) {
-        const response = await api.post("/create-plan", {
-          ...plan,
-          emoji: selectedEmoji,
-        });
-        const createdPlan = response.data.plan;
-        setSelectedPlan(createdPlan);
-        userDataQuery.refetch();
-        setStep(4);
-      }
+      const response = await api.post("/create-plan", {
+        ...plan,
+        emoji: selectedEmoji,
+      });
+      const createdPlan = response.data.plan;
+      setSelectedPlan(createdPlan);
+      userDataQuery.refetch();
+      setStep(4);
     } catch (error) {
       console.error("Plan creation error:", error);
       toast.error("Failed to create plan. Please try again.");
     }
   };
 
-  // Update handleGeneratePlans to handle Date object correctly
-  const handleGeneratePlans = async () => {
-    setIsGenerating(true);
-    try {
-      const response = await api.post("/generate-plans", {
-        goal,
-        // Only call toISOString if finishingDate is defined
-        finishingDate: finishingDate ? finishingDate.toISOString().split("T")[0] : undefined,
-        planDescription: planDescription.trim() || undefined,
-        emoji: selectedEmoji,
-      });
-
-      setGeneratedPlans(response.data.plans);
-    } catch (error) {
-      console.error("Error generating plan:", error);
-      toast.error("Failed to generate plan. Please try again.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // Update the final NotificationStep to use handleComplete
+  // Update the renderStep function
   const renderStep = () => {
     switch (step) {
       case 0:
@@ -186,11 +171,8 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
       case 3:
         return (
           <PlanGenerationStep
-            planDescription={planDescription}
-            setPlanDescription={setPlanDescription}
-            handleGeneratePlans={handleGeneratePlans}
-            isGenerating={isGenerating}
-            generatedPlans={generatedPlans}
+            goal={goal}
+            finishingDate={finishingDate?.toISOString().split('T')[0]}
             handlePlanSelection={handlePlanSelection}
             name={name}
           />
