@@ -24,7 +24,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [emoji, setEmoji] = useState(activity?.emoji || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { useUserDataQuery } = useUserPlan();
+  const { useUserDataQuery, refetchUserData } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const api = useApiWithAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -43,7 +43,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         title,
         measure,
       });
-      userDataQuery.refetch();
+      refetchUserData();
 
       const savedActivity = response.data;
       onSave(savedActivity);
