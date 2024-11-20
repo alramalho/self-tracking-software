@@ -136,26 +136,6 @@ const LogPage: React.FC = () => {
     [addMessage, addToQueue, outputMode]
   );
 
-  const handleActivitiesUpdate = useCallback(
-    (
-      newActivityEntries: any[],
-      notificationText: string,
-      reportedMood: boolean
-    ) => {
-      if ((newActivityEntries.length > 0 || reportedMood) && notificationText) {
-        addToNotificationCount(
-          newActivityEntries.length + (reportedMood ? 1 : 0)
-        );
-        toast(notificationText, {
-          duration: 5000,
-          position: "top-center",
-          icon: "📊",
-        });
-      }
-    },
-    [addToNotificationCount]
-  );
-
   useEffect(() => {
     if (!socket) return;
 
@@ -167,17 +147,18 @@ const LogPage: React.FC = () => {
       if (data.type === "message") {
         handleIncomingMessage(data.text, data.audio);
       } else if (data.type === "activities_update") {
-        handleActivitiesUpdate(
-          data.new_activity_entries,
-          data.new_activities_notification,
-          data.reported_mood
-        );
+        addToNotificationCount(1);
+        toast(data.new_activities_notification, {
+          duration: 5000,
+          position: "top-center",
+          icon: "📊",
+        });
       } else if (data.type === "intermediary_transcription") {
         setTranscription(data.text);
         addMessage({ role: "user", content: `🎙️ ${data.text}` });
       }
     };
-  }, [socket, handleIncomingMessage, handleActivitiesUpdate]);
+  }, [socket, handleIncomingMessage]);
 
   const handleReconnect = () => {
     if (socket) {

@@ -31,7 +31,7 @@ const BottomNav = () => {
         <div className="flex justify-around">
           <Link
             href="/"
-            className="flex flex-col items-center p-2 text-gray-600"
+            className="flex flex-col items-center p-2 text-gray-600 relative"
             onClick={() =>{
               if (pathname !== "/")  {
                 setIsLoadingFeed(true)
@@ -39,6 +39,11 @@ const BottomNav = () => {
             }}
           >
             {isLoadingFeed ? <Loader2 size={24} className="animate-spin" /> : <Home size={24} />}
+            {notificationCount > 0 && (
+              <div className="absolute top-1 right-1 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-[14px] font-bold -mt-1 -mr-1">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </div>
+            )}
             <span className="text-xs mt-1">Home</span>
           </Link>
           <Link
@@ -67,7 +72,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href={`/profile/me`}
-            className="flex flex-col items-center p-2 text-gray-600 relative"
+            className="flex flex-col items-center p-2 text-gray-600"
             onClick={() => {
               if (pathname !== "/profile/me") {
                 setIsLoadingProfile(true)
@@ -75,11 +80,6 @@ const BottomNav = () => {
             }}
           >
             {isLoadingProfile ? <Loader2 size={24} className="animate-spin" /> : <User size={24} />}
-            {notificationCount > 0 && (
-              <div className="absolute top-1 right-1 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-[14px] font-bold -mt-1 -mr-1">
-                {notificationCount > 99 ? '99+' : notificationCount}
-              </div>
-            )}
             <span className="text-xs mt-1">Profile</span>
           </Link>
         </div>

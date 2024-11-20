@@ -10,10 +10,15 @@ import traceback
 from fastapi import WebSocket, Request, HTTPException, status
 from auth.clerk import is_clerk_user_ws
 from auth.clerk import is_clerk_user_ws
-
+from services.notification_manager import NotificationManager
+from gateways.activities import ActivitiesGateway
+from entities.activity import ActivityEntry
 
 from fastapi import APIRouter
 router = APIRouter(prefix="/ai")
+
+activities_gateway = ActivitiesGateway()
+notification_manager = NotificationManager()
 
 @router.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
@@ -35,7 +40,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         audio_data = message.get("audio_data")
                         audio_format = message.get("audio_format")
 
-                        text_response, audio_response, activities, activity_entries, mood_report, notification_text = (
+                        text_response, audio_response, extracted_activity_entries = (
                             await process_message(websocket, user.id, text, input_mode, output_mode, audio_data, audio_format)
                         )
 
@@ -44,26 +49,26 @@ async def websocket_endpoint(websocket: WebSocket):
                             "text": text_response,
                         }
 
+                        for activity_entry in extracted_activity_entries:
+                            activities_gateway.create_activity_entry(
+                                ActivityEntry.new(
+                                    user_id=user.id,
+                                    activity_id=activity_entry.activity_id,
+                                    date=activity_entry.date,
+                                    quantity=activity_entry.quantity,
+                                )
+                            )
+
                         if output_mode == "voice" and audio_response:
                             response_data["audio"] = base64.b64encode(audio_response).decode("utf-8")
 
                         await websocket.send_json(response_data)
-
-                        # Send activities and mood data separately
-                        await websocket.send_json(
-                            {
+    
+                        if len(extracted_activity_entries) > 0:
+                            await websocket.send_json(
+                                {
                                 "type": "activities_update",
-                                "new_activities": [a.model_dump() for a in activities],
-                                "new_activity_entries": [
-                                    a.model_dump() for a in activity_entries
-                                ],
-                                "new_mood_report": (
-                                    mood_report.model_dump() if mood_report else None
-                                ),
-                                "new_activities_notification": notification_text,
-                                "reported_mood": bool(
-                                    mood_report.model_dump() if mood_report else None
-                                ),
+                                "new_activities_notification": f"Extracted {len(extracted_activity_entries)} new activities. Check your notifications for more details.",
                             }
                         )
 

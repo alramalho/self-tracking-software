@@ -44,3 +44,8 @@ def time_ago(iso_str):
 
 def exclude_embedding_fields(d: dict):
     return {key: value for key, value in d.items() if not key.endswith("_embedding")}
+
+
+
+if __name__ == "__main__":
+    print(time_ago("2024-11-12T17:03:00.000Z"))

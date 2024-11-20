@@ -3,11 +3,10 @@ from entities.user import User
 from entities.activity import Activity, ActivityEntry
 from entities.mood_report import MoodReport
 from gateways.database.mongodb import MongoDBGateway
-from ai.assistant.assistant import Assistant
 from ai.assistant.memory import DatabaseMemory
 from ai.llm import ask_schema, ask_text
 from datetime import datetime
-from ai.assistant.assistant import Assistant, activities_description, activity_entries_description
+from ai.assistant.flowchart import Assistant, ExtractedActivityEntry
 import pytz
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
@@ -33,128 +32,132 @@ users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
 
-def talk_with_assistant(user_id: str, user_input: str, extraction_summary: str = None) -> str:
+def talk_with_assistant(user_id: str, user_input: str) -> Tuple[str, List[ExtractedActivityEntry]]:
     user = users_gateway.get_user_by_id(user_id)
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
+    user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
+    recent_activities_string = activities_gateway.get_readable_recent_activity_entries(user_id)
     assistant = Assistant(
         memory=memory,
         user=user,
-        user_activities=activities_gateway.get_all_activities_by_user_id(user_id),
+        user_activities=user_activities,
+        recent_activities_string=recent_activities_string,
     )
-    return assistant.get_response(user_input, extraction_summary)
-
-
-def get_activities_from_conversation(user_id: str) -> Tuple[List[Activity], str]:
-    memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
-    activities = activities_gateway.get_all_activities_by_user_id(user_id)
-    current_date = datetime.now().strftime("%Y-%m-%d")
-
-    prompt = f"""
-    Given the conversation history, extract any present activities. 
-    {activities_description}
-    Try to match activities with existent ones, if not, create new ones.
-    Don't infer anything that is not explicitly included. 
-    If you don't have enough explicit information from the dialogue to create complete activities (e.g. missing measure), do not create them.
-
-    Existent Activities:
-    {", ".join([str(a) for a in activities])}
+    return assistant.get_response(user_input)
     
-    Conversation history:
-    {memory.read_all_as_str(max_messages=6)}
-    (today is {current_date})
-    """
-
-    class PartialActivity(BaseModel):
-        measure: str
-        title: str
-        emoji: str
-
-    class ResponseModel(BaseModel):
-        reasonings: str = Field(
-            description="Your reasoning justifying each created activity against the conversation history. Must not be emtpy or null."
-        )
-        activities: list[PartialActivity]
-
-    response = ask_schema("Go!", prompt, ResponseModel)
-
-    activities = [
-        Activity.new(user_id=user_id, measure=a.measure, title=a.title, emoji=a.emoji)
-        for a in response.activities
-    ]   
-    return activities, response.reasonings
 
 
-def get_activity_entries_from_conversation(user_id: str) -> Tuple[List[ActivityEntry], str]:
-    memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
-    activities = activities_gateway.get_all_activities_by_user_id(user_id)
-    current_date = datetime.now().strftime("%Y-%m-%d")
+# def get_activities_from_conversation(user_id: str) -> Tuple[List[Activity], str]:
+#     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
+#     activities = activities_gateway.get_all_activities_by_user_id(user_id)
+#     current_date = datetime.now().strftime("%Y-%m-%d")
 
-    prompt = f"""
-    Given the conversation history extract any activity entries that are mentioned & matched against existent activities.
-    {activity_entries_description}
-    Try to match activities with existent ones, if not, create new ones.
-    All information regarding the activtiy must be EXPLICTLY mentioned for you to create it. Do not craete it otherwise. 
+#     prompt = f"""
+#     Given the conversation history, extract any present activities. 
+#     {activities_description}
+#     Try to match activities with existent ones, if not, create new ones.
+#     Don't infer anything that is not explicitly included. 
+#     If you don't have enough explicit information from the dialogue to create complete activities (e.g. missing measure), do not create them.
 
-    Existent Activities:
-    {", ".join([f"{str(a)} (id: '{a.id}')" for a in activities])}
+#     Existent Activities:
+#     {", ".join([str(a) for a in activities])}
     
-    Conversation history:
-    {memory.read_all_as_str(max_messages=6)}
-    (today is {current_date})
-    """
+#     Conversation history:
+#     {memory.read_all_as_str(max_messages=6)}
+#     (today is {current_date})
+#     """
 
-    class PartialActivityEntry(BaseModel):
-        activity_id: str
-        quantity: float
-        date: str
+#     class PartialActivity(BaseModel):
+#         measure: str
+#         title: str
+#         emoji: str
 
-    class ResponseModel(BaseModel):
-        reasonings: str = Field(
-            description="Your reasoning justifying each activity and its full data entry against the conversation history. Must not be emtpy or null."
-        )
-        activity_entries: list[PartialActivityEntry]
+#     class ResponseModel(BaseModel):
+#         reasonings: str = Field(
+#             description="Your reasoning justifying each created activity against the conversation history. Must not be emtpy or null."
+#         )
+#         activities: list[PartialActivity]
 
-    response = ask_schema("Go!", prompt, ResponseModel)
-    activity_entries = [
-        ActivityEntry.new(activity_id=a.activity_id, quantity=a.quantity, date=a.date, user_id=user_id)
-        for a in response.activity_entries
-    ]
+#     response = ask_schema("Go!", prompt, ResponseModel)
 
-    return activity_entries, response.reasonings
+#     activities = [
+#         Activity.new(user_id=user_id, measure=a.measure, title=a.title, emoji=a.emoji)
+#         for a in response.activities
+#     ]   
+#     return activities, response.reasonings
 
 
-def get_mood_report_from_conversation(user_id: str) -> Tuple[MoodReport | None, str]:
-    memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
-    current_date = datetime.now().strftime("%Y-%m-%d")
+# def get_activity_entries_from_conversation(user_id: str) -> Tuple[List[ActivityEntry], str]:
+#     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
+#     activities = activities_gateway.get_all_activities_by_user_id(user_id)
+#     current_date = datetime.now().strftime("%Y-%m-%d")
 
-    prompt = f"""
-    Given the conversation history, extract the user's mood report for today.
-    It is imperatiive that the mood report is explicitly mentioned by the user, as an answer to the question of how happy the user is feeling from from 1 to 10.
-    If theres no such question & answer, do not create a mood report.
-    The mood score should be on a scale of 1 to 10, where 1 is extremely unhappy and 10 is extremely happy.
+#     prompt = f"""
+#     Given the conversation history extract any activity entries that are mentioned & matched against existent activities.
+#     # {activity_entries_description}
+#     Try to match activities with existent ones, if not, create new ones.
+#     All information regarding the activtiy must be EXPLICTLY mentioned for you to create it. Do not craete it otherwise. 
 
-    Conversation history:
-    {memory.read_all_as_str(max_messages=6)}
-    (today is {current_date})
-    """
+#     Existent Activities:
+#     {", ".join([f"{str(a)} (id: '{a.id}')" for a in activities])}
+    
+#     Conversation history:
+#     {memory.read_all_as_str(max_messages=6)}
+#     (today is {current_date})
+#     """
 
-    class ResponseModel(BaseModel):
-        reasoning: str = Field(
-            description="Your reasoning justifying the mood report against the conversation history."
-        )
-        mood_report: MoodReport | None
+#     class PartialActivityEntry(BaseModel):
+#         activity_id: str
+#         quantity: float
+#         date: str
 
-    response = ask_schema("Extract mood report", prompt, ResponseModel)
-    mood_report = (
-        MoodReport.new(
-            user_id=user_id,
-            score=response.mood_report.score,
-            date=response.mood_report.date,
-        )
-        if response.mood_report
-        else None
-    )
-    return mood_report, response.reasoning
+#     class ResponseModel(BaseModel):
+#         reasonings: str = Field(
+#             description="Your reasoning justifying each activity and its full data entry against the conversation history. Must not be emtpy or null."
+#         )
+#         activity_entries: list[PartialActivityEntry]
+
+#     response = ask_schema("Go!", prompt, ResponseModel)
+#     activity_entries = [
+#         ActivityEntry.new(activity_id=a.activity_id, quantity=a.quantity, date=a.date, user_id=user_id)
+#         for a in response.activity_entries
+#     ]
+
+#     return activity_entries, response.reasonings
+
+
+# def get_mood_report_from_conversation(user_id: str) -> Tuple[MoodReport | None, str]:
+#     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user_id)
+#     current_date = datetime.now().strftime("%Y-%m-%d")
+
+#     prompt = f"""
+#     Given the conversation history, extract the user's mood report for today.
+#     It is imperatiive that the mood report is explicitly mentioned by the user, as an answer to the question of how happy the user is feeling from from 1 to 10.
+#     If theres no such question & answer, do not create a mood report.
+#     The mood score should be on a scale of 1 to 10, where 1 is extremely unhappy and 10 is extremely happy.
+
+#     Conversation history:
+#     {memory.read_all_as_str(max_messages=6)}
+#     (today is {current_date})
+#     """
+
+#     class ResponseModel(BaseModel):
+#         reasoning: str = Field(
+#             description="Your reasoning justifying the mood report against the conversation history."
+#         )
+#         mood_report: MoodReport | None
+
+#     response = ask_schema("Extract mood report", prompt, ResponseModel)
+#     mood_report = (
+#         MoodReport.new(
+#             user_id=user_id,
+#             score=response.mood_report.score,
+#             date=response.mood_report.date,
+#         )
+#         if response.mood_report
+#         else None
+#     )
+#     return mood_report, response.reasoning
 
 
 def generate_notification_text(
@@ -287,26 +290,26 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
         })
         message = transcription
 
-    activities, activity_entries, mood_report, notification_text, reasoning = (
-        await process_activities_and_mood(user_id)
-    )
-    try:
-        hume_result = await process_audio_with_hume(base64.b64decode(audio_data), audio_format)
-        logger.info(f"Hume result: {hume_result}")
-    except Exception as e:
-        logger.error(f"Error processing audio with Hume: {e}")
-        hume_result = None
+    # activities, activity_entries, mood_report, notification_text, reasoning = (
+    #     await process_activities_and_mood(user_id)
+    # )
+    # try:
+    #     hume_result = await process_audio_with_hume(base64.b64decode(audio_data), audio_format)
+    #     logger.info(f"Hume result: {hume_result}")
+    # except Exception as e:
+    #     logger.error(f"Error processing audio with Hume: {e}")
+    #     hume_result = None
 
     # Update the assistant with the extraction results
-    extraction_summary = f"""
-    Extraction results:
-    Activities: {reasoning['activities']}
-    Activity Entries: {reasoning['activity_entries']}
-    Mood Report: {reasoning['mood_report']}
-    """
+    # extraction_summary = f"""
+    # Extraction results:
+    # Activities: {reasoning['activities']}
+    # Activity Entries: {reasoning['activity_entries']}
+    # Mood Report: {reasoning['mood_report']}
+    # """
 
-    text_response = await loop.run_in_executor(
-        executor, talk_with_assistant, user_id, message, extraction_summary
+    text_response, activity_entries = await loop.run_in_executor(
+        executor, talk_with_assistant, user_id, message
     )
     
     audio_response = None
@@ -315,7 +318,7 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
             executor, tts.text_to_speech, text_response
         )
     
-    return text_response, audio_response, activities, activity_entries, mood_report, notification_text
+    return text_response, audio_response, activity_entries
 
 def initiate_recurrent_checkin(user_id: str) -> Notification:
     notification_manager = NotificationManager()
