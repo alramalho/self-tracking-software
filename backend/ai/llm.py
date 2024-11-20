@@ -6,7 +6,7 @@ from typing import TypeVar, Type
 
 
 def ask_text(text: str, system: str, model: str = LLM_MODEL) -> str:
-    logger.info(f"Asking text: {text} to assistant with system {system}")
+    logger.info(f"Asking text: {text}\n\n to assistant with syste\n'{system}'")
 
     response = client.chat.completions.create(
         model=model,
@@ -23,8 +23,10 @@ def ask_text(text: str, system: str, model: str = LLM_MODEL) -> str:
 
 T = TypeVar("T", bound=BaseModel)
 
+import time
 
 def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL) -> T:
+    start_time = time.time()
 
     logger.info(f"Asking schema: \n{pymodel.model_json_schema()}\nText: '{text}'\nSystem: '{system}'")
 
@@ -37,5 +39,7 @@ def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL)
         response_format=pymodel,
     )
 
+    elapsed_time = (time.time() - start_time) * 1000
     logger.info(f"Assistant response: {completion.choices[0].message.parsed.model_dump_json(indent=2)}")
+    logger.info(f"Elapsed time for '{model}' ask_schema call: {elapsed_time:.2f} ms")
     return completion.choices[0].message.parsed

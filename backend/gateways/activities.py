@@ -199,8 +199,9 @@ class ActivitiesGateway:
 
 if __name__ == "__main__":
     from gateways.database.mongodb import MongoDBGateway
+    from shared.logger import create_logger
+    create_logger()
 
-    gateway = ActivitiesGateway(MongoDBGateway("activities"))
+    gateway = ActivitiesGateway()
 
-    activity = Activity(name="Alex", email="alexandre.ramalho.1998@gmail.com")
-    gateway.create_activity(activity)
+    print([activity.id for activity in gateway.get_all_activities_by_user_id("666666666666666666666665")])

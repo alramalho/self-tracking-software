@@ -28,7 +28,7 @@ class Activity(BaseModel):
         return v.lower()
 
     def __str__(self):
-        return f"{self.title} (measured in {self.measure})"
+        return f"{self.title} (measured in {self.measure}) (id: '{self.id}')"
 
     @classmethod
     def new(
