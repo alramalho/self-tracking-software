@@ -21,14 +21,12 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   useEffect(() => {
     setIsVisible(true);
     document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "unset";
-    };
   }, []);
-
+  
   const handleClose = () => {
     setIsVisible(false);
     setTimeout(onClose, 300); // Wait for animation to finish
+    document.body.style.overflow = "unset";
   };
 
   return (
