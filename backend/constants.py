@@ -32,3 +32,5 @@ POSTHOG_API_KEY=os.getenv("POSTHOG_API_KEY")
 POSTHOG_HOST="https://eu.i.posthog.com"
 
 ADMIN_API_KEY=os.getenv("ADMIN_API_KEY")
+
+MAX_TIMELINE_ENTRIES = 30
