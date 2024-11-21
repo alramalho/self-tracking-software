@@ -109,12 +109,12 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             value={heatmapData}
             startDate={utcStartDate}
             endDate={utcEndDate}
-            width={30 + 18 * numberOfWeeks}
-            height={150}
-            rectSize={14}
+            width={45 + 24 * numberOfWeeks}
+            height={200}
+            rectSize={18}
             legendRender={() => <></>}
             rectProps={{
-              rx: 3,
+              rx: 4,
             }}
             rectRender={(props, data) => {
               // Convert date string to UTC Date object
