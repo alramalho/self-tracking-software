@@ -21,7 +21,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { convertApiPlanToPlan, User, useUserPlan } from "@/contexts/UserPlanContext";
+import {
+  convertApiPlanToPlan,
+  User,
+  useUserPlan,
+} from "@/contexts/UserPlanContext";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -34,6 +38,8 @@ import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import { usePostHog } from "posthog-js/react";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Divider from "@/components/Divider";
+import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -49,7 +55,7 @@ const ProfilePage: React.FC = () => {
   const currentUser = userDataQuery.data?.user;
   const currentUserSentFriendRequests = userDataQuery.data?.sentFriendRequests;
   const currentUserReceivedFriendRequests =
-  userDataQuery.data?.receivedFriendRequests;
+    userDataQuery.data?.receivedFriendRequests;
   const isOwnProfile = currentUser?.username === username || username === "me";
   const profileDataQuery = useUserDataQuery(username);
   const profileData = profileDataQuery.data;
@@ -59,10 +65,13 @@ const ProfilePage: React.FC = () => {
   };
   const api = useApiWithAuth();
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
-  string | null
+    string | null
   >(null);
   const posthog = usePostHog();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [timeRange, setTimeRange] = useState<"Current Year" | "Current Month">(
+    "Current Year"
+  );
 
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -71,7 +80,7 @@ const ProfilePage: React.FC = () => {
     if (!profileData) {
       isOwnProfile ? userDataQuery.refetch() : profileDataQuery.refetch();
     }
-  }, [username, userDataQuery, isOwnProfile, profileDataQuery ]);
+  }, [username, userDataQuery, isOwnProfile, profileDataQuery]);
 
   useEffect(() => {
     if (isOwnProfile) {
@@ -135,6 +144,15 @@ const ProfilePage: React.FC = () => {
   const handleLogout = () => {
     signOut();
     posthog.reset();
+  };
+
+  const getActivitiesNotInPlans = () => {
+    const planActivityIds = new Set(
+      profileData?.plans?.flatMap((plan) =>
+        plan.sessions.map((session) => session.activity_id)
+      ) || []
+    );
+    return activities.filter((activity) => !planActivityIds.has(activity.id));
   };
 
   if (userDataQuery.isLoading || profileDataQuery.isLoading) {
@@ -275,7 +293,7 @@ const ProfilePage: React.FC = () => {
                 <ChartArea size={22} />
                 <span>Plans</span>
               </div>
-          </TabsTrigger>
+            </TabsTrigger>
             <TabsTrigger value="history">
               <div className="flex flex-col items-center">
                 <History size={22} />
@@ -291,9 +309,40 @@ const ProfilePage: React.FC = () => {
                     <span className="text-4xl">{plan.emoji}</span>
                     <h3 className="text-lg font-semibold">{plan.goal}</h3>
                   </div>
-                  <PlanActivityEntriesRenderer plan={convertApiPlanToPlan(plan, activities)} activities={activities} activityEntries={activityEntries} />
+                  <PlanActivityEntriesRenderer
+                    plan={convertApiPlanToPlan(plan, activities)}
+                    activities={activities}
+                    activityEntries={activityEntries}
+                  />
                 </div>
               ))}
+              <div className="flex flex-row gap-4 justify-between items-center">
+                <Divider
+                  className="w-full "
+                  text="Other Activities 👇"
+                />
+
+                <div className="flex self-center">
+                  <select
+                    className="p-2 border rounded-md"
+                    value={timeRange}
+                    onChange={(e) =>
+                      setTimeRange(
+                        e.target.value as "Current Year" | "Current Month"
+                      )
+                    }
+                  >
+                    <option value="Current Year">Current Year</option>
+                    <option value="Current Month">Current Month</option>
+                  </select>
+                </div>
+              </div>
+              <ActivityGridRenderer
+                activities={getActivitiesNotInPlans()}
+                activityEntries={activityEntries}
+                timeRange={timeRange}
+              />
+
               {(!profileData.plans || profileData.plans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
                   No active plans available.
