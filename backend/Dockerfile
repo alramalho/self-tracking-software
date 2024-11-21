@@ -1,5 +1,5 @@
 # Dockerfile for backend lambda
-FROM python:3.11 as build-image
+FROM python:3.12 as build-image
 
 # Define function directory
 ARG FUNCTION_DIR="/function"
