@@ -159,7 +159,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
       )}
 
       <ConfirmDialog
-        isOpen={showLeaveConfirm && canLeavePlan}
+        isOpen={showLeaveConfirm && (canLeavePlan || false)}
         onClose={() => setShowLeaveConfirm(false)}
         onConfirm={handleLeavePlan}
         title="Leave Plan"
