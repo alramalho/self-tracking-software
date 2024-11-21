@@ -131,27 +131,6 @@ const ProfilePage: React.FC = () => {
       }
     }
   };
-  const getFormattedDate = (date: string) => {
-    const parsedDate = parseISO(date);
-    const now = new Date();
-    const diffInDays = differenceInDays(now, parsedDate);
-
-    if (diffInDays === 0) {
-      return `today at ${format(parsedDate, "HH:mm")}`;
-    }
-    if (diffInDays === 1) {
-      return `yesterday at ${format(parsedDate, "HH:mm")}`;
-    }
-
-    if (diffInDays <= 7) {
-      return `last ${format(parsedDate, "EEEE")} at ${format(
-        parsedDate,
-        "HH:mm"
-      )}`;
-    }
-
-    return format(parsedDate, "MMM d HH:mm");
-  };
 
   const handleLogout = () => {
     signOut();
@@ -344,7 +323,7 @@ const ProfilePage: React.FC = () => {
                         activityEntryQuantity={entry.quantity}
                         activityEntryReactions={entry.reactions}
                         activityMeasure={activity?.measure || ""}
-                        formattedDate={getFormattedDate(entry.date)}
+                        isoDate={entry.date}
                         daysUntilExpiration={
                           entry.image?.expires_at
                             ? differenceInDays(
