@@ -24,9 +24,21 @@ jobs:
       - name: Deploy CDK
         env:
           ENVIRONMENT: production
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SHARED_ENCRYPTION_KEY: ${{ secrets.SHARED_ENCRYPTION_KEY }}
+          MONGO_DB_CONNECTION_STRING: ${{ secrets.MONGO_DB_CONNECTION_STRING }}
+          CLERK_JWT_PUBLIC_KEY: ${{ secrets.CLERK_JWT_PUBLIC_KEY }}
+          SVIX_SECRET: ${{ secrets.SVIX_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+          
         run: |
           cd aws-infrastructure
-          export BACKEND_API_URL=$(doctl apps list --format DefaultIngress | awk 'NR==2')
           yarn
           yarn bootstrap
           yarn deploy
