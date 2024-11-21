@@ -13,6 +13,7 @@ from gateways.plan_groups import PlanGroupsGateway
 from entities.notification import Notification
 from .notifications import router as notifications_router
 from services.notification_manager import NotificationManager
+from constants import MAX_TIMELINE_ENTRIES
 import re
 import concurrent.futures
 import requests
@@ -351,8 +352,24 @@ async def reject_friend_request(
 @router.get("/timeline")
 async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
     try:
-        timeline_data = get_recommended_activity_entries(current_user)
-        return timeline_data
+        friends = [users_gateway.get_user_by_id(friend_id).dict() for friend_id in current_user.friend_ids]
+        friends_activities_entries = [
+            entry.dict()
+            for friend_id in current_user.friend_ids
+            for entry in activities_gateway.get_most_recent_activity_entries(friend_id, limit=10)
+        ]
+        sorted_friends_activities_entries = sorted(
+            friends_activities_entries,
+            key=lambda x: x['created_at'],
+            reverse=True
+        )[:MAX_TIMELINE_ENTRIES]
+        friends_activities = [activities_gateway.get_activity_by_id(aentry['activity_id']).dict() for aentry in sorted_friends_activities_entries]
+
+        return {
+            "recommended_activity_entries": friends_activities_entries,
+            "recommended_activities": friends_activities,
+            "recommended_users": friends,
+        }
     except Exception as e:
         logger.error(f"Failed to get timeline data: {e}")
         logger.error(f"Traceback: \n{traceback.format_exc()}")
@@ -386,45 +403,6 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
 
     return results[:limit]
 
-
-def get_recommended_activity_entries(current_user: User):
-    limit = 30
-    activities = plan_controller.get_recommended_activities(current_user, limit=10)
-    activities_dicts = [
-        exclude_embedding_fields(activity.dict()) for activity in activities
-    ]
-
-    users = {}
-
-    for activity in activities:
-        user = users_gateway.get_user_by_id(activity.user_id)
-        if user:
-            users[user.id] = user.dict()
-
-    users = list(users.values())
-
-    recommended_activity_entries = []
-    for activity in activities:
-        for entry in activities_gateway.get_all_activity_entries_by_activity_id(
-            activity.id
-        ):
-            entry_dict = exclude_embedding_fields(entry.dict())
-            recommended_activity_entries.append(entry_dict)
-            if len(recommended_activity_entries) >= limit:
-                break
-        if len(recommended_activity_entries) >= limit:
-            break
-
-    for entry in recommended_activity_entries:
-        entry["is_week_finisher"], entry["plan_finished_name"] = (
-            plan_controller.is_week_finisher_of_any_plan(entry["id"])
-        )
-
-    return {
-        "recommended_activity_entries": recommended_activity_entries,
-        "recommended_activities": activities_dicts,
-        "recommended_users": users,
-    }
 
 
 @router.post("/report-feedback")
