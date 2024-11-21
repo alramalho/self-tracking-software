@@ -75,17 +75,17 @@ class ActivitiesGateway:
 
         ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.created_at, reverse=True)
         
-        # not return the time ago of the entry + the title of the respecitve activity
+        # return the date of the entry in the format 'Oct 27, 2024' + the title of the respective activity
         readable_activity_entries: List[str] = []
         for activity_entry in ordered_activity_entries[:limit]:
             respective_activity = all_activities_dict[activity_entry.activity_id]
 
-            readable_time_ago = time_ago(activity_entry.created_at)
+            formatted_date = activity_entry.created_at.strftime("%b %d, %Y")
             quantity = activity_entry.quantity
             activity_title = respective_activity.title
             activity_measure = respective_activity.measure
             
-            readable_activity_entries.append(f"{readable_time_ago} - {activity_title} ({quantity} {activity_measure})")
+            readable_activity_entries.append(f"{formatted_date} - {activity_title} ({quantity} {activity_measure})")
 
         return "\n".join(readable_activity_entries)
     
