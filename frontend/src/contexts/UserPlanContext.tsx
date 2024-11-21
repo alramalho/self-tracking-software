@@ -159,6 +159,7 @@ interface UserPlanContextType {
   timelineData: UseQueryResult<TimelineData | null>;
   fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<UserDataEntry>;
   refetchUserData: () => Promise<UserDataEntry>;
+  refetchAllData: () => Promise<UserDataEntry>;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
@@ -349,8 +350,26 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const refetchAllData = async () => {
+    return toast.promise(
+      Promise.all([
+        userDataQuery.refetch(),
+        timelineData.refetch()
+      ]).then(([userData, timeline]) => {
+        if (userData.error) throw userData.error;
+        if (!userData.data) throw new Error("User data is undefined");
+        return userData.data;
+      }),
+      {
+        loading: 'Refreshing all data...',
+        success: 'All data refreshed successfully',
+        error: 'Failed to refresh data'
+      }
+    );
+  };
+
   const context = {
-    userDataQuery,  // Export the whole query result
+    userDataQuery,
     useUserDataQuery,
     useMultipleUsersDataQuery,
     hasLoadedUserData: userDataQuery.isSuccess && !!userDataQuery.data,
@@ -358,12 +377,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     timelineData,
     fetchUserData,
     refetchUserData,
+    refetchAllData
   };
 
   return (
-    <UserPlanContext.Provider
-      value={context}
-    >
+    <UserPlanContext.Provider value={context}>
       {children}
     </UserPlanContext.Provider>
   );
