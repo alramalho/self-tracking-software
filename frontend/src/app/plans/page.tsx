@@ -9,9 +9,19 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 const PlansPage: React.FC = () => {
+  
   const { isSignedIn } = useSession();
   const { useUserDataQuery } = useUserPlan();
+  const [showServerMessage, setShowServerMessage] = useState(false);
   const { data: userData } = useUserDataQuery("me");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowServerMessage(true);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!isSignedIn) {
     return (
@@ -30,10 +40,19 @@ const PlansPage: React.FC = () => {
   }
 
   if (!userData) {
+
     return (
       <div className="h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin" />
-        <p className="ml-3">Loading your data...</p>
+        <Loader2 className="w-10 h-10 animate-spin mr-3" />
+        <div className="flex flex-col items-start">
+          <p className="text-left">Loading your data...</p>
+          {showServerMessage && (
+            <span className="text-gray-500 text-sm text-left">
+              we run on cheap servers...<br/>first request always takes longer<br/>
+              <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
+            </span>
+          )}
+        </div>
       </div>
     );
   }

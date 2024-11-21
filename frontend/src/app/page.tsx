@@ -13,13 +13,13 @@ import { useSession } from "@clerk/nextjs";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { Loader2 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
+import Link from "next/link";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
   const { useUserDataQuery, hasLoadedUserData, refetchAllData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
-  const { isAppInstalled } = useNotifications();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
@@ -36,11 +36,29 @@ const HomePage: React.FC = () => {
     router.push("/signin");
   }
 
+  const [showServerMessage, setShowServerMessage] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowServerMessage(true);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!hasLoadedUserData) {
+
     return (
       <div className="h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin" />
-        <p className="ml-3">Loading your data...</p>
+        <Loader2 className="w-10 h-10 animate-spin mr-3" />
+        <div className="flex flex-col items-start">
+          <p className="text-left">Loading your data...</p>
+          {showServerMessage && (
+            <span className="text-gray-500 text-sm text-left">
+              we run on cheap servers...<br/>first request of the day always takes longer<br/>
+              <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
+            </span>
+          )}
+        </div>
       </div>
     );
   }
