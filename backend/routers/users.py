@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, Query, Request
 from loguru import logger
-from typing import List, Optional, Dict
-from pydantic import BaseModel
+from typing import List
 from auth.clerk import is_clerk_user
 from entities.user import User
 from gateways.users import UsersGateway
@@ -11,7 +10,6 @@ from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
 from gateways.plan_groups import PlanGroupsGateway
 from entities.notification import Notification
-from .notifications import router as notifications_router
 from services.notification_manager import NotificationManager
 from constants import MAX_TIMELINE_ENTRIES
 import re
