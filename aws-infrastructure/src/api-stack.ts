@@ -18,6 +18,48 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id);
 
+    const backendLambda = new lambda.DockerImageFunction(
+      this,
+      "AssetFunction",
+      {
+        functionName: `${CAMEL_CASE_PREFIX}BackendAPI${props.environment}`,
+        code: lambda.DockerImageCode.fromImageAsset(
+          path.join(__dirname, "..", "..", "backend")
+        ),
+        timeout: cdk.Duration.seconds(899),
+        memorySize: 1024,
+        architecture: lambda.Architecture.X86_64,
+        logRetention: cdk.aws_logs.RetentionDays.ONE_WEEK,
+        environment: {
+          OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+          SHARED_ENCRYPTION_KEY: process.env.SHARED_ENCRYPTION_KEY!,
+          MONGO_DB_CONNECTION_STRING: process.env.MONGO_DB_CONNECTION_STRING!,
+          CLERK_JWT_PUBLIC_KEY: process.env.CLERK_JWT_PUBLIC_KEY!,
+          SVIX_SECRET: process.env.SVIX_SECRET!,
+          AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
+          AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
+          VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
+          AWS_REGION: process.env.AWS_REGION!,
+          ENVIRONMENT: process.env.ENVIRONMENT!,
+          JINA_API_KEY: process.env.JINA_API_KEY!,
+          POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
+          ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
+          Y_STRIPE_PRODUCT_ID: process.env.Y_STRIPE_PRODUCT_ID!,
+        },
+      }
+    );
+    backendLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "SES:SendRawEmail"],
+        resources: ["*"],
+        effect: iam.Effect.ALLOW,
+      })
+    );
+
+    const lambdaUrl = backendLambda.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+    });
+
     const apiCronProxyLambda = new lambda.Function(
       this,
       "ApiCronProxyLambdaFunction",
@@ -30,7 +72,7 @@ export class ApiStack extends cdk.Stack {
           path.join(__dirname, "..", "..", "backend", "lambdas")
         ),
         environment: {
-          API_URL: process.env.BACKEND_API_URL!,
+          API_URL: lambdaUrl.url,
         },
       }
     );
