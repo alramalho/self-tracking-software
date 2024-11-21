@@ -73,6 +73,8 @@ const ProfilePage: React.FC = () => {
     "Current Month"
   );
   const [endDate, setEndDate] = useState(endOfMonth(new Date()));
+  const [showServerMessage, setShowServerMessage] = useState(false);
+
 
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -166,11 +168,28 @@ const ProfilePage: React.FC = () => {
     setEndDate(value === "Current Month" ? endOfMonth(new Date()) : endOfYear(new Date()));
   };
 
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowServerMessage(true);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   if (userDataQuery.isLoading || profileDataQuery.isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
-        <p className="mt-2">Loading profile</p>
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin mr-3" />
+        <div className="flex flex-col items-start">
+          <p className="text-left">Loading your profile...</p>
+          {showServerMessage && (
+            <span className="text-gray-500 text-sm text-left">
+              we run on cheap servers...<br/>first request of the day always takes longer.<br/>
+              <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
+            </span>
+          )}
+        </div>
       </div>
     );
   }
