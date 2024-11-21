@@ -26,7 +26,7 @@ import {
   User,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import { format, parseISO, differenceInDays } from "date-fns";
+import { format, parseISO, differenceInDays, endOfMonth, endOfYear } from "date-fns";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
@@ -70,8 +70,9 @@ const ProfilePage: React.FC = () => {
   const posthog = usePostHog();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [timeRange, setTimeRange] = useState<"Current Year" | "Current Month">(
-    "Current Year"
+    "Current Month"
   );
+  const [endDate, setEndDate] = useState(endOfMonth(new Date()));
 
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -152,7 +153,17 @@ const ProfilePage: React.FC = () => {
         plan.sessions.map((session) => session.activity_id)
       ) || []
     );
-    return activities.filter((activity) => !planActivityIds.has(activity.id));
+    
+    // Filter activities that are not in plans AND have at least one activity entry
+    return activities.filter((activity) => 
+      !planActivityIds.has(activity.id) && 
+      activityEntries.some(entry => entry.activity_id === activity.id)
+    );
+  };
+
+  const handleTimeRangeChange = (value: "Current Year" | "Current Month") => {
+    setTimeRange(value);
+    setEndDate(value === "Current Month" ? endOfMonth(new Date()) : endOfYear(new Date()));
   };
 
   if (userDataQuery.isLoading || profileDataQuery.isLoading) {
@@ -327,7 +338,7 @@ const ProfilePage: React.FC = () => {
                     className="p-2 border rounded-md"
                     value={timeRange}
                     onChange={(e) =>
-                      setTimeRange(
+                      handleTimeRangeChange(
                         e.target.value as "Current Year" | "Current Month"
                       )
                     }
@@ -341,6 +352,7 @@ const ProfilePage: React.FC = () => {
                 activities={getActivitiesNotInPlans()}
                 activityEntries={activityEntries}
                 timeRange={timeRange}
+                endDate={endDate}
               />
 
               {(!profileData.plans || profileData.plans.length === 0) && (

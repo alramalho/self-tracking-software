@@ -17,6 +17,7 @@ export interface BaseHeatmapRendererProps {
   getIntensityForDate: (
     date: string
   ) => { activityIndex: number; intensity: number } | null;
+  noActivityLegend?: boolean;
 }
 
 export const getActivityColorMatrix = () => {
@@ -49,6 +50,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   heatmapData,
   onDateClick,
   getIntensityForDate,
+  noActivityLegend = false
 }) => {
   // Convert dates to UTC
   const utcStartDate = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
@@ -73,7 +75,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
           />
         </div>
         <span className="text-sm font-semibold">Today</span>
-        {activities.map((activity, index) => (
+        
+        {!noActivityLegend && activities.map((activity, index) => (
           <React.Fragment key={index}>
             <div className="flex flex-row gap-0 items-center">
               {colorMatrix[index % colorMatrix.length].map(

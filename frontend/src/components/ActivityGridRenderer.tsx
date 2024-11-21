@@ -7,12 +7,14 @@ interface ActivityGridRendererProps {
   activities: Activity[];
   activityEntries: ActivityEntry[];
   timeRange: string;
+  endDate?: Date;
 }
 
 const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   activities,
   activityEntries,
   timeRange,
+  endDate
 }) => {
   const getActivityEntries = (activityId: string) => {
     return activityEntries
@@ -85,8 +87,10 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
             <BaseHeatmapRenderer
               activities={[activity]}
               startDate={startDate}
+              endDate={endDate}
               heatmapData={value}
               onDateClick={handleDateClick(activity)}
+              noActivityLegend
               getIntensityForDate={getIntensityForDate(activity.id)}
             />
           </div>
