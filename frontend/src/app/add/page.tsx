@@ -19,7 +19,9 @@ const LogPage: React.FC = () => {
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const activities = userData?.activities || [];
-  const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>(undefined);
+  const [selectedActivity, setSelectedActivity] = useState<
+    Activity | undefined
+  >(undefined);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
@@ -44,6 +46,7 @@ const LogPage: React.FC = () => {
       );
       setSelectedDate(utcDate);
     }
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
   const handleQuantityChange = (amount: number) => {
@@ -113,10 +116,7 @@ const LogPage: React.FC = () => {
         onSelectActivity={(a) => {
           handleSelectActivity(a);
           // scroll to quantity
-          const quantity = document.getElementById("quantity");
-          if (quantity) {
-            quantity.scrollIntoView({ behavior: "smooth" });
-          }
+          window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
         }}
       />
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
