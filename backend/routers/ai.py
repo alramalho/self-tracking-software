@@ -13,6 +13,7 @@ from auth.clerk import is_clerk_user_ws
 from services.notification_manager import NotificationManager
 from gateways.activities import ActivitiesGateway
 from entities.activity import ActivityEntry
+from analytics.posthog import posthog
 
 from fastapi import APIRouter
 router = APIRouter(prefix="/ai")
@@ -34,6 +35,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     message = json.loads(data)
 
                     if message["action"] == "send_message":
+                        start_time = time.time()
                         text = message.get("text", "")
                         input_mode = message.get("input_mode", "text")
                         output_mode = message.get("output_mode", "text")
@@ -44,20 +46,40 @@ async def websocket_endpoint(websocket: WebSocket):
                             await process_message(websocket, user.id, text, input_mode, output_mode, audio_data, audio_format)
                         )
 
+                        # Calculate execution time
+                        execution_time = time.time() - start_time
+                        
+                        # Track latency based on input/output mode combination
+                        event_name = f"ai-conversation-{input_mode}-to-{output_mode}-latency"
+                        
+                        posthog.capture(
+                            distinct_id=user.id,
+                            event=event_name,
+                            properties={
+                                "latency_seconds": round(execution_time, 3),
+                                "input_mode": input_mode,
+                                "output_mode": output_mode,
+                                "extracted_activities_count": len(extracted_activity_entries),
+                            }
+                        )
+
                         response_data = {
                             "type": "message",
                             "text": text_response,
                         }
 
                         for activity_entry in extracted_activity_entries:
-                            activities_gateway.create_activity_entry(
-                                ActivityEntry.new(
+                            try:
+                                activities_gateway.create_activity_entry(
+                                    ActivityEntry.new(
                                     user_id=user.id,
                                     activity_id=activity_entry.activity_id,
                                     date=activity_entry.date,
                                     quantity=activity_entry.quantity,
+                                    )
                                 )
-                            )
+                            except Exception as e:
+                                logger.error(f"Error creating activity entry, continuing. Error: {e}")
 
                         if output_mode == "voice" and audio_response:
                             response_data["audio"] = base64.b64encode(audio_response).decode("utf-8")
