@@ -60,7 +60,7 @@ class PlanController:
         if not user:
             return []
             
-        plans = self.get_all_user_plans(user)
+        plans = self.get_all_user_active_plans(user)
         if not plans:
             return []
 
@@ -132,12 +132,13 @@ class PlanController:
         self.db_gateway.write(plan.dict())
         return plan, created_activities
 
-    def get_all_user_plans(self, user: User) -> List[Plan]:
+    def get_all_user_active_plans(self, user: User) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
         plans = []
         for plan_id in user.plan_ids:
             plan = self.get_plan(plan_id)
-            if plan:
+            current_date = datetime.now(UTC)
+            if plan and plan.finishing_date and current_date < datetime.fromisoformat(plan.finishing_date).replace(tzinfo=UTC):
                 plans.append(plan)
         return plans
 
@@ -419,7 +420,7 @@ class PlanController:
 
 
        # skip if user already has a plan with the same group
-        all_plans = self.get_all_user_plans(recipient)
+        all_plans = self.get_all_user_active_plans(recipient)
         inviters_plan = self.get_plan(invitation.plan_id)
         for plan in all_plans:
             if plan.plan_group_id == inviters_plan.plan_group_id and plan.id != inviters_plan.id:
