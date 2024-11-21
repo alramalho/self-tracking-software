@@ -58,8 +58,8 @@ const HomePage: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div className="flex flex-row gap-3 items-center text-center">
-          <span className="text-[40px]">🎯</span>
-          <h2 className="mt-2 text-xl font-bold tracking-tight text-gray-900">
+          <span className="mb-2 text-[40px]">🎯</span>
+          <h2 className="text-xl font-bold tracking-tight text-gray-900">
             <span className="text-blue-500 break-normal text-nowrap">
               tracking.<span className="text-blue-300">so</span>
             </span>
