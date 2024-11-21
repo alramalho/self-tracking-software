@@ -8,7 +8,7 @@ from loguru import logger
 from entities.activity import Activity
 from pydantic import create_model
 from constants import LLM_MODEL
-
+from datetime import datetime
 first_message_flowchart = {
     "FirstTimeEver": {
         "text": "Based on the conversation history, is this the first time ever talking to the user?",
@@ -64,7 +64,7 @@ every_message_flowchart = {
         "connections": {"default": "CheckActivityMeasurement"},
     },
     "ExtractActivity": {
-        "text": "Extract the activity from the user's message",
+        "text": f"Extract new activities from the user's message. New activites are activites that are not on the recent activities list. Today is {datetime.now().strftime('%b %d, %Y')}",
         "schema": ExtractedActivityEntryList,
         "connections": {"default": "InformTheUserAboutTheActivity"},
     },
@@ -215,7 +215,7 @@ class Assistant(object):
         Here's the user's activities:
         {"\n- ".join([str(a) for a in self.user_activities])}
 
-        Here's user's last week activity:
+        Here's user's recent activities:
         {self.recent_activities_string}
                                
         Here's your past conversation with the user:
