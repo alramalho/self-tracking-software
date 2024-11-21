@@ -226,6 +226,9 @@ class Assistant(object):
         """
         )
 
+        if result.startswith("Jarvis: "):
+            result = result[len("Jarvis: "):]
+            
         self.memory.write(
             Message.new(
                 result,

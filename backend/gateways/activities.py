@@ -1,10 +1,10 @@
-import datetime
+from datetime import datetime
 
 from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
-from shared.utils import time_ago
-from typing import List, Tuple, Optional
+from shared.utils import days_ago
+from typing import List
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 from entities.user import User
@@ -80,12 +80,12 @@ class ActivitiesGateway:
         for activity_entry in ordered_activity_entries[:limit]:
             respective_activity = all_activities_dict[activity_entry.activity_id]
 
-            formatted_date = activity_entry.created_at.strftime("%b %d, %Y")
+            formatted_date = datetime.fromisoformat(activity_entry.date).strftime("%b %d, %Y")
             quantity = activity_entry.quantity
             activity_title = respective_activity.title
             activity_measure = respective_activity.measure
             
-            readable_activity_entries.append(f"{formatted_date} - {activity_title} ({quantity} {activity_measure})")
+            readable_activity_entries.append(f"{formatted_date} ({days_ago(activity_entry.date)}) - {activity_title} ({quantity} {activity_measure})")
 
         return "\n".join(readable_activity_entries)
     
