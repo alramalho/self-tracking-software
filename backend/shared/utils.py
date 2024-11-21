@@ -41,11 +41,33 @@ def time_ago(iso_str):
         # If the difference is less than 1 minute, return "Just now" format.
         return "Just now"
 
+def days_ago(iso_str):
+    if iso_str is None or iso_str == "":
+        return "Never"
+
+    # Parse the ISO string to a datetime object
+    iso_str = iso_str.replace("Z", "+00:00")  # Replace 'Z' with '+00:00'
+    dt = datetime.fromisoformat(iso_str)
+
+    # If dt is naive, set its timezone to UTC.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    now = datetime.now(timezone.utc)
+    delta = now - dt
+
+    days = delta.days
+
+    if days <= 0:
+        return "today"
+    elif days == 1:
+        return "yesterday"
+    else:
+        return f"{days} days ago"
 
 def exclude_embedding_fields(d: dict):
     return {key: value for key, value in d.items() if not key.endswith("_embedding")}
 
-
-
 if __name__ == "__main__":
     print(time_ago("2024-11-12T17:03:00.000Z"))
+    print(days_ago("2024-11-12T17:03:00.000Z"))
