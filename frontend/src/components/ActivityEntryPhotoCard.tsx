@@ -6,6 +6,29 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
+import { parseISO, differenceInDays, format } from "date-fns";
+
+const getFormattedDate = (date: string) => {
+  const parsedDate = parseISO(date);
+  const now = new Date();
+  const diffInDays = differenceInDays(now, parsedDate);
+
+  if (diffInDays === 0) {
+    return `today at ${format(parsedDate, "HH:mm")}`;
+  }
+  if (diffInDays === 1) {
+    return `yesterday at ${format(parsedDate, "HH:mm")}`;
+  }
+
+  if (diffInDays <= 7) {
+    return `last ${format(parsedDate, "EEEE")} at ${format(
+      parsedDate,
+      "HH:mm"
+    )}`;
+  }
+
+  return format(parsedDate, "MMM d HH:mm");
+};
 interface ActivityEntryPhotoCardProps {
   imageUrl?: string;
   activityTitle: string;
@@ -13,7 +36,7 @@ interface ActivityEntryPhotoCardProps {
   activityMeasure: string;
   activityEmoji: string;
   activityEntryReactions: Record<string, string[]>;
-  formattedDate: string;
+  isoDate: string;
   daysUntilExpiration: number;
   hasImageExpired?: boolean;
   userPicture?: string;
@@ -44,7 +67,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityMeasure,
   activityEmoji,
   activityEntryReactions,
-  formattedDate,
+  isoDate,
   daysUntilExpiration,
   hasImageExpired,
   userPicture,
@@ -242,7 +265,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <span className="font-semibold">
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>
-              <span className="text-xs text-gray-500">{formattedDate}</span>
+              <span className="text-xs text-gray-500">
+                {getFormattedDate(isoDate)}
+              </span>
             </div>
           </div>
         </div>
