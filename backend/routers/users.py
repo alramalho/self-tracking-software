@@ -18,6 +18,8 @@ from urllib import parse
 import traceback
 from gateways.aws.ses import SESGateway, get_email_template_string
 from analytics.posthog import posthog
+import time
+
 router = APIRouter()
 
 users_gateway = UsersGateway()
@@ -44,6 +46,7 @@ async def get_user(user: User = Depends(is_clerk_user)):
 async def load_users_data(
     usernames: str = Query(...), current_user: User = Depends(is_clerk_user)
 ):
+    start_time = time.time()
     try:
         results = {}
         usernames = usernames.split(",")
@@ -141,6 +144,7 @@ async def load_users_data(
 
             if username == "me" or username == current_user.username:
                 try:
+                    execution_time = time.time() - start_time
                     posthog.capture(
                         distinct_id=user.id,
                         event="load-user-data",
@@ -156,6 +160,11 @@ async def load_users_data(
                                 "friend_count": len(current_user.friend_ids),
                             }
                         },
+                    )
+                    posthog.capture(
+                        distinct_id=user.id,
+                        event="load-user-data-latency",
+                        properties={"latency_seconds": round(execution_time, 3)},
                     )
                 except Exception as e:
                     logger.error(f"Failed to capture pageview: {e}")
@@ -349,6 +358,7 @@ async def reject_friend_request(
 
 @router.get("/timeline")
 async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
+    start_time = time.time()
     try:
         friends = [users_gateway.get_user_by_id(friend_id).dict() for friend_id in current_user.friend_ids]
         friends_activities_entries = [
@@ -362,6 +372,15 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             reverse=True
         )[:MAX_TIMELINE_ENTRIES]
         friends_activities = [activities_gateway.get_activity_by_id(aentry['activity_id']).dict() for aentry in sorted_friends_activities_entries]
+
+        execution_time = time.time() - start_time
+        posthog.capture(
+            distinct_id=current_user.id,
+            event="timeline-latency",
+            properties={
+                "latency_seconds": round(execution_time, 3),
+            }
+        )
 
         return {
             "recommended_activity_entries": friends_activities_entries,
