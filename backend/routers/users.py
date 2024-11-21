@@ -16,7 +16,7 @@ from services.notification_manager import NotificationManager
 from constants import MAX_TIMELINE_ENTRIES
 import re
 import concurrent.futures
-import requests
+from urllib import parse
 import traceback
 from gateways.aws.ses import SESGateway, get_email_template_string
 from analytics.posthog import posthog
@@ -420,6 +420,20 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
         }
         
         subject = f"[Tracking.so] New {email_type_map[type_]} from {email}"
+
+        # Create the email body and properly encode it
+        prefilled_content = (
+            f"Hey!\n\n"
+            f"I'm Alex, the dev from Tracking Software.\n"
+            f"Noticed you've opened a {email_type_map[type_]} with '{text}'"
+        )
+        
+        # Properly encode the mailto parameters
+        mailto_params = parse.urlencode({
+            'subject': f"Re: {email_type_map[type_]} on Tracking.so",
+            'body': prefilled_content
+        })
+        mailto_link = f"mailto:{email}?{mailto_params}"
         
         html_content = get_email_template_string(
             header=email_type_map[type_],
@@ -427,6 +441,7 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
             <p><strong>From:</strong> {email}</p>
             <p><strong>Message:</strong></p>
             <p>{text}</p>
+            <p><a href="{mailto_link}">Reply</a></p>
             """
         )
         
