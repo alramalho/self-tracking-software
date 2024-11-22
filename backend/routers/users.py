@@ -525,7 +525,7 @@ async def get_user_profile(username: str):
     try:
         user = users_gateway.get_user_by_safely("username", username)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail=f"User '{username}' not found")
 
         user_data = {
             "user": user.dict(include={"id", "name", "username", "picture", "plan_ids", "friend_ids", "pending_friend_requests"}),
