@@ -7,7 +7,9 @@ interface AuthLayoutProps {
 
 const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="relative w-full h-dvh bg-gray-50/80 
+      [background-image:linear-gradient(#eaedf1_1px,transparent_1px),linear-gradient(to_right,#eef0f3_1px,#f8fafc_1px)] 
+      [background-size:20px_20px] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <span className="text-[120px]">🎯</span>
