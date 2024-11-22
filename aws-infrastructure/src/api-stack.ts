@@ -85,12 +85,14 @@ export class ApiStack extends cdk.Stack {
     apiCronProxyLambda.grantInvoke(
       new iam.ServicePrincipal("events.amazonaws.com")
     );
+    backendLambda.grantInvoke(apiCronProxyLambda);
 
     const s3Bucket = new s3.Bucket(this, "S3Bucket", {
       bucketName: `${KEBAB_CASE_PREFIX}-bucket-${props.environment}`,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
+    s3Bucket.grantReadWrite(backendLambda);
 
     new cdk.CfnOutput(
       this,
