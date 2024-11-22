@@ -1,19 +1,23 @@
 "use client";
 
 import { SignUp } from "@clerk/clerk-react";
-import { useSearchParams } from "next/dist/client/components/navigation";
+import { useSearchParams } from "next/navigation";
 import React from "react";
 import AuthLayout from "@/components/AuthLayout";
 
 const SignUpPage: React.FC = () => {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect_url");
+  const referrer = searchParams.get("referrer");
+  const redirectUrlWithReferrer = redirectUrl && referrer 
+    ? `${redirectUrl}?referrer=${referrer}`
+    : redirectUrl;
 
   return (
     <AuthLayout>
       <SignUp 
-        signInUrl={redirectUrl ? `/signin?redirect_url=${redirectUrl}` : "/signin"} 
-        forceRedirectUrl={redirectUrl}
+        signInUrl={redirectUrlWithReferrer ? `/signin?redirect_url=${redirectUrlWithReferrer}` : "/signin"} 
+        forceRedirectUrl={redirectUrlWithReferrer || "/"}
         appearance={{
           elements: {
             rootBox: "w-full",

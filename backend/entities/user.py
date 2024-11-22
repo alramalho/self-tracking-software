@@ -23,6 +23,7 @@ class User(BaseModel):
     plan_ids: List[str] = Field(default_factory=list)
     friend_ids: List[str] = Field(default_factory=list)
     plan_invitations: List[str] = Field(default_factory=list)
+    referred_user_ids: List[str] = Field(default_factory=list)
 
     @classmethod
     def new(

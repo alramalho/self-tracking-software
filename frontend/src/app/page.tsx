@@ -47,7 +47,6 @@ const HomePage: React.FC = () => {
   }, []);
 
   if (!hasLoadedUserData) {
-
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
@@ -55,8 +54,17 @@ const HomePage: React.FC = () => {
           <p className="text-left">Loading your data...</p>
           {showServerMessage && (
             <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...<br/>first request after some inactivity period always takes longer<br/>
-              <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
+              we run on cheap servers...
+              <br />
+              first request after some inactivity period always takes longer
+              <br />
+              <Link
+                target="_blank"
+                href="https://ko-fi.com/alexramalho"
+                className="underline"
+              >
+                donate?
+              </Link>
             </span>
           )}
         </div>
@@ -108,6 +116,11 @@ const HomePage: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">
           Friend&apos;s last activities
         </h2>
+        {userData?.user?.friend_ids.length === 0 && (
+          <div className="text-left text-gray-500">
+            You haven&apos;t added any friends yet.
+          </div>
+        )}
         <TimelineRenderer />
       </div>
 
