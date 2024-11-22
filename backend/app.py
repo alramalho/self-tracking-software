@@ -1,7 +1,12 @@
 from fastapi import FastAPI, WebSocket, Request
 from shared.logger import create_logger
+from constants import ENVIRONMENT
+if ENVIRONMENT == "production":
+   level = "INFO"
+else:
+    level = "DEBUG"
 
-create_logger(level="DEBUG")
+create_logger(level=level)
 
 from fastapi.middleware.cors import CORSMiddleware
 import base64

@@ -132,36 +132,42 @@ async def store_activity_photo(
     isPublic: bool = Form(...),
     user: User = Depends(is_clerk_user),
 ):
-    s3_gateway = S3Gateway()
+    logger.info(f"Storing activity photo for user '{user.id}'")
+    try:
+        s3_gateway = S3Gateway()
 
-    photo_id = str(uuid.uuid4())
-    _, file_extension = os.path.splitext(photo.filename)
-    s3_path = f"/users/{user.id}/activity_entries/{activityEntryId}/photos/{photo_id}{file_extension}"
+        photo_id = str(uuid.uuid4())
+        _, file_extension = os.path.splitext(photo.filename)
+        s3_path = f"/users/{user.id}/activity_entries/{activityEntryId}/photos/{photo_id}{file_extension}"
 
-    s3_gateway.upload(await photo.read(), s3_path)
+        s3_gateway.upload(await photo.read(), s3_path)
 
-    expiration = 604799  # 7 days (max for s3 presigned url)
-    presigned_url = s3_gateway.generate_presigned_url(s3_path, expiration)
+        expiration = 604799  # 7 days (max for s3 presigned url)
+        presigned_url = s3_gateway.generate_presigned_url(s3_path, expiration)
 
-    image_expires_at = datetime.now() + timedelta(seconds=expiration)
+        image_expires_at = datetime.now() + timedelta(seconds=expiration)
 
-    image_info = ImageInfo(
-        s3_path=s3_path,
-        url=presigned_url,
-        expires_at=image_expires_at.isoformat(),
-        created_at=datetime.now().isoformat(),
-        is_public=isPublic,
-    )
+        image_info = ImageInfo(
+            s3_path=s3_path,
+            url=presigned_url,
+            expires_at=image_expires_at.isoformat(),
+            created_at=datetime.now().isoformat(),
+            is_public=isPublic,
+        )
 
-    updated_entry = activities_gateway.update_activity_entry(
-        activityEntryId, {"image": image_info.dict()}
-    )
+        updated_entry = activities_gateway.update_activity_entry(
+            activityEntryId, {"image": image_info.dict()}
+        )
 
-    return {
-        "message": "Photo uploaded successfully",
-        "updated_entry": updated_entry,
-        "presigned_url": presigned_url,
-    }
+        return {
+            "message": "Photo uploaded successfully",
+            "updated_entry": updated_entry,
+            "presigned_url": presigned_url,
+            }
+    except Exception as e:
+        logger.error(f"Error storing activity photo: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to store activity photo")
+
 
 
 @router.put("/activity-entries/{activity_entry_id}")
