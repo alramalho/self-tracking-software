@@ -5,7 +5,7 @@ import { useMessageHistory, Message } from "@/hooks/useMessageHistory"; // Add t
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
 import AudioControls from "@/components/AudioControls";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import {
   Wifi,
   WifiOff,
@@ -16,6 +16,7 @@ import {
   VolumeX,
   Trash2,
   Router,
+  Loader2,
 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
@@ -32,6 +33,13 @@ import { Switch } from "@/components/ui/switch";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import posthog from "posthog-js";
+import { Button } from "@/components/ui/button";
+import { RadialProgress } from "@/components/ui/radial-progress";
+import { Users } from "lucide-react";
+import { useClipboard } from "@/hooks/useClipboard";
+import { useShare } from "@/hooks/useShare";
+
+const REFERRAL_COUNT = 3;
 
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
@@ -42,7 +50,7 @@ const LogPage: React.FC = () => {
   const { addToQueue } = useSpeaker();
   const { addToNotificationCount, sendPushNotification } = useNotifications();
 
-  const { useUserDataQuery } = useUserPlan();
+  const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
 
   function isUserWhitelisted(): boolean {
@@ -66,41 +74,45 @@ const LogPage: React.FC = () => {
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const referredUsers = userData?.user?.referred_user_ids.length || 0;
+  const [copied, copyToClipboard] = useClipboard();
+  const { share, isSupported: isShareSupported } = useShare();
+
   const connectWebSocket = useCallback(async () => {
     try {
-        const token = await getToken();
-        if (!token) {
-            toast.error("No authentication token available");
-            return;
+      const token = await getToken();
+      if (!token) {
+        toast.error("No authentication token available");
+        return;
+      }
+
+      const newSocket = new WebSocket(
+        `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}/ai/connect?token=${token}`
+      );
+
+      newSocket.onopen = () => {
+        setIsConnected(true);
+        toast.success("WebSocket connected");
+      };
+
+      newSocket.onclose = (event) => {
+        setIsConnected(false);
+        if (event.code === 1008) {
+          toast.error("Authentication failed");
+        } else {
+          toast.error("WebSocket disconnected");
         }
+      };
 
-        const newSocket = new WebSocket(
-            `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}/ai/connect?token=${token}`
-        );
+      newSocket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        toast.error("WebSocket error occurred");
+      };
 
-        newSocket.onopen = () => {
-            setIsConnected(true);
-            toast.success("WebSocket connected");
-        };
-
-        newSocket.onclose = (event) => {
-            setIsConnected(false);
-            if (event.code === 1008) {
-                toast.error("Authentication failed");
-            } else {
-                toast.error("WebSocket disconnected");
-            }
-        };
-
-        newSocket.onerror = (error) => {
-            console.error("WebSocket error:", error);
-            toast.error("WebSocket error occurred");
-        };
-
-        setSocket(newSocket);
+      setSocket(newSocket);
     } catch (error) {
-        console.error("Error connecting to WebSocket:", error);
-        toast.error("Failed to connect to WebSocket");
+      console.error("Error connecting to WebSocket:", error);
+      toast.error("Failed to connect to WebSocket");
     }
   }, [getToken]);
 
@@ -248,6 +260,43 @@ const LogPage: React.FC = () => {
     markNotificationOpened();
   }, [notificationId, authedApi]);
 
+  const handleShareReferralLink = async () => {
+    toast.promise(
+      (async () => {
+        const link = `https://app.tracking.so/join/${userData?.user?.username}`;
+
+        if (isShareSupported) {
+          const success = await share(link);
+          if (!success) throw new Error("Failed to share");
+        } else {
+          const success = await copyToClipboard(link);
+          if (!success) throw new Error("Failed to copy");
+        }
+
+        return isShareSupported
+          ? "Shared referral link"
+          : "Copied referral link to clipboard";
+      })(),
+      {
+        loading: "Generating referral link...",
+        success: (message) => message,
+        error: isShareSupported
+          ? "Failed to share referral link"
+          : "Failed to copy referral link",
+      }
+    );
+  };
+
+  if (!hasLoadedUserData)
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin mr-3" />
+        <div className="flex flex-col items-start">
+          <p className="text-left">Loading your data...</p>
+        </div>
+      </div>
+    );
+    
   return (
     <>
       <AppleLikePopover
@@ -259,12 +308,32 @@ const LogPage: React.FC = () => {
       >
         <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
         <p className="text-base text-gray-700 mb-4">
-          This is an experimental feature exclusive for whitelisted BETA users.
           {isUserWhitelisted()
             ? "Thank you for being a part of the beta, please send me your feedback as you try it out."
-            : "If you'd like to use this, get in contact using the bubble in the bottom right under the 'Feature Requests' section."}
+            : `Look I'm gonna be honest with you pal, this is a closed feature that does cost some money to run. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
         </p>
 
+        {!isUserWhitelisted() && (
+          <div className="w-full max-w-sm mx-auto">
+            <RadialProgress
+              value={referredUsers}
+              total={REFERRAL_COUNT}
+              title="Referral Progress"
+              description="Refer friends to unlock AI features"
+              footer={
+                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>
+                    {REFERRAL_COUNT - referredUsers} more friends needed
+                  </span>
+                  <Button variant="secondary" onClick={handleShareReferralLink}>
+                    Share Referral Link
+                  </Button>
+                </div>
+              }
+            />
+          </div>
+        )}
       </AppleLikePopover>
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         {isLoading && (

@@ -16,9 +16,8 @@ export async function GET(request: NextRequest) {
     const picture = searchParams.get("picture");
     const planCount = searchParams.get("planCount");
     const friendCount = searchParams.get("friendCount");
-    const plansData = searchParams.get("plans");
-    
-    const plans: Plan[] = plansData ? JSON.parse(decodeURIComponent(plansData)) : [];
+    const currentlyWorkingOnEmoji = searchParams.get("currentlyWorkingOnEmoji");
+    const currentlyWorkingOnGoal = searchParams.get("currentlyWorkingOnGoal");
 
     const interBold = await fetch(
       new URL("../../../../../public/fonts/Inter-Bold.ttf", import.meta.url)
@@ -38,71 +37,82 @@ export async function GET(request: NextRequest) {
             fontFamily: "Inter",
           }}
         >
-          {/* Profile Picture */}
           <div
             style={{
-              width: "200px",
-              height: "200px",
-              borderRadius: "100px",
-              border: "8px solid white",
-              marginBottom: "32px",
-              overflow: "hidden",
               display: "flex",
+              flexDirection: "row",
               alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#f3f4f6",
+              gap: "32px",
             }}
           >
-            {picture ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={picture}
-                alt={name || "Profile"}
+            {/* Profile Picture */}
+            <div
+              style={{
+                width: "200px",
+                height: "200px",
+                borderRadius: "100px",
+                border: "8px solid white",
+                marginBottom: "32px",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#f3f4f6",
+              }}
+            >
+              {picture ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={picture}
+                  alt={name || "Profile"}
+                  width={150}
+                  height={150}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    fontSize: "80px",
+                    color: "#9ca3af",
+                  }}
+                >
+                  {name?.[0]?.toUpperCase() || "?"}
+                </div>
+              )}
+            </div>
+
+            {/* Name and Username */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                marginBottom: "48px",
+              }}
+            >
+              <span
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  fontSize: "80px",
-                  color: "#9ca3af",
+                  fontSize: "64px",
+                  fontWeight: 700,
+                  color: "#111827",
+                  marginBottom: "8px",
                 }}
               >
-                {name?.[0]?.toUpperCase() || "?"}
-              </div>
-            )}
-          </div>
-
-          {/* Name and Username */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              marginBottom: "48px",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "64px",
-                fontWeight: 700,
-                color: "#111827",
-                marginBottom: "8px",
-              }}
-            >
-              {name}
-            </span>
-            <span
-              style={{
-                fontSize: "32px",
-                color: "#6b7280",
-              }}
-            >
-              @{username}
-            </span>
+                {name}
+              </span>
+              <span
+                style={{
+                  fontSize: "32px",
+                  color: "#6b7280",
+                }}
+              >
+                @{username}
+              </span>
+            </div>
           </div>
 
           {/* Stats */}
@@ -166,7 +176,7 @@ export async function GET(request: NextRequest) {
           </div>
 
           {/* Plans Preview */}
-          {plans.length > 0 && (
+          {currentlyWorkingOnEmoji && currentlyWorkingOnGoal && (
             <div
               style={{
                 display: "flex",
@@ -187,35 +197,25 @@ export async function GET(request: NextRequest) {
                 style={{
                   display: "flex",
                   gap: "16px",
+                  background: "white",
+                  padding: "12px 24px",
+                  borderRadius: "16px",
+                  alignItems: "center",
                 }}
               >
-                {plans.slice(0, 3).map((plan, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      background: "white",
-                      padding: "12px 24px",
-                      borderRadius: "16px",
-                    }}
-                  >
-                    <span style={{ fontSize: "32px" }}>{plan.emoji}</span>
-                    <span
-                      style={{
-                        fontSize: "24px",
-                        color: "#111827",
-                        maxWidth: "200px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {plan.goal}
-                    </span>
-                  </div>
-                ))}
+                <span style={{ fontSize: "32px" }}>{currentlyWorkingOnEmoji}</span>
+                <span
+                  style={{
+                    fontSize: "24px",
+                    color: "#111827",
+                    maxWidth: "200px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {currentlyWorkingOnGoal}
+                </span>
               </div>
             </div>
           )}
@@ -242,4 +242,4 @@ export async function GET(request: NextRequest) {
       height: 630,
     });
   }
-} 
+}
