@@ -130,7 +130,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           </div>
         </>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 mb-20">
           <h3 className="text-lg font-semibold">Preview Plan</h3>
           <GeneratedPlanRenderer
             title={title}

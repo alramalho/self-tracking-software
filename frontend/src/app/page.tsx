@@ -26,7 +26,8 @@ const HomePage: React.FC = () => {
     if (
       isSignedIn &&
       hasLoadedUserData &&
-      userData?.plans?.length === 0
+      userData?.plans?.length === 0 &&
+      userData?.activities?.length === 0
     ) {
       router.push("/onboarding");
     }

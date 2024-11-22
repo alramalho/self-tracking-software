@@ -21,6 +21,11 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   useEffect(() => {
     setIsVisible(true);
     document.body.style.overflow = "hidden";
+    
+    // Clean up function to reset overflow when component unmounts
+    return () => {
+      document.body.style.overflow = "unset";
+    };
   }, []);
   
   const handleClose = () => {
