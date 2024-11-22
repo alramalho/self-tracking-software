@@ -49,6 +49,7 @@ export interface User {
   email: string;
   plan_ids: string[];
   friend_ids: string[];
+  referred_user_ids: string[];
   pending_friend_requests: string[];
 }
 

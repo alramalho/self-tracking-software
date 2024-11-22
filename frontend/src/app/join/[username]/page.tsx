@@ -14,13 +14,13 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   try {
     const userData = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/load-users-data?usernames=${params.username}`
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/get-user-profile/${params.username}`
     ).then((res) => {
-      if (!res.ok) throw new Error("Failed to fetch user data");
+      if (!res.ok) throw new Error("Failed to fetch user data. Error: " + res.statusText);
       return res.json();
     });
 
-    const user = userData[params.username]?.user;
+    const user = userData.user;
     if (!user) throw new Error("User not found");
 
     const title = `Join ${user.name} on tracking.so`;
@@ -28,11 +28,16 @@ export async function generateMetadata(
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://tracking.so";
     const ogImageUrl = new URL("/api/join/og", baseUrl);
+
     ogImageUrl.searchParams.append("name", user.name);
     ogImageUrl.searchParams.append("username", user.username);
     ogImageUrl.searchParams.append("picture", user.picture);
     ogImageUrl.searchParams.append("planCount", user.plan_ids.length.toString());
     ogImageUrl.searchParams.append("friendCount", user.friend_ids.length.toString());
+    if (userData.plans && userData.plans.length > 0) {
+      ogImageUrl.searchParams.append("currentlyWorkingOnEmoji", userData.plans[0]?.emoji);
+      ogImageUrl.searchParams.append("currentlyWorkingOnGoal", userData.plans[0]?.goal);
+    }
 
     return {
       title,
