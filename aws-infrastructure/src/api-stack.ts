@@ -57,7 +57,7 @@ export class ApiStack extends cdk.Stack {
     const aliasOptions = {
       aliasName: "live",
       version: version,
-      provisionedConcurrentExecutions: 1,
+      provisionedConcurrentExecutions: 2,
     };
 
     const alias = new lambda.Alias(this, "BackendLambdaAlias", aliasOptions);
