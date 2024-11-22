@@ -31,7 +31,7 @@ export async function generateMetadata(
     const description = `${planData.inviter.name} has invited you to join their plan '${planData.plan.goal}' ${planData.plan.emoji} on tracking.so`;
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://tracking.so";
-    const ogImageUrl = new URL("/api/og", baseUrl);
+    const ogImageUrl = new URL("/api/join-plan/og", baseUrl);
     ogImageUrl.searchParams.append("planName", planData.plan.goal);
     ogImageUrl.searchParams.append("inviterName", planData.inviter.name);
     ogImageUrl.searchParams.append("emoji", planData.plan.emoji);

@@ -106,6 +106,38 @@ async def load_users_data(
                     for request in friend_requests_received_future.result()
                 ]
 
+            # Generate custom bio
+            bio_parts = []
+            if plans:
+                plan_goals = [f"{plan['emoji']} {plan['goal']}" for plan in plans[:3]]
+                if len(plans) > 3:
+                    bio_parts.append(f"Working on {len(plans)} plans including {', '.join(plan_goals[:-1])} and {plan_goals[-1]}")
+                elif len(plans) > 1:
+                    bio_parts.append(f"Working on {', '.join(plan_goals[:-1])} and {plan_goals[-1]}")
+                else:
+                    bio_parts.append(f"Working on {plan_goals[0]}")
+
+            # Add activities info to bio
+            activity_categories = {}
+            for activity in activities:
+                category = activity.get("category", "Other")
+                if category not in activity_categories:
+                    activity_categories[category] = []
+                activity_categories[category].append(activity)
+
+            if activities:
+                activity_summary = []
+                for category, acts in activity_categories.items():
+                    if len(acts) > 0:
+                        emojis = " ".join(act["emoji"] for act in acts[:3])
+                        activity_summary.append(f"{category}: {emojis}")
+                
+                if activity_summary:
+                    bio_parts.append("Tracking " + " • ".join(activity_summary))
+
+            # Combine bio parts
+            generated_bio = " | ".join(bio_parts) if bio_parts else "Just joined tracking.so!"
+
             # Process plans to include activities
             activity_map = {activity["id"]: activity for activity in activities}
 
@@ -130,7 +162,10 @@ async def load_users_data(
                     entry.pop("image", None)
 
             results[username] = {
-                "user": user,
+                "user": {
+                    **user.dict(),
+                    "generated_bio": generated_bio,
+                },
                 "activities": activities,
                 "activity_entries": entries,
                 "mood_reports": mood_reports,
@@ -483,3 +518,65 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
         logger.error(f"Traceback: \n{traceback.format_exc()}")
         logger.error(f"Failed to send feedback email: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/get-user-profile/{username}")
+async def get_user_profile(username: str):
+    try:
+        user = users_gateway.get_user_by_safely("username", username)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_data = {
+            "user": user.dict(include={"id", "name", "username", "picture", "plan_ids", "friend_ids", "pending_friend_requests"}),
+            "plans": [
+                plan.dict()
+                for plan in [plan_controller.get_plan(plan_id) for plan_id in user.plan_ids]
+            ],
+            "activities": activities_gateway.get_all_activities_by_user_id(user.id)
+        }
+
+        return user_data
+    except Exception as e:
+        logger.error(f"Failed to fetch user profile: {e}")
+        logger.error(f"Traceback: \n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.post("/handle-referral/{referrer_username}")
+async def handle_referral(
+    referrer_username: str,
+    current_user: User = Depends(is_clerk_user)
+):
+    try:
+        referrer = users_gateway.get_user_by_safely("username", referrer_username)
+        if not referrer:
+            raise HTTPException(status_code=404, detail="Referrer not found")
+        
+        # Add the new user to referrer's referred_user_ids
+        if current_user.id not in referrer.referred_user_ids:
+            users_gateway.update_fields(referrer.id, {
+                "referred_user_ids": referrer.referred_user_ids + [current_user.id]
+            })
+            
+            # You might want to send a notification to the referrer
+            await notification_manager.create_and_process_notification(
+                Notification.new(
+                    user_id=referrer.id,
+                    message=f"{current_user.name} joined tracking.so through your invite!",
+                    type="info",
+                    related_id=current_user.id,
+                    related_data={
+                        "id": current_user.id,
+                        "name": current_user.name,
+                        "username": current_user.username,
+                        "picture": current_user.picture,
+                    },
+                )
+            )
+            
+        return {"message": "Referral handled successfully"}
+    except Exception as e:
+        logger.error(f"Failed to handle referral: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))

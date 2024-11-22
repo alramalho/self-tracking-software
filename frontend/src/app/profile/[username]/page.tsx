@@ -26,7 +26,13 @@ import {
   User,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import { format, parseISO, differenceInDays, endOfMonth, endOfYear } from "date-fns";
+import {
+  format,
+  parseISO,
+  differenceInDays,
+  endOfMonth,
+  endOfYear,
+} from "date-fns";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
@@ -74,7 +80,6 @@ const ProfilePage: React.FC = () => {
   );
   const [endDate, setEndDate] = useState(endOfMonth(new Date()));
   const [showServerMessage, setShowServerMessage] = useState(false);
-
 
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -155,19 +160,21 @@ const ProfilePage: React.FC = () => {
         plan.sessions.map((session) => session.activity_id)
       ) || []
     );
-    
+
     // Filter activities that are not in plans AND have at least one activity entry
-    return activities.filter((activity) => 
-      !planActivityIds.has(activity.id) && 
-      activityEntries.some(entry => entry.activity_id === activity.id)
+    return activities.filter(
+      (activity) =>
+        !planActivityIds.has(activity.id) &&
+        activityEntries.some((entry) => entry.activity_id === activity.id)
     );
   };
 
   const handleTimeRangeChange = (value: "Current Year" | "Current Month") => {
     setTimeRange(value);
-    setEndDate(value === "Current Month" ? endOfMonth(new Date()) : endOfYear(new Date()));
+    setEndDate(
+      value === "Current Month" ? endOfMonth(new Date()) : endOfYear(new Date())
+    );
   };
-
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -185,8 +192,17 @@ const ProfilePage: React.FC = () => {
           <p className="text-left">Loading your profile...</p>
           {showServerMessage && (
             <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...<br/>first request after some inactivity period always takes longer.<br/>
-              <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
+              we run on cheap servers...
+              <br />
+              first request after some inactivity period always takes longer.
+              <br />
+              <Link
+                target="_blank"
+                href="https://ko-fi.com/alexramalho"
+                className="underline"
+              >
+                donate?
+              </Link>
             </span>
           )}
         </div>
@@ -346,11 +362,15 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
               ))}
-              <div className="flex flex-row gap-4 justify-between items-center">
-                <Divider
-                  className="w-full "
-                  text="Other Activities 👇"
-                />
+              {(!profileData.plans || profileData.plans.length === 0) && (
+                <div className="text-center text-gray-500 py-8">
+                  You haven&apos;t created any plans yet.
+                </div>
+              )}
+              {getActivitiesNotInPlans().length > 0 && (
+                <>
+                  <div className="flex flex-row gap-4 justify-between items-center">
+                    <Divider className="w-full " text="Other Activities 👇" />
 
                 <div className="flex self-center">
                   <select
@@ -371,13 +391,9 @@ const ProfilePage: React.FC = () => {
                 activities={getActivitiesNotInPlans()}
                 activityEntries={activityEntries}
                 timeRange={timeRange}
-                endDate={endDate}
-              />
-
-              {(!profileData.plans || profileData.plans.length === 0) && (
-                <div className="text-center text-gray-500 py-8">
-                  No active plans available.
-                </div>
+                    endDate={endDate}
+                  />
+                </>
               )}
             </div>
           </TabsContent>
@@ -430,7 +446,7 @@ const ProfilePage: React.FC = () => {
             ) : (
               <div className="text-center text-gray-500 py-8">
                 {activityEntries?.length === 0
-                  ? "No activities available yet."
+                  ? "You haven't completed any activities yet."
                   : `${user?.name}'s ${activities.length} past activities photos have expired.`}
               </div>
             )}
