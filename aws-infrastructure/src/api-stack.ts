@@ -53,7 +53,16 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
-    const lambdaUrl = backendLambda.addFunctionUrl({
+    const version = backendLambda.currentVersion;
+    const aliasOptions = {
+      aliasName: "live",
+      version: version,
+      provisionedConcurrentExecutions: 1,
+    };
+
+    const alias = new lambda.Alias(this, "BackendLambdaAlias", aliasOptions);
+
+    const lambdaUrl = alias.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
     });
 
