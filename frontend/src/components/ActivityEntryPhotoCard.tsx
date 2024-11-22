@@ -55,8 +55,10 @@ interface ReactionCount {
 const REACTION_EMOJI_MAPPING = {
   fire: "🔥",
   rocket: "🚀",
+  love: "♥️",
   laugh: "😂",
   aubergine: "🍆",
+  peach: "🍑",
   surprise: "😮",
 };
 
