@@ -171,7 +171,7 @@ export default function ClientPage({
               onClick={() => router.push(`/profile/${params.username}`)}
               className="w-full max-w-md bg-black text-white"
             >
-              View {inviterData.user?.name}'s profile
+              View {inviterData.user?.name}&apos;s profile
             </Button>
           </div>
         ) : (
