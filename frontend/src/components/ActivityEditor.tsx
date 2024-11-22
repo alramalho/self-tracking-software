@@ -86,7 +86,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   return (
     <>
-      <AppleLikePopover onClose={onClose}>
+      <AppleLikePopover className="z-[70]" onClose={onClose}>
         <h2 className="text-2xl font-bold mb-4">
           {activity ? "Edit Activity" : "Add New Activity"}
         </h2>
