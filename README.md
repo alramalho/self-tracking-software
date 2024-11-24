@@ -47,3 +47,5 @@ To run the project locally, follow these steps:
     source .venv/bin/activate
     pip install -r requirements.txt
     ```
+
+2. Make sure you have a [ngrok account and auth token setup](https://ngrok.com/docs/getting-started/)
