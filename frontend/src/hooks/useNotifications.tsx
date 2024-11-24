@@ -98,7 +98,6 @@ export const NotificationsProvider = ({
           console.log(
             "Registration.active.state: " + registration.active.state
           );
-          setIsAppInstalled(true);
         }
       }
     }
