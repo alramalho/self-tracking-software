@@ -64,7 +64,7 @@ async def log_activity(
     try:
         entry = activities_gateway.create_activity_entry(activity_entry)
     except ActivityEntryAlreadyExistsException:
-        entry = activities_gateway.get_activity_entry(activity_id, iso_date_string)
+        entry = activities_gateway.get_activity_entry_by_activity_and_date(activity_id, iso_date_string)
         if entry:
             entry = activities_gateway.update_activity_entry(
                 entry.id,

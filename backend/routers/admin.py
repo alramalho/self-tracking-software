@@ -6,11 +6,17 @@ from services.notification_manager import NotificationManager
 from constants import ADMIN_API_KEY
 from entities.notification import Notification
 from gateways.users import UsersGateway
+from gateways.aws.s3 import S3Gateway
+from gateways.activities import ActivitiesGateway
+from datetime import datetime, timedelta
+from pytz import UTC
 
 router = APIRouter()
 security = HTTPBearer()
 users_gateway = UsersGateway()
 notification_manager = NotificationManager()
+activities_gateway = ActivitiesGateway()
+s3_gateway = S3Gateway()
 
 
 async def admin_auth(
@@ -45,6 +51,21 @@ async def send_notification(request: Request, verified: User = Depends(admin_aut
     )
     await notification_manager.create_and_process_notification(notification)
     return {"message": "Notification sent successfully"}
+
+
+@router.post("/regenerate-image-url")
+async def send_notification(request: Request, verified: User = Depends(admin_auth)):
+    body = await request.json()
+    activity_entry_id = body.get("activity_entry_id")
+    activity_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
+    expiration_days = body.get("expiration_days", 7) # 7 days (max for s3 presigned url)
+    url = s3_gateway.generate_presigned_url(activity_entry.image.s3_path, expiration_days * 24 * 60 * 60)
+
+    activity_entry.image.url = url
+    activity_entry.image.expires_at = (datetime.now(UTC) + timedelta(days=expiration_days)).isoformat()
+    activities_gateway.update_activity_entry(activity_entry.id, activity_entry.dict())
+
+    return {"url": url}
 
 
 @router.post("/send-notification-to-all-users")

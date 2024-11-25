@@ -44,7 +44,7 @@ class ActivitiesGateway:
         else:
             return None
         
-    def get_activity_entry(self, activity_id: str, date: str) -> ActivityEntry:
+    def get_activity_entry_by_activity_and_date(self, activity_id: str, date: str) -> ActivityEntry:
         entries = self.activity_entries_db_gateway.query("activity_id", activity_id)
         for entry in entries:
             if entry["date"] == date:
@@ -114,7 +114,7 @@ class ActivitiesGateway:
         if activity is None:
             raise ActivityDoesNotExistException(f"Activity with id {activity_entry.activity_id} does not exist")
 
-        existing_entry = self.get_activity_entry(activity_entry.activity_id, activity_entry.date)
+        existing_entry = self.get_activity_entry_by_activity_and_date(activity_entry.activity_id, activity_entry.date)
         if existing_entry:
             raise ActivityEntryAlreadyExistsException(
                 f"ActivityEntry for activity {activity.title} on date {activity_entry.date} already exists"
