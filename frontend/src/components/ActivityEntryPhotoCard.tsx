@@ -1,32 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Loader2, Smile } from "lucide-react";
+import { Edit, Smile } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
-import { parseISO, differenceInDays, format } from "date-fns";
+import { parseISO, format, isToday, isYesterday, differenceInCalendarDays } from 'date-fns';
 
 const getFormattedDate = (date: string) => {
   const parsedDate = parseISO(date);
   const now = new Date();
-  const diffInDays = differenceInDays(now, parsedDate);
-
-  if (diffInDays === 0) {
+  
+  if (isToday(parsedDate)) {
     return `today at ${format(parsedDate, "HH:mm")}`;
   }
-  if (diffInDays === 1) {
+  
+  if (isYesterday(parsedDate)) {
     return `yesterday at ${format(parsedDate, "HH:mm")}`;
   }
-
-  if (diffInDays <= 7) {
-    return `last ${format(parsedDate, "EEEE")} at ${format(
-      parsedDate,
-      "HH:mm"
-    )}`;
+  
+  const diffInCalendarDays = differenceInCalendarDays(now, parsedDate);
+  
+  if (diffInCalendarDays <= 7) {
+    return `last ${format(parsedDate, "EEEE")} at ${format(parsedDate, "HH:mm")}`;
   }
-
+  
   return format(parsedDate, "MMM d HH:mm");
 };
 interface ActivityEntryPhotoCardProps {
@@ -93,7 +91,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     {}
   );
 
-  console.log(reactions);
+  useEffect(() => {
+    console.log(`Date ${isoDate} -> ${getFormattedDate(isoDate)}`);
+  }, [isoDate]);
 
   // todo: use react query
   async function getReactions() {
