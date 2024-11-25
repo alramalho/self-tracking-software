@@ -7,14 +7,14 @@ from datetime import timedelta
 
 class S3Gateway:
     def __init__(self):
-        self.s3_client = boto3.client(
-            "s3",
-            region_name="eu-central-1",
+        session = boto3.Session(
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name="eu-central-1"
         )
-        self.bucket = boto3.resource(
-            "s3",
-            region_name="eu-central-1",
-        ).Bucket(S3_BUCKET_NAME)
+        
+        self.s3_client = session.client('s3')
+        self.bucket = session.resource('s3').Bucket(S3_BUCKET_NAME)
 
     def upload(self, bytes: bytes, key: str):
         try:

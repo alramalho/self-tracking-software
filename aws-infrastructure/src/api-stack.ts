@@ -41,7 +41,8 @@ export class ApiStack extends cdk.Stack {
           JINA_API_KEY: process.env.JINA_API_KEY!,
           POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
           ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
-          Y_STRIPE_PRODUCT_ID: process.env.Y_STRIPE_PRODUCT_ID!,
+          _AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
+          _AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
         },
       }
     );
