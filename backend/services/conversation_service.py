@@ -27,12 +27,12 @@ from shared.executor import executor
 from gateways.users import UsersGateway
 from services.notification_manager import NotificationManager
 from entities.notification import Notification
-
+from entities.message import Emotion
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
 
-def talk_with_assistant(user_id: str, user_input: str) -> Tuple[str, List[ExtractedActivityEntry]]:
+def talk_with_assistant(user_id: str, user_input: str, emotions: List[Emotion] = []) -> Tuple[str, List[ExtractedActivityEntry]]:
     user = users_gateway.get_user_by_id(user_id)
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
     user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
@@ -43,7 +43,7 @@ def talk_with_assistant(user_id: str, user_input: str) -> Tuple[str, List[Extrac
         user_activities=user_activities,
         recent_activities_string=recent_activities_string,
     )
-    return assistant.get_response(user_input)
+    return assistant.get_response(user_input, emotions)
     
 
 
@@ -278,7 +278,8 @@ async def process_activities_and_mood(user_id: str) -> Tuple[List[Activity], Lis
 
 async def process_message(websocket: WebSocket, user_id: str, message: str, input_mode: str, output_mode: str, audio_data: str = None, audio_format: str = None):
     loop = asyncio.get_event_loop()
-    
+    emotions = []
+
     if input_mode == "voice" and audio_data and audio_format:
         # Perform STT and send intermediary transcription
         transcription = await loop.run_in_executor(
@@ -290,26 +291,22 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
         })
         message = transcription
 
-    # activities, activity_entries, mood_report, notification_text, reasoning = (
-    #     await process_activities_and_mood(user_id)
-    # )
-    # try:
-    #     hume_result = await process_audio_with_hume(base64.b64decode(audio_data), audio_format)
-    #     logger.info(f"Hume result: {hume_result}")
-    # except Exception as e:
-    #     logger.error(f"Error processing audio with Hume: {e}")
-    #     hume_result = None
-
-    # Update the assistant with the extraction results
-    # extraction_summary = f"""
-    # Extraction results:
-    # Activities: {reasoning['activities']}
-    # Activity Entries: {reasoning['activity_entries']}
-    # Mood Report: {reasoning['mood_report']}
-    # """
+        # Process emotion analysis with Hume
+        try:
+            emotions = await process_audio_with_hume(base64.b64decode(audio_data), audio_format)
+            if emotions:
+                # Get top 3 emotions
+                top_emotions = emotions[:3]
+                await websocket.send_json({
+                    "type": "emotion_analysis",
+                    "result": [emotion.dict() for emotion in top_emotions]
+                })
+        except Exception as e:
+            logger.error(f"Error processing audio with Hume: {e}")
+            emotions = []  # Ensure emotions is a list even on error
 
     text_response, activity_entries = await loop.run_in_executor(
-        executor, talk_with_assistant, user_id, message
+        executor, talk_with_assistant, user_id, message, emotions
     )
     
     audio_response = None

@@ -47,6 +47,12 @@ import FeedbackForm from "@/components/FeedbackForm";
 
 const REFERRAL_COUNT = 2;
 
+type Emotion = {
+  name: string;
+  score: number;
+  color: string;
+};
+
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
   const authedApi = useApiWithAuth();
@@ -85,6 +91,8 @@ const LogPage: React.FC = () => {
   const { share, isSupported: isShareSupported } = useShare();
 
   const [showFeatureForm, setShowFeatureForm] = useState(false);
+
+  const [currentEmotions, setCurrentEmotions] = useState<Emotion[]>([]);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -178,6 +186,8 @@ const LogPage: React.FC = () => {
       } else if (data.type === "intermediary_transcription") {
         setTranscription(data.text);
         addMessage({ role: "user", content: `🎙️ ${data.text}` });
+      } else if (data.type === "emotion_analysis") {
+        setCurrentEmotions(data.result);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -309,6 +319,28 @@ const LogPage: React.FC = () => {
         success: "Feature request sent successfully!",
         error: "Failed to send feature request",
       }
+    );
+  };
+
+  const EmotionBadges: React.FC<{ emotions: Emotion[] }> = ({ emotions }) => {
+    if (!emotions.length) return null;
+
+    return (
+      <div className="flex gap-2 mt-2 justify-center">
+        {emotions.map((emotion, index) => (
+          <div
+            key={index}
+            className="px-2 py-1 rounded-full text-xs font-medium"
+            style={{
+              backgroundColor: `${emotion.color}15`,
+              color: emotion.color,
+              border: `1px solid ${emotion.color}30`
+            }}
+          >
+            {emotion.name} {(emotion.score * 100).toFixed(0)}%
+          </div>
+        ))}
+      </div>
     );
   };
 
@@ -515,11 +547,14 @@ const LogPage: React.FC = () => {
           </div>
         </div>
         {inputMode === "voice" ? (
-          <AudioControls
-            isRecording={isRecording}
-            isConnected={isConnected}
-            toggleRecording={handleToggleRecording}
-          />
+          <div className="flex flex-col items-center">
+            <AudioControls
+              isRecording={isRecording}
+              isConnected={isConnected}
+              toggleRecording={handleToggleRecording}
+            />
+            <EmotionBadges emotions={currentEmotions} />
+          </div>
         ) : (
           <div className="w-full max-w-md">
             <textarea
@@ -536,6 +571,7 @@ const LogPage: React.FC = () => {
             >
               Send Message
             </button>
+            <EmotionBadges emotions={currentEmotions} />
           </div>
         )}
       </div>

@@ -4,6 +4,12 @@ from datetime import UTC, datetime
 from pydantic import BaseModel
 from shared.utils import time_ago
 from bson import ObjectId
+from typing import List
+
+
+class Emotion(BaseModel):
+    name: str
+    score: float
 
 class Message(BaseModel):
     id: str
@@ -13,6 +19,7 @@ class Message(BaseModel):
     recipient_id: str
     text: str
     created_at: str
+    emotions: List[Emotion] = []
 
     @classmethod
     def new(
@@ -22,6 +29,7 @@ class Message(BaseModel):
         sender_id: str,
         recipient_name: str,
         recipient_id: str,
+        emotions: List[Emotion] = [],
     ) -> "Message":
         return cls(
             id=str(ObjectId()),
@@ -31,6 +39,7 @@ class Message(BaseModel):
             recipient_name=recipient_name,
             recipient_id=recipient_id,
             created_at=datetime.now(UTC).isoformat(),
+            emotions=emotions,
         )
 
     def __str__(self):

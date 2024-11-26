@@ -34,3 +34,9 @@ POSTHOG_HOST="https://eu.i.posthog.com"
 ADMIN_API_KEY=os.getenv("ADMIN_API_KEY")
 
 MAX_TIMELINE_ENTRIES = 30
+
+HUME_API_KEY=os.getenv("HUME_API_KEY")
+HUME_SECRET_KEY=os.getenv("HUME_SECRET_KEY")
+HUME_WS_URL="wss://api.hume.ai/v0/stream/models"
+HUME_BATCH_URL = "https://api.hume.ai/v0/batch/jobs"
+HUME_SCORE_FILTER_THRESHOLD=0.5
