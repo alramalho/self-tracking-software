@@ -173,11 +173,12 @@ const ProfilePage: React.FC = () => {
     );
 
     // Filter activities that are not in plans AND have at least one activity entry
-    return activities.filter(
+    const result = activities.filter(
       (activity) =>
         !planActivityIds.has(activity.id) &&
         activityEntries.some((entry) => entry.activity_id === activity.id)
     );
+    return result;
   };
 
   const handleTimeRangeChange = (value: "Current Year" | "Current Month") => {
@@ -382,28 +383,30 @@ const ProfilePage: React.FC = () => {
                 <>
                   <div className="flex flex-row gap-4 justify-between items-center">
                     <Divider className="w-full " text="Other Activities 👇" />
-
-                <div className="flex self-center">
-                  <select
-                    className="p-2 border rounded-md"
-                    value={timeRange}
-                    onChange={(e) =>
-                      handleTimeRangeChange(
-                        e.target.value as "Current Year" | "Current Month"
-                      )
-                    }
-                  >
-                    <option value="Current Year">Current Year</option>
-                    <option value="Current Month">Current Month</option>
-                  </select>
-                </div>
-              </div>
-              <ActivityGridRenderer
-                activities={getActivitiesNotInPlans()}
-                activityEntries={activityEntries}
-                timeRange={timeRange}
-                    endDate={endDate}
-                  />
+                    <div className="flex self-center">
+                      <select
+                        className="p-2 border rounded-md"
+                        value={timeRange}
+                        onChange={(e) =>
+                          handleTimeRangeChange(
+                            e.target.value as "Current Year" | "Current Month"
+                          )
+                        }
+                      >
+                        <option value="Current Year">Current Year</option>
+                        <option value="Current Month">Current Month</option>
+                      </select>
+                    </div>
+                  </div>
+                  {getActivitiesNotInPlans().map(activity => (
+                    <ActivityGridRenderer
+                      key={activity.id}
+                      activities={[activity]}
+                      activityEntries={activityEntries.filter(entry => entry.activity_id === activity.id)}
+                      timeRange={timeRange}
+                      endDate={endDate}
+                    />
+                  ))}
                 </>
               )}
             </div>

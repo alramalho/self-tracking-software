@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import toast from "react-hot-toast";
 import { Activity, ActivityEntry } from '@/contexts/UserPlanContext';
 import BaseHeatmapRenderer from './common/BaseHeatmapRenderer';
+import { isSameDay } from 'date-fns';
+import { parseISO } from 'date-fns';
 
 interface ActivityGridRendererProps {
   activities: Activity[];
@@ -16,39 +18,46 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   timeRange,
   endDate
 }) => {
+
   const getActivityEntries = (activityId: string) => {
-    return activityEntries
+    const result = activityEntries
       .filter((entry) => entry.activity_id === activityId)
       .map((entry) => ({
         date: entry.date.replaceAll("-", "/"),
         count: entry.quantity,
       }));
+    return result;
   };
 
   const getIntensityForDate = (activityId: string) => (date: string) => {
     const entry = activityEntries.find(
-      (e) => e.activity_id === activityId && e.date === date
+      (e) => e.activity_id === activityId && isSameDay(parseISO(e.date), date)
     );
     
     if (!entry) return null;
 
-    // Calculate intensity level based on quantity
-    // You might want to adjust these thresholds based on your needs
-    const intensity = entry.quantity <= 2 ? 0 :
-                     entry.quantity <= 4 ? 1 :
-                     entry.quantity <= 10 ? 2 :
-                     entry.quantity <= 20 ? 3 : 4;
+    const activityIndex = activities.findIndex(a => a.id === activityId);
 
-    return {
-      activityIndex: activities.findIndex(a => a.id === activityId),
-      intensity
-    };
+    const quantities = activityEntries
+      .filter(e => e.activity_id === activityId)
+      .map(e => e.quantity);
+    const minQuantity = Math.min(...quantities);
+    const maxQuantity = Math.max(...quantities);
+    const intensityLevels = 5;
+    const intensityStep = (Math.max(maxQuantity-minQuantity, 1) / intensityLevels);
+
+    const intensity = Math.min(
+      Math.floor((entry.quantity - minQuantity) / intensityStep),
+      intensityLevels - 1
+    );
+
+    return { activityIndex, intensity };
   };
 
   const handleDateClick = (activity: Activity) => (date: Date) => {
     const formattedDate = date.toISOString().split('T')[0];
     const entry = activityEntries.find(
-      (e) => e.activity_id === activity.id && e.date === formattedDate
+      (e) => e.activity_id === activity.id && isSameDay(parseISO(e.date), date)
     );
     
     const quantity = entry ? entry.quantity : 0;
