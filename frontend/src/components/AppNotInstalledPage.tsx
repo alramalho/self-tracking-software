@@ -25,7 +25,7 @@ const AppNotInstalledPage: React.FC = () => {
   return (
     <>
       {isAppInstallModalOpen && (
-        <div className="h-screen w-screen absolute flex z-[60] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto">
+        <div className="h-screen w-screen fixed flex z-[60] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto">
           <button
             onClick={() => setIsAppInstallModalOpen(false)}
             className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 z-[51]"
