@@ -395,6 +395,13 @@ async def reject_friend_request(
 async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
     start_time = time.time()
     try:
+        if len(current_user.friend_ids) == 0:
+            return {
+                "recommended_activity_entries": [],
+                "recommended_activities": [],
+                "recommended_users": []
+            }
+        
         friends = [users_gateway.get_user_by_id(friend_id).dict() for friend_id in current_user.friend_ids]
         friends_activities_entries = [
             entry.dict()
@@ -406,7 +413,7 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             key=lambda x: x['created_at'],
             reverse=True
         )[:MAX_TIMELINE_ENTRIES]
-        friends_activities = [activities_gateway.get_activity_by_id(aentry['activity_id']).dict() for aentry in sorted_friends_activities_entries]
+        friends_activities = [activities_gateway.get_activity_by_id(aentry['activity_id']).dict() for aentry in sorted_friends_activities_entries if activities_gateway.get_activity_by_id(aentry['activity_id'])]
 
         execution_time = time.time() - start_time
         posthog.capture(

@@ -35,6 +35,7 @@ class User(BaseModel):
         id: Optional[str] = None,
         username: Optional[str] = None,
         friend_ids: Optional[List[str]] = [],
+        referred_user_ids: Optional[List[str]] = [],
     ) -> "User":
         return cls(
             id=id or str(ObjectId()),
@@ -45,4 +46,5 @@ class User(BaseModel):
             name=name,
             username=username,
             friend_ids=friend_ids,
+            referred_user_ids=referred_user_ids,
         )
