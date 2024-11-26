@@ -43,8 +43,8 @@ export default function ClientPage({
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await api.get(`/load-users-data?usernames=${params.username}`);
-        setInviterData(response.data[params.username]);
+        const response = await api.get(`/get-user-profile/${params.username}`);
+        setInviterData(response.data);
       } catch (error) {
         console.error("Error fetching user data:", error);
         setInviterData(null);
