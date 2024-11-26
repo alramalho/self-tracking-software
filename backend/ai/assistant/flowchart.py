@@ -8,7 +8,10 @@ from loguru import logger
 from entities.activity import Activity
 from pydantic import create_model
 from constants import LLM_MODEL
+from entities.message import Emotion
 from datetime import datetime
+import re
+
 
 first_message_flowchart = {
     "FirstTimeEver": {
@@ -182,7 +185,7 @@ class Assistant(object):
         self.user_activities = user_activities
         self.recent_activities_string = recent_activities_string
 
-    def get_response(self, user_input: str) -> Tuple[str, List[ExtractedActivityEntry]]:
+    def get_response(self, user_input: str, emotions: List[Emotion] = []) -> Tuple[str, List[ExtractedActivityEntry]]:
         is_first_message_in_more_than_a_day = (
             len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
         )
@@ -194,6 +197,7 @@ class Assistant(object):
                 sender_id=self.user.id,
                 recipient_name=self.name,
                 recipient_id="0",
+                emotions=emotions,
             )
         )
 
@@ -226,10 +230,11 @@ class Assistant(object):
         Only output message to be sent to the user.
         """
         )
+        
+        jarvis_prefix = re.match(r"^Jarvis\s*\([^)]*\)\s*:\s*", result)
+        if jarvis_prefix:
+            result = result[len(jarvis_prefix.group(0)):]
 
-        if result.startswith("Jarvis: "):
-            result = result[len("Jarvis: "):]
-            
         self.memory.write(
             Message.new(
                 result,
