@@ -48,7 +48,7 @@ const PlansPage: React.FC = () => {
           <p className="text-left">Loading your data...</p>
           {showServerMessage && (
             <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...<br/>first request after some inactivity period always takes longer<br/>
+              we run on cheap servers...<br/>
               <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
             </span>
           )}
