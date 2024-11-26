@@ -484,7 +484,7 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
         prefilled_content = (
             f"Hey!\n\n"
             f"I'm Alex, the founder of Tracking Software.\n"
-            f"Regarding your {email_type_map[type_]} '{text}':\n\n"
+            f"Regarding your '{email_type_map[type_]}' with content:\n'{text}':\n\n"
         )
         
         # Properly encode the mailto parameters

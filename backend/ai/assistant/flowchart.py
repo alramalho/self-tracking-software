@@ -9,6 +9,7 @@ from entities.activity import Activity
 from pydantic import create_model
 from constants import LLM_MODEL
 from datetime import datetime
+
 first_message_flowchart = {
     "FirstTimeEver": {
         "text": "Based on the conversation history, is this the first time ever talking to the user?",
