@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChartArea, ChartGantt, Eye, Flame, Home, Loader2, Pencil, PlusSquare, Route, Search, Sparkle, Sprout, User } from "lucide-react";
+import { ChartArea, ChartGantt, Eclipse, Eye, Flame, Home, Loader2, Pencil, PlusSquare, Route, Search, Sparkle, Sprout, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
@@ -15,6 +15,7 @@ const BottomNav = () => {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -22,6 +23,7 @@ const BottomNav = () => {
     setIsLoadingPlans(false);
     setIsLoadingLog(false);
     setIsLoadingProfile(false);
+    setIsLoadingAi(false);
   }, [pathname]);
 
   return (
@@ -69,6 +71,18 @@ const BottomNav = () => {
           >
             {isLoadingLog ? <Loader2 size={24} className="animate-spin" /> : <PlusSquare size={24} />}
             <span className="text-xs mt-1">Add</span>
+          </Link>
+          <Link
+            href={`/ai`}
+            className="flex flex-col items-center p-2 text-gray-600"
+            onClick={() => {
+              if (pathname !== "/ai") {
+                setIsLoadingAi(true)
+              }
+            }}
+          >
+            {isLoadingAi ? <Loader2 size={24} className="animate-spin" /> : <Eclipse size={24} />}
+            <span className="text-xs mt-1">Coach</span>
           </Link>
           <Link
             href={`/profile/me`}

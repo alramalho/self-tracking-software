@@ -17,6 +17,11 @@ import {
   Trash2,
   Router,
   Loader2,
+  Brain,
+  Activity,
+  Bell,
+  PlusSquare,
+  MessageSquarePlus,
 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
@@ -38,8 +43,9 @@ import { RadialProgress } from "@/components/ui/radial-progress";
 import { Users } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
+import FeedbackForm from "@/components/FeedbackForm";
 
-const REFERRAL_COUNT = 3;
+const REFERRAL_COUNT = 2;
 
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
@@ -77,6 +83,8 @@ const LogPage: React.FC = () => {
   const referredUsers = userData?.user?.referred_user_ids.length || 0;
   const [copied, copyToClipboard] = useClipboard();
   const { share, isSupported: isShareSupported } = useShare();
+
+  const [showFeatureForm, setShowFeatureForm] = useState(false);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -117,7 +125,9 @@ const LogPage: React.FC = () => {
   }, [getToken]);
 
   useEffect(() => {
-    connectWebSocket();
+    if (isUserWhitelisted()) {
+      connectWebSocket();
+    }
 
     return () => {
       if (socket) {
@@ -287,6 +297,21 @@ const LogPage: React.FC = () => {
     );
   };
 
+  const suggestFeature = async (text: string) => {
+    await toast.promise(
+      authedApi.post("/report-feedback", {
+        email: userData?.user?.email || "",
+        text,
+        type: "feature_request",
+      }),
+      {
+        loading: "Sending feature request...",
+        success: "Feature request sent successfully!",
+        error: "Failed to send feature request",
+      }
+    );
+  };
+
   if (!hasLoadedUserData)
     return (
       <div className="h-screen flex items-center justify-center">
@@ -296,7 +321,7 @@ const LogPage: React.FC = () => {
         </div>
       </div>
     );
-    
+
   return (
     <>
       <AppleLikePopover
@@ -308,9 +333,47 @@ const LogPage: React.FC = () => {
       >
         <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
         <p className="text-base text-gray-700 mb-4">
+          It seems you&apos;re curious about our AI coach. Here&apos;s what it
+          does:
+        </p>
+
+        <div className="space-y-4 mb-6">
+          <div className="flex items-start space-x-3">
+            <Brain className="w-10 h-10 text-blue-300 mt-1" />
+            <div>
+              <h3 className="font-medium">Mood & Emotion extraction</h3>
+              <p className="text-sm text-gray-600">
+                Automatically detects and tracks your emotional state from
+                conversations
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-3">
+            <PlusSquare className="w-10 h-10 text-blue-300 mt-1" />
+            <div>
+              <h3 className="font-medium">Smart Activity Detection</h3>
+              <p className="text-sm text-gray-600">
+                Captures and logs activities automatically, even one-off events
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-3">
+            <Bell className="w-10 h-10 text-blue-300 mt-1" />
+            <div>
+              <h3 className="font-medium">Intelligent Notifications</h3>
+              <p className="text-sm text-gray-600">
+                Context-aware notification system that knows when to reach out
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-base text-gray-700 mb-4">
           {isUserWhitelisted()
             ? "Thank you for being a part of the beta, please send me your feedback as you try it out."
-            : `Look I'm gonna be honest with you pal, this is a closed feature that does cost some money to run. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
+            : `This is a costly feature to run, so I'm limiting access to a few users. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
         </p>
 
         {!isUserWhitelisted() && (
@@ -332,6 +395,29 @@ const LogPage: React.FC = () => {
                 </div>
               }
             />
+            {REFERRAL_COUNT - referredUsers === 0 && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 shadow-sm">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="text-blue-500">
+                    <Users className="h-8 w-8" />
+                  </div>
+                  <h3 className="font-semibold text-blue-900">
+                    You&apos;ve referred enough friends! Request access now.
+                  </h3>
+                  <p className="text-sm text-blue-700">
+                    Tell us how you plan to use the AI feature to get on the list
+                  </p>
+                  <Button
+                    variant="secondary"
+                    className="bg-white hover:bg-blue-50"
+                    onClick={() => setShowFeatureForm(true)}
+                  >
+                    <MessageSquarePlus className="w-4 h-4 mr-2" />
+                    Request Access
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </AppleLikePopover>
@@ -453,6 +539,16 @@ const LogPage: React.FC = () => {
           </div>
         )}
       </div>
+      {showFeatureForm && (
+        <FeedbackForm
+          title="✨ Try AI Feature"
+          email={userData?.user?.email || ""}
+          placeholder="How do you plan to use the AI feature?"
+          defaultValue="I want to try the AI because"
+          onSubmit={suggestFeature}
+          onClose={() => setShowFeatureForm(false)}
+        />
+      )}
     </>
   );
 };

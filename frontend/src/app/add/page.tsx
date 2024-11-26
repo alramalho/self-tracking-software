@@ -14,8 +14,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Loader2, X } from "lucide-react";
 
 const LogPage: React.FC = () => {
-  const router = useRouter();
-  const { useUserDataQuery, fetchUserData } = useUserPlan();
+  const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const activities = userData?.activities || [];
@@ -28,10 +27,6 @@ const LogPage: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(0);
   const [measureType, setMeasureType] = useState<string>("");
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
-  const [loggedActivityEntry, setLoggedActivityEntry] = useState<any>(null);
-  const api = useApiWithAuth();
-  const { addToNotificationCount } = useNotifications();
-  const [showBanner, setShowBanner] = useState(true);
 
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
@@ -90,26 +85,7 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
-      {showBanner && (
-        <div
-          className="fixed top-0 left-0 right-0 bg-gradient-to-r from-purple-500 to-blue-500 text-white p-4 text-center z-50 cursor-pointer"
-          onClick={() => router.push("/ai")}
-        >
-          <p className="font-semibold">
-            Log everything at once by talking to our AI coach 💬
-          </p>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowBanner(false);
-            }}
-            className="absolute top-1 right-2 text-white"
-          >
-            <X size={24} />
-          </button>
-        </div>
-      )}
-      <h1 className="text-2xl font-bold mb-6 mt-16">Log Activity</h1>
+      <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
       <ActivitySelector
         activities={activities}
         selectedActivity={selectedActivity}
