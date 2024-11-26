@@ -10,16 +10,18 @@ interface FeedbackFormProps {
   placeholder?: string;
   onSubmit: (text: string) => void;
   onClose: () => void;
+  defaultValue?: string;
 }
 
 const FeedbackForm = ({ 
   title, 
   email, 
   placeholder = "Please describe your issue...",
+  defaultValue,
   onSubmit, 
-  onClose 
+  onClose,
 }: FeedbackFormProps) => {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(defaultValue || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +31,7 @@ const FeedbackForm = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4`}>
       <div className="bg-white rounded-lg w-full max-w-md p-4 relative">
         <button
           onClick={onClose}

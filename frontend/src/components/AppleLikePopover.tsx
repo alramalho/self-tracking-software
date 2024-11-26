@@ -36,7 +36,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity duration-300 ${
+      className={`fixed inset-0 bg-black bg-opacity-50 z-[50] transition-opacity duration-300 ${
         isVisible ? "opacity-100" : "opacity-0"
       } ${className}`}
     >
