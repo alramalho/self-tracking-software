@@ -56,8 +56,6 @@ const HomePage: React.FC = () => {
             <span className="text-gray-500 text-sm text-left">
               we run on cheap servers...
               <br />
-              first request after some inactivity period always takes longer
-              <br />
               <Link
                 target="_blank"
                 href="https://ko-fi.com/alexramalho"
