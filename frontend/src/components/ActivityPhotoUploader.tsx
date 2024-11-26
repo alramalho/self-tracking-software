@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { useApiWithAuth } from '@/api';
-import { useUserPlan } from '@/contexts/UserPlanContext';
-import { toast } from 'react-hot-toast';
-import AppleLikePopover from './AppleLikePopover';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useNotifications } from '@/hooks/useNotifications';
+import React, { useState } from "react";
+import { useApiWithAuth } from "@/api";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import { toast } from "react-hot-toast";
+import AppleLikePopover from "./AppleLikePopover";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Info } from "lucide-react";
 
 interface ActivityPhotoUploaderProps {
   activityData: {
@@ -60,24 +61,24 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       // If we have a photo, upload it
       if (selectedFile) {
         const formData = new FormData();
-        formData.append('photo', selectedFile);
-        formData.append('activityEntryId', response.data.id);
-        formData.append('isPublic', isPublic.toString());
+        formData.append("photo", selectedFile);
+        formData.append("activityEntryId", response.data.id);
+        formData.append("isPublic", isPublic.toString());
 
-        await api.post('/store-activity-photo', formData, {
+        await api.post("/store-activity-photo", formData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         });
       }
 
       userDataQuery.refetch();
-      toast.success('Activity logged with photo successfully!');
+      toast.success("Activity logged with photo successfully!");
       addToNotificationCount(1);
       onSuccess();
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to log activity. Please try again.');
+      console.error("Error:", error);
+      toast.error("Failed to log activity. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -86,13 +87,10 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   return (
     <AppleLikePopover onClose={onClose} unclosable>
       <h2 className="text-2xl font-bold mb-4">📸 Add a proof!</h2>
-      <p className="text-sm text-gray-500 mb-4">
-        Only you and your friends can see this photo.
-      </p>
       <div className="space-y-4">
         <div
           className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50"
-          onClick={() => document.getElementById('photo-input')?.click()}
+          onClick={() => document.getElementById("photo-input")?.click()}
         >
           {selectedFile ? (
             <img
@@ -129,12 +127,19 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
             </label>
           </div>
         )} */}
-        <Button 
-          onClick={() => logActivity(!!selectedFile)} 
-          className="w-full" 
+        <div className="mb-3">
+          <Info className="w-5 h-5 text-gray-500 mb-1 mr-2 inline" />
+          <p className="text-md text-gray-500 mb-6 inline">
+            Only you and your friends can see this photo until it expires after
+            7 days.
+          </p>
+        </div>
+        <Button
+          onClick={() => logActivity(!!selectedFile)}
+          className="w-full"
           loading={isUploading}
         >
-          {selectedFile ? 'Upload' : 'Log without photo'}
+          {selectedFile ? "Upload" : "Log without photo"}
         </Button>
       </div>
     </AppleLikePopover>
