@@ -281,30 +281,20 @@ const LogPage: React.FC = () => {
   }, [notificationId, authedApi]);
 
   const handleShareReferralLink = async () => {
-    toast.promise(
-      (async () => {
-        const link = `https://app.tracking.so/join/${userData?.user?.username}`;
+    const link = `https://app.tracking.so/join/${userData?.user?.username}`;
 
-        if (isShareSupported) {
-          const success = await share(link);
-          if (!success) throw new Error("Failed to share");
-        } else {
-          const success = await copyToClipboard(link);
-          if (!success) throw new Error("Failed to copy");
-        }
-
-        return isShareSupported
-          ? "Shared referral link"
-          : "Copied referral link to clipboard";
-      })(),
-      {
-        loading: "Generating referral link...",
-        success: (message) => message,
-        error: isShareSupported
-          ? "Failed to share referral link"
-          : "Failed to copy referral link",
+    try {
+      if (isShareSupported) {
+        const success = await share(link);
+        if (!success) throw new Error("Failed to share");
+      } else {
+        const success = await copyToClipboard(link);
+        if (!success) throw new Error("Failed to copy");
       }
-    );
+    } catch (error) {
+      console.error("Error sharing referral link:", error);
+      toast.error("Failed to share referral link. Maybe you cancelled it?");
+    }
   };
 
   const suggestFeature = async (text: string) => {
@@ -334,7 +324,7 @@ const LogPage: React.FC = () => {
             style={{
               backgroundColor: `${emotion.color}15`,
               color: emotion.color,
-              border: `1px solid ${emotion.color}30`
+              border: `1px solid ${emotion.color}30`,
             }}
           >
             {emotion.name} {(emotion.score * 100).toFixed(0)}%
@@ -437,7 +427,8 @@ const LogPage: React.FC = () => {
                     You&apos;ve referred enough friends! Request access now.
                   </h3>
                   <p className="text-sm text-blue-700">
-                    Tell us how you plan to use the AI feature to get on the list
+                    Tell us how you plan to use the AI feature to get on the
+                    list
                   </p>
                   <Button
                     variant="secondary"
