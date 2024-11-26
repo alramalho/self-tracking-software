@@ -4,7 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { NotificationsProvider } from "@/hooks/useNotifications";
-import { validateEnv } from '@/lib/env';
+import { validateEnv } from "@/lib/env";
 import { PHProvider } from "./providers";
 import PostHogPageView from "./PostHogPageView";
 
@@ -23,7 +23,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     validateEnv();
   }
 
@@ -36,14 +36,13 @@ export default function RootLayout({
         />
       </head>
       <PHProvider>
-
-      <body className={inter.className}>
+        <body className={inter.className}>
           <ClerkProvider>
             <NotificationsProvider>
               <PostHogPageView />
               <ClientLayout>{children}</ClientLayout>
             </NotificationsProvider>
-        </ClerkProvider>
+          </ClerkProvider>
         </body>
       </PHProvider>
     </html>
