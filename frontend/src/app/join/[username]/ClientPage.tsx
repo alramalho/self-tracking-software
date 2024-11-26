@@ -44,7 +44,7 @@ export default function ClientPage({
     const fetchUserData = async () => {
       try {
         const response = await api.get(`/load-users-data?usernames=${params.username}`);
-        setInviterData(response.data);
+        setInviterData(response.data[params.username]);
       } catch (error) {
         console.error("Error fetching user data:", error);
         setInviterData(null);
@@ -68,6 +68,8 @@ export default function ClientPage({
   if (!inviterData) {
     return <div>Error: User profile not found</div>;
   }
+
+  console.log({inviterData});
 
   const handleSendFriendRequest = async () => {
     try {
