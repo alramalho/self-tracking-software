@@ -22,6 +22,8 @@ import {
   Bell,
   PlusSquare,
   MessageSquarePlus,
+  ChevronUp,
+  Eclipse,
 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
@@ -334,6 +336,8 @@ const LogPage: React.FC = () => {
     );
   };
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   if (!hasLoadedUserData)
     return (
       <div className="h-screen flex items-center justify-center">
@@ -346,59 +350,57 @@ const LogPage: React.FC = () => {
 
   return (
     <>
-      <AppleLikePopover
-        className={`z-[10000] ${isPopoverOpen ? "" : "hidden"}`}
-        onClose={() => {
-          isUserWhitelisted() ? null : router.push("/");
-          setIsPopoverOpen(false);
-        }}
-      >
-        <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
-        <p className="text-base text-gray-700 mb-4">
-          It seems you&apos;re curious about our AI coach. Here&apos;s what it
-          does:
-        </p>
+      {!isUserWhitelisted() && (
+        <AppleLikePopover
+          className={`z-[10000] ${isPopoverOpen ? "" : "hidden"}`}
+          onClose={() => {
+            setIsPopoverOpen(false);
+          }}
+        >
+          <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
+          <p className="text-base text-gray-700 mb-4">
+            It seems you&apos;re curious about our AI coach. Here&apos;s what it
+            does:
+          </p>
 
-        <div className="space-y-4 mb-6">
-          <div className="flex items-start space-x-3">
-            <Brain className="w-10 h-10 text-blue-300 mt-1" />
-            <div>
-              <h3 className="font-medium">Mood & Emotion extraction</h3>
-              <p className="text-sm text-gray-600">
-                Automatically detects and tracks your emotional state from
-                conversations
-              </p>
+          <div className="space-y-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <Brain className="w-10 h-10 text-blue-300 mt-1" />
+              <div>
+                <h3 className="font-medium">Mood & Emotion extraction</h3>
+                <p className="text-sm text-gray-600">
+                  Automatically detects and tracks your emotional state from
+                  conversations
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <PlusSquare className="w-10 h-10 text-blue-300 mt-1" />
+              <div>
+                <h3 className="font-medium">Smart Activity Detection</h3>
+                <p className="text-sm text-gray-600">
+                  Captures and logs activities automatically, even one-off
+                  events
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <Bell className="w-10 h-10 text-blue-300 mt-1" />
+              <div>
+                <h3 className="font-medium">Intelligent Notifications</h3>
+                <p className="text-sm text-gray-600">
+                  Context-aware notification system that knows when to reach out
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3">
-            <PlusSquare className="w-10 h-10 text-blue-300 mt-1" />
-            <div>
-              <h3 className="font-medium">Smart Activity Detection</h3>
-              <p className="text-sm text-gray-600">
-                Captures and logs activities automatically, even one-off events
-              </p>
-            </div>
-          </div>
+          <p className="text-base text-gray-700 mb-4">
+              {`This is a costly feature to run, so I'm limiting access to a few users. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
+          </p>
 
-          <div className="flex items-start space-x-3">
-            <Bell className="w-10 h-10 text-blue-300 mt-1" />
-            <div>
-              <h3 className="font-medium">Intelligent Notifications</h3>
-              <p className="text-sm text-gray-600">
-                Context-aware notification system that knows when to reach out
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-base text-gray-700 mb-4">
-          {isUserWhitelisted()
-            ? "Thank you for being a part of the beta, please send me your feedback as you try it out."
-            : `This is a costly feature to run, so I'm limiting access to a few users. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
-        </p>
-
-        {!isUserWhitelisted() && (
           <div className="w-full max-w-sm mx-auto">
             <RadialProgress
               value={referredUsers}
@@ -442,18 +444,39 @@ const LogPage: React.FC = () => {
               </div>
             )}
           </div>
-        )}
-      </AppleLikePopover>
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        {isLoading && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-            <LoaderCircle className="animate-spin text-gray-600" size={24} />
-          </div>
-        )}
-        <ChatMessageList className="max-w-xl">
-          {messages &&
-            messages.length > 0 &&
-            messages.map((message, index) => (
+        </AppleLikePopover>
+      )}
+      <div className="flex flex-col min-h-screen">
+        <div className="fixed top-4 left-0 right-0 flex justify-center gap-2 z-50">
+          <button
+            onClick={handleReconnect}
+            className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-2 border border-gray-300"
+          >
+            {isConnected ? (
+              <>
+                <Wifi className="text-green-500" size={16} />
+                <span>Connected</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="text-red-500" size={16} />
+                <span>Reconnect</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={clearMessages}
+            className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-2 border border-gray-300"
+          >
+            <Trash2 size={16} />
+            <span>Clear</span>
+          </button>
+        </div>
+
+        <div className="w-full max-w-xl mx-auto mt-12">
+          <ChatMessageList>
+            {messages.map((message, index) => (
               <ChatBubble
                 key={index}
                 variant={message.role === "assistant" ? "received" : "sent"}
@@ -468,103 +491,92 @@ const LogPage: React.FC = () => {
                 <ChatBubbleMessage>{message.content}</ChatBubbleMessage>
               </ChatBubble>
             ))}
-        </ChatMessageList>
-        {messages.length > 0 && (
-          <button
-            onClick={clearMessages}
-            className="flex items-center text-red-500 hover:text-red-600 transition-colors"
-          >
-            <Trash2 size={16} className="mr-1" />
-            Clear Messages
-          </button>
-        )}
-        <h1 className="text-2xl mb-4">hi, hyd</h1>
-        <div className="flex items-center mb-4">
-          {isConnected ? (
-            <Wifi className="text-green-500 mr-2" size={20} />
-          ) : (
-            <WifiOff className="text-red-500 mr-2" size={20} />
+          </ChatMessageList>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          {isLoading && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+              <LoaderCircle className="animate-spin text-gray-600" size={24} />
+            </div>
           )}
-          <span className="text-sm font-medium">
-            {isConnected ? "Connected" : "Disconnected"}
-          </span>
-          <button
-            onClick={handleReconnect}
-            className="ml-2 text-blue-500 hover:text-blue-600 transition-colors"
-          >
-            Reconnect
-          </button>
+
+          <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-blue-600 rounded-full mb-8 flex items-center justify-center shadow-lg">
+            <Eclipse className="w-12 h-12 text-white" />
+          </div>
+
+          <div className="flex space-x-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={inputMode === "voice"}
+                onCheckedChange={toggleInputMode}
+                id="input-mode"
+              />
+              <label htmlFor="input-mode" className="text-sm font-medium">
+                {inputMode === "voice" ? (
+                  <>
+                    <Mic className="inline mr-1" size={16} />
+                    Voice Input
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="inline mr-1" size={16} />
+                    Text Input
+                  </>
+                )}
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={outputMode === "voice"}
+                onCheckedChange={toggleOutputMode}
+                id="output-mode"
+              />
+              <label htmlFor="output-mode" className="text-sm font-medium">
+                {outputMode === "voice" ? (
+                  <>
+                    <Volume2 className="inline mr-1" size={16} />
+                    Voice Output
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="inline mr-1" size={16} />
+                    Text Output
+                  </>
+                )}
+              </label>
+            </div>
+          </div>
+
+          {inputMode === "voice" ? (
+            <div className="flex flex-col items-center">
+              <AudioControls
+                isRecording={isRecording}
+                isConnected={isConnected}
+                toggleRecording={handleToggleRecording}
+              />
+              <EmotionBadges emotions={currentEmotions} />
+            </div>
+          ) : (
+            <div className="w-full max-w-md">
+              <textarea
+                value={transcription}
+                onChange={handleTranscriptionChange}
+                className="w-full p-2 border rounded"
+                rows={4}
+                placeholder="Type your message here..."
+              />
+              <button
+                onClick={handleSendMessage}
+                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors w-full"
+                disabled={!isConnected}
+              >
+                Send Message
+              </button>
+              <EmotionBadges emotions={currentEmotions} />
+            </div>
+          )}
         </div>
-        <div className="flex space-x-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={inputMode === "voice"}
-              onCheckedChange={toggleInputMode}
-              id="input-mode"
-            />
-            <label htmlFor="input-mode" className="text-sm font-medium">
-              {inputMode === "voice" ? (
-                <>
-                  <Mic className="inline mr-1" size={16} />
-                  Voice Input
-                </>
-              ) : (
-                <>
-                  <MessageSquare className="inline mr-1" size={16} />
-                  Text Input
-                </>
-              )}
-            </label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={outputMode === "voice"}
-              onCheckedChange={toggleOutputMode}
-              id="output-mode"
-            />
-            <label htmlFor="output-mode" className="text-sm font-medium">
-              {outputMode === "voice" ? (
-                <>
-                  <Volume2 className="inline mr-1" size={16} />
-                  Voice Output
-                </>
-              ) : (
-                <>
-                  <VolumeX className="inline mr-1" size={16} />
-                  Text Output
-                </>
-              )}
-            </label>
-          </div>
-        </div>
-        {inputMode === "voice" ? (
-          <div className="flex flex-col items-center">
-            <AudioControls
-              isRecording={isRecording}
-              isConnected={isConnected}
-              toggleRecording={handleToggleRecording}
-            />
-            <EmotionBadges emotions={currentEmotions} />
-          </div>
-        ) : (
-          <div className="w-full max-w-md">
-            <textarea
-              value={transcription}
-              onChange={handleTranscriptionChange}
-              className="w-full p-2 border rounded"
-              rows={4}
-              placeholder="Type your message here..."
-            />
-            <button
-              onClick={handleSendMessage}
-              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors w-full"
-              disabled={!isConnected}
-            >
-              Send Message
-            </button>
-            <EmotionBadges emotions={currentEmotions} />
-          </div>
-        )}
       </div>
       {showFeatureForm && (
         <FeedbackForm
