@@ -11,6 +11,7 @@ from constants import LLM_MODEL
 from entities.message import Emotion
 from datetime import datetime
 import re
+import json
 
 
 first_message_flowchart = {
@@ -56,7 +57,7 @@ class ExtractedActivityEntryList(BaseModel):
 
 every_message_flowchart = {
     "ActivityScanner": {
-        "text": "Did the user mention he did any of the existent activities?",
+        "text": "Based on the conversation history alone, did the user mention he did any of the existent activities?",
         "connections": {"Yes": "CheckActivityMeasurement", "No": "Converse"},
     },
     "CheckActivityMeasurement": {
@@ -74,7 +75,6 @@ every_message_flowchart = {
     },
     "InformTheUserAboutTheActivity": {
         "text": "Inform the user that you've logged the activity",
-        "connections": {"default": "Converse"},
     },
     "Converse": {
         "text": "Let the user lead an engaging and challenging conversation with you. ",
@@ -94,11 +94,15 @@ class FlowchartLLMFramework:
             )
         )
         self.extracted = {}
+        self.visited_nodes = []
+        self.decisions = {}
+        self.steps = []
 
     def llm_function(
         self,
         node_text: str,
         context: Dict[str, Any],
+        current_node_id: str,
         options: Optional[List[str]] = None,
         schema: Optional[BaseModel] = None,
     ) -> str:
@@ -128,6 +132,8 @@ class FlowchartLLMFramework:
                 result = ask_schema(
                     full_prompt, self.system_prompt, DecisionSchema, LLM_MODEL
                 )
+                self.decisions[current_node_id] = result.decision
+                self.steps.append(f"Node {current_node_id}: Made decision '{result.decision}'")
                 return result.decision
             else:
                 # Non-decision node
@@ -135,9 +141,12 @@ class FlowchartLLMFramework:
                     result = ask_schema(
                         full_prompt, self.system_prompt, schema, LLM_MODEL
                     )
+                    self.steps.append(f"Node {current_node_id}: Extracted data using schema")
                     return result
                 else:
-                    return ask_text(full_prompt, self.system_prompt, LLM_MODEL)
+                    result = ask_text(full_prompt, self.system_prompt, LLM_MODEL)
+                    self.steps.append(f"Node {current_node_id}: Generated response")
+                    return result
         except Exception as e:
             logger.error(f"Error in LLM function: {e}")
             raise
@@ -145,30 +154,66 @@ class FlowchartLLMFramework:
     def run(self, input_string: str):
         current_node_id = self.start_node
         context = {"initial_input": input_string}
+        self.visited_nodes = []
+        self.decisions = {}
+        self.steps = []
+        traversal = []
 
         while True:
             current_node = self.flowchart[current_node_id]
-            logger.info(f"Current node: {current_node_id}")
+            self.visited_nodes.append(current_node_id)
+            
+            # Create traversal entry for this node
+            node_entry = {
+                "node": current_node_id,
+                "text": current_node["text"],
+                "options": list(current_node.get("connections", {}).keys()),
+                "decision": None,
+                "next_node": None,
+                "extracted": None
+            }
 
             if not current_node.get("connections"):  # End node
-                return self.llm_function(current_node["text"], context), self.extracted
+                result = self.llm_function(current_node["text"], context, current_node_id)
+                # Remove null fields and append
+                node_entry = {k: v for k, v in node_entry.items() if v is not None}
+                traversal.append(node_entry)
+                logger.log(
+                    "AI_FRAMEWORK",
+                    f"Input: {input_string}\n\nTraversal: {json.dumps({'traversal': traversal}, indent=2)}"
+                )
+                return result, self.extracted
 
             connections = current_node.get("connections", {})
             if len(connections) > 1:  # Decision node
                 options = list(connections.keys())
-                decision = self.llm_function(current_node["text"], context, options)
-                logger.info(f"Decision: {decision}")
-                current_node_id = connections.get(
-                    decision, list(connections.values())[0]
-                )
+                decision = self.llm_function(current_node["text"], context, current_node_id, options)
+                next_node = connections.get(decision, list(connections.values())[0])
+                
+                # Update traversal entry
+                node_entry["decision"] = decision
+                node_entry["next_node"] = next_node
+                traversal.append(node_entry)
+                
+                current_node_id = next_node
             else:  # Transition node
                 if current_node.get("schema"):
-                    self.extracted[current_node_id] = self.llm_function(
+                    extracted_data = self.llm_function(
                         current_node["text"],
                         context,
+                        current_node_id,
                         schema=current_node.get("schema", None),
                     )
-                current_node_id = list(connections.values())[0]
+                    self.extracted[current_node_id] = extracted_data
+                    
+                    # Update traversal entry with extracted data
+                    node_entry["extracted"] = extracted_data.dict() if hasattr(extracted_data, "dict") else extracted_data
+                
+                next_node = list(connections.values())[0]
+                node_entry["next_node"] = next_node
+                traversal.append(node_entry)
+                
+                current_node_id = next_node
 
 
 class Assistant(object):
@@ -247,6 +292,7 @@ class Assistant(object):
 
         logger.info(f"FRAMEWORK RESULT: {result}")
         logger.info(f"EXTRACTED: {extracted}")
+
         return result, (
             extracted["ExtractActivity"].activities
             if "ExtractActivity" in extracted
