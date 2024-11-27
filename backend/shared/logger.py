@@ -38,7 +38,7 @@ def create_logger(level="INFO"):
 
     if not log_level_exists("CONTROLLERS"):
         logger.level("CONTROLLERS", no=20, color="<white>", icon="🦾")
-        logger.log("CONTROLLERS", "CONTROLLERS logger created")
+    logger.log("CONTROLLERS", "CONTROLLERS logger created")
 
     if not log_level_exists("DB"):
         logger.level("DB", no=10, color="<cyan>", icon="📊")
@@ -47,5 +47,9 @@ def create_logger(level="INFO"):
     if not log_level_exists("HUME"):
         logger.level("HUME", no=20, color="<yellow>", icon="🧘")
         logger.log("HUME", "HUME logger created")
+
+    if not log_level_exists("AI_FRAMEWORK"):
+        logger.level("AI_FRAMEWORK", no=20, color="<green>", icon="🤖")
+        logger.log("AI_FRAMEWORK", "AI_FRAMEWORK logger created")
 
     logger.info(f"Using {ENVIRONMENT.capitalize()} enviroment! ⚠️")
