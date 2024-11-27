@@ -207,28 +207,33 @@ const LogPage: React.FC = () => {
     setTranscription(e.target.value);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (socket && isConnected) {
       setIsLoading(true);
-      socket.send(
-        JSON.stringify({
-          action: "send_message",
-          text: transcription,
-          input_mode: inputMode,
-          output_mode: outputMode,
-        })
-      );
+      try {
+        socket.send(
+          JSON.stringify({
+            action: "send_message",
+            text: transcription,
+            input_mode: inputMode,
+            output_mode: outputMode,
+          })
+        );
 
-      addMessage({ role: "user", content: transcription });
-      setTranscription("");
+        addMessage({ role: "user", content: transcription });
+        setTranscription("");
 
-      // Set timeout for server response
-      timeoutRef.current = setTimeout(() => {
+        // Increase timeout to 60 seconds
+        timeoutRef.current = setTimeout(() => {
+          setIsLoading(false);
+          toast.error("Server response timed out", {
+            position: "top-right",
+          });
+        }, 60000);
+      } catch (error) {
         setIsLoading(false);
-        toast.error("Server response timed out", {
-          position: "top-right",
-        });
-      }, 20000);
+        toast.error("Failed to send message");
+      }
     }
   };
 
@@ -450,27 +455,27 @@ const LogPage: React.FC = () => {
         <div className="fixed top-4 left-0 right-0 flex justify-center gap-2 z-50">
           <button
             onClick={handleReconnect}
-            className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-2 border border-gray-300"
+            className="px-4 py-2 rounded-full bg-white hover:bg-gray-100 transition-colors flex items-center gap-2 border border-gray-300 shadow-sm hover:shadow-md active:scale-95"
           >
             {isConnected ? (
               <>
                 <Wifi className="text-green-500" size={16} />
-                <span>Connected</span>
+                <span className="font-medium">Connected</span>
               </>
             ) : (
               <>
                 <WifiOff className="text-red-500" size={16} />
-                <span>Reconnect</span>
+                <span className="font-medium">Reconnect</span>
               </>
             )}
           </button>
 
           <button
             onClick={clearMessages}
-            className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-2 border border-gray-300"
+            className="px-4 py-2 rounded-full bg-white hover:bg-gray-100 transition-colors flex items-center gap-2 border border-gray-300 shadow-sm hover:shadow-md active:scale-95"
           >
             <Trash2 size={16} />
-            <span>Clear</span>
+            <span className="font-medium">Clear</span>
           </button>
         </div>
 
@@ -554,6 +559,7 @@ const LogPage: React.FC = () => {
                 isRecording={isRecording}
                 isConnected={isConnected}
                 toggleRecording={handleToggleRecording}
+                isLoading={isLoading}
               />
               <EmotionBadges emotions={currentEmotions} />
             </div>
@@ -568,10 +574,17 @@ const LogPage: React.FC = () => {
               />
               <button
                 onClick={handleSendMessage}
-                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors w-full"
-                disabled={!isConnected}
+                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!isConnected || isLoading}
               >
-                Send Message
+                {isLoading ? (
+                  <>
+                    <LoaderCircle className="animate-spin" size={16} />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <span>Send Message</span>
+                )}
               </button>
               <EmotionBadges emotions={currentEmotions} />
             </div>

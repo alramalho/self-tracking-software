@@ -11,7 +11,7 @@ from fastapi import WebSocket, Request, HTTPException, status
 from auth.clerk import is_clerk_user_ws
 from auth.clerk import is_clerk_user_ws
 from services.notification_manager import NotificationManager
-from gateways.activities import ActivitiesGateway
+from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsException
 from entities.activity import ActivityEntry
 from analytics.posthog import posthog
 
@@ -78,6 +78,12 @@ async def websocket_endpoint(websocket: WebSocket):
                                     quantity=activity_entry.quantity,
                                     )
                                 )
+                            except ActivityEntryAlreadyExistsException as e:
+                                existent_activity_entry = activities_gateway.get_activity_entry_by_activity_and_date(activity_entry.activity_id, activity_entry.date)
+                                existent_activity_entry.quantity = existent_activity_entry.quantity + activity_entry.quantity
+                                activities_gateway.update_activity_entry(existent_activity_entry)
+                                logger.info(f"Updated activity entry {existent_activity_entry.id} with new quantity {existent_activity_entry.quantity}")
+
                             except Exception as e:
                                 logger.error(f"Error creating activity entry, continuing. Error: {e}")
 
