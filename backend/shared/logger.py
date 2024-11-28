@@ -52,4 +52,8 @@ def create_logger(level="INFO"):
         logger.level("AI_FRAMEWORK", no=20, color="<green>", icon="🤖")
         logger.log("AI_FRAMEWORK", "AI_FRAMEWORK logger created")
 
+    if not log_level_exists("LOOPS"):
+        logger.level("LOOPS", no=20, color="<yellow>", icon="📧")
+        logger.log("LOOPS", "LOOPS logger created")
+
     logger.info(f"Using {ENVIRONMENT.capitalize()} enviroment! ⚠️")
