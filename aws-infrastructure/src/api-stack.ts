@@ -27,7 +27,7 @@ export class ApiStack extends cdk.Stack {
           path.join(__dirname, "..", "..", "backend")
         ),
         timeout: cdk.Duration.seconds(899),
-        memorySize: 1024,
+        memorySize: 512,
         architecture: lambda.Architecture.X86_64,
         logRetention: cdk.aws_logs.RetentionDays.ONE_WEEK,
         environment: {
@@ -58,7 +58,7 @@ export class ApiStack extends cdk.Stack {
     const aliasOptions = {
       aliasName: "live",
       version: version,
-      provisionedConcurrentExecutions: 2,
+      provisionedConcurrentExecutions: 1,
     };
 
     const alias = new lambda.Alias(this, "BackendLambdaAlias", aliasOptions);
