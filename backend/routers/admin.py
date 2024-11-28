@@ -10,6 +10,10 @@ from gateways.aws.s3 import S3Gateway
 from gateways.activities import ActivitiesGateway
 from datetime import datetime, timedelta
 from pytz import UTC
+from emails.loops import send_loops_event
+from shared.logger import logger
+from analytics import posthog
+from constants import ENVIRONMENT
 
 router = APIRouter()
 security = HTTPBearer()
@@ -58,11 +62,17 @@ async def send_notification(request: Request, verified: User = Depends(admin_aut
     body = await request.json()
     activity_entry_id = body.get("activity_entry_id")
     activity_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
-    expiration_days = body.get("expiration_days", 7) # 7 days (max for s3 presigned url)
-    url = s3_gateway.generate_presigned_url(activity_entry.image.s3_path, expiration_days * 24 * 60 * 60)
+    expiration_days = body.get(
+        "expiration_days", 7
+    )  # 7 days (max for s3 presigned url)
+    url = s3_gateway.generate_presigned_url(
+        activity_entry.image.s3_path, expiration_days * 24 * 60 * 60
+    )
 
     activity_entry.image.url = url
-    activity_entry.image.expires_at = (datetime.now(UTC) + timedelta(days=expiration_days)).isoformat()
+    activity_entry.image.expires_at = (
+        datetime.now(UTC) + timedelta(days=expiration_days)
+    ).isoformat()
     activities_gateway.update_activity_entry(activity_entry.id, activity_entry.dict())
 
     return {"url": url}
@@ -87,3 +97,37 @@ async def send_notification_to_all_users(
         await notification_manager.create_and_process_notification(notification)
         sent += 1
     return {"message": f"Notification sent successfully to {sent} users"}
+
+
+@router.post("/trigger-unactivated-check")
+async def run_daily_validations(
+    request: Request, dry_run: bool = False, verified: User = Depends(admin_auth)
+):
+    body = await request.json()
+    subset_usernames = body.get("subset_usernames", [])
+    dry_run = body.get("dry_run", True)
+    logger.info(f"Running unactivated check with subset_usernames: {subset_usernames} and dry_run: {dry_run}")
+
+    # unactivated users are users who have registered > 2 days ago and have no activity entry
+    all_users = users_gateway.get_all_users()
+    all_users = [user for user in all_users if user.username in subset_usernames]
+
+    unactivated_users = []
+    for user in all_users:
+        if (datetime.fromisoformat(user.created_at) < (datetime.now(UTC) - timedelta(days=2))
+            and len(activities_gateway.get_all_activity_entries_by_user_id(user.id)) == 0):
+            unactivated_users.append(user)
+
+    if not dry_run:
+        for user in unactivated_users:
+            send_loops_event(user.email, "unactivated")
+            posthog.capture(distinct_id=user.id, event="unactivated_loops_event_triggered")
+
+    return {
+        "message": f"Unactivated loops event {'' if dry_run else 'not'} triggered",
+        "users_checked": len(all_users),
+        "qualifiable_users": {
+            "user_count": len(unactivated_users),
+            "username_list": [user.username for user in unactivated_users],
+        },
+    }
