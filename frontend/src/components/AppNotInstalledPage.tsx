@@ -12,11 +12,17 @@ import {
 import { usePathname } from "next/navigation";
 import InstallPWATabs from "./InstallPWATabs";
 
-
 const AppNotInstalledPage: React.FC = () => {
   const [isAppInstallModalOpen, setIsAppInstallModalOpen] = useState(true);
   const pathname = usePathname();
-  const excludedRoutes = ["/signin", "/signup", "/join-plan", "/onboarding", "/join"];
+  const excludedRoutes = [
+    "/signin",
+    "/signup",
+    "/join-plan",
+    "/onboarding",
+    "/join",
+    "/add",
+  ];
 
   if (excludedRoutes.some((route) => pathname.startsWith(route))) {
     return null;
