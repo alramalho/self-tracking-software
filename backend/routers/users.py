@@ -19,6 +19,7 @@ import traceback
 from gateways.aws.ses import SESGateway, get_email_template_string
 from analytics.posthog import posthog
 import time
+from emails.loops import upsert_loops_contact
 
 router = APIRouter()
 
@@ -29,7 +30,6 @@ plan_controller = PlanController()
 notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
 ses_gateway = SESGateway()
-
 
 
 @router.get("/user-health")
@@ -70,7 +70,9 @@ async def load_users_data(
                     moods_gateway.get_all_mood_reports_by_user_id, user.id
                 )
 
-                plans_future = executor.submit(plan_controller.get_all_user_active_plans, user)
+                plans_future = executor.submit(
+                    plan_controller.get_all_user_active_plans, user
+                )
                 plan_groups_future = executor.submit(
                     plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
                 )
@@ -111,9 +113,13 @@ async def load_users_data(
             if plans:
                 plan_goals = [f"{plan['emoji']} {plan['goal']}" for plan in plans[:3]]
                 if len(plans) > 3:
-                    bio_parts.append(f"Working on {len(plans)} plans including {', '.join(plan_goals[:-1])} and {plan_goals[-1]}")
+                    bio_parts.append(
+                        f"Working on {len(plans)} plans including {', '.join(plan_goals[:-1])} and {plan_goals[-1]}"
+                    )
                 elif len(plans) > 1:
-                    bio_parts.append(f"Working on {', '.join(plan_goals[:-1])} and {plan_goals[-1]}")
+                    bio_parts.append(
+                        f"Working on {', '.join(plan_goals[:-1])} and {plan_goals[-1]}"
+                    )
                 else:
                     bio_parts.append(f"Working on {plan_goals[0]}")
 
@@ -131,12 +137,14 @@ async def load_users_data(
                     if len(acts) > 0:
                         emojis = " ".join(act["emoji"] for act in acts[:3])
                         activity_summary.append(f"{category}: {emojis}")
-                
+
                 if activity_summary:
                     bio_parts.append("Tracking " + " • ".join(activity_summary))
 
             # Combine bio parts
-            generated_bio = " | ".join(bio_parts) if bio_parts else "Just joined tracking.so!"
+            generated_bio = (
+                " | ".join(bio_parts) if bio_parts else "Just joined tracking.so!"
+            )
 
             # Process plans to include activities
             activity_map = {activity["id"]: activity for activity in activities}
@@ -201,6 +209,21 @@ async def load_users_data(
                         event="load-user-data-latency",
                         properties={"latency_seconds": round(execution_time, 3)},
                     )
+
+                    upsert_loops_contact(
+                        email=user.email,
+                        first_name=user.name,
+                        user_id=user.id,
+                        custom_properties={
+                            "username": user.username,
+                            "plansCount": len(plans),
+                            "planGroupsCount": len(plan_groups),
+                            "activitiesCount": len(activities),
+                            "activityEntriesCount": len(entries),
+                            "friendCount": len(current_user.friend_ids),
+                        },
+                    )
+
                 except Exception as e:
                     logger.error(f"Failed to capture pageview: {e}")
 
@@ -399,21 +422,28 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             return {
                 "recommended_activity_entries": [],
                 "recommended_activities": [],
-                "recommended_users": []
+                "recommended_users": [],
             }
-        
-        friends = [users_gateway.get_user_by_id(friend_id).dict() for friend_id in current_user.friend_ids]
+
+        friends = [
+            users_gateway.get_user_by_id(friend_id).dict()
+            for friend_id in current_user.friend_ids
+        ]
         friends_activities_entries = [
             entry.dict()
             for friend_id in current_user.friend_ids
-            for entry in activities_gateway.get_most_recent_activity_entries(friend_id, limit=10)
+            for entry in activities_gateway.get_most_recent_activity_entries(
+                friend_id, limit=10
+            )
         ]
         sorted_friends_activities_entries = sorted(
-            friends_activities_entries,
-            key=lambda x: x['created_at'],
-            reverse=True
+            friends_activities_entries, key=lambda x: x["created_at"], reverse=True
         )[:MAX_TIMELINE_ENTRIES]
-        friends_activities = [activities_gateway.get_activity_by_id(aentry['activity_id']).dict() for aentry in sorted_friends_activities_entries if activities_gateway.get_activity_by_id(aentry['activity_id'])]
+        friends_activities = [
+            activities_gateway.get_activity_by_id(aentry["activity_id"]).dict()
+            for aentry in sorted_friends_activities_entries
+            if activities_gateway.get_activity_by_id(aentry["activity_id"])
+        ]
 
         execution_time = time.time() - start_time
         posthog.capture(
@@ -421,7 +451,7 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             event="timeline-latency",
             properties={
                 "latency_seconds": round(execution_time, 3),
-            }
+            },
         )
 
         return {
@@ -463,7 +493,6 @@ def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
     return results[:limit]
 
 
-
 @router.post("/report-feedback")
 async def report_feedback(request: Request, user: User = Depends(is_clerk_user)):
     try:
@@ -473,11 +502,11 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
         type_ = body.get("type")
 
         email_type_map = {
-            "bug_report": "🐞 Bug Report", 
+            "bug_report": "🐞 Bug Report",
             "help_request": "🆘 Help Request",
-            "feature_request": "💡 Feature Request"
+            "feature_request": "💡 Feature Request",
         }
-        
+
         subject = f"[Tracking.so] New {email_type_map[type_]} from {email}"
 
         # Create the email body and properly encode it
@@ -486,14 +515,16 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
             f"I'm Alex, the founder of Tracking Software.\n"
             f"Regarding your '{email_type_map[type_]}' with content:\n'{text}':\n\n"
         )
-        
+
         # Properly encode the mailto parameters
-        mailto_params = parse.urlencode({
-            'subject': f"Re: {email_type_map[type_]} on Tracking.so",
-            'body': prefilled_content
-        })
+        mailto_params = parse.urlencode(
+            {
+                "subject": f"Re: {email_type_map[type_]} on Tracking.so",
+                "body": prefilled_content,
+            }
+        )
         mailto_link = f"mailto:{email}?{mailto_params}"
-        
+
         html_content = get_email_template_string(
             header=email_type_map[type_],
             content=f"""
@@ -501,23 +532,18 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
             <p><strong>Message:</strong></p>
             <p>{text}</p>
             <p><a href="{mailto_link}">Reply</a></p>
-            """
+            """,
         )
-        
+
         ses_gateway.send_email(
             to="alexandre.ramalho.1998@gmail.com",
             subject=subject,
-            html_body=html_content
+            html_body=html_content,
         )
 
         # Track in PostHog
         posthog.capture(
-            distinct_id=user.id,
-            event=type_,
-            properties={
-                "email": email,
-                "text": text
-            }
+            distinct_id=user.id, event=type_, properties={"email": email, "text": text}
         )
 
         return {"status": "success"}
@@ -535,12 +561,24 @@ async def get_user_profile(username: str):
             raise HTTPException(status_code=404, detail=f"User '{username}' not found")
 
         user_data = {
-            "user": user.dict(include={"id", "name", "username", "picture", "plan_ids", "friend_ids", "pending_friend_requests"}),
+            "user": user.dict(
+                include={
+                    "id",
+                    "name",
+                    "username",
+                    "picture",
+                    "plan_ids",
+                    "friend_ids",
+                    "pending_friend_requests",
+                }
+            ),
             "plans": [
                 plan.dict()
-                for plan in [plan_controller.get_plan(plan_id) for plan_id in user.plan_ids]
+                for plan in [
+                    plan_controller.get_plan(plan_id) for plan_id in user.plan_ids
+                ]
             ],
-            "activities": activities_gateway.get_all_activities_by_user_id(user.id)
+            "activities": activities_gateway.get_all_activities_by_user_id(user.id),
         }
 
         return user_data
@@ -552,20 +590,20 @@ async def get_user_profile(username: str):
 
 @router.post("/handle-referral/{referrer_username}")
 async def handle_referral(
-    referrer_username: str,
-    current_user: User = Depends(is_clerk_user)
+    referrer_username: str, current_user: User = Depends(is_clerk_user)
 ):
     try:
         referrer = users_gateway.get_user_by_safely("username", referrer_username)
         if not referrer:
             raise HTTPException(status_code=404, detail="Referrer not found")
-        
+
         # Add the new user to referrer's referred_user_ids
         if current_user.id not in referrer.referred_user_ids:
-            users_gateway.update_fields(referrer.id, {
-                "referred_user_ids": referrer.referred_user_ids + [current_user.id]
-            })
-            
+            users_gateway.update_fields(
+                referrer.id,
+                {"referred_user_ids": referrer.referred_user_ids + [current_user.id]},
+            )
+
             # You might want to send a notification to the referrer
             await notification_manager.create_and_process_notification(
                 Notification.new(
@@ -581,7 +619,7 @@ async def handle_referral(
                     },
                 )
             )
-            
+
         return {"message": "Referral handled successfully"}
     except Exception as e:
         logger.error(f"Failed to handle referral: {e}")
