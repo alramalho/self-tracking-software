@@ -122,7 +122,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
         <AppleLikePopover onClose={() => setShowSettings(false)}>
           <div className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold mb-4">Plan Settings</h2>
-            <Button
+            {/* <Button
               variant="outline"
               onClick={() => {
                 setShowSettings(false);
@@ -131,7 +131,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
               className="w-full"
             >
               Edit Plan
-            </Button>
+            </Button> */}
             <Button
               variant="destructive"
               onClick={() => {
