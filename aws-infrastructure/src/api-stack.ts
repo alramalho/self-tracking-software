@@ -43,6 +43,7 @@ export class ApiStack extends cdk.Stack {
           ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
           OVERRIDE_AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
           OVERRIDE_AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
+          LOOPS_API_KEY: process.env.LOOPS_API_KEY!,
         },
       }
     );
