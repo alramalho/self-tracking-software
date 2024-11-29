@@ -42,3 +42,4 @@ HUME_BATCH_URL = "https://api.hume.ai/v0/batch/jobs"
 HUME_SCORE_FILTER_THRESHOLD=0.5
 
 LOOPS_API_KEY=os.getenv("LOOPS_API_KEY")
+API_URL=os.getenv("API_URL")

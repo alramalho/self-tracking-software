@@ -152,6 +152,13 @@ class DatabaseMemory(Memory):
             if message_date == today and not today_divider_added:
                 formatted_messages.append(f"--- Today ({today.strftime('%Y-%m-%d')}) ---")
                 today_divider_added = True
-            formatted_messages.append(f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}")
+            
+            # Format message with emotions if present
+            message_text = f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}"
+            if m.emotions:
+                emotion_text = ", ".join([f"{e.name} ({e.score * 100:.0f}%)" for e in m.emotions])
+                message_text += f" (user expressed {emotion_text} in this message)"
+            
+            formatted_messages.append(message_text)
 
         return "\n".join(formatted_messages)

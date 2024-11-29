@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel
 from shared.utils import time_ago
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
 
 
 class Emotion(BaseModel):
@@ -29,10 +29,11 @@ class Message(BaseModel):
         sender_id: str,
         recipient_name: str,
         recipient_id: str,
+        id: Optional[str] = None,
         emotions: List[Emotion] = [],
     ) -> "Message":
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             text=text,
             sender_name=sender_name,
             sender_id=sender_id,
