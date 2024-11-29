@@ -114,7 +114,9 @@ async def run_daily_validations(
 
     # unactivated users are users who have registered > 2 days ago and have no activity entry
     all_users = users_gateway.get_all_users()
-    all_users = [user for user in all_users if user.username in subset_usernames]
+    
+    if len(subset_usernames) > 0:
+        all_users = [user for user in all_users if user.username in subset_usernames]
 
     unactivated_users = []
     for user in all_users:
