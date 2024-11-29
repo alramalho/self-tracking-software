@@ -67,7 +67,7 @@ const TimelineRenderer: React.FC = () => {
               activityTitle={activity.title}
               activityEmoji={activity.emoji || ""}
               activityEntryQuantity={entry.quantity}
-              activityEntryReactions={entry.reactions}
+              activityEntryReactions={entry.reactions || {}}
               activityMeasure={activity.measure}
               isoDate={entry.date}
               userPicture={user?.picture}
