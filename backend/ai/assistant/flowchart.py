@@ -20,7 +20,7 @@ first_message_flowchart = {
         "connections": {"Yes": "Introduce", "No": "FirstTimeToday"},
     },
     "Introduce": {
-        "text": "Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to talk to them about their recent activities and automatically track them. Then ask what they've been up to recently and how they're doing.",
+        "text": "Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to talk to them about their recent activities and automatically track them. Then ask what they've been up to recently or how they're doing.",
     },
     "FirstTimeToday": {
         "text": "Based on the conversation history, is this the first time talking today?",
@@ -57,15 +57,38 @@ class ExtractedActivityEntryList(BaseModel):
 
 every_message_flowchart = {
     "ActivityScanner": {
-        "text": "Did the user mention he did any of the existent activities in his exchanged messages with you?",
+        "text": "Did the user recently mentioned in the conversation history one of his existent activities?",
         "connections": {"Yes": "CheckActivityMeasurement", "No": "Converse"},
+        "temperature": 0.7,
     },
     "CheckActivityMeasurement": {
         "text": "Did the user mention the date of when the activity was done and the measure (for how long, how much pages, etc) in his exchanged messages with you?",
-        "connections": {"Yes": "ExtractActivity", "No": "AskForMoreInformation"},
+        "connections": {
+            "No": "AskForMoreInformation",
+            "Yes": "WasActivityAlreadyExtracted",
+        },
     },
     "AskForMoreInformation": {
         "text": "Ask the user for the missing information about the activity (either date and / or measure, whatever is missing)",
+    },
+    "WasActivityAlreadyExtracted": {
+        "text": """Looking at the most recent messages, check if the user's latest message was:
+        1. An acceptance/rejection message (usually containing phrases like "I accept", "I reject", "accepted the activity", "rejected the activity") 
+        OR
+        2. A message specifying activity details (like "I ran 5km", "read 10 pages today")
+        3. Something else
+
+        If the latest message was an acceptance/rejection -> choose "AcceptedOrRejected"
+        If the latest message was specifying activity details -> choose "FinishedSpecifyingActivity"
+        
+        Example acceptance: "I accepted the activity: 10 pages of reading"
+        Example specification: "I read 10 pages this morning"
+        """,
+        "connections": {
+            "AcceptedOrRejected": "Converse",
+            "FinishedSpecifyingActivity": "ExtractActivity",
+            "SomethingElse": "Converse",
+        },
     },
     "ExtractActivity": {
         "text": f"Extract new activities from the user's message. New activites are activites that are not on the recent activities list. Today is {datetime.now().strftime('%b %d, %Y')}",
@@ -73,10 +96,12 @@ every_message_flowchart = {
         "connections": {"default": "InformTheUserAboutTheActivity"},
     },
     "InformTheUserAboutTheActivity": {
-        "text": "Inform the user that you've logged the activity",
+        "text": "Inform the user that you've extracted the activity, which he needs to accept or reject.",
     },
     "Converse": {
-        "text": "Let the user lead an engaging and challenging conversation with you. Don't ask generic 'how can I help you?' questions, but rather ask how they're doing and what they've been up to.",
+        "text": "Let the user lead an engaging and challenging conversation with you, given your goal and recent conversation history.",
+        "temperature": 1,
+        "connections": {},
     },
 }
 
@@ -107,7 +132,15 @@ class FlowchartLLMFramework:
     ) -> str:
         try:
             # Combine node text with initial input for a more comprehensive prompt
-            full_prompt = f"<focus>'{node_text}'</focus>\n Context\n{context['initial_input']}\n"
+            full_prompt = (
+                f"<focus>'{node_text}'</focus>\n Context\n{context['initial_input']}\n"
+            )
+
+            # Get temperature from node configuration if available, only needed for ask_text
+            node = self.flowchart[current_node_id]
+            temperature = node.get(
+                "temperature", 0.7
+            )  # Default temperature if not specified
 
             if options:
                 # Decision node
@@ -129,7 +162,10 @@ class FlowchartLLMFramework:
                     ),
                 )
                 result = ask_schema(
-                    full_prompt, self.system_prompt, DecisionSchema, LLM_MODEL
+                    text=full_prompt,
+                    system=self.system_prompt,
+                    pymodel=DecisionSchema,
+                    model=LLM_MODEL,
                 )
                 self.decisions[current_node_id] = result.decision
                 self.reasoning[current_node_id] = result.reasoning
@@ -138,11 +174,19 @@ class FlowchartLLMFramework:
                 # Non-decision node
                 if schema:
                     result = ask_schema(
-                        full_prompt, self.system_prompt, schema, LLM_MODEL
+                        text=full_prompt,
+                        system=self.system_prompt,
+                        pymodel=schema,
+                        model=LLM_MODEL,
                     )
                     return result
                 else:
-                    result = ask_text(full_prompt, self.system_prompt, LLM_MODEL)
+                    result = ask_text(
+                        text=full_prompt,
+                        system=self.system_prompt,
+                        model=LLM_MODEL,
+                        temperature=temperature,  # Only pass temperature to ask_text
+                    )
                     return result
         except Exception as e:
             logger.error(f"Error in LLM function: {e}")
@@ -159,7 +203,7 @@ class FlowchartLLMFramework:
         while True:
             current_node = self.flowchart[current_node_id]
             self.visited_nodes.append(current_node_id)
-            
+
             node_entry = {
                 "node": current_node_id,
                 "text": current_node["text"],
@@ -167,7 +211,7 @@ class FlowchartLLMFramework:
                 "reasoning": None,
                 "decision": None,
                 "next_node": None,
-                "extracted": None
+                "extracted": None,
             }
 
             # Build the full prompt by combining node text with any schema data from context
@@ -179,26 +223,34 @@ class FlowchartLLMFramework:
                     node_prompt += f"\n\nContext: {model_name}: {data_dict}"
 
             if not current_node.get("connections"):  # End node
-                result = self.llm_function(node_prompt, context, current_node_id)
+                result = self.llm_function(
+                    node_text=node_prompt,
+                    context=context,
+                    current_node_id=current_node_id,
+                    options=list(current_node.get("connections", {}).keys()),
+                    schema=current_node.get("schema", None),
+                )
                 node_entry = {k: v for k, v in node_entry.items() if v is not None}
                 traversal.append(node_entry)
                 logger.log(
                     "AI_FRAMEWORK",
-                    f"Input: {input_string}\n\nTraversal: {json.dumps({'traversal': traversal}, indent=2)}"
+                    f"Input: {input_string}\n\nTraversal: {json.dumps({'traversal': traversal}, indent=2)}",
                 )
                 return result, self.extracted
 
             connections = current_node.get("connections", {})
             if len(connections) > 1:  # Decision node
                 options = list(connections.keys())
-                decision = self.llm_function(node_prompt, context, current_node_id, options)
+                decision = self.llm_function(
+                    node_prompt, context, current_node_id, options
+                )
                 next_node = connections.get(decision, list(connections.values())[0])
-                
+
                 node_entry["decision"] = decision
                 node_entry["reasoning"] = self.reasoning.get(current_node_id)
                 node_entry["next_node"] = next_node
                 traversal.append(node_entry)
-                
+
                 current_node_id = next_node
             else:  # Transition node
                 if current_node.get("schema"):
@@ -209,13 +261,17 @@ class FlowchartLLMFramework:
                         schema=current_node.get("schema", None),
                     )
                     self.extracted[current_node_id] = extracted_data
-                    
-                    node_entry["extracted"] = extracted_data.dict() if hasattr(extracted_data, "dict") else extracted_data
-                
+
+                    node_entry["extracted"] = (
+                        extracted_data.dict()
+                        if hasattr(extracted_data, "dict")
+                        else extracted_data
+                    )
+
                 next_node = list(connections.values())[0]
                 node_entry["next_node"] = next_node
                 traversal.append(node_entry)
-                
+
                 current_node_id = next_node
 
 
@@ -233,7 +289,9 @@ class Assistant(object):
         self.user_activities = user_activities
         self.recent_activities_string = recent_activities_string
 
-    def get_response(self, user_input: str, emotions: List[Emotion] = []) -> Tuple[str, List[ExtractedActivityEntry]]:
+    def get_response(
+        self, user_input: str, emotions: List[Emotion] = []
+    ) -> Tuple[str, List[ExtractedActivityEntry]]:
         is_first_message_in_more_than_a_day = (
             len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
         )
@@ -250,7 +308,8 @@ class Assistant(object):
         )
 
         system_prompt = f"""You are {self.name}, an AI assistant helping the user track their activities. 
-        Follow the instruction wrapped in <focus> tags carefully and provide appropriate responses.
+        Follow the instruction wrapped in <focus> tags carefully and provide appropriate responses, while always keeping your friendly personality and a connection to the conversastion thread.
+        Just like a human would do.
         That instruction does not come from the user, but you must address it.
         Always consider the entire conversation history when making decisions or responses.
         Respond in the same language as the initial input.
@@ -279,12 +338,12 @@ class Assistant(object):
         Only output message to be sent to the user.
         """
         )
-        
+
         jarvis_prefix = re.match(r"^Jarvis\s*\([^)]*\)\s*:\s*", result)
         if jarvis_prefix:
-            result = result[len(jarvis_prefix.group(0)):]
+            result = result[len(jarvis_prefix.group(0)) :]
         elif result.startswith(f"{self.name}:"):
-            result = result[len(f"{self.name}:"):]
+            result = result[len(f"{self.name}:") :]
 
         self.memory.write(
             Message.new(

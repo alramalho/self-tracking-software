@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from typing import TypeVar, Type
 
 
-def ask_text(text: str, system: str, model: str = LLM_MODEL) -> str:
-    logger.info(f"Asking text: {text}\n\n to assistant with syste\n'{system}'")
+def ask_text(text: str, system: str, model: str = LLM_MODEL, temperature: float = 0.7) -> str:
+    logger.info(f"Asking text: {text}\n\n to assistant with syste\n'{system}' with temperature {temperature}")
 
     response = client.chat.completions.create(
         model=model,
@@ -14,7 +14,7 @@ def ask_text(text: str, system: str, model: str = LLM_MODEL) -> str:
             {"role": "system", "content": system},
             {"role": "user", "content": text},
         ],
-        temperature=0.7,
+        temperature=temperature,
     )
 
     logger.info(f"Assistant response: {response.choices[0].message.content}")

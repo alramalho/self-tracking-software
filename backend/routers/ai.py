@@ -68,25 +68,25 @@ async def websocket_endpoint(websocket: WebSocket):
                             "text": text_response,
                         }
 
-                        for activity_entry in extracted_activity_entries:
-                            try:
-                                activities_gateway.create_activity_entry(
-                                    ActivityEntry.new(
-                                    user_id=user.id,
-                                    activity_id=activity_entry.activity_id,
-                                    date=activity_entry.date,
-                                    quantity=activity_entry.quantity,
-                                    )
-                                )
-                            except ActivityEntryAlreadyExistsException as e:
-                                existent_activity_entry = activities_gateway.get_activity_entry_by_activity_and_date(activity_entry.activity_id, activity_entry.date)
-                                existent_activity_entry.quantity = existent_activity_entry.quantity + activity_entry.quantity
-                                activities_gateway.update_activity_entry(existent_activity_entry)
-                                logger.info(f"Updated activity entry {existent_activity_entry.id} with new quantity {existent_activity_entry.quantity}")
+                        # for activity_entry in extracted_activity_entries:
+                        #     try:
+                        #         activities_gateway.create_activity_entry(
+                        #             ActivityEntry.new(
+                        #             user_id=user.id,
+                        #             activity_id=activity_entry.activity_id,
+                        #             date=activity_entry.date,
+                        #             quantity=activity_entry.quantity,
+                        #             )
+                        #         )
+                        #     except ActivityEntryAlreadyExistsException as e:
+                        #         existent_activity_entry = activities_gateway.get_activity_entry_by_activity_and_date(activity_entry.activity_id, activity_entry.date)
+                        #         existent_activity_entry.quantity = existent_activity_entry.quantity + activity_entry.quantity
+                        #         activities_gateway.update_activity_entry(existent_activity_entry)
+                        #         logger.info(f"Updated activity entry {existent_activity_entry.id} with new quantity {existent_activity_entry.quantity}")
 
-                            except Exception as e:
-                                logger.error(f"Error creating activity entry, continuing. Error: {e}")
-
+                        #     except Exception as e:
+                        #         logger.error(f"Error creating activity entry, continuing. Error: {e}")
+                        
                         if output_mode == "voice" and audio_response:
                             response_data["audio"] = base64.b64encode(audio_response).decode("utf-8")
 
