@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from auth.clerk import is_clerk_user
 from entities.user import User
 from services.notification_manager import NotificationManager
-from constants import ADMIN_API_KEY
+from constants import ADMIN_API_KEY, ENVIRONMENT
 from entities.notification import Notification
 from gateways.users import UsersGateway
 from gateways.aws.s3 import S3Gateway
@@ -13,7 +13,8 @@ from pytz import UTC
 from emails.loops import send_loops_event
 from shared.logger import logger
 from analytics import posthog
-from constants import ENVIRONMENT
+from gateways.aws.ses import SESGateway
+import json
 
 router = APIRouter()
 security = HTTPBearer()
@@ -21,6 +22,7 @@ users_gateway = UsersGateway()
 notification_manager = NotificationManager()
 activities_gateway = ActivitiesGateway()
 s3_gateway = S3Gateway()
+ses_gateway = SESGateway()
 
 
 async def admin_auth(
@@ -106,7 +108,9 @@ async def run_daily_validations(
     body = await request.json()
     subset_usernames = body.get("subset_usernames", [])
     dry_run = body.get("dry_run", True)
-    logger.info(f"Running unactivated check with subset_usernames: {subset_usernames} and dry_run: {dry_run}")
+    logger.info(
+        f"Running unactivated check with subset_usernames: {subset_usernames} and dry_run: {dry_run}"
+    )
 
     # unactivated users are users who have registered > 2 days ago and have no activity entry
     all_users = users_gateway.get_all_users()
@@ -114,16 +118,15 @@ async def run_daily_validations(
 
     unactivated_users = []
     for user in all_users:
-        if (datetime.fromisoformat(user.created_at) < (datetime.now(UTC) - timedelta(days=2))
-            and len(activities_gateway.get_all_activity_entries_by_user_id(user.id)) == 0):
+        if (
+            datetime.fromisoformat(user.created_at)
+            < (datetime.now(UTC) - timedelta(days=2))
+            and len(activities_gateway.get_all_activity_entries_by_user_id(user.id))
+            == 0
+        ):
             unactivated_users.append(user)
 
-    if not dry_run:
-        for user in unactivated_users:
-            send_loops_event(user.email, "unactivated")
-            posthog.capture(distinct_id=user.id, event="unactivated_loops_event_triggered")
-
-    return {
+    result = {
         "message": f"Unactivated loops event {'' if dry_run else 'not'} triggered",
         "users_checked": len(all_users),
         "qualifiable_users": {
@@ -131,3 +134,23 @@ async def run_daily_validations(
             "username_list": [user.username for user in unactivated_users],
         },
     }
+
+    if not dry_run:
+        triggered_users = []
+        for user in unactivated_users:
+            send_loops_event(user.email, "unactivated")
+            posthog.capture(
+                distinct_id=user.id, event="unactivated_loops_event_triggered"
+            )
+            triggered_users.append(user.username)
+
+        result["triggered_users_count"] = len(triggered_users)
+        result["triggered_users"] = triggered_users
+
+        ses_gateway.send_email(
+            to="alexandre.ramalho.1998@gmail.com",
+            subject="Unactivated loops event triggered",
+            html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(result, indent=2)}</pre>",
+        )
+
+    return result
