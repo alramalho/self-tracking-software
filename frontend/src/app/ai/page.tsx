@@ -63,7 +63,7 @@ const LogPage: React.FC = () => {
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const { addToQueue } = useSpeaker();
+  const { addToQueue, stopAudio } = useSpeaker();
   const { addToNotificationCount, sendPushNotification } = useNotifications();
 
   const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
@@ -82,7 +82,7 @@ const LogPage: React.FC = () => {
   const [transcription, setTranscription] = useState<string>("");
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [outputMode, setOutputMode] = useState<"voice" | "text">("voice");
-  const { isRecording, toggleRecording } = useMicrophone();
+  const { isRecording, toggleRecording, cancelRecording } = useMicrophone();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { messages, addMessage, clearMessages } = useMessageHistory(); // Update this line
   const router = useRouter();
@@ -269,13 +269,18 @@ const LogPage: React.FC = () => {
   }
 
   const handleToggleRecording = useCallback(() => {
+    if (!isRecording) {
+      // Stop any ongoing speech when starting to record
+      stopAudio();
+    }
+    
     toggleRecording((audioData, audioFormat) => {
       if (socket && isConnected) {
         setIsLoading(true);
         socket.send(
           JSON.stringify({
             action: "send_message",
-            text: "", // The server will use STT to convert audio to text
+            text: "",
             input_mode: "voice",
             output_mode: outputMode,
             audio_data: audioData,
@@ -283,7 +288,6 @@ const LogPage: React.FC = () => {
           })
         );
 
-        // Set timeout for server response
         timeoutRef.current = setTimeout(() => {
           setIsLoading(false);
           toast.error("Server response timed out", {
@@ -292,7 +296,7 @@ const LogPage: React.FC = () => {
         }, 30000);
       }
     });
-  }, [socket, isConnected, outputMode, toggleRecording]);
+  }, [socket, isConnected, outputMode, toggleRecording, stopAudio]);
 
   useEffect(() => {
     const markNotificationOpened = async () => {
@@ -580,6 +584,7 @@ const LogPage: React.FC = () => {
                 isRecording={isRecording}
                 isConnected={isConnected}
                 toggleRecording={handleToggleRecording}
+                cancelRecording={cancelRecording}
                 isLoading={isLoading}
               />
               <EmotionBadges emotions={currentEmotions} />
