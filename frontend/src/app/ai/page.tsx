@@ -15,14 +15,11 @@ import {
   Volume2,
   VolumeX,
   Trash2,
-  Router,
   Loader2,
   Brain,
-  Activity,
   Bell,
   PlusSquare,
   MessageSquarePlus,
-  ChevronUp,
   Eclipse,
 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
@@ -38,7 +35,11 @@ import {
 } from "@/components/ui/chat/chat-bubble";
 import { Switch } from "@/components/ui/switch";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import {
+  Activity,
+  ActivityEntry,
+  useUserPlan,
+} from "@/contexts/UserPlanContext";
 import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
 import { RadialProgress } from "@/components/ui/radial-progress";
@@ -46,6 +47,7 @@ import { Users } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
 import FeedbackForm from "@/components/FeedbackForm";
+import ActivitySuggestion from "@/components/ActivitySuggestion";
 
 const REFERRAL_COUNT = 2;
 
@@ -95,6 +97,12 @@ const LogPage: React.FC = () => {
   const [showFeatureForm, setShowFeatureForm] = useState(false);
 
   const [currentEmotions, setCurrentEmotions] = useState<Emotion[]>([]);
+  const [suggestedActivities, setSuggestedActivities] = useState<Activity[]>(
+    []
+  );
+  const [suggestedActivityEntries, setSuggestedActivityEntries] = useState<
+    ActivityEntry[]
+  >([]);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -190,6 +198,9 @@ const LogPage: React.FC = () => {
         addMessage({ role: "user", content: `🎙️ ${data.text}` });
       } else if (data.type === "emotion_analysis") {
         setCurrentEmotions(data.result);
+      } else if (data.type === "suggested_activity_entries") {
+        setSuggestedActivityEntries(data.activity_entries);
+        setSuggestedActivities(data.activities);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -245,6 +256,18 @@ const LogPage: React.FC = () => {
     setOutputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
   };
 
+  function sendMessage(message: string) {
+    setIsLoading(true);
+    socket?.send(
+      JSON.stringify({
+        action: "send_message",
+        text: message,
+        input_mode: "text",
+        output_mode: outputMode,
+      })
+    );
+  }
+
   const handleToggleRecording = useCallback(() => {
     toggleRecording((audioData, audioFormat) => {
       if (socket && isConnected) {
@@ -266,7 +289,7 @@ const LogPage: React.FC = () => {
           toast.error("Server response timed out", {
             position: "top-right",
           });
-        }, 20000);
+        }, 30000);
       }
     });
   }, [socket, isConnected, outputMode, toggleRecording]);
@@ -341,8 +364,6 @@ const LogPage: React.FC = () => {
     );
   };
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
   if (!hasLoadedUserData)
     return (
       <div className="h-screen flex items-center justify-center">
@@ -403,7 +424,7 @@ const LogPage: React.FC = () => {
           </div>
 
           <p className="text-base text-gray-700 mb-4">
-              {`This is a costly feature to run, so I'm limiting access to a few users. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
+            {`This is a costly feature to run, so I'm limiting access to a few users. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
           </p>
 
           <div className="w-full max-w-sm mx-auto">
@@ -589,6 +610,25 @@ const LogPage: React.FC = () => {
               <EmotionBadges emotions={currentEmotions} />
             </div>
           )}
+          {suggestedActivityEntries.map((activityEntry) => {
+            const activity = suggestedActivities.find(
+              (a) => a.id === activityEntry.activity_id
+            );
+            if (!activity) return null;
+            return (
+              <ActivitySuggestion
+                key={activityEntry.id}
+                activity={activity}
+                activityEntry={activityEntry}
+                onAccept={(activityEntry, activity) => {
+                  sendMessage(`I accepted the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`);
+                }}
+                onReject={(activityEntry, activity) => {
+                  sendMessage(`I rejected the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`);
+                }}
+              />
+            );
+          })}
         </div>
       </div>
       {showFeatureForm && (

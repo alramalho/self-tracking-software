@@ -308,6 +308,22 @@ async def process_message(websocket: WebSocket, user_id: str, message: str, inpu
     text_response, activity_entries = await loop.run_in_executor(
         executor, talk_with_assistant, user_id, message, emotions
     )
+    existing_activities = activities_gateway.get_all_activities_by_user_id(user_id)
+    existing_entries = activities_gateway.get_all_activity_entries_by_user_id(user_id)
+    activity_entries = [
+        ae for ae in activity_entries 
+        if not any(
+            existing.activity_id == ae.activity_id and existing.date == ae.date
+            for existing in existing_entries
+        )
+    ]
+    activities = [activities_gateway.get_activity_by_id(entry.activity_id) for entry in activity_entries]
+
+    await websocket.send_json({
+        "type": "suggested_activity_entries",
+        "activities": [activity.dict() for activity in activities],
+        "activity_entries": [activity.dict() for activity in activity_entries]
+    })
     
     audio_response = None
     if output_mode == "voice":
