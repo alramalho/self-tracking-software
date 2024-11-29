@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 import ConfirmDialog from "./ConfirmDialog";
+import EmojiPicker from "emoji-picker-react";
 
 interface ActivityEditorProps {
   onClose: () => void;
@@ -28,6 +29,28 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const userDataQuery = useUserDataQuery("me");
   const api = useApiWithAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showEmojiPicker &&
+        emojiPickerRef.current &&
+        emojiButtonRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node) &&
+        !emojiButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   const handleSave = async () => {
     if (!title || !measure || !emoji) {
@@ -73,9 +96,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     } catch (error: any) {
       console.error("Error deleting activity:", error);
       if (error.response?.status === 400) {
-        toast.error(
-          `Delete failed: ${error.response.data.detail}`
-        );
+        toast.error(`Delete failed: ${error.response.data.detail}`);
       } else {
         toast.error("Failed to delete activity. Please try again.");
       }
@@ -84,60 +105,80 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     }
   };
 
+  const onEmojiClick = (emojiData: any) => {
+    setEmoji(emojiData.emoji);
+    setShowEmojiPicker(false);
+  };
+
   return (
     <>
       <AppleLikePopover className="z-[70]" onClose={onClose}>
-        <h2 className="text-2xl font-bold mb-4">
-          {activity ? "Edit Activity" : "Add New Activity"}
-        </h2>
-        <div className="space-y-4">
-          <div className="flex items-center space-x-4">
-            {emoji ? (
-              <div className="text-4xl w-16 h-16 flex items-center justify-center border rounded-lg">
-                {emoji}
-              </div>
-            ) : (
-              <div
-                className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                onClick={() => document.getElementById("emoji-input")?.focus()}
-              >
-                <Plus className="h-6 w-6 text-gray-400" />
-              </div>
+        <div className="h-[70dvh] ">
+          <h2 className="text-2xl font-bold mb-4">
+            {activity ? "Edit Activity" : "Add New Activity"}
+          </h2>
+          <div className="flex flex-col justify-between h-full">
+            <div className="flex flex-col gap-4">
+            <div className="flex items-center space-x-4 relative">
+              {emoji ? (
+                <div
+                  ref={emojiButtonRef}
+                  className="text-4xl w-16 h-16 flex items-center justify-center border rounded-lg cursor-pointer hover:bg-gray-100"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                >
+                  {emoji}
+                </div>
+              ) : (
+                <div
+                  ref={emojiButtonRef}
+                  className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                >
+                  <Plus className="h-6 w-6 text-gray-400" />
+                </div>
+              )}
+              {showEmojiPicker && (
+                <div 
+                  ref={emojiPickerRef}
+                  className="absolute top-[10px] left-[-30px] mt-2"
+                  style={{ zIndex: 1000 }}
+                >
+                  <EmojiPicker onEmojiClick={onEmojiClick} />
+                </div>
+              )}
+            </div>
+            <Input
+              placeholder="Activity Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            {!activity && (
+              <Input
+                placeholder="Measure (e.g., minutes, times)"
+                value={measure}
+                onChange={(e) => setMeasure(e.target.value)}
+              />
             )}
-            <Input
-              id="emoji-input"
-              placeholder="Emoji"
-              value={emoji}
-              onChange={(e) => setEmoji(e.target.value)}
-              className="text-2xl"
-            />
-          </div>
-          <Input
-            placeholder="Activity Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          {!activity && (
-            <Input
-              placeholder="Measure (e.g., minutes, times)"
-              value={measure}
-              onChange={(e) => setMeasure(e.target.value)}
-            />
-          )}
-          {activity && (
-            <Button 
-              onClick={handleDelete} 
-              variant="destructive" 
-              className="w-full" 
-              disabled={isSaving}
-            >
-              {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-              Delete Activity
+            {activity && (
+              <Button
+                onClick={handleDelete}
+                variant="destructive"
+                className="w-full"
+                disabled={isSaving}
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Delete Activity
+              </Button>
+            )}
+            </div>
+            <Button onClick={handleSave} className="w-full py-5" loading={isSaving}>
+              Save Activity
             </Button>
-          )}
-          <Button onClick={handleSave} className="w-full" loading={isSaving}>
-            Save Activity
-          </Button>
+          </div>
         </div>
       </AppleLikePopover>
 
