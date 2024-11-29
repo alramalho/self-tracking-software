@@ -344,7 +344,7 @@ const ProfilePage: React.FC = () => {
           </AppleLikePopover>
         )}
 
-        <Tabs defaultValue="history" className="w-full">
+        <Tabs defaultValue="plans" className="w-full">
           <TabsList className="grid w-full grid-cols-2 h-13">
             <TabsTrigger value="plans">
               <div className="flex flex-col items-center">
