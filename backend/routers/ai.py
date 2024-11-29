@@ -12,14 +12,21 @@ from auth.clerk import is_clerk_user_ws
 from auth.clerk import is_clerk_user_ws
 from services.notification_manager import NotificationManager
 from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsException
+from gateways.messages import MessagesGateway
 from entities.activity import ActivityEntry
 from analytics.posthog import posthog
+from services.hume_service import EmotionWithColor, EMOTION_COLORS, HUME_SCORE_FILTER_THRESHOLD
+from gateways.database.mongodb import MongoDBGateway
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
 
 from fastapi import APIRouter
 router = APIRouter(prefix="/ai")
 
 activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
+messages_gateway = MessagesGateway()
+
 
 @router.websocket("/connect")
 async def websocket_endpoint(websocket: WebSocket):
@@ -41,6 +48,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         output_mode = message.get("output_mode", "text")
                         audio_data = message.get("audio_data")
                         audio_format = message.get("audio_format")
+
 
                         text_response, audio_response, extracted_activity_entries = (
                             await process_message(websocket, user.id, text, input_mode, output_mode, audio_data, audio_format)
@@ -68,37 +76,16 @@ async def websocket_endpoint(websocket: WebSocket):
                             "text": text_response,
                         }
 
-                        # for activity_entry in extracted_activity_entries:
-                        #     try:
-                        #         activities_gateway.create_activity_entry(
-                        #             ActivityEntry.new(
-                        #             user_id=user.id,
-                        #             activity_id=activity_entry.activity_id,
-                        #             date=activity_entry.date,
-                        #             quantity=activity_entry.quantity,
-                        #             )
-                        #         )
-                        #     except ActivityEntryAlreadyExistsException as e:
-                        #         existent_activity_entry = activities_gateway.get_activity_entry_by_activity_and_date(activity_entry.activity_id, activity_entry.date)
-                        #         existent_activity_entry.quantity = existent_activity_entry.quantity + activity_entry.quantity
-                        #         activities_gateway.update_activity_entry(existent_activity_entry)
-                        #         logger.info(f"Updated activity entry {existent_activity_entry.id} with new quantity {existent_activity_entry.quantity}")
-
-                        #     except Exception as e:
-                        #         logger.error(f"Error creating activity entry, continuing. Error: {e}")
-                        
                         if output_mode == "voice" and audio_response:
                             response_data["audio"] = base64.b64encode(audio_response).decode("utf-8")
 
                         await websocket.send_json(response_data)
     
                         if len(extracted_activity_entries) > 0:
-                            await websocket.send_json(
-                                {
+                            await websocket.send_json({
                                 "type": "activities_update",
                                 "new_activities_notification": f"Extracted {len(extracted_activity_entries)} new activities. Check your notifications for more details.",
-                            }
-                        )
+                            })
 
             except Exception as e:
                 traceback.print_exc()
@@ -113,9 +100,134 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
 
 
-@router.post("/hume-callback")
-async def hume_callback(request: Request):
+
+class HumeEmotion(BaseModel):
+    name: str
+    score: float
+
+class HumePrediction(BaseModel):
+    text: str
+    time: Dict[str, float]
+    confidence: float
+    speaker_confidence: Optional[float]
+    emotions: List[HumeEmotion]
+
+class HumeGroupedPrediction(BaseModel):
+    id: str
+    predictions: List[HumePrediction]
+
+class HumeProsodyModel(BaseModel):
+    metadata: Dict[str, Any]
+    grouped_predictions: List[HumeGroupedPrediction]
+
+class HumeModels(BaseModel):
+    prosody: HumeProsodyModel
+
+class HumeFileResult(BaseModel):
+    file: str
+    file_type: str
+    models: HumeModels
+
+class HumeResults(BaseModel):
+    predictions: List[HumeFileResult]
+    errors: List[Any]
+
+class HumeSource(BaseModel):
+    type: str
+    filename: str
+    content_type: str
+    md5sum: str
+
+class HumePredictionWrapper(BaseModel):
+    source: HumeSource
+    results: HumeResults
+
+class HumeCallbackData(BaseModel):
+    job_id: str
+    status: str
+    predictions: List[HumePredictionWrapper]
+
+def process_hume_results(predictions: List[HumePredictionWrapper]) -> List[EmotionWithColor]:
+    all_emotions = []
+    
+    for prediction in predictions:
+        for pred in prediction.results.predictions:
+            for group in pred.models.prosody.grouped_predictions:
+                for pred in group.predictions:
+                    emotions = [
+                        EmotionWithColor(
+                            name=e.name,
+                            score=e.score,
+                            color=EMOTION_COLORS.get(e.name, "#000000"),
+                        )
+                        for e in pred.emotions
+                    ]
+                    all_emotions.extend(emotions)
+
+    # Average scores for same emotions
+    emotion_dict = {}
+    for emotion in all_emotions:
+        if emotion.name in emotion_dict:
+            emotion_dict[emotion.name].append(emotion.score)
+        else:
+            emotion_dict[emotion.name] = [emotion.score]
+
+    # Create final emotion list with averaged scores
+    all_averaged_emotions = [
+        EmotionWithColor(
+            name=name,
+            score=sum(scores) / len(scores),
+            color=EMOTION_COLORS.get(name, "#000000"),
+        )
+        for name, scores in emotion_dict.items()
+    ]
+
+    # Sort all emotions by score
+    sorted_emotions = sorted(
+        all_averaged_emotions, key=lambda x: x.score, reverse=True
+    )
+
+    # Filter by threshold, if none pass return just the highest scoring emotion
+    final_emotions = [
+        e for e in sorted_emotions 
+        if e.score >= HUME_SCORE_FILTER_THRESHOLD
+    ]
+    if not final_emotions and sorted_emotions:
+        final_emotions = [sorted_emotions[0]]
+
+    return final_emotions
+
+@router.post("/hume-callback/{message_id}")
+async def hume_callback(message_id: str, request: Request):
     data = await request.json()
-    logger.info(f"Received Hume callback: {data}")
-    # Here you can process the Hume results further if needed
-    return {"status": "success"}
+    logger.info(f"Received Hume callback for message {message_id}: {data}")
+    
+    try:
+        # Parse and validate the data
+        callback_data = HumeCallbackData(**data)
+        
+        # Check job status
+        if callback_data.status != 'COMPLETED':
+            return {"status": "error", "message": f"Job not completed, status: {callback_data.status}"}
+
+        # Process emotions from predictions
+        emotions = process_hume_results(callback_data.predictions)
+        
+        # Get the specific message from the database
+        message = messages_gateway.get_message_by_id(message_id)
+        
+        if not message:
+            return {"status": "error", "message": f"Message {message_id} not found"}
+            
+        message.emotions = [emotion.dict() for emotion in emotions]
+        
+        # Update the message in the database
+        messages_gateway.update_message(message)
+        
+        logger.info(f"Updated message {message_id} with emotions: {emotions}")
+        return {"status": "success"}
+        
+    except Exception as e:
+        logger.error(f"Error processing Hume callback: {e}")
+        logger.error(traceback.format_exc())
+        return {"status": "error", "message": str(e)}

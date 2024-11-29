@@ -75,7 +75,7 @@ class EmotionPrediction(BaseModel):
 
 
 async def process_audio_with_hume(
-    audio_data: bytes, audio_format: str
+    audio_data: bytes, audio_format: str, message_id: str = None
 ) -> List[EmotionWithColor]:
     logger.log("HUME", f"Processing audio with Hume: {audio_format}")
     try:
@@ -85,7 +85,11 @@ async def process_audio_with_hume(
 
         # Prepare the form data
         form_data = aiohttp.FormData()
-        form_data.add_field("json", json.dumps({"models": {"prosody": {}}}))
+        callback_url = f"{os.getenv('API_URL')}/ai/hume-callback/{message_id}" if message_id else None
+        form_data.add_field("json", json.dumps({
+            "models": {"prosody": {}},
+            "callback_url": callback_url
+        }))
         form_data.add_field(
             "file",
             audio_data,
@@ -107,100 +111,7 @@ async def process_audio_with_hume(
                 job_data = await response.json()
                 job_id = job_data["job_id"]
                 logger.log("HUME", f"Started job: {job_id}")
-
-            # Poll for results
-            max_attempts = 30
-            attempt = 0
-
-            while attempt < max_attempts:
-                async with session.get(
-                    f"{HUME_BATCH_URL}/{job_id}/predictions", headers=headers
-                ) as response:
-                    if response.status < 300:
-                        response_data = await response.json()
-                        if len(response_data) > 0:
-                            predictions = response_data[0].get('results', {}).get('predictions', [])
-                            if predictions and len(predictions) > 0:
-                                logger.log(
-                                    "HUME",
-                                    f"Received predictions: {json.dumps(response_data, indent=2)}",
-                                )
-                                break
-                    elif response.status == 400 and "in progress" in await response.text():
-                        logger.log("HUME", f"Job still in progress: {job_id}")
-                    else:
-                        logger.error(
-                            f"Failed to get predictions (status {response.status}): {await response.text()}"
-                        )
-                        return []
-
-                await asyncio.sleep(1)
-                attempt += 1
-
-            if attempt >= max_attempts:
-                logger.error("Timeout waiting for Hume predictions")
-                return []
-
-            # Process the results
-            all_emotions = []
-            predictions = response_data[0]['results']['predictions']
-            
-            for prediction in predictions:
-                if 'models' in prediction and 'prosody' in prediction['models']:
-                    prosody_data = prediction['models']['prosody']
-                    
-                    if 'grouped_predictions' in prosody_data:
-                        for group in prosody_data['grouped_predictions']:
-                            if 'predictions' in group:
-                                for pred in group['predictions']:
-                                    if 'emotions' in pred:
-                                        emotions = [
-                                            EmotionWithColor(
-                                                name=e["name"],
-                                                score=e["score"],
-                                                color=EMOTION_COLORS.get(e["name"], "#000000"),
-                                            )
-                                            for e in pred["emotions"]
-                                        ]
-                                        all_emotions.extend(emotions)
-
-            # Average scores for same emotions
-            emotion_dict = {}
-            for emotion in all_emotions:
-                if emotion.name in emotion_dict:
-                    emotion_dict[emotion.name].append(emotion.score)
-                else:
-                    emotion_dict[emotion.name] = [emotion.score]
-
-            # Create final emotion list with averaged scores
-            # First create all emotions with averaged scores
-            all_averaged_emotions = [
-                EmotionWithColor(
-                    name=name,
-                    score=sum(scores) / len(scores),
-                    color=EMOTION_COLORS.get(name, "#000000"),
-                )
-                for name, scores in emotion_dict.items()
-            ]
-
-            # Sort all emotions by score
-            sorted_emotions = sorted(
-                all_averaged_emotions, key=lambda x: x.score, reverse=True
-            )
-
-            # Filter by threshold, if none pass return just the highest scoring emotion
-            final_emotions = [
-                e for e in sorted_emotions 
-                if e.score >= HUME_SCORE_FILTER_THRESHOLD
-            ]
-            if not final_emotions and sorted_emotions:
-                final_emotions = [sorted_emotions[0]]
-
-            logger.log(
-                "HUME",
-                f"Processed emotions: {json.dumps([e.dict() for e in final_emotions], indent=2)}",
-            )
-            return final_emotions
+                return []  # Return empty list immediately, emotions will be added via callback
 
     except Exception as e:
         logger.error(f"Error in Hume API connection: {e}")

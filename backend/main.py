@@ -1,3 +1,4 @@
+import os
 from loguru import logger
 import sys
 
@@ -13,6 +14,7 @@ if __name__ == "__main__":
         + "/clerk/webhook",
     )
 
+    os.environ["API_URL"] = public_url
     ssl_keyfile = "../localhost.key"
     ssl_certfile = "../localhost.crt"
 

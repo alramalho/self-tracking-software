@@ -290,7 +290,7 @@ class Assistant(object):
         self.recent_activities_string = recent_activities_string
 
     def get_response(
-        self, user_input: str, emotions: List[Emotion] = []
+        self, user_input: str, message_id: str, emotions: List[Emotion] = []
     ) -> Tuple[str, List[ExtractedActivityEntry]]:
         is_first_message_in_more_than_a_day = (
             len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
@@ -298,7 +298,8 @@ class Assistant(object):
 
         self.memory.write(
             Message.new(
-                user_input,
+                id=message_id,
+                text=user_input,
                 sender_name=self.user.name,
                 sender_id=self.user.id,
                 recipient_name=self.name,
@@ -334,6 +335,7 @@ class Assistant(object):
         Now here's your actual conversation history with the user:
         {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=3*60)}
 
+        {f"<system note>The detected user's emotions on HIS LAST MESSAGE are: {[f'{e.emotion} ({e.score * 100:.2f}%)' for e in emotions]}</system note>" if emotions else ""}
         
         Only output message to be sent to the user.
         """
