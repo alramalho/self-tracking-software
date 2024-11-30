@@ -428,23 +428,24 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             }
 
         friends = [
-            users_gateway.get_user_by_id(friend_id).dict()
+            users_gateway.get_user_by_id(friend_id)
             for friend_id in current_user.friend_ids
         ]
-        friends_activities_entries = [
-            entry.dict()
-            for friend_id in current_user.friend_ids
+        users = [*friends, current_user]
+        users_activities_entries = [
+            entry
+            for user in users
             for entry in activities_gateway.get_most_recent_activity_entries(
-                friend_id, limit=10
+                user.id, limit=10
             )
         ]
-        sorted_friends_activities_entries = sorted(
-            friends_activities_entries, key=lambda x: x["created_at"], reverse=True
+        sorted_users_activities_entries = sorted(
+            users_activities_entries, key=lambda x: x.created_at, reverse=True
         )[:MAX_TIMELINE_ENTRIES]
-        friends_activities = [
-            activities_gateway.get_activity_by_id(aentry["activity_id"]).dict()
-            for aentry in sorted_friends_activities_entries
-            if activities_gateway.get_activity_by_id(aentry["activity_id"])
+        users_activities = [
+            activities_gateway.get_activity_by_id(aentry.activity_id)
+            for aentry in sorted_users_activities_entries
+            if activities_gateway.get_activity_by_id(aentry.activity_id)
         ]
 
         execution_time = time.time() - start_time
@@ -457,9 +458,14 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
         )
 
         return {
-            "recommended_activity_entries": friends_activities_entries,
-            "recommended_activities": friends_activities,
-            "recommended_users": friends,
+            "recommended_activity_entries": [
+                aentry.dict() for aentry in users_activities_entries
+            ],
+            "recommended_activities": [
+                exclude_embedding_fields(activity.dict())
+                for activity in users_activities
+            ],
+            "recommended_users": [user.dict() for user in users],
         }
     except Exception as e:
         logger.error(f"Failed to get timeline data: {e}")
