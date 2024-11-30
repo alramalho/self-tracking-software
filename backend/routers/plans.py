@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Body, HTTPException
 from typing import Dict, List
 from auth.clerk import is_clerk_user
 from entities.user import User
-from controllers.plan_controller import PlanController
+from controllers.plan_controller import PlanController, GeneratedPlanUpdate
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
 from services.notification_manager import NotificationManager
@@ -16,6 +16,10 @@ from gateways.plan_invitations import PlanInvitationsGateway
 from shared.utils import exclude_embedding_fields
 from entities.plan_invitation import PlanInvitation
 from constants import URL
+from entities.activity import Activity
+
+
+
 router = APIRouter()
 
 plan_controller = PlanController()
@@ -36,13 +40,14 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
     goal = data.get("goal")
     finishing_date = data.get("finishingDate")
     plan_description = data.get("planDescription")
+    user_defined_activities = [Activity(**activity) for activity in data.get("userDefinedActivities", [])]
 
     if not goal:
         raise HTTPException(
             status_code=400, detail="Goal not set in onboarding progress"
         )
 
-    plans = plan_controller.generate_plans(goal, finishing_date, plan_description)
+    plans = plan_controller.generate_plans(goal, finishing_date, plan_description, user_defined_activities)
     return {"plans": plans}
 
 @router.post("/create-plan")
@@ -328,29 +333,22 @@ async def leave_plan(plan_id: str, current_user: User = Depends(is_clerk_user)):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
 
+    
 @router.post("/plans/{plan_id}/update")
 async def update_plan(
     plan_id: str,
-    data: Dict = Body(...),
+    generated_plan_update: GeneratedPlanUpdate,
     current_user: User = Depends(is_clerk_user)
 ):
-    plan = plan_controller.get_plan(plan_id)
-    if not plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
-    
-    if plan.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this plan")
-    
-    updated_plan_data = data.get("updatedPlan")
-    if not updated_plan_data:
-        raise HTTPException(status_code=400, detail="Updated plan data is required")
-    
-    # Update the plan while preserving its ID and user_id
-    updated_plan = plan_controller.update_plan_from_generated(
-        plan_id=plan_id,
-        user_id=current_user.id,
-        generated_plan=updated_plan_data
-    )
-    
-    return {"plan": updated_plan}
+    try:
+        updated_plan = plan_controller.update_plan_from_generated(
+            plan_id=plan_id,
+            user_id=current_user.id,
+            generated_plan_update=generated_plan_update
+        )
+        return {"plan": updated_plan}
+    except Exception as e:
+        logger.error(f"Failed to update plan: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))
 
