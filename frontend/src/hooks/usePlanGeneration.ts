@@ -25,7 +25,7 @@ export const usePlanGeneration = () => {
           } these activities in plan:\n${config.activities
             .map(
               (activity) =>
-                `- "${activity.title}" measured in "${activity.measure}"`
+                `- "${activity.title}" measured in "${activity.measure}" with emoji "${activity.emoji}""`
             )
             .join("\n")}\n\n`
         : "";
@@ -44,6 +44,7 @@ export const usePlanGeneration = () => {
       goal: config.goal,
       finishingDate: config.finishingDate,
       planDescription: fullDescription,
+      userDefinedActivities: config.activities,
     });
 
     if (!response.data.plans?.[0]) {

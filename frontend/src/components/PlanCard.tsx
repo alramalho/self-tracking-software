@@ -9,6 +9,8 @@ import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import PlanEditStep from "./PlanEditStep";
 import ConfirmDialog from "./ConfirmDialog";
+import PlanConfigurationForm from "./PlanConfigurationForm";
+import { GeneratedPlan } from "@/contexts/UserPlanContext";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -19,6 +21,10 @@ interface PlanCardProps {
   onInviteSuccess: () => void;
   hideInviteButton?: boolean;
   onPlanRemoved?: () => void;
+}
+
+interface UpdatePlanResponse {
+  plan: ApiPlan;
 }
 
 const PlanCard: React.FC<PlanCardProps> = ({
@@ -35,6 +41,20 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const api = useApiWithAuth();
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+
+  const updatePlan = async (planId: string, updatedPlan: GeneratedPlan) => {
+    const response = await api.post<UpdatePlanResponse>(`/plans/${planId}/update`, {
+      goal: updatedPlan.goal,
+      emoji: updatedPlan.emoji,
+      finishing_date: updatedPlan.finishing_date,
+      activities: updatedPlan.activities,
+      sessions: updatedPlan.sessions,
+    });
+    userDataQuery.refetch(); // Refresh user data to get updated plan
+    return response.data.plan;
+  };
 
   const handleLeavePlan = async () => {
     toast.promise(
@@ -54,6 +74,17 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const handleSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowSettings(true);
+  };
+
+  const handleEditPlan = async (updatedPlan: GeneratedPlan) => {
+    try {
+      await updatePlan(plan.id!, updatedPlan);
+      setShowEditModal(false);
+      toast.success("Plan updated successfully");
+    } catch (error) {
+      console.error("Failed to update plan:", error);
+      toast.error("Failed to update plan");
+    }
   };
 
   return (
@@ -122,7 +153,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
         <AppleLikePopover onClose={() => setShowSettings(false)}>
           <div className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold mb-4">Plan Settings</h2>
-            {/* <Button
+            <Button
               variant="outline"
               onClick={() => {
                 setShowSettings(false);
@@ -131,7 +162,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
               className="w-full"
             >
               Edit Plan
-            </Button> */}
+            </Button>
             <Button
               variant="destructive"
               onClick={() => {
@@ -159,13 +190,12 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
       {showEditModal && (
         <AppleLikePopover onClose={() => setShowEditModal(false)}>
-          <PlanEditStep
+          <PlanConfigurationForm
+            isEdit={true}
             plan={plan}
+            title={plan.goal}
             onClose={() => setShowEditModal(false)}
-            onPlanUpdated={() => {
-              setShowEditModal(false);
-              onPlanRemoved?.();
-            }}
+            onConfirm={handleEditPlan}
           />
         </AppleLikePopover>
       )}

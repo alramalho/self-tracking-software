@@ -17,7 +17,26 @@ from bson import ObjectId
 from entities.activity import SAMPLE_SEARCH_ACTIVITY
 from copy import deepcopy
 from gateways.plan_groups import PlanGroupsGateway
+import traceback
 
+class PlanActivityUpdate(BaseModel):
+    id: str
+    title: str
+    measure: str
+    emoji: str
+
+class PlanSessionUpdate(BaseModel):
+    date: str
+    activity_id: str
+    quantity: int
+    descriptive_guide: str
+
+class GeneratedPlanUpdate(BaseModel):
+    goal: str
+    emoji: Optional[str] = None
+    finishing_date: Optional[str] = None
+    activities: List[PlanActivityUpdate]
+    sessions: List[PlanSessionUpdate]
 
 class PlanController:
     def __init__(self):
@@ -74,63 +93,80 @@ class PlanController:
     def _process_generated_plan_activities(
         self,
         user_id: str,
-        generated_plan_data: Dict[str, Any]
+        generated_plan_data: GeneratedPlanUpdate
     ) -> List[Activity]:
         """Helper method to process and create activities from generated plan data"""
-        created_activities = []
-        for activity in generated_plan_data.get("activities", []):
-            converted_activity = Activity.new(
-                id=activity.get("id"),
-                user_id=user_id,
-                title=activity.get("title"),
-                measure=activity.get("measure"),
-                emoji=activity.get("emoji"),
+        new_plan_activities = []
+        # Get existing user activities for matching
+        user_activities = self.activities_gateway.get_all_activities_by_user_id(user_id)
+        
+        for activity in generated_plan_data.activities:
+            # Check if activity already exists (matching title and measure)
+            existing_activity = next(
+                (a for a in user_activities 
+                 if a.title.lower() == activity.title.lower() 
+                 and a.measure.lower() == activity.measure.lower()),
+                None
             )
-            try:
-                created_activities.append(
-                    self.activities_gateway.create_activity(converted_activity)
+            
+            if existing_activity:
+                # Use existing activity ID
+                activity.id = existing_activity.id
+                new_plan_activities.append(existing_activity)
+            else:
+                # Create new activity with new ID
+                converted_activity = Activity.new(
+                    id=str(ObjectId()),
+                    user_id=user_id,
+                    title=activity.title,
+                    measure=activity.measure,
+                    emoji=activity.emoji,
                 )
-            except ActivityAlreadyExistsException:
-                logger.info(
-                    f"Activity {converted_activity.id} ({converted_activity.title}) already exists"
-                )
-        return created_activities
+                try:
+                    new_plan_activities.append(
+                        self.activities_gateway.create_activity(converted_activity)
+                    )
+                except ActivityAlreadyExistsException:
+                    logger.info(
+                        f"Activity {converted_activity.id} ({converted_activity.title}) already exists"
+                    )
+        return new_plan_activities
 
     def _create_plan_sessions(
         self,
-        generated_plan_data: Dict[str, Any]
+        generated_plan_data: GeneratedPlanUpdate
     ) -> List[PlanSession]:
         """Helper method to create plan sessions from generated plan data"""
         return [
-            PlanSession(**session)
-            for session in generated_plan_data.get("sessions", [])
-            if session.get("activity_id")
+            PlanSession(**session.dict())
+            for session in generated_plan_data.sessions
+            if session.activity_id
         ]
 
     def create_plan_from_generated_plan(
         self,
         user_id: str,
-        generated_plan_data: Dict[str, Any]
+        generated_plan_data: GeneratedPlanUpdate
     ) -> Tuple[Plan, List[Activity]]:
         logger.log(
             "CONTROLLERS", f"Creating plan from generated plan for user {user_id}"
         )
         
         # Process activities and sessions
-        created_activities = self._process_generated_plan_activities(user_id, generated_plan_data)
+        new_plan_activities = self._process_generated_plan_activities(user_id, generated_plan_data)
         sessions = self._create_plan_sessions(generated_plan_data)
         
         # Create new plan
         plan = Plan.new(
             user_id=user_id,
-            goal=generated_plan_data["goal"],
-            emoji=generated_plan_data.get("emoji", ""),
-            finishing_date=generated_plan_data.get("finishing_date", None),
+            goal=generated_plan_data.goal,
+            emoji=generated_plan_data.emoji,
+            finishing_date=generated_plan_data.finishing_date,
             sessions=sessions,
         )
         
         self.db_gateway.write(plan.dict())
-        return plan, created_activities
+        return plan, new_plan_activities
 
     def get_all_user_active_plans(self, user: User) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
@@ -215,6 +251,7 @@ class PlanController:
         goal: str,
         finishing_date: Optional[str] = None,
         plan_description: Optional[str] = None,
+        user_defined_activities: Optional[List[Activity]] = None,
     ) -> List[Dict]:
         logger.log("CONTROLLERS", f"Generating plans for goal: {goal}")
         current_date = datetime.now().strftime("%Y-%m-%d, %A")
@@ -276,7 +313,7 @@ class PlanController:
                 ..., description="List of sessions weeks for this plan"
             )
 
-        def generate_plan_for_intensity(intensity: str) -> Dict:
+        def generate_plan_for_intensity(intensity: str, user_defined_activities: List[Activity]) -> Dict:
             class GeneratePlansResponse(BaseModel):
                 reasoning: str = Field(
                     ...,
@@ -292,10 +329,30 @@ class PlanController:
                 GeneratePlansResponse,
             )
 
-            new_activities = [
-                {**activity.dict(), "id": str(ObjectId())}
-                for activity in response.plan.activities
-            ]
+            # Process activities with matching against existing ones
+            new_activities = []
+            for activity in response.plan.activities:
+                # Check if activity already exists (matching title and measure)
+                existing_activity = next(
+                    (a for a in user_defined_activities 
+                     if a.title.lower() == activity.title.lower() 
+                     and a.measure.lower() == activity.measure.lower()),
+                    None
+                )
+                
+                if existing_activity:
+                    # Use existing activity's data and ID
+                    new_activities.append({
+                        **activity.dict(),
+                        "id": existing_activity.id
+                    })
+                else:
+                    # Create new activity with new ID
+                    new_activities.append({
+                        **activity.dict(),
+                        "id": str(ObjectId())
+                    })
+
             return {
                 "goal": goal,
                 "finishing_date": finishing_date,
@@ -324,7 +381,7 @@ class PlanController:
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             future_to_intensity = {
-                executor.submit(generate_plan_for_intensity, intensity): intensity
+                executor.submit(generate_plan_for_intensity, intensity, user_defined_activities): intensity
                 for intensity in intensities
             }
             simplified_plans = []
@@ -335,9 +392,10 @@ class PlanController:
                     plan = future.result()
                     simplified_plans.append(plan)
                 except Exception as exc:
-                    print(
+                    logger.error(
                         f"{intensity} intensity plan generation generated an exception: {exc}"
                     )
+                    logger.error(traceback.format_exc())
 
         return simplified_plans
 
@@ -578,7 +636,7 @@ class PlanController:
         self,
         plan_id: str,
         user_id: str,
-        generated_plan: Dict[str, Any]
+        generated_plan_update: GeneratedPlanUpdate
     ) -> Plan:
         logger.log("CONTROLLERS", f"Updating plan {plan_id} from generated plan")
         
@@ -591,12 +649,12 @@ class PlanController:
             raise ValueError("Not authorized to update this plan")
         
         # Process activities and sessions using shared methods
-        self._process_generated_plan_activities(user_id, generated_plan)
-        new_sessions = self._create_plan_sessions(generated_plan)
+        self._process_generated_plan_activities(user_id, generated_plan_update)
+        new_sessions = self._create_plan_sessions(generated_plan_update)
         
         # Update the existing plan with new data while preserving important fields
         existing_plan.sessions = new_sessions
-        existing_plan.emoji = generated_plan.get("emoji", existing_plan.emoji)
+        existing_plan.emoji = generated_plan_update.emoji or existing_plan.emoji
         
         # Save the updated plan
         self.update_plan(existing_plan)
