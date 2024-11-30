@@ -98,7 +98,8 @@ export interface GeneratedPlan extends Omit<Plan, "finishing_date" | "members">{
   intensity: string;
 }
 
-export interface ApiPlan extends Omit<Plan, "finishing_date" | "sessions"> {
+export interface ApiPlan extends Omit<Plan, "id" | "finishing_date" | "sessions"> {
+  id: string;
   finishing_date?: string;
   sessions: {
     date: string;

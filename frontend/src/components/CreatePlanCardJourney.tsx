@@ -29,6 +29,7 @@ interface CreatePlanCardJourneyState {
   selectedEmoji: string;
   planDescription: string;
   generatedPlans: GeneratedPlan[];
+  expiresAt?: number;
 }
 
 const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
@@ -42,6 +43,13 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
     const saved = localStorage.getItem('createPlanCardJourneyState');
     if (saved) {
       const parsed = JSON.parse(saved);
+      
+      // Check if the saved state has expired (12 hours)
+      if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+        localStorage.removeItem('createPlanCardJourneyState');
+        return getDefaultState();
+      }
+
       return {
         ...parsed,
         finishingDate: parsed.finishingDate ? new Date(parsed.finishingDate) : undefined,
@@ -59,6 +67,7 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
     selectedEmoji: '',
     planDescription: '',
     generatedPlans: [],
+    expiresAt: Date.now() + (12 * 60 * 60 * 1000), // 12 hours from now
   });
 
   // Replace individual state declarations with a single state object
@@ -89,12 +98,18 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
     selectedEmoji,
     planDescription,
     generatedPlans,
+    expiresAt,
   } = state;
 
   // Save to localStorage whenever state changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('createPlanCardJourneyState', JSON.stringify(state));
+      // Ensure expiresAt is set when saving
+      const stateToSave = {
+        ...state,
+        expiresAt: state.expiresAt || Date.now() + (12 * 60 * 60 * 1000),
+      };
+      localStorage.setItem('createPlanCardJourneyState', JSON.stringify(stateToSave));
     }
   }, [state]);
 
@@ -178,6 +193,14 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
           />
         );
       case 4:
+        if (!selectedPlan) {
+          if (localStorage.getItem('createPlanCardJourneyState')) {
+            localStorage.removeItem('createPlanCardJourneyState');
+            window.location.reload();
+          }
+
+          return <span>Oops, something went wrong. Please be so kind to open a bug request!</span>;
+        }
         return (
           <InviteStep
             selectedPlan={selectedPlan}
