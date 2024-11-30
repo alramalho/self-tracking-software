@@ -6,7 +6,7 @@ import InviteButton from "./InviteButton";
 import { ApiPlan } from "@/contexts/UserPlanContext";
 
 interface InviteStepProps {
-  selectedPlan: ApiPlan | null;
+  selectedPlan: ApiPlan;
   onNext: () => void;
   userDataQuery: any;
 }
@@ -24,7 +24,7 @@ const InviteStep: React.FC<InviteStepProps> = ({
       <CardContent>
         <InviteButton
           embedded={true}
-          planId={selectedPlan!.id!}
+          planId={selectedPlan.id}
           onInviteSuccess={() => {
             userDataQuery.refetch();
           }}
