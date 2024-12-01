@@ -13,7 +13,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export function DatePicker({ selected, onSelect, disablePastDates = false, disableFutureDates = false }: { selected?: Date; onSelect: (date: Date | undefined) => void, disablePastDates?: boolean, disableFutureDates?: boolean }) {
+interface DatePickerProps {
+  selected?: Date;
+  onSelect: (date: Date | undefined) => void;
+  disablePastDates?: boolean;
+  disableFutureDates?: boolean;
+  id?: string;
+}
+
+export function DatePicker({
+  selected,
+  onSelect,
+  disablePastDates,
+  disableFutureDates,
+  id,
+}: DatePickerProps) {
+  const [open, setOpen] = React.useState(false)
   const today = new Date();
   const disabledDays = [];
   if (disablePastDates) {
@@ -24,9 +39,10 @@ export function DatePicker({ selected, onSelect, disablePastDates = false, disab
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           variant={"outline"}
           className={cn(
             "w-[280px] justify-start text-left font-normal",
@@ -41,7 +57,10 @@ export function DatePicker({ selected, onSelect, disablePastDates = false, disab
         <Calendar
           mode="single"
           selected={selected}
-          onSelect={onSelect}
+          onSelect={(date) => {
+            onSelect(date);
+            setOpen(false);
+          }}
           initialFocus
           disabled={disabledDays}
         />

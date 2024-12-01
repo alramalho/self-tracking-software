@@ -401,9 +401,9 @@ class PlanController:
 
     def _count_number_of_weeks_till(self, finishing_date: Optional[str] = None) -> int:
         if finishing_date:
-            current_date = datetime.now()
+            current_date = datetime.now(UTC)
             try:
-                finishing_date = datetime.strptime(finishing_date, "%Y-%m-%d")
+                finishing_date = datetime.strptime(finishing_date, "%Y-%m-%d").replace(tzinfo=UTC)
             except ValueError:
                 finishing_date = datetime.fromisoformat(finishing_date)
             return (finishing_date - current_date).days // 7 + 1

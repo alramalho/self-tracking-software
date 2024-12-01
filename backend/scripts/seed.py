@@ -51,7 +51,7 @@ def generate_dummy_data():
     users = [
         User.new(id=str(ObjectId("666666666666666666666665")), name="Alex", email="alexandre.ramalho.1998@gmail.com", clerk_id="user_2kUW1zytLj9ERvDqVDDFCvIp5Un", picture="https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c", username="alex", friend_ids=["666666666666666666666667"], referred_user_ids=["666666666666666666666666"]),
         User.new(id=str(ObjectId("666666666666666666666666")), name="Alice", email="alice@example.com", username="alice"),
-        User.new(id=str(ObjectId("666666666666666666666667")), name="Bamboozle", email="irrelevant@hthlm.com", username="bamboozle", clerk_id="user_2pCjfvhKcNEigWm0SORfZkBQjq5", friend_ids=["666666666666666666666665"]),
+        User.new(id=str(ObjectId("666666666666666666666667")), name="E2E", email="tyvmgldzsifhjcpuwn@hthlm.com", username="bamboozle", clerk_id="user_2oUKXciL3h0y3QFcNOqHM9GTwUp", friend_ids=["666666666666666666666665"]),
         User.new(id=str(ObjectId("666666666666666666666668")), name="Charlie", email="charlie@example.com", username="charlie"),
         User.new(id=str(ObjectId("666666666666666666666669")), name="Tomas", email="tomas@example.com", username="tomas", picture="https://example.com/tomas.jpg")
     ]
