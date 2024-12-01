@@ -47,6 +47,11 @@ def _make_loops_request(
     payload: Optional[dict] = None,
     params: Optional[dict] = None
 ) -> LoopsResponse:
+    
+    if not LOOPS_API_KEY:
+        logger.error("LOOPS", "LOOPS_API_KEY is not set")
+        return {"success": False, "id": "", "message": "LOOPS_API_KEY is not set"}
+    
     url = f"https://app.loops.so/api/v1/{endpoint}"
     headers = {
         "Authorization": f"Bearer {LOOPS_API_KEY}",

@@ -89,6 +89,8 @@ export interface Plan {
     activity_id?: string;
     activity_name?: string;
   }[];
+  notes?: string;
+  duration_type?: "habit" | "lifestyle" | "custom";
 }
 
 export interface GeneratedPlan extends Omit<Plan, "finishing_date" | "members">{

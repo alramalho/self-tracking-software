@@ -5,7 +5,7 @@ from entities.plan_group import PlanGroupMember
 from entities.activity import Activity
 from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Literal
 from pydantic import BaseModel, Field, create_model
 from gateways.activities import ActivitiesGateway, ActivityAlreadyExistsException
 from gateways.users import UsersGateway
@@ -37,6 +37,8 @@ class GeneratedPlanUpdate(BaseModel):
     finishing_date: Optional[str] = None
     activities: List[PlanActivityUpdate]
     sessions: List[PlanSessionUpdate]
+    notes: Optional[str] = None
+    duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None
 
 class PlanController:
     def __init__(self):
@@ -162,6 +164,8 @@ class PlanController:
             goal=generated_plan_data.goal,
             emoji=generated_plan_data.emoji,
             finishing_date=generated_plan_data.finishing_date,
+            notes=generated_plan_data.notes,
+            duration_type=generated_plan_data.duration_type,
             sessions=sessions,
         )
         
@@ -655,6 +659,9 @@ class PlanController:
         # Update the existing plan with new data while preserving important fields
         existing_plan.sessions = new_sessions
         existing_plan.emoji = generated_plan_update.emoji or existing_plan.emoji
+        existing_plan.duration_type = generated_plan_update.duration_type or existing_plan.duration_type
+        existing_plan.notes = generated_plan_update.notes or existing_plan.notes
+        existing_plan.finishing_date = generated_plan_update.finishing_date or existing_plan.finishing_date
         
         # Save the updated plan
         self.update_plan(existing_plan)

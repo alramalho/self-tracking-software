@@ -66,6 +66,7 @@ async def create_plan(
         emoji=plan_data.get("emoji", ""),
         sessions=plan_data.get("sessions", []),
         finishing_date=plan_data.get("finishing_date", ""),
+        notes=plan_data.get("notes", None),
     )
     new_plan, created_activities = plan_controller.create_plan_from_generated_plan(
         current_user.id, generated_plan_data

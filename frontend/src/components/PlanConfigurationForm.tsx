@@ -21,6 +21,7 @@ import { Check } from "lucide-react";
 import Divider from "./Divider";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { addDays } from "date-fns";
 
 interface PlanConfigurationFormProps {
   onConfirm: (plan: GeneratedPlan) => Promise<void>;
@@ -35,6 +36,7 @@ interface CachedFormState {
   onlyTheseActivities: boolean;
   description: string;
   selectedEmoji: string;
+  planDurationType: PlanDurationType["type"];
   finishingDate?: string;
   goal: string;
   expiresAt: number;
@@ -47,7 +49,7 @@ interface ActivityItemProps {
 }
 
 interface PlanDurationType {
-  type: "custom" | "habit" | "lifestyle" | null;
+  type: "custom" | "habit" | "lifestyle" | undefined;
   date?: string;
 }
 
@@ -158,6 +160,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     const cacheKey = isEdit
       ? `editPlanJourneyState_${plan?.id}`
       : "createPlanJourneyState";
+    
     const saved = localStorage.getItem(cacheKey);
 
     if (saved) {
@@ -171,6 +174,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
       return parsed;
     }
+
     return getDefaultState();
   };
 
@@ -184,15 +188,18 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       ) || []
     );
   }
-  const getDefaultState = (): CachedFormState => ({
-    activities: plan ? getPlanActivities(plan) : [],
-    onlyTheseActivities: true,
-    description: "",
-    selectedEmoji: plan?.emoji || "",
-    finishingDate: plan?.finishing_date,
-    goal: plan?.goal || "",
-    expiresAt: Date.now() + 12 * 60 * 60 * 1000, // 12 hours from now
-  });
+  const getDefaultState = (): CachedFormState => {
+    return ({
+      activities: plan ? getPlanActivities(plan) : [],
+      onlyTheseActivities: true,
+      description: "",
+      selectedEmoji: plan?.emoji || "",
+      planDurationType: plan?.duration_type,
+      finishingDate: plan?.finishing_date,
+      goal: plan?.goal || "",
+      expiresAt: Date.now() + 12 * 60 * 60 * 1000, // 12 hours from now
+    });
+  };
 
   const initialState = loadInitialState();
 
@@ -217,6 +224,12 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [goal, setGoal] = useState(initialState.goal);
   const [goalConfirmed, setGoalConfirmed] = useState(false);
+  const [planNotes, setPlanNotes] = useState("");
+  const [planDuration, setPlanDuration] = useState<PlanDurationType>({
+    type: initialState.planDurationType ?? undefined,
+    date: initialState.finishingDate || currentFinishingDate,
+  });
+
 
   // Split activities into existing and new
   const [existingActivities, setExistingActivities] = useState<Activity[]>(
@@ -230,14 +243,15 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     )
   );
 
-  // Cache state changes - update to include both activity arrays
+  // Cache state changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stateToSave: CachedFormState = {
-        activities: [...existingActivities, ...newActivities], // Combine for backwards compatibility
+        activities: [...existingActivities, ...newActivities],
         onlyTheseActivities,
         description,
         selectedEmoji,
+        planDurationType: plan?.duration_type ?? planDuration.type,
         finishingDate: currentFinishingDate,
         goal,
         expiresAt: Date.now() + 12 * 60 * 60 * 1000,
@@ -246,6 +260,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       const cacheKey = isEdit
         ? `editPlanJourneyState_${plan?.id}`
         : "createPlanJourneyState";
+
       localStorage.setItem(cacheKey, JSON.stringify(stateToSave));
     }
   }, [
@@ -258,6 +273,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     goal,
     isEdit,
     plan?.id,
+    planDuration.type
   ]);
 
   const handleGenerate = async () => {
@@ -293,13 +309,17 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         ...generatedPlan,
         emoji: selectedEmoji,
         finishing_date: currentFinishingDate,
+        notes: planNotes,
+        duration_type: planDuration.type,
       };
-      await onConfirm(enrichedPlan);
+      
       // Clear cache after successful confirmation
       const cacheKey = isEdit
         ? `editPlanJourneyState_${plan?.id}`
         : "createPlanJourneyState";
       localStorage.removeItem(cacheKey);
+      
+      await onConfirm(enrichedPlan);
     } catch (error) {
       console.error("Confirmation failed:", error);
       toast.error("Failed to confirm plan");
@@ -308,22 +328,14 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     }
   };
 
-  const [planDuration, setPlanDuration] = useState<PlanDurationType>({
-    type: null,
-    date: currentFinishingDate,
-  });
-
   const getDateFromDurationType = (type: "habit" | "lifestyle"): string => {
     const today = new Date();
-    const futureDate = new Date(today);
 
     if (type === "habit") {
-      futureDate.setDate(today.getDate() + 21); // 21 days for habit
+      return addDays(today, 21).toISOString(); // 21 days for habit
     } else {
-      futureDate.setDate(today.getDate() + 90); // 90 days for lifestyle
+      return addDays(today, 90).toISOString(); // 90 days for lifestyle
     }
-
-    return futureDate.toISOString();
   };
 
   const Number = ({
@@ -421,12 +433,15 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                   type="habit"
                   emoji="🌱"
                   title="Habit Creation"
-                  description="21 days - Recommended for forming new habits through consistent practice"
+                  description="This will set the finishing date to 21 days from now"
                   isSelected={planDuration.type === "habit"}
                   onSelect={() => {
                     const newDate = getDateFromDurationType("habit");
                     setPlanDuration({ type: "habit", date: newDate });
                     setCurrentFinishingDate(newDate);
+                    setPlanNotes(
+                      "This plan is an habit creation plan (21 days). In order to consider the habit created, all weeks must be completed."
+                    );
                   }}
                 />
 
@@ -434,12 +449,15 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                   type="lifestyle"
                   emoji="🚀"
                   title="Lifestyle Improvement"
-                  description="90 days - Ideal for meaningful lifestyle changes and long-term transformation"
+                  description="This will set the finishing date to 90 days from now"
                   isSelected={planDuration.type === "lifestyle"}
                   onSelect={() => {
                     const newDate = getDateFromDurationType("lifestyle");
                     setPlanDuration({ type: "lifestyle", date: newDate });
                     setCurrentFinishingDate(newDate);
+                    setPlanNotes(
+                      "This plan is an lifestyle improvement plan (90 days). In order to consider the lifestyle improved, at least 90% of the weeks must be completed."
+                    );
                   }}
                 />
 
@@ -454,6 +472,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                       type: "custom",
                       date: currentFinishingDate,
                     });
+                    setPlanNotes("");
                   }}
                 />
               </div>
