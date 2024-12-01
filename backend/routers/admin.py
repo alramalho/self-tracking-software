@@ -12,9 +12,13 @@ from datetime import datetime, timedelta
 from pytz import UTC
 from emails.loops import send_loops_event
 from shared.logger import logger
-from analytics import posthog
+from analytics.posthog import posthog
 from gateways.aws.ses import SESGateway
 import json
+from pydantic import BaseModel
+from typing import Optional, Set
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter()
 security = HTTPBearer()
@@ -23,6 +27,17 @@ notification_manager = NotificationManager()
 activities_gateway = ActivitiesGateway()
 s3_gateway = S3Gateway()
 ses_gateway = SESGateway()
+
+limiter = Limiter(key_func=get_remote_address)
+
+ALLOWED_ORIGINS: Set[str] = {
+    "https://tracking.so",
+    "https://app.tracking.so",
+    "http://localhost:3000"
+}
+
+BLACKLISTED_IPS: Set[str] = set()  # Add known bad IPs
+MAX_ERROR_LENGTH = 1000  # Prevent huge error messages
 
 
 async def admin_auth(
@@ -156,3 +171,95 @@ async def run_daily_validations(
         )
 
     return result
+
+
+class GlobalErrorLog(BaseModel):
+    error_message: str
+    error_digest: Optional[str] = None
+    url: str
+    referrer: str
+    user_agent: Optional[str] = None
+    timestamp: str
+
+
+@router.post("/admin/public/log-error", tags=["public"])
+@limiter.limit("3/minute")
+async def log_error(error: GlobalErrorLog, request: Request):
+    """Protected public endpoint to log client-side errors"""
+    
+    # 1. Origin Check
+    origin = request.headers.get("origin")
+    if not origin or origin not in ALLOWED_ORIGINS:
+        logger.warning(f"Blocked request from unauthorized origin: {origin}")
+        raise HTTPException(status_code=403, detail="Invalid origin")
+
+    # 2. IP Check
+    client_ip = request.client.host
+    if client_ip in BLACKLISTED_IPS:
+        logger.warning(f"Blocked request from blacklisted IP: {client_ip}")
+        raise HTTPException(status_code=403, detail="IP blocked")
+
+    # 3. Content Validation
+    if len(error.error_message) > MAX_ERROR_LENGTH:
+        raise HTTPException(status_code=400, detail="Error message too long")
+
+    # 4. Referrer Validation
+    if error.referrer != 'direct' and not any(
+        error.referrer.startswith(origin) for origin in ALLOWED_ORIGINS
+    ):
+        logger.warning(f"Suspicious referrer: {error.referrer}")
+        # Maybe don't block but flag in logs/email
+    
+    try:
+        # Extract domain from referrer
+        referrer_domain = error.referrer
+        if error.referrer and error.referrer != 'direct':
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(error.referrer)
+                referrer_domain = parsed.netloc or parsed.path
+            except:
+                referrer_domain = error.referrer
+
+        # Add request context to the log
+        context = {
+            "error_message": error.error_message,
+            "error_digest": error.error_digest,
+            "url": error.url,
+            "referrer": error.referrer,
+            "referrer_domain": referrer_domain,
+            "user_agent": error.user_agent,
+            "timestamp": error.timestamp,
+            "ip": request.client.host,
+            "environment": ENVIRONMENT,
+        }
+
+        # 5. Add security context to logs
+        context["origin"] = origin
+        context["passed_security"] = True
+        
+        # Log to your regular logging system
+        logger.error(
+            "Client Error",
+            extra=context
+        )
+        
+        # Track in PostHog
+        posthog.capture(
+            distinct_id="anonymous",
+            event="client_error",
+            properties=context
+        )
+        
+        # Send email for critical errors in production
+        if ENVIRONMENT == "production":
+            ses_gateway.send_email(
+                to="alexandre.ramalho.1998@gmail.com",
+                subject=f"Client Error in {ENVIRONMENT}",
+                html_body=f"<strong>Client Error in {ENVIRONMENT}</strong><br><br><pre>{json.dumps(context, indent=2)}</pre>",
+            )
+        
+        return {"status": "success"}
+    except Exception as e:
+        logger.exception("Failed to log client error")
+        raise HTTPException(status_code=500, detail="Failed to log error")
