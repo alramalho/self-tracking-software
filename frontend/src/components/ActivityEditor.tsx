@@ -130,6 +130,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 </div>
               ) : (
                 <div
+                  data-testid="emoji-picker-button"
                   ref={emojiButtonRef}
                   className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}

@@ -90,6 +90,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   return (
     <>
       <div
+        data-testid="plan-card"
         className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
           isSelected ? "border-blue-500" : "border-gray-200"
         }`}
@@ -108,6 +109,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
               />
             )}
             <Button
+              data-testid="plan-settings-button"
               variant="ghost"
               size="icon"
               onClick={handleSettingsClick}

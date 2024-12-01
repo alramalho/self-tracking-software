@@ -238,14 +238,15 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   };
 
   return (
-    <div className="space-y-6" onClick={(e) => setShowEmojiPicker(false)}>
+    <div data-testid="plan-configuration-form" className="space-y-6" onClick={(e) => setShowEmojiPicker(false)}>
       {!generatedPlan ? (
         <>
           <div>
-            <h3 className="text-lg font-semibold mb-2">
+            <label className="text-lg font-medium mb-2 block" htmlFor="goal">
               What&apos;s your goal?
-            </h3>
+            </label>
             <Input
+              id="goal"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               placeholder="I want to gain the habit to go to the gym 3 times a week..."
@@ -272,6 +273,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               </div>
             ) : (
               <div
+                id="emoji-picker-trigger"
                 className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -290,17 +292,21 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-2 block">
-              Set a finishing date (Optional)
-            </h3>
+            <label
+              className="text-sm font-medium mb-2 block"
+              htmlFor="date-picker-trigger"
+            >
+              Set a finishing date
+            </label>
             <DatePicker
+              id="date-picker-trigger"
               selected={
                 currentFinishingDate
                   ? new Date(currentFinishingDate)
                   : undefined
               }
               onSelect={(date: Date | undefined) =>
-                setCurrentFinishingDate(date?.toISOString().split("T")[0])
+                setCurrentFinishingDate(date?.toISOString())
               }
               disablePastDates={true}
             />
@@ -315,7 +321,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                 <p className="text-sm text-gray-500 mb-4">
                   Select from activities you&apos;ve already created
                 </p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4">
+                <div data-testid="existing-activities" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4">
                   {userData.activities
                     // Filter out activities that are in newActivities
                     .filter(
@@ -368,19 +374,22 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
           <div className="flex items-center gap-2 mb-4">
             <Switch
+              id="only-selected"
               checked={onlyTheseActivities}
               onCheckedChange={setOnlyTheseActivities}
             />
-            <span className="text-sm text-gray-500">
-              Only use selected activities for this plan
-            </span>
+            <label htmlFor="only-selected" className="text-sm text-gray-500">
+              Only use selected activities
+            </label>
           </div>
 
           <div>
             <h3 className="text-lg font-semibold mb-2">
               Additional Customization
             </h3>
+            <label htmlFor="customization">Additional Customization</label>
             <Textarea
+              id="customization"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add any specific requirements or preferences for your plan..."

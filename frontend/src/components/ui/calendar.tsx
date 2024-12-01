@@ -34,6 +34,7 @@ function Calendar({
 
   return (
     <DayPicker
+      data-testid="day-picker"
       showOutsideDays={showOutsideDays}
       disabled={disabledDays}
       className={cn("p-3", className)}
