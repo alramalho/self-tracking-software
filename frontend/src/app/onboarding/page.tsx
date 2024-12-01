@@ -51,7 +51,7 @@ export default function OnboardingPage() {
                 </div>
               </DialogTitle>
               <DialogDescription className="text-center pt-4">
-                You've successfully created your first activity!
+                You&apos;ve successfully created your first activity!
                 <br />
                 Next, we advise you to add a plan so you can have some long
                 term aggregate visibility on your activities.

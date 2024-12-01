@@ -7,7 +7,6 @@ import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
-import PlanEditStep from "./PlanEditStep";
 import ConfirmDialog from "./ConfirmDialog";
 import PlanConfigurationForm from "./PlanConfigurationForm";
 import { GeneratedPlan } from "@/contexts/UserPlanContext";
