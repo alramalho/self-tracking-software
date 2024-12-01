@@ -17,8 +17,9 @@ import toast from "react-hot-toast";
 import { DatePicker } from "@/components/ui/date-picker";
 import EmojiPicker from "emoji-picker-react";
 import { Plus } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Check } from "lucide-react";
+import Divider from "./Divider";
+import { cn } from "@/lib/utils";
 
 interface PlanConfigurationFormProps {
   onConfirm: (plan: GeneratedPlan) => Promise<void>;
@@ -44,6 +45,20 @@ interface ActivityItemProps {
   onToggle: () => void;
 }
 
+interface PlanDurationType {
+  type: 'custom' | 'habit' | 'lifestyle';
+  date?: string;
+}
+
+interface DurationOptionProps {
+  type: 'habit' | 'lifestyle' | 'custom';
+  title: string;
+  description: string;
+  emoji: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}
+
 const ActivityItem: React.FC<ActivityItemProps> = ({
   activity,
   isSelected,
@@ -66,6 +81,33 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
         <p className="text-sm font-medium text-left">{activity.title}</p>
         <p className="text-xs text-gray-500 text-left">{activity.measure}</p>
       </div>
+    </div>
+  );
+};
+
+const DurationOption: React.FC<DurationOptionProps> = ({
+  type,
+  title,
+  description,
+  emoji,
+  isSelected,
+  onSelect,
+}) => {
+  return (
+    <div
+      onClick={onSelect}
+      className={`relative flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${
+        isSelected
+          ? 'border-blue-500 bg-blue-50'
+          : 'border-gray-200 hover:bg-gray-50'
+      }`}
+    >
+      {isSelected && (
+        <Check className="absolute top-3 right-3 h-4 w-4 text-blue-500" />
+      )}
+      <span className="text-2xl mb-2">{emoji}</span>
+      <h4 className="font-medium mb-1">{title}</h4>
+      <p className="text-sm text-gray-500">{description}</p>
     </div>
   );
 };
@@ -237,15 +279,111 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     }
   };
 
+  const [planDuration, setPlanDuration] = useState<PlanDurationType>({
+    type: 'custom',
+    date: currentFinishingDate
+  });
+
+  const getDateFromDurationType = (type: 'habit' | 'lifestyle'): string => {
+    const today = new Date();
+    const futureDate = new Date(today);
+    
+    if (type === 'habit') {
+      futureDate.setDate(today.getDate() + 21); // 21 days for habit
+    } else {
+      futureDate.setDate(today.getDate() + 90); // 90 days for lifestyle
+    }
+    
+    return futureDate.toISOString();
+  };
+
+  const Number = ({ children, className }: { children: React.ReactNode, className?: string }) => (
+    <span className={cn("flex flex-shrink-0 items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-medium", className)}>
+      {children}
+    </span>
+  );
+
   return (
     <div data-testid="plan-configuration-form" className="space-y-6" onClick={(e) => setShowEmojiPicker(false)}>
       {!generatedPlan ? (
         <>
-          <div>
-            <label className="text-lg font-medium mb-2 block" htmlFor="goal">
-              What&apos;s your goal?
+          <div className="space-y-4">
+            <label className="text-lg font-medium block flex items-center gap-2">
+              <Number className="w-6 h-6" >1</Number>
+              What are you trying to achieve?
             </label>
-            <Input
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <DurationOption
+                type="habit"
+                emoji="🌱"
+                title="Habit Creation"
+                description="21 days - Recommended for forming new habits through consistent practice"
+                isSelected={planDuration.type === 'habit'}
+                onSelect={() => {
+                  const newDate = getDateFromDurationType('habit');
+                  setPlanDuration({ type: 'habit', date: newDate });
+                  setCurrentFinishingDate(newDate);
+                }}
+              />
+              
+              <DurationOption
+                type="lifestyle"
+                emoji="🚀"
+                title="Lifestyle Improvement"
+                description="90 days - Ideal for meaningful lifestyle changes and long-term transformation"
+                isSelected={planDuration.type === 'lifestyle'}
+                onSelect={() => {
+                  const newDate = getDateFromDurationType('lifestyle');
+                  setPlanDuration({ type: 'lifestyle', date: newDate });
+                  setCurrentFinishingDate(newDate);
+                }}
+              />
+              
+              <DurationOption
+                type="custom"
+                emoji="⚡️"
+                title="Custom"
+                description="Set your own timeline for achieving your goals"
+                isSelected={planDuration.type === 'custom'}
+                onSelect={() => {
+                  setPlanDuration({ type: 'custom', date: currentFinishingDate });
+                }}
+              />
+            </div>
+
+            {planDuration.type === 'custom' && (
+              <div className="mt-4">
+                <label
+                  className="text-sm font-medium mb-2 block"
+                  htmlFor="date-picker-trigger"
+                >
+                  Set a custom finishing date
+                </label>
+                <DatePicker
+                  id="date-picker-trigger"
+                  selected={
+                    currentFinishingDate
+                      ? new Date(currentFinishingDate)
+                      : undefined
+                  }
+                  onSelect={(date: Date | undefined) => {
+                    const newDate = date?.toISOString();
+                    setCurrentFinishingDate(newDate);
+                    setPlanDuration({ type: 'custom', date: newDate });
+                  }}
+                  disablePastDates={true}
+                />
+              </div>
+            )}
+          </div>
+          <Divider />
+          <div>
+            <label className="text-lg font-medium mb-2 block flex items-center gap-2" htmlFor="goal">
+              <Number className="w-6 h-6" >2</Number>
+              Great, now what exactly do you want to do?
+            </label>
+            <Textarea
               id="goal"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
@@ -253,10 +391,12 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               className="mb-4 text-[16px]"
             />
           </div>
+          <Divider />
 
           <div>
-            <h3 className="text-sm font-medium mb-2 block">
-              Choose an emoji (Optional)
+            <h3 className="text-lg font-medium mb-2 block flex items-center gap-2">
+              <Number className="w-6 h-6" >3</Number>
+              Choose a plan emoji (Optional)
             </h3>
             {showEmojiPicker ? (
               <div
@@ -291,31 +431,13 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             )}
           </div>
 
-          <div>
-            <label
-              className="text-sm font-medium mb-2 block"
-              htmlFor="date-picker-trigger"
-            >
-              Set a finishing date
-            </label>
-            <DatePicker
-              id="date-picker-trigger"
-              selected={
-                currentFinishingDate
-                  ? new Date(currentFinishingDate)
-                  : undefined
-              }
-              onSelect={(date: Date | undefined) =>
-                setCurrentFinishingDate(date?.toISOString())
-              }
-              disablePastDates={true}
-            />
-          </div>
+          <Divider />
 
           <div className="space-y-8">
             {userData?.activities && userData.activities.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold mb-2">
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <Number className="w-6 h-6" >4</Number>
                   Your Existing Activities
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">
@@ -406,11 +528,12 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             <Button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="flex-1"
+              className="flex-1 gap-2"
             >
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-foreground text-primary text-sm font-medium">5</span>
               {isGenerating ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Generating...
                 </>
               ) : isEdit ? (
