@@ -219,7 +219,7 @@ const ActivityCreationJourney: React.FC<ActivityCreationJourneyProps> = ({
           <div className="space-y-4">
             <label className="text-lg font-medium block flex items-center gap-2">
               <Number>3</Number>
-              Let's log your first entry
+              Let&apos;s log your first entry
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
