@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -20,6 +20,7 @@ import { Plus } from "lucide-react";
 import { Check } from "lucide-react";
 import Divider from "./Divider";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface PlanConfigurationFormProps {
   onConfirm: (plan: GeneratedPlan) => Promise<void>;
@@ -46,17 +47,24 @@ interface ActivityItemProps {
 }
 
 interface PlanDurationType {
-  type: 'custom' | 'habit' | 'lifestyle';
+  type: "custom" | "habit" | "lifestyle" | null;
   date?: string;
 }
 
 interface DurationOptionProps {
-  type: 'habit' | 'lifestyle' | 'custom';
+  type: "habit" | "lifestyle" | "custom";
   title: string;
   description: string;
   emoji: string;
   isSelected: boolean;
   onSelect: () => void;
+}
+
+interface StepProps {
+  stepNumber: number;
+  isVisible: boolean;
+  children: React.ReactNode;
+  ref?: React.RefObject<HTMLDivElement>;
 }
 
 const ActivityItem: React.FC<ActivityItemProps> = ({
@@ -98,8 +106,8 @@ const DurationOption: React.FC<DurationOptionProps> = ({
       onClick={onSelect}
       className={`relative flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${
         isSelected
-          ? 'border-blue-500 bg-blue-50'
-          : 'border-gray-200 hover:bg-gray-50'
+          ? "border-blue-500 bg-blue-50"
+          : "border-gray-200 hover:bg-gray-50"
       }`}
     >
       {isSelected && (
@@ -111,6 +119,26 @@ const DurationOption: React.FC<DurationOptionProps> = ({
     </div>
   );
 };
+
+const Step = React.forwardRef<HTMLDivElement, StepProps>(
+  ({ stepNumber, isVisible, children }, ref) => {
+    return (
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{
+          opacity: isVisible ? 1 : 0,
+          scale: isVisible ? 1 : 0.95,
+          pointerEvents: isVisible ? "auto" : "none",
+        }}
+        transition={{ duration: 0.3 }}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+);
+Step.displayName = "Step";
 
 const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   onConfirm,
@@ -188,6 +216,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const { generatePlan } = usePlanGeneration();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [goal, setGoal] = useState(initialState.goal);
+  const [goalConfirmed, setGoalConfirmed] = useState(false);
 
   // Split activities into existing and new
   const [existingActivities, setExistingActivities] = useState<Activity[]>(
@@ -280,244 +309,369 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   };
 
   const [planDuration, setPlanDuration] = useState<PlanDurationType>({
-    type: 'custom',
-    date: currentFinishingDate
+    type: null,
+    date: currentFinishingDate,
   });
 
-  const getDateFromDurationType = (type: 'habit' | 'lifestyle'): string => {
+  const getDateFromDurationType = (type: "habit" | "lifestyle"): string => {
     const today = new Date();
     const futureDate = new Date(today);
-    
-    if (type === 'habit') {
+
+    if (type === "habit") {
       futureDate.setDate(today.getDate() + 21); // 21 days for habit
     } else {
       futureDate.setDate(today.getDate() + 90); // 90 days for lifestyle
     }
-    
+
     return futureDate.toISOString();
   };
 
-  const Number = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-    <span className={cn("flex flex-shrink-0 items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-medium", className)}>
+  const Number = ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <span
+      className={cn(
+        "flex flex-shrink-0 items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-medium",
+        className
+      )}
+    >
       {children}
     </span>
   );
 
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const shouldShowStep = (stepNumber: number) => {
+    if (isEdit) return true;
+    return stepNumber <= currentStep;
+  };
+
+  const stepRefs = {
+    step1: useRef<HTMLDivElement>(null),
+    step2: useRef<HTMLDivElement>(null),
+    step3: useRef<HTMLDivElement>(null),
+    step4: useRef<HTMLDivElement>(null),
+  };
+
+  const scrollToStep = (stepNumber: number) => {
+    const ref = stepRefs[`step${stepNumber}` as keyof typeof stepRefs];
+    if (ref.current) {
+      ref.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isEdit) return;
+
+    if (currentStep === 1 && planDuration.date) {
+      setCurrentStep(2);
+      scrollToStep(2);
+    }
+    if (currentStep === 2 && goalConfirmed) {
+      setCurrentStep(3);
+      scrollToStep(3);
+    }
+    if (
+      currentStep === 3 &&
+      (selectedEmoji ||
+        existingActivities.length > 0 ||
+        newActivities.length > 0)
+    ) {
+      setCurrentStep(4);
+      scrollToStep(4);
+    }
+  }, [
+    planDuration.date,
+    goalConfirmed,
+    selectedEmoji,
+    existingActivities,
+    newActivities,
+    currentStep,
+    isEdit,
+  ]);
+
   return (
-    <div data-testid="plan-configuration-form" className="space-y-6" onClick={(e) => setShowEmojiPicker(false)}>
+    <div
+      data-testid="plan-configuration-form"
+      className="space-y-6"
+      onClick={(e) => setShowEmojiPicker(false)}
+    >
       {!generatedPlan ? (
-        <>
-          <div className="space-y-4">
-            <label className="text-lg font-medium block flex items-center gap-2">
-              <Number className="w-6 h-6" >1</Number>
-              What are you trying to achieve?
-            </label>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <DurationOption
-                type="habit"
-                emoji="🌱"
-                title="Habit Creation"
-                description="21 days - Recommended for forming new habits through consistent practice"
-                isSelected={planDuration.type === 'habit'}
-                onSelect={() => {
-                  const newDate = getDateFromDurationType('habit');
-                  setPlanDuration({ type: 'habit', date: newDate });
-                  setCurrentFinishingDate(newDate);
-                }}
-              />
-              
-              <DurationOption
-                type="lifestyle"
-                emoji="🚀"
-                title="Lifestyle Improvement"
-                description="90 days - Ideal for meaningful lifestyle changes and long-term transformation"
-                isSelected={planDuration.type === 'lifestyle'}
-                onSelect={() => {
-                  const newDate = getDateFromDurationType('lifestyle');
-                  setPlanDuration({ type: 'lifestyle', date: newDate });
-                  setCurrentFinishingDate(newDate);
-                }}
-              />
-              
-              <DurationOption
-                type="custom"
-                emoji="⚡️"
-                title="Custom"
-                description="Set your own timeline for achieving your goals"
-                isSelected={planDuration.type === 'custom'}
-                onSelect={() => {
-                  setPlanDuration({ type: 'custom', date: currentFinishingDate });
-                }}
-              />
-            </div>
+        <div className="space-y-6 relative">
+          <Step
+            stepNumber={1}
+            isVisible={shouldShowStep(1)}
+            ref={stepRefs.step1}
+          >
+            <div className="space-y-4">
+              <label className="text-lg font-medium block flex items-center gap-2">
+                <Number className="w-6 h-6">1</Number>
+                What are you trying to achieve?
+              </label>
 
-            {planDuration.type === 'custom' && (
-              <div className="mt-4">
-                <label
-                  className="text-sm font-medium mb-2 block"
-                  htmlFor="date-picker-trigger"
-                >
-                  Set a custom finishing date
-                </label>
-                <DatePicker
-                  id="date-picker-trigger"
-                  selected={
-                    currentFinishingDate
-                      ? new Date(currentFinishingDate)
-                      : undefined
-                  }
-                  onSelect={(date: Date | undefined) => {
-                    const newDate = date?.toISOString();
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <DurationOption
+                  type="habit"
+                  emoji="🌱"
+                  title="Habit Creation"
+                  description="21 days - Recommended for forming new habits through consistent practice"
+                  isSelected={planDuration.type === "habit"}
+                  onSelect={() => {
+                    const newDate = getDateFromDurationType("habit");
+                    setPlanDuration({ type: "habit", date: newDate });
                     setCurrentFinishingDate(newDate);
-                    setPlanDuration({ type: 'custom', date: newDate });
                   }}
-                  disablePastDates={true}
                 />
-              </div>
-            )}
-          </div>
-          <Divider />
-          <div>
-            <label className="text-lg font-medium mb-2 block flex items-center gap-2" htmlFor="goal">
-              <Number className="w-6 h-6" >2</Number>
-              Great, now what exactly do you want to do?
-            </label>
-            <Textarea
-              id="goal"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              placeholder="I want to gain the habit to go to the gym 3 times a week..."
-              className="mb-4 text-[16px]"
-            />
-          </div>
-          <Divider />
 
-          <div>
-            <h3 className="text-lg font-medium mb-2 block flex items-center gap-2">
-              <Number className="w-6 h-6" >3</Number>
-              Choose a plan emoji (Optional)
-            </h3>
-            {showEmojiPicker ? (
-              <div
-                className="absolute top-[30px] left-[15px] mt-2"
-                style={{ zIndex: 1000 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <EmojiPicker
-                  onEmojiClick={(data) => {
-                    setSelectedEmoji(data.emoji);
-                    setShowEmojiPicker(false);
+                <DurationOption
+                  type="lifestyle"
+                  emoji="🚀"
+                  title="Lifestyle Improvement"
+                  description="90 days - Ideal for meaningful lifestyle changes and long-term transformation"
+                  isSelected={planDuration.type === "lifestyle"}
+                  onSelect={() => {
+                    const newDate = getDateFromDurationType("lifestyle");
+                    setPlanDuration({ type: "lifestyle", date: newDate });
+                    setCurrentFinishingDate(newDate);
+                  }}
+                />
+
+                <DurationOption
+                  type="custom"
+                  emoji="⚡️"
+                  title="Custom"
+                  description="Set your own timeline for achieving your goals"
+                  isSelected={planDuration.type === "custom"}
+                  onSelect={() => {
+                    setPlanDuration({
+                      type: "custom",
+                      date: currentFinishingDate,
+                    });
                   }}
                 />
               </div>
-            ) : (
-              <div
-                id="emoji-picker-trigger"
-                className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowEmojiPicker(true);
-                }}
+
+              {planDuration.type === "custom" && (
+                <div className="mt-4">
+                  <label
+                    className="text-sm font-medium mb-2 block"
+                    htmlFor="date-picker-trigger"
+                  >
+                    Set a custom finishing date
+                  </label>
+                  <DatePicker
+                    id="date-picker-trigger"
+                    selected={
+                      currentFinishingDate
+                        ? new Date(currentFinishingDate)
+                        : undefined
+                    }
+                    onSelect={(date: Date | undefined) => {
+                      const newDate = date?.toISOString();
+                      setCurrentFinishingDate(newDate);
+                      setPlanDuration({ type: "custom", date: newDate });
+                    }}
+                    disablePastDates={true}
+                  />
+                </div>
+              )}
+            </div>
+          </Step>
+
+          <Step
+            stepNumber={2}
+            isVisible={shouldShowStep(2)}
+            ref={stepRefs.step2}
+          >
+            <Divider />
+            <div>
+              <label
+                className="text-lg font-medium mb-2 block flex items-center gap-2"
+                htmlFor="goal"
               >
-                {
-                  <span className="text-4xl">
-                    {selectedEmoji || (
-                      <Plus className="h-6 w-6 text-gray-400" />
-                    )}
-                  </span>
-                }
+                <Number className="w-6 h-6">2</Number>
+                Great, now what exactly do you want to do?
+              </label>
+              <div className="space-y-2">
+                <Textarea
+                  id="goal"
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  placeholder="I want to gain the habit to go to the gym 3 times a week..."
+                  className="text-[16px]"
+                />
+                {!isEdit && (
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => {
+                        if (goal.trim().length === 0) {
+                          toast.error("Please enter a goal first");
+                          return;
+                        }
+                        setGoalConfirmed(true);
+                      }}
+                      disabled={goalConfirmed}
+                      className="w-32"
+                    >
+                      {goalConfirmed ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        "Continue"
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          </Step>
 
-          <Divider />
+          <Step
+            stepNumber={3}
+            isVisible={shouldShowStep(3)}
+            ref={stepRefs.step3}
+          >
+            <Divider />
+            <div>
+              <h3 className="text-lg font-medium mb-2 block flex items-center gap-2">
+                <Number className="w-6 h-6">3</Number>
+                Choose a plan emoji (Optional)
+              </h3>
+              {showEmojiPicker ? (
+                <div
+                  className="absolute top-[30px] left-[15px] mt-2"
+                  style={{ zIndex: 1000 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <EmojiPicker
+                    onEmojiClick={(data) => {
+                      setSelectedEmoji(data.emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  id="emoji-picker-trigger"
+                  className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowEmojiPicker(true);
+                  }}
+                >
+                  {
+                    <span className="text-4xl">
+                      {selectedEmoji || (
+                        <Plus className="h-6 w-6 text-gray-400" />
+                      )}
+                    </span>
+                  }
+                </div>
+              )}
+            </div>
+          </Step>
 
-          <div className="space-y-8">
-            {userData?.activities && userData.activities.length > 0 && (
+          <Step
+            stepNumber={4}
+            isVisible={shouldShowStep(4)}
+            ref={stepRefs.step4}
+          >
+            <Divider />
+            <div className="space-y-8">
+              {userData?.activities && userData.activities.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                    <Number className="w-6 h-6">4</Number>
+                    Your Existing Activities
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Select from activities you&apos;ve already created
+                  </p>
+                  <div
+                    data-testid="existing-activities"
+                    className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4"
+                  >
+                    {userData.activities
+                      // Filter out activities that are in newActivities
+                      .filter(
+                        (activity) =>
+                          !newActivities.some((na) => na.id === activity.id)
+                      )
+                      .map((activity) => (
+                        <ActivityItem
+                          key={activity.id}
+                          activity={activity}
+                          isSelected={existingActivities.some(
+                            (a) => a.id === activity.id
+                          )}
+                          onToggle={() => {
+                            setExistingActivities((prev) =>
+                              prev.some((a) => a.id === activity.id)
+                                ? prev.filter((a) => a.id !== activity.id)
+                                : [...prev, activity]
+                            );
+                          }}
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
+
               <div>
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                  <Number className="w-6 h-6" >4</Number>
-                  Your Existing Activities
+                <h3 className="text-lg font-semibold mb-2">
+                  Create New Activities
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">
-                  Select from activities you&apos;ve already created
+                  Add new activities for this plan
                 </p>
-                <div data-testid="existing-activities" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4">
-                  {userData.activities
-                    // Filter out activities that are in newActivities
-                    .filter(
-                      (activity) =>
-                        !newActivities.some((na) => na.id === activity.id)
-                    )
-                    .map((activity) => (
-                      <ActivityItem
-                        key={activity.id}
-                        activity={activity}
-                        isSelected={existingActivities.some(
-                          (a) => a.id === activity.id
-                        )}
-                        onToggle={() => {
-                          setExistingActivities((prev) =>
-                            prev.some((a) => a.id === activity.id)
-                              ? prev.filter((a) => a.id !== activity.id)
-                              : [...prev, activity]
-                          );
-                        }}
-                      />
-                    ))}
-                </div>
+                <ActivitySelector
+                  activities={newActivities}
+                  selectedActivity={undefined}
+                  onSelectActivity={(activity) => {
+                    setNewActivities((prev) =>
+                      prev.some((a) => a.id === activity.id)
+                        ? prev.filter((a) => a.id !== activity.id)
+                        : [...prev, activity]
+                    );
+                  }}
+                  onSaveActivity={(activity) =>
+                    setNewActivities((prev) => [...prev, activity])
+                  }
+                />
               </div>
-            )}
+            </div>
+
+            <div className="flex items-center gap-2 mb-4">
+              <Switch
+                id="only-selected"
+                checked={onlyTheseActivities}
+                onCheckedChange={setOnlyTheseActivities}
+              />
+              <label htmlFor="only-selected" className="text-sm text-gray-500">
+                Only use selected activities
+              </label>
+            </div>
 
             <div>
               <h3 className="text-lg font-semibold mb-2">
-                Create New Activities
+                Additional Customization
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Add new activities for this plan
-              </p>
-              <ActivitySelector
-                activities={newActivities}
-                selectedActivity={undefined}
-                onSelectActivity={(activity) => {
-                  setNewActivities((prev) =>
-                    prev.some((a) => a.id === activity.id)
-                      ? prev.filter((a) => a.id !== activity.id)
-                      : [...prev, activity]
-                  );
-                }}
-                onSaveActivity={(activity) =>
-                  setNewActivities((prev) => [...prev, activity])
-                }
+              <label htmlFor="customization">Additional Customization</label>
+              <Textarea
+                id="customization"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add any specific requirements or preferences for your plan..."
+                className="mb-4"
               />
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 mb-4">
-            <Switch
-              id="only-selected"
-              checked={onlyTheseActivities}
-              onCheckedChange={setOnlyTheseActivities}
-            />
-            <label htmlFor="only-selected" className="text-sm text-gray-500">
-              Only use selected activities
-            </label>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-2">
-              Additional Customization
-            </h3>
-            <label htmlFor="customization">Additional Customization</label>
-            <Textarea
-              id="customization"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add any specific requirements or preferences for your plan..."
-              className="mb-4"
-            />
-          </div>
+          </Step>
 
           <div className="flex gap-2">
             {onClose && (
@@ -530,7 +684,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               disabled={isGenerating}
               className="flex-1 gap-2"
             >
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-foreground text-primary text-sm font-medium">5</span>
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-foreground text-primary text-sm font-medium">
+                5
+              </span>
               {isGenerating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -543,7 +699,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               )}
             </Button>
           </div>
-        </>
+        </div>
       ) : (
         <div className="space-y-6 mb-20">
           <h3 className="text-lg font-semibold">Preview Plan</h3>

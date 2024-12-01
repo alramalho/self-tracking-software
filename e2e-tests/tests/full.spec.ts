@@ -46,6 +46,7 @@ test.describe.serial("App", () => {
       .getByLabel("Great, now what exactly do you want to do?")
       .fill("I want to exercise regularly and improve my fitness");
 
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     // Select an emoji
     await page.locator("#emoji-picker-trigger").click();
     await page
@@ -113,7 +114,7 @@ test.describe.serial("App", () => {
 
     await page
       .getByText("I want to exercise regularly and improve my fitness")
-      .first()
+      .last()
       .click();
 
     // Verify initial state
@@ -129,7 +130,7 @@ test.describe.serial("App", () => {
     const planCard = page.locator('[data-testid="plan-card"]', {
       hasText: "I want to exercise regularly and improve my fitness",
     });
-    await planCard.getByTestId("plan-settings-button").first().click();
+    await planCard.getByTestId("plan-settings-button").last().click();
 
     await page.getByRole("button", { name: "Edit Plan" }).click();
 
