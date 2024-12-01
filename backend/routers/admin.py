@@ -33,7 +33,6 @@ limiter = Limiter(key_func=get_remote_address)
 ALLOWED_ORIGINS: Set[str] = {
     "https://tracking.so",
     "https://app.tracking.so",
-    "http://localhost:3000"
 }
 
 BLACKLISTED_IPS: Set[str] = set()  # Add known bad IPs
