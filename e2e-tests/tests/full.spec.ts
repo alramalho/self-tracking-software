@@ -35,8 +35,15 @@ test.describe.serial("App", () => {
     await page.getByText("Create New Plan").click();
 
     // Fill in the plan configuration form
+    await page.getByText("Custom", { exact: true }).click();
+
+    // Set a custom finishing date
+    await page.getByLabel("Set a custom finishing date").click();
+    await page.getByRole("dialog").waitFor();
+    await page.getByTestId("day-picker").locator("td").last().click();
+
     await page
-      .getByLabel("What's your goal?")
+      .getByLabel("Great, now what exactly do you want to do?")
       .fill("I want to exercise regularly and improve my fitness");
 
     // Select an emoji
@@ -44,11 +51,6 @@ test.describe.serial("App", () => {
     await page
       .locator("button[data-full-name='grinning,grinning face']")
       .click();
-
-    // Set a finishing date
-    await page.getByLabel("Set a finishing date").click();
-    await page.getByRole("dialog").waitFor();
-    await page.getByTestId("day-picker").locator("td").last().click();
 
     await page.getByText("push-ups").click();
 
@@ -134,6 +136,8 @@ test.describe.serial("App", () => {
     const existingActivitiesSection = page.getByTestId("existing-activities");
     const pushUpsElement = existingActivitiesSection.getByText("push-ups");
     await pushUpsElement.click({ force: true });
+
+    await page.waitForTimeout(1000);
 
     await page.getByRole("button", { name: "Generate Update" }).click();
     await expect(page.getByText("Generating...")).toBeVisible();
