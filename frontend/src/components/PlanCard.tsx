@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserPlanContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import InviteButton from "./InviteButton";
@@ -47,7 +47,9 @@ const PlanCard: React.FC<PlanCardProps> = ({
     const response = await api.post<UpdatePlanResponse>(`/plans/${planId}/update`, {
       goal: updatedPlan.goal,
       emoji: updatedPlan.emoji,
+      duration_type: updatedPlan.duration_type,
       finishing_date: updatedPlan.finishing_date,
+      notes: updatedPlan.notes,
       activities: updatedPlan.activities,
       sessions: updatedPlan.sessions,
     });
