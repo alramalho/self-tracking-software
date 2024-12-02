@@ -57,8 +57,13 @@ class ExtractedActivityEntryList(BaseModel):
 
 every_message_flowchart = {
     "ActivityScanner": {
-        "text": "Did the user recently mentioned in the conversation history one of his existent activities that has not been extracted by you yet?",
-        "connections": {"Yes": "CheckActivityMeasurement", "No": "Converse"},
+        "text": "Did the user recently mentioned in the conversation history any activity that has not been extracted by you yet?",
+        "connections": {"Yes": "CheckActivityQualifies", "No": "Converse"},
+        "temperature": 0.7,
+    },
+    "CheckActivityQualifies": {
+        "text": "Does the activity exist in the user's activities list?",
+        "connections": {"Yes": "CheckActivityMeasurement", "No": "InformTheUserOnlyExistingActivitiesAreSupported"},
         "temperature": 0.7,
     },
     "CheckActivityMeasurement": {
@@ -78,6 +83,9 @@ every_message_flowchart = {
     },
     "InformTheUserAboutTheActivity": {
         "text": "Inform the user that you've extracted the activity, which he needs to accept or reject.",
+    },
+    "InformTheUserOnlyExistingActivitiesAreSupported": {
+        "text": "Inform the user that you only support activities that are on his activities list.",
     },
     "Converse": {
         "text": "Let the user lead an engaging and challenging conversation with you, given your goal and recent conversation history.",
