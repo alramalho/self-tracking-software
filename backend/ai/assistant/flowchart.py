@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional, Callable
 from ai.assistant.memory import Memory
 from entities.message import Message
 from entities.user import User
@@ -57,7 +57,7 @@ class ExtractedActivityEntryList(BaseModel):
 
 every_message_flowchart = {
     "ActivityScanner": {
-        "text": "Did the user recently mentioned in the conversation history one of his existent activities?",
+        "text": "Did the user recently mentioned in the conversation history one of his existent activities that has not been extracted by you yet?",
         "connections": {"Yes": "CheckActivityMeasurement", "No": "Converse"},
         "temperature": 0.7,
     },
@@ -65,30 +65,11 @@ every_message_flowchart = {
         "text": "Did the user mention the date of when the activity was done and the measure (for how long, how much pages, etc) in his exchanged messages with you?",
         "connections": {
             "No": "AskForMoreInformation",
-            "Yes": "WasActivityAlreadyExtracted",
+            "Yes": "ExtractActivity",
         },
     },
     "AskForMoreInformation": {
         "text": "Ask the user for the missing information about the activity (either date and / or measure, whatever is missing)",
-    },
-    "WasActivityAlreadyExtracted": {
-        "text": """Looking at the most recent messages, check if the user's latest message was:
-        1. An acceptance/rejection message (usually containing phrases like "I accept", "I reject", "accepted the activity", "rejected the activity") 
-        OR
-        2. A message specifying activity details (like "I ran 5km", "read 10 pages today")
-        3. Something else
-
-        If the latest message was an acceptance/rejection -> choose "AcceptedOrRejected"
-        If the latest message was specifying activity details -> choose "FinishedSpecifyingActivity"
-        
-        Example acceptance: "I accepted the activity: 10 pages of reading"
-        Example specification: "I read 10 pages this morning"
-        """,
-        "connections": {
-            "AcceptedOrRejected": "Converse",
-            "FinishedSpecifyingActivity": "ExtractActivity",
-            "SomethingElse": "Converse",
-        },
     },
     "ExtractActivity": {
         "text": f"Extract new activities from the user's message. New activites are activites that are not on the recent activities list. Today is {datetime.now().strftime('%b %d, %Y')}",
@@ -194,7 +175,6 @@ class FlowchartLLMFramework:
 
     def run(self, input_string: str):
         current_node_id = self.start_node
-        # Initialize context with input string
         context = {"initial_input": input_string}
         self.visited_nodes = []
         self.decisions = {}
