@@ -314,7 +314,6 @@ async def process_message(
             {"type": "intermediary_transcription", "text": transcription}
         )
         message = transcription
-        message_id = str(ObjectId())
 
         # Process emotion analysis with Hume
         try:
@@ -334,6 +333,8 @@ async def process_message(
             logger.error(f"Error processing audio with Hume: {e}")
             emotions = []  # Ensure emotions is a list even on error
 
+    message_id = str(ObjectId())
+    
     text_response, activity_entries = await loop.run_in_executor(
         executor, talk_with_assistant, user_id, message, message_id, emotions
     )
@@ -347,15 +348,14 @@ async def process_message(
             for existing in existing_entries
         )
     ]
-    activities = list(
-        {
-            activities_gateway.get_activity_by_id(entry.activity_id)
-            for entry in activity_entries
-        }
-    )
+    unique_activity_ids = {entry.activity_id for entry in activity_entries}
+    activities = [
+        activities_gateway.get_activity_by_id(activity_id)
+        for activity_id in unique_activity_ids
+    ]
     await websocket.send_json(
         {
-            "type": "suggested_activity_entries",
+            "type": "suggested_activity_entries", 
             "activities": [activity.dict() for activity in activities],
             "activity_entries": [activity.dict() for activity in activity_entries],
         }
