@@ -226,7 +226,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const [goalConfirmed, setGoalConfirmed] = useState(false);
   const [planNotes, setPlanNotes] = useState("");
   const [planDuration, setPlanDuration] = useState<PlanDurationType>({
-    type: initialState.planDurationType ?? undefined,
+    type: initialState.planDurationType ? initialState.planDurationType : initialState.finishingDate ? "custom" : undefined,
     date: initialState.finishingDate || currentFinishingDate,
   });
 
