@@ -48,6 +48,7 @@ import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
 import FeedbackForm from "@/components/FeedbackForm";
 import ActivitySuggestion from "@/components/ActivitySuggestion";
+import PlanSessionsSuggestion from "@/components/PlanSessionsSuggestion";
 
 const REFERRAL_COUNT = 2;
 
@@ -103,6 +104,7 @@ const LogPage: React.FC = () => {
   const [suggestedActivityEntries, setSuggestedActivityEntries] = useState<
     ActivityEntry[]
   >([]);
+  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] = useState<PlanSession[]>([]);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -186,9 +188,9 @@ const LogPage: React.FC = () => {
 
       if (data.type === "message") {
         handleIncomingMessage(data.text, data.audio);
-      } else if (data.type === "activities_update") {
+      } else if (data.type === "data_update") {
         addToNotificationCount(1);
-        toast(data.new_activities_notification, {
+        toast(data.notification, {
           duration: 5000,
           position: "top-center",
           icon: "📊",
@@ -201,6 +203,8 @@ const LogPage: React.FC = () => {
       } else if (data.type === "suggested_activity_entries") {
         setSuggestedActivityEntries(data.activity_entries);
         setSuggestedActivities(data.activities);
+      } else if (data.type === "suggested_next_week_sessions") {
+        setSuggestedNextWeekSessions(data.next_week_sessions);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -518,7 +522,7 @@ const LogPage: React.FC = () => {
                       : "https://htmlcolorcodes.com/assets/images/colors/orange-color-solid-background-1920x1080.png"
                   }
                 />
-                <ChatBubbleMessage>{message.content}</ChatBubbleMessage>
+                <ChatBubbleMessage message={message.content} />
               </ChatBubble>
             ))}
           </ChatMessageList>
@@ -634,6 +638,24 @@ const LogPage: React.FC = () => {
               />
             );
           })}
+          {suggestedNextWeekSessions.length > 0 && (
+            <PlanSessionsSuggestion
+              sessions={suggestedNextWeekSessions}
+              onFinish={({ accepted, rejected }) => {
+                const acceptedMsg = accepted.length > 0 
+                  ? `I accepted these plan sessions: ${accepted.map(s => s.descriptive_guide).join(', ')}` 
+                  : '';
+                const rejectedMsg = rejected.length > 0
+                  ? `I rejected these plan sessions: ${rejected.map(s => s.descriptive_guide).join(', ')}`
+                  : '';
+                const message = [acceptedMsg, rejectedMsg].filter(Boolean).join('. ');
+                if (message) {
+                  sendMessage(message);
+                }
+                setSuggestedNextWeekSessions([]); // Clear suggestions after handling
+              }}
+            />
+          )}
         </div>
       </div>
       {showFeatureForm && (

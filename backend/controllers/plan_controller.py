@@ -18,6 +18,7 @@ from entities.activity import SAMPLE_SEARCH_ACTIVITY
 from copy import deepcopy
 from gateways.plan_groups import PlanGroupsGateway
 import traceback
+from shared.utils import days_ago
 
 class PlanActivityUpdate(BaseModel):
     id: str
@@ -25,18 +26,12 @@ class PlanActivityUpdate(BaseModel):
     measure: str
     emoji: str
 
-class PlanSessionUpdate(BaseModel):
-    date: str
-    activity_id: str
-    quantity: int
-    descriptive_guide: str
-
 class GeneratedPlanUpdate(BaseModel):
     goal: str
     emoji: Optional[str] = None
     finishing_date: Optional[str] = None
     activities: List[PlanActivityUpdate]
-    sessions: List[PlanSessionUpdate]
+    sessions: List[PlanSession]
     notes: Optional[str] = None
     duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None
 
@@ -667,6 +662,58 @@ class PlanController:
         self.update_plan(existing_plan)
         
         return existing_plan
+
+    def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None) -> str:
+        """Get readable plans and their sessions for a user within the specified time period."""
+        user = self.users_gateway.get_user_by_id(user_id)
+        if not user:
+            return "No user found"
+
+        plans = self.get_all_user_active_plans(user)
+        if not plans:
+            return "No active plans found"
+
+        readable_plans: List[str] = []
+        current_date = datetime.now(UTC)
+
+        for index, plan in enumerate(plans):
+            # Filter sessions based on past_day_limit if specified
+            filtered_sessions = plan.sessions
+            if past_day_limit is not None:
+                filtered_sessions = [
+                    session for session in plan.sessions
+                    if (current_date - datetime.fromisoformat(session.date).replace(tzinfo=UTC)).days <= past_day_limit and datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= current_date
+                ]
+
+            if not filtered_sessions:
+                continue
+
+            # Get activities for this plan's sessions
+            activity_ids = {session.activity_id for session in filtered_sessions}
+            activities = {
+                aid: self.activities_gateway.get_activity_by_id(aid)
+                for aid in activity_ids
+            }
+
+            # Format plan and its sessions
+            plan_sessions: List[str] = []
+            for session in filtered_sessions:
+                activity = activities.get(session.activity_id)
+                if not activity:
+                    continue
+
+                formatted_date = datetime.fromisoformat(session.date).strftime("%A")
+                plan_sessions.append(
+                    f"  - {formatted_date} -{activity.title} ({session.quantity} {activity.measure})"
+                )
+
+            if plan_sessions:
+                readable_plans.append(
+                    f"Plan {index + 1}: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%b %d, %Y') if plan.finishing_date else 'no end date'}). Planned sessions this week:\n"
+                    + "\n".join(plan_sessions)
+                )
+
+        return "\n\n".join(readable_plans) if readable_plans else "No recent sessions found in active plans"
 
 if __name__ == "__main__":
     from shared.logger import create_logger

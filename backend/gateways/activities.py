@@ -1,4 +1,5 @@
 from datetime import datetime
+import pytz
 
 from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
@@ -66,7 +67,7 @@ class ActivitiesGateway:
     def get_all_activity_entries_by_activity_id(self, activity_id: str) -> list[ActivityEntry]:
         return [ActivityEntry(**data) for data in self.activity_entries_db_gateway.query("activity_id", activity_id)]
     
-    def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5) -> str:
+    def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5, past_day_limit: int = None) -> str:
         all_activities_dict = {activity.id: activity for activity in self.get_all_activities_by_user_id(user_id)}
 
         all_activity_entries: List[ActivityEntry] = []
@@ -75,12 +76,24 @@ class ActivitiesGateway:
 
         ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.created_at, reverse=True)
         
+        if past_day_limit is not None:
+            # Filter entries within the past_day_limit
+            current_date = datetime.now(pytz.UTC)
+            filtered_entries = [
+                entry for entry in ordered_activity_entries 
+                if (current_date - datetime.fromisoformat(entry.created_at)).days <= past_day_limit
+            ]
+            ordered_activity_entries = filtered_entries
+        else:
+            # Apply limit only if past_day_limit is not specified
+            ordered_activity_entries = ordered_activity_entries[:limit]
+        
         # return the date of the entry in the format 'Oct 27, 2024' + the title of the respective activity
         readable_activity_entries: List[str] = []
-        for activity_entry in ordered_activity_entries[:limit]:
+        for activity_entry in ordered_activity_entries:
             respective_activity = all_activities_dict[activity_entry.activity_id]
 
-            formatted_date = datetime.fromisoformat(activity_entry.date).strftime("%b %d, %Y")
+            formatted_date = datetime.fromisoformat(activity_entry.date).strftime("%A, %b %d %Y")
             quantity = activity_entry.quantity
             activity_title = respective_activity.title
             activity_measure = respective_activity.measure

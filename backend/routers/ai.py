@@ -15,6 +15,7 @@ from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsExc
 from gateways.messages import MessagesGateway
 from entities.activity import ActivityEntry
 from analytics.posthog import posthog
+from ai.assistant.activity_extractor import ExtractedActivityEntry
 from services.hume_service import EmotionWithColor, EMOTION_COLORS, HUME_SCORE_FILTER_THRESHOLD
 from gateways.database.mongodb import MongoDBGateway
 from typing import List, Optional, Dict, Any
@@ -49,8 +50,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         audio_data = message.get("audio_data")
                         audio_format = message.get("audio_format")
 
-
-                        text_response, audio_response, extracted_activity_entries = (
+                        text_response, audio_response, extracted_data = (
                             await process_message(websocket, user.id, text, input_mode, output_mode, audio_data, audio_format)
                         )
 
@@ -67,7 +67,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "latency_seconds": round(execution_time, 3),
                                 "input_mode": input_mode,
                                 "output_mode": output_mode,
-                                "extracted_activities_count": len(extracted_activity_entries),
+                                "extracted_data_count": len(extracted_data) if extracted_data else 0,
                             }
                         )
 
@@ -80,11 +80,12 @@ async def websocket_endpoint(websocket: WebSocket):
                             response_data["audio"] = base64.b64encode(audio_response).decode("utf-8")
 
                         await websocket.send_json(response_data)
-    
-                        if len(extracted_activity_entries) > 0:
+
+                        if extracted_data and len(extracted_data) > 0:
+                            data_type = "activities" if isinstance(extracted_data[0], ExtractedActivityEntry) else "next week sessions"
                             await websocket.send_json({
-                                "type": "activities_update",
-                                "new_activities_notification": f"Extracted {len(extracted_activity_entries)} new activities. Check your notifications for more details.",
+                                "type": "data_update",
+                                "notification": f"Extracted {len(extracted_data)} new {data_type}. Check your notifications for more details.",
                             })
 
             except Exception as e:
