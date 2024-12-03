@@ -7,7 +7,7 @@ from ai.assistant.memory import DatabaseMemory
 from ai.llm import ask_schema, ask_text
 from datetime import datetime
 from ai.assistant.activity_extractor import ActivityExtractorAssistant, ExtractedActivityEntry
-from ai.assistant.week_analyser import WeekAnalyserAssistant, SuggestedNextWeekSessions
+from ai.assistant.week_analyser import WeekAnalyserAssistant, SuggestedNextWeekSessions, ExtractedPlanSessions
 import pytz
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
@@ -349,7 +349,7 @@ async def process_message(
     )
 
     # Check if the extracted data is activity entries
-    if extracted_data and isinstance(extracted_data[0], ExtractedActivityEntry):
+    if extracted_data and isinstance(extracted_data, list) and extracted_data and isinstance(extracted_data[0], ExtractedActivityEntry):
         existing_entries = activities_gateway.get_all_activity_entries_by_user_id(user_id)
         activity_entries = [
             ae
@@ -372,11 +372,12 @@ async def process_message(
             }
         )
     # Check if the extracted data is next week sessions
-    elif extracted_data and isinstance(extracted_data[0], PlanSession):
+    elif extracted_data and isinstance(extracted_data, ExtractedPlanSessions):
         await websocket.send_json(
             {
                 "type": "suggested_next_week_sessions",
-                "next_week_sessions": [session.dict() for session in extracted_data],
+                "next_week_sessions": [session.dict() for session in extracted_data.sessions],
+                "plan_id": extracted_data.plan_id,
             }
         )
 

@@ -57,7 +57,7 @@ export default function ClientLayout({
           {isSignedIn && <BottomNav />}
         </main>
         <Toaster
-          position="bottom-center"
+          position="top-center"
           containerStyle={{
             bottom: "5rem",
             zIndex: 100,

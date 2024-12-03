@@ -48,9 +48,14 @@ import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
 import FeedbackForm from "@/components/FeedbackForm";
 import ActivitySuggestion from "@/components/ActivitySuggestion";
-import PlanSessionsSuggestion from "@/components/PlanSessionsSuggestion";
+import PlanUpdateBanner, { PlanSession } from "@/components/PlanUpdateBanner";
 
 const REFERRAL_COUNT = 2;
+
+type ExtractedPlanSessions = {
+  plan_id: string;
+  sessions: PlanSession[];
+}
 
 type Emotion = {
   name: string;
@@ -104,7 +109,7 @@ const LogPage: React.FC = () => {
   const [suggestedActivityEntries, setSuggestedActivityEntries] = useState<
     ActivityEntry[]
   >([]);
-  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] = useState<PlanSession[]>([]);
+  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] = useState<ExtractedPlanSessions | null>(null);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -204,7 +209,7 @@ const LogPage: React.FC = () => {
         setSuggestedActivityEntries(data.activity_entries);
         setSuggestedActivities(data.activities);
       } else if (data.type === "suggested_next_week_sessions") {
-        setSuggestedNextWeekSessions(data.next_week_sessions);
+        setSuggestedNextWeekSessions({sessions: data.next_week_sessions, plan_id: data.plan_id} as ExtractedPlanSessions);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -638,21 +643,17 @@ const LogPage: React.FC = () => {
               />
             );
           })}
-          {suggestedNextWeekSessions.length > 0 && (
-            <PlanSessionsSuggestion
-              sessions={suggestedNextWeekSessions}
-              onFinish={({ accepted, rejected }) => {
-                const acceptedMsg = accepted.length > 0 
-                  ? `I accepted these plan sessions: ${accepted.map(s => s.descriptive_guide).join(', ')}` 
-                  : '';
-                const rejectedMsg = rejected.length > 0
-                  ? `I rejected these plan sessions: ${rejected.map(s => s.descriptive_guide).join(', ')}`
-                  : '';
-                const message = [acceptedMsg, rejectedMsg].filter(Boolean).join('. ');
-                if (message) {
-                  sendMessage(message);
-                }
-                setSuggestedNextWeekSessions([]); // Clear suggestions after handling
+          {suggestedNextWeekSessions && suggestedNextWeekSessions.sessions.length > 0 && (
+            <PlanUpdateBanner
+              sessions={suggestedNextWeekSessions.sessions}
+              plan_id={suggestedNextWeekSessions.plan_id}
+              onAccept={(sessions) => {
+                sendMessage(`I accepted all suggested sessions for the plan: ${sessions.map(s => s.descriptive_guide).join(', ')}`);
+                setSuggestedNextWeekSessions(null); // Clear suggestions after handling
+              }}
+              onReject={(sessions) => {
+                sendMessage(`I rejected all suggested sessions for the plan: ${sessions.map(s => s.descriptive_guide).join(', ')}`);
+                setSuggestedNextWeekSessions(null); // Clear suggestions after handling
               }}
             />
           )}

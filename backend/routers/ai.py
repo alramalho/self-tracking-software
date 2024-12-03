@@ -50,7 +50,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         audio_data = message.get("audio_data")
                         audio_format = message.get("audio_format")
 
-                        text_response, audio_response, extracted_data = (
+                        text_response, audio_response, _ = (
                             await process_message(websocket, user.id, text, input_mode, output_mode, audio_data, audio_format)
                         )
 
@@ -67,7 +67,6 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "latency_seconds": round(execution_time, 3),
                                 "input_mode": input_mode,
                                 "output_mode": output_mode,
-                                "extracted_data_count": len(extracted_data) if extracted_data else 0,
                             }
                         )
 
@@ -81,12 +80,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
                         await websocket.send_json(response_data)
 
-                        if extracted_data and len(extracted_data) > 0:
-                            data_type = "activities" if isinstance(extracted_data[0], ExtractedActivityEntry) else "next week sessions"
-                            await websocket.send_json({
-                                "type": "data_update",
-                                "notification": f"Extracted {len(extracted_data)} new {data_type}. Check your notifications for more details.",
-                            })
+                        # if extracted_data and isinstance(extracted_data, list) and len(extracted_data) > 0:
+                        #     data_type = "activities" if isinstance(extracted_data[0], ExtractedActivityEntry) else "next week sessions"
+                        #     await websocket.send_json({
+                        #         "type": "data_update",
+                        #         "notification": f"Extracted {len(extracted_data)} new {data_type}. Check your notifications for more details.",
+                        #     })
 
             except Exception as e:
                 traceback.print_exc()
