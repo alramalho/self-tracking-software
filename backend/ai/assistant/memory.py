@@ -154,7 +154,7 @@ class DatabaseMemory(Memory):
                 today_divider_added = True
             
             # Format message with emotions if present
-            message_text = f"{m.sender_name} ({time_ago(m.created_at)}): {m.text}"
+            message_text = f"> {m.sender_name} ({time_ago(m.created_at)}): {m.text}"
             if m.emotions:
                 emotion_text = ", ".join([f"{e.name} ({e.score * 100:.0f}%)" for e in m.emotions])
                 message_text += f" (user expressed {emotion_text} in this message)"

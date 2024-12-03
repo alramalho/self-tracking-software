@@ -55,7 +55,8 @@ const REFERRAL_COUNT = 2;
 type ExtractedPlanSessions = {
   plan_id: string;
   sessions: PlanSession[];
-}
+  old_sessions: PlanSession[];
+};
 
 type Emotion = {
   name: string;
@@ -109,7 +110,8 @@ const LogPage: React.FC = () => {
   const [suggestedActivityEntries, setSuggestedActivityEntries] = useState<
     ActivityEntry[]
   >([]);
-  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] = useState<ExtractedPlanSessions | null>(null);
+  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] =
+    useState<ExtractedPlanSessions | null>(null);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -209,7 +211,11 @@ const LogPage: React.FC = () => {
         setSuggestedActivityEntries(data.activity_entries);
         setSuggestedActivities(data.activities);
       } else if (data.type === "suggested_next_week_sessions") {
-        setSuggestedNextWeekSessions({sessions: data.next_week_sessions, plan_id: data.plan_id} as ExtractedPlanSessions);
+        setSuggestedNextWeekSessions({
+          sessions: data.next_week_sessions,
+          old_sessions: data.old_sessions,
+          plan_id: data.plan_id,
+        } as ExtractedPlanSessions);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -282,7 +288,7 @@ const LogPage: React.FC = () => {
       // Stop any ongoing speech when starting to record
       stopAudio();
     }
-    
+
     toggleRecording((audioData, audioFormat) => {
       if (socket && isConnected) {
         setIsLoading(true);
@@ -635,28 +641,42 @@ const LogPage: React.FC = () => {
                 activity={activity}
                 activityEntry={activityEntry}
                 onAccept={(activityEntry, activity) => {
-                  sendMessage(`I accepted the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`);
+                  sendMessage(
+                    `I accepted the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`
+                  );
                 }}
                 onReject={(activityEntry, activity) => {
-                  sendMessage(`I rejected the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`);
+                  sendMessage(
+                    `I rejected the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`
+                  );
                 }}
               />
             );
           })}
-          {suggestedNextWeekSessions && suggestedNextWeekSessions.sessions.length > 0 && (
-            <PlanUpdateBanner
-              sessions={suggestedNextWeekSessions.sessions}
-              plan_id={suggestedNextWeekSessions.plan_id}
-              onAccept={(sessions) => {
-                sendMessage(`I accepted all suggested sessions for the plan: ${sessions.map(s => s.descriptive_guide).join(', ')}`);
-                setSuggestedNextWeekSessions(null); // Clear suggestions after handling
-              }}
-              onReject={(sessions) => {
-                sendMessage(`I rejected all suggested sessions for the plan: ${sessions.map(s => s.descriptive_guide).join(', ')}`);
-                setSuggestedNextWeekSessions(null); // Clear suggestions after handling
-              }}
-            />
-          )}
+          {suggestedNextWeekSessions &&
+            suggestedNextWeekSessions.sessions.length > 0 && (
+              <PlanUpdateBanner
+                sessions={suggestedNextWeekSessions.sessions}
+                old_sessions={suggestedNextWeekSessions.old_sessions}
+                plan_id={suggestedNextWeekSessions.plan_id}
+                onAccept={(sessions) => {
+                  sendMessage(
+                    `I accepted all suggested sessions for the plan: ${sessions
+                      .map((s) => s.descriptive_guide)
+                      .join(", ")}`
+                  );
+                  setSuggestedNextWeekSessions(null); // Clear suggestions after handling
+                }}
+                onReject={(sessions) => {
+                  sendMessage(
+                    `I rejected all suggested sessions for the plan: ${sessions
+                      .map((s) => s.descriptive_guide)
+                      .join(", ")}`
+                  );
+                  setSuggestedNextWeekSessions(null); // Clear suggestions after handling
+                }}
+              />
+            )}
         </div>
       </div>
       {showFeatureForm && (

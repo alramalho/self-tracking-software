@@ -663,8 +663,15 @@ class PlanController:
         
         return existing_plan
 
-    def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None) -> str:
-        """Get readable plans and their sessions for a user within the specified time period."""
+    def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None, future_day_limit: int = None) -> str:
+        """
+        Get readable plans and their sessions for a user within the specified time period.
+        
+        Args:
+            user_id: The ID of the user
+            past_day_limit: Number of past days to include sessions from (inclusive)
+            future_day_limit: Number of future days to include sessions from (inclusive)
+        """
         user = self.users_gateway.get_user_by_id(user_id)
         if not user:
             return "No user found"
@@ -674,15 +681,23 @@ class PlanController:
             return "No active plans found"
 
         readable_plans: List[str] = []
-        current_date = datetime.now(UTC)
+        current_date = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)  # Start of today
 
         for index, plan in enumerate(plans):
-            # Filter sessions based on past_day_limit if specified
+            # Filter sessions based on both past and future limits
             filtered_sessions = plan.sessions
-            if past_day_limit is not None:
+            if past_day_limit is not None or future_day_limit is not None:
                 filtered_sessions = [
                     session for session in plan.sessions
-                    if (current_date - datetime.fromisoformat(session.date).replace(tzinfo=UTC)).days <= past_day_limit and datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= current_date
+                    if (
+                        (past_day_limit is None or 
+                         (current_date - datetime.fromisoformat(session.date).replace(
+                             tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0)).days <= past_day_limit)
+                        and
+                        (future_day_limit is None or 
+                         (datetime.fromisoformat(session.date).replace(
+                             tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0) - current_date).days <= future_day_limit)
+                    )
                 ]
 
             if not filtered_sessions:
@@ -695,25 +710,48 @@ class PlanController:
                 for aid in activity_ids
             }
 
-            # Format plan and its sessions
-            plan_sessions: List[str] = []
+            # Separate past and future sessions
+            past_sessions: List[str] = []
+            future_sessions: List[str] = []
+            
             for session in filtered_sessions:
                 activity = activities.get(session.activity_id)
                 if not activity:
                     continue
 
-                formatted_date = datetime.fromisoformat(session.date).strftime("%A")
-                plan_sessions.append(
-                    f"  - {formatted_date} -{activity.title} ({session.quantity} {activity.measure})"
-                )
+                session_date = datetime.fromisoformat(session.date).replace(tzinfo=UTC)
+                formatted_date = session_date.strftime("%A, %b %d")
+                session_str = f"  - {formatted_date} - {activity.title} (ID: {activity.id}) ({session.quantity} {activity.measure})"
+                
+                if session_date <= current_date:
+                    past_sessions.append(session_str)
+                else:
+                    future_sessions.append(session_str)
 
-            if plan_sessions:
-                readable_plans.append(
-                    f"Plan {index + 1} (with ID '{plan.id}'): Name: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%b %d, %Y') if plan.finishing_date else 'no end date'}). Planned sessions this week:\n"
-                    + "\n".join(plan_sessions)
-                )
+            if past_sessions or future_sessions:
+                plan_text = [f"Plan {index + 1} (with ID '{plan.id}'): Name: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%A, %b %d') if plan.finishing_date else 'no end date'})"]
+                
+                if past_sessions:
+                    plan_text.append(f"Recent sessions from the last {past_day_limit} days:")
+                    plan_text.extend(past_sessions)
+                
+                if future_sessions:
+                    if past_sessions:  # Add a blank line if we had past sessions
+                        plan_text.append("")
+                    plan_text.append(f"Upcoming sessions in the next {future_day_limit} days:")
+                    plan_text.extend(future_sessions)
+                
+                readable_plans.append("\n".join(plan_text))
 
-        return "\n\n".join(readable_plans) if readable_plans else "No recent sessions found in active plans"
+        if not readable_plans:
+            if past_day_limit and future_day_limit:
+                return "No recent or upcoming sessions found in active plans"
+            elif past_day_limit:
+                return "No recent sessions found in active plans"
+            else:
+                return "No upcoming sessions found in active plans"
+            
+        return "\n\n".join(readable_plans)
 
 if __name__ == "__main__":
     from shared.logger import create_logger
