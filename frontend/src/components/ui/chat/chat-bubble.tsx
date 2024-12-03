@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import MessageLoading from "./message-loading"
+import { Remark } from "react-remark"
 
 const chatBubbleVariant = cva("flex gap-2 max-w-[60%] items-end relative", {
   variants: {
@@ -70,10 +71,11 @@ const chatBubbleMessageVariants = cva("p-4", {
 interface ChatBubbleMessageProps extends React.HTMLAttributes<HTMLDivElement>,
   VariantProps<typeof chatBubbleMessageVariants> {
   isLoading?: boolean
+  message: string
 }
 
 const ChatBubbleMessage = React.forwardRef<HTMLDivElement, ChatBubbleMessageProps>(
-  ({ className, variant, layout, isLoading = false, children, ...props }, ref) => (
+  ({ className, variant, layout, isLoading = false, message, ...props }, ref) => (
     <div
       className={cn(chatBubbleMessageVariants({ variant, layout, className }))}
       ref={ref}
@@ -84,7 +86,9 @@ const ChatBubbleMessage = React.forwardRef<HTMLDivElement, ChatBubbleMessageProp
           <MessageLoading />
         </div>
       ) : (
-        children
+        <div className="markdown">
+          <Remark>{message}</Remark>
+        </div>
       )}
     </div>
   )

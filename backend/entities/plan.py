@@ -5,8 +5,8 @@ from bson import ObjectId
 
 class PlanSession(BaseModel):
     date: str
-    descriptive_guide: str
     activity_id: str
+    descriptive_guide: str
     quantity: int
 
 

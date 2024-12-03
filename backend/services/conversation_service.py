@@ -1,4 +1,4 @@
-from typing import Tuple, List, Dict, Optional
+from typing import Tuple, List, Dict, Optional, Union
 from entities.user import User
 from entities.activity import Activity, ActivityEntry
 from entities.mood_report import MoodReport
@@ -6,7 +6,8 @@ from gateways.database.mongodb import MongoDBGateway
 from ai.assistant.memory import DatabaseMemory
 from ai.llm import ask_schema, ask_text
 from datetime import datetime
-from ai.assistant.flowchart import Assistant, ExtractedActivityEntry
+from ai.assistant.activity_extractor import ActivityExtractorAssistant, ExtractedActivityEntry
+from ai.assistant.week_analyser import WeekAnalyserAssistant, SuggestedNextWeekSessions
 import pytz
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
@@ -14,6 +15,7 @@ from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
 from gateways.moodreports import MoodsGateway
+from entities.plan import PlanSession
 
 from pydantic import BaseModel, Field
 import traceback
@@ -29,27 +31,34 @@ from gateways.users import UsersGateway
 from services.notification_manager import NotificationManager
 from entities.notification import Notification
 from entities.message import Emotion
+from controllers.plan_controller import PlanController
 
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
+plan_controller = PlanController()
 
 
 def talk_with_assistant(
     user_id: str, user_input: str, message_id: str = None, emotions: List[Emotion] = []
-) -> Tuple[str, List[ExtractedActivityEntry]]:
+) -> Tuple[str, List[ExtractedActivityEntry] | List[SuggestedNextWeekSessions]]:
     user = users_gateway.get_user_by_id(user_id)
     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
     user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
-    recent_activities_string = activities_gateway.get_readable_recent_activity_entries(
-        user_id
-    )
-    assistant = Assistant(
-        memory=memory,
-        user=user,
-        user_activities=user_activities,
-        recent_activities_string=recent_activities_string,
-    )
+    user_plans = plan_controller.get_all_user_active_plans(user)
+    if True:#datetime.now().weekday() in [5, 6]: 
+        assistant = WeekAnalyserAssistant(
+            memory=memory,
+            user=user,
+            user_activities=user_activities,
+            user_plans=user_plans,
+        )
+    else:
+        assistant = ActivityExtractorAssistant(
+            memory=memory,
+            user=user,
+            user_activities=user_activities,
+        )
     return assistant.get_response(
         user_input=user_input, message_id=message_id, emotions=emotions
     )
@@ -301,7 +310,7 @@ async def process_message(
     output_mode: str,
     audio_data: str = None,
     audio_format: str = None,
-):
+) -> Tuple[str, Optional[bytes], Union[List[ExtractedActivityEntry], List[SuggestedNextWeekSessions]]]:
     loop = asyncio.get_event_loop()
     emotions = []
 
@@ -335,31 +344,41 @@ async def process_message(
 
     message_id = str(ObjectId())
     
-    text_response, activity_entries = await loop.run_in_executor(
+    text_response, extracted_data = await loop.run_in_executor(
         executor, talk_with_assistant, user_id, message, message_id, emotions
     )
 
-    existing_entries = activities_gateway.get_all_activity_entries_by_user_id(user_id)
-    activity_entries = [
-        ae
-        for ae in activity_entries
-        if not any(
-            existing.activity_id == ae.activity_id and existing.date == ae.date
-            for existing in existing_entries
+    # Check if the extracted data is activity entries
+    if extracted_data and isinstance(extracted_data[0], ExtractedActivityEntry):
+        existing_entries = activities_gateway.get_all_activity_entries_by_user_id(user_id)
+        activity_entries = [
+            ae
+            for ae in extracted_data
+            if not any(
+                existing.activity_id == ae.activity_id and existing.date == ae.date
+                for existing in existing_entries
+            )
+        ]
+        unique_activity_ids = {entry.activity_id for entry in activity_entries}
+        activities = [
+            activities_gateway.get_activity_by_id(activity_id)
+            for activity_id in unique_activity_ids
+        ]
+        await websocket.send_json(
+            {
+                "type": "suggested_activity_entries", 
+                "activities": [activity.dict() for activity in activities],
+                "activity_entries": [activity.dict() for activity in activity_entries],
+            }
         )
-    ]
-    unique_activity_ids = {entry.activity_id for entry in activity_entries}
-    activities = [
-        activities_gateway.get_activity_by_id(activity_id)
-        for activity_id in unique_activity_ids
-    ]
-    await websocket.send_json(
-        {
-            "type": "suggested_activity_entries", 
-            "activities": [activity.dict() for activity in activities],
-            "activity_entries": [activity.dict() for activity in activity_entries],
-        }
-    )
+    # Check if the extracted data is next week sessions
+    elif extracted_data and isinstance(extracted_data[0], PlanSession):
+        await websocket.send_json(
+            {
+                "type": "suggested_next_week_sessions",
+                "next_week_sessions": [session.dict() for session in extracted_data],
+            }
+        )
 
     audio_response = None
     if output_mode == "voice":
@@ -367,7 +386,7 @@ async def process_message(
             executor, tts.text_to_speech, text_response
         )
 
-    return text_response, audio_response, activity_entries
+    return text_response, audio_response, extracted_data
 
 
 def initiate_recurrent_checkin(user_id: str) -> Notification:
