@@ -31,10 +31,41 @@ class AllPlanNamesSchema(BaseModel):
     plan_names: List[str] = Field(..., description="All plan names")
 
 class SuggestedNextWeekSessions(BaseModel):
+    plan_name: str = Field(..., description="The name of the plan")
     next_week_sessions: List[PlanSession] = Field(..., description="The sessions to be added to the plan for the upcoming week")
+
+class ExtractedPlanSessions(BaseModel):
+    plan_id: str = Field(..., description="The ID of the plan these sessions belong to")
+    sessions: List[PlanSession] = Field(..., description="The sessions to be added to the plan for the upcoming week")
+
+
+first_message_flowchart = {
+    "FirstTimeEver": {
+        "text": "Based on the conversation history, is this the first time ever talking to the user?",
+        "connections": {"Yes": "Introduce", "No": "FirstTimeToday"},
+    },
+    "Introduce": {
+        "text": "Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to help them prepare next week, which you'll do by analysing their plans and activity logs. Ask for his confirmation.",
+    },
+    "FirstTimeToday": {
+        "text": "Based on the conversation history, is this the first time talking today?",
+        "connections": {"Yes": "Greet", "No": "End"},
+    },
+    "Greet": {
+        "text": "Greet the user, asking what's he has been up to since you last talked X days ago (use the conversation history to determine how many days)",
+    },
+    "End": {  # this should never be reached
+        "text": "Conclude the conversation appropriately based on the entire interaction. "
+    },
+}
+
 
 every_message_flowchart = {
     "Start": {
+        "text": "Start the conversation.",
+        "connections": {"default": "ExtractPlanNames"}
+    },
+    "ExtractPlanNames": {
         "text": "Extract all plan names from the users plan list.",
         "connections": {"default": "StartPlanLoop"},
         "schema": AllPlanNamesSchema,
@@ -57,7 +88,7 @@ every_message_flowchart = {
         "temperature": 1
     },
     "CheckNextWeekPlans": {
-        "text": "Did the user explictly mention in the recent conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing?' ",
+        "text": "Did the user explictly mention in the recent conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing? Note that a mention that no adjustments are needed is also an explicit mention and should be answered with 'Yes'",
         "connections": {
             "Yes": "CheckSuggestedChanges",
             "No": "AskNextWeekPlans"
@@ -68,7 +99,7 @@ every_message_flowchart = {
         "temperature": 1
     },
     "CheckSuggestedChanges": {
-        "text": "Based on recent conversation history, do you suggest any change to '${current_plan}' upcoming week's sessions?",
+        "text": "Based on recent conversation history, do you suggest any change to '${current_plan}' upcoming week's sessions? Note that the frequency of the sessions is much more important than the day of the week.",
         "connections": {
             "Yes": "SuggestedChanges",
             "No": "NextPlan"
@@ -113,7 +144,10 @@ class WeekAnalyserAssistant(object):
 
     def get_response(
         self, user_input: str, message_id: str, emotions: List[Emotion] = []
-    ) -> Tuple[str, List[PlanSession]]:
+    ) -> Tuple[str, ExtractedPlanSessions | None]:
+        is_first_message_in_more_than_a_day = (
+            len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
+        )
         self.memory.write(
             Message.new(
                 id=message_id,
@@ -127,16 +161,21 @@ class WeekAnalyserAssistant(object):
         )
 
         system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
-        Respond to the user in the same language.
+        Respond to the user in the same language that he talks to you in.
         """
 
-        flowchart = every_message_flowchart
+        if is_first_message_in_more_than_a_day:
+            flowchart = first_message_flowchart
+        else:
+            flowchart = every_message_flowchart
 
-        framework = FlowchartLLMFramework(flowchart, system_prompt)
+        framework = FlowchartLLMFramework(
+            flowchart,
+            system_prompt,
+        )
 
         result, extracted = framework.run(
             f"""
-        
         Here's the user's plan list of {len(self.user_plans)} plans:
         {plan_controller.get_readable_plans_and_sessions(self.user.id, past_day_limit=max(6, datetime.now().isoweekday()))}
 
@@ -171,8 +210,14 @@ class WeekAnalyserAssistant(object):
         logger.info(f"FRAMEWORK RESULT: {result}")
         logger.info(f"EXTRACTED: {extracted}")
 
+        # Create a mapping of plan names to IDs TODO: this assumes that the plan present plan name is unique
+        plan_name_to_id = {plan.goal: plan.id for plan in self.user_plans}
+
         return result, (
-            extracted["SuggestedChanges"].next_week_sessions
+            ExtractedPlanSessions(
+                plan_id=plan_name_to_id[extracted["SuggestedChanges"].plan_name],
+                sessions=extracted["SuggestedChanges"].next_week_sessions
+            )
             if "SuggestedChanges" in extracted
-            else []
+            else None
         )

@@ -709,7 +709,7 @@ class PlanController:
 
             if plan_sessions:
                 readable_plans.append(
-                    f"Plan {index + 1}: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%b %d, %Y') if plan.finishing_date else 'no end date'}). Planned sessions this week:\n"
+                    f"Plan {index + 1} (with ID '{plan.id}'): Name: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%b %d, %Y') if plan.finishing_date else 'no end date'}). Planned sessions this week:\n"
                     + "\n".join(plan_sessions)
                 )
 
