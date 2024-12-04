@@ -125,8 +125,6 @@ class ActivityExtractorAssistant(object):
         )
 
         system_prompt = f"""You are {self.name}, an AI assistant helping the user track their activities. 
-        Follow the instruction wrapped in <focus> tags carefully and provide appropriate responses, while always keeping your friendly personality and a connection to the conversastion thread.
-        Just like a human would do.
         That instruction does not come from the user, but you must address it.
         Always consider the entire conversation history when making decisions or responses.
         Respond in the same language as the initial input.

@@ -74,7 +74,7 @@ first_message_flowchart = {
         "connections": {"Yes": "Greet", "No": "End"},
     },
     "Greet": {
-        "text": "Greet the user, asking what's he has been up to since you last talked X days ago (use the conversation history to determine how many days)",
+        "text": "Greet the user, and tell him you'd like to talk a bit about each of his plans.",
     },
     "End": {  # this should never be reached
         "text": "Conclude the conversation appropriately based on the entire interaction. "
@@ -99,15 +99,19 @@ every_message_flowchart = {
         "connections": {"default": "CheckPlanDiscussed"},
     },
     "CheckPlanDiscussed": {
-        "text": "Based exclusively on the conversation history, have you started discussing the plan '${current_plan}' with the user?",
+        "text": "Based exclusively on the conversation history, did you ask the user if he wants to discuss the plan '${current_plan}'?",
         "connections": {
-            "Yes": "CheckNextWeekPlans",
+            "Yes": "CheckUserWantsToDiscussPlan",
             "No": "AskToDiscussPlan"
         }
     },
     "AskToDiscussPlan": {
-        "text": "Ask the user if they would like to discuss the plan '${current_plan}'.",
+        "text": "Ask the user if they would like to discuss the plan '${current_plan}', making a bridge to the conversation and giving an overview on how the plan is doing by the outlook of recent user activity.",
         "temperature": 1,
+    },
+    "CheckUserWantsToDiscussPlan": {
+        "text": "Based exclusively on the conversation history, has the user accepted to discuss the plan '${current_plan}'?",
+        "connections": {"Yes": "CheckNextWeekPlans", "No": "NextPlan"}
     },
     "CheckNextWeekPlans": {
         "text": "Did the user explictly mention in the conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing? Note that a mention that no adjustments are needed is also an explicit mention and should be answered with 'Yes'",
@@ -118,7 +122,7 @@ every_message_flowchart = {
         "temperature": 1,
     },
     "CheckSuggestedChanges": {
-        "text": "Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? Mention the name of the plan in your reasoning.",
+        "text": "Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? You must start your reasoning with \"Based on the conversation history for plan '${current_plan}' ...\".",
         "connections": {"Yes": "SuggestedChanges", "No": "NextPlan"},
     },
     "SuggestedChanges": {
@@ -128,14 +132,14 @@ every_message_flowchart = {
         "connections": {"default": "InformTheUsreAboutTheChanges"},
     },
     "InformTheUsreAboutTheChanges": {
-        "text": "Inform the user that you've generated sessions replacing next week's ones, which now he needs to accept or reject."
+        "text": "Inform the user that you've generated sessions replacing next week's ones for plan '${current_plan}', which now he needs to accept or reject."
     },
     "NextPlan": {
         "type": "loop_continue",
         "connections": {"HasMore": "StartPlanLoop", "Complete": "Conclude"},
     },
     "Conclude": {
-        "text": "Wrap up the conversation with a summary of what was discussed and what actions were decided.",
+        "text": "Congratulate the user for making this far in the conversation, wrap up the conversation with a summary of what was discussed and what actions were decided and tell him you'll see him next week!",
         "temperature": 1,
     },
 }

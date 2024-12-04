@@ -98,7 +98,7 @@ class FlowchartLLMFramework:
                         f"No extracted data found from previous node '{last_node}' for variables: {required_vars}"
                     )
 
-            full_prompt = f"<focus>'{node_text}'</focus>\nContext:{context['initial_input']}\n"
+            full_prompt = f"<instruction>'{node_text}'</instruction>\nContext:{context['initial_input']}\n<instruction again>{node_text}</instruction again>"
 
             node = self.flowchart[current_node_id]
             temperature = node.get("temperature", 0.7)
@@ -119,7 +119,7 @@ class FlowchartLLMFramework:
                         str,
                         Field(
                             ...,
-                            description="Your step by step reasoning on which options best answers the question within <focus>.",
+                            description="Your step by step reasoning analysing the instruction within <instruction> and how to address it. ",
                         ),
                     ),
                     "decision": (
