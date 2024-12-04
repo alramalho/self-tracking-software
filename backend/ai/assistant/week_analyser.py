@@ -118,7 +118,7 @@ every_message_flowchart = {
         "temperature": 1,
     },
     "CheckSuggestedChanges": {
-        "text": "Based on recent conversation history & user's intentions, should you suggest any change to '${current_plan}' upcoming week's sessions?",
+        "text": "Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? Mention the name of the plan in your reasoning.",
         "connections": {"Yes": "SuggestedChanges", "No": "NextPlan"},
     },
     "SuggestedChanges": {
@@ -128,7 +128,7 @@ every_message_flowchart = {
         "connections": {"default": "InformTheUsreAboutTheChanges"},
     },
     "InformTheUsreAboutTheChanges": {
-        "text": "Inform the user that you've generated some upcoming week changes, which he needs to accept or reject."
+        "text": "Inform the user that you've generated sessions replacing next week's ones, which now he needs to accept or reject."
     },
     "NextPlan": {
         "type": "loop_continue",
@@ -202,7 +202,7 @@ class WeekAnalyserAssistant(object):
         {activities_gateway.get_readable_recent_activity_entries(self.user.id, past_day_limit=lookback_days)}
                                
         --- Now here's your actual conversation history with the user:
-        {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=10*60)}
+        {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=24*60)}
 
         {f"<system note>The detected user's emotions on HIS LAST MESSAGE are: {[f'{e.emotion} ({e.score * 100:.2f}%)' for e in emotions]}</system note>" if emotions else ""}
 
