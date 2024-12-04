@@ -1,4 +1,4 @@
-from services.conversation_service import process_message, users_gateway, activities_gateway, moods_gateway
+from services.conversation_service import process_message, activities_gateway
 from shared.executor import executor
 from ai import stt
 from starlette.types import ASGIApp
@@ -20,8 +20,12 @@ from services.hume_service import EmotionWithColor, EMOTION_COLORS, HUME_SCORE_F
 from gateways.database.mongodb import MongoDBGateway
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
+from entities.plan import PlanSession
+from auth.clerk import is_clerk_user
 
-from fastapi import APIRouter
+from entities.user import User
+from fastapi import APIRouter, Depends
+import services.conversation_service as conversation_service
 router = APIRouter(prefix="/ai")
 
 activities_gateway = ActivitiesGateway()
@@ -231,3 +235,39 @@ async def hume_callback(message_id: str, request: Request):
         logger.error(f"Error processing Hume callback: {e}")
         logger.error(traceback.format_exc())
         return {"status": "error", "message": str(e)}
+
+@router.post("/accept-activity")
+async def accept_activity(
+    request: Request,
+    user: User = Depends(is_clerk_user)
+) -> dict:
+    data = await request.json()
+    try:
+        activity_entry = ActivityEntry(**data)
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Missing required field: {str(e)}")
+    await conversation_service.handle_activity_acceptance(user, activity_entry)
+    return {"status": "success"}
+
+
+@router.post("/accept-sessions")
+async def accept_sessions(
+    request: Request,
+    user: User = Depends(is_clerk_user)
+) -> dict:
+    data = await request.json()
+    try:
+        plan_id = data["plan_id"]
+        sessions_data = data["sessions"]
+        old_sessions_data = data["old_sessions"]
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Missing required field: {str(e)}")
+
+    try:
+        sessions = [PlanSession(**session) for session in sessions_data]
+        old_sessions = [PlanSession(**session) for session in old_sessions_data]
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid session data: {str(e)}")
+
+    await conversation_service.handle_sessions_acceptance(user=user, plan_id=plan_id, sessions=sessions, old_sessions=old_sessions)
+    return {"status": "success"}

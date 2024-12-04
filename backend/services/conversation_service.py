@@ -15,7 +15,6 @@ from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
 from gateways.moodreports import MoodsGateway
-from entities.plan import PlanSession
 
 from pydantic import BaseModel, Field
 import traceback

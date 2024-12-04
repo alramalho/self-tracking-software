@@ -50,6 +50,16 @@ import FeedbackForm from "@/components/FeedbackForm";
 import ActivitySuggestion from "@/components/ActivitySuggestion";
 import PlanUpdateBanner, { PlanSession } from "@/components/PlanUpdateBanner";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const REFERRAL_COUNT = 2;
 
@@ -114,6 +124,8 @@ const LogPage: React.FC = () => {
   const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] = useLocalStorage<
     ExtractedPlanSessions | null
   >("suggested_next_week_sessions", null);
+
+  const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -235,33 +247,25 @@ const LogPage: React.FC = () => {
     setTranscription(e.target.value);
   };
 
+  const hasPendingChanges = useCallback(() => {
+    return (
+      (suggestedActivityEntries && suggestedActivityEntries.length > 0) ||
+      (suggestedNextWeekSessions && suggestedNextWeekSessions.sessions.length > 0)
+    );
+  }, [suggestedActivityEntries, suggestedNextWeekSessions]);
+
+  const clearPendingChanges = useCallback(() => {
+    setSuggestedActivityEntries([]);
+    setSuggestedNextWeekSessions(null);
+  }, [setSuggestedActivityEntries, setSuggestedNextWeekSessions]);
+
   const handleSendMessage = async () => {
     if (socket && isConnected) {
-      setIsLoading(true);
-      try {
-        socket.send(
-          JSON.stringify({
-            action: "send_message",
-            text: transcription,
-            input_mode: inputMode,
-            output_mode: outputMode,
-          })
-        );
-
-        addMessage({ role: "user", content: transcription });
-        setTranscription("");
-
-        // Increase timeout to 60 seconds
-        timeoutRef.current = setTimeout(() => {
-          setIsLoading(false);
-          toast.error("Server response timed out", {
-            position: "top-right",
-          });
-        }, 60000);
-      } catch (error) {
-        setIsLoading(false);
-        toast.error("Failed to send message");
+      if (hasPendingChanges()) {
+        setShowPendingChangesAlert(true);
+        return;
       }
+      sendMessage(transcription);
     }
   };
 
@@ -283,11 +287,18 @@ const LogPage: React.FC = () => {
         output_mode: outputMode,
       })
     );
+
+    addMessage({ role: "user", content: message });
+    setTranscription("");
   }
 
   const handleToggleRecording = useCallback(() => {
+    if (hasPendingChanges()) {
+      setShowPendingChangesAlert(true);
+      return;
+    }
+
     if (!isRecording) {
-      // Stop any ongoing speech when starting to record
       stopAudio();
     }
 
@@ -313,7 +324,7 @@ const LogPage: React.FC = () => {
         }, 30000);
       }
     });
-  }, [socket, isConnected, outputMode, toggleRecording, stopAudio]);
+  }, [socket, isConnected, outputMode, toggleRecording, stopAudio, hasPendingChanges]);
 
   useEffect(() => {
     const markNotificationOpened = async () => {
@@ -383,6 +394,78 @@ const LogPage: React.FC = () => {
         ))}
       </div>
     );
+  };
+
+  const handleActivityAcceptance = async (activityEntry: ActivityEntry, activity: Activity) => {
+    if (!isConnected || !socket) {
+      toast.error('Not connected to server');
+      return;
+    }
+
+    // Remove activity from suggested list
+    setSuggestedActivityEntries(entries => 
+      entries.filter(entry => entry.id !== activityEntry.id)
+    );
+
+    // Send acceptance message through WebSocket
+    const message = `I accept the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} on ${activityEntry.date}`;
+    sendMessage(message);
+  };
+
+  const handleActivityRejection = async (activityEntry: ActivityEntry, activity: Activity) => {
+    if (!isConnected || !socket) {
+      toast.error('Not connected to server');
+      return;
+    }
+
+    // Remove activity from suggested list
+    setSuggestedActivityEntries(entries => 
+      entries.filter(entry => entry.id !== activityEntry.id)
+    );
+
+    // Send rejection message through WebSocket
+    const message = `I reject the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} on ${activityEntry.date}`;
+    sendMessage(message);
+  };
+
+  const handleSessionsAcceptance = async (sessions: PlanSession[]) => {
+    if (!isConnected || !socket || !suggestedNextWeekSessions) {
+      toast.error('Not connected to server');
+      return;
+    }
+
+    // Clear suggested sessions
+    setSuggestedNextWeekSessions(null);
+
+    // Format sessions into readable string
+    const sessionsStr = sessions.map(session => {
+      const activity = userData?.activities.find(a => a.id === session.activity_id);
+      return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
+    }).join('\n');
+
+    // Send acceptance message through WebSocket
+    const message = `I accept the suggested sessions for the plan: \n${sessionsStr}`;
+    sendMessage(message);
+  };
+
+  const handleSessionsRejection = async (sessions: PlanSession[]) => {
+    if (!isConnected || !socket || !suggestedNextWeekSessions) {
+      toast.error('Not connected to server');
+      return;
+    }
+
+    // Clear suggested sessions
+    setSuggestedNextWeekSessions(null);
+
+    // Format sessions into readable string
+    const sessionsStr = sessions.map(session => {
+      const activity = userData?.activities.find(a => a.id === session.activity_id);
+      return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
+    }).join('\n');
+
+    // Send rejection message through WebSocket
+    const message = `I reject the suggested sessions for the plan: \n${sessionsStr}`;
+    sendMessage(message);
   };
 
   if (!hasLoadedUserData)
@@ -642,22 +725,8 @@ const LogPage: React.FC = () => {
                 key={activityEntry.id}
                 activity={activity}
                 activityEntry={activityEntry}
-                onAccept={(activityEntry, activity) => {
-                  setSuggestedActivityEntries(entries => 
-                    entries.filter(entry => entry.id !== activityEntry.id)
-                  );
-                  sendMessage(
-                    `I accepted the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`
-                  );
-                }}
-                onReject={(activityEntry, activity) => {
-                  setSuggestedActivityEntries(entries => 
-                    entries.filter(entry => entry.id !== activityEntry.id)
-                  );
-                  sendMessage(
-                    `I rejected the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`
-                  );
-                }}
+                onAccept={handleActivityAcceptance}
+                onReject={handleActivityRejection}
               />
             );
           })}
@@ -666,22 +735,8 @@ const LogPage: React.FC = () => {
               sessions={suggestedNextWeekSessions.sessions}
               old_sessions={suggestedNextWeekSessions.old_sessions}
               plan_id={suggestedNextWeekSessions.plan_id}
-              onAccept={(sessions) => {
-                sendMessage(
-                  `I accepted all suggested sessions for the plan: ${sessions
-                    .map((s) => s.descriptive_guide)
-                    .join(", ")}`
-                );
-                setSuggestedNextWeekSessions(null);
-              }}
-              onReject={(sessions) => {
-                sendMessage(
-                  `I rejected all suggested sessions for the plan: ${sessions
-                    .map((s) => s.descriptive_guide)
-                    .join(", ")}`
-                );
-                setSuggestedNextWeekSessions(null);
-              }}
+              onAccept={handleSessionsAcceptance}
+              onReject={handleSessionsRejection}
             />
           )}
         </div>
@@ -696,6 +751,21 @@ const LogPage: React.FC = () => {
           onClose={() => setShowFeatureForm(false)}
         />
       )}
+      <AlertDialog open={showPendingChangesAlert} onOpenChange={setShowPendingChangesAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pending Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please accept or reject the pending activities/sessions before sending new messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowPendingChangesAlert(false)}>
+              Okay
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
