@@ -74,7 +74,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               <div className="space-y-2">
                 {old_sessions.map((session) => {
                   const activity = userData?.activities.find((a) => a.id === session.activity_id);
-                  const weekday = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long' });
+                  const formattedDate = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                   return (
                     <div
                       key={session.date + session.activity_id}
@@ -82,7 +82,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
                     >
                       <span className="text-lg">{activity?.emoji}</span>
                       <span>
-                        {activity?.title} ({session.quantity} {activity?.measure}) on {weekday}
+                        {activity?.title} ({session.quantity} {activity?.measure}) on {formattedDate}
                       </span>
                     </div>
                   );
@@ -97,7 +97,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               <div className="space-y-2">
                 {sessions.map((session) => {
                   const activity = userData?.activities.find((a) => a.id === session.activity_id);
-                  const weekday = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long' });
+                  const formattedDate = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                   return (
                     <div
                       key={session.date + session.activity_id}
@@ -105,7 +105,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
                     >
                       <span className="text-lg">{activity?.emoji}</span>
                       <span>
-                        {activity?.title} ({session.quantity} {activity?.measure}) on {weekday}
+                        {activity?.title} ({session.quantity} {activity?.measure}) on {formattedDate}
                       </span>
                     </div>
                   );

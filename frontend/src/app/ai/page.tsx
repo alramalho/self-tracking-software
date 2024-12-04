@@ -49,6 +49,7 @@ import { useShare } from "@/hooks/useShare";
 import FeedbackForm from "@/components/FeedbackForm";
 import ActivitySuggestion from "@/components/ActivitySuggestion";
 import PlanUpdateBanner, { PlanSession } from "@/components/PlanUpdateBanner";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const REFERRAL_COUNT = 2;
 
@@ -107,11 +108,12 @@ const LogPage: React.FC = () => {
   const [suggestedActivities, setSuggestedActivities] = useState<Activity[]>(
     []
   );
-  const [suggestedActivityEntries, setSuggestedActivityEntries] = useState<
+  const [suggestedActivityEntries, setSuggestedActivityEntries] = useLocalStorage<
     ActivityEntry[]
-  >([]);
-  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] =
-    useState<ExtractedPlanSessions | null>(null);
+  >("suggested_activity_entries", []);
+  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] = useLocalStorage<
+    ExtractedPlanSessions | null
+  >("suggested_next_week_sessions", null);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -641,11 +643,17 @@ const LogPage: React.FC = () => {
                 activity={activity}
                 activityEntry={activityEntry}
                 onAccept={(activityEntry, activity) => {
+                  setSuggestedActivityEntries(entries => 
+                    entries.filter(entry => entry.id !== activityEntry.id)
+                  );
                   sendMessage(
                     `I accepted the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`
                   );
                 }}
                 onReject={(activityEntry, activity) => {
+                  setSuggestedActivityEntries(entries => 
+                    entries.filter(entry => entry.id !== activityEntry.id)
+                  );
                   sendMessage(
                     `I rejected the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} in ${activityEntry.date}`
                   );
@@ -653,30 +661,29 @@ const LogPage: React.FC = () => {
               />
             );
           })}
-          {suggestedNextWeekSessions &&
-            suggestedNextWeekSessions.sessions.length > 0 && (
-              <PlanUpdateBanner
-                sessions={suggestedNextWeekSessions.sessions}
-                old_sessions={suggestedNextWeekSessions.old_sessions}
-                plan_id={suggestedNextWeekSessions.plan_id}
-                onAccept={(sessions) => {
-                  sendMessage(
-                    `I accepted all suggested sessions for the plan: ${sessions
-                      .map((s) => s.descriptive_guide)
-                      .join(", ")}`
-                  );
-                  setSuggestedNextWeekSessions(null); // Clear suggestions after handling
-                }}
-                onReject={(sessions) => {
-                  sendMessage(
-                    `I rejected all suggested sessions for the plan: ${sessions
-                      .map((s) => s.descriptive_guide)
-                      .join(", ")}`
-                  );
-                  setSuggestedNextWeekSessions(null); // Clear suggestions after handling
-                }}
-              />
-            )}
+          {suggestedNextWeekSessions && suggestedNextWeekSessions.sessions.length > 0 && (
+            <PlanUpdateBanner
+              sessions={suggestedNextWeekSessions.sessions}
+              old_sessions={suggestedNextWeekSessions.old_sessions}
+              plan_id={suggestedNextWeekSessions.plan_id}
+              onAccept={(sessions) => {
+                sendMessage(
+                  `I accepted all suggested sessions for the plan: ${sessions
+                    .map((s) => s.descriptive_guide)
+                    .join(", ")}`
+                );
+                setSuggestedNextWeekSessions(null);
+              }}
+              onReject={(sessions) => {
+                sendMessage(
+                  `I rejected all suggested sessions for the plan: ${sessions
+                    .map((s) => s.descriptive_guide)
+                    .join(", ")}`
+                );
+                setSuggestedNextWeekSessions(null);
+              }}
+            />
+          )}
         </div>
       </div>
       {showFeatureForm && (
