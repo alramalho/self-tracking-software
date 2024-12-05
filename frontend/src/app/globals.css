@@ -42,11 +42,22 @@
     --input: 240 5.9% 90%;
     --ring: 240 10% 3.9%;
     --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
+    --chart-1: 173 58% 39%;
+    --chart-2: 12 76% 61%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --chart-6: 338 76% 61%;
+    --chart-7: 335 93% 67%;
+    --chart-8: 88 50% 53%;
+    --chart-awe: 173 58% 39%;
+    --chart-love: 12 76% 61%;
+    --chart-disapproval: 197 37% 24%;
+    --chart-optimism: 43 74% 66%;
+    --chart-submission: 27 87% 67%;
+    --chart-remorse: 308 33% 46%;
+    --chart-agressiveness: 0 53% 43%;
+    --chart-contempt: 199 100% 18%;
   }
 
   .dark {

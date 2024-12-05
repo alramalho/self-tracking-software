@@ -8,7 +8,6 @@ import { useClerk } from "@clerk/nextjs";
 import axios from "axios";
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { usePostHog } from "posthog-js/react";
-
 export interface Activity {
   id: string;
   title: string;
@@ -125,12 +124,18 @@ export interface Notification {
   related_data: Record<string, string> | null;
 }
 
+type Emotion = {
+  name: string;
+  score: number;
+  color: string;
+};
 export interface Message {
   id: string;
   sender_id: string;
   recipient_id: string;
   content: string;
   created_at: string;
+  emotions: Emotion[];
 }
 
 export interface UserDataEntry {

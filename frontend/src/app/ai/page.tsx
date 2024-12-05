@@ -58,12 +58,6 @@ type ExtractedPlanSessions = {
   old_sessions: PlanSession[];
 };
 
-type Emotion = {
-  name: string;
-  score: number;
-  color: string;
-};
-
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
   const authedApi = useApiWithAuth();
