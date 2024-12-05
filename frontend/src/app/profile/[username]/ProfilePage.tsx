@@ -355,10 +355,10 @@ const ProfilePage: React.FC = () => {
             </div>
           </AppleLikePopover>
         )}
-{/* 
+
         <div className="w-full max-w-3xl mb-8">
           <EmotionViewer messages={profileData.messages} />
-        </div> */}
+        </div>
 
         <Tabs defaultValue="plans" className="w-full">
           <TabsList className="grid w-full grid-cols-2 h-13">
