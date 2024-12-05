@@ -60,6 +60,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ChatInterface } from "@/components/chat/ChatInterface";
+import { EmotionBadges } from "@/components/chat/EmotionBadges";
+import { ChatInput } from "@/components/chat/ChatInput";
+import { AccessRestrictionPopover } from "@/components/chat/AccessRestrictionPopover";
 
 const REFERRAL_COUNT = 2;
 
@@ -118,12 +122,13 @@ const LogPage: React.FC = () => {
   const [suggestedActivities, setSuggestedActivities] = useState<Activity[]>(
     []
   );
-  const [suggestedActivityEntries, setSuggestedActivityEntries] = useLocalStorage<
-    ActivityEntry[]
-  >("suggested_activity_entries", []);
-  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] = useLocalStorage<
-    ExtractedPlanSessions | null
-  >("suggested_next_week_sessions", null);
+  const [suggestedActivityEntries, setSuggestedActivityEntries] =
+    useLocalStorage<ActivityEntry[]>("suggested_activity_entries", []);
+  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] =
+    useLocalStorage<ExtractedPlanSessions | null>(
+      "suggested_next_week_sessions",
+      null
+    );
 
   const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
 
@@ -250,7 +255,8 @@ const LogPage: React.FC = () => {
   const hasPendingChanges = useCallback(() => {
     return (
       (suggestedActivityEntries && suggestedActivityEntries.length > 0) ||
-      (suggestedNextWeekSessions && suggestedNextWeekSessions.sessions.length > 0)
+      (suggestedNextWeekSessions &&
+        suggestedNextWeekSessions.sessions.length > 0)
     );
   }, [suggestedActivityEntries, suggestedNextWeekSessions]);
 
@@ -324,7 +330,14 @@ const LogPage: React.FC = () => {
         }, 30000);
       }
     });
-  }, [socket, isConnected, outputMode, toggleRecording, stopAudio, hasPendingChanges]);
+  }, [
+    socket,
+    isConnected,
+    outputMode,
+    toggleRecording,
+    stopAudio,
+    hasPendingChanges,
+  ]);
 
   useEffect(() => {
     const markNotificationOpened = async () => {
@@ -374,37 +387,18 @@ const LogPage: React.FC = () => {
     );
   };
 
-  const EmotionBadges: React.FC<{ emotions: Emotion[] }> = ({ emotions }) => {
-    if (!emotions.length) return null;
-
-    return (
-      <div className="flex gap-2 mt-2 justify-center">
-        {emotions.map((emotion, index) => (
-          <div
-            key={index}
-            className="px-2 py-1 rounded-full text-xs font-medium"
-            style={{
-              backgroundColor: `${emotion.color}15`,
-              color: emotion.color,
-              border: `1px solid ${emotion.color}30`,
-            }}
-          >
-            {emotion.name} {(emotion.score * 100).toFixed(0)}%
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const handleActivityAcceptance = async (activityEntry: ActivityEntry, activity: Activity) => {
+  const handleActivityAcceptance = async (
+    activityEntry: ActivityEntry,
+    activity: Activity
+  ) => {
     if (!isConnected || !socket) {
-      toast.error('Not connected to server');
+      toast.error("Not connected to server");
       return;
     }
 
     // Remove activity from suggested list
-    setSuggestedActivityEntries(entries => 
-      entries.filter(entry => entry.id !== activityEntry.id)
+    setSuggestedActivityEntries((entries) =>
+      entries.filter((entry) => entry.id !== activityEntry.id)
     );
 
     // Send acceptance message through WebSocket
@@ -412,15 +406,18 @@ const LogPage: React.FC = () => {
     sendMessage(message);
   };
 
-  const handleActivityRejection = async (activityEntry: ActivityEntry, activity: Activity) => {
+  const handleActivityRejection = async (
+    activityEntry: ActivityEntry,
+    activity: Activity
+  ) => {
     if (!isConnected || !socket) {
-      toast.error('Not connected to server');
+      toast.error("Not connected to server");
       return;
     }
 
     // Remove activity from suggested list
-    setSuggestedActivityEntries(entries => 
-      entries.filter(entry => entry.id !== activityEntry.id)
+    setSuggestedActivityEntries((entries) =>
+      entries.filter((entry) => entry.id !== activityEntry.id)
     );
 
     // Send rejection message through WebSocket
@@ -430,7 +427,7 @@ const LogPage: React.FC = () => {
 
   const handleSessionsAcceptance = async (sessions: PlanSession[]) => {
     if (!isConnected || !socket || !suggestedNextWeekSessions) {
-      toast.error('Not connected to server');
+      toast.error("Not connected to server");
       return;
     }
 
@@ -438,10 +435,14 @@ const LogPage: React.FC = () => {
     setSuggestedNextWeekSessions(null);
 
     // Format sessions into readable string
-    const sessionsStr = sessions.map(session => {
-      const activity = userData?.activities.find(a => a.id === session.activity_id);
-      return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
-    }).join('\n');
+    const sessionsStr = sessions
+      .map((session) => {
+        const activity = userData?.activities.find(
+          (a) => a.id === session.activity_id
+        );
+        return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
+      })
+      .join("\n");
 
     // Send acceptance message through WebSocket
     const message = `I accept the suggested sessions for the plan: \n${sessionsStr}`;
@@ -450,7 +451,7 @@ const LogPage: React.FC = () => {
 
   const handleSessionsRejection = async (sessions: PlanSession[]) => {
     if (!isConnected || !socket || !suggestedNextWeekSessions) {
-      toast.error('Not connected to server');
+      toast.error("Not connected to server");
       return;
     }
 
@@ -458,10 +459,14 @@ const LogPage: React.FC = () => {
     setSuggestedNextWeekSessions(null);
 
     // Format sessions into readable string
-    const sessionsStr = sessions.map(session => {
-      const activity = userData?.activities.find(a => a.id === session.activity_id);
-      return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
-    }).join('\n');
+    const sessionsStr = sessions
+      .map((session) => {
+        const activity = userData?.activities.find(
+          (a) => a.id === session.activity_id
+        );
+        return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
+      })
+      .join("\n");
 
     // Send rejection message through WebSocket
     const message = `I reject the suggested sessions for the plan: \n${sessionsStr}`;
@@ -481,120 +486,17 @@ const LogPage: React.FC = () => {
   return (
     <>
       {!isUserWhitelisted() && (
-        <AppleLikePopover
-          className={`z-[10000] ${isPopoverOpen ? "" : "hidden"}`}
-          onClose={() => {
-            setIsPopoverOpen(false);
-          }}
-        >
-          <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
-          <p className="text-base text-gray-700 mb-4">
-            It seems you&apos;re curious about our AI coach. Here&apos;s what it
-            does:
-          </p>
-
-          <div className="space-y-4 mb-6">
-            <div className="flex items-start space-x-3">
-              <Brain className="w-10 h-10 text-blue-300 mt-1" />
-              <div>
-                <h3 className="font-medium">Mood & Emotion extraction</h3>
-                <p className="text-sm text-gray-600">
-                  Automatically detects and tracks your emotional state from
-                  conversations
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <PlusSquare className="w-10 h-10 text-blue-300 mt-1" />
-              <div>
-                <h3 className="font-medium">Smart Activity Detection</h3>
-                <p className="text-sm text-gray-600">
-                  Captures and logs activities automatically, even one-off
-                  events
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Bell className="w-10 h-10 text-blue-300 mt-1" />
-              <div>
-                <h3 className="font-medium">Intelligent Notifications</h3>
-                <p className="text-sm text-gray-600">
-                  Context-aware notification system that knows when to reach out
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-base text-gray-700 mb-4">
-            {`This is a costly feature to run, so I'm limiting access to a few users. If you'd like to use it, please refer ${REFERRAL_COUNT} friends and I'll put you on BETA access.`}
-          </p>
-
-          <div className="w-full max-w-sm mx-auto">
-            <RadialProgress
-              value={referredUsers}
-              total={REFERRAL_COUNT}
-              title="Referral Progress"
-              description="Refer friends to unlock AI features"
-              footer={
-                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>
-                    {REFERRAL_COUNT - referredUsers} more friends needed
-                  </span>
-                  <Button variant="secondary" onClick={handleShareReferralLink}>
-                    Share Referral Link
-                  </Button>
-                </div>
-              }
-            />
-            {REFERRAL_COUNT - referredUsers === 0 && (
-              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 shadow-sm">
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="text-blue-500">
-                    <Users className="h-8 w-8" />
-                  </div>
-                  <h3 className="font-semibold text-blue-900">
-                    You&apos;ve referred enough friends! Request access now.
-                  </h3>
-                  <p className="text-sm text-blue-700">
-                    Tell us how you plan to use the AI feature to get on the
-                    list
-                  </p>
-                  <Button
-                    variant="secondary"
-                    className="bg-white hover:bg-blue-50"
-                    onClick={() => setShowFeatureForm(true)}
-                  >
-                    <MessageSquarePlus className="w-4 h-4 mr-2" />
-                    Request Access
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </AppleLikePopover>
+        <AccessRestrictionPopover
+          isOpen={isPopoverOpen}
+          onClose={() => setIsPopoverOpen(false)}
+          referredUsers={referredUsers}
+          requiredReferrals={REFERRAL_COUNT}
+          onShareReferral={handleShareReferralLink}
+          onRequestAccess={() => setShowFeatureForm(true)}
+        />
       )}
       <div className="flex flex-col min-h-screen">
         <div className="fixed top-4 left-0 right-0 flex justify-center gap-2 z-50">
-          <button
-            onClick={handleReconnect}
-            className="px-4 py-2 rounded-full bg-white hover:bg-gray-100 transition-colors flex items-center gap-2 border border-gray-300 shadow-sm hover:shadow-md active:scale-95"
-          >
-            {isConnected ? (
-              <>
-                <Wifi className="text-green-500" size={16} />
-                <span className="font-medium">Connected</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="text-red-500" size={16} />
-                <span className="font-medium">Reconnect</span>
-              </>
-            )}
-          </button>
-
           <button
             onClick={clearMessages}
             className="px-4 py-2 rounded-full bg-white hover:bg-gray-100 transition-colors flex items-center gap-2 border border-gray-300 shadow-sm hover:shadow-md active:scale-95"
@@ -604,25 +506,7 @@ const LogPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="w-full max-w-xl mx-auto mt-12">
-          <ChatMessageList>
-            {messages.map((message, index) => (
-              <ChatBubble
-                key={index}
-                variant={message.role === "assistant" ? "received" : "sent"}
-              >
-                <ChatBubbleAvatar
-                  src={
-                    message.role === "assistant"
-                      ? "https://htmlcolorcodes.com/assets/images/colors/sky-blue-color-solid-background-1920x1080.png"
-                      : "https://htmlcolorcodes.com/assets/images/colors/orange-color-solid-background-1920x1080.png"
-                  }
-                />
-                <ChatBubbleMessage message={message.content} />
-              </ChatBubble>
-            ))}
-          </ChatMessageList>
-        </div>
+        <ChatInterface messages={messages} />
 
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           {isLoading && (
@@ -631,8 +515,30 @@ const LogPage: React.FC = () => {
             </div>
           )}
 
-          <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-blue-600 rounded-full mb-8 flex items-center justify-center shadow-lg">
-            <Eclipse className="w-12 h-12 text-white" />
+          <div className="bg-gray-50 border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
+            {inputMode === "voice" ? (
+              <div className="flex flex-col items-center w-full">
+                <AudioControls
+                  isRecording={isRecording}
+                  isConnected={isConnected}
+                  toggleRecording={handleToggleRecording}
+                  cancelRecording={cancelRecording}
+                  isLoading={isLoading}
+                />
+                <EmotionBadges emotions={currentEmotions} />
+              </div>
+            ) : (
+              <div className="flex items-center w-full">
+                <ChatInput
+                  transcription={transcription}
+                  isConnected={isConnected}
+                  isLoading={isLoading}
+                  onTranscriptionChange={handleTranscriptionChange}
+                  onSendMessage={handleSendMessage}
+                />
+                <EmotionBadges emotions={currentEmotions} />
+              </div>
+            )}
           </div>
 
           <div className="flex space-x-4 mb-4">
@@ -678,43 +584,24 @@ const LogPage: React.FC = () => {
             </div>
           </div>
 
-          {inputMode === "voice" ? (
-            <div className="flex flex-col items-center">
-              <AudioControls
-                isRecording={isRecording}
-                isConnected={isConnected}
-                toggleRecording={handleToggleRecording}
-                cancelRecording={cancelRecording}
-                isLoading={isLoading}
-              />
-              <EmotionBadges emotions={currentEmotions} />
-            </div>
-          ) : (
-            <div className="w-full max-w-md">
-              <textarea
-                value={transcription}
-                onChange={handleTranscriptionChange}
-                className="w-full p-2 border rounded"
-                rows={4}
-                placeholder="Type your message here..."
-              />
-              <button
-                onClick={handleSendMessage}
-                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!isConnected || isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <LoaderCircle className="animate-spin" size={16} />
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <span>Send Message</span>
-                )}
-              </button>
-              <EmotionBadges emotions={currentEmotions} />
-            </div>
-          )}
+          <Button
+              variant="ghost"
+              onClick={handleReconnect}
+              className="hover:bg-transparent"
+            >
+              {isConnected ? (
+                <>
+                  <Wifi className="text-green-500 mr-2" size={28} />
+                  <span className="text-xl font-normal italic">Connected</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="text-red-500 mr-2" size={28} />
+                  <span className="text-xl font-normal">Reconnect</span>
+                </>
+              )}
+            </Button>
+
           {suggestedActivityEntries.map((activityEntry) => {
             const activity = suggestedActivities.find(
               (a) => a.id === activityEntry.activity_id
@@ -730,15 +617,16 @@ const LogPage: React.FC = () => {
               />
             );
           })}
-          {suggestedNextWeekSessions && suggestedNextWeekSessions.sessions.length > 0 && (
-            <PlanUpdateBanner
-              sessions={suggestedNextWeekSessions.sessions}
-              old_sessions={suggestedNextWeekSessions.old_sessions}
-              plan_id={suggestedNextWeekSessions.plan_id}
-              onAccept={handleSessionsAcceptance}
-              onReject={handleSessionsRejection}
-            />
-          )}
+          {suggestedNextWeekSessions &&
+            suggestedNextWeekSessions.sessions.length > 0 && (
+              <PlanUpdateBanner
+                sessions={suggestedNextWeekSessions.sessions}
+                old_sessions={suggestedNextWeekSessions.old_sessions}
+                plan_id={suggestedNextWeekSessions.plan_id}
+                onAccept={handleSessionsAcceptance}
+                onReject={handleSessionsRejection}
+              />
+            )}
         </div>
       </div>
       {showFeatureForm && (
@@ -751,16 +639,22 @@ const LogPage: React.FC = () => {
           onClose={() => setShowFeatureForm(false)}
         />
       )}
-      <AlertDialog open={showPendingChangesAlert} onOpenChange={setShowPendingChangesAlert}>
+      <AlertDialog
+        open={showPendingChangesAlert}
+        onOpenChange={setShowPendingChangesAlert}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Pending Changes</AlertDialogTitle>
             <AlertDialogDescription>
-              Please accept or reject the pending activities/sessions before sending new messages.
+              Please accept or reject the pending activities/sessions before
+              sending new messages.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowPendingChangesAlert(false)}>
+            <AlertDialogAction
+              onClick={() => setShowPendingChangesAlert(false)}
+            >
               Okay
             </AlertDialogAction>
           </AlertDialogFooter>
