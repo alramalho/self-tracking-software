@@ -84,7 +84,11 @@ first_message_flowchart = {
 
 every_message_flowchart = {
     "Start": {
-        "text": "Start the conversation.",
+        "text": "Did the user made you request, question or instruction?",
+        "connections": {"Yes": "Answer", "No": "ExtractPlanNames"},
+    },
+    "Answer": {
+        "text": "Address the user's request, having in mind your goals and purpose.",
         "connections": {"default": "ExtractPlanNames"},
     },
     "ExtractPlanNames": {

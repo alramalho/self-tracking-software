@@ -11,30 +11,17 @@ import {
   WifiOff,
   Mic,
   MessageSquare,
-  LoaderCircle,
   Volume2,
   VolumeX,
   Trash2,
   Loader2,
-  Brain,
-  Bell,
-  PlusSquare,
-  MessageSquarePlus,
-  Eclipse,
 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
-import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 
-import {
-  ChatBubble,
-  ChatBubbleAvatar,
-  ChatBubbleMessage,
-} from "@/components/ui/chat/chat-bubble";
 import { Switch } from "@/components/ui/switch";
-import AppleLikePopover from "@/components/AppleLikePopover";
 import {
   Activity,
   ActivityEntry,
@@ -42,8 +29,6 @@ import {
 } from "@/contexts/UserPlanContext";
 import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
-import { RadialProgress } from "@/components/ui/radial-progress";
-import { Users } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
 import FeedbackForm from "@/components/FeedbackForm";
@@ -496,25 +481,12 @@ const LogPage: React.FC = () => {
         />
       )}
       <div className="flex flex-col min-h-screen">
-        <div className="fixed top-4 left-0 right-0 flex justify-center gap-2 z-50">
-          <button
-            onClick={clearMessages}
-            className="px-4 py-2 rounded-full bg-white hover:bg-gray-100 transition-colors flex items-center gap-2 border border-gray-300 shadow-sm hover:shadow-md active:scale-95"
-          >
-            <Trash2 size={16} />
-            <span className="font-medium">Clear</span>
-          </button>
+        <div className="flex flex-col justify-center items-center w-full mx-auto bg-gray-50 border-y border-gray-200">
+          <ChatInterface messages={messages} />
+          <span className="text-sm text-gray-400 px-4 py-2">Chat (<span onClick={clearMessages} className="text-gray-400 underline cursor-pointer">Clear</span>)</span>
         </div>
 
-        <ChatInterface messages={messages} />
-
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          {isLoading && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-              <LoaderCircle className="animate-spin text-gray-600" size={24} />
-            </div>
-          )}
-
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
           <div className="bg-gray-50 border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
             {inputMode === "voice" ? (
               <div className="flex flex-col items-center w-full">
@@ -525,7 +497,6 @@ const LogPage: React.FC = () => {
                   cancelRecording={cancelRecording}
                   isLoading={isLoading}
                 />
-                <EmotionBadges emotions={currentEmotions} />
               </div>
             ) : (
               <div className="flex items-center w-full">
@@ -536,7 +507,6 @@ const LogPage: React.FC = () => {
                   onTranscriptionChange={handleTranscriptionChange}
                   onSendMessage={handleSendMessage}
                 />
-                <EmotionBadges emotions={currentEmotions} />
               </div>
             )}
           </div>
@@ -585,22 +555,22 @@ const LogPage: React.FC = () => {
           </div>
 
           <Button
-              variant="ghost"
-              onClick={handleReconnect}
-              className="hover:bg-transparent"
-            >
-              {isConnected ? (
-                <>
-                  <Wifi className="text-green-500 mr-2" size={28} />
-                  <span className="text-xl font-normal italic">Connected</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="text-red-500 mr-2" size={28} />
-                  <span className="text-xl font-normal">Reconnect</span>
-                </>
-              )}
-            </Button>
+            variant="ghost"
+            onClick={handleReconnect}
+            className="hover:bg-transparent"
+          >
+            {isConnected ? (
+              <>
+                <Wifi className="text-green-500 mr-2" size={28} />
+                <span className="text-xl font-normal italic">Connected</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="text-red-500 mr-2" size={28} />
+                <span className="text-xl font-normal underline">Reconnect</span>
+              </>
+            )}
+          </Button>
 
           {suggestedActivityEntries.map((activityEntry) => {
             const activity = suggestedActivities.find(
@@ -627,6 +597,12 @@ const LogPage: React.FC = () => {
                 onReject={handleSessionsRejection}
               />
             )}
+        </div>
+        <div className="flex flex-col items-center justify-center w-full bg-gray-50 border-y border-gray-200">
+          <span className="text-sm text-gray-400 px-4 py-2">
+            Emotion Analysis
+          </span>
+          <EmotionBadges emotions={currentEmotions} />
         </div>
       </div>
       {showFeatureForm && (

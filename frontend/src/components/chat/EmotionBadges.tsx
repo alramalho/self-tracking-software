@@ -6,28 +6,27 @@ export interface Emotion {
   color: string;
 }
 
-interface EmotionBadgesProps {
-  emotions: Emotion[];
-}
-
-export const EmotionBadges: React.FC<EmotionBadgesProps> = ({ emotions }) => {
-  if (!emotions.length) return null;
-
+export const EmotionBadges = ({ emotions }: { emotions: Emotion[] }) => {
   return (
-    <div className="flex gap-2 mt-2 justify-center">
-      {emotions.map((emotion, index) => (
-        <div
-          key={index}
-          className="px-2 py-1 rounded-full text-xs font-medium"
-          style={{
-            backgroundColor: `${emotion.color}15`,
-            color: emotion.color,
-            border: `1px solid ${emotion.color}30`,
-          }}
-        >
-          {emotion.name} {(emotion.score * 100).toFixed(0)}%
-        </div>
-      ))}
+    <div className="flex items-center max-w-full gap-2 overflow-x-auto no-scrollbar w-full justify-center py-4">
+      <div className="flex overflow-x-auto no-scrollbar gap-2 px-4">
+        {emotions.map((emotion, index) => (
+          <div
+            key={index}
+            style={{
+              color: `${emotion.color}`,
+              backgroundColor: `${emotion.color}15`,
+              borderColor: emotion.color,
+            }}
+            className="flex items-center gap-1 px-2 py-1 rounded-full border"
+          >
+            <span className="font-medium">{emotion.name}</span>
+            <span className="text-xs opacity-75">
+              {Math.round(emotion.score * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }; 

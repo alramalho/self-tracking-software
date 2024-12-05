@@ -65,18 +65,14 @@ EMOTION_COLORS = {
 }
 
 
-class EmotionWithColor(Emotion):
-    color: str = "#000000"  # Default to black
-
-
 class EmotionPrediction(BaseModel):
     time: dict
-    emotions: List[EmotionWithColor]
+    emotions: List[Emotion]
 
 
 async def process_audio_with_hume(
     audio_data: bytes, audio_format: str, message_id: str = None
-) -> List[EmotionWithColor]:
+) -> List[Emotion]:
     logger.log("HUME", f"Processing audio with Hume: {audio_format}")
     try:
         headers = {

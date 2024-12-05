@@ -10,6 +10,7 @@ from typing import List, Optional
 class Emotion(BaseModel):
     name: str
     score: float
+    color: str
 
 class Message(BaseModel):
     id: str
