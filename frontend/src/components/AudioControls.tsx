@@ -20,42 +20,47 @@ const AudioControls: React.FC<AudioControlsProps> = ({
 }) => {
   if (isRecording) {
     return (
-      <div className="flex gap-2">
+      <div className="flex items-center justify-between w-full gap-2">
         <button
           onClick={cancelRecording}
-          className="rounded-full flex items-center justify-center transition-all duration-200 p-4 text-white bg-gray-500 hover:bg-gray-600"
+          className="p-2 text-gray-600 hover:text-red-600 transition-colors"
         >
-          <X className="text-white" size={24} />
-          <span className="ml-2">Cancel</span>
+          <X size={20} />
         </button>
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-pulse text-sm text-gray-600">
+            Recording...
+          </div>
+        </div>
+
         <button
           onClick={toggleRecording}
-          className="rounded-full flex items-center justify-center transition-all duration-200 p-4 text-white bg-green-500 hover:bg-green-600"
+          className="p-2 text-gray-600 hover:text-green-600 transition-colors"
         >
-          <Send className="text-white" size={24} />
-          <span className="ml-2">Send</span>
+          <Send size={20} />
         </button>
       </div>
     );
   }
 
   return (
-    <button
-      onClick={toggleRecording}
-      disabled={!isConnected || isLoading}
-      className={`rounded-full flex items-center justify-center transition-all duration-200 p-4 text-white 
-        bg-blue-500 hover:bg-blue-600
-        disabled:opacity-50 disabled:cursor-not-allowed`}
-    >
-      {isLoading ? (
-        <LoaderCircle className="animate-spin text-white" size={24} />
-      ) : (
-        <>
-          <Mic className="text-white" size={24} />
-          <span className="ml-2">Start Recording</span>
-        </>
-      )}
-    </button>
+    <div className="flex items-center justify-center w-full">
+      <button
+        onClick={toggleRecording}
+        disabled={!isConnected || isLoading}
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isLoading ? (
+          <LoaderCircle className="animate-spin" size={20} />
+        ) : (
+          <>
+            <Mic size={20} />
+            <span className="text-sm">Start Recording</span>
+          </>
+        )}
+      </button>
+    </div>
   );
 };
 
