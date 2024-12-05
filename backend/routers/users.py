@@ -20,6 +20,7 @@ from gateways.aws.ses import SESGateway, get_email_template_string
 from analytics.posthog import posthog
 import time
 from emails.loops import upsert_loops_contact
+from gateways.messages import MessagesGateway
 
 router = APIRouter()
 
@@ -30,6 +31,7 @@ plan_controller = PlanController()
 notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
 ses_gateway = SESGateway()
+messages_gateway = MessagesGateway()
 
 
 @router.get("/user-health")
@@ -84,6 +86,10 @@ async def load_users_data(
                     users_gateway.friend_request_gateway.get_pending_received_requests,
                     user.id,
                 )
+                messages_future = executor.submit(
+                    messages_gateway.get_all_messages_by_user,
+                    user.id
+                )
 
                 activities = [
                     exclude_embedding_fields(activity.dict())
@@ -107,6 +113,7 @@ async def load_users_data(
                     request.dict()
                     for request in friend_requests_received_future.result()
                 ]
+                messages = messages_future.result()
 
             # Generate custom bio
             bio_parts = []
@@ -179,6 +186,7 @@ async def load_users_data(
                 "mood_reports": mood_reports,
                 "plans": plans,
                 "plan_groups": plan_groups,
+                "messages": messages,
             }
 
             if current_user.id == user.id:

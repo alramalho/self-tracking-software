@@ -46,6 +46,7 @@ import { usePostHog } from "posthog-js/react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Divider from "@/components/Divider";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
+import { EmotionViewer } from "@/components/EmotionViewer";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -254,6 +255,11 @@ const ProfilePage: React.FC = () => {
     return currentUser?.friend_ids?.includes(profileData.user?.id || "");
   };
 
+  const getMessageCount = () => {
+    if (!profileData?.messages) return 0;
+    return profileData.messages.length;
+  };
+
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
@@ -270,6 +276,12 @@ const ProfilePage: React.FC = () => {
               <p className="text-sm text-gray-500">Friends</p>
             </div>
           </Link>
+          {!isOwnProfile && (
+            <div className="text-center">
+              <p className="text-2xl font-bold">{getMessageCount()}</p>
+              <p className="text-sm text-gray-500">Messages</p>
+            </div>
+          )}
           {isOwnProfile && (
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
@@ -343,6 +355,10 @@ const ProfilePage: React.FC = () => {
             </div>
           </AppleLikePopover>
         )}
+
+        <div className="w-full max-w-3xl mb-8">
+          <EmotionViewer messages={profileData.messages} />
+        </div>
 
         <Tabs defaultValue="plans" className="w-full">
           <TabsList className="grid w-full grid-cols-2 h-13">
