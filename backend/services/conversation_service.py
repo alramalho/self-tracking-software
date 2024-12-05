@@ -15,7 +15,7 @@ from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
 from gateways.moodreports import MoodsGateway
-
+from gateways.messages import MessagesGateway
 from pydantic import BaseModel, Field
 import traceback
 from ai import stt, tts
@@ -36,6 +36,7 @@ users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
 moods_gateway = MoodsGateway()
 plan_controller = PlanController()
+messages_gateway = MessagesGateway()
 
 
 def talk_with_assistant(
@@ -312,6 +313,7 @@ async def process_message(
 ) -> Tuple[str, Optional[bytes], Union[List[ExtractedActivityEntry], List[SuggestedNextWeekSessions]]]:
     loop = asyncio.get_event_loop()
     emotions = []
+    message_id = str(ObjectId())
 
     if input_mode == "voice" and audio_data and audio_format:
         # Perform STT and send intermediary transcription
@@ -338,10 +340,10 @@ async def process_message(
                     }
                 )
         except Exception as e:
+            logger.error(traceback.format_exc())
             logger.error(f"Error processing audio with Hume: {e}")
             emotions = []  # Ensure emotions is a list even on error
 
-    message_id = str(ObjectId())
     
     text_response, extracted_data = await loop.run_in_executor(
         executor, talk_with_assistant, user_id, message, message_id, emotions
@@ -399,3 +401,11 @@ def initiate_recurrent_checkin(user_id: str) -> Notification:
         recurrence="daily",
         time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
     )
+
+def get_recent_emotions(user_id: str) -> List[Emotion]:
+    messages = messages_gateway.get_recent_sent_messages(user_id, max_age_in_minutes=60, max_count=3)
+    logger.warning(f"Recent messages: {[str(m) for m in messages]}")
+    emotions = []
+    for message in messages:
+        emotions.extend(message.emotions)
+    return emotions

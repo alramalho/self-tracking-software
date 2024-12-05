@@ -49,7 +49,7 @@ def _make_loops_request(
 ) -> LoopsResponse:
     
     if not LOOPS_API_KEY:
-        logger.error("LOOPS", "LOOPS_API_KEY is not set")
+        logger.error("LOOPS_API_KEY is not set")
         return {"success": False, "id": "", "message": "LOOPS_API_KEY is not set"}
     
     url = f"https://app.loops.so/api/v1/{endpoint}"
