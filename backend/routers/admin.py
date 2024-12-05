@@ -115,7 +115,7 @@ async def send_notification_to_all_users(
     return {"message": f"Notification sent successfully to {sent} users"}
 
 
-@router.post("/trigger-unactivated-check")
+@router.post("/run-daily-validations")
 async def run_daily_validations(
     request: Request, dry_run: bool = False, verified: User = Depends(admin_auth)
 ):
