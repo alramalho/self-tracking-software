@@ -6,7 +6,7 @@ if ENVIRONMENT == "production":
 else:
     level = "DEBUG"
 
-create_logger(level=level)
+create_logger(level=30)
 
 from fastapi.middleware.cors import CORSMiddleware
 import base64

@@ -58,3 +58,23 @@ class MessagesGateway:
         ]
         
         return averaged_emotions
+
+    def get_all_messages_by_user(self, user_id: str) -> List[Message]:
+        # Get messages where user is either sender or recipient
+        msgs_as_sender = self.db_gateway.query("sender_id", user_id)
+        msgs_as_recipient = self.db_gateway.query("recipient_id", user_id)
+        
+        all_messages = []
+        
+        # Add all messages where user is sender
+        for msg in msgs_as_sender:
+            all_messages.append(Message(**msg))
+            
+        # Add all messages where user is recipient
+        for msg in msgs_as_recipient:
+            # Only add if not already added (in case of self-messages)
+            if msg.get('sender_id') != user_id:
+                all_messages.append(Message(**msg))
+                
+        all_messages.sort(key=lambda x: x.created_at, reverse=True)
+        return all_messages
