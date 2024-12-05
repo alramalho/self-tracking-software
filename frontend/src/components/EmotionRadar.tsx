@@ -37,7 +37,7 @@ export function EmotionRadar({ data }: EmotionRadarProps) {
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto aspect-square max-h-[300px]"
+      className="mx-auto aspect-square max-h-[300px] [&_.recharts-text]:fill-background"
     >
       <RadarChart data={data}>
         <ChartTooltip

@@ -89,8 +89,8 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (username === "me" && userDataQuery.data?.user?.username) {
       window.history.replaceState(
-        null, 
-        '', 
+        null,
+        "",
         `/profile/${userDataQuery.data.user.username}`
       );
     }
@@ -356,9 +356,11 @@ const ProfilePage: React.FC = () => {
           </AppleLikePopover>
         )}
 
-        <div className="w-full max-w-3xl mb-8">
-          <EmotionViewer messages={profileData.messages} />
-        </div>
+        {profileData.messages.filter((message) => message.emotions.length > 0).length > 0 && (
+          <div className="w-full max-w-3xl mb-8">
+            <EmotionViewer messages={profileData.messages} />
+          </div>
+        )}
 
         <Tabs defaultValue="plans" className="w-full">
           <TabsList className="grid w-full grid-cols-2 h-13">
@@ -414,11 +416,13 @@ const ProfilePage: React.FC = () => {
                       </select>
                     </div>
                   </div>
-                  {getActivitiesNotInPlans().map(activity => (
+                  {getActivitiesNotInPlans().map((activity) => (
                     <ActivityGridRenderer
                       key={activity.id}
                       activities={[activity]}
-                      activityEntries={activityEntries.filter(entry => entry.activity_id === activity.id)}
+                      activityEntries={activityEntries.filter(
+                        (entry) => entry.activity_id === activity.id
+                      )}
                       timeRange={timeRange}
                       endDate={endDate}
                     />

@@ -206,7 +206,7 @@ class WeekAnalyserAssistant(object):
         --- Here's the user's plan list of {len(self.user_plans)} plans:
         {plan_controller.get_readable_plans_and_sessions(self.user.id, past_day_limit=lookback_days, future_day_limit=lookahead_days)}
 
-        --- Here's user's logged activities during last week:
+        --- Here's user's actually done activities during last week:
         {activities_gateway.get_readable_recent_activity_entries(self.user.id, past_day_limit=lookback_days)}
                                
         --- Now here's your actual conversation history with the user:
