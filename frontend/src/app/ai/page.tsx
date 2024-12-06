@@ -593,9 +593,10 @@ const LogPage: React.FC = () => {
             )}
         </div>
         <div className="flex flex-col items-center justify-center w-full bg-gray-50 border-y border-gray-200">
-          <span className="text-sm text-gray-400 px-4 py-2">
+          <span className="text-sm text-gray-400 px-4 pt-2">
             Emotion Analysis
           </span>
+          <span className="text-xs text-gray-300 pb-2">(only available on voice input)</span>
           <EmotionBadges emotions={currentEmotions} />
         </div>
       </div>
