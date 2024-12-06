@@ -181,7 +181,7 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
           </CardDescription>
         </div>
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-[180px] bg-white/50 backdrop-blur-sm">
+          <SelectTrigger className="w-[180px] backdrop-blur-sm">
             <SelectValue placeholder="Select month" />
           </SelectTrigger>
           <SelectContent>
@@ -194,7 +194,7 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
         </Select>
       </CardHeader>
       <CardContent className="pb-0">
-        <div className="rounded-lg bg-white/50 p-4 backdrop-blur-sm">
+        <div className="rounded-lg p-4 backdrop-blur-sm">
           {chartData.length > 0 ? (
             <>
             <EmotionPie
@@ -205,7 +205,7 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
               numberOfMessages={totalMessagesThatHaveEmotion}
             />
             <span className="text-xs text-muted-foreground/80">
-              The percentage in the emotions represent the intensity that our AI captured.
+              The percentage in the emotions represent the intensity captured by our AI.
             </span>
             </>
           ) : (
