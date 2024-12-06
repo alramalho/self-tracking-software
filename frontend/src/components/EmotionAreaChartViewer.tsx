@@ -167,17 +167,18 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
         >
           <defs>
             <linearGradient id="sentimentGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
           <XAxis
             dataKey="date"
             tickFormatter={(date) => format(parseISO(date), 'MMM d')}
             tickLine={false}
             axisLine={false}
             tickMargin={8}
+            className="text-xs text-muted-foreground"
           />
           <YAxis
             domain={[-1, 1]}
@@ -191,9 +192,10 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
           <Area
             type="monotone"
             dataKey="sentiment"
-            stroke="#94a3b8"
+            stroke="hsl(var(--primary))"
             fill="url(#sentimentGradient)"
             fillOpacity={1}
+            strokeWidth={2}
           />
         </AreaChart>
       </ResponsiveContainer>

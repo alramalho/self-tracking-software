@@ -28,6 +28,7 @@ import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { EmotionAreaChartViewer } from "./EmotionAreaChartViewer";
+import { DateRangeSlider } from "@/components/ui/date-range-slider";
 
 const EMOTION_TO_CATEGORY = {
   Joy: "Optimism",
@@ -81,42 +82,29 @@ interface EmotionViewerProps {
 }
 
 export function EmotionViewer({ messages }: EmotionViewerProps) {
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
-
-  // Get available months from messages
-  const availableMonths = useMemo(() => {
-    const months = new Set<string>();
-    messages.forEach((message) => {
-      if (message.created_at) {
-        const monthKey = format(parseISO(message.created_at), "yyyy-MM");
-        months.add(monthKey);
-      }
-    });
-    return Array.from(months).sort().reverse(); // Most recent first
+  const dateRange = useMemo(() => {
+    const dates = messages
+      .filter((msg) => msg.created_at)
+      .map((msg) => new Date(msg.created_at!).getTime());
+    return {
+      min: Math.min(...dates),
+      max: Math.max(...dates),
+    };
   }, [messages]);
 
-  // Set initial month to most recent
-  useEffect(() => {
-    if (availableMonths.length > 0 && !selectedMonth) {
-      setSelectedMonth(availableMonths[0]);
-    }
-  }, [availableMonths, selectedMonth]);
+  const [selectedRange, setSelectedRange] = useState<[number, number]>([
+    dateRange.min,
+    dateRange.max,
+  ]);
 
-  // Filter messages by selected month
   const filteredMessages = useMemo(() => {
-    if (!selectedMonth) return [];
-
-    const start = startOfMonth(parseISO(selectedMonth));
-    const end = endOfMonth(parseISO(selectedMonth));
-
     return messages.filter((message) => {
       if (!message.created_at) return false;
-      const date = parseISO(message.created_at);
-      return date >= start && date <= end;
+      const messageDate = new Date(message.created_at).getTime();
+      return messageDate >= selectedRange[0] && messageDate <= selectedRange[1];
     });
-  }, [messages, selectedMonth]);
+  }, [messages, selectedRange]);
 
-  // Process messages to get emotion categories data
   const emotionCounts: { [key: string]: number } = {};
   let totalMessagesThatHaveEmotion = 0;
 
@@ -134,7 +122,6 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
     }
   });
 
-  // Convert to chart data format and calculate averages
   const chartData = Object.entries(emotionCounts).map(([category, total]) => ({
     category,
     value:
@@ -146,76 +133,75 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
   return (
     <Card className="overflow-hidden bg-gradient-to-br from-blue-50/80 to-white">
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-xl font-bold tracking-tight">
-              Emotional Profile
-            </CardTitle>
-            <CardDescription className="text-xs font-medium">
-              <Link
-                href="https://github.com/alramalho/self-tracking-software"
-                className="underline"
-              >
-                We don&apos;t store your voice data
-              </Link>
-            </CardDescription>
-          </div>
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-[180px] backdrop-blur-sm">
-              <SelectValue placeholder="Select month" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableMonths.map((month) => (
-                <SelectItem key={month} value={month}>
-                  {format(parseISO(month), "MMMM yyyy")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div>
+          <CardTitle className="text-xl font-bold tracking-tight">
+            Emotional Profile
+          </CardTitle>
+          <CardDescription className="text-xs font-medium">
+            <Link
+              href="https://github.com/alramalho/self-tracking-software"
+              className="underline"
+            >
+              We don&apos;t store your voice data
+            </Link>
+          </CardDescription>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-4">
-          <Card className="flex-1 min-w-[300px]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Emotion Distribution</CardTitle>
-              <CardDescription>
-                Distribution of emotions in your messages
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {chartData.length > 0 ? (
-                <>
-                  <EmotionPie
-                    data={chartData.map((item) => ({
-                      category: item.category,
-                      percentage: item.value,
-                    }))}
-                    numberOfMessages={totalMessagesThatHaveEmotion}
-                  />
-                  <span className="mt-4 block text-xs text-muted-foreground/80">
-                    The percentage in the emotions represent the intensity captured by our AI.
-                  </span>
-                </>
-              ) : (
-                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                  No data available for selected month
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Card className="flex-1 min-w-[300px]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Emotional Journey</CardTitle>
-              <CardDescription>
-                Your emotional patterns over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EmotionAreaChartViewer messages={filteredMessages} />
-            </CardContent>
-          </Card>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-4">
+            <Card className="flex-1 min-w-[300px]">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Emotion Distribution</CardTitle>
+                <CardDescription>
+                  Distribution of emotions in your messages
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {chartData.length > 0 ? (
+                  <>
+                    <EmotionPie
+                      data={chartData.map((item) => ({
+                        category: item.category,
+                        percentage: item.value,
+                      }))}
+                      numberOfMessages={totalMessagesThatHaveEmotion}
+                    />
+                    <span className="mt-4 block text-xs text-muted-foreground/80">
+                      The percentage in the emotions represent the intensity
+                      captured by our AI.
+                    </span>
+                  </>
+                ) : (
+                  <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                    No data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="w-full">
+              <DateRangeSlider
+                minDate={new Date(dateRange.min)}
+                maxDate={new Date(dateRange.max)}
+                value={selectedRange}
+                onValueChange={setSelectedRange}
+                className="w-full"
+              />
+            </div>
+
+            <Card className="flex-1 min-w-[300px]">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Emotional Journey</CardTitle>
+                <CardDescription>
+                  Your emotional patterns over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EmotionAreaChartViewer messages={filteredMessages} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </CardContent>
     </Card>
