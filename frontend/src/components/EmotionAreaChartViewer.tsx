@@ -3,6 +3,7 @@
 import { Message } from "@/contexts/UserPlanContext";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, parseISO } from "date-fns";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 interface Emotion {
   name: string;
@@ -106,46 +107,105 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
     );
   };
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const value = payload[0].value;
+      let emoji = "";
+      let sentiment = "Neutral";
+      
+      if (value >= 0.8) {
+        emoji = "😊";
+        sentiment = "Very Positive";
+      } else if (value >= 0.3) {
+        emoji = "🙂";
+        sentiment = "Positive";
+      } else if (value <= -0.8) {
+        emoji = "😔";
+        sentiment = "Very Negative";
+      } else if (value <= -0.3) {
+        emoji = "🙁";
+        sentiment = "Negative";
+      }
+
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm text-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Date
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {format(parseISO(label), 'MMM d, yyyy')}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Sentiment
+              </span>
+              <span className="font-bold">
+                {emoji} {sentiment}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="w-full h-[300px] mt-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={chartData}
-          margin={{
-            top: 10,
-            right: 30,
-            left: 30,
-            bottom: 0,
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="date"
-            tickFormatter={(date) => format(parseISO(date), 'MMM d')}
-          />
-          <YAxis
-            domain={[-1, 1]}
-            ticks={[-0.8, 0, 0.8]}
-            tick={<CustomYAxisTick />}
-          />
-          <Tooltip
-            labelFormatter={(date) => format(parseISO(date as string), 'MMM d, yyyy')}
-            formatter={(value: number) => {
-              let emoji = "😕";
-              if (value >= 0.8) emoji = "😊";
-              else if (value <= -0.8) emoji = "😔";
-              return [`${emoji} ${(value * 100).toFixed(0)}% ${value > 0 ? 'Positive' : value < 0 ? 'Negative' : 'Neutral'}`];
-            }}
-          />
-          <Area
-            type="monotone"
-            dataKey="sentiment"
-            stroke="#94a3b8"
-            fill="#94a3b8"
-            fillOpacity={0.6}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Emotional Journey</CardTitle>
+        <CardDescription>
+          Your emotional patterns over time
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="w-full h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={chartData}
+              margin={{
+                top: 10,
+                right: 30,
+                left: 30,
+                bottom: 0,
+              }}
+            >
+              <defs>
+                <linearGradient id="sentimentGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(date) => format(parseISO(date), 'MMM d')}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <YAxis
+                domain={[-1, 1]}
+                ticks={[-0.8, -0.4, 0, 0.4, 0.8]}
+                tick={<CustomYAxisTick />}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="sentiment"
+                stroke="#94a3b8"
+                fill="url(#sentimentGradient)"
+                fillOpacity={1}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
   );
 } 
