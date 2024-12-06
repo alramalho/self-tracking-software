@@ -47,6 +47,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import Divider from "@/components/Divider";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import { EmotionViewer } from "@/components/EmotionViewer";
+import { DemoEmotionViewer } from "@/components/DemoEmotionViewer";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -81,7 +82,7 @@ const ProfilePage: React.FC = () => {
   );
   const [endDate, setEndDate] = useState(endOfMonth(new Date()));
   const [showServerMessage, setShowServerMessage] = useState(false);
-  const router = useRouter();
+  const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
 
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -356,12 +357,15 @@ const ProfilePage: React.FC = () => {
           </AppleLikePopover>
         )}
 
-        {profileData.messages.filter((message) => message.emotions.length > 0).length > 0 && (
+        {userHasAccessToAi ? (
           <div className="w-full max-w-3xl mb-8">
             <EmotionViewer messages={profileData.messages} />
           </div>
+        ) : (
+          <div className="w-full max-w-3xl mb-8">
+            <DemoEmotionViewer />
+          </div>
         )}
-
         <Tabs defaultValue="plans" className="w-full">
           <TabsList className="grid w-full grid-cols-2 h-13">
             <TabsTrigger value="plans">

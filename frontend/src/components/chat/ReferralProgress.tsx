@@ -32,6 +32,10 @@ export const ReferralProgress: React.FC<ReferralProgressProps> = ({
             <Button variant="secondary" onClick={onShareReferral}>
               Share Referral Link
             </Button>
+            or
+            <Button onClick={() => window.open("https://buy.stripe.com/28obKQbsJbT98dqeUU", "_blank")}>
+              Purchase Demo Access
+            </Button>
           </div>
         }
       />

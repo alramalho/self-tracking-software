@@ -86,6 +86,15 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
     const dates = messages
       .filter((msg) => msg.created_at)
       .map((msg) => new Date(msg.created_at!).getTime());
+    
+    if (dates.length === 0) {
+      const now = new Date().getTime();
+      return {
+        min: now,
+        max: now,
+      };
+    }
+    
     return {
       min: Math.min(...dates),
       max: Math.max(...dates),
@@ -149,59 +158,68 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-4">
-            <Card className="flex-1 min-w-[300px]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Emotion Distribution</CardTitle>
-                <CardDescription>
-                  Distribution of emotions in your messages
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {chartData.length > 0 ? (
-                  <>
-                    <EmotionPie
-                      data={chartData.map((item) => ({
-                        category: item.category,
-                        percentage: item.value,
-                      }))}
-                      numberOfMessages={totalMessagesThatHaveEmotion}
-                    />
-                    <span className="mt-4 block text-xs text-muted-foreground/80">
-                      The percentage in the emotions represent the intensity
-                      captured by our AI.
-                    </span>
-                  </>
-                ) : (
-                  <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                    No data available
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="w-full">
-              <DateRangeSlider
-                minDate={new Date(dateRange.min)}
-                maxDate={new Date(dateRange.max)}
-                value={selectedRange}
-                onValueChange={setSelectedRange}
-                className="w-full"
-              />
+          {messages.length === 0 ? (
+            <div className="flex border rounded-lg p-2 h-[100px] items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <p className="text-lg font-medium">No messages yet</p>
+                <p className="text-sm text-muted-foreground"><Link href="/ai" className="underline">Start a conversation</Link> to see your emotional profile</p>
+              </div>
             </div>
+          ) : (
+            <div className="flex flex-wrap gap-4">
+              <Card className="flex-1 min-w-[300px]">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Emotion Distribution</CardTitle>
+                  <CardDescription>
+                    Distribution of emotions in your messages
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {chartData.length > 0 ? (
+                    <>
+                      <EmotionPie
+                        data={chartData.map((item) => ({
+                          category: item.category,
+                          percentage: item.value,
+                        }))}
+                        numberOfMessages={totalMessagesThatHaveEmotion}
+                      />
+                      <span className="mt-4 block text-xs text-muted-foreground/80">
+                        The percentage in the emotions represent the intensity
+                        captured by our AI.
+                      </span>
+                    </>
+                  ) : (
+                    <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                      No data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Card className="flex-1 min-w-[300px]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Emotional Journey</CardTitle>
-                <CardDescription>
-                  Your emotional patterns over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <EmotionAreaChartViewer messages={filteredMessages} />
-              </CardContent>
-            </Card>
-          </div>
+              <div className="w-full">
+                <DateRangeSlider
+                  minDate={new Date(dateRange.min)}
+                  maxDate={new Date(dateRange.max)}
+                  value={selectedRange}
+                  onValueChange={setSelectedRange}
+                  className="w-full"
+                />
+              </div>
+
+              <Card className="flex-1 min-w-[300px]">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Emotional Journey</CardTitle>
+                  <CardDescription>
+                    Your emotional patterns over time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EmotionAreaChartViewer messages={filteredMessages} />
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
