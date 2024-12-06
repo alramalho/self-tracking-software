@@ -27,6 +27,7 @@ import {
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { EmotionAreaChartViewer } from './EmotionAreaChartViewer';
 
 interface Emotion {
   name: string;
@@ -197,16 +198,17 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
         <div className="rounded-lg p-4 backdrop-blur-sm">
           {chartData.length > 0 ? (
             <>
-            <EmotionPie
-              data={chartData.map((item) => ({
-                category: item.category,
-                percentage: item.value,
-              }))}
-              numberOfMessages={totalMessagesThatHaveEmotion}
-            />
-            <span className="text-xs text-muted-foreground/80">
-              The percentage in the emotions represent the intensity captured by our AI.
-            </span>
+              <EmotionPie
+                data={chartData.map((item) => ({
+                  category: item.category,
+                  percentage: item.value,
+                }))}
+                numberOfMessages={totalMessagesThatHaveEmotion}
+              />
+              <EmotionAreaChartViewer messages={filteredMessages} />
+              <span className="text-xs text-muted-foreground/80">
+                The percentage in the emotions represent the intensity captured by our AI.
+              </span>
             </>
           ) : (
             <div className="flex h-[200px] items-center justify-center text-muted-foreground">
