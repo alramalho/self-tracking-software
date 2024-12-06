@@ -80,6 +80,7 @@ export function EmotionPie({ data, numberOfMessages }: EmotionPieProps) {
           dataKey="percentage"
           nameKey="category"
           innerRadius={65}
+          outerRadius={80}
           strokeWidth={2}
           stroke="#fff"
         >
