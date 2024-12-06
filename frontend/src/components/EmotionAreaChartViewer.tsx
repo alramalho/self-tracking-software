@@ -154,58 +154,49 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Emotional Journey</CardTitle>
-        <CardDescription>
-          Your emotional patterns over time
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="w-full h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData}
-              margin={{
-                top: 10,
-                right: 30,
-                left: 30,
-                bottom: 0,
-              }}
-            >
-              <defs>
-                <linearGradient id="sentimentGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.1}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(date) => format(parseISO(date), 'MMM d')}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-              />
-              <YAxis
-                domain={[-1, 1]}
-                ticks={[-0.8, -0.4, 0, 0.4, 0.8]}
-                tick={<CustomYAxisTick />}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="sentiment"
-                stroke="#94a3b8"
-                fill="url(#sentimentGradient)"
-                fillOpacity={1}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="w-full h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={chartData}
+          margin={{
+            top: 10,
+            right: 30,
+            left: 10,
+            bottom: 0,
+          }}
+        >
+          <defs>
+            <linearGradient id="sentimentGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.1}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis
+            dataKey="date"
+            tickFormatter={(date) => format(parseISO(date), 'MMM d')}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+          />
+          <YAxis
+            domain={[-1, 1]}
+            ticks={[-0.8, -0.4, 0, 0.4, 0.8]}
+            tick={<CustomYAxisTick />}
+            axisLine={false}
+            tickLine={false}
+            width={20}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Area
+            type="monotone"
+            dataKey="sentiment"
+            stroke="#94a3b8"
+            fill="url(#sentimentGradient)"
+            fillOpacity={1}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 } 

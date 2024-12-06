@@ -27,17 +27,7 @@ import {
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { EmotionAreaChartViewer } from './EmotionAreaChartViewer';
-
-interface Emotion {
-  name: string;
-  score: number;
-  color: string;
-}
-
-interface MessageWithEmotions extends Message {
-  emotions?: Emotion[];
-}
+import { EmotionAreaChartViewer } from "./EmotionAreaChartViewer";
 
 const EMOTION_TO_CATEGORY = {
   Joy: "Optimism",
@@ -87,7 +77,7 @@ const EMOTION_TO_CATEGORY = {
 } as const;
 
 interface EmotionViewerProps {
-  messages: MessageWithEmotions[];
+  messages: Message[];
 }
 
 export function EmotionViewer({ messages }: EmotionViewerProps) {
@@ -155,66 +145,77 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
 
   return (
     <Card className="overflow-hidden bg-gradient-to-br from-blue-50/80 to-white">
-      <CardHeader className="space-y-4 pb-4">
-        <div className="space-y-1.5">
-          <CardTitle className="text-xl font-bold tracking-tight">
-            <div className="flex items-center justify-between gap-2 flex-nowrap">
-              <span>Emotional Profile</span>
-              {/* <div className="flex items-center gap-2 rounded-full bg-blue-100/80 px-3 py-1">
-                <BadgeCheck size={16} className="text-blue-500" />
-                <span className="text-xs font-medium text-blue-700">
-                  Premium
-                </span>
-              </div> */}
-            </div>
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground/80">
-            Chat with our Coach to generate insights based on your interactions.{" "}
-            <br />
-            <Link
-              href="https://github.com/alramalho/self-tracking-software"
-              className="underline"
-            >
-              <span className="text-xs font-medium">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-xl font-bold tracking-tight">
+              Emotional Profile
+            </CardTitle>
+            <CardDescription className="text-xs font-medium">
+              <Link
+                href="https://github.com/alramalho/self-tracking-software"
+                className="underline"
+              >
                 We don&apos;t store your voice data
-              </span>
-            </Link>
-          </CardDescription>
+              </Link>
+            </CardDescription>
+          </div>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[180px] backdrop-blur-sm">
+              <SelectValue placeholder="Select month" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMonths.map((month) => (
+                <SelectItem key={month} value={month}>
+                  {format(parseISO(month), "MMMM yyyy")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-[180px] backdrop-blur-sm">
-            <SelectValue placeholder="Select month" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableMonths.map((month) => (
-              <SelectItem key={month} value={month}>
-                {format(parseISO(month), "MMMM yyyy")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </CardHeader>
-      <CardContent className="pb-0">
-        <div className="rounded-lg p-4 backdrop-blur-sm">
-          {chartData.length > 0 ? (
-            <>
-              <EmotionPie
-                data={chartData.map((item) => ({
-                  category: item.category,
-                  percentage: item.value,
-                }))}
-                numberOfMessages={totalMessagesThatHaveEmotion}
-              />
+      <CardContent>
+        <div className="flex flex-wrap gap-4">
+          <Card className="flex-1 min-w-[300px]">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Emotion Distribution</CardTitle>
+              <CardDescription>
+                Distribution of emotions in your messages
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {chartData.length > 0 ? (
+                <>
+                  <EmotionPie
+                    data={chartData.map((item) => ({
+                      category: item.category,
+                      percentage: item.value,
+                    }))}
+                    numberOfMessages={totalMessagesThatHaveEmotion}
+                  />
+                  <span className="mt-4 block text-xs text-muted-foreground/80">
+                    The percentage in the emotions represent the intensity captured by our AI.
+                  </span>
+                </>
+              ) : (
+                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                  No data available for selected month
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card className="flex-1 min-w-[300px]">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Emotional Journey</CardTitle>
+              <CardDescription>
+                Your emotional patterns over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <EmotionAreaChartViewer messages={filteredMessages} />
-              <span className="text-xs text-muted-foreground/80">
-                The percentage in the emotions represent the intensity captured by our AI.
-              </span>
-            </>
-          ) : (
-            <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-              No data available for selected month
-            </div>
-          )}
+            </CardContent>
+          </Card>
         </div>
       </CardContent>
     </Card>

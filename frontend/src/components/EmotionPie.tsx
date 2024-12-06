@@ -7,6 +7,8 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from "@/components/ui/chart"
 
 interface EmotionPieProps {
@@ -111,6 +113,10 @@ export function EmotionPie({ data, numberOfMessages }: EmotionPieProps) {
             }}
           />
         </Pie>
+        <ChartLegend
+          content={<ChartLegendContent nameKey="category" />}
+          className="flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+        />
       </PieChart>
     </ChartContainer>
   )
