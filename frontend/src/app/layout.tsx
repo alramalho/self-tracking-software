@@ -13,8 +13,8 @@ const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Tracking Software",
-  description: "Know yourself better",
+  title: "Tracking Software APP - Your Free and Open Source App for Activity Tracking",
+  description: "Measure your progress and manage your habits. Gain insights, set goals, and achieve accountability with your friends and personal AI coach.",
   manifest: "/manifest.json",
 };
 
