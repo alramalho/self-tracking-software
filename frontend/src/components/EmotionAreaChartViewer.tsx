@@ -1,9 +1,23 @@
 "use client";
 
 import { Message } from "@/contexts/UserPlanContext";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { format, parseISO } from "date-fns";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 
 interface Emotion {
   name: string;
@@ -16,82 +30,110 @@ interface MessageWithEmotions extends Message {
 }
 
 const EMOTION_TO_SENTIMENT = {
-  "Joy": "positive",
-  "Excitement": "positive",
-  "Interest": "positive",
+  Joy: "positive",
+  Excitement: "positive",
+  Interest: "positive",
   "Surprise (positive)": "positive",
-  "Contentment": "positive",
-  "Satisfaction": "positive",
-  "Relief": "positive",
-  "Admiration": "positive",
-  "Amusement": "positive",
-  "Ecstasy": "positive",
-  "Love": "positive",
-  "Pride": "positive",
-  "Triumph": "positive",
-  "Realization": "positive",
+  Contentment: "positive",
+  Satisfaction: "positive",
+  Relief: "positive",
+  Admiration: "positive",
+  Amusement: "positive",
+  Ecstasy: "positive",
+  Love: "positive",
+  Pride: "positive",
+  Triumph: "positive",
+  Realization: "positive",
   "Aesthetic Appreciation": "positive",
-  "Adoration": "positive",
-  "Calmness": "positive",
-  "Concentration": "neutral",
-  "Contemplation": "neutral",
-  "Determination": "neutral",
-  "Desire": "positive",
-  "Romance": "positive",
-  "Nostalgia": "neutral",
-  "Entrancement": "positive",
-  "Awe": "neutral",
-  "Anger": "negative",
-  "Anxiety": "negative",
-  "Fear": "negative",
-  "Sadness": "negative",
-  "Disgust": "negative",
-  "Confusion": "neutral",
-  "Contempt": "negative",
-  "Disappointment": "negative",
-  "Distress": "negative",
-  "Embarrassment": "negative",
+  Adoration: "positive",
+  Calmness: "positive",
+  Concentration: "neutral",
+  Contemplation: "neutral",
+  Determination: "neutral",
+  Desire: "positive",
+  Romance: "positive",
+  Nostalgia: "neutral",
+  Entrancement: "positive",
+  Awe: "neutral",
+  Anger: "negative",
+  Anxiety: "negative",
+  Fear: "negative",
+  Sadness: "negative",
+  Disgust: "negative",
+  Confusion: "neutral",
+  Contempt: "negative",
+  Disappointment: "negative",
+  Distress: "negative",
+  Embarrassment: "negative",
   "Empathic Pain": "negative",
-  "Pain": "negative",
-  "Shame": "negative",
+  Pain: "negative",
+  Shame: "negative",
   "Surprise (negative)": "negative",
-  "Tiredness": "neutral",
-  "Awkwardness": "negative",
-  "Boredom": "neutral",
-  "Doubt": "neutral",
-  "Craving": "neutral",
+  Tiredness: "neutral",
+  Awkwardness: "negative",
+  Boredom: "neutral",
+  Doubt: "neutral",
+  Craving: "neutral",
 } as const;
 
 interface EmotionAreaChartViewerProps {
   messages: MessageWithEmotions[];
 }
 
-export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps) {
+interface DailyChartData {
+  date: string;
+  sentiment: number;
+}
+
+export function EmotionAreaChartViewer({
+  messages,
+}: EmotionAreaChartViewerProps) {
   // Process messages to calculate normalized sentiment scores by date
-  const chartData = messages
-    .filter(msg => msg.emotions && msg.emotions.length > 0 && msg.created_at)
-    .map(message => {
-      let positiveCount = 0;
-      let negativeCount = 0;
-      let neutralCount = 0;
+  const chartData: DailyChartData[] = Object.entries(
+    messages
+      .filter((msg) => msg.emotions && msg.emotions.length > 0 && msg.created_at)
+      .reduce((acc: { [key: string]: number[] }, message) => {
+        // Format the date to YYYY-MM-DD to group by day
+        const dateKey = format(parseISO(message.created_at), 'yyyy-MM-dd');
+        
+        let positiveCount = 0;
+        let negativeCount = 0;
+        let neutralCount = 0;
 
-      message.emotions.forEach(emotion => {
-        const sentiment = EMOTION_TO_SENTIMENT[emotion.name as keyof typeof EMOTION_TO_SENTIMENT];
-        if (sentiment === "positive") positiveCount++;
-        else if (sentiment === "negative") negativeCount--;
-        else neutralCount++;
-      });
+        message.emotions.forEach((emotion) => {
+          const sentiment =
+            EMOTION_TO_SENTIMENT[
+              emotion.name as keyof typeof EMOTION_TO_SENTIMENT
+            ];
+          if (sentiment === "positive") positiveCount++;
+          else if (sentiment === "negative") negativeCount--;
+          else neutralCount++;
+        });
 
-      // Calculate normalized sentiment score between -1 and 1
-      const totalEmotions = Math.abs(positiveCount) + Math.abs(negativeCount) + Math.abs(neutralCount);
-      const sentimentScore = totalEmotions > 0 ? (positiveCount + negativeCount) / totalEmotions : 0;
+        // Calculate normalized sentiment score between -1 and 1
+        const totalEmotions =
+          Math.abs(positiveCount) +
+          Math.abs(negativeCount) +
+          Math.abs(neutralCount);
+        const sentimentScore =
+          totalEmotions > 0 ? (positiveCount + negativeCount) / totalEmotions : 0;
 
-      return {
-        date: message.created_at,
-        sentiment: sentimentScore,
-      };
-    })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        // Add the sentiment score to the array for this date
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(sentimentScore);
+        
+        return acc;
+      }, {})
+  )
+    .map(([date, scores]) => ({
+      date,
+      sentiment: scores.reduce((sum: number, score: number) => sum + score, 0) / scores.length
+    }))
+    .sort((a: DailyChartData, b: DailyChartData) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
   const CustomYAxisTick = ({ x, y, payload }: any) => {
     let emoji;
@@ -112,7 +154,7 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
       const value = payload[0].value;
       let emoji = "";
       let sentiment = "Neutral";
-      
+
       if (value >= 0.8) {
         emoji = "😊";
         sentiment = "Very Positive";
@@ -135,7 +177,7 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
                 Date
               </span>
               <span className="font-bold text-muted-foreground">
-                {format(parseISO(label), 'MMM d, yyyy')}
+                {format(parseISO(label), "MMM d, yyyy")}
               </span>
             </div>
             <div className="flex flex-col">
@@ -170,12 +212,18 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
               <stop offset="10%" stopColor="#589952" stopOpacity={0.2}/>
               <stop offset="50%" stopColor="#ffb366" stopOpacity={0.1}/>
               <stop offset="90%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2}/>
+              {/* <stop offset="10%" stopColor="#50A848" stopOpacity={0.2} />
+              <stop offset="90%" stopColor="#66A6FF" stopOpacity={0.1} /> */}
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            className="stroke-muted"
+          />
           <XAxis
             dataKey="date"
-            tickFormatter={(date) => format(parseISO(date), 'MMM d')}
+            tickFormatter={(date) => format(parseISO(date), "MMM d")}
             tickLine={false}
             axisLine={false}
             tickMargin={8}
@@ -202,4 +250,5 @@ export function EmotionAreaChartViewer({ messages }: EmotionAreaChartViewerProps
       </ResponsiveContainer>
     </div>
   );
-} 
+}
+
