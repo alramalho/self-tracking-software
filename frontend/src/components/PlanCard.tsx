@@ -92,9 +92,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
     <>
       <div
         data-testid="plan-card"
-        className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer hover:bg-gray-50 ${
-          isSelected ? "border-blue-500" : "border-gray-200"
-        }`}
+        className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer 
+          ${isSelected 
+            ? "border-blue-500 bg-blue-50" 
+            : "bg-white border-gray-200"
+          } transition-colors duration-200`}
         onClick={() => onSelect(plan.id!)}
       >
         <div className="flex justify-between items-start mb-4">

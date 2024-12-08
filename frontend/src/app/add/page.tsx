@@ -117,6 +117,7 @@ const LogPage: React.FC = () => {
                 onClick={() => handleQuantityChange(-1)}
                 variant="outline"
                 size="icon"
+                className="bg-white"
               >
                 -
               </Button>
@@ -125,6 +126,7 @@ const LogPage: React.FC = () => {
                 onClick={() => handleQuantityChange(1)}
                 variant="outline"
                 size="icon"
+                className="bg-white"
               >
                 +
               </Button>
@@ -135,6 +137,7 @@ const LogPage: React.FC = () => {
                   key={value}
                   onClick={() => handleQuickSelect(value)}
                   variant="secondary"
+                  className="bg-white"
                   size="sm"
                 >
                   {value}

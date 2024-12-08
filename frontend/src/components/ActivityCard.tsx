@@ -19,8 +19,8 @@ export const ActivityCard = ({
         className={`flex flex-col items-left justify-center p-6 rounded-lg border-2 ${
           selected
             ? "border-blue-500 bg-blue-100"
-            : "border-gray-300"
-        } hover:bg-gray-50 aspect-square w-full`}
+            : "border-gray-300 bg-white"
+        } aspect-square w-full`}
       >
         {activity.emoji && (
           <span className="text-4xl mb-2">{activity.emoji}</span>

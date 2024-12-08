@@ -35,7 +35,7 @@ const PlansRenderer: React.FC = () => {
         <Link href="/create-new-plan" passHref>
           <Button
             variant="outline"
-            className="w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+            className="bg-gray-50 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
           >
             <PlusSquare className="h-8 w-8 mb-2 text-gray-400" />
             <span>Create new Plan</span>
@@ -59,6 +59,14 @@ const PlansRenderer: React.FC = () => {
     refetchUserData();
   };
 
+  const handlePlanSelect = (planId: string) => {
+    if (selectedPlanId === planId) {
+      setSelectedPlanId(null);
+    } else {
+      setSelectedPlanId(planId);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -69,7 +77,7 @@ const PlansRenderer: React.FC = () => {
             planGroup={getPlanGroup(plan.id!)}
             isSelected={selectedPlanId === plan.id}
             currentUserId={userData?.user?.id}
-            onSelect={(planId) => setSelectedPlanId(planId)}
+            onSelect={handlePlanSelect}
             onInviteSuccess={handleInviteSuccess}
             onPlanRemoved={handlePlanRemoved}
           />
@@ -77,7 +85,7 @@ const PlansRenderer: React.FC = () => {
         <Link href="/create-new-plan" passHref>
           <Button
             variant="outline"
-            className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+            className="bg-gray-50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
           >
             <Plus className="h-8 w-8 mb-2 text-gray-400" />
             <span>Create New Plan</span>

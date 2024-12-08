@@ -29,11 +29,11 @@ const BottomNav = () => {
   return (
     <>
       <FloatingActionMenu />
-      <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t-2 pb-2 z-[50]">
+      <nav className="fixed bottom-0 left-0 right-0 bg-gray-50 shadow-lg border-t-2 pb-2 z-[50]">
         <div className="flex justify-around">
           <Link
             href="/"
-            className="flex flex-col items-center p-2 text-gray-600 relative"
+            className="flex flex-col justify-center items-center p-2 text-gray-600 relative"
             onClick={() =>{
               if (pathname !== "/")  {
                 setIsLoadingFeed(true)
@@ -50,7 +50,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href="/plans"
-            className="flex flex-col items-center p-2 text-gray-600"
+            className="flex flex-col justify-center items-center p-2 text-gray-600"
             onClick={() => {
               if (pathname !== "/plans") {
                 setIsLoadingPlans(true)
@@ -62,19 +62,19 @@ const BottomNav = () => {
           </Link>
           <Link
             href="/add"
-            className="flex flex-col items-center p-2 text-gray-600"
+            className="flex flex-col justify-center items-center p-2 text-gray-600"
             onClick={() => {
               if (pathname !== "/add") {
                 setIsLoadingLog(true)
               }
             }}
           >
-            {isLoadingLog ? <Loader2 size={24} className="animate-spin" /> : <PlusSquare size={24} />}
+            {isLoadingLog ? <Loader2 size={30} className="animate-spin" /> : <PlusSquare size={30} />}
             <span className="text-xs mt-1">Add</span>
           </Link>
           <Link
             href={`/ai`}
-            className="flex flex-col items-center p-2 text-gray-600"
+            className="flex flex-col justify-center items-center p-2 text-gray-600"
             onClick={() => {
               if (pathname !== "/ai") {
                 setIsLoadingAi(true)
@@ -86,7 +86,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href={`/profile/me`}
-            className="flex flex-col items-center p-2 text-gray-600"
+            className="flex flex-col justify-center items-center p-2 text-gray-600"
             onClick={() => {
               if (pathname !== "/profile/me") {
                 setIsLoadingProfile(true)
