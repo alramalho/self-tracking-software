@@ -1,7 +1,8 @@
-import React from 'react';
-import { Brain, Bell, PlusSquare } from "lucide-react";
+import React from "react";
+import { Brain, Bell, PlusSquare, MessageSquarePlus } from "lucide-react";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { ReferralProgress } from './ReferralProgress';
+import { ReferralProgress } from "./ReferralProgress";
+import { Button } from "../ui/button";
 
 interface AccessRestrictionPopoverProps {
   isOpen: boolean;
@@ -12,7 +13,9 @@ interface AccessRestrictionPopoverProps {
   onRequestAccess: () => void;
 }
 
-export const AccessRestrictionPopover: React.FC<AccessRestrictionPopoverProps> = ({
+export const AccessRestrictionPopover: React.FC<
+  AccessRestrictionPopoverProps
+> = ({
   isOpen,
   onClose,
   referredUsers,
@@ -24,10 +27,12 @@ export const AccessRestrictionPopover: React.FC<AccessRestrictionPopoverProps> =
     <AppleLikePopover
       className={`z-[10000] ${isOpen ? "" : "hidden"}`}
       onClose={onClose}
+      unclosable={true}
     >
       <h1 className="text-2xl font-bold mb-4">howdy partner 🤠</h1>
       <p className="text-base text-gray-700 mb-4">
-        It seems you&apos;re curious about our AI coach. Here&apos;s what it does:
+        It seems you&apos;re curious about our AI coach. Here&apos;s what it
+        does:
       </p>
 
       <div className="space-y-4 mb-6">
@@ -36,7 +41,8 @@ export const AccessRestrictionPopover: React.FC<AccessRestrictionPopoverProps> =
           <div>
             <h3 className="font-medium">Mood & Emotion extraction</h3>
             <p className="text-sm text-gray-600">
-              Automatically detects and tracks your emotional state from conversations
+              Automatically detects and tracks your emotional state from
+              conversations
             </p>
           </div>
         </div>
@@ -61,13 +67,19 @@ export const AccessRestrictionPopover: React.FC<AccessRestrictionPopoverProps> =
           </div>
         </div>
       </div>
-
-      <ReferralProgress
+      <Button
+        className="w-full hover:bg-blue-50"
+        onClick={onRequestAccess}
+      >
+        <MessageSquarePlus className="w-4 h-4 mr-2" />
+        Request Access
+      </Button>
+      {/* <ReferralProgress
         referredUsers={referredUsers}
         requiredReferrals={requiredReferrals}
         onShareReferral={onShareReferral}
         onRequestAccess={onRequestAccess}
-      />
+      /> */}
     </AppleLikePopover>
   );
-}; 
+};

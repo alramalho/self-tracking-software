@@ -365,7 +365,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       {areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
 
       {planGroupMembers && planGroupMembers.length > 0 && (
-        <div className="border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
           <div className="flex flex-row flex-wrap gap-6">
             {planGroupMembers.map((member) => (
@@ -422,7 +422,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           />
         </div>
       ) : null}
-      <div className="border border-gray-200 rounded-lg p-4 mt-8">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mt-8">
         <h2 className="text-2xl font-bold mb-4">
           Activities Overview {selectedPlan.emoji}
         </h2>
@@ -513,7 +513,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </div>
         </div>
       </div>
-
+{/* 
       <div className="mt-8 border border-gray-200 rounded-lg p-4 mb-8">
         <h2 className="text-2xl font-bold mb-4">Calendar</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -572,12 +572,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             }}
           />
         </div>
-      </div>
+      </div> */}
 
       <Link href="/add" passHref>
         <Button
           variant="outline"
-          className="w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+          className="bg-gray-50 mt-2 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
         >
           <PlusSquare className="h-8 w-8 mb-2 text-gray-400" />
           <span>Log Activity</span>

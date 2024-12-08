@@ -171,7 +171,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             userData.notifications.map((notification) => (
               <div
                 key={notification.id}
-                className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 hover:shadow-md mb-4"
+                className="bg-white shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 hover:shadow-md mb-4"
               >
                 <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
                   {["friend_request", "plan_invitation", "info"].includes(
