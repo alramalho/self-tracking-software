@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { RadialProgress } from "@/components/ui/radial-progress";
-import { Users } from "lucide-react";
+import { MessageSquarePlus, Users } from "lucide-react";
 
 interface ReferralProgressProps {
   referredUsers: number;

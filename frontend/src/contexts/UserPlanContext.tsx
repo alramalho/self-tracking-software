@@ -124,7 +124,7 @@ export interface Notification {
   related_data: Record<string, string> | null;
 }
 
-type Emotion = {
+export type Emotion = {
   name: string;
   score: number;
   color: string;
