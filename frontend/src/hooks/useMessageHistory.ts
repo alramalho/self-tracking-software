@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 
-export type Message = {
+export interface Message {
   role: "user" | "assistant";
   content: string;
-};
+}
 
 export function useMessageHistory() {
   const [messages, setMessages] = useState<Message[]>([]);

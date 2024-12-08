@@ -15,6 +15,7 @@ import {
   VolumeX,
   Trash2,
   Loader2,
+  History,
 } from "lucide-react"; // Add this import
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
@@ -598,6 +599,14 @@ const LogPage: React.FC = () => {
           </span>
           <span className="text-xs text-gray-300 pb-2">(only available on voice input)</span>
           <EmotionBadges emotions={currentEmotions} />
+          <Button
+            variant="ghost"
+            className="mt-2 mb-4"
+            onClick={() => router.push('/message-history')}
+          >
+            <History className="w-4 h-4 mr-2" />
+            See emotion history ({userData?.messages?.length || 0} messages)
+          </Button>
         </div>
       </div>
       {showFeatureForm && (

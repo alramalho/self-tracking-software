@@ -133,7 +133,7 @@ export interface Message {
   id: string;
   sender_id: string;
   recipient_id: string;
-  content: string;
+  text: string;
   created_at: string;
   emotions: Emotion[];
 }
