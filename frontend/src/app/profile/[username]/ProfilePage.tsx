@@ -83,7 +83,7 @@ const ProfilePage: React.FC = () => {
   const [endDate, setEndDate] = useState(endOfMonth(new Date()));
   const [showServerMessage, setShowServerMessage] = useState(false);
   const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
-
+  const router = useRouter();
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
 
@@ -360,6 +360,14 @@ const ProfilePage: React.FC = () => {
         {userHasAccessToAi ? (
           <div className="w-full max-w-3xl mb-8">
             <EmotionViewer messages={profileData.messages} />
+            <Button
+              variant="ghost"
+              className="mt-2 mb-4"
+              onClick={() => router.push("/message-history")}
+            >
+              <History className="w-4 h-4 mr-2" />
+              See emotion history
+            </Button>
           </div>
         ) : (
           <div className="w-full max-w-3xl mb-8">
