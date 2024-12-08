@@ -1,10 +1,5 @@
+import { Emotion } from '@/contexts/UserPlanContext';
 import React from 'react';
-
-export interface Emotion {
-  name: string;
-  score: number;
-  color: string;
-}
 
 export const EmotionBadges = ({ emotions }: { emotions: Emotion[] }) => {
   // Helper function to determine if a color is bright

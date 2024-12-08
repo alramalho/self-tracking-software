@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Activity,
   ActivityEntry,
+  Emotion,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
 import posthog from "posthog-js";
