@@ -1,5 +1,4 @@
-from datetime import datetime
-import pytz
+from datetime import datetime, UTC
 
 from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
@@ -78,7 +77,7 @@ class ActivitiesGateway:
         
         if past_day_limit is not None:
             # Filter entries within the past_day_limit
-            current_date = datetime.now(pytz.UTC)
+            current_date = datetime.now(UTC)
             filtered_entries = [
                 entry for entry in ordered_activity_entries 
                 if (current_date - datetime.fromisoformat(entry.created_at)).days <= past_day_limit
@@ -163,7 +162,7 @@ class ActivitiesGateway:
     
     def delete_activity(self, activity_id: str):
         activity = self.get_activity_by_id(activity_id)
-        activity.deleted_at = datetime.datetime.now(datetime.UTC).isoformat()
+        activity.deleted_at = datetime.now(UTC).isoformat()
         self.activities_db_gateway.write(activity.dict())
         logger.info(f"Activity {activity.id} ({activity.title}) marked as deleted")
 
@@ -208,7 +207,7 @@ class ActivitiesGateway:
     def is_activity_in_any_active_plan(self, activity_id: str) -> bool:
         plans_db_gateway = MongoDBGateway("plans")
         
-        current_date = datetime.datetime.now(datetime.UTC).isoformat()
+        current_date = datetime.now(UTC).isoformat()
         active_plans = plans_db_gateway.query_by_criteria({'sessions.activity_id': activity_id, 'finishing_date': {'$gte': current_date}})
         
         return len(active_plans) > 0
