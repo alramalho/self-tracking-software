@@ -122,14 +122,15 @@ const HomePage: React.FC = () => {
         <TimelineRenderer />
       </div>
 
-      {isSearchOpen && (
-        <AppleLikePopover onClose={() => setIsSearchOpen(false)}>
-          <div className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Search Users</h2>
-            <UserSearch onUserClick={handleUserClick} />
-          </div>
-        </AppleLikePopover>
-      )}
+      <AppleLikePopover
+        onClose={() => setIsSearchOpen(false)}
+        open={isSearchOpen}
+      >
+        <div className="p-4">
+          <h2 className="text-xl font-semibold mb-4">Search Users</h2>
+          <UserSearch onUserClick={handleUserClick} />
+        </div>
+      </AppleLikePopover>
     </div>
   );
 };

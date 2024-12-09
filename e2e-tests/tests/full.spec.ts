@@ -136,6 +136,7 @@ test.describe.serial("App", () => {
 
     const existingActivitiesSection = page.getByTestId("existing-activities");
     const pushUpsElement = existingActivitiesSection.getByText("push-ups");
+    await pushUpsElement.scrollIntoViewIfNeeded();
     await pushUpsElement.click({ force: true });
 
     await page.waitForTimeout(1000);

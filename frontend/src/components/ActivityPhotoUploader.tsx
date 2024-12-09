@@ -16,12 +16,14 @@ interface ActivityPhotoUploaderProps {
   };
   onClose: () => void;
   onSuccess: () => void;
+  open: boolean;
 }
 
 const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   activityData,
   onClose,
   onSuccess,
+  open,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isPublic, setisPublic] = useState(false);
@@ -85,7 +87,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   };
 
   return (
-    <AppleLikePopover onClose={onClose} unclosable>
+    <AppleLikePopover open={open} onClose={onClose} unclosable>
       <h2 className="text-2xl font-bold mb-4">📸 Add a proof!</h2>
       <div className="space-y-4">
         <div

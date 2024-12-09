@@ -17,11 +17,13 @@ interface ActivityEntry {
 interface ActivityEntryEditorProps {
   activityEntry: ActivityEntry;
   onClose: () => void;
+  open: boolean;
 }
 
 const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   activityEntry,
   onClose,
+  open,
 }) => {
   const [quantity, setQuantity] = useState(activityEntry.quantity.toString());
   const [date, setDate] = useState(
@@ -54,7 +56,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   };
 
   return (
-    <AppleLikePopover onClose={onClose}>
+    <AppleLikePopover open={open} onClose={onClose}>
       <h2 className="text-2xl font-bold mb-4">Edit Activity Entry</h2>
       <div className="space-y-4">
         <div>

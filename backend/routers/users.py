@@ -59,7 +59,6 @@ async def load_users_data(
                 user = users_gateway.get_user_by_safely("username", username.lower())
                 if not user:
                     continue
-
             # Reuse existing concurrent fetching logic
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 activities_future = executor.submit(

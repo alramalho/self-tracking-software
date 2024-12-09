@@ -44,15 +44,18 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const userDataQuery = useUserDataQuery("me");
 
   const updatePlan = async (planId: string, updatedPlan: GeneratedPlan) => {
-    const response = await api.post<UpdatePlanResponse>(`/plans/${planId}/update`, {
-      goal: updatedPlan.goal,
-      emoji: updatedPlan.emoji,
-      duration_type: updatedPlan.duration_type,
-      finishing_date: updatedPlan.finishing_date,
-      notes: updatedPlan.notes,
-      activities: updatedPlan.activities,
-      sessions: updatedPlan.sessions,
-    });
+    const response = await api.post<UpdatePlanResponse>(
+      `/plans/${planId}/update`,
+      {
+        goal: updatedPlan.goal,
+        emoji: updatedPlan.emoji,
+        duration_type: updatedPlan.duration_type,
+        finishing_date: updatedPlan.finishing_date,
+        notes: updatedPlan.notes,
+        activities: updatedPlan.activities,
+        sessions: updatedPlan.sessions,
+      }
+    );
     userDataQuery.refetch(); // Refresh user data to get updated plan
     return response.data.plan;
   };
@@ -93,9 +96,10 @@ const PlanCard: React.FC<PlanCardProps> = ({
       <div
         data-testid="plan-card"
         className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer 
-          ${isSelected 
-            ? "border-blue-500 bg-blue-50" 
-            : "bg-white border-gray-200"
+          ${
+            isSelected
+              ? "border-blue-500 bg-blue-50"
+              : "bg-white border-gray-200"
           } transition-colors duration-200`}
         onClick={() => onSelect(plan.id!)}
       >
@@ -154,33 +158,34 @@ const PlanCard: React.FC<PlanCardProps> = ({
         )}
       </div>
 
-      {showSettings && (
-        <AppleLikePopover onClose={() => setShowSettings(false)}>
-          <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-semibold mb-4">Plan Settings</h2>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowSettings(false);
-                setShowEditModal(true);
-              }}
-              className="w-full"
-            >
-              Edit Plan
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setShowSettings(false);
-                setShowLeaveConfirm(true);
-              }}
-              className="w-full"
-            >
-              Leave Plan
-            </Button>
-          </div>
-        </AppleLikePopover>
-      )}
+      <AppleLikePopover
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+      >
+        <div className="flex flex-col gap-4">
+          <h2 className="text-xl font-semibold mb-4">Plan Settings</h2>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowSettings(false);
+              setShowEditModal(true);
+            }}
+            className="w-full"
+          >
+            Edit Plan
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setShowSettings(false);
+              setShowLeaveConfirm(true);
+            }}
+            className="w-full"
+          >
+            Leave Plan
+          </Button>
+        </div>
+      </AppleLikePopover>
 
       <ConfirmDialog
         isOpen={showLeaveConfirm}
@@ -193,17 +198,18 @@ const PlanCard: React.FC<PlanCardProps> = ({
         variant="destructive"
       />
 
-      {showEditModal && (
-        <AppleLikePopover onClose={() => setShowEditModal(false)}>
-          <PlanConfigurationForm
-            isEdit={true}
-            plan={plan}
-            title={plan.goal}
-            onClose={() => setShowEditModal(false)}
-            onConfirm={handleEditPlan}
-          />
-        </AppleLikePopover>
-      )}
+      <AppleLikePopover
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+      >
+        <PlanConfigurationForm
+          isEdit={true}
+          plan={plan}
+          title={plan.goal}
+          onClose={() => setShowEditModal(false)}
+          onConfirm={handleEditPlan}
+        />
+      </AppleLikePopover>
     </>
   );
 };
