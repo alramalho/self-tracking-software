@@ -154,11 +154,13 @@ class NotificationManager:
         return Notification(**data[0]) if data else None
 
     def get_all_for_user(self, user_id: str) -> List[Notification]:
-        return [
+        notifications = [
             Notification(**item)
             for item in self.db_gateway.query("user_id", user_id)
             if item["status"] != "concluded"
         ]
+        notifications.sort(key=lambda x: x.created_at, reverse=True)
+        return notifications
 
     def get_last_notifications_sent_to_user(
         self, user_id: str, limit: int = 10
