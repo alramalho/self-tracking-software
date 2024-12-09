@@ -96,7 +96,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const shareOrCopyButton = (
     <Button
       variant="outline"
-      className="mt-4 text-md w-full p-6 bg-gray-100"
+      className="mt-4 text-md w-full p-6 bg-gray-50"
       onClick={handleShareOrCopy}
     >
       {isShareSupported ? (
@@ -137,6 +137,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     <div className="relative">
       <Button
         variant="outline"
+        className="bg-gray-50"
         size="sm"
         onClick={(e) => {
           e.stopPropagation();
