@@ -4,6 +4,7 @@ import { Activity, ActivityEntry } from '@/contexts/UserPlanContext';
 import BaseHeatmapRenderer from './common/BaseHeatmapRenderer';
 import { isSameDay } from 'date-fns';
 import { parseISO } from 'date-fns';
+import { subDays } from 'date-fns';
 
 interface ActivityGridRendererProps {
   activities: Activity[];
@@ -72,10 +73,9 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     }
   };
 
-  const startDate = new Date(
-    timeRange === "Current Year"
-      ? `${new Date().getFullYear()}/01/01`
-      : `${new Date().getFullYear()}/${new Date().getMonth() + 1}/01`
+  const startDate = subDays(
+    new Date(),
+    timeRange === "30 Days" ? 30 : 180
   );
 
   return (
