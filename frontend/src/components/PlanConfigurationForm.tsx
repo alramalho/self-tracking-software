@@ -681,7 +681,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               <h3 className="text-lg font-semibold mb-2">
                 Additional Customization
               </h3>
-              <label htmlFor="customization">Additional Customization</label>
               <Textarea
                 id="customization"
                 value={description}
