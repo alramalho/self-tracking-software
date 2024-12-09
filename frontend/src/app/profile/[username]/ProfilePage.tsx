@@ -32,6 +32,7 @@ import {
   differenceInDays,
   endOfMonth,
   endOfYear,
+  subDays,
 } from "date-fns";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -77,10 +78,8 @@ const ProfilePage: React.FC = () => {
   >(null);
   const posthog = usePostHog();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [timeRange, setTimeRange] = useState<"Current Year" | "Current Month">(
-    "Current Month"
-  );
-  const [endDate, setEndDate] = useState(endOfMonth(new Date()));
+  const [timeRange, setTimeRange] = useState<"30 Days" | "180 Days">("30 Days");
+  const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
   const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
   const router = useRouter();
@@ -183,11 +182,9 @@ const ProfilePage: React.FC = () => {
     return result;
   };
 
-  const handleTimeRangeChange = (value: "Current Year" | "Current Month") => {
+  const handleTimeRangeChange = (value: "30 Days" | "180 Days") => {
     setTimeRange(value);
-    setEndDate(
-      value === "Current Month" ? endOfMonth(new Date()) : endOfYear(new Date())
-    );
+    setEndDate(new Date());
   };
 
   useEffect(() => {
@@ -413,12 +410,12 @@ const ProfilePage: React.FC = () => {
                         value={timeRange}
                         onChange={(e) =>
                           handleTimeRangeChange(
-                            e.target.value as "Current Year" | "Current Month"
+                            e.target.value as "30 Days" | "180 Days"
                           )
                         }
                       >
-                        <option value="Current Year">Current Year</option>
-                        <option value="Current Month">Current Month</option>
+                        <option value="30 Days">Last 30 Days</option>
+                        <option value="180 Days">Last 180 Days</option>
                       </select>
                     </div>
                   </div>
