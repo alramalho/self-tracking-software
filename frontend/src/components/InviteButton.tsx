@@ -68,7 +68,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     toast.promise(
       (async () => {
         const link = await generateCopyLink();
-        
+
         if (isShareSupported) {
           const success = await share(link);
           if (!success) throw new Error("Failed to share");
@@ -76,15 +76,19 @@ const InviteButton: React.FC<InviteButtonProps> = ({
           const success = await copyToClipboard(link);
           if (!success) throw new Error("Failed to copy");
         }
-        
+
         onInviteSuccess();
         setIsSearchOpen(false);
-        return isShareSupported ? "Shared invite link" : "Copied invite link to clipboard";
+        return isShareSupported
+          ? "Shared invite link"
+          : "Copied invite link to clipboard";
       })(),
       {
         loading: "Generating invite link...",
         success: (message) => message,
-        error: isShareSupported ? "Failed to share invite link" : "Failed to copy invite link",
+        error: isShareSupported
+          ? "Failed to share invite link"
+          : "Failed to copy invite link",
       }
     );
   };
@@ -142,24 +146,25 @@ const InviteButton: React.FC<InviteButtonProps> = ({
         <UserPlus className="h-4 w-4 mr-2" />
         {buttonText}
       </Button>
-      {isSearchOpen && (
-        <AppleLikePopover onClose={() => setIsSearchOpen(false)}>
-          {shareOrCopyButton}
-          <Divider text="OR" />
-          <UserSearch
-            onUserClick={handleUserSelect}
-            selectedUsers={invitees}
-            onUserRemove={removeInvitee}
-          />
-          <Button
-            className="w-full mt-4"
-            onClick={handleInvite}
-            disabled={invitees.length === 0}
-          >
-            {buttonText} ({invitees.length})
-          </Button>
-        </AppleLikePopover>
-      )}
+      <AppleLikePopover
+        open={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      >
+        {shareOrCopyButton}
+        <Divider text="OR" />
+        <UserSearch
+          onUserClick={handleUserSelect}
+          selectedUsers={invitees}
+          onUserRemove={removeInvitee}
+        />
+        <Button
+          className="w-full mt-4"
+          onClick={handleInvite}
+          disabled={invitees.length === 0}
+        >
+          {buttonText} ({invitees.length})
+        </Button>
+      </AppleLikePopover>
     </div>
   );
 };

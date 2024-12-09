@@ -92,7 +92,10 @@ const LogPage: React.FC = () => {
         onSelectActivity={(a) => {
           handleSelectActivity(a);
           // scroll to quantity
-          window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+          window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "smooth",
+          });
         }}
       />
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -158,17 +161,16 @@ const LogPage: React.FC = () => {
           </Button>
         </div>
       </div>
-      {showPhotoUploader && (
-        <ActivityPhotoUploader
-          activityData={{
-            activityId: selectedActivity!.id,
-            date: selectedDate!,
-            quantity: quantity,
-          }}
-          onClose={() => setShowPhotoUploader(false)}
-          onSuccess={handleActivityLogged}
-        />
-      )}
+      <ActivityPhotoUploader
+        open={showPhotoUploader}
+        activityData={{
+          activityId: selectedActivity?.id ?? "",
+          date: selectedDate ?? new Date(),
+          quantity: quantity,
+        }}
+        onClose={() => setShowPhotoUploader(false)}
+        onSuccess={handleActivityLogged}
+      />
     </div>
   );
 };

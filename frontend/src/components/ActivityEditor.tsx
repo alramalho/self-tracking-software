@@ -13,12 +13,14 @@ interface ActivityEditorProps {
   onClose: () => void;
   onSave: (activity: Activity) => void;
   activity?: Activity;
+  open: boolean;
 }
 
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   onClose,
   onSave,
   activity,
+  open,
 }) => {
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
@@ -46,9 +48,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showEmojiPicker]);
 
@@ -112,13 +114,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   return (
     <>
-      <AppleLikePopover className="z-[70]" onClose={onClose}>
-        <div className="h-[70dvh] ">
-          <h2 className="text-2xl font-bold mb-4">
-            {activity ? "Edit Activity" : "Add New Activity"}
-          </h2>
-          <div className="flex flex-col justify-between h-full">
-            <div className="flex flex-col gap-4">
+      <AppleLikePopover open={open} className="z-[70]" onClose={onClose}>
+        <h2 className="text-2xl font-bold mb-4">
+          {activity ? "Edit Activity" : "Add New Activity"}
+        </h2>
+        <div className="flex flex-col justify-between h-full">
+          <div className="flex flex-col gap-4">
             <div className="flex items-center space-x-4 relative">
               {emoji ? (
                 <div
@@ -139,7 +140,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 </div>
               )}
               {showEmojiPicker && (
-                <div 
+                <div
                   ref={emojiPickerRef}
                   className="absolute top-[10px] left-[-30px] mt-2"
                   style={{ zIndex: 1000 }}
@@ -175,11 +176,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 Delete Activity
               </Button>
             )}
-            </div>
-            <Button onClick={handleSave} className="w-full py-5" loading={isSaving}>
-              Save Activity
-            </Button>
           </div>
+          <Button
+            onClick={handleSave}
+            className="w-full py-5 mt-8"
+            loading={isSaving}
+          >
+            Save Activity
+          </Button>
         </div>
       </AppleLikePopover>
 

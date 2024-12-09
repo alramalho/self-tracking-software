@@ -286,8 +286,9 @@ const ActivityCreationJourney: React.FC<ActivityCreationJourneyProps> = ({
         </Step>
       )}
 
-      {showPhotoUploader && createdActivityId && (
+      {createdActivityId && (
         <ActivityPhotoUploader
+          open={showPhotoUploader}
           activityData={{
             activityId: createdActivityId,
             date: selectedDate,

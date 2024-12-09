@@ -277,12 +277,6 @@ const ProfilePage: React.FC = () => {
               <p className="text-sm text-gray-500">Friends</p>
             </div>
           </Link>
-          {!isOwnProfile && (
-            <div className="text-center">
-              <p className="text-2xl font-bold">{getMessageCount()}</p>
-              <p className="text-sm text-gray-500">Messages</p>
-            </div>
-          )}
           {isOwnProfile && (
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
@@ -349,8 +343,8 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
 
-        {showUserProfile && isOwnProfile && (
-          <AppleLikePopover onClose={() => setShowUserProfile(false)}>
+        {isOwnProfile && (
+          <AppleLikePopover open={showUserProfile} onClose={() => setShowUserProfile(false)}>
             <div className="max-h-[80vh] overflow-y-auto">
               <UserProfile routing={"hash"} />
             </div>
@@ -501,6 +495,7 @@ const ProfilePage: React.FC = () => {
       </div>
       {showEditActivityEntry && isOnesOwnProfile && (
         <ActivityEntryEditor
+          open={!!showEditActivityEntry}
           activityEntry={
             activityEntries.find((entry) => entry.id === showEditActivityEntry)!
           }

@@ -60,16 +60,15 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
           </span>
         </button>
       </div>
-      {showEditor && (
-        <ActivityEditor
-          onClose={() => {
-            setShowEditor(false);
-            setEditingActivity(null);
-          }}
-          onSave={handleSaveActivity}
-          activity={editingActivity || undefined}
-        />
-      )}
+      <ActivityEditor
+        open={showEditor}
+        onClose={() => {
+          setShowEditor(false);
+          setEditingActivity(null);
+        }}
+        onSave={handleSaveActivity}
+        activity={editingActivity || undefined}
+      />
     </>
   );
 };
