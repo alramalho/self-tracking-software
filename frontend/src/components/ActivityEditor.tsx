@@ -142,10 +142,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               {showEmojiPicker && (
                 <div
                   ref={emojiPickerRef}
-                  className="absolute top-[10px] left-[-30px] mt-2"
+                  className="absolute top-[-30px] left-[-10px] mt-2"
                   style={{ zIndex: 1000 }}
                 >
-                  <EmojiPicker onEmojiClick={onEmojiClick} />
+                  <EmojiPicker width={300} height={3000} onEmojiClick={onEmojiClick} />
                 </div>
               )}
             </div>

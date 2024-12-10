@@ -67,6 +67,8 @@ async def create_plan(
         sessions=plan_data.get("sessions", []),
         finishing_date=plan_data.get("finishing_date", ""),
         notes=plan_data.get("notes", None),
+        outline_type=plan_data.get("outline_type", "specific"),
+        times_per_week=plan_data.get("times_per_week", None),
     )
     new_plan, created_activities = plan_controller.create_plan_from_generated_plan(
         current_user.id, generated_plan_data
