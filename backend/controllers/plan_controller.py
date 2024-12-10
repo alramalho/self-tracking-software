@@ -661,6 +661,8 @@ class PlanController:
         existing_plan.duration_type = generated_plan_update.duration_type or existing_plan.duration_type
         existing_plan.notes = generated_plan_update.notes or existing_plan.notes
         existing_plan.finishing_date = generated_plan_update.finishing_date or existing_plan.finishing_date
+        existing_plan.outline_type = generated_plan_update.outline_type or existing_plan.outline_type
+        existing_plan.times_per_week = generated_plan_update.times_per_week or existing_plan.times_per_week
         
         # Save the updated plan
         self.update_plan(existing_plan)

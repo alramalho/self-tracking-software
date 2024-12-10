@@ -53,6 +53,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
         finishing_date: updatedPlan.finishing_date,
         notes: updatedPlan.notes,
         activities: updatedPlan.activities,
+        outline_type: updatedPlan.outline_type,
+        times_per_week: updatedPlan.times_per_week,
         sessions: updatedPlan.sessions,
       }
     );

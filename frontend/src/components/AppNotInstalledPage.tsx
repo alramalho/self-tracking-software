@@ -36,7 +36,7 @@ const AppNotInstalledPage: React.FC = () => {
           <button
             data-testid="close-app-install-modal"
             onClick={() => setIsAppInstallModalOpen(false)}
-            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 z-[51]"
+            className="absolute top-4 right-4 p-2 bg-transparent rounded-full transition-colors duration-200 z-[51]"
             aria-label="Close"
           >
             <X className="w-6 h-6 text-white" />
