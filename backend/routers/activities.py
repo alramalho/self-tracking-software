@@ -296,3 +296,28 @@ async def delete_activity(
     except Exception as e:
         logger.error(f"Error deleting activity: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to delete activity")
+
+@router.delete("/activity-entries/{activity_entry_id}")
+async def delete_activity_entry(
+    activity_entry_id: str,
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        # Get the activity to verify ownership
+        activity_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        if not activity_entry:
+            raise HTTPException(status_code=404, detail="Activity not found")
+
+        if activity_entry.user_id != user.id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to delete this activity"
+            )
+            
+        # Delete the activity
+        activities_gateway.delete_activity_entry(activity_entry_id)
+        return {"message": "Activity deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting activity: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to delete activity")
