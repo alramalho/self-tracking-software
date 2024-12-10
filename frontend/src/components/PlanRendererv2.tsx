@@ -151,7 +151,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     [userData, planGroupMembers, membersData]
   );
 
-  // Simplified session data calculation
+  // Modify the useEffect for session data calculation
   useEffect(() => {
     const calculateSessionData = () => {
       setLoading(true);
@@ -159,6 +159,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         setLoading(false);
         return;
       }
+
       // Get all plans in the group
       const groupPlans = planGroupMembers
         .map((member) => {
@@ -171,9 +172,18 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
       // Get all dates from plans and completed entries
       const allDates = [
-        ...groupPlans.flatMap((plan) =>
-          plan.sessions.map((s) => parseISO(s.date))
-        ),
+        ...groupPlans.flatMap((plan) => {
+          if (plan.outline_type === "times_per_week") {
+            // For times_per_week plans, generate dates based on times_per_week
+            const startDate = new Date();
+            return Array.from({ length: 12 }).map((_, i) => {
+              const date = new Date();
+              date.setDate(date.getDate() - (7 * i));
+              return date;
+            });
+          }
+          return plan.sessions.map((s) => parseISO(s.date));
+        }),
         ...groupPlans.flatMap((plan) =>
           getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
         ),
@@ -198,18 +208,20 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
         weeklyData[weekKey] = { planned: 0 };
 
-        // Count planned sessions this week
-        const plannedThisWeek = selectedPlan.sessions.filter((session) => {
-          const sessionDate = parseISO(session.date);
-          return sessionDate >= currentWeek && sessionDate <= weekEnd;
-        }).length;
-        weeklyData[weekKey].planned += plannedThisWeek;
+        // Calculate planned sessions for this week
+        if (selectedPlan.outline_type === "times_per_week") {
+          weeklyData[weekKey].planned = selectedPlan.times_per_week || 0;
+        } else {
+          const plannedThisWeek = selectedPlan.sessions.filter((session) => {
+            const sessionDate = parseISO(session.date);
+            return sessionDate >= currentWeek && sessionDate <= weekEnd;
+          }).length;
+          weeklyData[weekKey].planned += plannedThisWeek;
+        }
 
-        // Calculate data for user in the plan group and his respective plan
+        // Calculate data for each user in the plan group
         groupPlans.forEach((plan) => {
-          const member = planGroupMembers.find(
-            (m) => m.user_id === plan.user_id
-          );
+          const member = planGroupMembers.find((m) => m.user_id === plan.user_id);
           if (!member) return;
 
           // Count completed sessions this week
