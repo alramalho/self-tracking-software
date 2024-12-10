@@ -24,13 +24,17 @@ import {
 import { LineChart } from "@/components/charts/line";
 import { Loader2, PlusSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { SmallActivityEntryCard, Entry } from "@/components/SmallActivityEntryCard";
+import {
+  SmallActivityEntryCard,
+  Entry,
+} from "@/components/SmallActivityEntryCard";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { Switch } from "./ui/switch";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
+import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -70,7 +74,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [selectedSession, setSelectedSession] = useState<
     ApiPlan["sessions"][0] | null
   >(null);
-  const [displayFutureActivities, setDisplayFutureActivities] = useState(true);
+  const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
 
   // Get current user's activities
   const activities = useMemo(() => {
@@ -362,8 +366,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   return (
     <div>
-      {areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
-
+      {selectedPlan.outline_type === "specific" &&
+        areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
       {planGroupMembers && planGroupMembers.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
@@ -446,14 +450,16 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             );
           })}
         </div> */}
-        <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
-          <span className="text-xs text-gray-500">Completed</span>
-          <Switch
-            checked={displayFutureActivities}
-            onCheckedChange={setDisplayFutureActivities}
-          />
-          <span className="text-xs text-gray-500">Planned</span>
-        </div>
+        {selectedPlan.outline_type === "specific" && (
+          <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
+            <span className="text-xs text-gray-500">Completed</span>
+            <Switch
+              checked={displayFutureActivities}
+              onCheckedChange={setDisplayFutureActivities}
+            />
+            <span className="text-xs text-gray-500">Planned</span>
+          </div>
+        )}
         {displayFutureActivities ? (
           <PlanSessionsRenderer
             plan={convertApiPlanToPlan(
@@ -474,46 +480,60 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           />
         )}
         <div className="mt-8">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">This week</h2>
-            <span className="text-sm text-gray-500 ">
-              Completed activities are calculated on a per week count basis.
-            </span>
-          </div>
-          <div className="flex flex-row flex-wrap gap-4">
-            {selectedPlan.sessions
-              .filter((session) => {
-                const sessionDate = parseISO(session.date);
-                const endOfCurrentWeek = endOfWeek(new Date());
-                const beginningOfCurrentWeek = startOfWeek(new Date());
-                return (
-                  isAfter(sessionDate, beginningOfCurrentWeek) &&
-                  isBefore(sessionDate, endOfCurrentWeek)
-                );
-              })
-              .map((session) => {
-                const activity = activities.find(
-                  (a) => a.id === session.activity_id
-                );
-                const completed = isSessionCompleted(session);
-                const completedOn = getCompletedOn(session);
-                if (!activity) return null;
+          {selectedPlan.outline_type === "specific" && (
+            <>
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  This week
+                </h2>
 
-                return (
-                  <SmallActivityEntryCard
-                    key={`${session.date}-${session.activity_id}`}
-                    entry={session as Entry}
-                    activity={activity}
-                    onClick={() => setSelectedSession(session)}
-                    completed={completed}
-                    completedOn={completedOn}
-                  />
-                );
-              })}
-          </div>
+                <span className="text-sm text-gray-500 ">
+                  Completed activities are calculated on a per week count basis.
+                </span>
+              </div>
+              <div className="flex flex-row flex-wrap gap-4">
+                {selectedPlan.sessions
+                  .filter((session) => {
+                    const sessionDate = parseISO(session.date);
+                    const endOfCurrentWeek = endOfWeek(new Date());
+                    const beginningOfCurrentWeek = startOfWeek(new Date());
+                    return (
+                      isAfter(sessionDate, beginningOfCurrentWeek) &&
+                      isBefore(sessionDate, endOfCurrentWeek)
+                    );
+                  })
+                  .map((session) => {
+                    const activity = activities.find(
+                      (a) => a.id === session.activity_id
+                    );
+                    const completed = isSessionCompleted(session);
+                    const completedOn = getCompletedOn(session);
+                    if (!activity) return null;
+
+                    return (
+                      <SmallActivityEntryCard
+                        key={`${session.date}-${session.activity_id}`}
+                        entry={session as Entry}
+                        activity={activity}
+                        onClick={() => setSelectedSession(session)}
+                        completed={completed}
+                        completedOn={completedOn}
+                      />
+                    );
+                  })}
+              </div>
+            </>
+          )}
+
+          {selectedPlan.outline_type === "times_per_week" && (
+            <WeeklySessionsChecklist
+              plan={selectedPlan}
+              activityEntries={activityEntries}
+            />
+          )}
         </div>
       </div>
-{/* 
+      {/* 
       <div className="mt-8 border border-gray-200 rounded-lg p-4 mb-8">
         <h2 className="text-2xl font-bold mb-4">Calendar</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
