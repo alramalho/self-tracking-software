@@ -28,7 +28,7 @@ const GeneratedPlanRenderer: React.FC<GeneratedPlanRendererProps> = ({
             ? format(plan.finishing_date, "yyyy-MM-dd")
             : "Not specified"}
         </p>
-        <p>Number of sessions: {plan.sessions.length}</p>
+        <p>Number of sessions: {plan.sessions?.length || 0}</p>
         <div className="mt-4 mb-4">
           <h3 className="text-lg font-semibold mb-2">Plan Overview:</h3>
           <p className="text-sm text-gray-600">{plan.overview}</p>
