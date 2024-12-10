@@ -23,12 +23,6 @@ export function WeeklySessionsChecklist({
     threshold: 0.5,
     triggerOnce: true,
   });
-
-  // Only show for times_per_week plans
-  if (plan.outline_type !== "times_per_week" || !plan.times_per_week) {
-    return null;
-  }
-
   // Get current week's completed sessions count (unique days)
   const currentWeekStart = startOfWeek(new Date());
   const currentWeekEnd = endOfWeek(new Date());
@@ -62,6 +56,11 @@ export function WeeklySessionsChecklist({
       return () => clearInterval(timer);
     }
   }, [inView, completedSessionsThisWeek, plan.times_per_week]);
+
+  // Only show for times_per_week plans
+  if (plan.outline_type !== "times_per_week" || !plan.times_per_week) {
+    return null;
+  }
 
   return (
     <div ref={ref}>

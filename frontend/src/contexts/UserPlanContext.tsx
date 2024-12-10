@@ -81,7 +81,7 @@ export interface Plan {
   goal: string;
   finishing_date?: Date;
   plan_group_id?: string;
-  sessions?: {
+  sessions: {
     date: Date;
     descriptive_guide: string;
     quantity: number;

@@ -18,7 +18,7 @@ class Plan(BaseModel):
     goal_embedding: Optional[List[float]] = None
     emoji: str | None = None
     finishing_date: Optional[str] = None
-    sessions: Optional[List[PlanSession]] = None
+    sessions: List[PlanSession]
     created_at: str
     deleted_at: Optional[str] = None
     duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None
