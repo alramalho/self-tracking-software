@@ -234,10 +234,12 @@ async def load_users_data(
                     )
 
                 except Exception as e:
+                    logger.error(traceback.format_exc())
                     logger.error(f"Failed to capture pageview: {e}")
 
         return results
     except Exception as e:
+        logger.error(traceback.format_exc())
         logger.error(f"Failed to load multiple users data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

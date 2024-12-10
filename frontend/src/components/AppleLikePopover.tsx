@@ -25,8 +25,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
 }) => {
   return (
     <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DrawerContent className={`px-6 pb-4 ${className}`}>
-        <div className="w-12 h-1 bg-gray-300 rounded mx-auto mb-6" />
+      <DrawerContent className={`px-4 pb-4 ${className}`}>
         {!unclosable && (
           <DrawerClose asChild>
             <Button

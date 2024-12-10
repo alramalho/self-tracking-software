@@ -81,7 +81,7 @@ export interface Plan {
   goal: string;
   finishing_date?: Date;
   plan_group_id?: string;
-  sessions: {
+  sessions?: {
     date: Date;
     descriptive_guide: string;
     quantity: number;
@@ -90,6 +90,8 @@ export interface Plan {
   }[];
   notes?: string;
   duration_type?: "habit" | "lifestyle" | "custom";
+  outline_type?: "specific" | "times_per_week";
+  times_per_week?: number;
 }
 
 export interface GeneratedPlan extends Omit<Plan, "finishing_date" | "members">{

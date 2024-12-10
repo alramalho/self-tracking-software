@@ -18,14 +18,16 @@ class Plan(BaseModel):
     goal_embedding: Optional[List[float]] = None
     emoji: str | None = None
     finishing_date: Optional[str] = None
-    sessions: List[PlanSession]
+    sessions: Optional[List[PlanSession]] = None
     created_at: str
     deleted_at: Optional[str] = None
     duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None
+    outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
+    times_per_week: Optional[int] = None
     notes: Optional[str] = None
     
     @classmethod
-    def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: List[PlanSession], plan_group_id: Optional[str] = None, id: Optional[str] = None, duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None, notes: Optional[str] = None) -> "Plan":
+    def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: Optional[List[PlanSession]] = None, plan_group_id: Optional[str] = None, id: Optional[str] = None, duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None, notes: Optional[str] = None, outline_type: Optional[Literal["specific", "times_per_week"]] = "specific", times_per_week: Optional[int] = None) -> "Plan":
         return cls(
             id=id or str(ObjectId()),
             user_id=user_id,
@@ -37,4 +39,6 @@ class Plan(BaseModel):
             created_at=datetime.now(UTC).isoformat(),
             duration_type=duration_type,
             notes=notes,
+            outline_type=outline_type,
+            times_per_week=times_per_week,
         )

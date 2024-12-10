@@ -20,6 +20,7 @@ const AppNotInstalledPage: React.FC = () => {
     "/signup",
     "/join-plan",
     "/onboarding",
+    "/create-new-plan",
     "/join",
     "/add",
   ];

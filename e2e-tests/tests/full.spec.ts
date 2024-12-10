@@ -25,7 +25,7 @@ test.describe.serial("App", () => {
     }
   });
 
-  test("can sign up and create a plan", async () => {
+  test("can sign up and create a specific plan", async () => {
     // Navigate to Plans and start creating a new plan
     await page
       .locator("nav")
@@ -74,11 +74,14 @@ test.describe.serial("App", () => {
 
     // Add additional customization
     await page
-      .getByLabel("Additional Customization")
+      .getByPlaceholder(
+        "Add any specific requirements or preferences for your plan..."
+      )
       .fill(
         "I prefer morning workouts and would like to focus on cardio exercises"
       );
 
+    await page.getByText("Specific Schedule").click();
     // Generate and create the plan
     await page.getByRole("button", { name: "Generate Plan" }).click();
 
@@ -142,8 +145,8 @@ test.describe.serial("App", () => {
     await page.waitForTimeout(1000);
 
     await page.getByRole("button", { name: "Generate Update" }).click();
-    await expect(page.getByText("Generating...")).toBeVisible();
-    await expect(page.getByText("Generating...")).not.toBeVisible({
+    await expect(page.getByText("Generating your plan...")).toBeVisible();
+    await expect(page.getByText("Generating your plan...")).not.toBeVisible({
       timeout: 15000,
     });
 

@@ -19,7 +19,7 @@ import {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [hasReadInstructions, setHasReadInstructions] = useState(false);
+  const [showPlanCreation, setShowPlanCreation] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const { refetchUserData } = useUserPlan();
@@ -92,7 +92,7 @@ export default function OnboardingPage() {
                   </p>
                   <Button
                     className="mt-4"
-                    onClick={() => setHasReadInstructions(true)}
+                    onClick={() => router.push("/create-new-plan")}
                   >
                     Creating your first plan
                   </Button>

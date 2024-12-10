@@ -31,9 +31,11 @@ class GeneratedPlanUpdate(BaseModel):
     emoji: Optional[str] = None
     finishing_date: Optional[str] = None
     activities: List[PlanActivityUpdate]
-    sessions: List[PlanSession]
+    sessions: Optional[List[PlanSession]] = None
     notes: Optional[str] = None
     duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None
+    outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
+    times_per_week: Optional[int] = None
 
 class PlanController:
     def __init__(self):
@@ -162,6 +164,8 @@ class PlanController:
             notes=generated_plan_data.notes,
             duration_type=generated_plan_data.duration_type,
             sessions=sessions,
+            outline_type=generated_plan_data.outline_type,
+            times_per_week=generated_plan_data.times_per_week,
         )
         
         self.db_gateway.write(plan.dict())
