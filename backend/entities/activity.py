@@ -75,6 +75,7 @@ class ActivityEntry(BaseModel):
     created_at: str
     image: Optional[ImageInfo] = None
     reactions: dict[str, List[str]] = Field(default_factory=dict, description="Mapping of emoji to list of user")
+    deleted_at: Optional[str] = None
 
     @classmethod
     def new(

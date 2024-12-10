@@ -166,6 +166,12 @@ class ActivitiesGateway:
         self.activities_db_gateway.write(activity.dict())
         logger.info(f"Activity {activity.id} ({activity.title}) marked as deleted")
 
+    def delete_activity_entry(self, activity_entry_id: str):
+        activity_entry = self.get_activity_entry_by_id(activity_entry_id)
+        activity_entry.deleted_at = datetime.now(UTC).isoformat()
+        self.activity_entries_db_gateway.write(activity_entry.dict())
+        logger.info(f"ActivityEntry {activity_entry_id} marked as deleted")
+
     def permanently_delete_activity(self, activity_id: str):
         self.activities_db_gateway.delete_all('id', activity_id)
         logger.info(f"Activity {activity_id} forever deleted")

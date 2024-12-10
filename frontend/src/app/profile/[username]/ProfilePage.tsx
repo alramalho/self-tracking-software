@@ -56,7 +56,7 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const { useUserDataQuery } = useUserPlan();
+  const { useUserDataQuery, refetchUserData } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const params = useParams();
@@ -496,6 +496,9 @@ const ProfilePage: React.FC = () => {
           activityEntry={
             activityEntries.find((entry) => entry.id === showEditActivityEntry)!
           }
+          onDelete={() => {
+            profileDataQuery.refetch();
+          }}
           onClose={() => setShowEditActivityEntry(null)}
         />
       )}
