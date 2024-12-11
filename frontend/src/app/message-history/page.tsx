@@ -20,7 +20,7 @@ export default function MessageHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 pb-16 space-y-4">
+    <div className="min-h-screen p-4 space-y-4">
       <div className="flex h-full flex-col max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Message History</h1>
 
