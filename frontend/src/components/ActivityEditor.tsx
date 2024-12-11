@@ -65,8 +65,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       const response = await api.post("/upsert-activity", {
         ...activity,
         emoji,
-        title,
-        measure,
+        title: title.trim(), // is this the best place to do this?
+        measure: measure.trim(),
       });
       refetchUserData();
 
