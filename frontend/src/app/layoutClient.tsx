@@ -31,7 +31,6 @@ export default function ClientLayout({
   }, []);
 
   if (!isLoaded) {
-
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
@@ -39,8 +38,15 @@ export default function ClientLayout({
           <p className="text-left">Loading your data...</p>
           {showServerMessage && (
             <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...<br/>
-              <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
+              we run on cheap servers...
+              <br />
+              <Link
+                target="_blank"
+                href="https://ko-fi.com/alexramalho"
+                className="underline"
+              >
+                donate?
+              </Link>
             </span>
           )}
         </div>
@@ -51,7 +57,7 @@ export default function ClientLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
-        <main className="h-[100dvh] pb-16 relative box-border">
+        <main className="relative h-[calc(100dvh-4.7rem)] overflow-scroll">
           <GeneralInitializer />
           {children}
           {isSignedIn && <BottomNav />}

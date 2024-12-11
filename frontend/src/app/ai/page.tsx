@@ -479,7 +479,7 @@ const LogPage: React.FC = () => {
           onRequestAccess={() => setShowFeatureForm(true)}
         />
       )}
-      <div className="flex flex-col min-h-[100%] bg-white">
+      <div className="h-full flex flex-col justify-between min-h-[100%]">
         <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-50">
           <Button
             variant="ghost"
