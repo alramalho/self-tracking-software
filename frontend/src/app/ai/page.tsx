@@ -69,7 +69,7 @@ const LogPage: React.FC = () => {
   const { addToQueue, stopAudio } = useSpeaker();
   const { addToNotificationCount, sendPushNotification } = useNotifications();
 
-  const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
+  const { useUserDataQuery, hasLoadedUserData, messagesData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
 
   function isUserWhitelisted(): boolean {
@@ -184,6 +184,9 @@ const LogPage: React.FC = () => {
     },
     [addMessage, addToQueue, outputMode]
   );
+  useEffect(() => {
+    messagesData.refetch();
+  }, [messages]);
 
   useEffect(() => {
     if (!socket) return;
@@ -476,14 +479,24 @@ const LogPage: React.FC = () => {
           onRequestAccess={() => setShowFeatureForm(true)}
         />
       )}
-      <div className="flex flex-col min-h-screen">
-        <div className="flex flex-col justify-center items-center w-full mx-auto bg-gray-50 border-y border-gray-200">
-          <ChatInterface messages={messages} />
-          <span className="text-sm text-gray-400 px-4 py-2">Chat (<span onClick={clearMessages} className="text-gray-400 underline cursor-pointer">Clear</span>)</span>
+      <div className="flex flex-col min-h-[100%] bg-white">
+        <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-50">
+          <Button
+            variant="ghost"
+            className="text-gray-500 underline w-full"
+            onClick={() => router.push("/message-history")}
+          >
+            <History className="w-4 h-4 mr-2" />
+            See full history
+          </Button>
+          <div className="w-full">
+            <p className="text-gray-500 text-lg mx-auto text-center">...</p>
+          </div>
+          <ChatInterface messages={messages.slice(-2)} />
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-          <div className="bg-gray-50 border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
+          <div className="border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
             {inputMode === "voice" ? (
               <div className="flex flex-col items-center w-full">
                 <AudioControls
@@ -594,20 +607,18 @@ const LogPage: React.FC = () => {
               />
             )}
         </div>
-        <div className="flex flex-col items-center justify-center w-full bg-gray-50 border-y border-gray-200">
-          <span className="text-sm text-gray-400 px-4 pt-2">
+        <div className="flex flex-col items-center justify-center w-full border-y border-gray-200 bg-gray-100">
+          <span className="text-sm text-gray-500 px-4 pt-2">
             Emotion Analysis
           </span>
-          <span className="text-xs text-gray-300 pb-2">(only available on voice input)</span>
-          <EmotionBadges emotions={currentEmotions} />
-          <Button
-            variant="ghost"
-            className="mt-2 mb-4"
-            onClick={() => router.push('/message-history')}
-          >
-            <History className="w-4 h-4 mr-2" />
-            See emotion history ({userData?.messages?.length || 0} messages)
-          </Button>
+          {inputMode !== "voice" && (
+            <span className="text-xs text-gray-400 pb-2">
+              ⚠️ only available on voice input
+            </span>
+          )}
+          <div className="min-h-[70px]">
+            <EmotionBadges emotions={currentEmotions} />
+          </div>
         </div>
       </div>
       {showFeatureForm && (

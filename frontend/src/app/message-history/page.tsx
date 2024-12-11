@@ -7,11 +7,11 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function MessageHistoryPage() {
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData, isLoading } = useUserDataQuery("me");
+  const { messagesData } = useUserPlan();
+  const messages = messagesData.data?.messages || [];
   const router = useRouter();
 
-  if (isLoading) {
+  if (messagesData.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin" />
@@ -19,10 +19,8 @@ export default function MessageHistoryPage() {
     );
   }
 
-  const messages = userData?.messages || [];
-
   return (
-    <div className="min-h-screen p-4 space-y-4">
+    <div className="min-h-screen p-4 pb-16 space-y-4">
       <div className="flex h-full flex-col max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Message History</h1>
 

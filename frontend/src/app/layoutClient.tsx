@@ -51,7 +51,7 @@ export default function ClientLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
-        <main className="pb-16 relative">
+        <main className="h-[100dvh] pb-16 relative box-border">
           <GeneralInitializer />
           {children}
           {isSignedIn && <BottomNav />}
