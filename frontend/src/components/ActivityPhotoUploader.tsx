@@ -137,6 +137,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           </p>
         </div>
         <Button
+          size="lg"
           onClick={() => logActivity(!!selectedFile)}
           className="w-full"
           loading={isUploading}
