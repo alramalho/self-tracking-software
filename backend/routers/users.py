@@ -85,10 +85,6 @@ async def load_users_data(
                     users_gateway.friend_request_gateway.get_pending_received_requests,
                     user.id,
                 )
-                messages_future = executor.submit(
-                    messages_gateway.get_all_messages_by_user,
-                    user.id
-                )
 
                 activities = [
                     exclude_embedding_fields(activity.dict())
@@ -112,7 +108,6 @@ async def load_users_data(
                     request.dict()
                     for request in friend_requests_received_future.result()
                 ]
-                messages = messages_future.result()
 
             # Generate custom bio
             bio_parts = []
@@ -185,7 +180,6 @@ async def load_users_data(
                 "mood_reports": mood_reports,
                 "plans": plans,
                 "plan_groups": plan_groups,
-                "messages": messages,
             }
 
             if current_user.id == user.id:
@@ -642,3 +636,16 @@ async def handle_referral(
         logger.error(f"Failed to handle referral: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/load-messages")
+async def load_messages(current_user: User = Depends(is_clerk_user)):
+    try:
+        messages = messages_gateway.get_all_messages_by_user(current_user.id)
+        return {
+            "messages": messages
+        }
+    except Exception as e:
+        logger.error(f"Failed to load messages: {e}")
+        logger.error(f"Traceback: \n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))

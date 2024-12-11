@@ -152,7 +152,6 @@ export interface UserDataEntry {
   receivedFriendRequests: FriendRequest[];
   notifications: Notification[];
   expiresAt: string;
-  messages: Message[];
 }
 
 export interface TaggedActivityEntry extends ActivityEntry {
@@ -178,6 +177,7 @@ interface UserPlanContextType {
   hasLoadedUserData: boolean; 
   hasLoadedTimelineData: boolean;
   timelineData: UseQueryResult<TimelineData | null>;
+  messagesData: UseQueryResult<{ messages: Message[] }>;
   fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<UserDataEntry>;
   refetchUserData: () => Promise<UserDataEntry>;
   refetchAllData: () => Promise<UserDataEntry>;
@@ -392,6 +392,16 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const messagesData = useQuery({
+    queryKey: ['messagesData'],
+    queryFn: async () => {
+      const response = await api.get('/load-messages');
+      return response.data;
+    },
+    enabled: isSignedIn,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   const context = {
     userDataQuery,
     useUserDataQuery,
@@ -399,6 +409,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     hasLoadedUserData: userDataQuery.isSuccess && !!userDataQuery.data,
     hasLoadedTimelineData: timelineData.isSuccess,
     timelineData,
+    messagesData,
     fetchUserData,
     refetchUserData,
     refetchAllData

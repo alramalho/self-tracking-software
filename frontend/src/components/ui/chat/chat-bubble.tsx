@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import MessageLoading from "./message-loading"
 import { Remark } from "react-remark"
 
-const chatBubbleVariant = cva("flex gap-2 max-w-[60%] items-end relative", {
+const chatBubbleVariant = cva("flex gap-2 max-w-[90%] items-end relative", {
   variants: {
     variant: {
       received: "self-start",
@@ -40,14 +40,16 @@ ChatBubble.displayName = "ChatBubble"
 
 interface ChatBubbleAvatarProps {
   src?: string
-  fallback?: string
+  fallback?: string | React.ReactNode
   className?: string
 }
 
 const ChatBubbleAvatar: React.FC<ChatBubbleAvatarProps> = ({ src, fallback, className }) => (
   <Avatar className={className}>
     <AvatarImage src={src} alt="Avatar" />
-    <AvatarFallback>{fallback}</AvatarFallback>
+    <AvatarFallback>
+      {fallback}
+    </AvatarFallback>
   </Avatar>
 )
 
