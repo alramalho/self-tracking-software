@@ -129,34 +129,38 @@ const ProfilePage: React.FC = () => {
 
   const handleSendFriendRequest = async () => {
     if (profileData && profileData.user) {
-      try {
-        await api.post(`/send-friend-request/${profileData.user.id}`);
-
-        // Update the local state to reflect the sent friend request
-        userDataQuery.refetch();
-        toast.success("Friend request sent successfully");
-      } catch (error) {
-        console.error("Error sending friend request:", error);
-        toast.error("Failed to send friend request");
-      }
+      await toast.promise(
+        (async () => {
+          await api.post(`/send-friend-request/${profileData!.user!.id}`);
+          await userDataQuery.refetch();
+        })(),
+        {
+          loading: "Sending friend request...",
+          success: "Friend request sent successfully",
+          error: "Failed to send friend request"
+        }
+      );
     }
   };
 
   const handleFriendRequest = async (action: "accept" | "reject") => {
     if (profileData && profileData.user) {
-      try {
-        const request = currentUserReceivedFriendRequests?.find(
-          (req) =>
-            req.sender_id === profileData.user?.id && req.status === "pending"
+      const request = currentUserReceivedFriendRequests?.find(
+        (req) =>
+          req.sender_id === profileData.user?.id && req.status === "pending"
+      );
+      if (request) {
+        await toast.promise(
+          (async () => {
+            await api.post(`${action}-friend-request/${request.id}`);
+            await userDataQuery.refetch();
+          })(),
+          {
+            loading: `${action}ing friend request...`,
+            success: `Friend request ${action}ed`,
+            error: `Failed to ${action} friend request`
+          }
         );
-        if (request) {
-          await api.post(`${action}-friend-request/${request.id}`);
-          toast.success(`Friend request ${action}ed`);
-          userDataQuery.refetch();
-        }
-      } catch (error) {
-        console.error(`Error ${action}ing friend request:`, error);
-        toast.error(`Failed to ${action} friend request`);
       }
     }
   };
@@ -261,20 +265,72 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
-        <div className="flex justify-around gap-4 items-center mb-8">
-          <Avatar className="w-20 h-20">
-            <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
-            <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
-          </Avatar>
-          <Link href={`/friends/${getUsername(user)}`}>
-            <div className="text-center">
-              <p className="text-2xl font-bold">
-                {user?.friend_ids?.length || 0}
-              </p>
-              <p className="text-sm text-gray-500">Friends</p>
-            </div>
-          </Link>
-          {isOwnProfile && (
+        <div className="flex justify-around gap-4 items-center mb-4">
+          <div className="flex flex-col items-center">
+            <Avatar className="w-20 h-20">
+              <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
+              <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
+            </Avatar>
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <Link href={`/friends/${getUsername(user)}`}>
+              <div className="text-center">
+                <p className="text-2xl font-bold">
+                  {user?.friend_ids?.length || 0}
+                </p>
+                <p className="text-sm text-gray-500">Friends</p>
+              </div>
+            </Link>
+            {!isOwnProfile && !isFriend() && (
+              <>
+                {hasPendingReceivedFriendRequest() ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      has sent you a friend request
+                    </p>
+                    <div className="flex space-x-6">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-10 w-10 text-green-600 bg-green-50"
+                        onClick={() => handleFriendRequest("accept")}
+                      >
+                        <Check className="h-6 w-6" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-10 w-10 text-red-600 bg-red-50"
+                        onClick={() => handleFriendRequest("reject")}
+                      >
+                        <X className="h-6 w-6" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                    onClick={handleSendFriendRequest}
+                    disabled={hasPendingSentFriendRequest()}
+                  >
+                    {hasPendingSentFriendRequest() ? (
+                      <>
+                        <Check size={20} />
+                        <span>Request Sent</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={20} />
+                        <span>Add Friend</span>
+                      </>
+                    )}
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+          {isOwnProfile && ( 
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Bell size={20} />
@@ -288,55 +344,10 @@ const ProfilePage: React.FC = () => {
                 className="cursor-pointer"
                 onClick={() => setShowUserProfile(true)}
               />
-              <Button
-                variant="ghost"
-                onClick={() => setShowLogoutConfirm(true)}
-              >
+              <Button variant="ghost" onClick={() => setShowLogoutConfirm(true)}>
                 <LogOut size={24} className="cursor-pointer" />
               </Button>
             </div>
-          )}
-          {!isOwnProfile && !isFriend() && (
-            <>
-              {hasPendingReceivedFriendRequest() && (
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                    onClick={() => handleFriendRequest("accept")}
-                  >
-                    <Check size={20} />
-                    <span>Accept</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                    onClick={() => handleFriendRequest("reject")}
-                  >
-                    <X size={20} />
-                    <span>Reject</span>
-                  </Button>
-                </div>
-              )}
-              <Button
-                variant="outline"
-                className="flex items-center space-x-2"
-                onClick={handleSendFriendRequest}
-                disabled={hasPendingSentFriendRequest()}
-              >
-                {hasPendingSentFriendRequest() ? (
-                  <>
-                    <Check size={20} />
-                    <span>Request Sent</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus size={20} />
-                    <span>Add Friend</span>
-                  </>
-                )}
-              </Button>
-            </>
           )}
         </div>
 
