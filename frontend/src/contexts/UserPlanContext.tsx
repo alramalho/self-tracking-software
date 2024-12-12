@@ -262,7 +262,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         receivedFriendRequests: userData.received_friend_requests || [],
         notifications: notificationsResponse.data.notifications || [],
         expiresAt: addMinutes(new Date(), 10).toISOString(),
-        messages: userData.messages || [],
       };
 
       console.log('Transformed User Data:', transformedData);
@@ -348,7 +347,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           receivedFriendRequests: typedValue.received_friend_requests || [],
           notifications: [],
           expiresAt: addMinutes(new Date(), 10).toISOString(),
-          messages: typedValue.messages || [],
         };
       }
       return transformedData;
