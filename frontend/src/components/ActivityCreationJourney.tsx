@@ -185,7 +185,7 @@ const ActivityCreationJourney: React.FC<ActivityCreationJourneyProps> = ({
 
               {showEmojiPicker && (
                 <div
-                  className="absolute mt-20"
+                  className="absolute mt-20 z-[30]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <EmojiPicker
