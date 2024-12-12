@@ -257,11 +257,6 @@ const ProfilePage: React.FC = () => {
     return currentUser?.friend_ids?.includes(profileData.user?.id || "");
   };
 
-  const getMessageCount = () => {
-    if (!profileData?.messages) return 0;
-    return profileData.messages.length;
-  };
-
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
