@@ -7,17 +7,18 @@ from constants import LLM_MODEL
 import json
 import re
 from pydantic.fields import FieldInfo
+from .flowchart_nodes import FlowchartNode, NodeType, LoopStartNode
 
 
 class FlowchartLLMFramework:
-    def __init__(self, flowchart: Dict[str, Dict[str, Any]], system_prompt: str):
+    def __init__(self, flowchart: Dict[str, FlowchartNode], system_prompt: str):
         self.flowchart = flowchart
         self.system_prompt = system_prompt + "\nYou are a conversationalist agent, so your messages to the user must always be linked to the conversation threads. Nevertheless, your primary is wrapped within the <focus> tag, so that's what you should focus on in your reasoning. "
         self.start_node = next(
             node_id
             for node_id, node in flowchart.items()
             if not any(
-                node_id in n.get("connections", {}).values() for n in flowchart.values()
+                node_id in n.connections.values() for n in flowchart.values()
             )
         )
         self.extracted = {}
@@ -27,10 +28,10 @@ class FlowchartLLMFramework:
         self.loop_states = {}
         self.loop_vars = {}
 
-    def handle_loop_node(self, node_id: str, node: Dict[str, Any]) -> str:
-        if node["type"] == "loop_start":
-            iterator_name = node["iterator"]
-            collection_var = node["collection"].replace("${", "").replace("}", "")
+    def handle_loop_node(self, node_id: str, node: FlowchartNode) -> str:
+        if node.type == NodeType.LOOP_START:
+            iterator_name = node.iterator
+            collection_var = node.collection.replace("${", "").replace("}", "")
             
             if iterator_name not in self.loop_states:
                 collection = getattr(self.extracted[self.visited_nodes[-2]], collection_var)
@@ -41,13 +42,13 @@ class FlowchartLLMFramework:
                 }
                 self.loop_vars[iterator_name] = collection[0]
             
-            return node["connections"]["default"]
+            return node.connections["default"]
 
-        elif node["type"] == "loop_continue":
+        elif node.type == NodeType.LOOP_CONTINUE:
             iterator_name = next(
-                n["iterator"] 
+                n.iterator 
                 for n in self.flowchart.values() 
-                if n.get("type") == "loop_start"
+                if isinstance(n, LoopStartNode)
             )
             
             loop_state = self.loop_states[iterator_name]
@@ -55,9 +56,9 @@ class FlowchartLLMFramework:
             
             if loop_state["current_index"] < len(loop_state["collection"]):
                 self.loop_vars[iterator_name] = loop_state["collection"][loop_state["current_index"]]
-                return node["connections"]["HasMore"]
+                return node.connections["HasMore"]
             else:
-                return node["connections"]["Complete"]
+                return node.connections["Complete"]
 
     def replace_loop_vars(self, text: str) -> str:
         for var_name, value in self.loop_vars.items():
@@ -101,7 +102,7 @@ class FlowchartLLMFramework:
             full_prompt = f"<instruction>'{node_text}'</instruction>\nContext:{context['initial_input']}\n<instruction again>{node_text}</instruction again>"
 
             node = self.flowchart[current_node_id]
-            temperature = node.get("temperature", 0.7)
+            temperature = node.temperature
 
             if options:
                 base_schema = None
@@ -175,21 +176,21 @@ class FlowchartLLMFramework:
             current_node = self.flowchart[current_node_id]
             self.visited_nodes.append(current_node_id)
 
-            if current_node.get("type") in ["loop_start", "loop_continue"]:
+            if current_node.type in [NodeType.LOOP_START, NodeType.LOOP_CONTINUE]:
                 current_node_id = self.handle_loop_node(current_node_id, current_node)
                 continue
 
             node_entry = {
                 "node": current_node_id,
-                "text": current_node["text"],
-                "options": list(current_node.get("connections", {}).keys()),
+                "text": current_node.text,
+                "options": list(current_node.connections.keys()),
                 "reasoning": None,
                 "decision": None,
                 "next_node": None,
                 "extracted": None,
             }
 
-            node_prompt = current_node["text"]
+            node_prompt = current_node.text
             for prev_node, data in self.extracted.items():
                 if (
                     hasattr(data, "__class__") 
@@ -200,13 +201,13 @@ class FlowchartLLMFramework:
                     data_dict = data.dict() if hasattr(data, "dict") else str(data)
                     node_prompt += f"\n\nContext: {model_name}: {data_dict}"
 
-            if not current_node.get("connections"):  # End node
+            if not current_node.connections:  # End node
                 result = self.llm_function(
                     node_text=node_prompt,
                     context=context,
                     current_node_id=current_node_id,
-                    options=list(current_node.get("connections", {}).keys()),
-                    schema=current_node.get("schema", None),
+                    options=list(current_node.connections.keys()),
+                    schema=current_node.output_schema,
                 )
                 node_entry = {k: v for k, v in node_entry.items() if v is not None}
                 traversal.append(node_entry)
@@ -217,7 +218,7 @@ class FlowchartLLMFramework:
                 assert type(result) == str, f"End node '{current_node_id}' must return a string"
                 return result, self.extracted
 
-            connections = current_node.get("connections", {})
+            connections = current_node.connections
             if len(connections) > 1:  # Decision node
                 options = list(connections.keys())
                 decision = self.llm_function(
@@ -225,7 +226,7 @@ class FlowchartLLMFramework:
                     context=context,
                     current_node_id=current_node_id,
                     options=options,
-                    schema=current_node.get("schema", None),
+                    schema=current_node.output_schema,
                 )
                 next_node = connections.get(decision, list(connections.values())[0])
 
@@ -236,12 +237,12 @@ class FlowchartLLMFramework:
 
                 current_node_id = next_node
             else:  # Transition node
-                if current_node.get("schema"):
+                if current_node.output_schema:
                     extracted_data = self.llm_function(
                         node_text=node_prompt,
                         context=context,
                         current_node_id=current_node_id,
-                        schema=current_node.get("schema", None),
+                        schema=current_node.output_schema,
                     )
                     self.extracted[current_node_id] = extracted_data
 

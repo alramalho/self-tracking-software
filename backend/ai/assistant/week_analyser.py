@@ -12,6 +12,12 @@ from datetime import timedelta
 from .flowchart_framework import FlowchartLLMFramework
 from gateways.activities import ActivitiesGateway
 from controllers.plan_controller import PlanController, PlanSession
+from .flowchart_nodes import (
+    Node,
+    LoopStartNode,
+    LoopContinueNode,
+    NodeType,
+)
 
 activities_gateway = ActivitiesGateway()
 plan_controller = PlanController()
@@ -62,90 +68,91 @@ class EnrichedPlanSessions(ExtractedPlanSessions):
 
 
 first_message_flowchart = {
-    "FirstTimeEver": {
-        "text": "Based on the conversation history, is this the first time ever talking to the user?",
-        "connections": {"Yes": "Introduce", "No": "FirstTimeToday"},
-    },
-    "Introduce": {
-        "text": "Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to help them prepare next week, which you'll do by analysing their plans and activity logs. Ask for his confirmation.",
-    },
-    "FirstTimeToday": {
-        "text": "Based on the conversation history, is this the first time talking today?",
-        "connections": {"Yes": "Greet", "No": "End"},
-    },
-    "Greet": {
-        "text": "Greet the user, and tell him you'd like to talk a bit about each of his plans.",
-    },
-    "End": {  # this should never be reached
-        "text": "Conclude the conversation appropriately based on the entire interaction. "
-    },
+    "FirstTimeEver": Node(
+        text="Based on the conversation history, is this the first time ever talking to the user?",
+        connections={"Yes": "Introduce", "No": "FirstTimeToday"},
+    ),
+    "Introduce": Node(
+        text="Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to help them prepare next week, which you'll do by analysing their plans and activity logs. Ask for his confirmation.",
+        connections={},  # Empty connections indicate an end node
+    ),
+    "FirstTimeToday": Node(
+        text="Based on the conversation history, is this the first time talking today?",
+        connections={"Yes": "Greet", "No": "End"},
+    ),
+    "Greet": Node(
+        text="Greet the user, and tell him you'd like to talk a bit about each of his plans.",
+    ),
+    "End": Node(  # this should never be reached
+        text="Conclude the conversation appropriately based on the entire interaction. "
+    ),
 }
 
 
 every_message_flowchart = {
-    "Start": {
-        "text": "Did the user made you request, question or instruction?",
-        "connections": {"Yes": "Answer", "No": "ExtractPlanNames"},
-    },
-    "Answer": {
-        "text": "Address the user's request, having in mind your goals and purpose.",
-        "connections": {"default": "ExtractPlanNames"},
-    },
-    "ExtractPlanNames": {
-        "text": "Extract all plan names from the users plan list.",
-        "connections": {"default": "StartPlanLoop"},
-        "schema": AllPlanNamesSchema,
-    },
-    "StartPlanLoop": {
-        "type": "loop_start",
-        "iterator": "current_plan",
-        "collection": "plan_names",
-        "connections": {"default": "CheckPlanDiscussed"},
-    },
-    "CheckPlanDiscussed": {
-        "text": "Based exclusively on the conversation history, did you ask the user if he wants to discuss the plan '${current_plan}'?",
-        "connections": {
+    "Start": Node(
+        text="Did the user made you request, question or instruction?",
+        connections={"Yes": "Answer", "No": "ExtractPlanNames"},
+    ),
+    "Answer": Node(
+        text="Address the user's request, having in mind your goals and purpose.",
+        connections={"default": "ExtractPlanNames"},
+    ),
+    "ExtractPlanNames": Node(
+        text="Extract all plan names from the users plan list.",
+        connections={"default": "StartPlanLoop"},
+        output_schema=AllPlanNamesSchema,
+    ),
+    "StartPlanLoop": LoopStartNode(
+        text="",
+        iterator="current_plan",
+        collection="plan_names",
+        connections={"default": "CheckPlanDiscussed"},
+    ),
+    "CheckPlanDiscussed": Node(
+        text="Based exclusively on the conversation history, did you ask the user if he wants to discuss the plan '${current_plan}'?",
+        connections={
             "Yes": "CheckUserWantsToDiscussPlan",
             "No": "AskToDiscussPlan"
         }
-    },
-    "AskToDiscussPlan": {
-        "text": "Ask the user if they would like to discuss the plan '${current_plan}', making a bridge to the conversation and giving an overview on how the plan is doing by the outlook of recent user activity.",
-        "temperature": 1,
-    },
-    "CheckUserWantsToDiscussPlan": {
-        "text": "Based exclusively on the conversation history, has the user accepted to discuss the plan '${current_plan}'?",
-        "connections": {"Yes": "CheckNextWeekPlans", "No": "NextPlan"}
-    },
-    "CheckNextWeekPlans": {
-        "text": "Did the user explictly mention in the conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing? Note that a mention that no adjustments are needed is also an explicit mention and should be answered with 'Yes'",
-        "connections": {"Yes": "CheckSuggestedChanges", "No": "AskNextWeekPlans"},
-    },
-    "AskNextWeekPlans": {
-        "text": "Remind the user of his upcoming week planned sessions for '${current_plan}' and ask what's his plans about it / if he plans on doing them all.",
-        "temperature": 1,
-    },
-    "CheckSuggestedChanges": {
-        "text": "Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? You must start your reasoning with \"Based on the conversation history for plan '${current_plan}' ...\".",
-        "connections": {"Yes": "SuggestedChanges", "No": "NextPlan"},
-    },
-    "SuggestedChanges": {
-        "text": "Analyse and suggest changes for plan '${current_plan}'. You can only make changes to the plan sessions date & details.",
-        "temperature": 1,
-        "schema": SuggestedNextWeekSessions,
-        "connections": {"default": "InformTheUsreAboutTheChanges"},
-    },
-    "InformTheUsreAboutTheChanges": {
-        "text": "Inform the user that you've generated sessions replacing next week's ones for plan '${current_plan}', which now he needs to accept or reject."
-    },
-    "NextPlan": {
-        "type": "loop_continue",
-        "connections": {"HasMore": "StartPlanLoop", "Complete": "Conclude"},
-    },
-    "Conclude": {
-        "text": "Congratulate the user for making this far in the conversation, wrap up the conversation with a summary of what was discussed and what actions were decided and tell him you'll see him next week!",
-        "temperature": 1,
-    },
+    ),
+    "AskToDiscussPlan": Node(
+        text="Ask the user if they would like to discuss the plan '${current_plan}', making a bridge to the conversation and giving an overview on how the plan is doing by the outlook of recent user activity.",
+        temperature=1,
+    ),
+    "CheckUserWantsToDiscussPlan": Node(
+        text="Based exclusively on the conversation history, has the user accepted to discuss the plan '${current_plan}'?",
+        connections={"Yes": "CheckNextWeekPlans", "No": "NextPlan"}
+    ),
+    "CheckNextWeekPlans": Node(
+        text="Did the user explictly mention in the conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing? Note that a mention that no adjustments are needed is also an explicit mention and should be answered with 'Yes'",
+        connections={"Yes": "CheckSuggestedChanges", "No": "AskNextWeekPlans"},
+    ),
+    "AskNextWeekPlans": Node(
+        text="Remind the user of his upcoming week planned sessions for '${current_plan}' and ask what's his plans about it / if he plans on doing them all.",
+        temperature=1,
+    ),
+    "CheckSuggestedChanges": Node(
+        text="Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? You must start your reasoning with \"Based on the conversation history for plan '${current_plan}' ...\".",
+        connections={"Yes": "SuggestedChanges", "No": "NextPlan"},
+    ),
+    "SuggestedChanges": Node(
+        text="Analyse and suggest changes for plan '${current_plan}'. You can only make changes to the plan sessions date & details.",
+        temperature=1,
+        output_schema=SuggestedNextWeekSessions,
+        connections={"default": "InformTheUsreAboutTheChanges"},
+    ),
+    "InformTheUsreAboutTheChanges": Node(
+        text="Inform the user that you've generated sessions replacing next week's ones for plan '${current_plan}', which now he needs to accept or reject."
+    ),
+    "NextPlan": LoopContinueNode(
+        text="",
+        connections={"HasMore": "StartPlanLoop", "Complete": "Conclude"},
+    ),
+    "Conclude": Node(
+        text="Congratulate the user for making this far in the conversation, wrap up the conversation with a summary of what was discussed and what actions were decided and tell him you'll see him next week!",
+        temperature=1,
+    ),
 }
 
 

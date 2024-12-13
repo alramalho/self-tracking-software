@@ -118,24 +118,6 @@ async def mark_notification_opened(
     }
 
 
-@router.post("/initiate-user-recurrent-checkin")
-async def route_initiate_user_recurrent_checkin(user: User = Depends(is_clerk_user)):
-    notification = await notification_manager.create_and_process_notification(
-        Notification.new(
-            user_id=user.id,
-            message="",  # This will be filled when processed
-            type="engagement",
-            prompt_tag="user-recurrent-checkin",
-            recurrence="daily",
-            time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
-        )
-    )
-    return {
-        "message": "Recurrent check-in initiated successfully",
-        "notification": notification,
-    }
-
-
 @router.get("/load-notifications")
 async def load_notifications(user: User = Depends(is_clerk_user)):
     notifications = [

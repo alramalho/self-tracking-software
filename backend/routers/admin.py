@@ -115,54 +115,118 @@ async def send_notification_to_all_users(
     return {"message": f"Notification sent successfully to {sent} users"}
 
 
-@router.post("/run-daily-validations")
-async def run_daily_validations(
-    request: Request, dry_run: bool = False, verified: User = Depends(admin_auth)
-):
-    body = await request.json()
-    subset_usernames = body.get("subset_usernames", [])
-    dry_run = body.get("dry_run", True)
-    logger.info(
-        f"Running unactivated check with subset_usernames: {subset_usernames} and dry_run: {dry_run}"
-    )
+async def _process_unactivated_notifications(
+    users: list[User], dry_run: bool = True
+) -> dict:
+    notifications_processed = []
+    for user in users:
+        notification = Notification.new(
+            user_id=user.id,
+            message="",  # This will be filled when processed
+            type="engagement",
+            prompt_tag="user-recurrent-checkin",
+            recurrence=None,
+        )
+        await notification_manager.create_and_process_notification(
+            notification, dry_run
+        )
+        notifications_processed.append(
+            {
+                "user": {
+                    "username": user.username,
+                    "id": user.id,
+                },
+                "notification": {
+                    "message": notification.message,
+                    "sent_at": notification.created_at,
+                    "id": notification.id,
+                },
+            }
+        )
+    return {"notifications_processed": notifications_processed}
 
-    # unactivated users are users who have registered > 2 days ago and have no activity entry
-    all_users = users_gateway.get_all_users()
-    
-    if len(subset_usernames) > 0:
-        all_users = [user for user in all_users if user.username in subset_usernames]
 
+async def _process_unactivated_emails(users: list[User], dry_run: bool = True) -> dict:
+    """
+    Process and send emails for unactivated users
+    """
+    # Find unactivated users (registered > 2 days ago with no activity entry on more than one day)
     unactivated_users = []
-    for user in all_users:
+    for user in users:
+        user_activities = activities_gateway.get_all_activity_entries_by_user_id(
+            user.id
+        )
+        activity_days = {
+            datetime.fromisoformat(entry.created_at).date() for entry in user_activities
+        }
+
         if (
             datetime.fromisoformat(user.created_at)
             < (datetime.now(UTC) - timedelta(days=2))
-            and len(activities_gateway.get_all_activity_entries_by_user_id(user.id))
-            == 0
+            and len(activity_days) <= 1  # Activities on 1 or fewer days
         ):
             unactivated_users.append(user)
 
+    if dry_run:
+        return {
+            "message": "Email sending skipped (dry run)",
+            "would_email": len(unactivated_users),
+            "would_email_usernames": [user.username for user in unactivated_users],
+        }
+
+    triggered_users = []
+    for user in unactivated_users:
+        send_loops_event(user.email, "unactivated")
+        posthog.capture(distinct_id=user.id, event="unactivated_loops_event_triggered")
+        triggered_users.append(user.username)
+
     result = {
-        "message": f"Unactivated loops event {'' if dry_run else 'not'} triggered",
-        "users_checked": len(all_users),
-        "qualifiable_users": {
-            "user_count": len(unactivated_users),
-            "username_list": [user.username for user in unactivated_users],
-        },
+        "emails_sent": len(triggered_users),
+        "emailed_usernames": triggered_users,
+        "unactivated_users_count": len(unactivated_users),
     }
 
-    if not dry_run:
-        triggered_users = []
-        for user in unactivated_users:
-            send_loops_event(user.email, "unactivated")
-            posthog.capture(
-                distinct_id=user.id, event="unactivated_loops_event_triggered"
-            )
-            triggered_users.append(user.username)
+    return result
 
-        result["triggered_users_count"] = len(triggered_users)
-        result["triggered_users"] = triggered_users
 
+@router.post("/run-daily-job")
+async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
+    body = await request.json()
+    filter_usernames = body.get("filter_usernames", [])
+    dry_run = body.get("dry_run", True)
+
+    unactivated_emails_dry_run = dry_run.get("unactivated_emails", True)
+    notifications_dry_run = dry_run.get("notifications", True)
+
+    logger.info(
+        f"Running unactivated check with subset_usernames: {filter_usernames} and unactivated_emails_dry_run: {unactivated_emails_dry_run} and notifications_dry_run: {notifications_dry_run}"
+    )
+
+    # Get all users or subset if specified
+    all_users = users_gateway.get_all_users()
+
+    if len(filter_usernames) > 0:
+        filtered_users = [
+            user for user in all_users if user.username in filter_usernames
+        ]
+    else:
+        filtered_users = all_users
+
+    # Process notifications and emails
+    notification_result = await _process_unactivated_notifications(
+        filtered_users, notifications_dry_run
+    )
+    unactivated_emails_result = await _process_unactivated_emails(
+        filtered_users, unactivated_emails_dry_run
+    )
+
+    result = {
+        "users_checked": len(all_users),
+        "notification_result": notification_result,
+        "unactivated_emails_result": unactivated_emails_result,
+    }
+
+    if not unactivated_emails_dry_run:
         ses_gateway.send_email(
             to="alexandre.ramalho.1998@gmail.com",
             subject="Unactivated loops event triggered",
@@ -185,7 +249,7 @@ class GlobalErrorLog(BaseModel):
 @limiter.limit("3/minute")
 async def log_error(error: GlobalErrorLog, request: Request):
     """Protected public endpoint to log client-side errors"""
-    
+
     # 1. Origin Check
     origin = request.headers.get("origin")
     if not origin or origin not in ALLOWED_ORIGINS:
@@ -203,18 +267,19 @@ async def log_error(error: GlobalErrorLog, request: Request):
         raise HTTPException(status_code=400, detail="Error message too long")
 
     # 4. Referrer Validation
-    if error.referrer != 'direct' and not any(
+    if error.referrer != "direct" and not any(
         error.referrer.startswith(origin) for origin in ALLOWED_ORIGINS
     ):
         logger.warning(f"Suspicious referrer: {error.referrer}")
         # Maybe don't block but flag in logs/email
-    
+
     try:
         # Extract domain from referrer
         referrer_domain = error.referrer
-        if error.referrer and error.referrer != 'direct':
+        if error.referrer and error.referrer != "direct":
             try:
                 from urllib.parse import urlparse
+
                 parsed = urlparse(error.referrer)
                 referrer_domain = parsed.netloc or parsed.path
             except:
@@ -236,20 +301,15 @@ async def log_error(error: GlobalErrorLog, request: Request):
         # 5. Add security context to logs
         context["origin"] = origin
         context["passed_security"] = True
-        
+
         # Log to your regular logging system
-        logger.error(
-            "Client Error",
-            extra=context
-        )
-        
+        logger.error("Client Error", extra=context)
+
         # Track in PostHog
         posthog.capture(
-            distinct_id="anonymous",
-            event="client_error",
-            properties=context
+            distinct_id="anonymous", event="client_error", properties=context
         )
-        
+
         # Send email for critical errors in production
         if ENVIRONMENT == "production":
             ses_gateway.send_email(
@@ -257,7 +317,7 @@ async def log_error(error: GlobalErrorLog, request: Request):
                 subject=f"Client Error in {ENVIRONMENT}",
                 html_body=f"<strong>Client Error in {ENVIRONMENT}</strong><br><br><pre>{json.dumps(context, indent=2)}</pre>",
             )
-        
+
         return {"status": "success"}
     except Exception as e:
         logger.exception("Failed to log client error")

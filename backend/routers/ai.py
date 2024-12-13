@@ -17,6 +17,7 @@ from entities.activity import ActivityEntry
 from analytics.posthog import posthog
 from ai.assistant.activity_extractor import ExtractedActivityEntry
 from services.hume_service import EMOTION_COLORS, HUME_SCORE_FILTER_THRESHOLD
+from constants import LLM_MODEL
 from entities.message import Emotion
 from gateways.database.mongodb import MongoDBGateway
 from typing import List, Optional, Dict, Any
@@ -110,6 +111,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "latency_seconds": round(execution_time, 3),
                                 "input_mode": input_mode,
                                 "output_mode": output_mode,
+                                "model": LLM_MODEL,
                             },
                         )
 

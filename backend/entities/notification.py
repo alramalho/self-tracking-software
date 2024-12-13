@@ -9,6 +9,7 @@ class Notification(BaseModel):
     user_id: str
     message: str
     created_at: datetime = Field(default_factory=datetime.now)
+    sent_at: Optional[datetime] = None
     processed_at: Optional[datetime] = None
     opened_at: Optional[datetime] = None
     concluded_at: Optional[datetime] = None

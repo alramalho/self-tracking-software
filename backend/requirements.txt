@@ -20,3 +20,5 @@ python-multipart
 posthog
 mangum
 slowapi
+groq
+instructor

@@ -9,6 +9,12 @@ import re
 from loguru import logger
 from .flowchart_framework import FlowchartLLMFramework
 from gateways.activities import ActivitiesGateway
+from .flowchart_nodes import (
+    Node,
+    LoopStartNode,
+    LoopContinueNode,
+    NodeType,
+)
 
 activities_gateway = ActivitiesGateway()
 
@@ -33,63 +39,63 @@ class ExtractedActivityEntryList(BaseModel):
 
 
 first_message_flowchart = {
-    "FirstTimeEver": {
-        "text": "Based on the conversation history, is this the first time ever talking to the user?",
-        "connections": {"Yes": "Introduce", "No": "FirstTimeToday"},
-    },
-    "Introduce": {
-        "text": "Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to talk to them about their recent activities and automatically track them. Then ask what they've been up to recently or how they're doing.",
-    },
-    "FirstTimeToday": {
-        "text": "Based on the conversation history, is this the first time talking today?",
-        "connections": {"Yes": "Greet", "No": "End"},
-    },
-    "Greet": {
-        "text": "Greet the user, asking what's he has been up to since you last talked X days ago (use the conversation history to determine how many days)",
-    },
-    "End": {  # this should never be reached
-        "text": "Conclude the conversation appropriately based on the entire interaction. "
-    },
+    "FirstTimeEver": Node(
+        text="Based on the conversation history, is this the first time ever talking to the user?",
+        connections={"Yes": "Introduce", "No": "FirstTimeToday"},
+    ),
+    "Introduce": Node(
+        text="Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to talk to them about their recent activities and automatically track them. Then ask what they've been up to recently or how they're doing.",
+        connections={},  # Empty connections indicate an end node
+    ),
+    "FirstTimeToday": Node(
+        text="Based on the conversation history, is this the first time talking today?",
+        connections={"Yes": "Greet", "No": "End"},
+    ),
+    "Greet": Node(
+        text="Greet the user, asking what's he has been up to since you last talked X days ago (use the conversation history to determine how many days)",
+    ),
+    "End": Node(  # this should never be reached
+        text="Conclude the conversation appropriately based on the entire interaction. "
+    ),
 }
 
 
 every_message_flowchart = {
-    "ActivityScanner": {
-        "text": "Did the user recently mentioned in the conversation history any activity that has not been extracted by you yet?",
-        "connections": {"Yes": "CheckActivityQualifies", "No": "Converse"},
-        "temperature": 0.7,
-    },
-    "CheckActivityQualifies": {
-        "text": "Does the activity exist in the user's activities list?",
-        "connections": {"Yes": "CheckActivityMeasurement", "No": "InformTheUserOnlyExistingActivitiesAreSupported"},
-        "temperature": 0.7,
-    },
-    "CheckActivityMeasurement": {
-        "text": "Did the user mention the date of when the activity was done and the measure (for how long, how much pages, etc) in his exchanged messages with you?",
-        "connections": {
+    "ActivityScanner": Node(
+        text="Did the user recently mentioned in the conversation history any activity that has not been extracted by you yet?",
+        connections={"Yes": "CheckActivityQualifies", "No": "Converse"},
+        temperature=0.7,
+    ),
+    "CheckActivityQualifies": Node(
+        text="Does the activity exist in the user's activities list?",
+        connections={"Yes": "CheckActivityMeasurement", "No": "InformTheUserOnlyExistingActivitiesAreSupported"},
+        temperature=0.7,
+    ),
+    "CheckActivityMeasurement": Node(
+        text="Did the user mention the date of when the activity was done and the measure (for how long, how much pages, etc) in his exchanged messages with you?",
+        connections={
             "No": "AskForMoreInformation",
             "Yes": "ExtractActivity",
         },
-    },
-    "AskForMoreInformation": {
-        "text": "Ask the user for the missing information about the activity (either date and / or measure, whatever is missing)",
-    },
-    "ExtractActivity": {
-        "text": f"Extract new activities from the user's message. New activites are activites that are not on the recent activities list. Today is {datetime.now().strftime('%b %d, %Y')}",
-        "schema": ExtractedActivityEntryList,
-        "connections": {"default": "InformTheUserAboutTheActivity"},
-    },
-    "InformTheUserAboutTheActivity": {
-        "text": "Inform the user that you've extracted the activity, which he needs to accept or reject.",
-    },
-    "InformTheUserOnlyExistingActivitiesAreSupported": {
-        "text": "Inform the user that you only support activities that are on his activities list.",
-    },
-    "Converse": {
-        "text": "Let the user lead an engaging and challenging conversation with you, given your goal and recent conversation history.",
-        "temperature": 1,
-        "connections": {},
-    },
+    ),
+    "AskForMoreInformation": Node(
+        text="Ask the user for the missing information about the activity (either date and / or measure, whatever is missing)",
+    ),
+    "ExtractActivity": Node(
+        text=f"Extract new activities from the user's message. New activites are activites that are not on the recent activities list. Today is {datetime.now().strftime('%b %d, %Y')}",
+        output_schema=ExtractedActivityEntryList,
+        connections={"default": "InformTheUserAboutTheActivity"},
+    ),
+    "InformTheUserAboutTheActivity": Node(
+        text="Inform the user that you've extracted the activity, which he needs to accept or reject.",
+    ),
+    "InformTheUserOnlyExistingActivitiesAreSupported": Node(
+        text="Inform the user that you only support activities that are on his activities list.",
+    ),
+    "Converse": Node(
+        text="Let the user lead an engaging and challenging conversation with you, given your goal and recent conversation history.",
+        temperature=1,
+    ),
 }
 
 
