@@ -5,10 +5,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+LLM_MODEL='gpt-4o-mini'
 SHARED_ENCRYPTION_KEY=os.getenv("SHARED_ENCRYPTION_KEY")
 TTS_MODEL='tts-1'
 TTS_VOICE="alloy"
-LLM_MODEL='gpt-4o-mini'
 STT_MODEL="whisper-1"
 LLM_TEMPERATURE=0.7
 ENVIRONMENT=os.getenv("ENVIRONMENT", "dev")

@@ -86,7 +86,7 @@ class NotificationManager:
         return notification
 
     async def process_notification(
-        self, notification_id: str
+        self, notification_id: str, dry_run: bool = False
     ) -> Optional[Notification]:
 
         notification = self.get_notification(notification_id)
@@ -108,7 +108,8 @@ class NotificationManager:
             self._reschedule_notification(notification)
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
-        if user.pwa_subscription_endpoint:
+        if user.pwa_subscription_endpoint and not dry_run:
+            notification.sent_at = datetime.now()
             await self.send_push_notification(
                 user.id, title=f"hey {user.name} 👋", body=notification.message.lower()
             )
@@ -117,10 +118,10 @@ class NotificationManager:
         return notification
 
     async def create_and_process_notification(
-        self, notification: Notification
+        self, notification: Notification, dry_run: bool = False
     ) -> Optional[Notification]:
         notification = self.create_or_get_notification(notification)
-        return await self.process_notification(notification.id)
+        return await self.process_notification(notification.id, dry_run)
 
     def mark_as_opened(self, notification_id: str) -> Optional[Notification]:
         notification = self.get_notification(notification_id)

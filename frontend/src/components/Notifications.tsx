@@ -7,7 +7,7 @@ import { Check, X, MessageSquare, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import posthog from "posthog-js";
-import { MarkdownRenderer } from './MarkdownRenderer';
+import { Remark } from 'react-remark';
 
 interface NotificationsProps {}
 
@@ -199,14 +199,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
                     <Link
                       href={`/profile/${notification.related_data!.username}`}
                     >
-                      <p className="text-sm text-gray-700">
-                        <MarkdownRenderer content={notification.message} />
-                      </p>
+                      <p className="text-sm text-gray-700"><div className="markdown"><Remark>{notification.message}</Remark></div></p>
                     </Link>
                   ) : (
-                    <p className="text-sm text-gray-700">
-                      <MarkdownRenderer content={notification.message} />
-                    </p>
+                    <p className="text-sm text-gray-700"><div className="markdown"><Remark>{notification.message}</Remark></div></p>
                   )}
                 </div>
                 <div className="flex ml-4">

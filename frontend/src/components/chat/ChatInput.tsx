@@ -32,7 +32,7 @@ export const ChatInput = ({
       />
       <button
         onClick={onSendMessage}
-        disabled={!isConnected || isLoading || !transcription.trim()}
+        disabled={!isConnected}
         className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Send size={20} />

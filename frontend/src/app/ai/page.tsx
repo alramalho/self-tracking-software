@@ -113,11 +113,15 @@ const LogPage: React.FC = () => {
 
   const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
 
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+
   const connectWebSocket = useCallback(async () => {
     try {
+      setIsConnecting(true);
       const token = await getToken();
       if (!token) {
         toast.error("No authentication token available");
+        setIsConnecting(false);
         return;
       }
 
@@ -127,11 +131,13 @@ const LogPage: React.FC = () => {
 
       newSocket.onopen = () => {
         setIsConnected(true);
+        setIsConnecting(false);
         toast.success("WebSocket connected");
       };
 
       newSocket.onclose = (event) => {
         setIsConnected(false);
+        setIsConnecting(false);
         if (event.code === 1008) {
           toast.error("Authentication failed");
         } else {
@@ -141,12 +147,14 @@ const LogPage: React.FC = () => {
 
       newSocket.onerror = (error) => {
         console.error("WebSocket error:", error);
+        setIsConnecting(false);
         toast.error("WebSocket error occurred");
       };
 
       setSocket(newSocket);
     } catch (error) {
       console.error("Error connecting to WebSocket:", error);
+      setIsConnecting(false);
       toast.error("Failed to connect to WebSocket");
     }
   }, [getToken]);
@@ -480,7 +488,7 @@ const LogPage: React.FC = () => {
         />
       )}
       <div className="h-full flex flex-col justify-between min-h-[100%]">
-        <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-50">
+        <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-100">
           <Button
             variant="ghost"
             className="text-gray-500 underline w-full"
@@ -568,7 +576,12 @@ const LogPage: React.FC = () => {
             onClick={handleReconnect}
             className="hover:bg-transparent"
           >
-            {isConnected ? (
+            {isConnecting ? (
+              <>
+                <Loader2 className="animate-spin text-gray-500 mr-2" size={28} />
+                <span className="text-xl font-normal italic">Connecting...</span>
+              </>
+            ) : isConnected ? (
               <>
                 <Wifi className="text-green-500 mr-2" size={28} />
                 <span className="text-xl font-normal italic">Connected</span>

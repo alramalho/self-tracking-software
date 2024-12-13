@@ -68,6 +68,14 @@ export class ApiStack extends cdk.Stack {
       authType: lambda.FunctionUrlAuthType.NONE,
     });
 
+    new cdk.CfnOutput(
+      this,
+      `${PASCAL_CASE_PREFIX}BackendLambdaURL${props.environment}`,
+      {
+        value: lambdaUrl.url,
+      }
+    );
+
     const apiCronProxyLambda = new lambda.Function(
       this,
       "ApiCronProxyLambdaFunction",

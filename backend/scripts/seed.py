@@ -261,7 +261,7 @@ def generate_dummy_data():
             Notification.new(
                 id=str(ObjectId("66666666666666666666668d")),
                 user_id=users[0].id,
-                message="Time for your weekly reflection. What have you achieved this week?",
+                message="Time for your weekly reflection! Let's take a moment to look back at your journey. What goals have you accomplished this week? What challenges did you overcome? What have you learned about yourself through tracking your activities and working towards your goals?",
                 type="engagement",
                 prompt_tag="weekly-reflection",
                 recurrence="weekly",
