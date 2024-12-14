@@ -7,6 +7,7 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 LLM_MODEL='gpt-4o-mini'
+# LLM_MODEL='llama-3.3-70b-specdec'
 SHARED_ENCRYPTION_KEY=os.getenv("SHARED_ENCRYPTION_KEY")
 TTS_MODEL='tts-1'
 TTS_VOICE="alloy"

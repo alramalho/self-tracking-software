@@ -115,7 +115,7 @@ async def send_notification_to_all_users(
     return {"message": f"Notification sent successfully to {sent} users"}
 
 
-async def _process_unactivated_notifications(
+async def _process_notifications(
     users: list[User], dry_run: bool = True
 ) -> dict:
     notifications_processed = []
@@ -213,7 +213,7 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
         filtered_users = all_users
 
     # Process notifications and emails
-    notification_result = await _process_unactivated_notifications(
+    notification_result = await _process_notifications(
         filtered_users, notifications_dry_run
     )
     unactivated_emails_result = await _process_unactivated_emails(
