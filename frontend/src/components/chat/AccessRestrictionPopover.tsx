@@ -25,6 +25,7 @@ export const AccessRestrictionPopover: React.FC<
 }) => {
   return (
     <AppleLikePopover
+      open={isOpen}
       className={`z-[10000] ${isOpen ? "" : "hidden"}`}
       onClose={onClose}
       unclosable={true}
