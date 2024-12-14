@@ -170,7 +170,7 @@ class WeekAnalyserAssistant(object):
         self.user_activities = user_activities
         self.user_plans = user_plans
 
-    def get_response(
+    async def get_response(
         self, user_input: str, message_id: str, emotions: List[Emotion] = []
     ) -> Tuple[str, EnrichedPlanSessions | None]:
         is_first_message_in_more_than_a_day = (
@@ -201,6 +201,7 @@ class WeekAnalyserAssistant(object):
         framework = FlowchartLLMFramework(
             flowchart,
             system_prompt,
+            lookahead_depth=20,
         )
         # For days since last Sunday (inclusive)
         lookback_days = max(6, datetime.now().isoweekday() % 7)  # Sunday=0, Monday=1, ..., Saturday=6, max 6 is for debugging during mid 
@@ -208,7 +209,7 @@ class WeekAnalyserAssistant(object):
         # For days until next Saturday (inclusive)
         lookahead_days = max(6, (6 - datetime.now().isoweekday() % 7))  # Days remaining until Saturday
 
-        result, extracted = framework.run(
+        result, extracted = await framework.run(
             f"""
         --- Here's the user's plan list of {len(self.user_plans)} plans:
         {plan_controller.get_readable_plans_and_sessions(self.user.id, past_day_limit=lookback_days, future_day_limit=lookahead_days)}
