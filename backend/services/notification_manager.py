@@ -108,10 +108,24 @@ class NotificationManager:
             self._reschedule_notification(notification)
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
+        is_push = False
         if user.pwa_subscription_endpoint and not dry_run:
             notification.sent_at = datetime.now()
-            await self.send_push_notification(
-                user.id, title=f"hey {user.name} 👋", body=notification.message.lower()
+            title = f"hey {user.name} 👋"
+            body = notification.message.lower()
+            await self.send_push_notification(user.id, title=title, body=body)
+            is_push = True
+
+        if notification.type == "engagement" and not dry_run:
+            posthog.capture(
+                distinct_id=user.id,
+                event="engagement-notification-sent",
+                properties={
+                    "notification_id": notification.id,
+                    "title": title,
+                    "body": body,
+                    "is_push": is_push,
+                },
             )
 
         logger.info(f"Notification '{notification.id}' processed")
@@ -318,5 +332,5 @@ if __name__ == "__main__":
                         recurrence="daily",
                         time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
                     )
-                )   
+                )
             )
