@@ -51,6 +51,7 @@ import { ChatInterface } from "@/components/chat/ChatInterface";
 import { EmotionBadges } from "@/components/chat/EmotionBadges";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { AccessRestrictionPopover } from "@/components/chat/AccessRestrictionPopover";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 
 const REFERRAL_COUNT = 2;
 
@@ -72,12 +73,16 @@ const LogPage: React.FC = () => {
   const { useUserDataQuery, hasLoadedUserData, messagesData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
 
-  function isUserWhitelisted(): boolean {
-    if (posthog.isFeatureEnabled("ai-bot-access")) {
-      return true;
+  const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
+  const posthogFeatureFlagsInitialized = typeof isFeatureEnabled !== "undefined";
+  const [isUserWhitelisted, setIsUserWhitelisted] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (posthogFeatureFlagsInitialized) {
+      setIsUserWhitelisted(isFeatureEnabled);
     }
-    return false;
-  }
+  }, [posthogFeatureFlagsInitialized, isFeatureEnabled]);
+
 
   const searchParams = useSearchParams();
   const notificationId = searchParams.get("notification_id");
@@ -159,7 +164,7 @@ const LogPage: React.FC = () => {
   }, [getToken]);
 
   useEffect(() => {
-    if (isUserWhitelisted()) {
+    if (isUserWhitelisted) {
       connectWebSocket();
     }
 
@@ -476,7 +481,7 @@ const LogPage: React.FC = () => {
 
   return (
     <>
-      {!isUserWhitelisted() && (
+      {!isUserWhitelisted && (
         <AccessRestrictionPopover
           isOpen={true}
           onClose={() => router.back()}
@@ -486,7 +491,7 @@ const LogPage: React.FC = () => {
           onRequestAccess={() => setShowFeatureForm(true)}
         />
       )}
-      {isUserWhitelisted() && (
+      {isUserWhitelisted && (
         <>
           <div className="h-full flex flex-col justify-between min-h-[100%]">
             <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-100">
