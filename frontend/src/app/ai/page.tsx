@@ -89,7 +89,6 @@ const LogPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { messages, addMessage, clearMessages } = useMessageHistory(); // Update this line
   const router = useRouter();
-  const [isPopoverOpen, setIsPopoverOpen] = useState(true);
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -479,192 +478,205 @@ const LogPage: React.FC = () => {
     <>
       {!isUserWhitelisted() && (
         <AccessRestrictionPopover
-          isOpen={isPopoverOpen}
-          onClose={() => setIsPopoverOpen(false)}
+          isOpen={true}
+          onClose={() => router.back()}
           referredUsers={referredUsers}
           requiredReferrals={REFERRAL_COUNT}
           onShareReferral={handleShareReferralLink}
           onRequestAccess={() => setShowFeatureForm(true)}
         />
       )}
-      <div className="h-full flex flex-col justify-between min-h-[100%]">
-        <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-100">
-          <Button
-            variant="ghost"
-            className="text-gray-500 underline w-full"
-            onClick={() => router.push("/message-history")}
-          >
-            <History className="w-4 h-4 mr-2" />
-            See full history
-          </Button>
-          <div className="w-full">
-            <p className="text-gray-500 text-lg mx-auto text-center">...</p>
-          </div>
-          <ChatInterface messages={messages.slice(-2)} />
-        </div>
-
-        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-          <div className="border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
-            {inputMode === "voice" ? (
-              <div className="flex flex-col items-center w-full">
-                <AudioControls
-                  isRecording={isRecording}
-                  isConnected={isConnected}
-                  toggleRecording={handleToggleRecording}
-                  cancelRecording={cancelRecording}
-                  isLoading={isLoading}
-                />
+      {isUserWhitelisted() && (
+        <>
+          <div className="h-full flex flex-col justify-between min-h-[100%]">
+            <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-100">
+              <Button
+                variant="ghost"
+                className="text-gray-500 underline w-full"
+                onClick={() => router.push("/message-history")}
+              >
+                <History className="w-4 h-4 mr-2" />
+                See full history
+              </Button>
+              <div className="w-full">
+                <p className="text-gray-500 text-lg mx-auto text-center">...</p>
               </div>
-            ) : (
-              <div className="flex items-center w-full">
-                <ChatInput
-                  transcription={transcription}
-                  isConnected={isConnected}
-                  isLoading={isLoading}
-                  onTranscriptionChange={handleTranscriptionChange}
-                  onSendMessage={handleSendMessage}
-                />
-              </div>
-            )}
-          </div>
+              <ChatInterface messages={messages.slice(-2)} />
+            </div>
 
-          <div className="flex space-x-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={inputMode === "voice"}
-                onCheckedChange={toggleInputMode}
-                id="input-mode"
-              />
-              <label htmlFor="input-mode" className="text-sm font-medium">
+            <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+              <div className="border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
                 {inputMode === "voice" ? (
+                  <div className="flex flex-col items-center w-full">
+                    <AudioControls
+                      isRecording={isRecording}
+                      isConnected={isConnected}
+                      toggleRecording={handleToggleRecording}
+                      cancelRecording={cancelRecording}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center w-full">
+                    <ChatInput
+                      transcription={transcription}
+                      isConnected={isConnected}
+                      isLoading={isLoading}
+                      onTranscriptionChange={handleTranscriptionChange}
+                      onSendMessage={handleSendMessage}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-4 mb-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={inputMode === "voice"}
+                    onCheckedChange={toggleInputMode}
+                    id="input-mode"
+                  />
+                  <label htmlFor="input-mode" className="text-sm font-medium">
+                    {inputMode === "voice" ? (
+                      <>
+                        <Mic className="inline mr-1" size={16} />
+                        Voice Input
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="inline mr-1" size={16} />
+                        Text Input
+                      </>
+                    )}
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={outputMode === "voice"}
+                    onCheckedChange={toggleOutputMode}
+                    id="output-mode"
+                  />
+                  <label htmlFor="output-mode" className="text-sm font-medium">
+                    {outputMode === "voice" ? (
+                      <>
+                        <Volume2 className="inline mr-1" size={16} />
+                        Voice Output
+                      </>
+                    ) : (
+                      <>
+                        <VolumeX className="inline mr-1" size={16} />
+                        Text Output
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={handleReconnect}
+                className="hover:bg-transparent"
+              >
+                {isConnecting ? (
                   <>
-                    <Mic className="inline mr-1" size={16} />
-                    Voice Input
+                    <Loader2
+                      className="animate-spin text-gray-500 mr-2"
+                      size={28}
+                    />
+                    <span className="text-xl font-normal italic">
+                      Connecting...
+                    </span>
+                  </>
+                ) : isConnected ? (
+                  <>
+                    <Wifi className="text-green-500 mr-2" size={28} />
+                    <span className="text-xl font-normal italic">
+                      Connected
+                    </span>
                   </>
                 ) : (
                   <>
-                    <MessageSquare className="inline mr-1" size={16} />
-                    Text Input
+                    <WifiOff className="text-red-500 mr-2" size={28} />
+                    <span className="text-xl font-normal underline">
+                      Reconnect
+                    </span>
                   </>
                 )}
-              </label>
+              </Button>
+
+              {suggestedActivityEntries.map((activityEntry) => {
+                const activity = suggestedActivities.find(
+                  (a) => a.id === activityEntry.activity_id
+                );
+                if (!activity) return null;
+                return (
+                  <ActivitySuggestion
+                    key={activityEntry.id}
+                    activity={activity}
+                    activityEntry={activityEntry}
+                    onAccept={handleActivityAcceptance}
+                    onReject={handleActivityRejection}
+                  />
+                );
+              })}
+              {suggestedNextWeekSessions &&
+                suggestedNextWeekSessions.sessions.length > 0 && (
+                  <PlanUpdateBanner
+                    sessions={suggestedNextWeekSessions.sessions}
+                    old_sessions={suggestedNextWeekSessions.old_sessions}
+                    plan_id={suggestedNextWeekSessions.plan_id}
+                    onAccept={handleSessionsAcceptance}
+                    onReject={handleSessionsRejection}
+                  />
+                )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={outputMode === "voice"}
-                onCheckedChange={toggleOutputMode}
-                id="output-mode"
-              />
-              <label htmlFor="output-mode" className="text-sm font-medium">
-                {outputMode === "voice" ? (
-                  <>
-                    <Volume2 className="inline mr-1" size={16} />
-                    Voice Output
-                  </>
-                ) : (
-                  <>
-                    <VolumeX className="inline mr-1" size={16} />
-                    Text Output
-                  </>
-                )}
-              </label>
+            <div className="flex flex-col items-center justify-center w-full border-y border-gray-200 bg-gray-100">
+              <span className="text-sm text-gray-500 px-4 pt-2">
+                Emotion Analysis
+              </span>
+              {inputMode !== "voice" && (
+                <span className="text-xs text-gray-400 pb-2">
+                  ⚠️ only available on voice input
+                </span>
+              )}
+              <div className="min-h-[70px]">
+                <EmotionBadges emotions={currentEmotions} />
+              </div>
             </div>
           </div>
-
-          <Button
-            variant="ghost"
-            onClick={handleReconnect}
-            className="hover:bg-transparent"
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="animate-spin text-gray-500 mr-2" size={28} />
-                <span className="text-xl font-normal italic">Connecting...</span>
-              </>
-            ) : isConnected ? (
-              <>
-                <Wifi className="text-green-500 mr-2" size={28} />
-                <span className="text-xl font-normal italic">Connected</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="text-red-500 mr-2" size={28} />
-                <span className="text-xl font-normal underline">Reconnect</span>
-              </>
-            )}
-          </Button>
-
-          {suggestedActivityEntries.map((activityEntry) => {
-            const activity = suggestedActivities.find(
-              (a) => a.id === activityEntry.activity_id
-            );
-            if (!activity) return null;
-            return (
-              <ActivitySuggestion
-                key={activityEntry.id}
-                activity={activity}
-                activityEntry={activityEntry}
-                onAccept={handleActivityAcceptance}
-                onReject={handleActivityRejection}
-              />
-            );
-          })}
-          {suggestedNextWeekSessions &&
-            suggestedNextWeekSessions.sessions.length > 0 && (
-              <PlanUpdateBanner
-                sessions={suggestedNextWeekSessions.sessions}
-                old_sessions={suggestedNextWeekSessions.old_sessions}
-                plan_id={suggestedNextWeekSessions.plan_id}
-                onAccept={handleSessionsAcceptance}
-                onReject={handleSessionsRejection}
-              />
-            )}
-        </div>
-        <div className="flex flex-col items-center justify-center w-full border-y border-gray-200 bg-gray-100">
-          <span className="text-sm text-gray-500 px-4 pt-2">
-            Emotion Analysis
-          </span>
-          {inputMode !== "voice" && (
-            <span className="text-xs text-gray-400 pb-2">
-              ⚠️ only available on voice input
-            </span>
+          {showFeatureForm && (
+            <FeedbackForm
+              title="✨ Try AI Feature"
+              email={userData?.user?.email || ""}
+              placeholder="How do you plan to use the AI feature?"
+              defaultValue="I want to try the AI because"
+              onSubmit={suggestFeature}
+              onClose={() => setShowFeatureForm(false)}
+            />
           )}
-          <div className="min-h-[70px]">
-            <EmotionBadges emotions={currentEmotions} />
-          </div>
-        </div>
-      </div>
-      {showFeatureForm && (
-        <FeedbackForm
-          title="✨ Try AI Feature"
-          email={userData?.user?.email || ""}
-          placeholder="How do you plan to use the AI feature?"
-          defaultValue="I want to try the AI because"
-          onSubmit={suggestFeature}
-          onClose={() => setShowFeatureForm(false)}
-        />
+          <AlertDialog
+            open={showPendingChangesAlert}
+            onOpenChange={setShowPendingChangesAlert}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Pending Changes</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Please accept or reject the pending activities/sessions before
+                  sending new messages.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogAction
+                  onClick={() => setShowPendingChangesAlert(false)}
+                >
+                  Okay
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
       )}
-      <AlertDialog
-        open={showPendingChangesAlert}
-        onOpenChange={setShowPendingChangesAlert}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Pending Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              Please accept or reject the pending activities/sessions before
-              sending new messages.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction
-              onClick={() => setShowPendingChangesAlert(false)}
-            >
-              Okay
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
