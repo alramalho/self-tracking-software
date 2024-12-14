@@ -27,6 +27,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
       refetchUserData();
     };
 
+    let skipToast = false;
     const actionPromise = async () => {
       if (notification.type === "info") {
         if (action === "dismiss") {
@@ -35,10 +36,11 @@ const Notifications: React.FC<NotificationsProps> = () => {
         await concludeNotification();
       } else if (notification.type === "engagement") {
         if (action === "respond") {
-          posthog.capture("engagement-notification-responded", {
+          posthog.capture("engagement-notification-interacted", {
             notification_id: notification.id,
           });
           router.push(`/ai?notificationId=${notification.id}`);
+          skipToast = true;
         }
         await concludeNotification();
       } else if (notification.type === "plan_invitation") {
@@ -53,16 +55,18 @@ const Notifications: React.FC<NotificationsProps> = () => {
       }
     };
 
-    toast.promise(actionPromise(), {
-      loading: `Processing ${notification.type.replace("_", " ")}...`,
-      success: `${notification.type
-        .replace("_", " ")
-        .charAt(0)
-        .toUpperCase()}${notification.type
-        .replace("_", " ")
-        .slice(1)} ${action}ed successfully!`,
-      error: `Failed to ${action} ${notification.type.replace("_", " ")}`,
-    });
+    if (!skipToast) {
+      toast.promise(actionPromise(), {
+        loading: `Processing ${notification.type.replace("_", " ")}...`,
+        success: `${notification.type
+          .replace("_", " ")
+          .charAt(0)
+          .toUpperCase()}${notification.type
+          .replace("_", " ")
+          .slice(1)} ${action}ed successfully!`,
+        error: `Failed to ${action} ${notification.type.replace("_", " ")}`,
+      });
+    }
   };
 
   const renderActionButtons = (notification: Notification) => {
