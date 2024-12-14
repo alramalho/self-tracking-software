@@ -39,29 +39,35 @@ plan_controller = PlanController()
 messages_gateway = MessagesGateway()
 
 
-def talk_with_assistant(
+async def talk_with_assistant(
     user_id: str, user_input: str, message_id: str = None, emotions: List[Emotion] = []
 ) -> Tuple[str, List[ExtractedActivityEntry] | List[SuggestedNextWeekSessions]]:
-    user = users_gateway.get_user_by_id(user_id)
-    memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
-    user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
-    user_plans = plan_controller.get_all_user_active_plans(user)
-    if True:#datetime.now().weekday() in [5, 6]: 
-        assistant = WeekAnalyserAssistant(
-            memory=memory,
-            user=user,
-            user_activities=user_activities,
-            user_plans=user_plans,
+    try:
+        user = users_gateway.get_user_by_id(user_id)
+        memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
+        user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
+        user_plans = plan_controller.get_all_user_active_plans(user)
+        
+        if True:  #datetime.now().weekday() in [5, 6]: 
+            assistant = WeekAnalyserAssistant(
+                memory=memory,
+                user=user,
+                user_activities=user_activities,
+                user_plans=user_plans,
+            )
+        else:
+            assistant = ActivityExtractorAssistant(
+                memory=memory,
+                user=user,
+                user_activities=user_activities,
+            )
+            
+        return await assistant.get_response(
+            user_input=user_input, message_id=message_id, emotions=emotions
         )
-    else:
-        assistant = ActivityExtractorAssistant(
-            memory=memory,
-            user=user,
-            user_activities=user_activities,
-        )
-    return assistant.get_response(
-        user_input=user_input, message_id=message_id, emotions=emotions
-    )
+    except Exception as e:
+        logger.error(f"Error in talk_with_assistant: {e}")
+        raise
 
 
 # def get_activities_from_conversation(user_id: str) -> Tuple[List[Activity], str]:
@@ -331,7 +337,6 @@ async def process_message(
                 base64.b64decode(audio_data), audio_format, message_id
             )
             if emotions:
-                # Get top 3 emotions
                 top_emotions = emotions[:3]
                 await websocket.send_json(
                     {
@@ -342,11 +347,12 @@ async def process_message(
         except Exception as e:
             logger.error(traceback.format_exc())
             logger.error(f"Error processing audio with Hume: {e}")
-            emotions = []  # Ensure emotions is a list even on error
+            emotions = []
 
-    
+    # Run talk_with_assistant in a separate thread
     text_response, extracted_data = await loop.run_in_executor(
-        executor, talk_with_assistant, user_id, message, message_id, emotions
+        executor,
+        lambda: asyncio.run(talk_with_assistant(user_id, message, message_id, emotions))
     )
 
     # Check if the extracted data is activity entries
