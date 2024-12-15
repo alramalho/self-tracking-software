@@ -1,5 +1,5 @@
 from constants import TTS_MODEL, TTS_VOICE
-from ai.clients import openai_client as client
+from ai.clients import sync_openai_client as client
 from io import BytesIO
 
 

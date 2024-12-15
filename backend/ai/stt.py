@@ -1,6 +1,6 @@
 import io
 import filetype
-from ai.clients import openai_client as client
+from ai.clients import sync_openai_client as client
 from constants import STT_MODEL
 from loguru import logger
 

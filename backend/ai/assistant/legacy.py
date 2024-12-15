@@ -1,4 +1,4 @@
-from ai.clients import openai_client as client
+from ai.clients import sync_openai_client as client
 from constants import LLM_MODEL
 from datetime import datetime
 from entities.message import Message
