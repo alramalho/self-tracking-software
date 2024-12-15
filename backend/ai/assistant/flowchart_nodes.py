@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, Any, Optional, List, Union, Type
+from typing import Dict, Any, Optional, List, Union, Type, Set
 from pydantic import BaseModel, Field
 
 
@@ -15,6 +15,7 @@ class Node(BaseModel):
     connections: Dict[str, str] = {}
     output_schema: Optional[Type[BaseModel]] = None
     temperature: float = 0.7
+    needs: Optional[Set[str]] = None
 
 
 class LoopStartNode(Node):

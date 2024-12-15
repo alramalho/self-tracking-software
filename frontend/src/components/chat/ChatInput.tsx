@@ -35,7 +35,7 @@ export const ChatInput = ({
         disabled={!isConnected}
         className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <Send size={20} />
+        {isLoading ? <LoaderCircle size={20} className="animate-spin" /> : <Send size={20} />}
       </button>
     </div>
   );

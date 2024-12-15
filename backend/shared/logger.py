@@ -49,7 +49,7 @@ def create_logger(level="INFO"):
         logger.log("HUME", "HUME logger created")
 
     if not log_level_exists("AI_FRAMEWORK"):
-        logger.level("AI_FRAMEWORK", no=30, color="<green>", icon="🤖")
+        logger.level("AI_FRAMEWORK", no=20, color="<green>", icon="🤖")
         logger.log("AI_FRAMEWORK", "AI_FRAMEWORK logger created")
 
     if not log_level_exists("LOOPS"):

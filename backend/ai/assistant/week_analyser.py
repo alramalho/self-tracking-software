@@ -90,13 +90,12 @@ first_message_flowchart = {
 
 
 every_message_flowchart = {
-    "Start": Node(
+    "HasRequest": Node(
         text="Did the user made you request, question or instruction?",
         connections={"Yes": "Answer", "No": "ExtractPlanNames"},
     ),
     "Answer": Node(
         text="Address the user's request, having in mind your goals and purpose.",
-        connections={"default": "ExtractPlanNames"},
     ),
     "ExtractPlanNames": Node(
         text="Extract all plan names from the users plan list.",
@@ -108,13 +107,11 @@ every_message_flowchart = {
         iterator="current_plan",
         collection="plan_names",
         connections={"default": "CheckPlanDiscussed"},
+        needs=["ExtractPlanNames"],
     ),
     "CheckPlanDiscussed": Node(
         text="Based exclusively on the conversation history, did you ask the user if he wants to discuss the plan '${current_plan}'?",
-        connections={
-            "Yes": "CheckUserWantsToDiscussPlan",
-            "No": "AskToDiscussPlan"
-        }
+        connections={"Yes": "CheckUserWantsToDiscussPlan", "No": "AskToDiscussPlan"},
     ),
     "AskToDiscussPlan": Node(
         text="Ask the user if they would like to discuss the plan '${current_plan}', making a bridge to the conversation and giving an overview on how the plan is doing by the outlook of recent user activity.",
@@ -122,28 +119,29 @@ every_message_flowchart = {
     ),
     "CheckUserWantsToDiscussPlan": Node(
         text="Based exclusively on the conversation history, has the user accepted to discuss the plan '${current_plan}'?",
-        connections={"Yes": "CheckNextWeekPlans", "No": "NextPlan"}
+        connections={"Yes": "CheckUserMentionedNextWeekPlans", "No": "NextPlan"},
     ),
-    "CheckNextWeekPlans": Node(
+    "CheckUserMentionedNextWeekPlans": Node(
         text="Did the user explictly mention in the conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing? Note that a mention that no adjustments are needed is also an explicit mention and should be answered with 'Yes'",
-        connections={"Yes": "CheckSuggestedChanges", "No": "AskNextWeekPlans"},
+        connections={"Yes": "ShouldSuggestChanges", "No": "AskNextWeekPlans"},
     ),
     "AskNextWeekPlans": Node(
         text="Remind the user of his upcoming week planned sessions for '${current_plan}' and ask what's his plans about it / if he plans on doing them all.",
         temperature=1,
     ),
-    "CheckSuggestedChanges": Node(
+    "ShouldSuggestChanges": Node(
         text="Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? You must start your reasoning with \"Based on the conversation history for plan '${current_plan}' ...\".",
-        connections={"Yes": "SuggestedChanges", "No": "NextPlan"},
+        connections={"Yes": "SuggestChanges", "No": "NextPlan"},
     ),
-    "SuggestedChanges": Node(
+    "SuggestChanges": Node(
         text="Analyse and suggest changes for plan '${current_plan}'. You can only make changes to the plan sessions date & details.",
         temperature=1,
         output_schema=SuggestedNextWeekSessions,
         connections={"default": "InformTheUsreAboutTheChanges"},
     ),
     "InformTheUsreAboutTheChanges": Node(
-        text="Inform the user that you've generated sessions replacing next week's ones for plan '${current_plan}', which now he needs to accept or reject."
+        text="Inform the user that you've generated sessions replacing next week's ones for plan '${current_plan}', which now he needs to accept or reject.",
+        needs=["SuggestChanges"],
     ),
     "NextPlan": LoopContinueNode(
         text="",
@@ -171,7 +169,7 @@ class WeekAnalyserAssistant(object):
         self.user_plans = user_plans
 
     async def get_response(
-        self, user_input: str, message_id: str, emotions: List[Emotion] = []
+        self, user_input: str, message_id: str = None, emotions: List[Emotion] = []
     ) -> Tuple[str, EnrichedPlanSessions | None]:
         is_first_message_in_more_than_a_day = (
             len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
@@ -201,7 +199,7 @@ class WeekAnalyserAssistant(object):
         framework = FlowchartLLMFramework(
             flowchart,
             system_prompt,
-            lookahead_depth=20,
+            lookahead_depth=6,
         )
         # For days since last Sunday (inclusive)
         lookback_days = max(6, datetime.now().isoweekday() % 7)  # Sunday=0, Monday=1, ..., Saturday=6, max 6 is for debugging during mid 
