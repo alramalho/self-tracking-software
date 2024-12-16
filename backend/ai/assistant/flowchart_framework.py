@@ -31,7 +31,10 @@ class FlowchartLLMFramework:
         self.reasoning = {}
         self.loop_states = {}
         self.loop_vars = {}
+        self.loop_visit_count = {}
         self.lookahead_depth = lookahead_depth
+        self.current_iteration = {}  # Track current iteration for each node
+        self.loop_nodes = self.get_loop_nodes()  # Pre-compute loop nodes
 
     def handle_loop_node(self, node_id: str, node: FlowchartNode) -> str:
         if node.type == NodeType.LOOP_START:
@@ -80,29 +83,26 @@ class FlowchartLLMFramework:
         schema: Optional[BaseModel] = None,
     ) -> str:
         try:
+            node_instance_id = self.get_node_instance_id(current_node_id)
             node_text = self.replace_loop_vars(node_text)
             required_vars = re.findall(r"\$\{([^}]+)\}", node_text)
 
             if required_vars:
-                last_node = (
-                    self.execution_path[-1] if self.execution_path else None
-                )
-                if last_node and last_node in self.extracted:
-                    last_output = self.extracted[last_node]
-
-                    for var in required_vars:
-                        if hasattr(last_output, var):
-                            value = getattr(last_output, var)
-                            node_text = node_text.replace(f"${{{var}}}", str(value))
-                        else:
-                            raise ValueError(
-                                f"Previous node '{last_node}' output schema does not contain required variable '{var}'. "
-                                f"Available fields: {[f for f in last_output.__fields__]}"
-                            )
-                else:
-                    raise ValueError(
-                        f"No extracted data found from previous node '{last_node}' for variables: {required_vars}"
-                    )
+                # Find the last node instance that provided the required variable
+                for var in required_vars:
+                    var_found = False
+                    for prev_instance_id in reversed(self.execution_path):
+                        if prev_instance_id in self.extracted:
+                            last_output = self.extracted[prev_instance_id]
+                            if hasattr(last_output, var):
+                                value = getattr(last_output, var)
+                                node_text = node_text.replace(f"${{{var}}}", str(value))
+                                var_found = True
+                                break
+                    if not var_found:
+                        raise ValueError(
+                            f"No extracted data found from previous nodes for variable '{var}'"
+                        )
 
             full_prompt = f"<instruction>'{node_text}'</instruction>\nContext:{context['initial_input']}\n<instruction again>{node_text}</instruction again>"
 
@@ -145,9 +145,9 @@ class FlowchartLLMFramework:
                     pymodel=DecisionSchema,
                     model=LLM_MODEL,
                 )
-                self.decisions[current_node_id] = result.decision
-                self.reasoning[current_node_id] = result.reasoning
-                self.extracted[current_node_id] = result
+                self.decisions[node_instance_id] = result.decision  # Use instance ID
+                self.reasoning[node_instance_id] = result.reasoning  # Use instance ID
+                self.extracted[node_instance_id] = result  # Use instance ID
                 return result.decision
             else:
                 if schema:
@@ -220,41 +220,82 @@ class FlowchartLLMFramework:
 
         while queue:
             node_id, remaining_depth = queue.pop(0)
-            if node_id in visited:
+            node_instance_id = self.get_node_instance_id(node_id)
+            
+            if node_instance_id in visited:
                 continue
 
-            visited.add(node_id)
+            visited.add(node_instance_id)
             node = self.flowchart[node_id]
+
+            # Stop traversal at loop boundaries
+            if node.type in [NodeType.LOOP_START, NodeType.LOOP_CONTINUE]:
+                # Get the iterator name and collection length
+                iterator_name = next(
+                    n.iterator 
+                    for n in self.flowchart.values() 
+                    if isinstance(n, LoopStartNode)
+                )
+                if iterator_name in self.loop_states:
+                    loop_state = self.loop_states[iterator_name]
+                    max_iterations = len(loop_state["collection"])
+                    
+                    # Track visits to this loop node
+                    self.loop_visit_count[node_id] = self.loop_visit_count.get(node_id, 0) + 1
+                    if self.loop_visit_count[node_id] > max_iterations:
+                        continue
+
+                    # If we're in a loop and know its state, we can determine the next node
+                    if node.type == NodeType.LOOP_CONTINUE:
+                        if loop_state["current_index"] == len(loop_state["collection"]) - 1:
+                            next_node = node.connections["Complete"]
+                            queue.append((next_node, remaining_depth - 1))
+                        else:
+                            next_node = node.connections["HasMore"]
+                            queue.append((next_node, remaining_depth - 1))
+                continue
 
             # If node can be processed, add it to the list
             if await self.can_process_node(node_id, node):
-                processable.append(node_id)
+                processable.append(node_instance_id)  # Add instance ID instead of node ID
 
             # Add connected nodes to queue if we still have depth
             if remaining_depth > 1:
                 for next_node in node.connections.values():
-                    if next_node not in self.visited_nodes:  # Only add unvisited nodes
+                    next_instance_id = self.get_node_instance_id(next_node)
+                    if next_instance_id not in self.visited_nodes:
                         queue.append((next_node, remaining_depth - 1))
 
-        logger.debug(f"Found processable nodes for {current_node_id}: {processable}")
+        logger.debug(f"Found processable nodes for {self.get_node_instance_id(current_node_id)}: {processable}")
         return processable
+
+    def get_node_instance_id(self, node_id: str) -> str:
+        """Generate a unique ID for this instance of the node, including its iteration count."""
+        iteration = self.current_iteration.get(node_id, 0)
+        return f"{node_id}_{iteration}"
 
     async def process_node(self, node_id: str, context: Dict[str, Any]) -> Any:
         """Process a single node and return its result."""
-        # If node is already completed, return its cached result
-        if node_id in self.completed_nodes:
-            logger.info(f"Reusing completed node: {node_id}")
-            return self.node_results.get(node_id)
+        node_instance_id = self.get_node_instance_id(node_id)
+        
+        # If node instance is already completed, return its cached result
+        if node_instance_id in self.completed_nodes:
+            logger.info(f"Reusing completed node instance: {node_instance_id}")
+            return self.node_results.get(node_instance_id)
 
         node = self.flowchart[node_id]
-        logger.info(f"Processing node: {node_id}")
+        logger.info(f"Processing node instance: {node_instance_id}")
         
         # Add to visited nodes BEFORE processing
-        self.visited_nodes.append(node_id)
+        self.visited_nodes.append(node_instance_id)
 
         try:
             if node.type in [NodeType.LOOP_START, NodeType.LOOP_CONTINUE]:
                 result = self.handle_loop_node(node_id, node)
+                # Increment iteration counter for nodes in the loop
+                if node.type == NodeType.LOOP_START:
+                    for loop_node_id in self.loop_nodes:  # Use pre-computed list
+                        self.current_iteration[loop_node_id] = self.current_iteration.get(loop_node_id, 0) + 1
             else:
                 node_prompt = node.text
                 for prev_node, data in self.extracted.items():
@@ -288,23 +329,65 @@ class FlowchartLLMFramework:
                     else:
                         result = None
 
-            # Store ALL results, even None
-            self.node_results[node_id] = result
-            # Store only schema/structured outputs in extracted
+            # Store results with instance ID
+            self.node_results[node_instance_id] = result
             if result is not None and hasattr(result, '__class__'):
-                self.extracted[node_id] = result
+                self.extracted[node_instance_id] = result
 
-            # Mark node as completed after successful processing
-            self.completed_nodes.add(node_id)
+            # Mark node instance as completed
+            self.completed_nodes.add(node_instance_id)
             return result
 
         except Exception as e:
-            # Remove from visited nodes if processing failed
-            if node_id in self.visited_nodes:
-                self.visited_nodes.remove(node_id)
+            if node_instance_id in self.visited_nodes:
+                self.visited_nodes.remove(node_instance_id)
             raise
 
+    def get_loop_nodes(self) -> List[str]:
+        """Get all nodes that are part of the current loop."""
+        loop_nodes = set()
+        loop_start = None
+        
+        # First find the LOOP_START node
+        for node_id, node in self.flowchart.items():
+            if node.type == NodeType.LOOP_START:
+                loop_start = node_id
+                break
+                
+        if not loop_start:
+            return []
+            
+        # Do a DFS traversal from loop start until we hit LOOP_CONTINUE
+        def dfs_collect_loop_nodes(current_id: str, visited: set) -> bool:
+            if current_id in visited:
+                return False
+                
+            visited.add(current_id)
+            current_node = self.flowchart[current_id]
+            
+            # If we hit a LOOP_CONTINUE, we've found all nodes in the loop
+            if current_node.type == NodeType.LOOP_CONTINUE:
+                loop_nodes.add(current_id)
+                return True
+                
+            # Add current node to loop nodes
+            loop_nodes.add(current_id)
+            
+            # Traverse all connections
+            for next_node in current_node.connections.values():
+                if dfs_collect_loop_nodes(next_node, visited):
+                    return True
+                    
+            # If we get here, this path didn't lead to LOOP_CONTINUE
+            loop_nodes.remove(current_id)
+            return False
+            
+        dfs_collect_loop_nodes(loop_start, set())
+        return list(loop_nodes)
+
     async def run(self, input_string: str):
+        self.loop_visit_count = {}
+        self.current_iteration = {}  # Reset iteration counters
         current_node_id = self.start_node
         context = {"initial_input": input_string}
         self.visited_nodes = []
@@ -314,45 +397,50 @@ class FlowchartLLMFramework:
         self.extracted = {}
         self.decisions = {}
         traversal = []
-        background_tasks = set()  # Track background tasks
+        background_tasks = set()
 
         while True:
-            # Add current node to execution path BEFORE processing anything
-            if current_node_id not in self.execution_path:
-                self.execution_path.append(current_node_id)
+            # Get current node instance ID
+            current_instance_id = self.get_node_instance_id(current_node_id)
+            
+            # Add current node instance to execution path
+            if current_instance_id not in self.execution_path:
+                self.execution_path.append(current_instance_id)
 
             # Get nodes that can be processed in parallel
             processable_nodes = await self.get_processable_nodes(current_node_id, self.lookahead_depth)
             logger.info(f"Processing nodes in parallel: {processable_nodes}")
 
             # Start processing all nodes
-            for node_id in processable_nodes:
+            for node_instance_id in processable_nodes:
+                # Convert instance ID back to node ID for processing
+                node_id = node_instance_id.rsplit('_', 1)[0]
                 if node_id != current_node_id:  # Process non-current nodes in background
                     task = asyncio.create_task(self.process_node(node_id, context))
                     background_tasks.add(task)
                     task.add_done_callback(background_tasks.discard)
 
             # Process current node and wait for it if it hasn't been processed yet
-            if current_node_id not in self.completed_nodes:
+            if current_instance_id not in self.completed_nodes:
                 result = await self.process_node(current_node_id, context)
                 if result is not None:
-                    self.node_results[current_node_id] = result
+                    self.node_results[current_instance_id] = result
                     if isinstance(result, str) and len(self.flowchart[current_node_id].connections) > 1:
-                        self.decisions[current_node_id] = result
+                        self.decisions[current_instance_id] = result
 
             # Record node traversal
             current_node = self.flowchart[current_node_id]
             node_entry = {
-                "node": current_node_id,
+                "node": current_instance_id,  # Use instance ID here too
                 "text": current_node.text,
                 "options": list(current_node.connections.keys()),
-                "reasoning": self.reasoning.get(current_node_id),
-                "decision": self.decisions.get(current_node_id),
+                "reasoning": self.reasoning.get(current_instance_id),
+                "decision": self.decisions.get(current_instance_id),
                 "next_node": None,
                 "extracted": (
-                    self.extracted[current_node_id].dict()
-                    if current_node_id in self.extracted 
-                    and hasattr(self.extracted[current_node_id], "dict")
+                    self.extracted[current_instance_id].dict()
+                    if current_instance_id in self.extracted 
+                    and hasattr(self.extracted[current_instance_id], "dict")
                     else None
                 ),
             }
@@ -369,14 +457,14 @@ class FlowchartLLMFramework:
                     "AI_FRAMEWORK",
                     f"Input: {input_string}\n\nTraversal: {json.dumps({'traversal': traversal}, indent=2)}",
                 )
-                result = self.node_results.get(current_node_id, None)
-                assert isinstance(result, str), f"End node '{current_node_id}' must return a string"
+                result = self.node_results.get(current_instance_id, None)
+                assert isinstance(result, str), f"End node '{current_instance_id}' must return a string"
                 return result, self.extracted
 
             # Handle node transitions
             connections = current_node.connections
             if len(connections) > 1:  # Decision node
-                decision = self.decisions[current_node_id]
+                decision = self.decisions[current_instance_id]
                 next_node = connections.get(decision, list(connections.values())[0])
             else:  # Transition node
                 next_node = list(connections.values())[0]
