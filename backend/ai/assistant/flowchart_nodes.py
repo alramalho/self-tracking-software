@@ -11,7 +11,7 @@ class NodeType(str, Enum):
 
 class Node(BaseModel):
     type: NodeType = NodeType.BASIC
-    text: str
+    text: str = ""
     connections: Dict[str, str] = {}
     output_schema: Optional[Type[BaseModel]] = None
     temperature: float = 0.7
