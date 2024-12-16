@@ -9,6 +9,7 @@ import re
 import asyncio
 from pydantic.fields import FieldInfo
 from .flowchart_nodes import FlowchartNode, NodeType, LoopStartNode
+import time
 
 
 class FlowchartLLMFramework:
@@ -33,8 +34,8 @@ class FlowchartLLMFramework:
         self.loop_vars = {}
         self.loop_visit_count = {}
         self.lookahead_depth = lookahead_depth
-        self.current_iteration = {}  # Track current iteration for each node
         self.loop_nodes = self.get_loop_nodes()  # Pre-compute loop nodes
+        self.node_durations = {}
 
     def handle_loop_node(self, node_id: str, node: FlowchartNode) -> str:
         if node.type == NodeType.LOOP_START:
@@ -65,6 +66,10 @@ class FlowchartLLMFramework:
             
             if loop_state["current_index"] < len(loop_state["collection"]):
                 self.loop_vars[iterator_name] = loop_state["collection"][loop_state["current_index"]]
+                self.completed_nodes = {
+                    node_id for node_id in self.completed_nodes 
+                    if node_id.rsplit('_', 1)[0] not in self.loop_nodes
+                }
                 return node.connections["HasMore"]
             else:
                 return node.connections["Complete"]
@@ -83,6 +88,7 @@ class FlowchartLLMFramework:
         schema: Optional[BaseModel] = None,
     ) -> str:
         try:
+            start_time = time.time()
             node_instance_id = self.get_node_instance_id(current_node_id)
             node_text = self.replace_loop_vars(node_text)
             required_vars = re.findall(r"\$\{([^}]+)\}", node_text)
@@ -145,9 +151,11 @@ class FlowchartLLMFramework:
                     pymodel=DecisionSchema,
                     model=LLM_MODEL,
                 )
-                self.decisions[node_instance_id] = result.decision  # Use instance ID
-                self.reasoning[node_instance_id] = result.reasoning  # Use instance ID
-                self.extracted[node_instance_id] = result  # Use instance ID
+                duration_ms = int((time.time() - start_time) * 1000)
+                self.node_durations[node_instance_id] = duration_ms
+                self.decisions[node_instance_id] = result.decision
+                self.reasoning[node_instance_id] = result.reasoning
+                self.extracted[node_instance_id] = result
                 return result.decision
             else:
                 if schema:
@@ -157,6 +165,8 @@ class FlowchartLLMFramework:
                         pymodel=schema,
                         model=LLM_MODEL,
                     )
+                    duration_ms = int((time.time() - start_time) * 1000)
+                    self.node_durations[node_instance_id] = duration_ms
                     return result
                 else:
                     result = await ask_text_async(
@@ -165,6 +175,8 @@ class FlowchartLLMFramework:
                         model=LLM_MODEL,
                         temperature=temperature,
                     )
+                    duration_ms = int((time.time() - start_time) * 1000)
+                    self.node_durations[node_instance_id] = duration_ms
                     return result
         except Exception as e:
             logger.error(f"Error in LLM function: {e}")
@@ -271,7 +283,23 @@ class FlowchartLLMFramework:
 
     def get_node_instance_id(self, node_id: str) -> str:
         """Generate a unique ID for this instance of the node, including its iteration count."""
-        iteration = self.current_iteration.get(node_id, 0)
+        # Check if node is part of a loop
+        if node_id in self.loop_nodes:
+            # Get the iterator name from the loop start node
+            iterator_name = next(
+                n.iterator 
+                for n in self.flowchart.values() 
+                if isinstance(n, LoopStartNode)
+            )
+            # Use the loop's current index as iteration count
+            if iterator_name in self.loop_states:
+                iteration = self.loop_states[iterator_name]["current_index"]
+            else:
+                iteration = 0
+        else:
+            # For nodes outside loops, use 0 as iteration count
+            iteration = 0
+        
         return f"{node_id}_{iteration}"
 
     async def process_node(self, node_id: str, context: Dict[str, Any]) -> Any:
@@ -280,11 +308,11 @@ class FlowchartLLMFramework:
         
         # If node instance is already completed, return its cached result
         if node_instance_id in self.completed_nodes:
-            logger.info(f"Reusing completed node instance: {node_instance_id}")
+            logger.debug(f"Reusing completed node instance: {node_instance_id}")
             return self.node_results.get(node_instance_id)
 
         node = self.flowchart[node_id]
-        logger.info(f"Processing node instance: {node_instance_id}")
+        logger.debug(f"Processing node instance: {node_instance_id}")
         
         # Add to visited nodes BEFORE processing
         self.visited_nodes.append(node_instance_id)
@@ -292,10 +320,6 @@ class FlowchartLLMFramework:
         try:
             if node.type in [NodeType.LOOP_START, NodeType.LOOP_CONTINUE]:
                 result = self.handle_loop_node(node_id, node)
-                # Increment iteration counter for nodes in the loop
-                if node.type == NodeType.LOOP_START:
-                    for loop_node_id in self.loop_nodes:  # Use pre-computed list
-                        self.current_iteration[loop_node_id] = self.current_iteration.get(loop_node_id, 0) + 1
             else:
                 node_prompt = node.text
                 for prev_node, data in self.extracted.items():
@@ -344,50 +368,34 @@ class FlowchartLLMFramework:
             raise
 
     def get_loop_nodes(self) -> List[str]:
-        """Get all nodes that are part of the current loop."""
+        """Get all nodes that are part of any loop by checking for iterator variable usage."""
         loop_nodes = set()
-        loop_start = None
+        loop_iterator = None
         
-        # First find the LOOP_START node
+        # First find the LOOP_START node to get the iterator name
         for node_id, node in self.flowchart.items():
             if node.type == NodeType.LOOP_START:
-                loop_start = node_id
+                loop_iterator = node.iterator
+                loop_nodes.add(node_id)
                 break
                 
-        if not loop_start:
+        if not loop_iterator:
             return []
             
-        # Do a DFS traversal from loop start until we hit LOOP_CONTINUE
-        def dfs_collect_loop_nodes(current_id: str, visited: set) -> bool:
-            if current_id in visited:
-                return False
+        # Check all nodes for usage of the iterator variable
+        iterator_pattern = f"${{{loop_iterator}}}"
+        for node_id, node in self.flowchart.items():
+            # Add nodes that use the iterator variable
+            if hasattr(node, 'text') and iterator_pattern in node.text:
+                loop_nodes.add(node_id)
+            # Always include LOOP_CONTINUE nodes
+            if node.type == NodeType.LOOP_CONTINUE:
+                loop_nodes.add(node_id)
                 
-            visited.add(current_id)
-            current_node = self.flowchart[current_id]
-            
-            # If we hit a LOOP_CONTINUE, we've found all nodes in the loop
-            if current_node.type == NodeType.LOOP_CONTINUE:
-                loop_nodes.add(current_id)
-                return True
-                
-            # Add current node to loop nodes
-            loop_nodes.add(current_id)
-            
-            # Traverse all connections
-            for next_node in current_node.connections.values():
-                if dfs_collect_loop_nodes(next_node, visited):
-                    return True
-                    
-            # If we get here, this path didn't lead to LOOP_CONTINUE
-            loop_nodes.remove(current_id)
-            return False
-            
-        dfs_collect_loop_nodes(loop_start, set())
         return list(loop_nodes)
 
     async def run(self, input_string: str):
         self.loop_visit_count = {}
-        self.current_iteration = {}  # Reset iteration counters
         current_node_id = self.start_node
         context = {"initial_input": input_string}
         self.visited_nodes = []
@@ -396,6 +404,7 @@ class FlowchartLLMFramework:
         self.node_results = {}
         self.extracted = {}
         self.decisions = {}
+        self.node_durations = {}  # Reset durations for new run
         traversal = []
         background_tasks = set()
 
@@ -409,7 +418,7 @@ class FlowchartLLMFramework:
 
             # Get nodes that can be processed in parallel
             processable_nodes = await self.get_processable_nodes(current_node_id, self.lookahead_depth)
-            logger.info(f"Processing nodes in parallel: {processable_nodes}")
+            logger.debug(f"Processing nodes in parallel: {processable_nodes}")
 
             # Start processing all nodes
             for node_instance_id in processable_nodes:
@@ -430,6 +439,9 @@ class FlowchartLLMFramework:
 
             # Record node traversal
             current_node = self.flowchart[current_node_id]
+            logger.info(f"Current node: {current_instance_id}")
+            if current_instance_id == "CheckPlanDiscussed_1":
+                print("hello")
             node_entry = {
                 "node": current_instance_id,  # Use instance ID here too
                 "text": current_node.text,
@@ -437,6 +449,7 @@ class FlowchartLLMFramework:
                 "reasoning": self.reasoning.get(current_instance_id),
                 "decision": self.decisions.get(current_instance_id),
                 "next_node": None,
+                "duration_ms": self.node_durations.get(current_instance_id),  # Add duration to node entry
                 "extracted": (
                     self.extracted[current_instance_id].dict()
                     if current_instance_id in self.extracted 
@@ -449,7 +462,7 @@ class FlowchartLLMFramework:
             if not current_node.connections:
                 # Optionally wait for background tasks to complete
                 if background_tasks:
-                    logger.info("Waiting for background tasks to complete...")
+                    logger.debug("Waiting for background tasks to complete...")
                     await asyncio.gather(*background_tasks)
                 
                 traversal.append(node_entry)
@@ -459,6 +472,7 @@ class FlowchartLLMFramework:
                 )
                 result = self.node_results.get(current_instance_id, None)
                 assert isinstance(result, str), f"End node '{current_instance_id}' must return a string"
+                logger.info(f"End node {current_instance_id} returned: {result}")
                 return result, self.extracted
 
             # Handle node transitions
