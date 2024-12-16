@@ -144,7 +144,7 @@ test.describe.serial("App", () => {
 
     await page.waitForTimeout(1000);
 
-    await page.getByRole("button", { name: "Generate Update" }).click();
+    await page.getByRole("button", { name: "Generate Plan" }).click();
     await expect(page.getByText("Generating your plan...")).toBeVisible();
     await expect(page.getByText("Generating your plan...")).not.toBeVisible({
       timeout: 15000,
