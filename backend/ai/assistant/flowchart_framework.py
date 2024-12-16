@@ -237,8 +237,6 @@ class FlowchartLLMFramework:
             async with self.processing_nodes_lock:
                 if (
                     await self.can_currently_process_node(node)
-                    and node_instance_id not in self.completed_nodes
-                    and node_instance_id not in self.processing_nodes
                 ):
                     processable.append(node_instance_id)
 
@@ -443,6 +441,26 @@ class FlowchartLLMFramework:
                     node_id = node_instance_id.rsplit("_", 1)[0]
                     task = asyncio.create_task(self.process_node(node_id, context))
                     self.node_tasks[node_instance_id] = task
+
+            # Prune unreachable nodes
+            async with self.processing_nodes_lock:
+                processing_nodes = set(self.processing_nodes)
+                for node_instance_id in processing_nodes:
+                    if node_instance_id not in lookahead_nodes:
+                        # Node is processing but not in lookahead - it's unreachable
+                        if node_instance_id in self.node_tasks:
+                            task = self.node_tasks[node_instance_id]
+                            if not task.done():
+                                logger.debug(f"Cancelling unreachable node task: {node_instance_id}")
+                                task.cancel()
+                                try:
+                                    await task
+                                except asyncio.CancelledError:
+                                    logger.debug(f"Successfully cancelled task for node: {node_instance_id}")
+                                except Exception as e:
+                                    logger.error(f"Error while cancelling task for node {node_instance_id}: {e}")
+                            self.node_tasks.pop(node_instance_id, None)
+                            self.processing_nodes.remove(node_instance_id)
 
             # Wait for current node to complete
             if current_instance_id not in self.completed_nodes:
