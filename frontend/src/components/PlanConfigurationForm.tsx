@@ -517,6 +517,36 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     generatedPlan,
   ]);
 
+  const canGeneratePlan = () => {
+    // Basic requirements for all plan types
+    const hasBasicInfo = 
+      planDuration.type && 
+      planDuration.date && 
+      goal.trim() !== '' && 
+      selectedEmoji && 
+      (existingActivities.length > 0 || newActivities.length > 0) &&
+      outlineType;
+
+    if (!hasBasicInfo) return false;
+
+    // Additional requirements based on outline type
+    if (outlineType === 'times_per_week') {
+      return timesPerWeek > 0;
+    }
+
+    return true;
+  };
+
+  const canConfirmPlan = () => {
+    if (!canGeneratePlan()) return false;
+    
+    if (outlineType === "specific" && !isEdit) {
+      return generatedPlan !== null;
+    }
+
+    return true;
+  };
+
   return (
     <div
       data-testid="plan-configuration-form"
@@ -904,46 +934,38 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               Cancel
             </Button>
           )}
-          <Button
-            onClick={async (e) => {
-              if (outlineType === "specific") {
-                if (!generatedPlan) {
-                  await handleGenerate();
-                } else {
-                  await handleConfirm();
-                }
-              } else {
-                await handleConfirm();
-              }
-            }}
-            disabled={isProcessing}
-            className="flex-1 gap-2"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : isEdit ? (
-              outlineType === "specific" ? (
-                generatedPlan ? (
-                  "Confirm Update"
-                ) : (
-                  "Generate Update"
-                )
+          {canConfirmPlan() && (
+            <Button
+              onClick={handleConfirm}
+              disabled={isProcessing}
+              className="flex-1 gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </>
               ) : (
-                "Confirm Update"
-              )
-            ) : outlineType === "specific" ? (
-              generatedPlan ? (
-                "Create Plan"
+                isEdit ? "Confirm Update" : "Create Plan"
+              )}
+            </Button>
+          )}
+          {outlineType === "specific" && !generatedPlan && canGeneratePlan() && (
+            <Button
+              onClick={handleGenerate}
+              disabled={isProcessing }
+              className="flex-1 gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </>
               ) : (
                 "Generate Plan"
-              )
-            ) : (
-              "Create Plan"
-            )}
-          </Button>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>

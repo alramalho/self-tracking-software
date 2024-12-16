@@ -16,12 +16,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import toast from "react-hot-toast";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [showPlanCreation, setShowPlanCreation] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
+  const [showActivityEditor, seShowActivityEditor] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [showCreatePlanCardJourney, setShowCreatePlanCardJourney] =
+    useState(false);
   const { refetchUserData } = useUserPlan();
 
   const onCompleteActivity = async (activities: Activity[]) => {
@@ -36,7 +39,6 @@ export default function OnboardingPage() {
 
   return (
     <>
-      <FloatingActionMenu className="z-[70]" />
       {showCompletionDialog ? (
         <Dialog
           open={showCompletionDialog}
@@ -53,8 +55,8 @@ export default function OnboardingPage() {
               <DialogDescription className="text-center pt-4">
                 You&apos;ve successfully created your first activity!
                 <br />
-                Next, we advise you to add a plan so you can have some long
-                term aggregate visibility on your activities.
+                Next, we advise you to add a plan so you can have some long term
+                aggregate visibility on your activities.
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-center pt-4">
@@ -68,8 +70,15 @@ export default function OnboardingPage() {
         <div className="fixed inset-0 bg-gray-100 z-[60]">
           <div className="h-full w-full overflow-y-auto">
             <div className="min-h-full flex flex-col items-center justify-center p-4">
-              {showEditor ? (
+              {showActivityEditor ? (
                 <ActivityCreationJourney onComplete={onCompleteActivity} />
+              ) : showCreatePlanCardJourney ? (
+                <CreatePlanCardJourney
+                  onComplete={() => {
+                    toast.success("Plan creation finished successfully");
+                    router.push("/");
+                  }}
+                ></CreatePlanCardJourney>
               ) : (
                 <div className="text-center">
                   <div className="flex flex-row items-center justify-center gap-5">
@@ -92,7 +101,7 @@ export default function OnboardingPage() {
                   </p>
                   <Button
                     className="mt-4"
-                    onClick={() => router.push("/create-new-plan")}
+                    onClick={() => setShowCreatePlanCardJourney(true)}
                   >
                     Creating your first plan
                   </Button>
@@ -103,7 +112,7 @@ export default function OnboardingPage() {
                   <Button
                     variant="secondary"
                     className="mt-2 border-2 border-gray-300"
-                    onClick={() => setShowEditor(true)}
+                    onClick={() => seShowActivityEditor(true)}
                   >
                     Create your first activity
                   </Button>
