@@ -46,7 +46,7 @@ def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL)
 
     elapsed_time = (time.time() - start_time) * 1000
     # logger.debug(f"Assistant response: {result.model_dump_json(indent=2)}")
-    logger.debug(f"Elapsed time for '{model}' ask_schema call: {elapsed_time:.2f} ms")
+    # logger.debug(f"Elapsed time for '{model}' ask_schema call: {elapsed_time:.2f} ms")
     return result
 
 async def ask_text_async(text: str, system: str, model: str = LLM_MODEL, temperature: float = 0.7) -> str:
@@ -63,7 +63,7 @@ async def ask_text_async(text: str, system: str, model: str = LLM_MODEL, tempera
     )
 
     elapsed_time = (time.time() - start_time) * 1000
-    logger.debug(f"Elapsed time for '{model}' ask_text_async call: {elapsed_time:.2f} ms")
+    # logger.debug(f"Elapsed time for '{model}' ask_text_async call: {elapsed_time:.2f} ms")
     return response.choices[0].message.content
 
 async def ask_schema_async(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL) -> T:
@@ -80,7 +80,7 @@ async def ask_schema_async(text: str, system: str, pymodel: Type[T], model: str 
     result = completion.choices[0].message.parsed
 
     elapsed_time = (time.time() - start_time) * 1000
-    logger.debug(f"Elapsed time for '{model}' ask_schema_async call: {elapsed_time:.2f} ms")
+    # logger.debug(f"Elapsed time for '{model}' ask_schema_async call: {elapsed_time:.2f} ms")
     return result
 
 # Test code
