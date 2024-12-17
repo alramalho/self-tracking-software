@@ -54,10 +54,11 @@ export default function ClientLayout({
     );
   }
 
+  const bottomMargin = isSignedIn ? "4.7rem" : "0";
   return (
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
-        <main className="relative h-[calc(100dvh-4.7rem)] overflow-scroll">
+        <main className={`relative h-[calc(100dvh-${bottomMargin})] overflow-scroll`}>
           <GeneralInitializer />
           {children}
           {isSignedIn && <BottomNav />}
