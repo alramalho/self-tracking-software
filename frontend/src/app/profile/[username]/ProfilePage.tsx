@@ -56,7 +56,7 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const { useUserDataQuery, refetchUserData } = useUserPlan();
+  const { useUserDataQuery, refetchUserData, messagesData } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const params = useParams();
@@ -81,7 +81,7 @@ const ProfilePage: React.FC = () => {
   const [timeRange, setTimeRange] = useState<"30 Days" | "180 Days">("30 Days");
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
-  const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
+  const userHasAccessToAi = false//posthog.isFeatureEnabled("ai-bot-access");
   const router = useRouter();
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -354,9 +354,9 @@ const ProfilePage: React.FC = () => {
           </AppleLikePopover>
         )}
 
-        {/* {userHasAccessToAi ? (
+        {userHasAccessToAi ? (
           <div className="w-full max-w-3xl mb-8">
-            <EmotionViewer messages={profileData.messages} />
+            <EmotionViewer messages={messagesData.data?.messages || []} />
             <Button
               variant="ghost"
               className="mt-2 mb-4"
@@ -370,7 +370,7 @@ const ProfilePage: React.FC = () => {
           <div className="w-full max-w-3xl mb-8">
             <DemoEmotionViewer />
           </div>
-        )} */}
+        )}
         <Tabs defaultValue="plans" className="w-full">
           <TabsList className="grid w-full grid-cols-2 h-13 bg-gray-100">
             <TabsTrigger value="plans">
