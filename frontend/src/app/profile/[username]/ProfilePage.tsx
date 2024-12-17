@@ -372,7 +372,7 @@ const ProfilePage: React.FC = () => {
           </div>
         )} */}
         <Tabs defaultValue="plans" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-13">
+          <TabsList className="grid w-full grid-cols-2 h-13 bg-gray-100">
             <TabsTrigger value="plans">
               <div className="flex flex-col items-center">
                 <ChartArea size={22} />
