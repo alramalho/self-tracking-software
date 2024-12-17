@@ -189,6 +189,7 @@ class WeekAnalyserAssistant(object):
         system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
         Respond to the user in the same language that he talks to you in.
         Your instruction will always be very specific, so make sure you do the appropriate conversation bridge.
+        Keep you answers as concise as possible.
         """
 
         if is_first_message_in_more_than_a_day:
