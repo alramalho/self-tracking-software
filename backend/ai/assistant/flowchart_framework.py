@@ -77,66 +77,51 @@ class FlowchartLLMFramework:
                 self.loop_vars[iterator_name] = loop_state["collection"][
                     loop_state["current_index"]
                 ]
-                self.completed_nodes = {
-                    node_id
-                    for node_id in self.completed_nodes
-                    if node_id.rsplit("_", 1)[0] not in self.loop_nodes
-                }
                 return node.connections["HasMore"]
             else:
                 return node.connections["Complete"]
 
-    def replace_loop_vars(self, text: str) -> str:
-        for var_name, value in self.loop_vars.items():
-            text = text.replace(f"${{{var_name}}}", str(value))
+    def replace_loop_vars(self, node_instance_id: str, text: str) -> str:
+        """Replace loop variables with their values for the specific node instance."""
+        node_id, iteration = node_instance_id.rsplit("_", 1)
+        iteration = int(iteration)
+
+        # Get the iterator name from the loop start node
+        iterator_name = next(
+            (n.iterator for n in self.flowchart.values() if isinstance(n, LoopStartNode)),
+            None
+        )
+        
+        if iterator_name and node_id in self.loop_nodes:
+            if iterator_name in self.loop_states:
+                loop_state = self.loop_states[iterator_name]
+                collection = loop_state["collection"]
+                
+                # Use the iteration number to get the correct value
+                if iteration < len(collection):
+                    value = collection[iteration]
+                    text = text.replace(f"${{{iterator_name}}}", str(value))
+
         return text
 
     async def llm_function(
         self,
-        node_text: str,
+        node_instance_id: str,
         context: Dict[str, Any],
-        current_node_id: str,
-        options: Optional[List[str]] = None,
-        schema: Optional[BaseModel] = None,
-    ) -> Tuple[Optional[BaseModel], str, str]: # return optinal output schema / next node / output text (needs rfeactor #TODO)
+    ) -> Tuple[Optional[BaseModel], str, str]:
         try:
-            start_time = time.time()
-            node_instance_id = self.get_node_instance_id(current_node_id)
-            node_text = self.replace_loop_vars(node_text)
-            required_vars = re.findall(r"\$\{([^}]+)\}", node_text)
-
-            if required_vars:
-                # Find the last node instance that provided the required variable
-                for var in required_vars:
-                    var_found = False
-                    for prev_instance_id in reversed(self.execution_path):
-                        if prev_instance_id in self.extracted:
-                            last_output = self.extracted[prev_instance_id]
-                            if hasattr(last_output, var):
-                                value = getattr(last_output, var)
-                                node_text = node_text.replace(f"${{{var}}}", str(value))
-                                var_found = True
-                                break
-                    if not var_found:
-                        raise ValueError(
-                            f"No extracted data found from previous nodes for variable '{var}'"
-                        )
+            current_node_id = node_instance_id.rsplit("_", 1)[0]
+            node = self.flowchart[current_node_id]
+            node_text = self.replace_loop_vars(node_instance_id, node.text)
+            options = list(node.connections.keys())
 
             full_prompt = f"<instruction>'{node_text}'</instruction>\nContext:{context['initial_input']}\n<instruction again>{node_text}</instruction again>"
-
-            node = self.flowchart[current_node_id]
+            
             temperature = node.temperature
 
-            if options:
-                base_schema = None
-                if schema:
-                    model_extension = await ask_schema_async(
-                        text=full_prompt,
-                        system=self.system_prompt,
-                        pymodel=schema,
-                        model=LLM_MODEL,
-                    )
-                    base_schema = model_extension.__class__
+            if len(options) > 1:
+                # If we have a schema, use it as the base, otherwise use BaseModel
+                base_schema = node.output_schema if node.output_schema else BaseModel
 
                 extension_fields = {
                     "reasoning": (
@@ -154,7 +139,7 @@ class FlowchartLLMFramework:
 
                 DecisionSchema = create_model(
                     "DecisionSchema",
-                    __base__=base_schema if base_schema else BaseModel,
+                    __base__=base_schema,
                     **extension_fields,
                 )
                 result = await ask_schema_async(
@@ -163,22 +148,19 @@ class FlowchartLLMFramework:
                     pymodel=DecisionSchema,
                     model=LLM_MODEL,
                 )
-                duration_ms = int((time.time() - start_time) * 1000)
-                self.node_durations[node_instance_id] = duration_ms
                 self.decisions[node_instance_id] = result.decision
                 self.reasoning[node_instance_id] = result.reasoning
                 self.extracted[node_instance_id] = result
                 return None, result.decision, None
             else:
-                if schema:
+                if node.output_schema:
                     schema = await ask_schema_async(
                         text=full_prompt,
                         system=self.system_prompt,
-                        pymodel=schema,
+                        pymodel=node.output_schema,
                         model=LLM_MODEL,
                     )
-                    duration_ms = int((time.time() - start_time) * 1000)
-                    self.node_durations[node_instance_id] = duration_ms
+                    self.extracted[node_instance_id] = schema
                     return schema, None, None # if output schema is provided, the return is the result of the schema
                 else:
                     result = await ask_text_async(
@@ -187,14 +169,14 @@ class FlowchartLLMFramework:
                         model=LLM_MODEL,
                         temperature=temperature,
                     )
-                    duration_ms = int((time.time() - start_time) * 1000)
-                    self.node_durations[node_instance_id] = duration_ms
-                    return None, None,result # if an end node, the return is the actual output message of the system
+                    return None, None, result # if an end node, the return is the actual output message of the system
         except Exception as e:
             logger.error(f"Error in LLM function: {e}")
             raise
 
-    async def can_currently_process_node(self, node: FlowchartNode) -> bool:
+    async def can_currently_process_node(self, node_instance_id: str) -> bool:
+        node_id = node_instance_id.rsplit("_", 1)[0]
+        node = self.flowchart[node_id]
         # Check if node has any uncomputed variable dependencies
         node_text = node.text
         required_vars = re.findall(r"\$\{([^}]+)\}", node_text)
@@ -204,11 +186,33 @@ class FlowchartLLMFramework:
 
         # Check if node has any explicit dependencies
         if hasattr(node, "needs") and node.needs:
-            node_instance_id = self.get_node_instance_id(node.needs)
             if node_instance_id not in self.completed_nodes:
                 return False
 
         return True
+    
+    async def has_started_processing(self, node_instance_id: str) -> bool:
+        async with self.processing_nodes_lock:
+            # Fast path - if already processing or completed, return immediately
+            if node_instance_id in self.processing_nodes:
+                logger.debug(f"Node '{node_instance_id}' is already processing")
+                return True
+
+            if node_instance_id in self.completed_nodes:
+                logger.debug(f"Node '{node_instance_id}' is already completed")
+                return True
+            
+            return False
+
+    async def get_or_start_node_task(self, node_instance_id: str, context: Dict[str, Any]) -> asyncio.Task:
+        task = None
+        if await self.has_started_processing(node_instance_id):
+            task = self.node_tasks.get(node_instance_id)
+        else:
+            task = asyncio.create_task(self.process_node(node_instance_id, context)) 
+            self.node_tasks[node_instance_id] = task
+
+        return task
 
     async def get_processable_nodes(
         self, current_node_id: str, depth: int = 1
@@ -217,54 +221,72 @@ class FlowchartLLMFramework:
         if depth <= 0:
             return []
 
-        loop_lookahead = 0
         processable = []
         visited = set()
-        queue = [(current_node_id, depth)]
+        # Queue now contains: (node_id, depth, loop_lookahead)
+        queue = [(current_node_id, depth, 0)]
 
         while queue:
-            node_id, remaining_depth = queue.pop(0)
+            node_id, remaining_depth, branch_loop_lookahead = queue.pop(0)
             node_instance_id = (
-                f"{node_id}_{self.get_current_loop_iteration(node_id) + loop_lookahead}"
+                f"{node_id}_{self.get_current_loop_iteration(node_id) + branch_loop_lookahead}"
             )
 
             if node_instance_id in visited:
                 continue
 
+            visited.add(node_instance_id)
             node = self.flowchart[node_id]
 
             # Check node state under lock
             async with self.processing_nodes_lock:
-                if (
-                    await self.can_currently_process_node(node)
-                ):
+                if await self.can_currently_process_node(node_instance_id):
                     processable.append(node_instance_id)
 
-            iterator_name = next(
-                n.iterator
-                for n in self.flowchart.values()
-                if isinstance(n, LoopStartNode)
-            )
-            if node.type == NodeType.LOOP_CONTINUE and iterator_name in self.loop_states:
-                loop_state = self.loop_states[iterator_name]
-
-                # Check if there are more items to process in the collection
-                if (
-                    loop_state["current_index"] + loop_lookahead + 1
-                    < len(loop_state["collection"])
-                ):
-                    queue.append((node.connections["HasMore"], remaining_depth - 1))
-                    loop_lookahead += 1
-                else:
-                    queue.append((node.connections["Complete"], remaining_depth - 1))
+            # If we've reached max depth, don't add more nodes to queue
+            if remaining_depth <= 1:
                 continue
 
-            # Add connected nodes to queue if we still have depth
-            if remaining_depth > 1:
-                for next_node in node.connections.values():
-                    next_instance_id = self.get_node_instance_id(next_node)
-                    if next_instance_id not in self.visited_nodes:
-                        queue.append((next_node, remaining_depth - 1))
+            iterator_name = next(
+                (n.iterator for n in self.flowchart.values() if isinstance(n, LoopStartNode)),
+                None
+            )
+
+            # Handle loop continue nodes
+            if node.type == NodeType.LOOP_CONTINUE and iterator_name in self.loop_states:
+                loop_state = self.loop_states[iterator_name]
+                
+                # Check if there are more items to process in the collection
+                if (
+                    loop_state["current_index"] + branch_loop_lookahead + 1
+                    < len(loop_state["collection"])
+                ):
+                    # For HasMore path, increment the lookahead
+                    queue.append((
+                        node.connections["HasMore"], 
+                        remaining_depth - 1,
+                        branch_loop_lookahead + 1
+                    ))
+                    # For Complete path, keep the same lookahead
+                    queue.append((
+                        node.connections["Complete"],
+                        remaining_depth - 1,
+                        branch_loop_lookahead
+                    ))
+                else:
+                    # If no more items, only follow Complete path
+                    queue.append((
+                        node.connections["Complete"],
+                        remaining_depth - 1,
+                        branch_loop_lookahead
+                    ))
+                continue
+
+            # Add connected nodes to queue, maintaining the branch's lookahead
+            for next_node in node.connections.values():
+                next_instance_id = f"{next_node}_{self.get_current_loop_iteration(next_node) + branch_loop_lookahead}"
+                if next_instance_id not in visited:
+                    queue.append((next_node, remaining_depth - 1, branch_loop_lookahead))
 
         logger.debug(
             f"Found processable nodes for {self.get_node_instance_id(current_node_id)}: {processable}"
@@ -296,25 +318,15 @@ class FlowchartLLMFramework:
         """Generate a unique ID for this instance of the node, including its iteration count."""
         return f"{node_id}_{self.get_current_loop_iteration(node_id)}"
 
-    async def process_node(self, node_id: str, context: Dict[str, Any]) -> Any:
-        node_instance_id = self.get_node_instance_id(node_id)
-
+    async def process_node(self, node_instance_id: str, context: Dict[str, Any]) -> Any:
+        node_id = node_instance_id.rsplit("_", 1)[0]
+    
         async with self.processing_nodes_lock:
-            # Fast path - if already processing or completed, return immediately
-            if node_instance_id in self.processing_nodes:
-                if node_instance_id == "CheckUserWantsToDiscussPlan_0":
-                    print("dd")
-                logger.debug(f"Node '{node_instance_id}' is already processing")
-
-            if node_instance_id in self.completed_nodes:
-                logger.debug(f"Node '{node_instance_id}' is already completed")
-                return self.node_results.get(node_instance_id)
-            # Mark as processing before starting
             self.processing_nodes.add(node_instance_id)
+            logger.debug(f"Processing node instance: '{node_instance_id}'")
 
         node = self.flowchart[node_id]
         start_time = time.time()
-        logger.debug(f"Processing node instance: '{node_instance_id}'")
 
         try:
             if node.type in [NodeType.LOOP_START, NodeType.LOOP_CONTINUE]:
@@ -333,41 +345,44 @@ class FlowchartLLMFramework:
                         )
                         node_prompt += f"\n\nContext: {model_name}: {data_dict}"
 
+                if node_instance_id == "CheckPlanDiscussed_1":
+                    print(f"bepp")
+
                 connections = node.connections
                 if len(connections) == 0:
                     _, _, output_text = await self.llm_function(
-                            node_text=node_prompt,
-                            context=context,
-                            current_node_id=node_id,
-                            schema=node.output_schema,
-                        )
+                        node_instance_id=node_instance_id,
+                        context=context,
+                    )
                     result = output_text
                 elif len(connections) > 1:  # Decision node, result is the decision
-                    options = list(connections.keys())
                     _, decision, _ = await self.llm_function(
-                        node_text=node_prompt,
+                        node_instance_id=node_instance_id,
                         context=context,
-                        current_node_id=node_id,
-                        options=options,
-                        schema=node.output_schema,
                     )
                     result = connections[decision]
+                    if node_instance_id == "CheckPlanDiscussed_1":
+                        print(f"bepp")
                     
                 else:  # Transition or end node, result is the next node
                     if node.output_schema:
                         schema_result, _, _ = await self.llm_function(
-                            node_text=node_prompt,
+                            node_instance_id=node_instance_id,
                             context=context,
-                            current_node_id=node_id,
-                            schema=node.output_schema,
                         )
                         self.extracted[node_instance_id] = schema_result
                     result = connections["default"]
 
             # Store results and mark as completed
+            if node_instance_id == "CheckPlanDiscussed_1":
+                print(f"bepp")
             self.node_results[node_instance_id] = result
             self.completed_nodes.add(node_instance_id)
+
             duration_ms = int((time.time() - start_time) * 1000)
+            self.node_durations[node_instance_id] = duration_ms
+
+
             logger.debug(
                 f"Finished processing node '{node_instance_id}' in {duration_ms}ms"
             )
@@ -422,25 +437,22 @@ class FlowchartLLMFramework:
             current_node = self.flowchart[current_node_id]
             logger.info(f"Processing current node: {current_instance_id}")
 
+            if current_instance_id == "CheckPlanDiscussed_1":
+                print(f"bepp")
+
             if current_instance_id not in self.execution_path:
                 self.execution_path.append(current_instance_id)
 
-            # Start processing current node if not already processing/completed
-            if current_instance_id in self.processing_nodes:
-                logger.debug(f"Node '{current_instance_id}' is already processing")
-            else:
-                task = asyncio.create_task(self.process_node(current_node_id, context))
-                self.node_tasks[current_instance_id] = task
-
-            # Get and start processing lookahead nodes
+            # Get and start processing current node
+            await self.get_or_start_node_task(current_instance_id, context)
+                  
+            # Get and start processingm lookahead nodes
             lookahead_nodes = await self.get_processable_nodes(
                 current_node_id, self.lookahead_depth
             )
             for node_instance_id in lookahead_nodes:
-                if node_instance_id != current_instance_id:  # Skip current node
-                    node_id = node_instance_id.rsplit("_", 1)[0]
-                    task = asyncio.create_task(self.process_node(node_id, context))
-                    self.node_tasks[node_instance_id] = task
+                if node_instance_id != current_instance_id:
+                    await self.get_or_start_node_task(node_instance_id, context)
 
             # Prune unreachable nodes
             async with self.processing_nodes_lock:
@@ -510,6 +522,9 @@ class FlowchartLLMFramework:
             assert current_instance_id in self.node_results, f"Node '{current_instance_id}' not found in node_results"
             
             next_node = self.node_results[current_instance_id]
+
+            if current_instance_id == "CheckPlanDiscussed_1":
+                print(f"bepp")
 
             node_entry["next_node"] = next_node
             traversal.append(node_entry)
