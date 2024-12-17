@@ -127,7 +127,7 @@ async def _process_notifications(
             prompt_tag="user-recurrent-checkin",
             recurrence=None,
         )
-        await notification_manager.create_and_process_notification(
+        notification = await notification_manager.create_and_process_notification(
             notification, dry_run
         )
         notifications_processed.append(
@@ -221,7 +221,7 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     )
 
     result = {
-        "users_checked": len(all_users),
+        "users_checked": len(filtered_users),
         "notification_result": notification_result,
         "unactivated_emails_result": unactivated_emails_result,
     }
