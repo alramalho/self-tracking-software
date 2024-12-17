@@ -81,7 +81,7 @@ const ProfilePage: React.FC = () => {
   const [timeRange, setTimeRange] = useState<"30 Days" | "180 Days">("30 Days");
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
-  const userHasAccessToAi = false//posthog.isFeatureEnabled("ai-bot-access");
+  const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
   const router = useRouter();
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
@@ -367,9 +367,10 @@ const ProfilePage: React.FC = () => {
             </Button>
           </div>
         ) : (
-          <div className="w-full max-w-3xl mb-8">
-            <DemoEmotionViewer />
-          </div>
+          <></>
+          // <div className="w-full max-w-3xl mb-8">
+          //   <DemoEmotionViewer />
+          // </div>
         )}
         <Tabs defaultValue="plans" className="w-full">
           <TabsList className="grid w-full grid-cols-2 h-13 bg-gray-100">
