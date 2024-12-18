@@ -213,7 +213,6 @@ const LogPage: React.FC = () => {
       newSocket.onopen = () => {
         setIsConnected(true);
         setIsConnecting(false);
-        toast.success("WebSocket connected");
       };
 
       newSocket.onclose = (event) => {
