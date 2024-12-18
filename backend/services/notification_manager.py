@@ -1,7 +1,6 @@
 from entities.notification import Notification
 from gateways.database.mongodb import MongoDBGateway
 from gateways.aws.event_bridge import EventBridgeCronGateway
-from controllers.prompt_controller import PromptController
 from ai.llm import ask_text
 from datetime import datetime, timedelta
 from typing import List, Optional, Literal
@@ -30,7 +29,6 @@ class NotificationManager:
         self.db_gateway = MongoDBGateway("notifications")
         self.users_gateway = UsersGateway()
         self.cron_gateway = EventBridgeCronGateway()
-        self.prompt_controller = PromptController()
 
     def delete_notification(self, notification_id: str):
         notification = self.get_notification(notification_id)
@@ -56,8 +54,7 @@ class NotificationManager:
                 and existing.message == notification.message
             )
             same_scheduled_type = (
-                notification.prompt_tag == existing.prompt_tag
-                and notification.type == existing.type
+                notification.type == existing.type
                 and notification.recurrence == existing.recurrence
                 and notification.recurrence is not None
             )
@@ -92,13 +89,6 @@ class NotificationManager:
         notification = self.get_notification(notification_id)
         if not notification or notification.status != "pending":
             return None
-
-        if notification.type == "engagement":
-            prompt = self.prompt_controller.get_prompt(
-                notification.user_id, notification.prompt_tag
-            )
-            message = ask_text(prompt, "").strip('"')
-            notification.message = message
 
         notification.processed_at = datetime.now()
         notification.status = "processed"
@@ -328,7 +318,6 @@ if __name__ == "__main__":
                         user_id=user.id,
                         message="",  # This will be filled when processed
                         type="engagement",
-                        prompt_tag="user-recurrent-checkin",
                         recurrence="daily",
                         time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
                     )

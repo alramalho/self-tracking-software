@@ -8,10 +8,16 @@ from entities.notification import Notification
 from gateways.users import UsersGateway
 from gateways.aws.s3 import S3Gateway
 from gateways.activities import ActivitiesGateway
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from pytz import UTC
+from ai.assistant.memory import DatabaseMemory
+from gateways.database.mongodb import MongoDBGateway
 from emails.loops import send_loops_event
+from ai.llm import ask_text
+from controllers.prompt_controller import PromptController
 from shared.logger import logger
+from bson import ObjectId
+from entities.message import Message
 from analytics.posthog import posthog
 from gateways.aws.ses import SESGateway
 import json
@@ -27,7 +33,7 @@ notification_manager = NotificationManager()
 activities_gateway = ActivitiesGateway()
 s3_gateway = S3Gateway()
 ses_gateway = SESGateway()
-
+prompt_controller = PromptController()
 limiter = Limiter(key_func=get_remote_address)
 
 ALLOWED_ORIGINS: Set[str] = {
@@ -120,16 +126,41 @@ async def _process_notifications(
 ) -> dict:
     notifications_processed = []
     for user in users:
+
+        prompt = prompt_controller.get_prompt(
+            user.id, "user-recurrent-checkin"
+        )
+        
+        message_id = str(ObjectId())
+        message = ask_text(prompt, "").strip('"')
+
         notification = Notification.new(
             user_id=user.id,
-            message="",  # This will be filled when processed
+            message=message,
             type="engagement",
-            prompt_tag="user-recurrent-checkin",
             recurrence=None,
+            related_data={
+                "message_id": message_id,
+                "message_text": message,
+            },
         )
         notification = await notification_manager.create_and_process_notification(
             notification, dry_run
         )
+        if not dry_run:
+            memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+            memory.write(
+                Message.new(
+                    id=message_id,
+                    text=message,
+                    sender_name="Jarvis",
+                    sender_id="0",
+                    recipient_name=user.name,
+                    recipient_id=user.id,
+                    emotions=[],
+                )
+            )
+
         notifications_processed.append(
             {
                 "user": {
@@ -189,11 +220,19 @@ async def _process_unactivated_emails(users: list[User], dry_run: bool = True) -
     return result
 
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+
 @router.post("/run-daily-job")
 async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     body = await request.json()
     filter_usernames = body.get("filter_usernames", [])
     dry_run = body.get("dry_run", True)
+    send_report = body.get("send_report", False)
 
     unactivated_emails_dry_run = dry_run.get("unactivated_emails", True)
     notifications_dry_run = dry_run.get("notifications", True)
@@ -221,16 +260,21 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     )
 
     result = {
+        "dry_run": {
+            "unactivated_emails": unactivated_emails_dry_run,
+            "notifications": notifications_dry_run,
+        },
         "users_checked": len(filtered_users),
         "notification_result": notification_result,
         "unactivated_emails_result": unactivated_emails_result,
     }
 
-    if not unactivated_emails_dry_run:
+    if send_report:
+        current_time = datetime.now(UTC).strftime('%Y-%m-%d')
         ses_gateway.send_email(
             to="alexandre.ramalho.1998@gmail.com",
-            subject="Unactivated loops event triggered",
-            html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(result, indent=2)}</pre>",
+            subject=f"Daily Job for Tracking.so [{ENVIRONMENT}] [{current_time}]",
+            html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(result, indent=2, default=json_serial)}</pre>",
         )
 
     return result

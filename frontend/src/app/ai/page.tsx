@@ -52,6 +52,7 @@ import { EmotionBadges } from "@/components/chat/EmotionBadges";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { AccessRestrictionPopover } from "@/components/chat/AccessRestrictionPopover";
 import { useFeatureFlagEnabled } from "posthog-js/react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const REFERRAL_COUNT = 2;
 
@@ -59,6 +60,78 @@ type ExtractedPlanSessions = {
   plan_id: string;
   sessions: PlanSession[];
   old_sessions: PlanSession[];
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.3,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut",
+    },
+  },
+};
+
+const delayTime = 3; // 3 seconds
+const messageDisplayVariants = {
+  initial: {
+    height: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 1,
+  },
+  animate: {
+    height: "200px",
+    opacity: 0,
+    transition: {
+      height: {
+        duration: 0.8,
+        ease: "easeInOut",
+        delay: delayTime,
+      },
+      opacity: {
+        duration: 0.5,
+        delay: delayTime + 0.8, // Start fading after height animation completes
+      },
+    },
+  },
+  exit: {
+    opacity: 0,
+  },
+};
+
+const messageTextVariants = {
+  initial: { opacity: 0, scale: 0.8 },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut",
+    },
+  },
+  shrink: {
+    scale: 0.6,
+    y: 0,
+    transition: {
+      duration: 0.8,
+      ease: "easeInOut",
+      delay: 2,
+    },
+  },
 };
 
 const LogPage: React.FC = () => {
@@ -74,7 +147,8 @@ const LogPage: React.FC = () => {
   const { data: userData } = useUserDataQuery("me");
 
   const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
-  const posthogFeatureFlagsInitialized = typeof isFeatureEnabled !== "undefined";
+  const posthogFeatureFlagsInitialized =
+    typeof isFeatureEnabled !== "undefined";
   const [isUserWhitelisted, setIsUserWhitelisted] = useState<boolean>(false);
 
   useEffect(() => {
@@ -83,9 +157,12 @@ const LogPage: React.FC = () => {
     }
   }, [posthogFeatureFlagsInitialized, isFeatureEnabled]);
 
-
   const searchParams = useSearchParams();
   const notificationId = searchParams.get("notification_id");
+  const messageId = searchParams.get("messageId");
+  const messageText = searchParams.get("messageText");
+  const [isInitialMessageAnimating, setIsInitialMessageAnimating] =
+    useState(true);
 
   const [transcription, setTranscription] = useState<string>("");
   const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
@@ -469,6 +546,34 @@ const LogPage: React.FC = () => {
     sendMessage(message);
   };
 
+  function clearToasts() {
+    toast.remove();
+  }
+
+  useEffect(() => {
+    if (messageId && messageText) {
+      clearMessages();
+      if (messagesData.data) {
+        messagesData.data.messages
+          .slice(0, 2)
+          .map((message) => ({
+            role:
+              message.sender_id === userData?.user?.id ? "user" : "assistant",
+            content: message.text,
+          }))
+          .forEach((message) => {
+            addMessage(message as Message);
+          });
+      }
+      setTimeout(() => {
+        setIsInitialMessageAnimating(false);
+        handleReconnect();
+      }, (delayTime + 1.4) * 1000); // delayTime + height animation + fade duration + small buffer
+    } else {
+      setIsInitialMessageAnimating(false);
+    }
+  }, [messageId, messageText]);
+
   if (!hasLoadedUserData)
     return (
       <div className="h-screen flex items-center justify-center">
@@ -493,162 +598,206 @@ const LogPage: React.FC = () => {
       )}
       {isUserWhitelisted && (
         <>
-          <div className="h-full flex flex-col justify-between min-h-[100%]">
-            <div className="max-h-[200px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-100">
-              <Button
-                variant="ghost"
-                className="text-gray-500 underline w-full"
-                onClick={() => router.push("/message-history")}
+          <AnimatePresence>
+            {messageId && messageText && isInitialMessageAnimating ? (
+              <motion.div
+                variants={messageDisplayVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="fixed inset-0 bg-white z-110 px-4"
               >
-                <History className="w-4 h-4 mr-2" />
-                See full history
-              </Button>
-              <div className="w-full">
-                <p className="text-gray-500 text-lg mx-auto text-center">...</p>
-              </div>
-              <ChatInterface messages={messages.slice(-2)} />
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-              <div className="border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
-                {inputMode === "voice" ? (
-                  <div className="flex flex-col items-center w-full">
-                    <AudioControls
-                      isRecording={isRecording}
-                      isConnected={isConnected}
-                      toggleRecording={handleToggleRecording}
-                      cancelRecording={cancelRecording}
-                      isLoading={isLoading}
-                    />
+                <motion.div
+                  variants={messageTextVariants}
+                  initial="initial"
+                  animate="animate"
+                  className="max-w-2xl mx-auto text-xl text-center"
+                >
+                  {decodeURIComponent(messageText)}
+                </motion.div>
+              </motion.div>
+            ) : (
+              <motion.div
+                className="h-full flex flex-col justify-between min-h-[100%]"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.div
+                  variants={itemVariants}
+                  className="max-h-[250px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-100"
+                >
+                  <Button
+                    variant="ghost"
+                    className="text-gray-500 underline w-full"
+                    onClick={() => router.push("/message-history")}
+                  >
+                    <History className="w-4 h-4 mr-2" />
+                    See full history
+                  </Button>
+                  <div className="w-full">
+                    <p className="text-gray-500 text-md leading-[15px] mx-auto text-center">
+                      ...
+                    </p>
                   </div>
-                ) : (
-                  <div className="flex items-center w-full">
-                    <ChatInput
-                      transcription={transcription}
-                      isConnected={isConnected}
-                      isLoading={isLoading}
-                      onTranscriptionChange={handleTranscriptionChange}
-                      onSendMessage={handleSendMessage}
-                    />
-                  </div>
-                )}
-              </div>
+                  <ChatInterface messages={messages.slice(-2)} />
+                </motion.div>
 
-              <div className="flex space-x-4 mb-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={inputMode === "voice"}
-                    onCheckedChange={toggleInputMode}
-                    id="input-mode"
-                  />
-                  <label htmlFor="input-mode" className="text-sm font-medium">
+                <motion.div
+                  variants={itemVariants}
+                  className="flex-1 flex flex-col items-center justify-center px-4 py-8"
+                >
+                  <div className="border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
                     {inputMode === "voice" ? (
+                      <div className="flex flex-col items-center w-full">
+                        <AudioControls
+                          isRecording={isRecording}
+                          isConnected={isConnected}
+                          toggleRecording={handleToggleRecording}
+                          cancelRecording={cancelRecording}
+                          isLoading={isLoading}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center w-full">
+                        <ChatInput
+                          transcription={transcription}
+                          isConnected={isConnected}
+                          isLoading={isLoading}
+                          onTranscriptionChange={handleTranscriptionChange}
+                          onSendMessage={handleSendMessage}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-4 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={inputMode === "voice"}
+                        onCheckedChange={toggleInputMode}
+                        id="input-mode"
+                      />
+                      <label
+                        htmlFor="input-mode"
+                        className="text-sm font-medium"
+                      >
+                        {inputMode === "voice" ? (
+                          <>
+                            <Mic className="inline mr-1" size={16} />
+                            Voice Input
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="inline mr-1" size={16} />
+                            Text Input
+                          </>
+                        )}
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={outputMode === "voice"}
+                        onCheckedChange={toggleOutputMode}
+                        id="output-mode"
+                      />
+                      <label
+                        htmlFor="output-mode"
+                        className="text-sm font-medium"
+                      >
+                        {outputMode === "voice" ? (
+                          <>
+                            <Volume2 className="inline mr-1" size={16} />
+                            Voice Output
+                          </>
+                        ) : (
+                          <>
+                            <VolumeX className="inline mr-1" size={16} />
+                            Text Output
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    onClick={handleReconnect}
+                    className="hover:bg-transparent"
+                  >
+                    {isConnecting ? (
                       <>
-                        <Mic className="inline mr-1" size={16} />
-                        Voice Input
+                        <Loader2
+                          className="animate-spin text-gray-500 mr-2"
+                          size={28}
+                        />
+                        <span className="text-xl font-normal italic">
+                          Connecting...
+                        </span>
+                      </>
+                    ) : isConnected ? (
+                      <>
+                        <Wifi className="text-green-500 mr-2" size={28} />
+                        <span className="text-xl font-normal italic">
+                          Connected
+                        </span>
                       </>
                     ) : (
                       <>
-                        <MessageSquare className="inline mr-1" size={16} />
-                        Text Input
+                        <WifiOff className="text-red-500 mr-2" size={28} />
+                        <span className="text-xl font-normal underline">
+                          Reconnect
+                        </span>
                       </>
                     )}
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={outputMode === "voice"}
-                    onCheckedChange={toggleOutputMode}
-                    id="output-mode"
-                  />
-                  <label htmlFor="output-mode" className="text-sm font-medium">
-                    {outputMode === "voice" ? (
-                      <>
-                        <Volume2 className="inline mr-1" size={16} />
-                        Voice Output
-                      </>
-                    ) : (
-                      <>
-                        <VolumeX className="inline mr-1" size={16} />
-                        Text Output
-                      </>
+                  </Button>
+
+                  {suggestedActivityEntries.map((activityEntry) => {
+                    const activity = suggestedActivities.find(
+                      (a) => a.id === activityEntry.activity_id
+                    );
+                    if (!activity) return null;
+                    return (
+                      <ActivitySuggestion
+                        key={activityEntry.id}
+                        activity={activity}
+                        activityEntry={activityEntry}
+                        onAccept={handleActivityAcceptance}
+                        onReject={handleActivityRejection}
+                      />
+                    );
+                  })}
+                  {suggestedNextWeekSessions &&
+                    suggestedNextWeekSessions.sessions.length > 0 && (
+                      <PlanUpdateBanner
+                        sessions={suggestedNextWeekSessions.sessions}
+                        old_sessions={suggestedNextWeekSessions.old_sessions}
+                        plan_id={suggestedNextWeekSessions.plan_id}
+                        onAccept={handleSessionsAcceptance}
+                        onReject={handleSessionsRejection}
+                      />
                     )}
-                  </label>
-                </div>
-              </div>
+                </motion.div>
 
-              <Button
-                variant="ghost"
-                onClick={handleReconnect}
-                className="hover:bg-transparent"
-              >
-                {isConnecting ? (
-                  <>
-                    <Loader2
-                      className="animate-spin text-gray-500 mr-2"
-                      size={28}
-                    />
-                    <span className="text-xl font-normal italic">
-                      Connecting...
+                <motion.div
+                  variants={itemVariants}
+                  className="flex flex-col items-center justify-center w-full border-y border-gray-200 bg-gray-100"
+                >
+                  <span className="text-sm text-gray-500 px-4 pt-2">
+                    Emotion Analysis
+                  </span>
+                  {inputMode !== "voice" && (
+                    <span className="text-xs text-gray-400 pb-2">
+                      ⚠️ only available on voice input
                     </span>
-                  </>
-                ) : isConnected ? (
-                  <>
-                    <Wifi className="text-green-500 mr-2" size={28} />
-                    <span className="text-xl font-normal italic">
-                      Connected
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="text-red-500 mr-2" size={28} />
-                    <span className="text-xl font-normal underline">
-                      Reconnect
-                    </span>
-                  </>
-                )}
-              </Button>
-
-              {suggestedActivityEntries.map((activityEntry) => {
-                const activity = suggestedActivities.find(
-                  (a) => a.id === activityEntry.activity_id
-                );
-                if (!activity) return null;
-                return (
-                  <ActivitySuggestion
-                    key={activityEntry.id}
-                    activity={activity}
-                    activityEntry={activityEntry}
-                    onAccept={handleActivityAcceptance}
-                    onReject={handleActivityRejection}
-                  />
-                );
-              })}
-              {suggestedNextWeekSessions &&
-                suggestedNextWeekSessions.sessions.length > 0 && (
-                  <PlanUpdateBanner
-                    sessions={suggestedNextWeekSessions.sessions}
-                    old_sessions={suggestedNextWeekSessions.old_sessions}
-                    plan_id={suggestedNextWeekSessions.plan_id}
-                    onAccept={handleSessionsAcceptance}
-                    onReject={handleSessionsRejection}
-                  />
-                )}
-            </div>
-            <div className="flex flex-col items-center justify-center w-full border-y border-gray-200 bg-gray-100">
-              <span className="text-sm text-gray-500 px-4 pt-2">
-                Emotion Analysis
-              </span>
-              {inputMode !== "voice" && (
-                <span className="text-xs text-gray-400 pb-2">
-                  ⚠️ only available on voice input
-                </span>
-              )}
-              <div className="min-h-[70px]">
-                <EmotionBadges emotions={currentEmotions} />
-              </div>
-            </div>
-          </div>
+                  )}
+                  <div className="min-h-[70px]">
+                    <EmotionBadges emotions={currentEmotions} />
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {showFeatureForm && (
             <FeedbackForm
               title="✨ Try AI Feature"

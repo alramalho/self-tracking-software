@@ -74,7 +74,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href={`/ai`}
-            className="flex flex-col justify-center items-center p-2 text-gray-600"
+            className="flex flex-col justify-center items-center p-2 text-gray-600 text-center"
             onClick={() => {
               if (pathname !== "/ai") {
                 setIsLoadingAi(true)

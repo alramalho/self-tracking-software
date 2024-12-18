@@ -70,7 +70,7 @@ class FlowchartLLMFramework:
                 if isinstance(n, LoopStartNode)
             )
 
-            loop_state = self.loop_states[iterator_name]
+            loop_state = self.loop_states[iterator_name] # todo: sometimes throwing KeyError: 'current_plan'?
             loop_state["current_index"] += 1
 
             if loop_state["current_index"] < len(loop_state["collection"]):

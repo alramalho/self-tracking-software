@@ -1,6 +1,5 @@
 import React from "react";
 import { Message, useUserPlan } from "@/contexts/UserPlanContext";
-import { Message as ChatMessage } from "@/hooks/useMessageHistory";
 import { ChatInterface } from "./chat/ChatInterface";
 import { EmotionBadges } from "./chat/EmotionBadges";
 import { Card } from "./ui/card";
@@ -8,7 +7,7 @@ import { ChatBubbleAvatar } from "./ui/chat/chat-bubble";
 import { ChatBubbleMessage } from "./ui/chat/chat-bubble";
 import { ChatBubble } from "./ui/chat/chat-bubble";
 import { ChatMessageList } from "./ui/chat/chat-message-list";
-import { EmotionViewer } from "./EmotionViewer";
+import { Eclipse } from "lucide-react";
 import Divider from "./Divider";
 
 interface MessageHistoryViewerProps {
@@ -65,52 +64,41 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
   });
 
   return (
-    <Card className="w-full flex-1 max-w-4xl mx-auto p-4 flex flex-col h-full overflow-hidden">
-      <ChatMessageList className="flex-1 overflow-y-auto">
-        {sortedDates.map(([dateKey, dateMessages], index) => (
-          <React.Fragment key={dateKey}>
-            <Divider text={formatDate(dateKey)} />
-            {dateMessages
-              .sort(
-                (a, b) =>
-                  new Date(a.created_at).getTime() -
-                  new Date(b.created_at).getTime()
-              )
-              .map((message) => {
-                const role =
-                  message.sender_id === userData?.user?.id
-                    ? "user"
-                    : "assistant";
-                return (
-                  <ChatBubble
-                    key={message.id}
-                    variant={role === "assistant" ? "received" : "sent"}
-                  >
-                    <div
-                      className={`flex items-start gap-2 w-full ${
-                        role === "user" ? "flex-row-reverse" : ""
-                      }`}
-                    >
-                      <ChatBubbleAvatar
-                        src={
-                          role === "assistant"
-                            ? "https://htmlcolorcodes.com/assets/images/colors/sky-blue-color-solid-background-1920x1080.png"
-                            : userData?.user?.picture
-                        }
-                        className={`${role === "user" ? "mt-2" : ""}`}
-                      />
-                      <div className="flex flex-col gap-2 justify-end">
-                        <ChatBubbleMessage message={message.text} />
-                        <EmotionBadges emotions={message.emotions} />
-                      </div>
-                    </div>
-                  </ChatBubble>
-                );
-              })}
-          </React.Fragment>
-        ))}
-        <div ref={messagesEndRef} /> {/* Scroll anchor */}
-      </ChatMessageList>
-    </Card>
+    <ChatMessageList>
+      {sortedDates.map(([dateKey, dateMessages], index) => (
+        <React.Fragment key={dateKey}>
+          <Divider text={formatDate(dateKey)} />
+          {dateMessages
+            .sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime()
+            )
+            .map((message) => {
+              const role =
+                message.sender_id === userData?.user?.id ? "user" : "assistant";
+              return (
+                <ChatBubble
+                  key={message.id}
+                  variant={role === "assistant" ? "received" : "sent"}
+                >
+                  <ChatBubbleAvatar
+                    src={role === "user" ? userData?.user?.picture : undefined}
+                    fallback={<Eclipse className="w-8 h-8" />}
+                  />
+                  <div className="flex flex-col gap-2">
+                    <ChatBubbleMessage
+                      message={message.text}
+                      variant={role === "assistant" ? "received" : "sent"}
+                    />
+                    <EmotionBadges emotions={message.emotions} />
+                  </div>
+                </ChatBubble>
+              );
+            })}
+        </React.Fragment>
+      ))}
+      <div ref={messagesEndRef} />
+    </ChatMessageList>
   );
 }
