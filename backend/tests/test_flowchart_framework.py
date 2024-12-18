@@ -151,3 +151,86 @@ async def test_flowchart_execution_time(system_prompt: str, input_string: str):
     print(f"Initial nodes time (max of HasRequest_0, ExtractPlanNames_0): {initial_nodes_time/1000:.2f}s")
     print(f"Parallel nodes time (max of remaining nodes): {parallel_nodes_time/1000:.2f}s\033[0m")
     
+
+@pytest.mark.asyncio
+async def test_flowchart_with_alternative_history(system_prompt: str):
+    # Different input string with focus on project work
+    input_string = """
+        --- Here's the user's plan list of 4 plans:
+        Plan 1 (with ID '6711a1b3b56e3f2ec95c9181'): Name: 'get fit' (ends Tuesday, Dec 31)
+        Sessions that the user PLANNED (not necessarily done) in the last 6 days:
+        - Thursday, Dec 12 - gym (ID: 6711a1b3b56e3f2ec95c9182) (1 sessions)
+        - Saturday, Dec 14 - running (ID: 6711a1b3b56e3f2ec95c9183) (10 kilometers)
+        - Monday, Dec 16 - gym (ID: 6711a1b3b56e3f2ec95c9182) (1 sessions)
+        - Wednesday, Dec 18 - running (ID: 6711a1b3b56e3f2ec95c9183) (9 kilometers)
+
+        Upcoming sessions in the next 6 days:
+        - Thursday, Dec 19 - gym (ID: 6711a1b3b56e3f2ec95c9182) (1 sessions)
+        - Saturday, Dec 21 - running (ID: 6711a1b3b56e3f2ec95c9183) (8 kilometers)
+        - Monday, Dec 23 - gym (ID: 6711a1b3b56e3f2ec95c9182) (1 sessions)
+
+        Plan 2 (with ID '67229dc8a9c5dddd57c30a83'): Name: 'Read 1 book' (ends Tuesday, Jan 28)
+        Sessions that the user PLANNED (not necessarily done) in the last 6 days:
+        - Thursday, Dec 12 - reading (ID: 6713ab63baaf861c0d3d1d25) (30 pages)
+        - Saturday, Dec 14 - reading (ID: 6713ab63baaf861c0d3d1d25) (20 pages)
+        - Monday, Dec 16 - reading (ID: 6713ab63baaf861c0d3d1d25) (15 pages)
+        - Tuesday, Dec 17 - reading (ID: 6713ab63baaf861c0d3d1d25) (15 pages)
+
+        Upcoming sessions in the next 6 days:
+        - Thursday, Dec 19 - reading (ID: 6713ab63baaf861c0d3d1d25) (30 pages)
+        - Saturday, Dec 21 - reading (ID: 6713ab63baaf861c0d3d1d25) (30 pages)
+        - Monday, Dec 23 - reading (ID: 6713ab63baaf861c0d3d1d25) (15 pages)
+        - Tuesday, Dec 24 - reading (ID: 6713ab63baaf861c0d3d1d25) (15 pages)
+
+        Plan 3 (with ID '672d5e0783e074f2ab227579'): Name: 'i want my side project to reach 1000 users' (ends Monday, Dec 30)
+        Sessions that the user PLANNED (not necessarily done) in the last 6 days:
+        - Friday, Dec 13 - work on side project (ID: 672d5d7683e074f2ab227571) (3 hours)
+        - Saturday, Dec 14 - work on side project (ID: 672d5d7683e074f2ab227571) (3 hours)
+        - Monday, Dec 16 - work on side project (ID: 672d5d7683e074f2ab227571) (3 hours)
+        - Wednesday, Dec 18 - work on side project (ID: 672d5d7683e074f2ab227571) (3 hours)
+
+        Upcoming sessions in the next 6 days:
+        - Friday, Dec 20 - work on side project (ID: 672d5d7683e074f2ab227571) (3 hours)
+        - Saturday, Dec 21 - work on side project (ID: 672d5d7683e074f2ab227571) (3 hours)
+        - Monday, Dec 23 - work on side project (ID: 672d5d7683e074f2ab227571) (3 hours)
+
+        --- Here's user's actually done activities during last week:
+        Monday, Dec 16 2024 (yesterday) - running (4 kilometers)
+        Wednesday, Dec 11 2024 (6 days ago) - running (4 kilometers)
+        Thursday, Dec 12 2024 (6 days ago) - reading (10 pages)
+        Wednesday, Dec 11 2024 (6 days ago) - gym (1 sessions)
+                               
+        --- Now here's your actual conversation history with the user:
+        ... (older than 1440 minutes messages omitted) ...
+        > Jarvis (13 hours ago): Your side project is eager for some attention! What's one action you can take this week to get closer to that 1000 user goal? 🖥️
+        > Jarvis (13 hours ago): You're making strides in running, but how about setting a new distance challenge for the week? What's the next goal you want to hit? 🏃‍♀️
+        > Jarvis (13 hours ago): You're making strides with your running! What's one distance you want to push yourself to this week? 🏃‍♀️
+        > Alex Ramalho (13 hours ago): sup
+        > Jarvis (13 hours ago): Hey Alex! It looks like you've been quite active with your running and gym sessions as part of your 'get fit' plan. You've planned some great distances and have even managed to complete 4 kilometers yesterday. Would you like to discuss any adjustments or goals for this plan moving forward? 🏃‍♀️💪
+        > Jarvis (13 hours ago): Looks like your reading goal is on hold! What's one book you've been wanting to dive into that could spark your interest? 📖
+        > Jarvis (13 hours ago): Your reading goal seems to be on hold! What's one book you've been wanting to dive into this week? 📖
+        > Alex Ramalho (13 hours ago): Yeah, I've kind of been focusing on my pet project.
+        --- Today (2024-12-18) ---
+        > Alex Ramalho (Just now): hey
+    """
+    
+    # Initialize framework
+    framework = FlowchartLLMFramework(FLOWCHART, system_prompt, lookahead_depth=6)
+    
+    try:
+        # Run the framework
+        result, extracted = await framework.run(input_string)
+        
+        # Basic assertions that don't depend on specific response content
+        assert isinstance(result, str), "Result should be a string"
+        assert result != "", "Result should not be empty"
+        
+        # Print execution summary
+        print("\n\033[92m=== Test Execution Summary ===")
+        print(f"Response received: {result[:100]}...")  # Print first 100 chars
+        print(f"Number of nodes executed: {len(framework.execution_path)}")
+        print(f"Execution path: {' -> '.join(framework.execution_path)}\033[0m")
+        
+    except Exception as e:
+        pytest.fail(f"Test failed with exception: {str(e)}")
+    
