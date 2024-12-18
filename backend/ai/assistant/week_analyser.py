@@ -203,13 +203,16 @@ class WeekAnalyserAssistant(object):
             lookahead_depth=6,
         )
         # For days since last Sunday (inclusive)
-        lookback_days = max(6, datetime.now().isoweekday() % 7)  # Sunday=0, Monday=1, ..., Saturday=6, max 6 is for debugging during mid 
+        lookback_days = max(
+            6, datetime.now().isoweekday() % 7
+        )  # Sunday=0, Monday=1, ..., Saturday=6, max 6 is for debugging during mid
 
         # For days until next Saturday (inclusive)
-        lookahead_days = max(6, (6 - datetime.now().isoweekday() % 7))  # Days remaining until Saturday
+        lookahead_days = max(
+            6, (6 - datetime.now().isoweekday() % 7)
+        )  # Days remaining until Saturday
 
-        result, extracted = await framework.run(
-            f"""
+        prompt = f"""
         --- Here's the user's plan list of {len(self.user_plans)} plans:
         {plan_controller.get_readable_plans_and_sessions(self.user.id, past_day_limit=lookback_days, future_day_limit=lookahead_days)}
 
@@ -223,7 +226,7 @@ class WeekAnalyserAssistant(object):
 
         --- Only output the message to be sent to the user.
         """
-        )
+        result, extracted = await framework.run(prompt)
 
         jarvis_prefix = re.match(r"^Jarvis\s*\([^)]*\)\s*:\s*", result)
         if jarvis_prefix:
@@ -254,7 +257,8 @@ class WeekAnalyserAssistant(object):
                 s
                 for s in plan.sessions
                 if datetime.strptime(s.date, "%Y-%m-%d").date() >= datetime.now().date()
-                and datetime.strptime(s.date, "%Y-%m-%d").date() <= datetime.now().date() + timedelta(days=lookahead_days)
+                and datetime.strptime(s.date, "%Y-%m-%d").date()
+                <= datetime.now().date() + timedelta(days=lookahead_days)
             ]
 
         return result, (
@@ -266,3 +270,4 @@ class WeekAnalyserAssistant(object):
             if "SuggestedChanges" in extracted
             else None
         )
+

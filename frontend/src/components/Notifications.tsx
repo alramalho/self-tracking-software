@@ -22,9 +22,11 @@ const Notifications: React.FC<NotificationsProps> = () => {
     notification: Notification,
     action: string
   ) => {
-    const concludeNotification = async () => {
+    const concludeNotification = async (skipToast: boolean = false) => {
       await api.post(`/conclude-notification/${notification.id}`);
-      refetchUserData();
+      if (!skipToast) {
+        refetchUserData();
+      }
     };
 
     let skipToast = false;
@@ -39,10 +41,14 @@ const Notifications: React.FC<NotificationsProps> = () => {
           posthog.capture("engagement-notification-interacted", {
             notification_id: notification.id,
           });
-          router.push(`/ai?notificationId=${notification.id}`);
           skipToast = true;
+          if (notification.related_data && notification.related_data.message_id && notification.related_data.message_text) {
+            router.push(`/ai?messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`);
+          } else {
+            toast.error("Something went wrong. Please be so kind and open a bug report.");
+          }
         }
-        await concludeNotification();
+        await concludeNotification(skipToast);
       } else if (notification.type === "plan_invitation") {
         router.push(`/join-plan/${notification.related_id}`);
       } else if (notification.type === "friend_request") {

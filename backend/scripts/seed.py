@@ -252,7 +252,6 @@ def generate_dummy_data():
                 user_id=users[0].id,
                 message="How's your training going? Let's check in on your progress!",
                 type="engagement",
-                prompt_tag="user-recurrent-checkin",
                 recurrence="daily",
                 time_deviation_in_hours=2,
             )
@@ -263,7 +262,6 @@ def generate_dummy_data():
                 user_id=users[0].id,
                 message="Time for your weekly reflection! Let's take a moment to look back at your journey. What goals have you accomplished this week? What challenges did you overcome? What have you learned about yourself through tracking your activities and working towards your goals?",
                 type="engagement",
-                prompt_tag="weekly-reflection",
                 recurrence="weekly",
                 time_deviation_in_hours=4,
             )

@@ -31,7 +31,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages }) => {
               }
               fallback={<Eclipse className="w-8 h-8" />}
             />
-            <ChatBubbleMessage message={message.content} variant={message.role === "assistant" ? "received" : "sent"} />
+            <ChatBubbleMessage className={`${message.role === "user" ? "p-3" : "p-1"}`} message={message.content} variant={message.role === "assistant" ? "received" : "sent"} />
           </ChatBubble>
         ))}
       </ChatMessageList>
