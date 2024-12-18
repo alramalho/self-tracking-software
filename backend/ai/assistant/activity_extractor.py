@@ -111,7 +111,7 @@ class ActivityExtractorAssistant(object):
         self.user = user
         self.user_activities = user_activities
 
-    def get_response(
+    async def get_response(
         self, user_input: str, message_id: str, emotions: List[Emotion] = []
     ) -> Tuple[str, List[ExtractedActivityEntry]]:
         is_first_message_in_more_than_a_day = (
@@ -143,7 +143,7 @@ class ActivityExtractorAssistant(object):
 
         framework = FlowchartLLMFramework(flowchart, system_prompt)
 
-        result, extracted = framework.run(
+        result, extracted = await framework.run(
             f"""
         
         Here's the user's all the existent activities user is trying to track:
@@ -180,8 +180,10 @@ class ActivityExtractorAssistant(object):
         logger.info(f"FRAMEWORK RESULT: {result}")
         logger.info(f"EXTRACTED: {extracted}")
 
-        return result, (
-            extracted["ExtractActivity"].activities
-            if "ExtractActivity" in extracted
-            else []
-        )
+        # Aggregate activities from all ExtractActivity nodes
+        all_activities = []
+        for key in extracted:
+            if key.startswith("ExtractActivity_"):
+                all_activities.extend(extracted[key].activities)
+        
+        return result, all_activities

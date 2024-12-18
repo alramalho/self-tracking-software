@@ -181,9 +181,7 @@ const LogPage: React.FC = () => {
   const [showFeatureForm, setShowFeatureForm] = useState(false);
 
   const [currentEmotions, setCurrentEmotions] = useState<Emotion[]>([]);
-  const [suggestedActivities, setSuggestedActivities] = useState<Activity[]>(
-    []
-  );
+  const [suggestedActivities, setSuggestedActivities] = useLocalStorage<Activity[]>("suggested_activities", []);
   const [suggestedActivityEntries, setSuggestedActivityEntries] =
     useLocalStorage<ActivityEntry[]>("suggested_activity_entries", []);
   const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] =
@@ -227,7 +225,6 @@ const LogPage: React.FC = () => {
       };
 
       newSocket.onerror = (error) => {
-        console.error("WebSocket error:", error);
         setIsConnecting(false);
         setIsLoading(false);
         toast.error("WebSocket error occurred");
@@ -235,7 +232,6 @@ const LogPage: React.FC = () => {
 
       setSocket(newSocket);
     } catch (error) {
-      console.error("Error connecting to WebSocket:", error);
       setIsConnecting(false);
       toast.error("Failed to connect to WebSocket");
     }
@@ -283,8 +279,6 @@ const LogPage: React.FC = () => {
 
     socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
-
-      console.log("Received message:", data);
 
       if (data.type === "message") {
         handleIncomingMessage(data.text, data.audio);
@@ -424,7 +418,7 @@ const LogPage: React.FC = () => {
             `/mark-notification-opened?notification_id=${notificationId}`
           );
         } catch (error) {
-          console.error("Error marking notification as opened:", error);
+          toast.error(`Error marking notification as opened: ${error}`);
         }
       }
     };
@@ -609,7 +603,7 @@ const LogPage: React.FC = () => {
                 initial="initial"
                 animate="animate"
                 exit="exit"
-                className="fixed inset-0 bg-white z-110 px-4"
+                className="fixed inset-0 bg-gray-50 z-110 px-4"
               >
                 <motion.div
                   variants={messageTextVariants}
@@ -622,14 +616,14 @@ const LogPage: React.FC = () => {
               </motion.div>
             ) : (
               <motion.div
-                className="h-full flex flex-col justify-between min-h-[100%]"
+                className="h-full flex flex-col justify-between min-h-[100%] bg-gray-100"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
               >
                 <motion.div
                   variants={itemVariants}
-                  className="max-h-[250px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-gray-100"
+                  className="min-h-[150px] max-h-[250px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-white drop-shadow-sm"
                 >
                   <Button
                     variant="ghost"
@@ -651,7 +645,33 @@ const LogPage: React.FC = () => {
                   variants={itemVariants}
                   className="flex-1 flex flex-col items-center justify-center px-4 py-8"
                 >
-                  <div className="border-[4px] rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
+                  {suggestedActivityEntries.map((activityEntry) => {
+                    const activity = suggestedActivities.find(
+                      (a) => a.id === activityEntry.activity_id
+                    );
+                    if (!activity) return null;
+                    return (
+                      <ActivitySuggestion
+                        key={activityEntry.id}
+                        activity={activity}
+                        activityEntry={activityEntry}
+                        onAccept={handleActivityAcceptance}
+                        onReject={handleActivityRejection}
+                      />
+                    );
+                  })}
+
+                  {suggestedNextWeekSessions &&
+                    suggestedNextWeekSessions.sessions.length > 0 && (
+                      <PlanUpdateBanner
+                        sessions={suggestedNextWeekSessions.sessions}
+                        old_sessions={suggestedNextWeekSessions.old_sessions}
+                        plan_id={suggestedNextWeekSessions.plan_id}
+                        onAccept={handleSessionsAcceptance}
+                        onReject={handleSessionsRejection}
+                      />
+                    )}
+                  <div className="border-[4px] bg-white rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
                     {inputMode === "voice" ? (
                       <div className="flex flex-col items-center w-full">
                         <AudioControls
@@ -755,37 +775,11 @@ const LogPage: React.FC = () => {
                       </>
                     )}
                   </Button>
-
-                  {suggestedActivityEntries.map((activityEntry) => {
-                    const activity = suggestedActivities.find(
-                      (a) => a.id === activityEntry.activity_id
-                    );
-                    if (!activity) return null;
-                    return (
-                      <ActivitySuggestion
-                        key={activityEntry.id}
-                        activity={activity}
-                        activityEntry={activityEntry}
-                        onAccept={handleActivityAcceptance}
-                        onReject={handleActivityRejection}
-                      />
-                    );
-                  })}
-                  {suggestedNextWeekSessions &&
-                    suggestedNextWeekSessions.sessions.length > 0 && (
-                      <PlanUpdateBanner
-                        sessions={suggestedNextWeekSessions.sessions}
-                        old_sessions={suggestedNextWeekSessions.old_sessions}
-                        plan_id={suggestedNextWeekSessions.plan_id}
-                        onAccept={handleSessionsAcceptance}
-                        onReject={handleSessionsRejection}
-                      />
-                    )}
                 </motion.div>
 
                 <motion.div
                   variants={itemVariants}
-                  className="flex flex-col items-center justify-center w-full border-y border-gray-200 bg-gray-100"
+                  className="flex flex-col items-center justify-center border-y border-gray-200 bg-gray-100 bg-white m-2 border-1 border-gray-200 rounded-lg box-border bg-gradient-to-r from-orange-100 to-white shadow-md-top"
                 >
                   <span className="text-sm text-gray-500 px-4 pt-2">
                     Emotion Analysis
@@ -825,6 +819,11 @@ const LogPage: React.FC = () => {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
+                <AlertDialogAction
+                  onClick={() => clearPendingChanges()}
+                >
+                  Delete and proceed
+                </AlertDialogAction>
                 <AlertDialogAction
                   onClick={() => setShowPendingChangesAlert(false)}
                 >

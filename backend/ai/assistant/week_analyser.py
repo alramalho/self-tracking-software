@@ -261,13 +261,19 @@ class WeekAnalyserAssistant(object):
                 <= datetime.now().date() + timedelta(days=lookahead_days)
             ]
 
+        # Aggregate sessions from all SuggestedChanges nodes
+        all_sessions = []
+        for key in extracted:
+            if key.startswith("SuggestedChanges_"):
+                all_sessions.extend(extracted[key].next_week_sessions)
+
         return result, (
             EnrichedPlanSessions(
                 plan_id=plan_id,
-                sessions=extracted["SuggestedChanges"].next_week_sessions,
+                sessions=all_sessions,
                 old_sessions=old_sessions,
             )
-            if "SuggestedChanges" in extracted
+            if any(k.startswith("SuggestedChanges_") for k in extracted)
             else None
         )
 

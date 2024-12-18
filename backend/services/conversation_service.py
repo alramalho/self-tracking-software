@@ -48,7 +48,7 @@ async def talk_with_assistant(
         user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
         user_plans = plan_controller.get_all_user_active_plans(user)
         
-        if True:  #datetime.now().weekday() in [5, 6]: 
+        if datetime.now().weekday() in [5, 6]: 
             assistant = WeekAnalyserAssistant(
                 memory=memory,
                 user=user,

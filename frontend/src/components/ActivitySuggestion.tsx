@@ -37,7 +37,7 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
   };
 
   return (
-    <div className="bg-gray-100 shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 hover:shadow-md mb-4">
+    <div className="mb-4 bg-white drop-shadow-md border border-gray-200 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 ">
       <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3">
         <span className="text-2xl">{activity.emoji}</span>
         <p className="text-sm text-gray-700">
