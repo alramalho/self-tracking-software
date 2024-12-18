@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import GeneralInitializer from "@/components/GeneralInitializer";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const queryClient = new QueryClient();
 
@@ -54,11 +55,13 @@ export default function ClientLayout({
     );
   }
 
-  const bottomMargin = isSignedIn ? "4.7rem" : "0";
   return (
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
-        <main className={`relative h-[calc(100dvh-${bottomMargin})] overflow-scroll`}>
+        <main className={cn(
+          "relative overflow-scroll",
+          isSignedIn ? "h-[calc(100dvh-4.7rem)]" : "h-[calc(100dvh-0rem)]"
+        )}>
           <GeneralInitializer />
           {children}
           {isSignedIn && <BottomNav />}
