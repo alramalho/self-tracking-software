@@ -218,6 +218,7 @@ const LogPage: React.FC = () => {
       newSocket.onclose = (event) => {
         setIsConnected(false);
         setIsConnecting(false);
+        setIsLoading(false);
         if (event.code === 1008) {
           toast.error("Authentication failed");
         } else {
@@ -228,6 +229,7 @@ const LogPage: React.FC = () => {
       newSocket.onerror = (error) => {
         console.error("WebSocket error:", error);
         setIsConnecting(false);
+        setIsLoading(false);
         toast.error("WebSocket error occurred");
       };
 
@@ -344,6 +346,9 @@ const LogPage: React.FC = () => {
         return;
       }
       sendMessage(transcription);
+    } else {
+      setIsLoading(false);
+      toast.error("Not connected to server");
     }
   };
 

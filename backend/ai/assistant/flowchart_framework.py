@@ -45,21 +45,23 @@ class FlowchartLLMFramework:
         self.processing_nodes = set()
         self.processing_nodes_lock = asyncio.Lock()
         self.node_tasks = {}  # Add this to track tasks by node instance ID
+        self.loop_states_lock = asyncio.Lock()
 
-    def handle_loop_node(self, node: FlowchartNode) -> str:
+    async def handle_loop_node(self, node: FlowchartNode) -> str:
         if node.type == NodeType.LOOP_START:
             iterator_name = node.iterator
             collection_var = node.collection.replace("${", "").replace("}", "")
 
-            if iterator_name not in self.loop_states:
-                previous_node = self.execution_path[-2]
-                collection = getattr(self.extracted[previous_node], collection_var)
-                self.loop_states[iterator_name] = {
-                    "collection": collection,
-                    "current_index": 0,
-                    "processed": set(),
-                }
-                self.loop_vars[iterator_name] = collection[0]
+            async with self.loop_states_lock:
+                if iterator_name not in self.loop_states:
+                    previous_node = self.execution_path[-2]
+                    collection = getattr(self.extracted[previous_node], collection_var)
+                    self.loop_states[iterator_name] = {
+                        "collection": collection,
+                        "current_index": 0,
+                        "processed": set(),
+                    }
+                    self.loop_vars[iterator_name] = collection[0]
 
             return node.connections["default"]
 
@@ -70,16 +72,17 @@ class FlowchartLLMFramework:
                 if isinstance(n, LoopStartNode)
             )
 
-            loop_state = self.loop_states[iterator_name] # todo: sometimes throwing KeyError: 'current_plan'?
-            loop_state["current_index"] += 1
+            async with self.loop_states_lock:
+                loop_state = self.loop_states[iterator_name]
+                loop_state["current_index"] += 1
 
-            if loop_state["current_index"] < len(loop_state["collection"]):
-                self.loop_vars[iterator_name] = loop_state["collection"][
-                    loop_state["current_index"]
-                ]
-                return node.connections["HasMore"]
-            else:
-                return node.connections["Complete"]
+                if loop_state["current_index"] < len(loop_state["collection"]):
+                    self.loop_vars[iterator_name] = loop_state["collection"][
+                        loop_state["current_index"]
+                    ]
+                    return node.connections["HasMore"]
+                else:
+                    return node.connections["Complete"]
 
     def replace_loop_vars(self, node_instance_id: str, text: str) -> str:
         """Replace loop variables with their values for the specific node instance."""
@@ -253,33 +256,32 @@ class FlowchartLLMFramework:
             )
 
             # Handle loop continue nodes
-            if node.type == NodeType.LOOP_CONTINUE and iterator_name in self.loop_states:
-                loop_state = self.loop_states[iterator_name]
-                
-                # Check if there are more items to process in the collection
-                if (
-                    loop_state["current_index"] + branch_loop_lookahead + 1
-                    < len(loop_state["collection"])
-                ):
-                    # For HasMore path, increment the lookahead
-                    queue.append((
-                        node.connections["HasMore"], 
-                        remaining_depth - 1,
-                        branch_loop_lookahead + 1
-                    ))
-                    # For Complete path, keep the same lookahead
-                    queue.append((
-                        node.connections["Complete"],
-                        remaining_depth - 1,
-                        branch_loop_lookahead
-                    ))
-                else:
-                    # If no more items, only follow Complete path
-                    queue.append((
-                        node.connections["Complete"],
-                        remaining_depth - 1,
-                        branch_loop_lookahead
-                    ))
+            if node.type == NodeType.LOOP_CONTINUE and iterator_name:
+                async with self.loop_states_lock:
+                    if iterator_name in self.loop_states:
+                        loop_state = self.loop_states[iterator_name]
+                        
+                        # Check if there are more items to process in the collection
+                        if (
+                            loop_state["current_index"] + branch_loop_lookahead + 1
+                            < len(loop_state["collection"])
+                        ):
+                            queue.append((
+                                node.connections["HasMore"], 
+                                remaining_depth - 1,
+                                branch_loop_lookahead + 1
+                            ))
+                            queue.append((
+                                node.connections["Complete"],
+                                remaining_depth - 1,
+                                branch_loop_lookahead
+                            ))
+                        else:
+                            queue.append((
+                                node.connections["Complete"],
+                                remaining_depth - 1,
+                                branch_loop_lookahead
+                            ))
                 continue
 
             # Add connected nodes to queue, maintaining the branch's lookahead
@@ -330,7 +332,7 @@ class FlowchartLLMFramework:
 
         try:
             if node.type in [NodeType.LOOP_START, NodeType.LOOP_CONTINUE]:
-                result = self.handle_loop_node(node)
+                result = await self.handle_loop_node(node)
             else:
                 node_prompt = node.text
                 for prev_node, data in self.extracted.items():
@@ -510,7 +512,7 @@ class FlowchartLLMFramework:
                 traversal.append(node_entry)
                 logger.log(
                     "AI_FRAMEWORK",
-                    f"Input: {input_string}\n\nTraversal: {json.dumps({'traversal': traversal}, indent=2)}",
+                    f"Input: {input_string}\n\nTraversal: {json.dumps({'traversal': traversal}, indent=2)}. Execution path: {self.execution_path}",
                 )
                 result = self.node_results[current_instance_id]
                 assert isinstance(

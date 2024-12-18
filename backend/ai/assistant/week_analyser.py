@@ -91,7 +91,7 @@ first_message_flowchart = {
 
 every_message_flowchart = {
     "HasRequest": Node(
-        text="Did the user made you request, question or instruction?",
+        text="Was the last user message a request, question or instruction?",
         connections={"Yes": "Answer", "No": "ExtractPlanNames"},
     ),
     "Answer": Node(
@@ -188,7 +188,7 @@ class WeekAnalyserAssistant(object):
 
         system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
         Respond to the user in the same language that he talks to you in.
-        Your instruction will always be very specific, so make sure you do the appropriate conversation bridge.
+        Your instruction will always be very specific, so it is crucial that you make sure to do an appropriate bridge with last user message.
         Keep you answers as concise as possible.
         """
 
