@@ -738,7 +738,7 @@ class PlanController:
                 plan_text = [f"Plan {index + 1} (with ID '{plan.id}'): Name: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%A, %b %d') if plan.finishing_date else 'no end date'})"]
                 
                 if past_sessions:
-                    plan_text.append(f"Sessions that the user PLANNED (not necessarily done) in the last {past_day_limit} days:")
+                    plan_text.append(f"Sessions that were scheduled for the last {past_day_limit} days (not this are not done sessions):")
                     plan_text.extend(past_sessions)
                 
                 if future_sessions:
