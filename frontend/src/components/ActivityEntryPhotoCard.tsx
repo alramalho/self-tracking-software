@@ -91,10 +91,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     {}
   );
 
-  useEffect(() => {
-    console.log(`Date ${isoDate} -> ${getFormattedDate(isoDate)}`);
-  }, [isoDate]);
-
   // todo: use react query
   async function getReactions() {
     const response = await api.get(
@@ -186,7 +182,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           />
           <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2">
             {Object.entries(reactions).map(([emoji, usernames]) => {
-              console.log(activityEntryId, emoji, usernames);
               return (
                 <button
                   key={emoji}
@@ -239,7 +234,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log("clicked");
                       setShowEmojiPicker(!showEmojiPicker);
                     }}
                     className="inline-flex items-center space-x-1 bg-white rounded-full p-2 transition-all shadow-md"
