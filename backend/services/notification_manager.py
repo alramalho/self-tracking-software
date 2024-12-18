@@ -11,6 +11,7 @@ from constants import (
     VAPID_PRIVATE_KEY,
     CHRON_PROXY_LAMBDA_TARGET_ARN,
     SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
+    ENVIRONMENT,
 )
 from gateways.users import UsersGateway
 from entities.user import User
@@ -247,6 +248,12 @@ class NotificationManager:
     async def send_push_notification(
         self, user_id: str, title: str, body: str, url: str = None, icon: str = None
     ):
+        if ENVIRONMENT in ["dev", "development"]:
+            logger.warning(
+                f"Skipping push notification for '{user_id}' in '{ENVIRONMENT}' environment"
+            )
+            return
+
         subscription_info = self.users_gateway.get_subscription_info(user_id)
         if not subscription_info:
             logger.error(f"Subscription not found for {user_id}")

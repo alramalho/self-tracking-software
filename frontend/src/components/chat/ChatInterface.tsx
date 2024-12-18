@@ -29,9 +29,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages }) => {
               src={
                 message.role === "user" ? userData?.user?.picture : undefined
               }
-              fallback={<Eclipse className="w-8 h-8" />}
+              fallback={<Eclipse className="w-8 h-8 bg-transparent" />}
             />
-            <ChatBubbleMessage className={`${message.role === "user" ? "p-3" : "p-1"}`} message={message.content} variant={message.role === "assistant" ? "received" : "sent"} />
+            <ChatBubbleMessage className={`${message.role === "user" ? "p-3" : "p-1 bg-transparent"}`} message={message.content} variant={message.role === "assistant" ? "received" : "sent"} />
           </ChatBubble>
         ))}
       </ChatMessageList>

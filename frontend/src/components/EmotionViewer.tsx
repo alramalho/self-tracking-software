@@ -245,7 +245,7 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-4">
-                    <Card className="flex-1 min-w-[300px]">
+                    <Card className="flex-1 min-w-[300px] bg-gradient-to-br from-blue-50/50 to-white">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg">Emotion Distribution</CardTitle>
                         <CardDescription>
@@ -285,7 +285,7 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
                       />
                     </div>
 
-                    <Card className="flex-1 min-w-[300px]">
+                    <Card className="flex-1 min-w-[300px] bg-gradient-to-br from-blue-50/50 to-white">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg">Emotional Journey</CardTitle>
                         <CardDescription>
