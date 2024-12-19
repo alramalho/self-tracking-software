@@ -145,10 +145,10 @@ async def _process_checkin_notifications(
             },
         )
 
-        notification = await notification_manager.create_and_process_notification(
-            notification, dry_run
-        )
         if not dry_run:
+            notification = await notification_manager.create_and_process_notification(
+                notification
+            )
             memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
             memory.write(
                 Message.new(

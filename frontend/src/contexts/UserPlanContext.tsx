@@ -178,6 +178,7 @@ interface UserPlanContextType {
   hasLoadedTimelineData: boolean;
   timelineData: UseQueryResult<TimelineData | null>;
   messagesData: UseQueryResult<{ messages: Message[] }>;
+  notificationsData: UseQueryResult<{ notifications: Notification[] }>;
   fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<UserDataEntry>;
   refetchUserData: () => Promise<UserDataEntry>;
   refetchAllData: () => Promise<UserDataEntry>;
@@ -247,10 +248,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error('No user data found in response');
       }
 
-      const notificationsResponse = username === "me" 
-        ? await api.get('/load-notifications')
-        : { data: { notifications: [] } };
-
       const transformedData: UserDataEntry = {
         user: userData.user || null,
         plans: userData.plans || [],
@@ -260,7 +257,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         moodReports: userData.mood_reports || [],
         sentFriendRequests: userData.sent_friend_requests || [],
         receivedFriendRequests: userData.received_friend_requests || [],
-        notifications: notificationsResponse.data.notifications || [],
+        notifications: [],
         expiresAt: addMinutes(new Date(), 10).toISOString(),
       };
 
@@ -374,8 +371,10 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     return toast.promise(
       Promise.all([
         userDataQuery.refetch(),
-        timelineData.refetch()
-      ]).then(([userData, timeline]) => {
+        timelineData.refetch(),
+        notificationsData.refetch(),
+        messagesData.refetch()
+      ]).then(([userData]) => {
         if (userData.error) throw userData.error;
         if (!userData.data) throw new Error("User data is undefined");
         return userData.data;
@@ -398,6 +397,16 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  const notificationsData = useQuery({
+    queryKey: ['notificationsData'],
+    queryFn: async () => {
+      const response = await api.get('/load-notifications');
+      return response.data;
+    },
+    enabled: isSignedIn,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   const context = {
     userDataQuery,
     useUserDataQuery,
@@ -406,6 +415,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     hasLoadedTimelineData: timelineData.isSuccess,
     timelineData,
     messagesData,
+    notificationsData,
     fetchUserData,
     refetchUserData,
     refetchAllData

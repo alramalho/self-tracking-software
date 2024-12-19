@@ -43,22 +43,24 @@ class PromptController:
 
             Only one plan or activity should be mentioned in the notification.
 
-            Here are the last messages you've sent him, try to diversify your message to avoid repetition:
-            {notification_history}
-
             Current date and time in UTC:
             {datetime.now(pytz.UTC).strftime("%A, %B %d, %Y at %I:%M %p %Z")}
 
+            Examples of badly written messages include:
+            - "How's your meditation practice going? Remember, even 5 minutes can make a difference!", the tone is too condescending
+            - "Your side project is bursting with potential! What's one action you can take this week to get closer to that 1000 user goal? 🚀", it is bad because the question is too generic and the tone is condescending
+            
             Examples of effective messages include:
             - "I've noticed you haven't picked up reading lately? What's happening?", for a user with a reading activity. It's good because it's direct question, no beating around the bush.
             - "You haven't logged an activity in a while. Have you been slacking off or just not logging?", for a user who hasn't logged any activities in the past week. It's good because it's provocative, no beating around the bush.
             - "'Music gives a soul to the universe, wings to the mind, flight to the imagination.' – Plato. Tell me, how's your music practice going?", for a user interested in music. It's good because it's a quote, and it's a question.
             - "I've noticed you've done all your activities for the plan 'Learn to play guitar' this week. What's your plans for this week?", good because it encourages the user to answer you.
 
-            Counter-examples:
-            - "How's your meditation practice going? Remember, even 5 minutes can make a difference!", the tone is too condescending
+            Here are the last messages you've sent him, try to diversify your message to avoid repetition:
+            {notification_history}
 
             Output only the message to be sent to the user. Nothing more, nothing less.
+            The tone should be sober, direct, and provocative.
 
             Your message to be sent to the user:
     """

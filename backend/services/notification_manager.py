@@ -84,7 +84,7 @@ class NotificationManager:
         return notification
 
     async def process_notification(
-        self, notification_id: str, dry_run: bool = False
+        self, notification_id: str
     ) -> Optional[Notification]:
 
         notification = self.get_notification(notification_id)
@@ -100,14 +100,14 @@ class NotificationManager:
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
         is_push = False
-        if user.pwa_subscription_endpoint and not dry_run:
+        if user.pwa_subscription_endpoint:
             notification.sent_at = datetime.now()
             title = f"hey {user.name} 👋"
             body = notification.message.lower()
             await self.send_push_notification(user.id, title=title, body=body)
             is_push = True
 
-        if notification.type == "engagement" and not dry_run:
+        if notification.type == "engagement":
             posthog.capture(
                 distinct_id=user.id,
                 event="engagement-notification-sent",
@@ -123,10 +123,10 @@ class NotificationManager:
         return notification
 
     async def create_and_process_notification(
-        self, notification: Notification, dry_run: bool = False
+        self, notification: Notification
     ) -> Optional[Notification]:
         notification = self.create_or_get_notification(notification)
-        return await self.process_notification(notification.id, dry_run)
+        return await self.process_notification(notification.id)
 
     def mark_as_opened(self, notification_id: str) -> Optional[Notification]:
         notification = self.get_notification(notification_id)

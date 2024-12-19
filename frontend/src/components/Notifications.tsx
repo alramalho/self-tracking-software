@@ -7,12 +7,13 @@ import { Check, X, MessageSquare, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import posthog from "posthog-js";
-import { Remark } from 'react-remark';
+import { Remark } from "react-remark";
 
 interface NotificationsProps {}
 
 const Notifications: React.FC<NotificationsProps> = () => {
-  const { useUserDataQuery, refetchUserData } = useUserPlan();
+  const { useUserDataQuery, refetchUserData, notificationsData } =
+    useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
   const router = useRouter();
@@ -25,7 +26,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
     const concludeNotification = async (skipToast: boolean = false) => {
       await api.post(`/conclude-notification/${notification.id}`);
       if (!skipToast) {
-        refetchUserData();
+        notificationsData.refetch();
       }
     };
 
@@ -42,10 +43,18 @@ const Notifications: React.FC<NotificationsProps> = () => {
             notification_id: notification.id,
           });
           skipToast = true;
-          if (notification.related_data && notification.related_data.message_id && notification.related_data.message_text) {
-            router.push(`/ai?messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`);
+          if (
+            notification.related_data &&
+            notification.related_data.message_id &&
+            notification.related_data.message_text
+          ) {
+            router.push(
+              `/ai?messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`
+            );
           } else {
-            toast.error("Something went wrong. Please be so kind and open a bug report.");
+            toast.error(
+              "Something went wrong. Please be so kind and open a bug report."
+            );
           }
         }
         await concludeNotification(skipToast);
@@ -152,76 +161,88 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
   const handleClearAll = async () => {
     const clearPromise = async () => {
-      await api.post('/clear-all-notifications');
-      refetchUserData(); 
+      await api.post("/clear-all-notifications");
+      refetchUserData();
     };
 
     toast.promise(clearPromise(), {
-      loading: 'Clearing all notifications...',
-      success: 'All notifications cleared!',
-      error: 'Failed to clear notifications',
+      loading: "Clearing all notifications...",
+      success: "All notifications cleared!",
+      error: "Failed to clear notifications",
     });
   };
 
   return (
     <>
-      {userData && userData.notifications && userData.notifications.length > 0 && (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Notifications</h2>
-            <button
-              onClick={handleClearAll}
-              className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
-            >
-              Clear All
-            </button>
-          </div>
-
-          {userData?.notifications &&
-            userData.notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className="bg-white shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4"
+      {notificationsData &&
+        notificationsData.data &&
+        notificationsData.data.notifications &&
+        notificationsData.data.notifications.length > 0 && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Notifications</h2>
+              <button
+                onClick={handleClearAll}
+                className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
               >
-                <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-                  {["friend_request", "plan_invitation", "info"].includes(
-                    notification.type
-                  ) &&
-                    hasPictureData(notification) && (
+                Clear All
+              </button>
+            </div>
+
+            {notificationsData.data.notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className="bg-white shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4"
+                >
+                  <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+                    {["friend_request", "plan_invitation", "info"].includes(
+                      notification.type
+                    ) &&
+                      hasPictureData(notification) && (
+                        <Link
+                          href={`/profile/${
+                            notification.related_data!.username
+                          }`}
+                        >
+                          <Avatar>
+                            <AvatarImage
+                              src={notification.related_data!.picture}
+                              alt={notification.related_data!.name || ""}
+                            />
+                            <AvatarFallback>
+                              {(notification.related_data!.name || "U")[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Link>
+                      )}
+                    {["engagement"].includes(notification.type) && (
+                      <p className="text-4xl text-gray-700 font-medium">💭</p>
+                    )}
+                    {hasPictureData(notification) ? (
                       <Link
                         href={`/profile/${notification.related_data!.username}`}
                       >
-                        <Avatar>
-                          <AvatarImage
-                            src={notification.related_data!.picture}
-                            alt={notification.related_data!.name || ""}
-                          />
-                          <AvatarFallback>
-                            {(notification.related_data!.name || "U")[0]}
-                          </AvatarFallback>
-                        </Avatar>
+                        <p className="text-sm text-gray-700">
+                          <div className="markdown">
+                            <Remark>{notification.message}</Remark>
+                          </div>
+                        </p>
                       </Link>
+                    ) : (
+                      <p className="text-sm text-gray-700">
+                        <div className="markdown">
+                          <Remark>{notification.message}</Remark>
+                        </div>
+                      </p>
                     )}
-                  {["engagement"].includes(notification.type) && (
-                    <p className="text-4xl text-gray-700 font-medium">💭</p>
-                  )}
-                  {hasPictureData(notification) ? (
-                    <Link
-                      href={`/profile/${notification.related_data!.username}`}
-                    >
-                      <p className="text-sm text-gray-700"><div className="markdown"><Remark>{notification.message}</Remark></div></p>
-                    </Link>
-                  ) : (
-                    <p className="text-sm text-gray-700"><div className="markdown"><Remark>{notification.message}</Remark></div></p>
-                  )}
+                  </div>
+                  <div className="flex ml-4">
+                    {renderActionButtons(notification)}
+                  </div>
                 </div>
-                <div className="flex ml-4">
-                  {renderActionButtons(notification)}
-                </div>
-              </div>
-            ))}
-        </>
-      )}
+              ))}
+          </>
+        )}
     </>
   );
 };
