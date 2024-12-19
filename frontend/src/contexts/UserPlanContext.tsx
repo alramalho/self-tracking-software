@@ -264,8 +264,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         expiresAt: addMinutes(new Date(), 10).toISOString(),
       };
 
-      console.log('Transformed User Data:', transformedData);
-
       return transformedData;
     } catch (err: unknown) {
       console.error('Error in fetchUserData:', err);

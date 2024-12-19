@@ -42,12 +42,10 @@ const PlanActivityEntriesRenderer: React.FC<
     );
     const firstActivityEntry = sortedPlanActivityEntries[0];
     const beginingOfWeek = startOfWeek(firstActivityEntry.date);
-    console.log({ beginingOfWeek });
     return beginingOfWeek;
   }, [planActivityEntries]);
 
   useEffect(() => {
-    console.log({ beginingOfWeekOfFirstActivityEntry });
   }, [beginingOfWeekOfFirstActivityEntry]);
 
   const formatEntriesForHeatMap = () => {
@@ -55,7 +53,6 @@ const PlanActivityEntriesRenderer: React.FC<
       date: format(entry.date, "yyyy/MM/dd"),
       count: entry.quantity,
     }));
-    console.log({ formattedEntries });
     return formattedEntries;
   };
 
