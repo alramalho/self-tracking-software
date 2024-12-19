@@ -21,6 +21,7 @@ const config = {
       boxShadow: {
         "md-top":
           "0 -6px 12px -3px rgb(0 0 0 / 0.05), 0 4px 6px -2px rgb(0 0 0 / 0.03)",
+        "inner-custom": "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)",
       },
       colors: {
         border: "hsl(var(--border))",

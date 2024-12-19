@@ -17,7 +17,7 @@ export const ChatInput = ({
   onSendMessage,
 }: ChatInputProps) => {
   return (
-    <div className="flex items-center w-full gap-2">
+    <div className="flex items-center w-full max-w-[240px]">
       <textarea
         value={transcription}
         onChange={onTranscriptionChange}

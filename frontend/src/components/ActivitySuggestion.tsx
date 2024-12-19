@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, X, Loader2 } from 'lucide-react';
 import { useApiWithAuth } from '@/api';
 import toast from 'react-hot-toast';
 import { Activity, ActivityEntry } from '@/contexts/UserPlanContext';
@@ -9,6 +9,7 @@ interface ActivitySuggestionProps {
   activityEntry: ActivityEntry;
   onAccept: (activityEntry: ActivityEntry, activity: Activity) => void;
   onReject: (activityEntry: ActivityEntry, activity: Activity) => void;
+  disabled: boolean;
 }
 
 const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
@@ -16,28 +17,35 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
   activityEntry,
   onAccept,
   onReject,
+  disabled,
 }) => {
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const api = useApiWithAuth();
   const buttonClasses = "p-2 rounded-full transition-colors duration-200 flex items-center justify-center";
   const iconSize = 20;
 
   const handleAccept = async () => {
+    setIsAccepting(true);
+    await onAccept(activityEntry, activity);
+  };
+
+  const handleReject = async () => {
+    setIsRejecting(true);
     try {
-      await api.post('/log-activity', {
-        activity_id: activity.id,
-        iso_date_string: activityEntry.date,
-        quantity: activityEntry.quantity,
-        has_photo: false,
-      });
-      toast.success('Activity logged successfully!');
-      onAccept(activityEntry, activity);
-    } catch (error) {
-      toast.error('Failed to log activity');
+      await onReject(activityEntry, activity);
+    } finally {
+      setIsRejecting(false);
     }
   };
 
   return (
-    <div className="mb-4 bg-white drop-shadow-md border border-gray-200 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 ">
+    <div onClick={() => {
+      if (disabled) {
+        toast.error('You must be connected to the AI to talk to it.');
+        return;
+      };
+    }} className={`${disabled ? 'opacity-50' : ''} bg-white drop-shadow-md border border-gray-200 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 `}>
       <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3">
         <span className="text-2xl">{activity.emoji}</span>
         <p className="text-sm text-gray-700">
@@ -47,17 +55,31 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
       <div className="flex ml-4">
         <button
           onClick={handleAccept}
-          className={`${buttonClasses} bg-green-100 text-green-600 hover:bg-green-200`}
+          disabled={isAccepting || isRejecting || disabled}
+          className={`${buttonClasses} ${
+            isAccepting ? 'bg-green-50' : 'bg-green-100 hover:bg-green-200'
+          } text-green-600`}
           aria-label="Accept"
         >
-          <Check size={iconSize} />
+          {isAccepting ? (
+            <Loader2 size={iconSize} className="animate-spin" />
+          ) : (
+            <Check size={iconSize} />
+          )}
         </button>
         <button
-          onClick={() => onReject(activityEntry, activity)}
-          className={`${buttonClasses} bg-red-100 text-red-600 hover:bg-red-200 ml-2`}
+          onClick={handleReject}
+          disabled={isAccepting || isRejecting || disabled}
+          className={`${buttonClasses} ${
+            isRejecting ? 'bg-red-50' : 'bg-red-100 hover:bg-red-200'
+          } text-red-600 ml-2`}
           aria-label="Reject"
         >
-          <X size={iconSize} />
+          {isRejecting ? (
+            <Loader2 size={iconSize} className="animate-spin" />
+          ) : (
+            <X size={iconSize} />
+          )}
         </button>
       </div>
     </div>

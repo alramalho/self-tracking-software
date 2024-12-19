@@ -72,13 +72,13 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
     "shadow-md border border-gray-200 absolute right-16 whitespace-nowrap";
 
   const mainButtonClasses =
-    "w-14 h-14 bg-white rounded-full flex items-center justify-center " +
+    "w-12 h-12 bg-white rounded-full flex items-center justify-center " +
     "text-gray-600 shadow-md hover:shadow-lg border border-red-200 " +
     "transition-all duration-200 hover:scale-105";
 
   return (
     <>
-      <div className={`fixed bottom-20 right-4 ${className} z-[40]`}>
+      <div className={`fixed bottom-20 right-2 ${className} z-[40]`}>
         <div
           className={`flex flex-col-reverse gap-3 items-end transition-all duration-200 mb-3
             ${
