@@ -653,7 +653,10 @@ class PlanController:
         
         # Process activities and sessions using shared methods
         self._process_generated_plan_activities(user_id, generated_plan_update)
-        new_sessions = self._create_plan_sessions(generated_plan_update)
+        if generated_plan_update.sessions:
+            new_sessions = self._create_plan_sessions(generated_plan_update)
+        else:
+            new_sessions = existing_plan.sessions
         
         # Update the existing plan with new data while preserving important fields
         existing_plan.sessions = new_sessions

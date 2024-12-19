@@ -273,8 +273,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     date: initialState.finishingDate || currentFinishingDate,
   });
 
-  const [outlineType, setOutlineType] =
-    useState<Plan["outline_type"]>(initialState.outlineType);
+  const [outlineType, setOutlineType] = useState<Plan["outline_type"]>(
+    initialState.outlineType
+  );
   const [timesPerWeek, setTimesPerWeek] = useState<number>(
     initialState.timesPerWeek || 0
   );
@@ -283,6 +284,11 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
   // Split activities into existing and new
   const [existingActivities, setExistingActivities] = useState<Activity[]>(
+    initialState.activities.filter((a) =>
+      userData?.activities?.some((ua) => ua.id === a.id)
+    )
+  );
+  const [initialActivities, setInitialActivities] = useState<Activity[]>(
     initialState.activities.filter((a) =>
       userData?.activities?.some((ua) => ua.id === a.id)
     )
@@ -339,70 +345,91 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     await toast.promise(
       generatePlan({
         goal,
-        finishingDate: currentFinishingDate?.split('T')[0], // remove time
+        finishingDate: currentFinishingDate?.split("T")[0], // remove time
         activities: [...existingActivities, ...newActivities], // Combine both for generation
         onlyTheseActivities,
         description,
         isEdit,
-      }).then(plan => {
+      }).then((plan) => {
         setGeneratedPlan(plan);
       }),
       {
-        loading: 'Generating your plan...',
-        success: 'Plan generated successfully',
-        error: 'Failed to generate plan'
+        loading: "Generating your plan...",
+        success: "Plan generated successfully",
+        error: "Failed to generate plan",
       }
     );
   };
 
-
   const handleConfirm = async () => {
     try {
+      console.log('Starting handleConfirm...');
+      console.log('Initial state:', {
+        goal,
+        selectedEmoji,
+        currentFinishingDate,
+        planNotes,
+        planDuration,
+        outlineType,
+        timesPerWeek,
+        existingActivities,
+        newActivities,
+        generatedPlan
+      });
+
       setIsProcessing(true);
-      
-      let planToConfirm: GeneratedPlan;
-      if (outlineType === "specific") {
 
-        if (!generatedPlan) return;
-
-        // For specific plans, use the generated plan
-        planToConfirm = {
-          ...generatedPlan,
-          emoji: selectedEmoji,
-          finishing_date: currentFinishingDate,
-          notes: planNotes,
-          duration_type: planDuration.type,
-          outline_type: outlineType,
-          sessions: generatedPlan.sessions,
-        };
-      } else {
-        // For times_per_week plans, create plan without sessions
-        planToConfirm = {
-          goal,
-          overview: "", // backwards compatibility
-          intensity: "", // backwards compatibility
-          emoji: selectedEmoji,
-          finishing_date: currentFinishingDate,
-          notes: planNotes,
-          duration_type: planDuration.type,
-          outline_type: outlineType,
-          times_per_week: timesPerWeek,
-          activities: [...existingActivities, ...newActivities].map(activity => ({
+      let planToConfirm: Partial<GeneratedPlan> = {
+        goal,
+        emoji: selectedEmoji,
+        finishing_date: currentFinishingDate,
+        notes: planNotes,
+        duration_type: planDuration.type,
+        outline_type: outlineType,
+        overview: "", // backwards compatibility
+        intensity: "", // backwards compatibility
+        activities: [...existingActivities, ...newActivities].map(
+          (activity) => ({
             id: activity.id,
             emoji: activity.emoji || "❓",
             title: activity.title,
-            measure: activity.measure
-          })),
-          sessions: [...existingActivities, ...newActivities].map(activity => ({
-            date: new Date(currentFinishingDate || new Date().toISOString()),
-            descriptive_guide: "",
-            quantity: 1,
-            activity_id: activity.id,
-            activity_name: activity.title,
-            emoji: activity.emoji || "❓"
-          }))
+            measure: activity.measure,
+          })
+        ),
+      };
+
+      console.log('Initial planToConfirm:', planToConfirm);
+
+      if (outlineType === "specific") {
+        if (generatedPlan) {
+          console.log('Using generated plan:', generatedPlan);
+          planToConfirm = {
+            ...planToConfirm,
+            ...generatedPlan,
+          };
+        } else {
+          console.log('Warning: No generated plan available for specific outline type');
+        }
+      } else {
+        console.log('Creating times_per_week plan');
+        // For times_per_week plans, create plan without sessions
+        planToConfirm = {
+          ...planToConfirm,
+          times_per_week: timesPerWeek,
+          sessions: [...existingActivities, ...newActivities].map(
+            (activity) => ({
+              date: new Date(currentFinishingDate || new Date().toISOString()),
+              descriptive_guide: "",
+              quantity: 1,
+              activity_id: activity.id,
+              activity_name: activity.title,
+              emoji: activity.emoji || "❓",
+            })
+          ),
         };
       }
+
+      console.log('Final planToConfirm:', planToConfirm);
 
       // IMPORTANT MESSAGE: THIS IS HIGHLY DIRTY AND TBH BREAKING SOLID PRICINPLES. HERE WE'RE BOTH EDITING, CREATING A PLETHORA OF DIFFERENT PLAN TYPES, ANY FURTHER MODIFICATION NEEDS TO CLEAN THIS MESS. ENOUGH.
 
@@ -411,13 +438,18 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         ? `editPlanJourneyState_${plan?.id}`
         : "createPlanJourneyState";
       localStorage.removeItem(cacheKey);
+      console.log('Cleared cache with key:', cacheKey);
 
-      await onConfirm(planToConfirm);
+      console.log('Calling onConfirm with plan...');
+      await onConfirm(planToConfirm as GeneratedPlan);
+      console.log('onConfirm completed successfully');
+
     } catch (error) {
       console.error("Confirmation failed:", error);
       toast.error("Failed to confirm plan");
     } finally {
       setIsProcessing(false);
+      console.log('handleConfirm completed');
     }
   };
 
@@ -487,8 +519,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       setCurrentStep(4);
       scrollToStep(4);
     }
-    if (currentStep === 4 && 
-      (existingActivities.length > 0 || newActivities.length > 0)) {
+    if (
+      currentStep === 4 &&
+      (existingActivities.length > 0 || newActivities.length > 0)
+    ) {
       setCurrentStep(5);
       scrollToStep(5);
     }
@@ -519,18 +553,18 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
   const canGeneratePlan = () => {
     // Basic requirements for all plan types
-    const hasBasicInfo = 
-      planDuration.type && 
-      planDuration.date && 
-      goal.trim() !== '' && 
-      selectedEmoji && 
+    const hasBasicInfo =
+      planDuration.type &&
+      planDuration.date &&
+      goal.trim() !== "" &&
+      selectedEmoji &&
       (existingActivities.length > 0 || newActivities.length > 0) &&
       outlineType;
 
     if (!hasBasicInfo) return false;
 
     // Additional requirements based on outline type
-    if (outlineType === 'times_per_week') {
+    if (outlineType === "times_per_week") {
       return timesPerWeek > 0;
     }
 
@@ -539,8 +573,14 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
   const canConfirmPlan = () => {
     if (!canGeneratePlan()) return false;
-    
+
+    // if it is creating, we need to have a generated plan
     if (outlineType === "specific" && !isEdit) {
+      return generatedPlan !== null;
+    }
+
+    // if it is editing and there's activity changes, we need to have a generated plan
+    if (isEdit && initialActivities.length != existingActivities.length) {
       return generatedPlan !== null;
     }
 
@@ -554,11 +594,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       onClick={(e) => setShowEmojiPicker(false)}
     >
       <div className="space-y-6 relative">
-        <Step
-          stepNumber={1}
-          isVisible={shouldShowStep(1)}
-          ref={stepRefs.step1}
-        >
+        <Step stepNumber={1} isVisible={shouldShowStep(1)} ref={stepRefs.step1}>
           <div className="space-y-4">
             <label className="text-lg font-medium block flex items-center gap-2">
               <Number className="w-6 h-6">1</Number>
@@ -641,11 +677,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           </div>
         </Step>
 
-        <Step
-          stepNumber={2}
-          isVisible={shouldShowStep(2)}
-          ref={stepRefs.step2}
-        >
+        <Step stepNumber={2} isVisible={shouldShowStep(2)} ref={stepRefs.step2}>
           <Divider />
           <div>
             <label
@@ -676,11 +708,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                     disabled={goalConfirmed}
                     className="w-32"
                   >
-                    {goalConfirmed ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      "Continue"
-                    )}
+                    {goalConfirmed ? <Check className="h-4 w-4" /> : "Continue"}
                   </Button>
                 </div>
               )}
@@ -688,11 +716,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           </div>
         </Step>
 
-        <Step
-          stepNumber={3}
-          isVisible={shouldShowStep(3)}
-          ref={stepRefs.step3}
-        >
+        <Step stepNumber={3} isVisible={shouldShowStep(3)} ref={stepRefs.step3}>
           <Divider />
           <div>
             <h3 className="text-lg font-medium mb-2 block flex items-center gap-2">
@@ -733,11 +757,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           </div>
         </Step>
 
-        <Step
-          stepNumber={4}
-          isVisible={shouldShowStep(4)}
-          ref={stepRefs.step4}
-        >
+        <Step stepNumber={4} isVisible={shouldShowStep(4)} ref={stepRefs.step4}>
           <Divider />
           <div className="space-y-8">
             <div>
@@ -816,8 +836,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             </div>
 
             <div>
-              <label 
-                htmlFor="customization-input" 
+              <label
+                htmlFor="customization-input"
                 className="text-lg font-semibold mb-2 block"
               >
                 Additional Customization
@@ -833,11 +853,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           </div>
         </Step>
 
-        <Step
-          stepNumber={5}
-          isVisible={shouldShowStep(5)}
-          ref={stepRefs.step5}
-        >
+        <Step stepNumber={5} isVisible={shouldShowStep(5)} ref={stepRefs.step5}>
           <Divider />
           <div className="space-y-4">
             <label className="text-lg font-medium block flex items-center gap-2">
@@ -921,16 +937,20 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                 Preview & Accept Plan
               </h3>
               <GeneratedPlanRenderer title={title} plan={generatedPlan} />
-              <Button variant="outline" className="w-full bg-gray-50" onClick={handleGenerate}>
+              <Button
+                variant="outline"
+                className="w-full bg-gray-50"
+                onClick={handleGenerate}
+              >
                 Regenerate
               </Button>
             </div>
           </Step>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
           {onClose && (
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
           )}
@@ -945,27 +965,31 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...
                 </>
+              ) : isEdit ? (
+                "Confirm Update"
               ) : (
-                isEdit ? "Confirm Update" : "Create Plan"
+                "Create Plan"
               )}
             </Button>
           )}
-          {outlineType === "specific" && !generatedPlan && canGeneratePlan() && (
-            <Button
-              onClick={handleGenerate}
-              disabled={isProcessing }
-              className="flex-1 gap-2"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Generate Plan"
-              )}
-            </Button>
-          )}
+          {outlineType === "specific" &&
+            !generatedPlan &&
+            canGeneratePlan() && (
+              <Button
+                onClick={handleGenerate}
+                disabled={isProcessing}
+                className="flex-1 gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Generate Plan"
+                )}
+              </Button>
+            )}
         </div>
       </div>
     </div>
