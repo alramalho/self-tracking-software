@@ -29,7 +29,7 @@ const BottomNav = () => {
   return (
     <>
       <FloatingActionMenu />
-      <nav className="fixed bottom-0 left-0 right-0 bg-gray-50 shadow-lg border-t-2 pb-2 z-[50]">
+      <nav className="fixed bottom-0 left-0 right-0 bg-gray-100/50 backdrop-blur-md shadow-lg border-t-2 border-gray-300 pb-2 z-[50]">
         <div className="flex justify-around">
           <Link
             href="/"
