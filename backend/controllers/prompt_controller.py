@@ -25,6 +25,12 @@ class PromptController:
         
         notification_history = "\n".join([notification.message for notification in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)])
 
+        # if it is saturday or sunday, add a suffix to the prompt
+        if datetime.now(pytz.UTC).weekday() in [5, 6]:
+            weekend_notifiaction_suffix = "It's the weekend, so your message today should be more casual and invite the user to plan the week ahead with you."
+        else:
+            weekend_notifiaction_suffix = ""
+
         return f"""
             You are Jarvis, a friendly AI assistant focused on engaging the user in conversations about their activities, mood, and personal growth.
             This is your proactive reach-out time.
@@ -62,6 +68,8 @@ class PromptController:
 
             Output only the message to be sent to the user. Nothing more, nothing less.
             The tone should be sober, direct, and provocative.
+
+            {weekend_notifiaction_suffix}
 
             Your message to be sent to the user:
     """
