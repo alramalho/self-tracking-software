@@ -61,7 +61,6 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      toast.success("Activity entry updated successfully!");
       await api.put(`/activity-entries/${activityEntry.id}`, {
         quantity: Number(quantity),
         date: new Date(date).toISOString(),
