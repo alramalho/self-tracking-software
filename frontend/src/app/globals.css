@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  background: #f9fafb;
+  background: #F4F4F4;
 }
 .markdown ul {
   list-style-type: disc;

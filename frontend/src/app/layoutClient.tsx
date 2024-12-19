@@ -59,8 +59,8 @@ export default function ClientLayout({
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
         <main className={cn(
-          "relative overflow-scroll",
-          isSignedIn ? "h-[calc(100dvh-4.7rem)]" : "h-[calc(100dvh-0rem)]"
+          "relative overflow-scroll h-100dvh",
+          isSignedIn ? "mb-[4.7rem]" : "mb-[0rem]"
         )}>
           <GeneralInitializer />
           {children}
