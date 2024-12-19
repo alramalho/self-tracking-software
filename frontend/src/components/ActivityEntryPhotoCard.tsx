@@ -178,7 +178,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           <img
             src={imageUrl}
             alt={activityTitle}
-            className="w-full h-full max-h-[400px] object-contain"
+            className="w-full h-full max-h-[400px] object-cover"
           />
           <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2">
             {Object.entries(reactions).map(([emoji, usernames]) => {
