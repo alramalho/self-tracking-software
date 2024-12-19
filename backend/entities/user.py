@@ -24,6 +24,7 @@ class User(BaseModel):
     friend_ids: List[str] = Field(default_factory=list)
     plan_invitations: List[str] = Field(default_factory=list)
     referred_user_ids: List[str] = Field(default_factory=list)
+    unactivated_email_sent_at: Optional[datetime] = None
 
     @classmethod
     def new(
