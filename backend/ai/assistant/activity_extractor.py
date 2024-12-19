@@ -136,7 +136,7 @@ class ActivityExtractorAssistant(object):
         Always consider the entire conversation history when making decisions or responses.
         Respond in the same language as the initial input.
 
-        Don't use emojis, be direct and provocative. Don't be afraid to say things that might be uncomfortable for the user.
+        If the user want's to talk, be direct. Don't be afraid to say things that might be uncomfortable for the user.
         Today is {datetime.now().strftime('%b %d, %Y')}. 
         """
 
