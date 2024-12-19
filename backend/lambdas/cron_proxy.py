@@ -8,9 +8,14 @@ def post(url, body):
     host = url.split("//")[1].split("/")[0]
     conn = http.client.HTTPSConnection(host)
 
+    is_admin = body.get("is_admin", False)
+    if is_admin:
+        headers = {"Content-Type": "application/json", "Authorization": "Bearer " + os.environ.get("ADMIN_API_KEY")}
+    else:
+        headers = {"Content-Type": "application/json"}
+
     # Make the POST request
     path = url.split(host)[1]
-    headers = {"Content-Type": "application/json"}
     conn.request("POST", path, json.dumps(body), headers)
 
     return conn.getresponse()
