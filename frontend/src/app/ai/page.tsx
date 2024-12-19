@@ -134,6 +134,25 @@ const messageTextVariants = {
   },
 };
 
+const connectionStatusVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: "easeOut"
+    }
+  },
+  exit: { 
+    opacity: 0,
+    y: -20,
+    transition: {
+      duration: 0.2
+    }
+  }
+};
+
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
   const authedApi = useApiWithAuth();
@@ -181,7 +200,9 @@ const LogPage: React.FC = () => {
   const [showFeatureForm, setShowFeatureForm] = useState(false);
 
   const [currentEmotions, setCurrentEmotions] = useState<Emotion[]>([]);
-  const [suggestedActivities, setSuggestedActivities] = useLocalStorage<Activity[]>("suggested_activities", []);
+  const [suggestedActivities, setSuggestedActivities] = useLocalStorage<
+    Activity[]
+  >("suggested_activities", []);
   const [suggestedActivityEntries, setSuggestedActivityEntries] =
     useLocalStorage<ActivityEntry[]>("suggested_activity_entries", []);
   const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] =
@@ -467,12 +488,18 @@ const LogPage: React.FC = () => {
       return;
     }
 
-    // Remove activity from suggested list
+    await authedApi.post("/log-activity", {
+      activity_id: activity.id,
+      iso_date_string: activityEntry.date,
+      quantity: activityEntry.quantity,
+      has_photo: false,
+    });
+
     setSuggestedActivityEntries((entries) =>
       entries.filter((entry) => entry.id !== activityEntry.id)
     );
+    console.log("removed activity form suggested list", activityEntry);
 
-    // Send acceptance message through WebSocket
     const message = `I accept the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} on ${activityEntry.date}`;
     sendMessage(message);
   };
@@ -623,7 +650,7 @@ const LogPage: React.FC = () => {
               >
                 <motion.div
                   variants={itemVariants}
-                  className="min-h-[150px] max-h-[250px] overflow-y-auto m-2 border border-gray-200 rounded-lg bg-white drop-shadow-sm"
+                  className="relative min-h-[150px] max-h-[350px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
                 >
                   <Button
                     variant="ghost"
@@ -641,9 +668,117 @@ const LogPage: React.FC = () => {
                   <ChatInterface messages={messages.slice(-2)} />
                 </motion.div>
 
+                {inputMode !== "voice" && (
+                  <div className="text-center -mt-1 mb-2">
+                    <span className="text-xs text-gray-400">
+                      ⚠️ Emotion analysis only available on voice mode
+                    </span>
+                  </div>
+                )}
+
+                <motion.div className="flex flex-col items-center justify-center">
+                  <EmotionBadges emotions={currentEmotions} />
+                </motion.div>
+
                 <motion.div
                   variants={itemVariants}
-                  className="flex-1 flex flex-col items-center justify-center px-4 py-8"
+                  className={`flex-1 flex flex-col items-center justify-center gap-4 p-4 ${
+                    suggestedActivityEntries.length > 0 ? "mb-4" : ""
+                  }`}
+                >
+                  <AnimatePresence mode="wait">
+                    {!isConnected ? (
+                      <motion.div
+                        key="disconnected"
+                        variants={connectionStatusVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                      >
+                        <Button
+                          variant="ghost"
+                          onClick={handleReconnect}
+                          className="hover:bg-transparent"
+                        >
+                          {isConnecting ? (
+                            <>
+                              <Loader2 className="animate-spin text-gray-500 mr-2" size={28} />
+                              <span className="text-xl font-normal italic">Connecting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <WifiOff className="text-red-500 mr-2" size={28} />
+                              <span className="text-xl font-normal underline">Connect</span>
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="connected"
+                        variants={connectionStatusVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="flex flex-row items-center justify-between w-full max-w-[600px]"
+                      >
+                        <Button
+                          variant="ghost"
+                          onClick={toggleInputMode}
+                          className="flex items-center space-x-2 hover:bg-gray-100"
+                          title={`${inputMode === "voice" ? "Voice" : "Text"} Input`}
+                        >
+                          {inputMode === "voice" ? (
+                            <Mic className="w-7 h-7 text-blue-500" />
+                          ) : (
+                            <MessageSquare className="w-7 h-7 text-gray-500" />
+                          )}
+                        </Button>
+
+                        <div className="border-[4px] bg-white shadow-inner rounded-full border-gray-700 w-full max-w-[220px] min-w-[220px] min-h-[4rem] flex items-center justify-between px-4">
+                          {inputMode === "voice" ? (
+                            <div className="flex flex-col items-center w-full">
+                              <AudioControls
+                                isRecording={isRecording}
+                                isConnected={isConnected}
+                                toggleRecording={handleToggleRecording}
+                                cancelRecording={cancelRecording}
+                                isLoading={isLoading}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center w-full">
+                              <ChatInput
+                                transcription={transcription}
+                                isConnected={isConnected}
+                                isLoading={isLoading}
+                                onTranscriptionChange={handleTranscriptionChange}
+                                onSendMessage={handleSendMessage}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          onClick={toggleOutputMode}
+                          className="flex items-center space-x-2 hover:bg-gray-100"
+                          title={`${outputMode === "voice" ? "Voice" : "Text"} Output`}
+                        >
+                          {outputMode === "voice" ? (
+                            <Volume2 className="w-7 h-7 text-blue-500" />
+                          ) : (
+                            <VolumeX className="w-7 h-7 text-gray-500" />
+                          )}
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                <motion.div
+                  variants={itemVariants}
+                  className="flex flex-col gap-4 px-4 mb-4"
                 >
                   {suggestedActivityEntries.map((activityEntry) => {
                     const activity = suggestedActivities.find(
@@ -654,6 +789,7 @@ const LogPage: React.FC = () => {
                       <ActivitySuggestion
                         key={activityEntry.id}
                         activity={activity}
+                        disabled={!isConnected}
                         activityEntry={activityEntry}
                         onAccept={handleActivityAcceptance}
                         onReject={handleActivityRejection}
@@ -671,127 +807,6 @@ const LogPage: React.FC = () => {
                         onReject={handleSessionsRejection}
                       />
                     )}
-                  <div className="border-[4px] bg-white rounded-full border-gray-700 min-w-[16rem] min-h-[4rem] mb-4 flex items-center justify-between px-4">
-                    {inputMode === "voice" ? (
-                      <div className="flex flex-col items-center w-full">
-                        <AudioControls
-                          isRecording={isRecording}
-                          isConnected={isConnected}
-                          toggleRecording={handleToggleRecording}
-                          cancelRecording={cancelRecording}
-                          isLoading={isLoading}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center w-full">
-                        <ChatInput
-                          transcription={transcription}
-                          isConnected={isConnected}
-                          isLoading={isLoading}
-                          onTranscriptionChange={handleTranscriptionChange}
-                          onSendMessage={handleSendMessage}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex space-x-4 mb-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={inputMode === "voice"}
-                        onCheckedChange={toggleInputMode}
-                        id="input-mode"
-                      />
-                      <label
-                        htmlFor="input-mode"
-                        className="text-sm font-medium"
-                      >
-                        {inputMode === "voice" ? (
-                          <>
-                            <Mic className="inline mr-1" size={16} />
-                            Voice Input
-                          </>
-                        ) : (
-                          <>
-                            <MessageSquare className="inline mr-1" size={16} />
-                            Text Input
-                          </>
-                        )}
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={outputMode === "voice"}
-                        onCheckedChange={toggleOutputMode}
-                        id="output-mode"
-                      />
-                      <label
-                        htmlFor="output-mode"
-                        className="text-sm font-medium"
-                      >
-                        {outputMode === "voice" ? (
-                          <>
-                            <Volume2 className="inline mr-1" size={16} />
-                            Voice Output
-                          </>
-                        ) : (
-                          <>
-                            <VolumeX className="inline mr-1" size={16} />
-                            Text Output
-                          </>
-                        )}
-                      </label>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    onClick={handleReconnect}
-                    className="hover:bg-transparent"
-                  >
-                    {isConnecting ? (
-                      <>
-                        <Loader2
-                          className="animate-spin text-gray-500 mr-2"
-                          size={28}
-                        />
-                        <span className="text-xl font-normal italic">
-                          Connecting...
-                        </span>
-                      </>
-                    ) : isConnected ? (
-                      <>
-                        <Wifi className="text-green-500 mr-2" size={28} />
-                        <span className="text-xl font-normal italic">
-                          Connected
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <WifiOff className="text-red-500 mr-2" size={28} />
-                        <span className="text-xl font-normal underline">
-                          Reconnect
-                        </span>
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
-
-                <motion.div
-                  variants={itemVariants}
-                  className="flex flex-col items-center justify-center border-y border-gray-200 bg-gray-100 bg-white m-2 border-1 border-gray-200 rounded-lg box-border bg-gradient-to-r from-orange-100 to-white shadow-md-top"
-                >
-                  <span className="text-sm text-gray-500 px-4 pt-2">
-                    Emotion Analysis
-                  </span>
-                  {inputMode !== "voice" && (
-                    <span className="text-xs text-gray-400 pb-2">
-                      ⚠️ only available on voice input
-                    </span>
-                  )}
-                  <div className="min-h-[70px]">
-                    <EmotionBadges emotions={currentEmotions} />
-                  </div>
                 </motion.div>
               </motion.div>
             )}
@@ -819,11 +834,6 @@ const LogPage: React.FC = () => {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogAction
-                  onClick={() => clearPendingChanges()}
-                >
-                  Delete and proceed
-                </AlertDialogAction>
                 <AlertDialogAction
                   onClick={() => setShowPendingChangesAlert(false)}
                 >
