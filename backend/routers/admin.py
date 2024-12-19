@@ -211,7 +211,11 @@ async def _process_unactivated_emails(users: list[User], dry_run: bool = True) -
 
     triggered_users = []
     for user in unactivated_users:
+        if user.unactivated_email_sent_at:
+            logger.info(f"Unactivated email already sent to '{user.username}', skipping")
+            continue
         send_loops_event(user.email, "unactivated")
+        users_gateway.update_fields(user.id, {"unactivated_email_sent_at": datetime.now(UTC).isoformat()})
         posthog.capture(distinct_id=user.id, event="unactivated_loops_event_triggered")
         triggered_users.append(user.username)
 
