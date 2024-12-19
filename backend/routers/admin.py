@@ -125,7 +125,10 @@ async def _process_checkin_notifications(
     users: list[User], dry_run: bool = True
 ) -> dict:
     notifications_processed = []
-    for user in users:
+
+    filtered_users = [u for u in users if posthog.feature_enabled("ai-bot-access", u.id)]
+    
+    for user in filtered_users:
 
         prompt = prompt_controller.get_prompt(
             user.id, "user-recurrent-checkin"
