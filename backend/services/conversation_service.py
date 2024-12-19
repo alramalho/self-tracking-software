@@ -375,7 +375,7 @@ async def process_message(
             {
                 "type": "suggested_activity_entries", 
                 "activities": [activity.dict() for activity in activities],
-                "activity_entries": [activity.dict() for activity in activity_entries],
+                "activity_entries": [{"id": str(ObjectId()), **activity_entry.dict()} for activity_entry in activity_entries],
             }
         )
     # Check if the extracted data is next week sessions

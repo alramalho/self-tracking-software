@@ -63,6 +63,16 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
     return new Date(a[0]).getTime() - new Date(b[0]).getTime();
   });
 
+  function getMessageRole(message: Message) {
+    if (message.sender_id === userData?.user?.id) {
+      return "user";
+    }
+    if (message.sender_id === "-1") {
+      return "system";
+    }
+    return "assistant";
+  }
+
   return (
     <ChatMessageList>
       {sortedDates.map(([dateKey, dateMessages], index) => (
@@ -75,8 +85,10 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
                 new Date(b.created_at).getTime()
             )
             .map((message) => {
-              const role =
-                message.sender_id === userData?.user?.id ? "user" : "assistant";
+              const role = getMessageRole(message);
+              if (role === "system") {
+                return <Divider text={message.text} key={message.id} />;
+              }
               return (
                 <ChatBubble
                   key={message.id}

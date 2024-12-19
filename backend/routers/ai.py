@@ -291,38 +291,22 @@ async def hume_callback(message_id: str, request: Request):
         return {"status": "error", "message": str(e)}
 
 
-@router.post("/accept-activity")
-async def accept_activity(
-    request: Request, user: User = Depends(is_clerk_user)
-) -> dict:
+@router.post("/send-system-message")
+async def send_system_message(request: Request, user: User = Depends(is_clerk_user)):
+    from ai.assistant.memory import Memory, DatabaseMemory
+    from entities.message import Message
+
     data = await request.json()
-    try:
-        activity_entry = ActivityEntry(**data)
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing required field: {str(e)}")
-    await conversation_service.handle_activity_acceptance(user, activity_entry)
-    return {"status": "success"}
+    message = data["message"]
 
+    memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+    memory.write(Message.new(
+        text=message,
+        sender_name="System",
+        sender_id="-1",
+        recipient_name=user.name,
+        recipient_id=user.id,
+        emotions=[],
+    ))
 
-@router.post("/accept-sessions")
-async def accept_sessions(
-    request: Request, user: User = Depends(is_clerk_user)
-) -> dict:
-    data = await request.json()
-    try:
-        plan_id = data["plan_id"]
-        sessions_data = data["sessions"]
-        old_sessions_data = data["old_sessions"]
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing required field: {str(e)}")
-
-    try:
-        sessions = [PlanSession(**session) for session in sessions_data]
-        old_sessions = [PlanSession(**session) for session in old_sessions_data]
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid session data: {str(e)}")
-
-    await conversation_service.handle_sessions_acceptance(
-        user=user, plan_id=plan_id, sessions=sessions, old_sessions=old_sessions
-    )
     return {"status": "success"}

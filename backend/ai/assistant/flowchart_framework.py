@@ -518,8 +518,14 @@ class FlowchartLLMFramework:
                 assert isinstance(
                     result, str
                 ), f"End node '{current_instance_id}' must return a string"
-                return result, self.extracted
-                
+
+                filtered_extracted = {
+                    node_id: self.extracted[node_id]
+                    for node_id in self.extracted 
+                    if node_id in self.execution_path
+                }
+                return result, filtered_extracted
+            
             assert current_instance_id in self.completed_nodes, f"Node '{current_instance_id}' not found in completed_nodes"
             assert current_instance_id in self.node_results, f"Node '{current_instance_id}' not found in node_results"
             

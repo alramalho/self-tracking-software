@@ -62,35 +62,36 @@ first_message_flowchart = {
 
 every_message_flowchart = {
     "ActivityScanner": Node(
-        text="Did the user recently mentioned in the conversation history any activity that has not been extracted by you yet?",
+        text="Did the user recently mentioned in the conversation history any new activity that wasn't extracted yet? Reason thoroughly about the activities discussed & whether they were already extracted and finalized (accepted or rejected) before deciding.",
         connections={"Yes": "CheckActivityQualifies", "No": "Converse"},
         temperature=0.7,
     ),
     "CheckActivityQualifies": Node(
         text="Does the activity exist in the user's activities list?",
-        connections={"Yes": "CheckActivityMeasurement", "No": "InformTheUserOnlyExistingActivitiesAreSupported"},
+        connections={"Yes": "CheckActivityDetails", "No": "InformTheUserOnlyExistingActivitiesAreSupported"},
         temperature=0.7,
     ),
-    "CheckActivityMeasurement": Node(
-        text="Did the user mention the date of when the activity was done and the measure (for how long, how much pages, etc) in his exchanged messages with you?",
+    "CheckActivityDetails": Node(
+        text="Are the mentioned activity details (date and quantity) inferrable from last user's messages?",
         connections={
             "No": "AskForMoreInformation",
             "Yes": "ExtractActivity",
         },
     ),
     "AskForMoreInformation": Node(
-        text="Ask the user for the missing information about the activity (either date and / or measure, whatever is missing)",
+        text="Ask the user for the missing information about the activity (either date and / or quantity, whatever is missing)",
     ),
     "ExtractActivity": Node(
-        text=f"Extract new activities from the user's message. New activites are activites that are not on the recent activities list. Today is {datetime.now().strftime('%b %d, %Y')}",
+        text=f"Extract new activities recently mentioned in the user's message. New activites are activites that are not on the recent logged activities list. You can only extract activities that the user is currently tracking, not create new ones.",
         output_schema=ExtractedActivityEntryList,
         connections={"default": "InformTheUserAboutTheActivity"},
+        needs=["CheckActivityDetails"],
     ),
     "InformTheUserAboutTheActivity": Node(
         text="Inform the user that you've extracted the activity, which he needs to accept or reject.",
     ),
     "InformTheUserOnlyExistingActivitiesAreSupported": Node(
-        text="Inform the user that you only support activities that are on his activities list.",
+        text="Analyse user's activity name and inform the user that you couldn't find the activity in his activities list.",
     ),
     "Converse": Node(
         text="Let the user lead an engaging and challenging conversation with you, given your goal and recent conversation history.",
@@ -130,12 +131,13 @@ class ActivityExtractorAssistant(object):
             )
         )
 
-        system_prompt = f"""You are {self.name}, an AI assistant helping the user track their activities. 
+        system_prompt = f"""You are {self.name}, an AI assistant helping the user do and track more of his existing activities. 
         That instruction does not come from the user, but you must address it.
         Always consider the entire conversation history when making decisions or responses.
         Respond in the same language as the initial input.
 
         Don't use emojis, be direct and provocative. Don't be afraid to say things that might be uncomfortable for the user.
+        Today is {datetime.now().strftime('%b %d, %Y')}. 
         """
 
         if is_first_message_in_more_than_a_day:
