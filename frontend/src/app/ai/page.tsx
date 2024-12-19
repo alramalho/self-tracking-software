@@ -136,21 +136,21 @@ const messageTextVariants = {
 
 const connectionStatusVariants = {
   initial: { opacity: 0, y: 20 },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     y: 0,
     transition: {
       duration: 0.3,
-      ease: "easeOut"
-    }
+      ease: "easeOut",
+    },
   },
-  exit: { 
+  exit: {
     opacity: 0,
     y: -20,
     transition: {
-      duration: 0.2
-    }
-  }
+      duration: 0.2,
+    },
+  },
 };
 
 const LogPage: React.FC = () => {
@@ -214,6 +214,11 @@ const LogPage: React.FC = () => {
   const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
 
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+
+  const [pendingActivityResponses, setPendingActivityResponses] = useState<{
+    accepted: { activity: Activity; entry: ActivityEntry }[];
+    rejected: { activity: Activity; entry: ActivityEntry }[];
+  }>({ accepted: [], rejected: [] });
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -373,9 +378,10 @@ const LogPage: React.FC = () => {
 
   const toggleOutputMode = () => {
     setOutputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
+    stopAudio();
   };
 
-  function sendMessage(message: string) {
+  function sendMessage(message: string, visible: boolean = true) {
     setIsLoading(true);
     socket?.send(
       JSON.stringify({
@@ -386,7 +392,9 @@ const LogPage: React.FC = () => {
       })
     );
 
-    addMessage({ role: "user", content: message });
+    if (visible) {
+      addMessage({ role: "user", content: message });
+    }
     setTranscription("");
   }
 
@@ -479,6 +487,16 @@ const LogPage: React.FC = () => {
     );
   };
 
+  function toReadableDate(date: string) {
+    return new Date(date)
+      .toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+      .replace(",", "");
+  }
+
   const handleActivityAcceptance = async (
     activityEntry: ActivityEntry,
     activity: Activity
@@ -495,13 +513,50 @@ const LogPage: React.FC = () => {
       has_photo: false,
     });
 
+    setPendingActivityResponses((prev) => ({
+      ...prev,
+      accepted: [...prev.accepted, { activity, entry: activityEntry }],
+    }));
+
     setSuggestedActivityEntries((entries) =>
       entries.filter((entry) => entry.id !== activityEntry.id)
     );
-    console.log("removed activity form suggested list", activityEntry);
 
-    const message = `I accept the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} on ${activityEntry.date}`;
-    sendMessage(message);
+    if (suggestedActivityEntries.length === 1) {
+      const acceptedActivitiesStr = [
+        ...pendingActivityResponses.accepted,
+        { activity, entry: activityEntry },
+      ]
+        .map(
+          ({ activity, entry }) =>
+            `${entry.quantity} ${activity.measure} '${
+              activity.title
+            }' in ${toReadableDate(entry.date)}`
+        )
+        .join("\n - ");
+
+      const rejectedActivitiesStr = pendingActivityResponses.rejected
+        .map(
+          ({ activity, entry }) =>
+            `${entry.quantity} ${activity.measure} '${
+              activity.title
+            }' in ${toReadableDate(entry.date)}`
+        )
+        .join("\n - ");
+
+      let message = "";
+      if (acceptedActivitiesStr) {
+        message += `User accepted and logged the following activities:\n${acceptedActivitiesStr}\n`;
+      }
+      if (rejectedActivitiesStr) {
+        message += `User rejected the following activities:\n${rejectedActivitiesStr}`;
+      }
+
+      await authedApi.post("/ai/send-system-message", { message });
+      sendMessage("done!", false);
+
+      setPendingActivityResponses({ accepted: [], rejected: [] });
+    }
   };
 
   const handleActivityRejection = async (
@@ -513,14 +568,49 @@ const LogPage: React.FC = () => {
       return;
     }
 
-    // Remove activity from suggested list
+    setPendingActivityResponses((prev) => ({
+      ...prev,
+      rejected: [...prev.rejected, { activity, entry: activityEntry }],
+    }));
+
     setSuggestedActivityEntries((entries) =>
       entries.filter((entry) => entry.id !== activityEntry.id)
     );
 
-    // Send rejection message through WebSocket
-    const message = `I reject the activity: ${activityEntry.quantity} ${activity.measure} of ${activity.title} on ${activityEntry.date}`;
-    sendMessage(message);
+    if (suggestedActivityEntries.length === 1) {
+      const acceptedActivitiesStr = pendingActivityResponses.accepted
+        .map(
+          ({ activity, entry }) =>
+            `${entry.quantity} ${activity.measure} of ${
+              activity.title
+            } in ${toReadableDate(entry.date)}`
+        )
+        .join("\n");
+
+      const rejectedActivitiesStr = [
+        ...pendingActivityResponses.rejected,
+        { activity, entry: activityEntry },
+      ]
+        .map(
+          ({ activity, entry }) =>
+            `${entry.quantity} ${activity.measure} of ${
+              activity.title
+            } in ${toReadableDate(entry.date)}`
+        )
+        .join("\n");
+
+      let message = "";
+      if (acceptedActivitiesStr) {
+        message += `User accepted and logged the following activities:\n${acceptedActivitiesStr}\n`;
+      }
+      if (rejectedActivitiesStr) {
+        message += `User rejected the following activities:\n${rejectedActivitiesStr}`;
+      }
+
+      await authedApi.post("/ai/send-system-message", { message });
+      sendMessage("done!", false);
+      setPendingActivityResponses({ accepted: [], rejected: [] });
+    }
   };
 
   const handleSessionsAcceptance = async (sessions: PlanSession[]) => {
@@ -529,22 +619,23 @@ const LogPage: React.FC = () => {
       return;
     }
 
-    // Clear suggested sessions
     setSuggestedNextWeekSessions(null);
 
-    // Format sessions into readable string
     const sessionsStr = sessions
       .map((session) => {
         const activity = userData?.activities.find(
           (a) => a.id === session.activity_id
         );
-        return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
+        return `${session.quantity} ${activity?.measure} of ${
+          activity?.title
+        } (${session.descriptive_guide}) in ${toReadableDate(session.date)}`;
       })
       .join("\n");
 
-    // Send acceptance message through WebSocket
-    const message = `I accept the suggested sessions for the plan: \n${sessionsStr}`;
-    sendMessage(message);
+    const message = `User accepted the suggested sessions for the plan: \n${sessionsStr}`;
+    await authedApi.post("/ai/send-system-message", { message });
+    sendMessage("done!", false);
+
   };
 
   const handleSessionsRejection = async (sessions: PlanSession[]) => {
@@ -562,13 +653,15 @@ const LogPage: React.FC = () => {
         const activity = userData?.activities.find(
           (a) => a.id === session.activity_id
         );
-        return `${session.quantity} ${activity?.measure} of ${activity?.title} (${session.descriptive_guide})`;
+        return `${session.quantity} ${activity?.measure} of ${
+          activity?.title
+        } (${session.descriptive_guide}) in ${toReadableDate(session.date)}`;
       })
       .join("\n");
 
-    // Send rejection message through WebSocket
-    const message = `I reject the suggested sessions for the plan: \n${sessionsStr}`;
-    sendMessage(message);
+    const message = `User rejected the suggested sessions for the plan: \n${sessionsStr}`;
+    await authedApi.post("/ai/send-system-message", { message });
+    sendMessage("done!", false);
   };
 
   function clearToasts() {
@@ -668,14 +761,6 @@ const LogPage: React.FC = () => {
                   <ChatInterface messages={messages.slice(-2)} />
                 </motion.div>
 
-                {inputMode !== "voice" && (
-                  <div className="text-center -mt-1 mb-2">
-                    <span className="text-xs text-gray-400">
-                      ⚠️ Emotion analysis only available on voice mode
-                    </span>
-                  </div>
-                )}
-
                 <motion.div className="flex flex-col items-center justify-center">
                   <EmotionBadges emotions={currentEmotions} />
                 </motion.div>
@@ -702,13 +787,23 @@ const LogPage: React.FC = () => {
                         >
                           {isConnecting ? (
                             <>
-                              <Loader2 className="animate-spin text-gray-500 mr-2" size={28} />
-                              <span className="text-xl font-normal italic">Connecting...</span>
+                              <Loader2
+                                className="animate-spin text-gray-500 mr-2"
+                                size={28}
+                              />
+                              <span className="text-xl font-normal italic">
+                                Connecting...
+                              </span>
                             </>
                           ) : (
                             <>
-                              <WifiOff className="text-red-500 mr-2" size={28} />
-                              <span className="text-xl font-normal underline">Connect</span>
+                              <WifiOff
+                                className="text-red-500 mr-2"
+                                size={28}
+                              />
+                              <span className="text-xl font-normal underline">
+                                Connect
+                              </span>
                             </>
                           )}
                         </Button>
@@ -726,7 +821,9 @@ const LogPage: React.FC = () => {
                           variant="ghost"
                           onClick={toggleInputMode}
                           className="flex items-center space-x-2 hover:bg-gray-100"
-                          title={`${inputMode === "voice" ? "Voice" : "Text"} Input`}
+                          title={`${
+                            inputMode === "voice" ? "Voice" : "Text"
+                          } Input`}
                         >
                           {inputMode === "voice" ? (
                             <Mic className="w-7 h-7 text-blue-500" />
@@ -752,7 +849,9 @@ const LogPage: React.FC = () => {
                                 transcription={transcription}
                                 isConnected={isConnected}
                                 isLoading={isLoading}
-                                onTranscriptionChange={handleTranscriptionChange}
+                                onTranscriptionChange={
+                                  handleTranscriptionChange
+                                }
                                 onSendMessage={handleSendMessage}
                               />
                             </div>
@@ -763,7 +862,9 @@ const LogPage: React.FC = () => {
                           variant="ghost"
                           onClick={toggleOutputMode}
                           className="flex items-center space-x-2 hover:bg-gray-100"
-                          title={`${outputMode === "voice" ? "Voice" : "Text"} Output`}
+                          title={`${
+                            outputMode === "voice" ? "Voice" : "Text"
+                          } Output`}
                         >
                           {outputMode === "voice" ? (
                             <Volume2 className="w-7 h-7 text-blue-500" />
@@ -774,6 +875,13 @@ const LogPage: React.FC = () => {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  {inputMode !== "voice" && (
+                    <div className="text-center -mt-1 mb-2">
+                      <span className="text-xs text-gray-400">
+                        ⚠️ Emotion analysis only available on voice mode
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
 
                 <motion.div
