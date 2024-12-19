@@ -89,6 +89,7 @@ export class ApiStack extends cdk.Stack {
         ),
         environment: {
           API_URL: lambdaUrl.url,
+          ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
         },
       }
     );
