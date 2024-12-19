@@ -162,7 +162,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
   const handleClearAll = async () => {
     const clearPromise = async () => {
       await api.post("/clear-all-notifications");
-      refetchUserData();
+      notificationsData.refetch();
     };
 
     toast.promise(clearPromise(), {
