@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Literal
 from ai.assistant.memory import Memory
 from entities.message import Message, Emotion
 from entities.user import User
@@ -46,12 +46,15 @@ class AllPlanNamesSchema(BaseModel):
     plan_names: List[str] = Field(..., description="All plan names")
 
 
-class SuggestedNextWeekSessions(BaseModel):
+class SuggestedChanges(BaseModel):
     plan_name: str = Field(..., description="The name of the plan")
+    plan_type: Literal["specific", "times_per_week"] = Field(..., description="The type of the plan in question.")
     next_week_sessions: List[PlanSession] = Field(
-        ..., description="The sessions to be added to the plan for the upcoming week"
+        ..., description="[only for 'specific' plans] The sessions to be added to the plan for the upcoming week"
     )
-
+    next_week_times_per_week: int = Field(
+        ..., description="[only for 'times_per_week' plans] The new number of sessions per week"
+    )
 
 class ExtractedPlanSessions(BaseModel):
     plan_id: str = Field(..., description="The ID of the plan these sessions belong to")
@@ -59,12 +62,21 @@ class ExtractedPlanSessions(BaseModel):
         ..., description="The sessions to be added to the plan for the upcoming week"
     )
 
+class ExtractedTimesPerWeek(BaseModel):
+    plan_id: str = Field(..., description="The ID of the plan these sessions belong to")
+    old_times_per_week: int = Field(
+        ..., description="The old number of sessions per week"
+    )
+    new_times_per_week: int = Field(
+        ..., description="The new number of sessions per week"
+    )
 
 class EnrichedPlanSessions(ExtractedPlanSessions):
     old_sessions: List[PlanSession] = Field(
         ...,
         description="The sessions to be removed from the plan for the upcoming week",
     )
+
 
 
 first_message_flowchart = {
@@ -91,11 +103,11 @@ first_message_flowchart = {
 
 every_message_flowchart = {
     "HasRequest": Node(
-        text="Was the last user message a request, question or instruction?",
+        text="Was the last user message a request, question or instruction that is not related to the plans?",
         connections={"Yes": "Answer", "No": "ExtractPlanNames"},
     ),
     "Answer": Node(
-        text="Address the user's request, having in mind your goals and purpose.",
+        text="Address the user's request on last message, having in mind your goals and purpose.",
     ),
     "ExtractPlanNames": Node(
         text="Extract all plan names from the users plan list.",
@@ -110,7 +122,7 @@ every_message_flowchart = {
         needs=["ExtractPlanNames"],
     ),
     "CheckPlanDiscussed": Node(
-        text="Based exclusively on the conversation history, did you ask the user if he wants to discuss the plan '${current_plan}'?",
+        text="Based exclusively on the conversation history, did you explicitly or implicitly ask the user if he wants to discuss the plan '${current_plan}'?",
         connections={"Yes": "CheckUserWantsToDiscussPlan", "No": "AskToDiscussPlan"},
     ),
     "AskToDiscussPlan": Node(
@@ -134,9 +146,9 @@ every_message_flowchart = {
         connections={"Yes": "SuggestChanges", "No": "NextPlan"},
     ),
     "SuggestChanges": Node(
-        text="Analyse and suggest changes for plan '${current_plan}'. You can only make changes to the plan sessions date & details.",
+        text="Analyse the plan '${current_plan}'. If of the 'specific' type you can only suggest next week's sessions. If of the 'times per week' type you can only suggest the new number of sessions per week.",
         temperature=1,
-        output_schema=SuggestedNextWeekSessions,
+        output_schema=SuggestedChanges,
         connections={"default": "InformTheUsreAboutTheChanges"},
     ),
     "InformTheUsreAboutTheChanges": Node(
@@ -146,6 +158,7 @@ every_message_flowchart = {
     "NextPlan": LoopContinueNode(
         text="",
         connections={"HasMore": "StartPlanLoop", "Complete": "Conclude"},
+        needs=["StartPlanLoop"], # this shouldnt be needed
     ),
     "Conclude": Node(
         text="Congratulate the user for making this far in the conversation, wrap up the conversation with a summary of what was discussed and what actions were decided and tell him you'll see him next week!",
@@ -170,7 +183,7 @@ class WeekAnalyserAssistant(object):
 
     async def get_response(
         self, user_input: str, message_id: str = None, emotions: List[Emotion] = []
-    ) -> Tuple[str, EnrichedPlanSessions | None]:
+    ) -> Tuple[str, EnrichedPlanSessions | ExtractedTimesPerWeek | None]:
         is_first_message_in_more_than_a_day = (
             len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
         )
@@ -188,10 +201,7 @@ class WeekAnalyserAssistant(object):
 
         system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
         Respond to the user in the same language that he talks to you in.
-        Your instruction will always bec very specific, so it is crucial that you make sure to do an appropriate bridge with last user message.
-        Keep you answers as concise as possible.
-
-        Don't use emojis, be direct and provocative. Don't be afraid to say things that might be uncomfortable for the user.
+        No matter what, make sure your answer never jumps the conversation and has the user's last message into account.
         """
 
         if is_first_message_in_more_than_a_day:
@@ -218,11 +228,11 @@ class WeekAnalyserAssistant(object):
         --- Here's the user's plan list of {len(self.user_plans)} plans:
         {plan_controller.get_readable_plans_and_sessions(self.user.id, past_day_limit=lookback_days, future_day_limit=lookahead_days)}
 
-        --- Here's user's actually done activities during last week:
+        --- Now here's the activities that the user has done during the past {lookback_days} days:
         {activities_gateway.get_readable_recent_activity_entries(self.user.id, past_day_limit=lookback_days)}
                                
         --- Now here's your actual conversation history with the user:
-        {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=24*60)}
+        {self.memory.read_all_as_str(max_words=750, max_age_in_minutes=12*60)}
 
         {f"<system note>The detected user's emotions on HIS LAST MESSAGE are: {[f'{e.emotion} ({e.score * 100:.2f}%)' for e in emotions]}</system note>" if emotions else ""}
 
@@ -251,31 +261,40 @@ class WeekAnalyserAssistant(object):
 
         # Create a mapping of plan names to IDs TODO: this assumes that the plan present plan name is unique
         plan_name_to_id = {plan.goal: plan.id for plan in self.user_plans}
+        
+        if "SuggestChanges" in extracted:
+            if extracted["`SuggestedChanges`"].plan_type == "specific":
+                plan_id = plan_name_to_id[extracted["SuggestedChanges"].plan_name]
+                plan = plan_controller.get_plan(plan_id=plan_id)
+                old_sessions = [
+                    s
+                    for s in plan.sessions
+                    if datetime.strptime(s.date, "%Y-%m-%d").date() >= datetime.now().date()
+                    and datetime.strptime(s.date, "%Y-%m-%d").date()
+                    <= datetime.now().date() + timedelta(days=lookahead_days)
+                ]
 
-        if "SuggestedChanges" in extracted:
-            plan_id = plan_name_to_id[extracted["SuggestedChanges"].plan_name]
-            plan = plan_controller.get_plan(plan_id=plan_id)
-            old_sessions = [
-                s
-                for s in plan.sessions
-                if datetime.strptime(s.date, "%Y-%m-%d").date() >= datetime.now().date()
-                and datetime.strptime(s.date, "%Y-%m-%d").date()
-                <= datetime.now().date() + timedelta(days=lookahead_days)
-            ]
+                # Aggregate sessions from all SuggestedChanges nodes
+                all_sessions = []
+                for key in extracted:
+                    if key.startswith("SuggestedChanges_"):
+                        all_sessions.extend(extracted[key].next_week_sessions)
 
-        # Aggregate sessions from all SuggestedChanges nodes
-        all_sessions = []
-        for key in extracted:
-            if key.startswith("SuggestedChanges_"):
-                all_sessions.extend(extracted[key].next_week_sessions)
-
-        return result, (
-            EnrichedPlanSessions(
-                plan_id=plan_id,
-                sessions=all_sessions,
-                old_sessions=old_sessions,
-            )
-            if any(k.startswith("SuggestedChanges_") for k in extracted)
-            else None
-        )
+                return result, EnrichedPlanSessions(
+                    plan_id=plan_id,
+                    sessions=all_sessions,
+                    old_sessions=old_sessions,
+                )
+            elif extracted["SuggestedChanges"].plan_type == "times_per_week":
+                plan_id = plan_name_to_id[extracted["SuggestedChanges"].plan_name]
+                plan = plan_controller.get_plan(plan_id=plan_id)
+                return result, ExtractedTimesPerWeek(
+                    plan_id=plan_id,
+                    old_times_per_week=plan.times_per_week,
+                    new_times_per_week=extracted["SuggestedChanges"].next_week_times_per_week,
+                )
+            else:
+                return result, None
+        else:
+            return result, None
 

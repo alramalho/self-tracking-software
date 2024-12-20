@@ -397,6 +397,22 @@ async def leave_plan(plan_id: str, current_user: User = Depends(is_clerk_user)):
 @router.post("/plans/{plan_id}/update")
 async def update_plan(
     plan_id: str,
+    request: Request,
+    current_user: User = Depends(is_clerk_user),
+):
+    body = await request.json()
+    data = body["data"]
+
+    plan = plan_controller.get_plan(plan_id)
+    for key, value in data.items():
+        setattr(plan, key, value)
+        
+    return await plan_controller.update_plan(plan)
+
+
+@router.post("/plans/{plan_id}/generated-update")
+async def generate_update_plan(
+    plan_id: str,
     generated_plan_update: GeneratedPlanUpdate,
     current_user: User = Depends(is_clerk_user),
 ):
