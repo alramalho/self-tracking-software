@@ -52,7 +52,7 @@ const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> 
       <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3">
         <span className="text-2xl">{plan.emoji || '📅'}</span>
         <p className="text-sm text-gray-700">
-          Update "{plan.goal}" from {old_times_per_week} to {times_per_week} times per week?
+          Update &quot;{plan.goal}&quot; from {old_times_per_week} to {times_per_week} times per week?
         </p>
       </div>
       <div className="flex ml-4">
