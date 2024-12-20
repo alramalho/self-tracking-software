@@ -45,7 +45,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   const updatePlan = async (planId: string, updatedPlan: GeneratedPlan) => {
     const response = await api.post<UpdatePlanResponse>(
-      `/plans/${planId}/update`,
+      `/plans/${planId}/generated-update`,
       {
         goal: updatedPlan.goal,
         emoji: updatedPlan.emoji,

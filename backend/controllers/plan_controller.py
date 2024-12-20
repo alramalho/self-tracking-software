@@ -745,10 +745,15 @@ class PlanController:
                     plan_text.extend(past_sessions)
                 
                 if future_sessions:
-                    if past_sessions:  # Add a blank line if we had past sessions
-                        plan_text.append("")
-                    plan_text.append(f"Upcoming sessions in the next {future_day_limit} days:")
-                    plan_text.extend(future_sessions)
+                    if plan.outline_type == "specific":
+                        if past_sessions:  # Add a blank line if we had past sessions
+                            plan_text.append("")
+                        plan_text.append(f"Upcoming sessions in the next {future_day_limit} days:")
+                        plan_text.extend(future_sessions)
+                    else:
+                        plan_text.append(f"For the next week, user is just planning on doing {plan.times_per_week} sessions.")
+                        plan_text.extend(future_sessions)
+
                 
                 readable_plans.append("\n".join(plan_text))
 

@@ -69,6 +69,9 @@ class ActivitiesGateway:
     def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5, past_day_limit: int = None) -> str:
         all_activities_dict = {activity.id: activity for activity in self.get_all_activities_by_user_id(user_id)}
 
+        if len(all_activities_dict) == 0:
+            return f"(User has not done any activities during the past {past_day_limit} days)"
+
         all_activity_entries: List[ActivityEntry] = []
         for activity_id in all_activities_dict.keys():
             all_activity_entries.extend(self.get_all_activity_entries_by_activity_id(activity_id))

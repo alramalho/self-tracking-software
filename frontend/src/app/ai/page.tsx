@@ -7,13 +7,11 @@ import { useSpeaker } from "@/hooks/useSpeaker";
 import AudioControls from "@/components/AudioControls";
 import toast from "react-hot-toast";
 import {
-  Wifi,
   WifiOff,
   Mic,
   MessageSquare,
   Volume2,
   VolumeX,
-  Trash2,
   Loader2,
   History,
 } from "lucide-react"; // Add this import
@@ -22,14 +20,12 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 
-import { Switch } from "@/components/ui/switch";
 import {
   Activity,
   ActivityEntry,
   Emotion,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
@@ -40,7 +36,6 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -53,6 +48,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { AccessRestrictionPopover } from "@/components/chat/AccessRestrictionPopover";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { motion, AnimatePresence } from "framer-motion";
+import PlanTimesPerWeekUpdateBanner from "@/components/PlanTimesPerWeekUpdateBanner";
 
 const REFERRAL_COUNT = 2;
 
@@ -60,6 +56,12 @@ type ExtractedPlanSessions = {
   plan_id: string;
   sessions: PlanSession[];
   old_sessions: PlanSession[];
+};
+
+type ExtractedTimesPerWeek = {
+  plan_id: string;
+  old_times_per_week: number;
+  new_times_per_week: number;
 };
 
 const containerVariants = {
@@ -210,6 +212,11 @@ const LogPage: React.FC = () => {
       "suggested_next_week_sessions",
       null
     );
+  const [suggestedTimesPerWeek, setSuggestedTimesPerWeek] =
+    useLocalStorage<ExtractedTimesPerWeek | null>(
+      "suggested_times_per_week",
+      null
+    );
 
   const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
 
@@ -329,6 +336,12 @@ const LogPage: React.FC = () => {
           old_sessions: data.old_sessions,
           plan_id: data.plan_id,
         } as ExtractedPlanSessions);
+      } else if (data.type === "suggested_times_per_week") {
+        setSuggestedTimesPerWeek({
+          new_times_per_week: data.times_per_week,
+          old_times_per_week: data.old_times_per_week,
+          plan_id: data.plan_id,
+        } as ExtractedTimesPerWeek);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -350,14 +363,16 @@ const LogPage: React.FC = () => {
     return (
       (suggestedActivityEntries && suggestedActivityEntries.length > 0) ||
       (suggestedNextWeekSessions &&
-        suggestedNextWeekSessions.sessions.length > 0)
+        suggestedNextWeekSessions.sessions.length > 0) ||
+      (suggestedTimesPerWeek &&
+        suggestedTimesPerWeek.new_times_per_week !==
+          suggestedTimesPerWeek.old_times_per_week)
     );
-  }, [suggestedActivityEntries, suggestedNextWeekSessions]);
-
-  const clearPendingChanges = useCallback(() => {
-    setSuggestedActivityEntries([]);
-    setSuggestedNextWeekSessions(null);
-  }, [setSuggestedActivityEntries, setSuggestedNextWeekSessions]);
+  }, [
+    suggestedActivityEntries,
+    suggestedNextWeekSessions,
+    suggestedTimesPerWeek,
+  ]);
 
   const handleSendMessage = async () => {
     if (socket && isConnected) {
@@ -559,6 +574,42 @@ const LogPage: React.FC = () => {
     }
   };
 
+  const handleTimesPerWeekAcceptance = async () => {
+    if (!isConnected || !socket) {
+      toast.error("Not connected to server");
+      return;
+    }
+
+    const oldTimesPerWeek = suggestedTimesPerWeek?.old_times_per_week;
+    const newTimesPerWeek = suggestedTimesPerWeek?.new_times_per_week;
+    const planId = suggestedTimesPerWeek?.plan_id;
+
+    await authedApi.post(`/plans/${planId}/update`, {
+      data: {
+        times_per_week: newTimesPerWeek,
+      },
+    });
+
+    await authedApi.post("/ai/send-system-message", {
+      message: `User accepted the changes of ${oldTimesPerWeek} to ${newTimesPerWeek} times per week`,
+    });
+    sendMessage("done!", false);
+
+    setSuggestedTimesPerWeek(null);
+  };
+
+  const handleTimesPerWeekRejection = async () => {
+    const oldTimesPerWeek = suggestedTimesPerWeek?.old_times_per_week;
+    const newTimesPerWeek = suggestedTimesPerWeek?.new_times_per_week;
+
+    await authedApi.post("/ai/send-system-message", {
+      message: `User rejected the changes of ${oldTimesPerWeek} to ${newTimesPerWeek} times per week`,
+    });
+    sendMessage("done!", false);
+
+    setSuggestedTimesPerWeek(null);
+  };
+
   const handleActivityRejection = async (
     activityEntry: ActivityEntry,
     activity: Activity
@@ -635,7 +686,6 @@ const LogPage: React.FC = () => {
     const message = `User accepted the suggested sessions for the plan: \n${sessionsStr}`;
     await authedApi.post("/ai/send-system-message", { message });
     sendMessage("done!", false);
-
   };
 
   const handleSessionsRejection = async (sessions: PlanSession[]) => {
@@ -915,6 +965,16 @@ const LogPage: React.FC = () => {
                         onReject={handleSessionsRejection}
                       />
                     )}
+
+                  {suggestedTimesPerWeek && (
+                    <PlanTimesPerWeekUpdateBanner
+                      times_per_week={suggestedTimesPerWeek.new_times_per_week}
+                      old_times_per_week={suggestedTimesPerWeek.old_times_per_week}
+                      plan={userData?.plans.find(p => p.id === suggestedTimesPerWeek.plan_id)}
+                      onAccept={handleTimesPerWeekAcceptance}
+                      onReject={handleTimesPerWeekRejection}
+                    />
+                  )}
                 </motion.div>
               </motion.div>
             )}
