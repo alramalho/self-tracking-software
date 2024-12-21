@@ -89,24 +89,17 @@ const itemVariants = {
 const delayTime = 3; // 3 seconds
 const messageDisplayVariants = {
   initial: {
-    height: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     opacity: 1,
   },
   animate: {
-    height: "200px",
     opacity: 0,
     transition: {
-      height: {
-        duration: 0.8,
-        ease: "easeInOut",
-        delay: delayTime,
-      },
       opacity: {
         duration: 0.5,
-        delay: delayTime + 0.8, // Start fading after height animation completes
+        delay: delayTime + 0.8,
       },
     },
   },
@@ -714,33 +707,29 @@ const LogPage: React.FC = () => {
     sendMessage("done!", false);
   };
 
-  function clearToasts() {
-    toast.remove();
-  }
-
   useEffect(() => {
-    if (messageId && messageText) {
-      clearMessages();
-      if (messagesData.data) {
-        messagesData.data.messages
-          .slice(0, 2)
-          .map((message) => ({
-            role:
-              message.sender_id === userData?.user?.id ? "user" : "assistant",
-            content: message.text,
-          }))
-          .forEach((message) => {
-            addMessage(message as Message);
-          });
-      }
+    if (messageId && messageText && messagesData.isSuccess) {
       setTimeout(() => {
+        clearMessages();
+        if (messagesData.data?.messages) {
+          messagesData.data.messages
+            .slice(0, 1)
+            .map((message) => ({
+              role:
+                message.sender_id === userData?.user?.id ? "user" : "assistant",
+              content: message.text,
+            }))
+            .forEach((message) => {
+              addMessage(message as Message);
+            });
+        }
         setIsInitialMessageAnimating(false);
         handleReconnect();
       }, (delayTime + 1.4) * 1000); // delayTime + height animation + fade duration + small buffer
-    } else {
+    } else if (!messageId && !messageText) {
       setIsInitialMessageAnimating(false);
     }
-  }, [messageId, messageText]);
+  }, [messageId, messageText, messagesData.isSuccess, messagesData.data]);
 
   if (!hasLoadedUserData)
     return (
@@ -786,7 +775,7 @@ const LogPage: React.FC = () => {
               </motion.div>
             ) : (
               <motion.div
-                className="h-full flex flex-col justify-between min-h-[100%] bg-gray-100"
+                className="h-screen flex flex-col justify-between min-h-[100vh] bg-gray-100"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
@@ -969,8 +958,12 @@ const LogPage: React.FC = () => {
                   {suggestedTimesPerWeek && (
                     <PlanTimesPerWeekUpdateBanner
                       times_per_week={suggestedTimesPerWeek.new_times_per_week}
-                      old_times_per_week={suggestedTimesPerWeek.old_times_per_week}
-                      plan={userData?.plans.find(p => p.id === suggestedTimesPerWeek.plan_id)}
+                      old_times_per_week={
+                        suggestedTimesPerWeek.old_times_per_week
+                      }
+                      plan={userData?.plans.find(
+                        (p) => p.id === suggestedTimesPerWeek.plan_id
+                      )}
                       onAccept={handleTimesPerWeekAcceptance}
                       onReject={handleTimesPerWeekRejection}
                     />
