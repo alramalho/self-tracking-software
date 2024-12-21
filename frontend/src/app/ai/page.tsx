@@ -733,7 +733,7 @@ const LogPage: React.FC = () => {
 
   if (!hasLoadedUserData)
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
         <div className="flex flex-col items-start">
           <p className="text-left">Loading your data...</p>
@@ -775,7 +775,7 @@ const LogPage: React.FC = () => {
               </motion.div>
             ) : (
               <motion.div
-                className="h-screen flex flex-col justify-between min-h-[100vh] bg-gray-100"
+                className="h-full flex flex-col justify-between bg-gray-100"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
