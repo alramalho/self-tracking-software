@@ -164,6 +164,7 @@ const LogPage: React.FC = () => {
   const posthogFeatureFlagsInitialized =
     typeof isFeatureEnabled !== "undefined";
   const [isUserWhitelisted, setIsUserWhitelisted] = useState<boolean>(false);
+  const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
 
   useEffect(() => {
     if (posthogFeatureFlagsInitialized) {
@@ -179,8 +180,7 @@ const LogPage: React.FC = () => {
     useState(true);
 
   const [transcription, setTranscription] = useState<string>("");
-  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
-  const [outputMode, setOutputMode] = useState<"voice" | "text">("voice");
+  const [outputMode, setOutputMode] = useState<"voice" | "text">("text");
   const { isRecording, toggleRecording, cancelRecording } = useMicrophone();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { messages, addMessage, clearMessages } = useMessageHistory(); // Update this line
@@ -378,10 +378,6 @@ const LogPage: React.FC = () => {
       setIsLoading(false);
       toast.error("Not connected to server");
     }
-  };
-
-  const toggleInputMode = () => {
-    setInputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
   };
 
   const toggleOutputMode = () => {
@@ -708,7 +704,7 @@ const LogPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (messageId && messageText && messagesData.isSuccess) {
+    if (!hasTransitioned && messageId && messageText && messagesData.isSuccess) {
       setTimeout(() => {
         clearMessages();
         if (messagesData.data?.messages) {
@@ -725,6 +721,7 @@ const LogPage: React.FC = () => {
         }
         setIsInitialMessageAnimating(false);
         handleReconnect();
+        setHasTransitioned(true);
       }, (delayTime + 1.4) * 1000); // delayTime + height animation + fade duration + small buffer
     } else if (!messageId && !messageText) {
       setIsInitialMessageAnimating(false);
@@ -782,7 +779,7 @@ const LogPage: React.FC = () => {
               >
                 <motion.div
                   variants={itemVariants}
-                  className="relative min-h-[150px] max-h-[350px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
+                  className="relative min-h-[150px] max-h-[550px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
                 >
                   <Button
                     variant="ghost"
@@ -854,67 +851,24 @@ const LogPage: React.FC = () => {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className="flex flex-row items-center justify-between w-full max-w-[600px]"
+                        className="flex flex-row items-center justify-between w-full max-w-full"
                       >
-                        <Button
-                          variant="ghost"
-                          onClick={toggleInputMode}
-                          className="flex items-center space-x-2 hover:bg-gray-100"
-                          title={`${
-                            inputMode === "voice" ? "Voice" : "Text"
-                          } Input`}
-                        >
-                          {inputMode === "voice" ? (
-                            <Mic className="w-7 h-7 text-blue-500" />
-                          ) : (
-                            <MessageSquare className="w-7 h-7 text-gray-500" />
-                          )}
-                        </Button>
-
-                        <div className="border-[4px] bg-white shadow-inner rounded-full border-gray-700 w-full max-w-[220px] min-w-[220px] min-h-[4rem] flex items-center justify-between px-4">
-                          {inputMode === "voice" ? (
-                            <div className="flex flex-col items-center w-full">
-                              <AudioControls
-                                isRecording={isRecording}
-                                isConnected={isConnected}
-                                toggleRecording={handleToggleRecording}
-                                cancelRecording={cancelRecording}
-                                isLoading={isLoading}
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-center w-full">
-                              <ChatInput
-                                transcription={transcription}
-                                isConnected={isConnected}
-                                isLoading={isLoading}
-                                onTranscriptionChange={
-                                  handleTranscriptionChange
-                                }
-                                onSendMessage={handleSendMessage}
-                              />
-                            </div>
-                          )}
+                        <div className="border-[4px] bg-white shadow-inner rounded-full border-gray-700 w-full max-w-[600px] min-w-[220px] min-h-[4rem] flex items-center justify-between">
+                          <ChatInput
+                            transcription={transcription}
+                            isConnected={isConnected}
+                            isLoading={isLoading}
+                            isRecording={isRecording}
+                            onTranscriptionChange={handleTranscriptionChange}
+                            onSendMessage={handleSendMessage}
+                            onToggleRecording={handleToggleRecording}
+                            onCancelRecording={cancelRecording}
+                          />
                         </div>
-
-                        <Button
-                          variant="ghost"
-                          onClick={toggleOutputMode}
-                          className="flex items-center space-x-2 hover:bg-gray-100"
-                          title={`${
-                            outputMode === "voice" ? "Voice" : "Text"
-                          } Output`}
-                        >
-                          {outputMode === "voice" ? (
-                            <Volume2 className="w-7 h-7 text-blue-500" />
-                          ) : (
-                            <VolumeX className="w-7 h-7 text-gray-500" />
-                          )}
-                        </Button>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  {inputMode !== "voice" && (
+                  {outputMode !== "voice" && (
                     <div className="text-center -mt-1 mb-2">
                       <span className="text-xs text-gray-400">
                         ⚠️ Emotion analysis only available on voice mode
