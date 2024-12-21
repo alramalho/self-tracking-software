@@ -59,7 +59,7 @@ class MongoDBGateway(DBGateway):
         # Update embeddings for fields that require it
         for key, value in data.items():
             if key.endswith('_embedding'):
-                self._ensure_vector_search_index(key)
+                # self._ensure_vector_search_index(key)
                 continue  # Skip embedding fields
             embedding_key = f"{key}_embedding"
             if embedding_key in data:
