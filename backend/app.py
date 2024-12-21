@@ -50,20 +50,45 @@ async def get_user_from_request(request: Request) -> Optional[User]:
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        try:
+            response = await call_next(request)
 
-        response = await call_next(request)
+            # Get the response body
+            response_body = b""
+            async for chunk in response.body_iterator:
+                response_body += chunk
 
-        # Get the response body
-        response_body = b""
-        async for chunk in response.body_iterator:
-            response_body += chunk
+            # Log the response body and traceback for errors
+            if response.status_code >= 400:
+                error_message = f"Error response body: {response_body.decode()}"
+                user = await get_user_from_request(request)
+                user_id = user.id if user else "unknown"
+                
+                posthog.capture(
+                    distinct_id=user_id,
+                    event='error',
+                    properties={
+                        "error": error_message,
+                        "user_id": user_id,
+                        "user_username": user.username if user else "unknown",
+                        "path": request.url.path,
+                        "method": request.method,
+                        "status_code": response.status_code,
+                    },
+                )
+                logger.error(error_message)
 
-        # Log the response body and traceback for errors
-        if response.status_code >= 400:
-            error_message = f"Error response body: {response_body.decode()}"
+            # Re-create the response with the consumed body
+            return Response(
+                content=response_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
+            )
+        except Exception as e:
+            error_message = f"Unhandled error: {str(e)}\n{traceback.format_exc()}"
             user = await get_user_from_request(request)
             user_id = user.id if user else "unknown"
-
             
             posthog.capture(
                 distinct_id=user_id,
@@ -74,18 +99,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "user_username": user.username if user else "unknown",
                     "path": request.url.path,
                     "method": request.method,
-                    "status_code": response.status_code,
+                    "status_code": 500,
                 },
             )
             logger.error(error_message)
-
-        # Re-create the response with the consumed body
-        return Response(
-            content=response_body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.media_type,
-        )
+            
+            return Response(
+                content=json.dumps({"detail": str(e)}),
+                status_code=500,
+                media_type="application/json"
+            )
 
 
 app.add_middleware(LoggingMiddleware)
