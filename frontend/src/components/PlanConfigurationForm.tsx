@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -189,6 +189,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const userData = userDataQuery.data;
+  const planData = userData?.plans?.find((p) => p.id === plan?.id);
 
   // Load initial state from localStorage or use defaults
   const loadInitialState = (): CachedFormState => {
@@ -280,7 +281,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     initialState.timesPerWeek || 0
   );
   const [currentStep, setCurrentStep] = useState(1);
-  const [canConfirm, setCanConfirm] = useState(false);
 
   // Split activities into existing and new
   const [existingActivities, setExistingActivities] = useState<Activity[]>(
@@ -361,95 +361,118 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     );
   };
 
-  const handleConfirm = async () => {
-    try {
-      console.log('Starting handleConfirm...');
-      console.log('Initial state:', {
-        goal,
-        selectedEmoji,
-        currentFinishingDate,
-        planNotes,
-        planDuration,
-        outlineType,
-        timesPerWeek,
-        existingActivities,
-        newActivities,
-        generatedPlan
-      });
+  const createPlanToConfirm = useCallback((): Partial<GeneratedPlan> => {
+    const basePlan = {
+      goal,
+      emoji: selectedEmoji,
+      finishing_date: currentFinishingDate,
+      notes: planNotes,
+      duration_type: planDuration.type,
+      outline_type: outlineType,
+      overview: "", // backwards compatibility
+      intensity: "", // backwards compatibility
+      activities: [...existingActivities, ...newActivities].map(
+        (activity) => ({
+          id: activity.id,
+          emoji: activity.emoji || "❓",
+          title: activity.title,
+          measure: activity.measure,
+        })
+      ),
+    };
 
-      setIsProcessing(true);
-
-      let planToConfirm: Partial<GeneratedPlan> = {
-        goal,
-        emoji: selectedEmoji,
-        finishing_date: currentFinishingDate,
-        notes: planNotes,
-        duration_type: planDuration.type,
-        outline_type: outlineType,
-        overview: "", // backwards compatibility
-        intensity: "", // backwards compatibility
-        activities: [...existingActivities, ...newActivities].map(
-          (activity) => ({
-            id: activity.id,
-            emoji: activity.emoji || "❓",
-            title: activity.title,
-            measure: activity.measure,
-          })
-        ),
-      };
-
-      console.log('Initial planToConfirm:', planToConfirm);
-
-      if (outlineType === "specific") {
-        if (generatedPlan) {
-          console.log('Using generated plan:', generatedPlan);
-          planToConfirm = {
-            ...planToConfirm,
-            ...generatedPlan,
-          };
-        } else {
-          console.log('Warning: No generated plan available for specific outline type');
-        }
-      } else {
-        console.log('Creating times_per_week plan');
-        // For times_per_week plans, create plan without sessions
-        planToConfirm = {
-          ...planToConfirm,
-          times_per_week: timesPerWeek,
-          sessions: [...existingActivities, ...newActivities].map(
-            (activity) => ({
-              date: new Date(currentFinishingDate || new Date().toISOString()),
-              descriptive_guide: "",
-              quantity: 1,
-              activity_id: activity.id,
-              activity_name: activity.title,
-              emoji: activity.emoji || "❓",
-            })
-          ),
+    if (outlineType === "specific") {
+      if (generatedPlan) {
+        return {
+          ...basePlan,
+          ...generatedPlan,
         };
       }
+      return basePlan;
+    } 
+    
+    console.log("timesPerWeek in createPlanToConfirm", timesPerWeek);
+    
+    // For times_per_week plans
+    return {
+      ...basePlan,
+      times_per_week: timesPerWeek,
+      sessions: [...existingActivities, ...newActivities].map(
+        (activity) => ({
+          date: new Date(currentFinishingDate || new Date().toISOString()),
+          descriptive_guide: "",
+          quantity: 1,
+          activity_id: activity.id,
+          activity_name: activity.title,
+          emoji: activity.emoji || "❓",
+        })
+      ),
+    };
+  }, [
+    goal,
+    selectedEmoji,
+    currentFinishingDate,
+    planNotes,
+    planDuration.type,
+    outlineType,
+    existingActivities,
+    newActivities,
+    timesPerWeek,
+    generatedPlan,
+  ]);
 
-      console.log('Final planToConfirm:', planToConfirm);
+  const hasMadeAnyChanges = useCallback(() => {
 
-      // IMPORTANT MESSAGE: THIS IS HIGHLY DIRTY AND TBH BREAKING SOLID PRICINPLES. HERE WE'RE BOTH EDITING, CREATING A PLETHORA OF DIFFERENT PLAN TYPES, ANY FURTHER MODIFICATION NEEDS TO CLEAN THIS MESS. ENOUGH.
+    const planToBeSaved = createPlanToConfirm();
+    console.log("planToBeSaved.times_per_week in hasMadeAnyChanges", planToBeSaved.times_per_week);
+    
+    if (!planData && !isEdit) return true; // New plan creation
+    if (!planData) {
+      console.log("planData is null");
+      return false;
+    } // Edit mode but no plan data
+    
+    console.log("planData.times_per_week", planData.times_per_week);
+    // Check basic plan properties
+    if (planToBeSaved.goal !== planData.goal) return true;
+    if (planToBeSaved.emoji !== planData.emoji) return true;
+    if (planToBeSaved.finishing_date !== planData.finishing_date) return true;
+    if (planToBeSaved.duration_type !== planData.duration_type) return true;
+    if (planToBeSaved.outline_type !== planData.outline_type) return true;
+    if (planToBeSaved.times_per_week !== planData.times_per_week) return true;
+
+    // Check activities
+    const currentActivityIds = new Set(planToBeSaved.activities?.map(a => a.id) ?? []);
+    const dbActivityIds = new Set(getPlanActivities(planData).map(a => a.id));
+    
+    if (currentActivityIds.size !== dbActivityIds.size) return true;
+    
+    // Convert Set to Array for iteration
+    return Array.from(currentActivityIds).some(id => !dbActivityIds.has(id));
+  }, [
+    createPlanToConfirm,
+    planData,
+    isEdit,
+    userData?.activities,
+  ]);
+
+  const handleConfirm = async () => {
+    try {
+      setIsProcessing(true);
+      
+      const planToConfirm = createPlanToConfirm();
 
       // Clear cache after successful confirmation
       const cacheKey = isEdit
         ? `editPlanJourneyState_${plan?.id}`
         : "createPlanJourneyState";
       localStorage.removeItem(cacheKey);
-      console.log('Cleared cache with key:', cacheKey);
 
-      console.log('Calling onConfirm with plan...');
       await onConfirm(planToConfirm as GeneratedPlan);
-      console.log('onConfirm completed successfully');
-
     } catch (error) {
-      console.error("Confirmation failed:", error);
       toast.error("Failed to confirm plan");
     } finally {
       setIsProcessing(false);
-      console.log('handleConfirm completed');
     }
   };
 
@@ -526,17 +549,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       setCurrentStep(5);
       scrollToStep(5);
     }
-    if (currentStep === 5 && outlineType) {
-      if (outlineType === "times_per_week") {
-        if (timesPerWeek > 0) {
-          setCanConfirm(true);
-        }
-      } else if (generatedPlan) {
-        setCurrentStep(6);
-        scrollToStep(6);
-      } else {
-        setCanConfirm(true);
-      }
+    if (currentStep === 5 && outlineType == "specific") {
+      setCurrentStep(6);
+      scrollToStep(6);
     }
   }, [
     planDuration.date,
@@ -566,22 +581,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     // Additional requirements based on outline type
     if (outlineType === "times_per_week") {
       return timesPerWeek > 0;
-    }
-
-    return true;
-  };
-
-  const canConfirmPlan = () => {
-    if (!canGeneratePlan()) return false;
-
-    // if it is creating, we need to have a generated plan
-    if (outlineType === "specific" && !isEdit) {
-      return generatedPlan !== null;
-    }
-
-    // if it is editing and there's activity changes, we need to have a generated plan
-    if (isEdit && initialActivities.length != existingActivities.length) {
-      return generatedPlan !== null;
     }
 
     return true;
@@ -954,7 +953,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               Cancel
             </Button>
           )}
-          {canConfirmPlan() && (
+          {hasMadeAnyChanges() && (
             <Button
               onClick={handleConfirm}
               disabled={isProcessing}
