@@ -347,9 +347,6 @@ class FlowchartLLMFramework:
                         )
                         node_prompt += f"\n\nContext: {model_name}: {data_dict}"
 
-                if node_instance_id == "CheckPlanDiscussed_1":
-                    print(f"bepp")
-
                 connections = node.connections
                 if len(connections) == 0:
                     _, _, output_text = await self.llm_function(
@@ -363,8 +360,6 @@ class FlowchartLLMFramework:
                         context=context,
                     )
                     result = connections[decision]
-                    if node_instance_id == "CheckPlanDiscussed_1":
-                        print(f"bepp")
                     
                 else:  # Transition or end node, result is the next node
                     if node.output_schema:
@@ -376,8 +371,6 @@ class FlowchartLLMFramework:
                     result = connections["default"]
 
             # Store results and mark as completed
-            if node_instance_id == "CheckPlanDiscussed_1":
-                print(f"bepp")
             self.node_results[node_instance_id] = result
             self.completed_nodes.add(node_instance_id)
 
@@ -438,9 +431,6 @@ class FlowchartLLMFramework:
             current_instance_id = self.get_node_instance_id(current_node_id)
             current_node = self.flowchart[current_node_id]
             logger.info(f"Processing current node: {current_instance_id}")
-
-            if current_instance_id == "CheckPlanDiscussed_1":
-                print(f"bepp")
 
             if current_instance_id not in self.execution_path:
                 self.execution_path.append(current_instance_id)
@@ -530,9 +520,6 @@ class FlowchartLLMFramework:
             assert current_instance_id in self.node_results, f"Node '{current_instance_id}' not found in node_results"
             
             next_node = self.node_results[current_instance_id]
-
-            if current_instance_id == "CheckPlanDiscussed_1":
-                print(f"bepp")
 
             node_entry["next_node"] = next_node
             traversal.append(node_entry)

@@ -11,6 +11,7 @@ from entities.plan import Plan
 from datetime import timedelta
 from .flowchart_framework import FlowchartLLMFramework
 from gateways.activities import ActivitiesGateway
+from ai.assistant.activity_extractor import ActivityExtractorAssistant
 from controllers.plan_controller import PlanController, PlanSession
 from .flowchart_nodes import (
     Node,
@@ -85,7 +86,7 @@ first_message_flowchart = {
         connections={"Yes": "Introduce", "No": "FirstTimeToday"},
     ),
     "Introduce": Node(
-        text="Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to help them prepare next week, which you'll do by analysing their plans and activity logs. Ask for his confirmation.",
+        text="Introduce yourself, telling what you can do for the user.",
         connections={},  # Empty connections indicate an end node
     ),
     "FirstTimeToday": Node(
@@ -100,11 +101,20 @@ first_message_flowchart = {
     ),
 }
 
+class LetsGoToActivityExtractor(BaseModel):
+    irrelevant_number: str = Field(..., description="Return here a number between 1 and 10.")
 
 every_message_flowchart = {
     "HasRequest": Node(
         text="Was the last user message a request, question or instruction that is not related to the plans?",
-        connections={"Yes": "Answer", "No": "ExtractPlanNames"},
+        connections={"Yes": "Answer", "No": "CheckActivityManagement"},
+    ),
+    "CheckActivityManagement": Node(
+        text="Is the user asking you to manage any of their activities?",
+        connections={"Yes": "ExitToActivityExtractor", "No": "Answer"},
+    ),
+    "ExitToActivityExtractor": Node(
+        text="Just return the phrase 'exit to activity extractor'.",
     ),
     "Answer": Node(
         text="Address the user's request on last message, having in mind your goals and purpose.",
@@ -202,6 +212,7 @@ class WeekAnalyserAssistant(object):
         system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
         Respond to the user in the same language that he talks to you in.
         No matter what, make sure your answer never jumps the conversation and has the user's last message into account.
+        You can also help the user extract past activities, if it is needed, even though is not your primary objective.
         """
 
         if is_first_message_in_more_than_a_day:
@@ -234,7 +245,7 @@ class WeekAnalyserAssistant(object):
         --- Now here's your actual conversation history with the user:
         {self.memory.read_all_as_str(max_words=750, max_age_in_minutes=12*60)}
 
-        {f"<system note>The detected user's emotions on HIS LAST MESSAGE are: {[f'{e.emotion} ({e.score * 100:.2f}%)' for e in emotions]}</system note>" if emotions else ""}
+        {f"<system note>Take special attention to any user present emotions, if present.</system note>" if emotions else ""}
 
         --- Only output the message to be sent to the user.
         """
@@ -246,23 +257,29 @@ class WeekAnalyserAssistant(object):
         elif result.startswith(f"{self.name}:"):
             result = result[len(f"{self.name}:") :]
 
-        self.memory.write(
-            Message.new(
-                result,
-                sender_name=self.name,
-                sender_id="0",
-                recipient_name=self.user.name,
-                recipient_id=self.user.id,
-            )
-        )
-
         logger.info(f"FRAMEWORK RESULT: {result}")
         logger.info(f"EXTRACTED: {extracted}")
 
         # Create a mapping of plan names to IDs TODO: this assumes that the plan present plan name is unique
         plan_name_to_id = {plan.goal: plan.id for plan in self.user_plans}
         
-        if "SuggestChanges" in extracted:
+        if "exit to activity extractor" in result.lower():
+            assistant = ActivityExtractorAssistant(
+                memory=self.memory,
+                user=self.user,
+                user_activities=self.user_activities,
+            )
+            return await assistant.get_response(user_input, message_id, emotions)
+        elif "SuggestChanges" in extracted:
+            self.memory.write(
+                Message.new(
+                    result,
+                    sender_name=self.name,
+                    sender_id="0",
+                    recipient_name=self.user.name,
+                    recipient_id=self.user.id,
+                )
+            )
             if extracted["`SuggestedChanges`"].plan_type == "specific":
                 plan_id = plan_name_to_id[extracted["SuggestedChanges"].plan_name]
                 plan = plan_controller.get_plan(plan_id=plan_id)
