@@ -16,6 +16,7 @@ interface PlanUpdateBannerProps {
   plan_id: string;
   onAccept: (sessions: PlanSession[]) => void;
   onReject: (sessions: PlanSession[]) => void;
+  disabled: boolean;
 }
 
 const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
@@ -24,6 +25,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
   plan_id,
   onAccept,
   onReject,
+  disabled,
 }) => {
   const { useUserDataQuery } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
@@ -33,7 +35,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
     <div className="w-full max-w-md space-y-4">
       <div
         key={plan_id}
-        className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+        className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -50,6 +52,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               variant="ghost"
               size="sm"
               className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              disabled={disabled}
               onClick={() => onAccept(sessions)}
             >
               <Check className="w-4 h-4 mr-2" />
@@ -60,6 +63,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               size="sm"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={() => onReject(sessions)}
+              disabled={disabled}
             >
               <X className="w-4 h-4 mr-2" />
               Reject All

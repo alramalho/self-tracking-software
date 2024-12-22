@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useMessageHistory, Message } from "@/hooks/useMessageHistory"; // Add this import
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
-import AudioControls from "@/components/AudioControls";
 import toast from "react-hot-toast";
 import {
   WifiOff,
@@ -158,7 +157,8 @@ const LogPage: React.FC = () => {
   const { addToNotificationCount, sendPushNotification } = useNotifications();
 
   const { useUserDataQuery, hasLoadedUserData, messagesData } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const userDataQuery = useUserDataQuery("me");
+  const { data: userData } = userDataQuery;
 
   const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
   const posthogFeatureFlagsInitialized =
@@ -558,7 +558,7 @@ const LogPage: React.FC = () => {
 
       await authedApi.post("/ai/send-system-message", { message });
       sendMessage("done!", false);
-
+      userDataQuery.refetch();
       setPendingActivityResponses({ accepted: [], rejected: [] });
     }
   };
@@ -585,6 +585,7 @@ const LogPage: React.FC = () => {
     sendMessage("done!", false);
 
     setSuggestedTimesPerWeek(null);
+    userDataQuery.refetch();
   };
 
   const handleTimesPerWeekRejection = async () => {
@@ -675,6 +676,7 @@ const LogPage: React.FC = () => {
     const message = `User accepted the suggested sessions for the plan: \n${sessionsStr}`;
     await authedApi.post("/ai/send-system-message", { message });
     sendMessage("done!", false);
+    userDataQuery.refetch();
   };
 
   const handleSessionsRejection = async (sessions: PlanSession[]) => {
@@ -904,6 +906,7 @@ const LogPage: React.FC = () => {
                         sessions={suggestedNextWeekSessions.sessions}
                         old_sessions={suggestedNextWeekSessions.old_sessions}
                         plan_id={suggestedNextWeekSessions.plan_id}
+                        disabled={!isConnected}
                         onAccept={handleSessionsAcceptance}
                         onReject={handleSessionsRejection}
                       />
@@ -918,6 +921,7 @@ const LogPage: React.FC = () => {
                       plan={userData?.plans.find(
                         (p) => p.id === suggestedTimesPerWeek.plan_id
                       )}
+                      disabled={!isConnected}
                       onAccept={handleTimesPerWeekAcceptance}
                       onReject={handleTimesPerWeekRejection}
                     />
@@ -964,3 +968,4 @@ const LogPage: React.FC = () => {
 };
 
 export default LogPage;
+

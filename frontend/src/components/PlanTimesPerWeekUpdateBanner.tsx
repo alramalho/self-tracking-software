@@ -9,6 +9,7 @@ interface PlanTimesPerWeekUpdateBannerProps {
   plan?: ApiPlan;
   onAccept: () => Promise<void>;
   onReject: () => Promise<void>;
+  disabled: boolean;
 }
 
 const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> = ({
@@ -17,6 +18,7 @@ const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> 
   plan,
   onAccept,
   onReject,
+  disabled,
 }) => {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -48,7 +50,7 @@ const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> 
   if (!plan) return null;
 
   return (
-    <div className="bg-white drop-shadow-md border border-gray-200 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200">
+    <div className={`bg-white drop-shadow-md border border-gray-200 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
       <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3">
         <span className="text-2xl">{plan.emoji || '📅'}</span>
         <p className="text-sm text-gray-700">
@@ -58,7 +60,7 @@ const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> 
       <div className="flex ml-4">
         <button
           onClick={handleAccept}
-          disabled={isAccepting || isRejecting}
+          disabled={isAccepting || isRejecting || disabled}
           className={`${buttonClasses} ${
             isAccepting ? 'bg-green-50' : 'bg-green-100 hover:bg-green-200'
           } text-green-600`}
@@ -72,7 +74,7 @@ const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> 
         </button>
         <button
           onClick={handleReject}
-          disabled={isAccepting || isRejecting}
+          disabled={isAccepting || isRejecting || disabled}
           className={`${buttonClasses} ${
             isRejecting ? 'bg-red-50' : 'bg-red-100 hover:bg-red-200'
           } text-red-600 ml-2`}
