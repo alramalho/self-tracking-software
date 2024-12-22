@@ -10,7 +10,7 @@ import os
 import asyncio
 
 
-def ask_text(text: str, system: str, model: str = LLM_MODEL, temperature: float = 0.3) -> str:
+def ask_text(text: str, system: str, model: str = LLM_MODEL, temperature: float = 0) -> str:
     # logger.debug(f"Asking text: {text}\n\n to assistant with system\n'{system}' with temperature {temperature}")
     messages = [
         {"role": "system", "content": system},
@@ -49,7 +49,7 @@ def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL)
     # logger.debug(f"Elapsed time for '{model}' ask_schema call: {elapsed_time:.2f} ms")
     return result
 
-async def ask_text_async(text: str, system: str, model: str = LLM_MODEL, temperature: float = 0.3) -> str:
+async def ask_text_async(text: str, system: str, model: str = LLM_MODEL, temperature: float = 0) -> str:
     start_time = time.time()
     messages = [
         {"role": "system", "content": system},

@@ -61,8 +61,15 @@ first_message_flowchart = {
 
 
 every_message_flowchart = {
+    "Start": Node(
+        text="Check if the second to last message in the conversation history is a system message about activity rejection and you didn't follow up on it. Was an activity just rejected without you asking for why?",
+        connections={"Yes": "HandleRejection", "No": "ActivityScanner"},
+    ),
+    "HandleRejection": Node(
+        text="Ask the user why they rejected the activity tracking and how can you adapt it.",
+    ),
     "ActivityScanner": Node(
-        text="Did the user recently mentioned in the conversation history any new activity that wasn't extracted yet? Reason thoroughly about the activities discussed & whether they were already extracted and finalized (accepted or rejected) before deciding.",
+        text="Based on the conversation history, check if the user mentioned any new activities that still need to be processed. An activity needs processing if it was either: 1) Just mentioned but not yet extracted, or 2) Previously extracted but rejected by the user. An activity does NOT need processing if it was already extracted and accepted, or if the user explicitly dismissed tracking it. Are there any activities that need processing?",
         connections={"Yes": "CheckActivityQualifies", "No": "Converse"},
         temperature=0.7,
     ),
