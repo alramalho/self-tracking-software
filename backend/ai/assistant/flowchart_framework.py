@@ -131,7 +131,7 @@ class FlowchartLLMFramework:
                         str,
                         Field(
                             ...,
-                            description="Your step by step reasoning analysing the instruction within <instruction> and how to address it. ",
+                            description="Your step by step reasoning analysing how do address the instruction within <instruction>, culminating in a 'decision'. The 'Context' nearby provides an history of your previous thought chain, possibly relevant for instructions that seemingly refer pre-existing content.",
                         ),
                     ),
                     "decision": (

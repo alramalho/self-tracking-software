@@ -676,6 +676,7 @@ class PlanController:
     def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None, future_day_limit: int = None) -> str:
         """
         Get readable plans and their sessions for a user within the specified time period.
+        Handles both specific schedule plans and times-per-week plans.
         
         Args:
             user_id: The ID of the user
@@ -691,72 +692,16 @@ class PlanController:
             return "No active plans found"
 
         readable_plans: List[str] = []
-        current_date = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)  # Start of today
-
         for index, plan in enumerate(plans):
-            # Filter sessions based on both past and future limits
-            filtered_sessions = plan.sessions
-            if past_day_limit is not None or future_day_limit is not None:
-                filtered_sessions = [
-                    session for session in plan.sessions
-                    if (
-                        (past_day_limit is None or 
-                         (current_date - datetime.fromisoformat(session.date).replace(
-                             tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0)).days <= past_day_limit)
-                        and
-                        (future_day_limit is None or 
-                         (datetime.fromisoformat(session.date).replace(
-                             tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0) - current_date).days <= future_day_limit)
-                    )
-                ]
-
-            if not filtered_sessions:
-                continue
-
-            # Get activities for this plan's sessions
-            activity_ids = {session.activity_id for session in filtered_sessions}
-            activities = {
-                aid: self.activities_gateway.get_activity_by_id(aid)
-                for aid in activity_ids
-            }
-
-            # Separate past and future sessions
-            past_sessions: List[str] = []
-            future_sessions: List[str] = []
+            plan_header = f"Plan {index + 1} (with ID '{plan.id}'): Name: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%A, %b %d') if plan.finishing_date else 'no end date'})"
             
-            for session in filtered_sessions:
-                activity = activities.get(session.activity_id)
-                if not activity:
-                    continue
-
-                session_date = datetime.fromisoformat(session.date).replace(tzinfo=UTC)
-                formatted_date = session_date.strftime("%A, %b %d")
-                session_str = f"  - {formatted_date} - {activity.title} (ID: {activity.id}) ({session.quantity} {activity.measure})"
+            if plan.outline_type == "specific":
+                plan_text = self._get_readable_specific_plan(plan, past_day_limit, future_day_limit)
+            else:  # times_per_week type
+                plan_text = self._get_readable_times_per_week_plan(plan, past_day_limit, future_day_limit)
                 
-                if session_date <= current_date:
-                    past_sessions.append(session_str)
-                else:
-                    future_sessions.append(session_str)
-
-            if past_sessions or future_sessions:
-                plan_text = [f"Plan {index + 1} (with ID '{plan.id}'): Name: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%A, %b %d') if plan.finishing_date else 'no end date'})"]
-                
-                if past_sessions:
-                    plan_text.append(f"Sessions that were scheduled for the last {past_day_limit} days (not this are not done sessions):")
-                    plan_text.extend(past_sessions)
-                
-                if future_sessions:
-                    if plan.outline_type == "specific":
-                        if past_sessions:  # Add a blank line if we had past sessions
-                            plan_text.append("")
-                        plan_text.append(f"Upcoming sessions in the next {future_day_limit} days:")
-                        plan_text.extend(future_sessions)
-                    else:
-                        plan_text.append(f"For the next week, user is just planning on doing {plan.times_per_week} sessions.")
-                        plan_text.extend(future_sessions)
-
-                
-                readable_plans.append("\n".join(plan_text))
+            if plan_text:  # Only add plans that have content
+                readable_plans.append(f"{plan_header}\n{plan_text}")
 
         if not readable_plans:
             if past_day_limit and future_day_limit:
@@ -767,6 +712,94 @@ class PlanController:
                 return "No upcoming sessions found in active plans"
             
         return "\n\n".join(readable_plans)
+
+    def _get_readable_specific_plan(self, plan: Plan, past_day_limit: Optional[int], future_day_limit: Optional[int]) -> str:
+        """Helper method to format specific schedule plans"""
+        current_date = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Filter sessions based on time limits
+        filtered_sessions = [
+            session for session in plan.sessions
+            if (past_day_limit is None or 
+                (current_date - datetime.fromisoformat(session.date).replace(
+                    tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0)).days <= past_day_limit)
+            and
+            (future_day_limit is None or 
+                (datetime.fromisoformat(session.date).replace(
+                    tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0) - current_date).days <= future_day_limit)
+        ]
+        
+        if not filtered_sessions:
+            return ""
+        
+        # Get activities for sessions
+        activity_ids = {session.activity_id for session in filtered_sessions}
+        activities = {
+            aid: self.activities_gateway.get_activity_by_id(aid)
+            for aid in activity_ids
+        }
+        
+        past_sessions: List[str] = []
+        future_sessions: List[str] = []
+        
+        for session in filtered_sessions:
+            activity = activities.get(session.activity_id)
+            if not activity:
+                continue
+            
+            session_date = datetime.fromisoformat(session.date).replace(tzinfo=UTC)
+            formatted_date = session_date.strftime("%A, %b %d")
+            session_str = f"  - {formatted_date} - {activity.title} (ID: {activity.id}) ({session.quantity} {activity.measure})"
+            
+            if session_date <= current_date:
+                past_sessions.append(session_str)
+            else:
+                future_sessions.append(session_str)
+            
+        plan_text = []
+        if past_sessions:
+            plan_text.append(f"Sessions that were scheduled for the last {past_day_limit} days (not this are not done sessions):")
+            plan_text.extend(past_sessions)
+        
+        if future_sessions:
+            if past_sessions:
+                plan_text.append("")
+            plan_text.append(f"Upcoming sessions in the next {future_day_limit} days:")
+            plan_text.extend(future_sessions)
+        
+        return "\n".join(plan_text)
+
+    def _get_readable_times_per_week_plan(self, plan: Plan, past_day_limit: Optional[int], future_day_limit: Optional[int]) -> str:
+        """Helper method to format times-per-week plans"""
+        current_date = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Get unique activities from sessions
+        activity_ids = {session.activity_id for session in plan.sessions}
+        activities = {
+            aid: self.activities_gateway.get_activity_by_id(aid)
+            for aid in activity_ids
+        }
+        
+        # Format activities list
+        activity_list = []
+        for activity in activities.values():
+            if activity:
+                activity_list.append(f"  - {activity.title} (ID: {activity.id})")
+        
+        plan_text = []
+        plan_text.append(f"This is a flexible plan targeting {plan.times_per_week} sessions per week.")
+        plan_text.append("Available activities:")
+        plan_text.extend(activity_list)
+        
+        # Add past week completion info if requested
+        if past_day_limit:
+            week_start = current_date - timedelta(days=current_date.weekday())
+            completed_sessions = sum(1 for session in plan.sessions 
+                                   if datetime.fromisoformat(session.date).replace(tzinfo=UTC) >= week_start 
+                                   and datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= current_date)
+            plan_text.append(f"\nThis week's progress: {completed_sessions}/{plan.times_per_week} sessions completed")
+        
+        return "\n".join(plan_text)
 
 if __name__ == "__main__":
     from shared.logger import create_logger

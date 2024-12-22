@@ -48,6 +48,7 @@ class AllPlanNamesSchema(BaseModel):
 
 
 class SuggestedChanges(BaseModel):
+    analysis: str = Field(..., description="Analysis of the plan's current status and why changes are needed")
     plan_name: str = Field(..., description="The name of the plan")
     plan_type: Literal["specific", "times_per_week"] = Field(..., description="The type of the plan in question.")
     next_week_sessions: List[PlanSession] = Field(
@@ -105,19 +106,23 @@ class LetsGoToActivityExtractor(BaseModel):
     irrelevant_number: str = Field(..., description="Return here a number between 1 and 10.")
 
 every_message_flowchart = {
-    "HasRequest": Node(
-        text="Was the last user message a request, question or instruction that is not related to the plans?",
-        connections={"Yes": "Answer", "No": "CheckActivityManagement"},
-    ),
-    "CheckActivityManagement": Node(
-        text="Is the user asking you to manage any of their activities?",
-        connections={"Yes": "ExitToActivityExtractor", "No": "Answer"},
+    "CheckMessageIntent": Node(
+        text="What is the primary intent of the user's last message? Choose one: 'plan_management' if about adjusting/planning next week's activities, 'activity_logging' if about recording past activities, 'other_request' if it's an unrelated request/question, or 'general_conversation' if none of the above.",
+        connections={
+            "plan_management": "ExtractPlanNames",
+            "activity_logging": "ExitToActivityExtractor",
+            "other_request": "HandleRequest",
+            "general_conversation": "HandleConversation"
+        }
     ),
     "ExitToActivityExtractor": Node(
         text="Just return the phrase 'exit to activity extractor'.",
     ),
-    "Answer": Node(
-        text="Address the user's request on last message, having in mind your goals and purpose.",
+    "HandleRequest": Node(
+        text="Address the user's specific request or question, keeping in mind your goals and purpose.",
+    ),
+    "HandleConversation": Node(
+        text="Engage in general conversation while gently steering towards discussing their plans if appropriate.",
     ),
     "ExtractPlanNames": Node(
         text="Extract all plan names from the users plan list.",
@@ -128,50 +133,49 @@ every_message_flowchart = {
         text="",
         iterator="current_plan",
         collection="plan_names",
-        connections={"default": "CheckPlanDiscussed"},
+        connections={"default": "CheckPlanRelevance"},
         needs=["ExtractPlanNames"],
     ),
-    "CheckPlanDiscussed": Node(
-        text="Based exclusively on the conversation history, did you explicitly or implicitly ask the user if he wants to discuss the plan '${current_plan}'?",
-        connections={"Yes": "CheckUserWantsToDiscussPlan", "No": "AskToDiscussPlan"},
+    "CheckPlanRelevance": Node(
+        text="""Based on the conversation history, determine if we should discuss plan '${current_plan}'. Consider:
+        1. Has the user explicitly mentioned not wanting to discuss this plan?
+        2. Is the user clearly focused on discussing a different plan?
+        3. Have we already concluded discussion about this plan by suggesting and accepting proposed changes?
+
+        Analyse each of the above in your reasoning, and answer 'Discuss' only if none of them is true.""",
+        connections={"Discuss": "AnalyzePlanStatus", "Skip": "NextPlan"},
     ),
-    "AskToDiscussPlan": Node(
-        text="Ask the user if they would like to discuss the plan '${current_plan}', making a bridge to the conversation and giving an overview on how the plan is doing by the outlook of recent user activity.",
-        temperature=1,
-    ),
-    "CheckUserWantsToDiscussPlan": Node(
-        text="Based exclusively on the conversation history, has the user accepted to discuss the plan '${current_plan}'?",
-        connections={"Yes": "CheckUserMentionedNextWeekPlans", "No": "NextPlan"},
-    ),
-    "CheckUserMentionedNextWeekPlans": Node(
-        text="Did the user explictly mention in the conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing? Note that a mention that no adjustments are needed is also an explicit mention and should be answered with 'Yes'",
-        connections={"Yes": "ShouldSuggestChanges", "No": "AskNextWeekPlans"},
-    ),
-    "AskNextWeekPlans": Node(
-        text="Remind the user of his upcoming week planned sessions for '${current_plan}' and ask what's his plans about it / if he plans on doing them all.",
-        temperature=1,
-    ),
-    "ShouldSuggestChanges": Node(
-        text="Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? You must start your reasoning with \"Based on the conversation history for plan '${current_plan}' ...\".",
+    "AnalyzePlanStatus": Node(
+        text="""Analyze the current status of plan '${current_plan}' and determine if changes are needed. Consider:
+        1. Recent activity completion rate
+        2. User's explicit mentions about next week's intentions
+        3. Any difficulties or challenges mentioned
+        
+        Output your analysis and conclude if changes are needed with a Yes/No.""",
         connections={"Yes": "SuggestChanges", "No": "NextPlan"},
     ),
     "SuggestChanges": Node(
-        text="Analyse the plan '${current_plan}'. If of the 'specific' type you can only suggest next week's sessions. If of the 'times per week' type you can only suggest the new number of sessions per week.",
+        text="""Analyze the current status of plan '${current_plan}' and determine if changes are needed. Consider:
+        1. Recent activity completion rate
+        2. User's explicit mentions about next week's intentions
+        3. Any difficulties or challenges mentioned
+        
+        And suggest specific changes for plan '${current_plan}'. If it's a 'specific' type plan, suggest next week's sessions. If it's a 'times per week' type, suggest the new number of sessions per week.""",
         temperature=1,
         output_schema=SuggestedChanges,
-        connections={"default": "InformTheUsreAboutTheChanges"},
+        connections={"default": "InformUserAboutChanges"},
     ),
-    "InformTheUsreAboutTheChanges": Node(
-        text="Inform the user that you've generated sessions replacing next week's ones for plan '${current_plan}', which now he needs to accept or reject.",
+    "InformUserAboutChanges": Node(
+        text="Inform the user about the suggested changes for plan '${current_plan}', which he now needs to accept or reject.",
         needs=["SuggestChanges"],
     ),
     "NextPlan": LoopContinueNode(
         text="",
         connections={"HasMore": "StartPlanLoop", "Complete": "Conclude"},
-        needs=["StartPlanLoop"], # this shouldnt be needed
+        needs=["StartPlanLoop"],
     ),
     "Conclude": Node(
-        text="Congratulate the user for making this far in the conversation, wrap up the conversation with a summary of what was discussed and what actions were decided and tell him you'll see him next week!",
+        text="Summarize the discussion outcomes for each plan that was addressed and wrap up the conversation appropriately.",
         temperature=1,
     ),
 }
@@ -270,8 +274,9 @@ class WeekAnalyserAssistant(object):
                 user_activities=self.user_activities,
             )
             return await assistant.get_response(user_input, message_id, emotions)
-        elif "SuggestChanges" in extracted:
-            self.memory.write(
+        
+
+        self.memory.write(
                 Message.new(
                     result,
                     sender_name=self.name,
@@ -280,38 +285,38 @@ class WeekAnalyserAssistant(object):
                     recipient_id=self.user.id,
                 )
             )
-            if extracted["`SuggestedChanges`"].plan_type == "specific":
-                plan_id = plan_name_to_id[extracted["SuggestedChanges"].plan_name]
-                plan = plan_controller.get_plan(plan_id=plan_id)
-                old_sessions = [
-                    s
-                    for s in plan.sessions
-                    if datetime.strptime(s.date, "%Y-%m-%d").date() >= datetime.now().date()
-                    and datetime.strptime(s.date, "%Y-%m-%d").date()
-                    <= datetime.now().date() + timedelta(days=lookahead_days)
-                ]
 
-                # Aggregate sessions from all SuggestedChanges nodes
-                all_sessions = []
-                for key in extracted:
-                    if key.startswith("SuggestedChanges_"):
-                        all_sessions.extend(extracted[key].next_week_sessions)
+        for key in extracted:
+            if key.startswith("SuggestChanges_"):
+                if extracted[key].plan_type == "specific":
+                    plan_id = plan_name_to_id[extracted[key].plan_name]
+                    plan = plan_controller.get_plan(plan_id=plan_id)
+                    old_sessions = [
+                        s
+                        for s in plan.sessions
+                        if datetime.strptime(s.date, "%Y-%m-%d").date() >= datetime.now().date()
+                        and datetime.strptime(s.date, "%Y-%m-%d").date()
+                        <= datetime.now().date() + timedelta(days=lookahead_days)
+                    ]
 
-                return result, EnrichedPlanSessions(
-                    plan_id=plan_id,
-                    sessions=all_sessions,
-                    old_sessions=old_sessions,
-                )
-            elif extracted["SuggestedChanges"].plan_type == "times_per_week":
-                plan_id = plan_name_to_id[extracted["SuggestedChanges"].plan_name]
-                plan = plan_controller.get_plan(plan_id=plan_id)
-                return result, ExtractedTimesPerWeek(
-                    plan_id=plan_id,
-                    old_times_per_week=plan.times_per_week,
-                    new_times_per_week=extracted["SuggestedChanges"].next_week_times_per_week,
-                )
+                    # Aggregate sessions from all SuggestedChanges nodes
+                    return result, EnrichedPlanSessions(
+                        plan_id=plan_id,
+                        sessions=extracted[key].next_week_sessions,
+                        old_sessions=old_sessions,
+                    )
+                elif extracted[key].plan_type == "times_per_week":
+                    plan_id = plan_name_to_id[extracted[key].plan_name]
+                    plan = plan_controller.get_plan(plan_id=plan_id)
+                    return result, ExtractedTimesPerWeek(
+                        plan_id=plan_id,
+                        old_times_per_week=plan.times_per_week,
+                        new_times_per_week=extracted[key].next_week_times_per_week,
+                    )
+                else:
+                    raise ValueError(f"Unknown plan type: {extracted[key].plan_type}")
             else:
-                return result, None
-        else:
-            return result, None
+                continue
+
+        return result, None
 

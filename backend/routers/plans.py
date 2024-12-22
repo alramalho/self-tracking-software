@@ -407,7 +407,7 @@ async def update_plan(
     for key, value in data.items():
         setattr(plan, key, value)
         
-    return await plan_controller.update_plan(plan)
+    return plan_controller.update_plan(plan)
 
 
 @router.post("/plans/{plan_id}/generated-update")

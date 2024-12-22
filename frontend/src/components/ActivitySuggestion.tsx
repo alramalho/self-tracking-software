@@ -21,7 +21,6 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
 }) => {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
-  const api = useApiWithAuth();
   const buttonClasses = "p-2 rounded-full transition-colors duration-200 flex items-center justify-center";
   const iconSize = 20;
 
