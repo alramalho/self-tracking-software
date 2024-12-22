@@ -851,7 +851,7 @@ const LogPage: React.FC = () => {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className="flex flex-row items-center justify-between w-full max-w-full"
+                        className="flex flex-row items-center justify-center w-full max-w-full"
                       >
                         <div className="border-[4px] bg-white shadow-inner rounded-full border-gray-700 w-full max-w-[600px] min-w-[220px] min-h-[4rem] flex items-center justify-between">
                           <ChatInput
