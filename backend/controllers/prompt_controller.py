@@ -6,7 +6,6 @@ from gateways.activities import ActivitiesGateway
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
 from controllers.plan_controller import PlanController
-
 class PromptController:
     def get_prompt(self, user_id: str, prompt_tag: str) -> str:
         if prompt_tag == "user-recurrent-checkin":
@@ -22,23 +21,33 @@ class PromptController:
         activities_gateway = ActivitiesGateway()
         activities = activities_gateway.get_all_activities_by_user_id(user_id)
         plan_controller = PlanController()
-        
+
         notification_history = "\n".join([notification.message for notification in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)])
 
         # if it is saturday or sunday, add a suffix to the prompt
-        if datetime.now(pytz.UTC).weekday() in [5, 6]:
-            weekend_notifiaction_suffix = "It's the weekend, so your message today should be more casual and invite the user to plan the week ahead with you."
+        weekday = datetime.now(pytz.UTC).weekday()
+        if weekday == 2:  # Wednesday
+            recent_activities = activities_gateway.get_readable_recent_activity_entries(user_id, past_days_limit=4)
+            day_based_preffix = f"""It's Wednesday! Let's celebrate the progress of the user. Here are user's activities from the past few days:
+            {recent_activities}
+            
+            Your message today should be motivational, specifically mentioning (if any) one of these activities and encouraging the user to keep up their momentum."""
+        elif weekday == 4:  # Friday
+            day_based_preffix = "It's Friday, so your message today should encourage reflection on the past week offer your help to brainstorm or log any missed activities."
+        elif weekday in [5, 6]:  # Saturday/Sunday
+            day_based_preffix = "It's the weekend, so your message today should be more casual and invite the user to plan the week ahead with you."
         else:
-            weekend_notifiaction_suffix = ""
+            day_based_preffix = ""
 
         return f"""
             You are Jarvis, a friendly AI assistant focused on engaging the user in conversations about their activities, mood, and personal growth.
             This is your proactive reach-out time.
             Analyze ALL information provided to you about the User (activities, preferences, conversation history) to craft a short, engaging notification.
             The goal of this notification is to encourage interaction.
-            The notfication is must be largely based on his current interactions, logged activities and plans, so take special attention into analyzing their history, and it must be a direct question that the user would want to answer, even if provocative.
+
+            {day_based_preffix}
             
-            Craft your message as a brief, inspiring quote, a meaningful tip, or a personal question tailored to the user's goals and activities. Aim for a balance that sparks curiosity and invites a response.
+            You may craft your message as a brief, inspiring quote, a meaningful tip, or a personal question tailored to the user's goals and activities. Aim for a balance that sparks curiosity and invites a response.
             
             Avoid overly complex or deep questions. Keep it light, personal, and engaging.
 
@@ -68,8 +77,6 @@ class PromptController:
 
             Output only the message to be sent to the user. Nothing more, nothing less.
             The tone should be sober, direct, and provocative.
-
-            {weekend_notifiaction_suffix}
 
             Your message to be sent to the user:
     """
