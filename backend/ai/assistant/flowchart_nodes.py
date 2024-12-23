@@ -22,6 +22,7 @@ class LoopStartNode(Node):
     type: NodeType = NodeType.LOOP_START
     iterator: str
     collection: str
+    end_node: str
 
 
 class LoopContinueNode(Node):

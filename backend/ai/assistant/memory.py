@@ -27,11 +27,9 @@ class ArrayMemory(Memory):
         self.minimum_messages = minimum_messages
 
     def write(self, message: Message):
-        logger.log("AGENT", f"Writing to memory ... {message.sender_name}: {message.text}")
         self.messages.append(message)
 
     def read_all(self, max_words: Optional[int] = None, max_age_in_minutes: int = 90) -> List[Message]:
-        logger.log("AGENT", f"Reading all ({len(self.messages)} messages) from memory ...")
         filtered_messages = self._filter_messages(max_words, max_age_in_minutes)
         return filtered_messages
 

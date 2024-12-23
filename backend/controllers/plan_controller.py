@@ -673,7 +673,7 @@ class PlanController:
         
         return existing_plan
 
-    def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None, future_day_limit: int = None) -> str:
+    def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None, future_day_limit: int = None, plans: List[Plan] = None, ) -> str:
         """
         Get readable plans and their sessions for a user within the specified time period.
         Handles both specific schedule plans and times-per-week plans.
@@ -687,7 +687,9 @@ class PlanController:
         if not user:
             return "No user found"
 
-        plans = self.get_all_user_active_plans(user)
+        if plans is None:
+            plans = self.get_all_user_active_plans(user)
+
         if not plans:
             return "No active plans found"
 
@@ -700,8 +702,7 @@ class PlanController:
             else:  # times_per_week type
                 plan_text = self._get_readable_times_per_week_plan(plan, past_day_limit, future_day_limit)
                 
-            if plan_text:  # Only add plans that have content
-                readable_plans.append(f"{plan_header}\n{plan_text}")
+            readable_plans.append(f"{plan_header}\n{plan_text}")
 
         if not readable_plans:
             if past_day_limit and future_day_limit:
@@ -728,9 +729,6 @@ class PlanController:
                 (datetime.fromisoformat(session.date).replace(
                     tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0) - current_date).days <= future_day_limit)
         ]
-        
-        if not filtered_sessions:
-            return ""
         
         # Get activities for sessions
         activity_ids = {session.activity_id for session in filtered_sessions}
@@ -759,13 +757,20 @@ class PlanController:
         plan_text = []
         if past_sessions:
             plan_text.append(f"Sessions that were scheduled for the last {past_day_limit} days (not this are not done sessions):")
-            plan_text.extend(past_sessions)
+            if len(past_sessions) > 0:
+                plan_text.extend(past_sessions)
+            else:
+                plan_text.append("No past sessions found")
         
         if future_sessions:
             if past_sessions:
                 plan_text.append("")
             plan_text.append(f"Upcoming sessions in the next {future_day_limit} days:")
-            plan_text.extend(future_sessions)
+
+            if len(future_sessions) > 0:
+                plan_text.extend(future_sessions)
+            else:
+                plan_text.append("No future sessions found")
         
         return "\n".join(plan_text)
 
@@ -789,7 +794,10 @@ class PlanController:
         plan_text = []
         plan_text.append(f"This is a flexible plan targeting {plan.times_per_week} sessions per week.")
         plan_text.append("Available activities:")
-        plan_text.extend(activity_list)
+        if len(activity_list) > 0:
+            plan_text.extend(activity_list)
+        else:
+            plan_text.append("No activities found")
         
         # Add past week completion info if requested
         if past_day_limit:

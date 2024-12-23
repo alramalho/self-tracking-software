@@ -24,13 +24,9 @@ activities_gateway = ActivitiesGateway()
 plan_controller = PlanController()
 
 
-class OptionalPlanNameSchema(BaseModel):
-    plan_name: str | None = Field(None, description="The name of the plan (if exists)")
-
 
 class PlanNameSchema(BaseModel):
-    plan_name: str = Field(..., description="The name of the plan")
-
+    current_plan: str = Field(..., description="The name of the plan")
 
 class PlanAnalysisSchema(BaseModel):
     plan_name: str = Field(..., description="The name of the plan to analyse")
@@ -81,26 +77,26 @@ class EnrichedPlanSessions(ExtractedPlanSessions):
 
 
 
-first_message_flowchart = {
-    "FirstTimeEver": Node(
-        text="Based on the conversation history, is this the first time ever talking to the user?",
-        connections={"Yes": "Introduce", "No": "FirstTimeToday"},
-    ),
-    "Introduce": Node(
-        text="Introduce yourself, telling what you can do for the user.",
-        connections={},  # Empty connections indicate an end node
-    ),
-    "FirstTimeToday": Node(
-        text="Based on the conversation history, is this the first time talking today?",
-        connections={"Yes": "Greet", "No": "End"},
-    ),
-    "Greet": Node(
-        text="Greet the user, and tell him you'd like to talk a bit about each of his plans.",
-    ),
-    "End": Node(  # this should never be reached
-        text="Conclude the conversation appropriately based on the entire interaction. "
-    ),
-}
+# first_message_flowchart = {
+#     "FirstTimeEver": Node(
+#         text="Based on the conversation history, is this the first time ever talking to the user?",
+#         connections={"Yes": "Introduce", "No": "FirstTimeToday"},
+#     ),
+#     "Introduce": Node(
+#         text="Introduce yourself, telling what you can do for the user.",
+#         connections={},  # Empty connections indicate an end node
+#     ),
+#     "FirstTimeToday": Node(
+#         text="Based on the conversation history, is this the first time talking today?",
+#         connections={"Yes": "Greet", "No": "End"},
+#     ),
+#     "Greet": Node(
+#         text="Greet the user, and tell him you'd like to talk a bit about each of his plans.",
+#     ),
+#     "End": Node(  # this should never be reached
+#         text="Conclude the conversation appropriately based on the entire interaction. "
+#     ),
+# }
 
 class LetsGoToActivityExtractor(BaseModel):
     irrelevant_number: str = Field(..., description="Return here a number between 1 and 10.")
@@ -109,10 +105,10 @@ every_message_flowchart = {
     "CheckMessageIntent": Node(
         text="What is the primary intent of the user's last message? Choose one: 'plan_management' if about adjusting/planning next week's activities, 'activity_logging' if about recording past activities, 'other_request' if it's an unrelated request/question, or 'general_conversation' if none of the above.",
         connections={
-            "plan_management": "ExtractPlanNames",
+            "plan_management": "ExtractPlanName",
             "activity_logging": "ExitToActivityExtractor",
             "other_request": "HandleRequest",
-            "general_conversation": "HandleConversation"
+            "general_conversation": "ExtractPlanNames"
         }
     ),
     "ExitToActivityExtractor": Node(
@@ -123,6 +119,11 @@ every_message_flowchart = {
     ),
     "HandleConversation": Node(
         text="Engage in general conversation while gently steering towards discussing their plans if appropriate.",
+    ),
+    "ExtractPlanName": Node(
+        text="Extract the plan name which the user is talking about.",
+        connections={"default": "CheckPlanRelevance"},
+        output_schema=PlanNameSchema,
     ),
     "ExtractPlanNames": Node(
         text="Extract all plan names from the users plan list.",
@@ -135,26 +136,30 @@ every_message_flowchart = {
         collection="plan_names",
         connections={"default": "CheckPlanRelevance"},
         needs=["ExtractPlanNames"],
+        end_node="NextPlan",
     ),
     "CheckPlanRelevance": Node(
-        text="""Based on the conversation history, determine if we should discuss plan '${current_plan}'. Consider:
-        1. Has the user explicitly mentioned not wanting to discuss this plan?
-        2. Is the user clearly focused on discussing a different plan?
-        3. Have we already concluded discussion about this plan by suggesting and accepting proposed changes?
-
-        Analyse each of the above in your reasoning, and answer 'Discuss' only if none of them is true.""",
+        text="""Review the conversation history to determine if plan '${current_plan}' needs discussion. Check if:
+        1. We have already discussed this plan recently
+        2. We have already suggested and finalized changes for this plan
+        
+        Respond with 'Discuss' only if the plan has not been fully addressed yet.""",
         connections={"Discuss": "AnalyzePlanStatus", "Skip": "NextPlan"},
     ),
     "AnalyzePlanStatus": Node(
-        text="""Analyze the current status of plan '${current_plan}' and determine if changes are needed. Consider:
-        1. Recent activity completion rate
-        2. User's explicit mentions about next week's intentions
-        3. Any difficulties or challenges mentioned
-        
-        Output your analysis and conclude if changes are needed with a Yes/No.""",
-        connections={"Yes": "SuggestChanges", "No": "NextPlan"},
+        text="""Analyze the current status of plan '${current_plan}' and determine if changes should be either "Made" or "Suggested".
+        You should make changes only when the user has agreed to or suggested them, otherwise you should suggest them yourself first.""",
+        connections={"MakeChanges": "MakeChanges", "SuggestChanges": "SuggestChanges"},
     ),
     "SuggestChanges": Node(
+        text="""Analyze the current status of plan '${current_plan}' and determine what changes should be suggested.
+        In order to suggest effective changeschanges, you should:
+        1. understand what are the user's expressed difficulties, challenges, or what went well during the past week in the plan.
+        For this you should look both into the plan's past week outlook and to the logged activity history, to make a correct assessment on what the user is needing to change.
+        2. understand what are the user's intentions for the upcoming week, so that your suggestion has increased probability of being actually carried through.
+        """,
+    ),
+    "MakeChanges": Node(
         text="""Analyze the current status of plan '${current_plan}' and determine if changes are needed. Consider:
         1. Recent activity completion rate
         2. User's explicit mentions about next week's intentions
@@ -167,7 +172,7 @@ every_message_flowchart = {
     ),
     "InformUserAboutChanges": Node(
         text="Inform the user about the suggested changes for plan '${current_plan}', which he now needs to accept or reject.",
-        needs=["SuggestChanges"],
+        needs=["MakeChanges"],
     ),
     "NextPlan": LoopContinueNode(
         text="",
@@ -175,7 +180,7 @@ every_message_flowchart = {
         needs=["StartPlanLoop"],
     ),
     "Conclude": Node(
-        text="Summarize the discussion outcomes for each plan that was addressed and wrap up the conversation appropriately.",
+        text="There are no (more) plans to discuss. Converse with the user, and inform him of this, if you did not already.",
         temperature=1,
     ),
 }
@@ -195,12 +200,22 @@ class WeekAnalyserAssistant(object):
         self.user_activities = user_activities
         self.user_plans = user_plans
 
+        system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
+        Respond to the user in the same language that he talks to you in.
+        No matter what, make sure your answer never jumps the conversation and has the user's last message into account.
+        You can also help the user extract past activities, if it is needed, even though is not your primary objective.
+        """
+
+        self.framework = FlowchartLLMFramework(
+            every_message_flowchart,
+            system_prompt,
+            lookahead_depth=3,
+        )
+
+
     async def get_response(
         self, user_input: str, message_id: str = None, emotions: List[Emotion] = []
     ) -> Tuple[str, EnrichedPlanSessions | ExtractedTimesPerWeek | None]:
-        is_first_message_in_more_than_a_day = (
-            len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
-        )
         self.memory.write(
             Message.new(
                 id=message_id,
@@ -213,22 +228,7 @@ class WeekAnalyserAssistant(object):
             )
         )
 
-        system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
-        Respond to the user in the same language that he talks to you in.
-        No matter what, make sure your answer never jumps the conversation and has the user's last message into account.
-        You can also help the user extract past activities, if it is needed, even though is not your primary objective.
-        """
 
-        if is_first_message_in_more_than_a_day:
-            flowchart = first_message_flowchart
-        else:
-            flowchart = every_message_flowchart
-
-        framework = FlowchartLLMFramework(
-            flowchart,
-            system_prompt,
-            lookahead_depth=6,
-        )
         # For days since last Sunday (inclusive)
         lookback_days = max(
             6, datetime.now().isoweekday() % 7
@@ -241,7 +241,7 @@ class WeekAnalyserAssistant(object):
 
         prompt = f"""
         --- Here's the user's plan list of {len(self.user_plans)} plans:
-        {plan_controller.get_readable_plans_and_sessions(self.user.id, past_day_limit=lookback_days, future_day_limit=lookahead_days)}
+        {plan_controller.get_readable_plans_and_sessions(self.user.id, past_day_limit=lookback_days, future_day_limit=lookahead_days, plans=self.user_plans)}
 
         --- Now here's the activities that the user has done during the past {lookback_days} days:
         {activities_gateway.get_readable_recent_activity_entries(self.user.id, past_day_limit=lookback_days)}
@@ -253,7 +253,7 @@ class WeekAnalyserAssistant(object):
 
         --- Only output the message to be sent to the user.
         """
-        result, extracted = await framework.run(prompt)
+        result, extracted = await self.framework.run(prompt)
 
         jarvis_prefix = re.match(r"^Jarvis\s*\([^)]*\)\s*:\s*", result)
         if jarvis_prefix:
@@ -287,7 +287,7 @@ class WeekAnalyserAssistant(object):
             )
 
         for key in extracted:
-            if key.startswith("SuggestChanges_"):
+            if key.startswith("MakeChanges_"):
                 if extracted[key].plan_type == "specific":
                     plan_id = plan_name_to_id[extracted[key].plan_name]
                     plan = plan_controller.get_plan(plan_id=plan_id)
@@ -307,7 +307,7 @@ class WeekAnalyserAssistant(object):
                     )
                 elif extracted[key].plan_type == "times_per_week":
                     plan_id = plan_name_to_id[extracted[key].plan_name]
-                    plan = plan_controller.get_plan(plan_id=plan_id)
+                    plan = [p for p in self.user_plans if p.id == plan_id][0]
                     return result, ExtractedTimesPerWeek(
                         plan_id=plan_id,
                         old_times_per_week=plan.times_per_week,
