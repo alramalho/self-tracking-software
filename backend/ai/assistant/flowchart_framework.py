@@ -61,7 +61,11 @@ class FlowchartLLMFramework:
                         "current_index": 0,
                         "processed": set(),
                     }
-                    self.loop_vars[iterator_name] = collection[0]
+                    if len(collection) > 0:
+                        self.loop_vars[iterator_name] = collection[0]
+                    else:
+                        self.loop_vars[iterator_name] = [] # no items in the collection
+                        return node.end_node
 
             return node.connections["default"]
 
