@@ -234,7 +234,6 @@ export const NotificationsProvider = ({
                 console.log("Push endpoint:" + subscription.endpoint);
                 // Use api in a useCallback hook
                 await updatePwaStatus(subscription);
-                await initiateUserRecurrentCheckin();
               } catch (err) {
                 console.error("Failed to subscribe:", err);
                 console.log("Failed to subscribe: " + err);
@@ -259,15 +258,6 @@ export const NotificationsProvider = ({
     }
   };
 
-  const initiateUserRecurrentCheckin = async () => {
-    try {
-      await api.post("/initiate-user-recurrent-checkin");
-      console.log("Recurrent check-in initiated successfully");
-    } catch (error) {
-      console.error("Failed to initiate recurrent check-in:", error);
-      console.log("Failed to initiate recurrent check-in: " + error);
-    }
-  };
 
   // Define updatePwaStatus using useCallback
   const updatePwaStatus = React.useCallback(
