@@ -67,7 +67,7 @@ export default function OnboardingPage() {
           </DialogContent>
         </Dialog>
       ) : (
-        <div className="fixed inset-0 bg-gray-100 z-[60]">
+        <div className="fixed inset-0 bg-white z-[60]">
           <div className="h-full w-full overflow-y-auto">
             <div className="min-h-full flex flex-col items-center justify-center p-4">
               {showActivityEditor ? (
