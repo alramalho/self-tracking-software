@@ -118,7 +118,7 @@ class ActivitiesGateway:
             logger.info(f"Activity {activity.id} ({activity.title}) created")
             return activity
         except DuplicateKeyError as e: # todo, this activities gateway should be mongo agnostic
-            raise ActivityAlreadyExistsException()
+            logger.error(f"Error creating activity: Activity {activity.id} ({activity.title}) already exists")
         except Exception as e:
             logger.error(f"Error creating activity: {e}")
             raise
