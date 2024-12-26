@@ -16,6 +16,7 @@ class PromptController:
     def _get_user_recurrent_checkin_prompt(self, user_id: str) -> str:
 
         from services.notification_manager import NotificationManager
+        from gateways.users import UsersGateway
         notification_manager = NotificationManager()    
 
         activities_gateway = ActivitiesGateway()
@@ -23,6 +24,8 @@ class PromptController:
         plan_controller = PlanController()
 
         notification_history = "\n".join([notification.message for notification in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)])
+
+        user = UsersGateway().get_user_by_id(user_id)
 
         # if it is saturday or sunday, add a suffix to the prompt
         weekday = datetime.now(pytz.UTC).weekday()
@@ -41,6 +44,7 @@ class PromptController:
 
         return f"""
             You are Jarvis, a friendly AI assistant focused on engaging the user in conversations about their activities, mood, and personal growth.
+            You are speaking in "{user.language}".
             This is your proactive reach-out time.
             Analyze ALL information provided to you about the User (activities, preferences, conversation history) to craft a short, engaging notification.
             The goal of this notification is to encourage interaction.
