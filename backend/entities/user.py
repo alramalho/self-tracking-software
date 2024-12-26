@@ -11,6 +11,7 @@ class User(BaseModel):
     username: Optional[str] = None
     timezone: Optional[str] = None
     clerk_id: Optional[str] = None
+    language: Optional[str] = "English"
     email: str
     created_at: str
     deleted: bool = False
