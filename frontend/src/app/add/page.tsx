@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import ActivitySelector from "@/components/ActivitySelector";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
@@ -27,6 +27,8 @@ const LogPage: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(0);
   const [measureType, setMeasureType] = useState<string>("");
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
+  const searchParams = useSearchParams();
+  const shouldOpenAddNewActivityEditor = searchParams.get("openAdd");
 
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
@@ -89,6 +91,7 @@ const LogPage: React.FC = () => {
       <ActivitySelector
         activities={activities}
         selectedActivity={selectedActivity}
+        shouldOpenAddNewActivityEditor={shouldOpenAddNewActivityEditor === "true"}
         onSelectActivity={(a) => {
           handleSelectActivity(a);
           // scroll to quantity

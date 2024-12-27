@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
-import ActivityCreationJourney from "@/components/ActivityCreationJourney";
 import {
   Dialog,
   DialogContent,
@@ -20,17 +19,9 @@ import toast from "react-hot-toast";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [showPlanCreation, setShowPlanCreation] = useState(false);
-  const [showActivityEditor, seShowActivityEditor] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [showCreatePlanCardJourney, setShowCreatePlanCardJourney] =
     useState(false);
-  const { refetchUserData } = useUserPlan();
-
-  const onCompleteActivity = async (activities: Activity[]) => {
-    await refetchUserData();
-    setShowCompletionDialog(true);
-  };
 
   const onCloseCompletionDialog = () => {
     setShowCompletionDialog(false);
@@ -70,9 +61,7 @@ export default function OnboardingPage() {
         <div className="fixed inset-0 bg-white z-[60]">
           <div className="h-full w-full overflow-y-auto">
             <div className="min-h-full flex flex-col items-center justify-center p-4">
-              {showActivityEditor ? (
-                <ActivityCreationJourney onComplete={onCompleteActivity} />
-              ) : showCreatePlanCardJourney ? (
+              {showCreatePlanCardJourney ? (
                 <CreatePlanCardJourney
                   onComplete={() => {
                     toast.success("Plan creation finished successfully");
@@ -112,7 +101,7 @@ export default function OnboardingPage() {
                   <Button
                     variant="secondary"
                     className="mt-2 border-2 border-gray-300"
-                    onClick={() => seShowActivityEditor(true)}
+                    onClick={() => router.push("/add?openAdd=true")}
                   >
                     Create your first activity
                   </Button>
