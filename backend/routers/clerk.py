@@ -112,9 +112,9 @@ async def user_event_webhook(request: Request):
             raise HTTPException(status_code=400, detail=error_msg)
 
     except KeyError as e:
-        logger.error(f"Missing key in payload: {e}")
+        logger.error(f"Clerk Webhook: Missing key in payload: {e}")
         raise HTTPException(status_code=400, detail=f"Missing key in payload: {e}")
     except Exception as e:
         traceback.print_exc()
-        logger.error(str(e))
+        logger.error(f"Clerk Webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
