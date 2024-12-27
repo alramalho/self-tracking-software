@@ -7,9 +7,9 @@ from gateways.users import UsersGateway
 from entities.message import Message
 from gateways.database.mongodb import MongoDBGateway
 from ai.assistant.memory import DatabaseMemory
-from entities.notification import Notification
+from http import HTTPStatus
 from pydantic import BaseModel
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 from fastapi import Request
 from typing import Optional
 from constants import (
@@ -91,9 +91,7 @@ async def process_scheduled_notification(request: Request):
             )
         return {"message": "Notification processed and sent successfully"}
     else:
-        return JSONResponse(
-            status_code=204, content={"message": "No notification processed"}
-        )
+        return Response(status_code=HTTPStatus.NO_CONTENT.value, content="No notification processed")
 
 
 @router.post("/mark-notification-opened")
