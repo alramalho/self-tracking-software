@@ -18,6 +18,11 @@ const BottomNav = () => {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const pathname = usePathname();
 
+  const isActiveRoute = (route: string) => {
+    if (route === '/') return pathname === '/';
+    return pathname.startsWith(route);
+  };
+
   useEffect(() => {
     setIsLoadingFeed(false);
     setIsLoadingPlans(false);
@@ -33,7 +38,7 @@ const BottomNav = () => {
         <div className="flex justify-around">
           <Link
             href="/"
-            className="flex flex-col justify-center items-center p-2 text-gray-600 relative"
+            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/') ? 'text-blue-500' : 'text-gray-600'} relative`}
             onClick={() =>{
               if (pathname !== "/")  {
                 setIsLoadingFeed(true)
@@ -50,7 +55,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href="/plans"
-            className="flex flex-col justify-center items-center p-2 text-gray-600"
+            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/plans') ? 'text-blue-500' : 'text-gray-600'}`}
             onClick={() => {
               if (pathname !== "/plans") {
                 setIsLoadingPlans(true)
@@ -62,7 +67,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href="/add"
-            className="flex flex-col justify-center items-center p-2 text-gray-600"
+            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/add') ? 'text-blue-500' : 'text-gray-600'}`}
             onClick={() => {
               if (pathname !== "/add") {
                 setIsLoadingLog(true)
@@ -74,7 +79,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href={`/ai`}
-            className="flex flex-col justify-center items-center p-2 text-gray-600 text-center"
+            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/ai') ? 'text-blue-500' : 'text-gray-600'} text-center`}
             onClick={() => {
               if (pathname !== "/ai") {
                 setIsLoadingAi(true)
@@ -86,7 +91,7 @@ const BottomNav = () => {
           </Link>
           <Link
             href={`/profile/me`}
-            className="flex flex-col justify-center items-center p-2 text-gray-600"
+            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/profile') ? 'text-blue-500' : 'text-gray-600'}`}
             onClick={() => {
               if (pathname !== "/profile/me") {
                 setIsLoadingProfile(true)
