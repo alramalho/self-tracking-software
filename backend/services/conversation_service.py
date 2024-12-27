@@ -31,6 +31,7 @@ from services.notification_manager import NotificationManager
 from entities.notification import Notification
 from entities.message import Emotion
 from controllers.plan_controller import PlanController
+from analytics.posthog import posthog
 
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
@@ -48,7 +49,7 @@ async def talk_with_assistant(
         user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
         user_plans = plan_controller.get_all_user_active_plans(user)
         
-        if datetime.now().weekday() in [5, 6]: 
+        if datetime.now().weekday() in [5, 6] and posthog.feature_enabled("week-analyser-bot-access", user.id): 
             assistant = WeekAnalyserAssistant(
                 memory=memory,
                 user=user,
