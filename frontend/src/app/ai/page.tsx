@@ -192,8 +192,6 @@ const LogPage: React.FC = () => {
   const [copied, copyToClipboard] = useClipboard();
   const { share, isSupported: isShareSupported } = useShare();
 
-  const [showFeatureForm, setShowFeatureForm] = useState(false);
-
   const [currentEmotions, setCurrentEmotions] = useState<Emotion[]>([]);
   const [suggestedActivities, setSuggestedActivities] = useLocalStorage<
     Activity[]
@@ -749,7 +747,7 @@ const LogPage: React.FC = () => {
           referredUsers={referredUsers}
           requiredReferrals={REFERRAL_COUNT}
           onShareReferral={handleShareReferralLink}
-          onRequestAccess={() => setShowFeatureForm(true)}
+          onRequestAccess={() => router.back()}
         />
       )}
       {isUserWhitelisted && (
@@ -930,16 +928,6 @@ const LogPage: React.FC = () => {
               </motion.div>
             )}
           </AnimatePresence>
-          {showFeatureForm && (
-            <FeedbackForm
-              title="✨ Try AI Feature"
-              email={userData?.user?.email || ""}
-              placeholder="How do you plan to use the AI feature?"
-              defaultValue="I want to try the AI because"
-              onSubmit={suggestFeature}
-              onClose={() => setShowFeatureForm(false)}
-            />
-          )}
           <AlertDialog
             open={showPendingChangesAlert}
             onOpenChange={setShowPendingChangesAlert}

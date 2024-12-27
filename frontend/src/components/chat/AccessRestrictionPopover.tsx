@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Brain, Bell, PlusSquare, MessageSquarePlus } from "lucide-react";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ReferralProgress } from "./ReferralProgress";
 import { Button } from "../ui/button";
+import { toast } from "react-hot-toast";
+import { useApiWithAuth } from "@/api";
+import { useUserPlan } from "@/contexts/UserPlanContext";
 
 interface AccessRestrictionPopoverProps {
   isOpen: boolean;
@@ -23,6 +26,28 @@ export const AccessRestrictionPopover: React.FC<
   onShareReferral,
   onRequestAccess,
 }) => {
+  const api = useApiWithAuth();
+  const { useUserDataQuery } = useUserPlan();
+  const { data: userData } = useUserDataQuery("me");
+  const email = userData?.user?.email || "";
+  const [text, setText] = useState("I want to try the AI because");
+  
+  const requestAccess = async () => {
+    await toast.promise(
+      api.post("/report-feedback", {
+        email,
+        text,
+        type: "feature_request",
+      }),
+      {
+        loading: "Requesting access...",
+        success: "Access request sent successfully!",
+        error: "Failed to send access request",
+      }
+    );
+    onRequestAccess();
+  };
+
   return (
     <AppleLikePopover
       open={isOpen}
@@ -68,10 +93,16 @@ export const AccessRestrictionPopover: React.FC<
           </div>
         </div>
       </div>
-      <Button
-        className="w-full hover:bg-blue-50"
-        onClick={onRequestAccess}
-      >
+      <div>
+        <label className="block text-sm text-gray-600 mb-1">Message</label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg min-h-[120px] focus:outline-none focus:ring-2 focus:ring-gray-200"
+          required
+        />
+      </div>
+      <Button className="w-full hover:bg-blue-50" onClick={requestAccess}>
         <MessageSquarePlus className="w-4 h-4 mr-2" />
         Request Access
       </Button>
