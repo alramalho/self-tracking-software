@@ -20,3 +20,7 @@ python-multipart
 posthog
 mangum
 slowapi
+
+psycopg2
+tortoise-orm
+aerich
