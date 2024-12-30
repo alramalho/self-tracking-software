@@ -124,7 +124,10 @@ class UsersGateway:
                     ]
                     for emoji, usernames in activity_entry.reactions.items()
                 }
-                self.activities_gateway.upsert_activity_entry(activity_entry)
+                try:
+                    self.activities_gateway.update_activity_entry(activity_entry)
+                except Exception as e:
+                    logger.error(f"Error updating activity entry {activity_entry.id}: {e}")
 
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)
