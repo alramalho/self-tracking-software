@@ -37,39 +37,9 @@ class ExtractedActivityEntryList(BaseModel):
         ..., description="A list of activities that were logged"
     )
 
-
-first_message_flowchart = {
-    "FirstTimeEver": Node(
-        text="Based on the conversation history, is this the first time ever talking to the user?",
-        connections={"Yes": "Introduce", "No": "FirstTimeToday"},
-    ),
-    "Introduce": Node(
-        text="Introduce yourself, say that you're Jarvis, you're happy to meet the user and you're here to talk to them about their recent activities and automatically track them. Then ask what they've been up to recently or how they're doing.",
-        connections={},  # Empty connections indicate an end node
-    ),
-    "FirstTimeToday": Node(
-        text="Based on the conversation history, is this the first time talking today?",
-        connections={"Yes": "Greet", "No": "End"},
-    ),
-    "Greet": Node(
-        text="Greet the user, asking what's he has been up to since you last talked X days ago (use the conversation history to determine how many days)",
-    ),
-    "End": Node(  # this should never be reached
-        text="Conclude the conversation appropriately based on the entire interaction. "
-    ),
-}
-
-
 every_message_flowchart = {
-    "Start": Node(
-        text="Check if the second to last message in the conversation history is a system message about activity rejection and you didn't follow up on it. Was an activity just rejected without you asking for why?",
-        connections={"Yes": "HandleRejection", "No": "ActivityScanner"},
-    ),
-    "HandleRejection": Node(
-        text="Ask the user why they rejected the activity tracking and how can you adapt it.",
-    ),
     "ActivityScanner": Node(
-        text="Based on the conversation history, check if the user mentioned any new activities that still need to be processed. An activity needs processing if it was either: 1) Just mentioned but not yet extracted, or 2) Previously extracted but rejected by the user. An activity does NOT need processing if it was already extracted and accepted, or if the user explicitly dismissed tracking it. Are there any activities that need processing?",
+        text="Based on the conversation history, did the user specificially asked you to log or register any activities?",
         connections={"Yes": "CheckActivityQualifies", "No": "Converse"},
         temperature=0.7,
     ),
@@ -146,14 +116,11 @@ class ActivityExtractorAssistant(object):
         Today is {datetime.now().strftime('%b %d, %Y')}. 
         """
 
-        if is_first_message_in_more_than_a_day:
-            flowchart = first_message_flowchart
-        else:
-            flowchart = every_message_flowchart
+        flowchart = every_message_flowchart
 
-        framework = FlowchartLLMFramework(flowchart, system_prompt)
+        self.framework = FlowchartLLMFramework(flowchart, system_prompt)
 
-        result, extracted = await framework.run(
+        result, extracted = await self.framework.run(
             f"""
         
         Here's the user's all the existent activities user is trying to track:
