@@ -779,7 +779,7 @@ const LogPage: React.FC = () => {
               >
                 <motion.div
                   variants={itemVariants}
-                  className="relative min-h-[150px] max-h-[550px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
+                  className="relative bg-white min-h-[150px] max-h-[550px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
                 >
                   <Button
                     variant="ghost"
