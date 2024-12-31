@@ -1,41 +1,53 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Send, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMicrophone } from "@/hooks/useMicrophone";
 
 interface ChatInputProps {
-  transcription: string;
   isConnected: boolean;
   isLoading: boolean;
-  isRecording?: boolean;
-  onTranscriptionChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onSendMessage: () => void;
-  onToggleRecording?: () => void;
-  onCancelRecording?: () => void;
+  onVoiceSent: (audioData: string, audioFormat: string) => void;
+  onTextSent: (text: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
-  transcription,
   isConnected,
   isLoading,
-  isRecording = false,
-  onTranscriptionChange,
-  onSendMessage,
-  onToggleRecording,
-  onCancelRecording,
+  onVoiceSent,
+  onTextSent,
 }) => {
+  const [text, setText] = useState("");
+  const { isRecording, toggleRecording, cancelRecording } = useMicrophone();
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onSendMessage();
+      handleSendText();
     }
+  };
+
+  const handleSendText = () => {
+    if (!text.trim() || !isConnected || isLoading) return;
+    onTextSent(text);
+    setText("");
+  };
+
+  const startRecording = () => {
+    if (!isConnected || isLoading) return;
+    toggleRecording(onVoiceSent);
+  };
+
+  const stopRecording = () => {
+    if (!isConnected || isLoading) return;
+    toggleRecording(onVoiceSent);
   };
 
   return (
     <div className="relative flex items-center w-full gap-2">
       <textarea
-        value={transcription}
-        onChange={onTranscriptionChange}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type a message..."
         className={cn(
@@ -57,7 +69,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onCancelRecording}
+              onClick={cancelRecording}
               className="h-8 w-8"
             >
               <X className="h-5 w-5" />
@@ -65,7 +77,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onToggleRecording}
+              onClick={stopRecording}
               className="h-8 w-8"
             >
               <Send className="h-5 w-5" />
@@ -83,17 +95,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={onToggleRecording}
+                onClick={startRecording}
                 className="h-8 w-8"
                 disabled={!isConnected}
               >
                 <Mic className="h-5 w-5" />
               </Button>
-              {transcription && (
+              {text && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={onSendMessage}
+                  onClick={handleSendText}
                   className="h-8 w-8"
                   disabled={!isConnected}
                 >
