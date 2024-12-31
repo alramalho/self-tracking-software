@@ -15,13 +15,13 @@ import GeneratedPlanRenderer from "./GeneratedPlanRenderer";
 import { usePlanGeneration } from "@/hooks/usePlanGeneration";
 import toast from "react-hot-toast";
 import { DatePicker } from "@/components/ui/date-picker";
-import EmojiPicker from "emoji-picker-react";
 import { Plus, Minus } from "lucide-react";
 import { Check } from "lucide-react";
 import Divider from "./Divider";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { addDays } from "date-fns";
+import { EmojiInput } from "./ui/EmojiInput";
 
 interface PlanConfigurationFormProps {
   onConfirm: (plan: GeneratedPlan) => Promise<void>;
@@ -722,37 +722,11 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
               <Number className="w-6 h-6">3</Number>
               Choose a plan emoji
             </h3>
-            {showEmojiPicker ? (
-              <div
-                className="absolute top-[30px] left-[15px] mt-2"
-                style={{ zIndex: 1000 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <EmojiPicker
-                  onEmojiClick={(data) => {
-                    setSelectedEmoji(data.emoji);
-                    setShowEmojiPicker(false);
-                  }}
-                />
-              </div>
-            ) : (
-              <div
-                id="emoji-picker-trigger"
-                className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowEmojiPicker(true);
-                }}
-              >
-                {
-                  <span className="text-4xl">
-                    {selectedEmoji || (
-                      <Plus className="h-6 w-6 text-gray-400" />
-                    )}
-                  </span>
-                }
-              </div>
-            )}
+            <EmojiInput
+              value={selectedEmoji}
+              onChange={setSelectedEmoji}
+              placeholder="Enter an emoji"
+            />
           </div>
         </Step>
 

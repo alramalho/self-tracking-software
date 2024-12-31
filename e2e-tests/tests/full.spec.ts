@@ -48,10 +48,7 @@ test.describe.serial("App", () => {
 
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     // Select an emoji
-    await page.locator("#emoji-picker-trigger").click();
-    await page
-      .locator("button[data-full-name='grinning,grinning face']")
-      .click();
+    await page.getByPlaceholder("Enter an emoji").fill("🙂");
 
     await page.getByText("push-ups").click();
 
@@ -62,10 +59,8 @@ test.describe.serial("App", () => {
       .getByPlaceholder("Measure (e.g., minutes, times)")
       .fill("kilometers");
 
-    await page.getByTestId("emoji-picker-button").click();
-    await page
-      .locator("button[data-full-name='slightly smiling face']")
-      .click();
+    await page.getByPlaceholder("Enter an emoji").fill("🙂");
+    await page.getByRole("button", { name: "Save Activity" }).click();
 
     await page.getByRole("button", { name: "Save Activity" }).click();
 
