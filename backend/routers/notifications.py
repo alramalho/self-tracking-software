@@ -167,7 +167,18 @@ async def trigger_push_notification(
 @router.post("/clear-all-notifications")
 async def clear_all_notifications(user: User = Depends(is_clerk_user)):
     notifications = notification_manager.get_all_for_user(user.id)
+    
+    # Find the latest engagement notification
+    latest_engagement = None
+    for notification in notifications:
+        if notification.type == "engagement" and notification.status != "concluded":
+            if not latest_engagement or notification.created_at > latest_engagement.created_at:
+                latest_engagement = notification
+    
+    # Conclude all except latest engagement
     for notification in notifications:
         if notification.status != "concluded":
-            notification_manager.conclude_notification(notification.id)
-    return {"message": "All notifications cleared"}
+            if notification != latest_engagement:
+                notification_manager.conclude_notification(notification.id)
+                
+    return {"message": "All notifications cleared except latest engagement"}
