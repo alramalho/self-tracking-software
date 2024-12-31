@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
-from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsException
+from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsException, ActivityDoesNotExistException
 from entities.activity import Activity, ActivityEntry, ImageInfo
 from gateways.aws.s3 import S3Gateway
 import uuid
@@ -72,6 +72,8 @@ async def log_activity(
                     "quantity": quantity + entry.quantity,
                 },
             )
+    except ActivityDoesNotExistException:
+        raise HTTPException(status_code=404, detail="Activity does not exist")
 
     if has_photo:
         for friend_id in user.friend_ids:
