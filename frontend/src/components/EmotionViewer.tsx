@@ -7,6 +7,7 @@ import {
   Star,
   BadgeCheck,
   ChevronDown,
+  History,
 } from "lucide-react";
 import {
   Card,
@@ -31,6 +32,8 @@ import Link from "next/link";
 import { EmotionAreaChartViewer } from "./EmotionAreaChartViewer";
 import { DateRangeSlider } from "@/components/ui/date-range-slider";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "./ui/button";
+import { useRouter } from "next/navigation";
 
 const EMOTION_TO_CATEGORY = {
   Joy: "Optimism",
@@ -80,31 +83,31 @@ const EMOTION_TO_CATEGORY = {
 } as const;
 
 const contentVariants = {
-  hidden: { 
+  hidden: {
     opacity: 0,
     height: 0,
     transition: {
       height: {
-        duration: 0.2
+        duration: 0.2,
       },
       opacity: {
-        duration: 0.2
-      }
-    }
+        duration: 0.2,
+      },
+    },
   },
-  visible: { 
+  visible: {
     opacity: 1,
     height: "auto",
     transition: {
       height: {
-        duration: 0.2
+        duration: 0.2,
       },
       opacity: {
         duration: 0.3,
-        delay: 0.1
-      }
-    }
-  }
+        delay: 0.1,
+      },
+    },
+  },
 };
 
 interface EmotionViewerProps {
@@ -113,12 +116,13 @@ interface EmotionViewerProps {
 
 export function EmotionViewer({ messages }: EmotionViewerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  
+  const router = useRouter();
+
   const dateRange = useMemo(() => {
     const dates = messages
       .filter((msg) => msg.created_at)
       .map((msg) => new Date(msg.created_at!).getTime());
-    
+
     if (dates.length === 0) {
       const now = new Date().getTime();
       return {
@@ -126,7 +130,7 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
         max: now,
       };
     }
-    
+
     return {
       min: Math.min(...dates),
       max: Math.max(...dates),
@@ -177,12 +181,14 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
         className="w-full cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <motion.div 
+        <motion.div
           className="px-6 py-4 bg-gradient-to-br from-blue-50/80 to-white rounded-lg border border-gray-200 shadow-sm flex justify-between items-start"
           whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.9)" }}
         >
           <div className="flex flex-col items-start">
-            <h3 className="text-xl font-bold tracking-tight">Emotional Profile ⭐️</h3>
+            <h3 className="text-xl font-bold tracking-tight">
+              Emotional Profile ⭐️
+            </h3>
             <p className="text-xs font-medium text-muted-foreground">
               <Link
                 href="https://github.com/alramalho/self-tracking-software"
@@ -205,21 +211,21 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ 
-              opacity: 1, 
+            animate={{
+              opacity: 1,
               height: "auto",
               transition: {
                 height: { duration: 0.3 },
-                opacity: { duration: 0.3, delay: 0.1 }
-              }
+                opacity: { duration: 0.3, delay: 0.1 },
+              },
             }}
-            exit={{ 
-              opacity: 0, 
+            exit={{
+              opacity: 0,
               height: 0,
               transition: {
                 height: { duration: 0.2 },
-                opacity: { duration: 0.2 }
-              }
+                opacity: { duration: 0.2 },
+              },
             }}
             className="overflow-hidden"
           >
@@ -247,7 +253,9 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
                   <div className="flex flex-wrap gap-4">
                     <Card className="flex-1 min-w-[300px] bg-gradient-to-br from-blue-50/50 to-white">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Emotion Distribution</CardTitle>
+                        <CardTitle className="text-lg">
+                          Emotion Distribution
+                        </CardTitle>
                         <CardDescription>
                           Distribution of emotions in your messages
                         </CardDescription>
@@ -263,8 +271,8 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
                               numberOfMessages={totalMessagesThatHaveEmotion}
                             />
                             <span className="mt-4 block text-xs text-muted-foreground/80">
-                              The percentage in the emotions represent the intensity
-                              captured by our AI.
+                              The percentage in the emotions represent the
+                              intensity captured by our AI.
                             </span>
                           </>
                         ) : (
@@ -287,7 +295,9 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
 
                     <Card className="flex-1 min-w-[300px] bg-gradient-to-br from-blue-50/50 to-white">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Emotional Journey</CardTitle>
+                        <CardTitle className="text-lg">
+                          Emotional Journey
+                        </CardTitle>
                         <CardDescription>
                           Your emotional patterns over time
                         </CardDescription>
@@ -298,6 +308,14 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
                     </Card>
                   </div>
                 )}
+                <Button
+                  variant="ghost"
+                  className="mt-2 mb-4"
+                  onClick={() => router.push("/message-history")}
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  See emotion history
+                </Button>
               </div>
             </motion.div>
           </motion.div>
