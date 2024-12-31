@@ -121,6 +121,7 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
   const dateRange = useMemo(() => {
     const dates = messages
       .filter((msg) => msg.created_at)
+      .filter((msg) => msg.emotions && msg.emotions.length > 0)
       .map((msg) => new Date(msg.created_at!).getTime());
 
     if (dates.length === 0) {
