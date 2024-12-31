@@ -365,13 +365,13 @@ const LogPage: React.FC = () => {
     suggestedTimesPerWeek,
   ]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (text: string) => {
     if (socket && isConnected) {
       if (hasPendingChanges()) {
         setShowPendingChangesAlert(true);
         return;
       }
-      sendMessage(transcription);
+      sendMessage(text);
     } else {
       setIsLoading(false);
       toast.error("Not connected to server");
@@ -400,46 +400,34 @@ const LogPage: React.FC = () => {
     setTranscription("");
   }
 
-  const handleToggleRecording = useCallback(() => {
+  const handleVoiceSent = (audioData: string, audioFormat: string) => {
+    console.log("handleVoiceSent", audioData, audioFormat);
     if (hasPendingChanges()) {
       setShowPendingChangesAlert(true);
       return;
     }
 
-    if (!isRecording) {
-      stopAudio();
+    if (socket && isConnected) {
+      setIsLoading(true);
+      socket.send(
+        JSON.stringify({
+          action: "send_message",
+          text: "",
+          input_mode: "voice",
+          output_mode: outputMode,
+          audio_data: audioData,
+          audio_format: audioFormat,
+        })
+      );
+
+      timeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        toast.error("Server response timed out", {
+          position: "top-right",
+        });
+      }, 30000);
     }
-
-    toggleRecording((audioData, audioFormat) => {
-      if (socket && isConnected) {
-        setIsLoading(true);
-        socket.send(
-          JSON.stringify({
-            action: "send_message",
-            text: "",
-            input_mode: "voice",
-            output_mode: outputMode,
-            audio_data: audioData,
-            audio_format: audioFormat,
-          })
-        );
-
-        timeoutRef.current = setTimeout(() => {
-          setIsLoading(false);
-          toast.error("Server response timed out", {
-            position: "top-right",
-          });
-        }, 30000);
-      }
-    });
-  }, [
-    socket,
-    isConnected,
-    outputMode,
-    toggleRecording,
-    stopAudio,
-    hasPendingChanges,
-  ]);
+  };
 
   useEffect(() => {
     const markNotificationOpened = async () => {
@@ -472,21 +460,6 @@ const LogPage: React.FC = () => {
       console.error("Error sharing referral link:", error);
       toast.error("Failed to share referral link. Maybe you cancelled it?");
     }
-  };
-
-  const suggestFeature = async (text: string) => {
-    await toast.promise(
-      authedApi.post("/report-feedback", {
-        email: userData?.user?.email || "",
-        text,
-        type: "feature_request",
-      }),
-      {
-        loading: "Sending feature request...",
-        success: "Feature request sent successfully!",
-        error: "Failed to send feature request",
-      }
-    );
   };
 
   function toReadableDate(date: string) {
@@ -704,7 +677,12 @@ const LogPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!hasTransitioned && messageId && messageText && messagesData.isSuccess) {
+    if (
+      !hasTransitioned &&
+      messageId &&
+      messageText &&
+      messagesData.isSuccess
+    ) {
       setTimeout(() => {
         clearMessages();
         if (messagesData.data?.messages) {
@@ -855,26 +833,20 @@ const LogPage: React.FC = () => {
                       >
                         <div className="border-[4px] bg-white shadow-inner rounded-full border-gray-700 w-full max-w-[600px] min-w-[220px] min-h-[4rem] flex items-center justify-between">
                           <ChatInput
-                            transcription={transcription}
                             isConnected={isConnected}
                             isLoading={isLoading}
-                            isRecording={isRecording}
-                            onTranscriptionChange={handleTranscriptionChange}
-                            onSendMessage={handleSendMessage}
-                            onToggleRecording={handleToggleRecording}
-                            onCancelRecording={cancelRecording}
+                            onTextSent={handleSendMessage}
+                            onVoiceSent={handleVoiceSent}
                           />
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  {outputMode !== "voice" && (
-                    <div className="text-center -mt-1 mb-2">
-                      <span className="text-xs text-gray-400">
-                        ⚠️ Emotion analysis only available on voice mode
-                      </span>
-                    </div>
-                  )}
+                  <div className="text-center -mt-1 mb-2">
+                    <span className="text-xs text-gray-400">
+                      ⚠️ Emotion analysis only available on voice mode
+                    </span>
+                  </div>
                 </motion.div>
 
                 <motion.div
@@ -956,4 +928,3 @@ const LogPage: React.FC = () => {
 };
 
 export default LogPage;
-

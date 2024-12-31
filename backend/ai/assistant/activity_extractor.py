@@ -40,7 +40,12 @@ class ExtractedActivityEntryList(BaseModel):
 every_message_flowchart = {
     "ActivityScanner": Node(
         text="Based on the conversation history, did the user specificially asked you to log or register any activities?",
-        connections={"Yes": "CheckActivityQualifies", "No": "Converse"},
+        connections={"Yes": "CheckActivityAlreadyConcluded", "No": "Converse"},
+        temperature=0.7,
+    ),
+    "CheckActivityAlreadyConcluded": Node(
+        text="Have you already concluded the activity requested by the user? By concluded is meant that you have already extarcted and user has already accepted or rejected the activity.",
+        connections={"No": "CheckActivityQualifies", "Yes": "Converse"},
         temperature=0.7,
     ),
     "CheckActivityQualifies": Node(
@@ -71,7 +76,7 @@ every_message_flowchart = {
         text="Analyse user's activity name and inform the user that you couldn't find the activity in his activities list.",
     ),
     "Converse": Node(
-        text="Let the user lead an engaging and challenging conversation with you, always keeping in mind your past activity logging goal.",
+        text="Let the user lead an engaging and challenging conversation with you, nudging the user into tracking existing activities if the conversation gets very lengthy.",
         temperature=1,
     ),
 }
@@ -120,12 +125,14 @@ class ActivityExtractorAssistant(object):
         flowchart = every_message_flowchart
 
         self.framework = FlowchartLLMFramework(flowchart, system_prompt)
+        
 
+        activities_str = "\n- ".join([str(a) for a in self.user_activities]) if len(self.user_activities) > 0 else "(User has not started tracking any activities yet)"
         result, extracted = await self.framework.run(
             f"""
         
-        Here's the user's all the existent activities user is trying to track:
-        {"\n- ".join([str(a) for a in self.user_activities])}
+        Here's the user's existing activities:
+        {activities_str}
 
         Here's user's most recently logged activities:
         {activities_gateway.get_readable_recent_activity_entries(self.user.id)}

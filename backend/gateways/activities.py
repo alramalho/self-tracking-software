@@ -66,7 +66,7 @@ class ActivitiesGateway:
     def get_all_activity_entries_by_activity_id(self, activity_id: str) -> list[ActivityEntry]:
         return [ActivityEntry(**data) for data in self.activity_entries_db_gateway.query("activity_id", activity_id)]
     
-    def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5, past_day_limit: int = None) -> str:
+    def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5, past_day_limit: int = 7) -> str:
         all_activities_dict = {activity.id: activity for activity in self.get_all_activities_by_user_id(user_id)}
 
         if len(all_activities_dict) == 0:
