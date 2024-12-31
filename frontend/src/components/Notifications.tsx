@@ -190,57 +190,59 @@ const Notifications: React.FC<NotificationsProps> = () => {
             </div>
 
             {notificationsData.data.notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className="bg-white shadow-sm border border-gray-200 bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4"
-                >
-                  <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-                    {["friend_request", "plan_invitation", "info"].includes(
-                      notification.type
-                    ) &&
-                      hasPictureData(notification) && (
-                        <Link
-                          href={`/profile/${
-                            notification.related_data!.username
-                          }`}
-                        >
-                          <Avatar>
-                            <AvatarImage
-                              src={notification.related_data!.picture}
-                              alt={notification.related_data!.name || ""}
-                            />
-                            <AvatarFallback>
-                              {(notification.related_data!.name || "U")[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Link>
-                      )}
-                    {["engagement"].includes(notification.type) && (
-                      <p className="text-4xl text-gray-700 font-medium">💭</p>
-                    )}
-                    {hasPictureData(notification) ? (
+              <div
+                key={notification.id}
+                className={`shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 ${
+                  notification.type === "engagement"
+                    ? "bg-gradient-to-r from-blue-50 to-green-50 border border-green-100"
+                    : "bg-white border border-gray-200"
+                }`}
+              >
+                <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+                  {["friend_request", "plan_invitation", "info"].includes(
+                    notification.type
+                  ) &&
+                    hasPictureData(notification) && (
                       <Link
                         href={`/profile/${notification.related_data!.username}`}
                       >
-                        <p className="text-sm text-gray-700">
-                          <div className="markdown">
-                            <Remark>{notification.message}</Remark>
-                          </div>
-                        </p>
+                        <Avatar>
+                          <AvatarImage
+                            src={notification.related_data!.picture}
+                            alt={notification.related_data!.name || ""}
+                          />
+                          <AvatarFallback>
+                            {(notification.related_data!.name || "U")[0]}
+                          </AvatarFallback>
+                        </Avatar>
                       </Link>
-                    ) : (
+                    )}
+                  {["engagement"].includes(notification.type) && (
+                    <p className="text-4xl text-gray-700 font-medium">💭</p>
+                  )}
+                  {hasPictureData(notification) ? (
+                    <Link
+                      href={`/profile/${notification.related_data!.username}`}
+                    >
                       <p className="text-sm text-gray-700">
                         <div className="markdown">
                           <Remark>{notification.message}</Remark>
                         </div>
                       </p>
-                    )}
-                  </div>
-                  <div className="flex ml-4">
-                    {renderActionButtons(notification)}
-                  </div>
+                    </Link>
+                  ) : (
+                    <p className="text-sm text-gray-700">
+                      <div className="markdown">
+                        <Remark>{notification.message}</Remark>
+                      </div>
+                    </p>
+                  )}
                 </div>
-              ))}
+                <div className="flex ml-4">
+                  {renderActionButtons(notification)}
+                </div>
+              </div>
+            ))}
           </>
         )}
     </>

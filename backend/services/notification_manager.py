@@ -93,17 +93,17 @@ class NotificationManager:
 
         notification.processed_at = datetime.now()
         notification.status = "processed"
-        self._update_notification(notification)
 
         if notification.recurrence:
             self._reschedule_notification(notification)
 
         user = self.users_gateway.get_user_by_id(notification.user_id)
+        title = f"hey {user.name} 👋"
+        body = notification.message.lower()
+
         is_push = False
         if user.pwa_subscription_endpoint:
             notification.sent_at = datetime.now()
-            title = f"hey {user.name} 👋"
-            body = notification.message.lower()
             await self.send_push_notification(user.id, title=title, body=body)
             is_push = True
 
@@ -119,6 +119,7 @@ class NotificationManager:
                 },
             )
 
+        self._update_notification(notification)
         logger.info(f"Notification '{notification.id}' processed")
         return notification
 

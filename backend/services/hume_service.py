@@ -4,7 +4,7 @@ import base64
 import json
 import os
 from dotenv import load_dotenv
-from constants import HUME_API_KEY, HUME_SCORE_FILTER_THRESHOLD, HUME_BATCH_URL
+from constants import HUME_API_KEY, HUME_SCORE_FILTER_THRESHOLD, HUME_BATCH_URL, API_URL
 from typing import List
 from entities.message import Emotion
 from pydantic import BaseModel
@@ -181,7 +181,7 @@ async def process_audio_with_hume(
 
         # Prepare the form data
         form_data = aiohttp.FormData()
-        callback_url = f"{os.getenv('API_URL')}/ai/hume-callback/{message_id}" if message_id else None
+        callback_url = f"{API_URL}/ai/hume-callback/{message_id}" if message_id else None
         form_data.add_field("json", json.dumps({
             "models": {"prosody": {}},
             "callback_url": callback_url
