@@ -156,7 +156,7 @@ class HumeEmotion(BaseModel):
 class HumePrediction(BaseModel):
     text: str
     time: Dict[str, float]
-    confidence: float
+    confidence: Optional[float]
     speaker_confidence: Optional[float]
     emotions: List[HumeEmotion]
 
