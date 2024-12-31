@@ -7,7 +7,7 @@ import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 import ConfirmDialog from "./ConfirmDialog";
-import EmojiPicker from "emoji-picker-react";
+import { EmojiInput } from "./ui/EmojiInput";
 
 interface ActivityEditorProps {
   onClose: () => void;
@@ -120,35 +120,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         </h2>
         <div className="flex flex-col justify-between h-full">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center space-x-4 relative">
-              {emoji ? (
-                <div
-                  ref={emojiButtonRef}
-                  className="text-4xl w-16 h-16 flex items-center justify-center border rounded-lg cursor-pointer hover:bg-gray-100"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                >
-                  {emoji}
-                </div>
-              ) : (
-                <div
-                  data-testid="emoji-picker-button"
-                  ref={emojiButtonRef}
-                  className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                >
-                  <Plus className="h-6 w-6 text-gray-400" />
-                </div>
-              )}
-              {showEmojiPicker && (
-                <div
-                  ref={emojiPickerRef}
-                  className="absolute top-[-30px] left-[-10px] mt-2"
-                  style={{ zIndex: 1000 }}
-                >
-                  <EmojiPicker width={300} height={3000} onEmojiClick={onEmojiClick} />
-                </div>
-              )}
-            </div>
+            <EmojiInput
+              value={emoji}
+              onChange={(emoji) => setEmoji(emoji)}
+              placeholder="Select an emoji"
+            />
             <Input
               placeholder="Activity Title"
               value={title}
