@@ -28,7 +28,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
-import FeedbackForm from "@/components/FeedbackForm";
 import ActivitySuggestion from "@/components/ActivitySuggestion";
 import PlanUpdateBanner, { PlanSession } from "@/components/PlanUpdateBanner";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -165,6 +164,7 @@ const LogPage: React.FC = () => {
     typeof isFeatureEnabled !== "undefined";
   const [isUserWhitelisted, setIsUserWhitelisted] = useState<boolean>(false);
   const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
+  const [areEmotionsLoading, setAreEmotionsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (posthogFeatureFlagsInitialized) {
@@ -181,13 +181,12 @@ const LogPage: React.FC = () => {
 
   const [transcription, setTranscription] = useState<string>("");
   const [outputMode, setOutputMode] = useState<"voice" | "text">("text");
-  const { isRecording, toggleRecording, cancelRecording } = useMicrophone();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { messages, addMessage, clearMessages } = useMessageHistory(); // Update this line
   const router = useRouter();
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  const emotionLoadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const referredUsers = userData?.user?.referred_user_ids.length || 0;
   const [copied, copyToClipboard] = useClipboard();
   const { share, isSupported: isShareSupported } = useShare();
@@ -318,6 +317,10 @@ const LogPage: React.FC = () => {
         addMessage({ role: "user", content: `🎙️ ${data.text}` });
       } else if (data.type === "emotion_analysis") {
         setCurrentEmotions(data.result);
+        setAreEmotionsLoading(false);
+        if (emotionLoadingTimeoutRef.current) {
+          clearTimeout(emotionLoadingTimeoutRef.current);
+        }
       } else if (data.type === "suggested_activity_entries") {
         setSuggestedActivityEntries(data.activity_entries);
         setSuggestedActivities(data.activities);
@@ -401,14 +404,15 @@ const LogPage: React.FC = () => {
   }
 
   const handleVoiceSent = (audioData: string, audioFormat: string) => {
-    console.log("handleVoiceSent", audioData, audioFormat);
+    
     if (hasPendingChanges()) {
       setShowPendingChangesAlert(true);
       return;
     }
-
+    
     if (socket && isConnected) {
       setIsLoading(true);
+      setAreEmotionsLoading(true); // voice always triggers emotion analysis
       socket.send(
         JSON.stringify({
           action: "send_message",
@@ -420,6 +424,9 @@ const LogPage: React.FC = () => {
         })
       );
 
+      emotionLoadingTimeoutRef.current = setTimeout(() => {
+        setAreEmotionsLoading(false);
+      }, 30000);
       timeoutRef.current = setTimeout(() => {
         setIsLoading(false);
         toast.error("Server response timed out", {
@@ -776,7 +783,7 @@ const LogPage: React.FC = () => {
                 </motion.div>
 
                 <motion.div className="flex flex-col items-center justify-center">
-                  <EmotionBadges emotions={currentEmotions} />
+                  <EmotionBadges emotions={currentEmotions} loading={areEmotionsLoading}/>
                 </motion.div>
 
                 <motion.div

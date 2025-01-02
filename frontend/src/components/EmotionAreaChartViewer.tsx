@@ -91,11 +91,13 @@ export function EmotionAreaChartViewer({
   // Process messages to calculate normalized sentiment scores by date
   const chartData: DailyChartData[] = Object.entries(
     messages
-      .filter((msg) => msg.emotions && msg.emotions.length > 0 && msg.created_at)
+      .filter(
+        (msg) => msg.emotions && msg.emotions.length > 0 && msg.created_at
+      )
       .reduce((acc: { [key: string]: number[] }, message) => {
         // Format the date to YYYY-MM-DD to group by day
-        const dateKey = format(parseISO(message.created_at), 'yyyy-MM-dd');
-        
+        const dateKey = format(parseISO(message.created_at), "yyyy-MM-dd");
+
         let positiveCount = 0;
         let negativeCount = 0;
         let neutralCount = 0;
@@ -116,23 +118,28 @@ export function EmotionAreaChartViewer({
           Math.abs(negativeCount) +
           Math.abs(neutralCount);
         const sentimentScore =
-          totalEmotions > 0 ? (positiveCount + negativeCount) / totalEmotions : 0;
+          totalEmotions > 0
+            ? (positiveCount + negativeCount) / totalEmotions
+            : 0;
 
         // Add the sentiment score to the array for this date
         if (!acc[dateKey]) {
           acc[dateKey] = [];
         }
         acc[dateKey].push(sentimentScore);
-        
+
         return acc;
       }, {})
   )
     .map(([date, scores]) => ({
       date,
-      sentiment: scores.reduce((sum: number, score: number) => sum + score, 0) / scores.length
+      sentiment:
+        scores.reduce((sum: number, score: number) => sum + score, 0) /
+        scores.length,
     }))
-    .sort((a: DailyChartData, b: DailyChartData) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
+    .sort(
+      (a: DailyChartData, b: DailyChartData) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
   const CustomYAxisTick = ({ x, y, payload }: any) => {
@@ -155,15 +162,9 @@ export function EmotionAreaChartViewer({
       let emoji = "";
       let sentiment = "Neutral";
 
-      if (value >= 0.8) {
-        emoji = "😊";
-        sentiment = "Very Positive";
-      } else if (value >= 0.3) {
+      if (value >= 0.3) {
         emoji = "🙂";
         sentiment = "Positive";
-      } else if (value <= -0.8) {
-        emoji = "😔";
-        sentiment = "Very Negative";
       } else if (value <= -0.3) {
         emoji = "🙁";
         sentiment = "Negative";
@@ -209,9 +210,13 @@ export function EmotionAreaChartViewer({
         >
           <defs>
             <linearGradient id="sentimentGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="10%" stopColor="#589952" stopOpacity={0.2}/>
-              <stop offset="50%" stopColor="#ffb366" stopOpacity={0.1}/>
-              <stop offset="90%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2}/>
+              <stop offset="10%" stopColor="#589952" stopOpacity={0.2} />
+              <stop offset="50%" stopColor="#ffb366" stopOpacity={0.1} />
+              <stop
+                offset="90%"
+                stopColor="hsl(var(--chart-2))"
+                stopOpacity={0.2}
+              />
               {/* <stop offset="10%" stopColor="#50A848" stopOpacity={0.2} />
               <stop offset="90%" stopColor="#66A6FF" stopOpacity={0.1} /> */}
             </linearGradient>
@@ -251,4 +256,3 @@ export function EmotionAreaChartViewer({
     </div>
   );
 }
-
