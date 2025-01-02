@@ -45,7 +45,7 @@ async def test_simple_conversation(test_user, test_activities):
     assistant = ActivityExtractorAssistant(
         user=test_user,
         user_activities=test_activities,
-        memory=ArrayMemory(minimum_messages=1),
+        memory=ArrayMemory(minimum_messages=1, initial_messages=[]),
     )
 
     # Simulate user message
@@ -65,10 +65,11 @@ async def test_simple_conversation(test_user, test_activities):
 @pytest.mark.asyncio
 async def test_activity_extraction_incomplete(test_user, test_activities):
     # Setup
+    memory = ArrayMemory(minimum_messages=1, initial_messages=[])
     assistant = ActivityExtractorAssistant(
         user=test_user,
         user_activities=test_activities,
-        memory=ArrayMemory(minimum_messages=1),
+        memory=memory,
     )
 
     # Simulate user message about logging activity without quantity
@@ -90,11 +91,12 @@ async def test_activity_extraction_incomplete(test_user, test_activities):
 
 @pytest.mark.asyncio
 async def test_activity_extraction_complete(test_user, test_activities):
+    memory = ArrayMemory(minimum_messages=1, initial_messages=[])
     # Setup
     assistant = ActivityExtractorAssistant(
         user=test_user,
         user_activities=test_activities,
-        memory=ArrayMemory(minimum_messages=1),
+        memory=memory,
     )
 
     # Simulate user message with complete activity information
@@ -117,11 +119,12 @@ async def test_activity_extraction_complete(test_user, test_activities):
 
 @pytest.mark.asyncio
 async def test_activity_extraction_nonexistent(test_user, test_activities):
+    memory = ArrayMemory(minimum_messages=1, initial_messages=[])
     # Setup
     assistant = ActivityExtractorAssistant(
         user=test_user,
         user_activities=test_activities,
-        memory=ArrayMemory(minimum_messages=1),
+        memory=memory,
     )
 
     # Simulate user message about logging a non-existent activity
@@ -143,57 +146,60 @@ async def test_activity_extraction_nonexistent(test_user, test_activities):
 @pytest.mark.asyncio
 async def test_activity_already_extracted(test_user, test_activities):
     # Setup memory with initial messages
-    memory = ArrayMemory(minimum_messages=1, initial_messages=[
-        Message.new(
-            text="ive been reading a book about espinosa",
-            sender_name=test_user.name,
-            sender_id=test_user.id,
-            recipient_name="Jarvis",
-            recipient_id="0",
-        ),
-        Message.new(
-            text="That sounds interesting! Espinosa's work often dives into deep philosophical ideas. What specific themes or concepts from the book have caught your attention? Also, have you thought about tracking your reading activities? It might be helpful to reflect on what you've read!",
-            sender_name="Jarvis",
-            sender_id="0",
-            recipient_name=test_user.name,
-            recipient_id=test_user.id,
-        ),
-        Message.new(
-            text="you're right,ive just created a reading activity, mark that ive read yesterday",
-            sender_name=test_user.name,
-            sender_id=test_user.id,
-            recipient_name="Jarvis",
-            recipient_id="0",
-        ),
-        Message.new(
-            text="Could you please provide the duration in minutes for your reading activity yesterday? This will help me log it accurately!",
-            sender_name="Jarvis",
-            sender_id="0",
-            recipient_name=test_user.name,
-            recipient_id=test_user.id,
-        ),
-        Message.new(
-            text="yeah, ive read 15min",
-            sender_name=test_user.name,
-            sender_id=test_user.id,
-            recipient_name="Jarvis",
-            recipient_id="0",
-        ),
-        Message.new(
-            text="I've extracted the reading activity of 15 minutes from yesterday. Please confirm if you would like to accept or reject this entry!",
-            sender_name="Jarvis",
-            sender_id="0",
-            recipient_name=test_user.name,
-            recipient_id=test_user.id,
-        ),
-        Message.new(
-            text="User accepted and logged the following activities:",
-            sender_name="System",
-            sender_id="system",
-            recipient_name=test_user.name,
-            recipient_id=test_user.id,
-        ),
-    ])
+    memory = ArrayMemory(
+        minimum_messages=1,
+        initial_messages=[
+            Message.new(
+                text="ive been reading a book about espinosa",
+                sender_name=test_user.name,
+                sender_id=test_user.id,
+                recipient_name="Jarvis",
+                recipient_id="0",
+            ),
+            Message.new(
+                text="That sounds interesting! Espinosa's work often dives into deep philosophical ideas. What specific themes or concepts from the book have caught your attention? Also, have you thought about tracking your reading activities? It might be helpful to reflect on what you've read!",
+                sender_name="Jarvis",
+                sender_id="0",
+                recipient_name=test_user.name,
+                recipient_id=test_user.id,
+            ),
+            Message.new(
+                text="you're right,ive just created a reading activity, mark that ive read yesterday",
+                sender_name=test_user.name,
+                sender_id=test_user.id,
+                recipient_name="Jarvis",
+                recipient_id="0",
+            ),
+            Message.new(
+                text="Could you please provide the duration in minutes for your reading activity yesterday? This will help me log it accurately!",
+                sender_name="Jarvis",
+                sender_id="0",
+                recipient_name=test_user.name,
+                recipient_id=test_user.id,
+            ),
+            Message.new(
+                text="yeah, ive read 15min",
+                sender_name=test_user.name,
+                sender_id=test_user.id,
+                recipient_name="Jarvis",
+                recipient_id="0",
+            ),
+            Message.new(
+                text="I've extracted the reading activity of 15 minutes from yesterday. Please confirm if you would like to accept or reject this entry!",
+                sender_name="Jarvis",
+                sender_id="0",
+                recipient_name=test_user.name,
+                recipient_id=test_user.id,
+            ),
+            Message.new(
+                text="User accepted and logged the following activities:",
+                sender_name="System",
+                sender_id="system",
+                recipient_name=test_user.name,
+                recipient_id=test_user.id,
+            ),
+        ],
+    )
 
     assistant = ActivityExtractorAssistant(
         user=test_user,
@@ -213,4 +219,49 @@ async def test_activity_already_extracted(test_user, test_activities):
         "ActivityScanner_0",
         "CheckActivityAlreadyConcluded_0",
         "Converse_0",
-    ] 
+    ]
+
+
+@pytest.mark.asyncio
+async def test_assistant_conversation_termination(test_user, test_activities):
+    # Setup memory with initial messages simulating a conversation about activities and plans
+    memory = ArrayMemory(
+        minimum_messages=1,
+        initial_messages=[
+            Message.new(
+                text="I've been thinking about starting some new activities",
+                sender_name=test_user.name,
+                sender_id=test_user.id,
+                recipient_name="Jarvis",
+                recipient_id="0",
+            ),
+            Message.new(
+                text="That's great! What kind of activities are you interested in? I see you already have running and reading set up!",
+                sender_name="Jarvis",
+                sender_id="0",
+                recipient_name=test_user.name,
+                recipient_id=test_user.id,
+            ),
+        ],
+    )
+
+    assistant = ActivityExtractorAssistant(
+        user=test_user,
+        user_activities=test_activities,
+        memory=memory,
+    )
+
+    # Send a message that clearly indicates the user wants to end the conversation
+    response, extracted = await assistant.get_response(
+        "Thanks, that's all for now. I'll let you know when I go for my next run.",
+        message_id="test_message_1",
+    )
+
+    # Assertions
+    assert response is not None
+    assert assistant.framework.execution_path == [
+        "ActivityScanner_0",
+        "Converse_0",
+    ]
+    # Ensure the response doesn't contain a question mark, indicating no follow-up questions
+    assert "?" not in response
