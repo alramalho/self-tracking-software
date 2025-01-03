@@ -9,10 +9,12 @@ test.describe.serial("App", () => {
   test.beforeAll(async ({ browser }) => {
     page = await (await browser.newContext()).newPage();
     await clerkSetup();
-    await page.goto("http://localhost:3000/");
+    await page.goto(process.env.BASE_URL || "http://localhost:3000/");
     await setupClerkTestingToken({ page });
 
-    await page.getByLabel("Email address").fill("tyvmgldzsifhjcpuwn@hthlm.com");
+    await page
+      .getByLabel("Email address")
+      .fill("alexandre.ramalho+e2etest@gmail.com");
     await page
       .getByLabel("Password", { exact: true })
       .fill("adfasdfasdfasdfasd");
