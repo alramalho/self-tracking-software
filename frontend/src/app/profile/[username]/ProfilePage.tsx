@@ -12,6 +12,8 @@ import {
   Settings,
   UserPlus,
   X,
+  Star,
+  SquareActivity,
 } from "lucide-react";
 import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
@@ -354,18 +356,8 @@ const ProfilePage: React.FC = () => {
           </AppleLikePopover>
         )}
 
-        {userHasAccessToAi ? (
-          <div className="w-full max-w-3xl mb-8">
-            <EmotionViewer messages={messagesData.data?.messages || []} />
-          </div>
-        ) : (
-          <></>
-          // <div className="w-full max-w-3xl mb-8">
-          //   <DemoEmotionViewer />
-          // </div>
-        )}
         <Tabs defaultValue="plans" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-13 bg-gray-50">
+          <TabsList className={`grid w-full h-13 bg-gray-50 ${isOnesOwnProfile ? "grid-cols-3" : "grid-cols-2"}`}>
             <TabsTrigger value="plans">
               <div className="flex flex-col items-center">
                 <ChartArea size={22} />
@@ -378,6 +370,14 @@ const ProfilePage: React.FC = () => {
                 <span>History</span>
               </div>
             </TabsTrigger>
+            {userHasAccessToAi && isOnesOwnProfile && (
+              <TabsTrigger value="mood">
+                <div className="flex flex-col items-center">
+                  <SquareActivity size={22} />
+                  <span>Mood</span>
+                </div>
+              </TabsTrigger>
+            )}
           </TabsList>
           <TabsContent value="plans">
             <div className="space-y-4">
@@ -487,6 +487,26 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
           </TabsContent>
+          {userHasAccessToAi && isOnesOwnProfile && (
+            <TabsContent value="mood">
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg bg-white">
+                  <div className="flex flex-row items-center gap-2 mb-4">
+                    <h3 className="text-lg font-semibold">Emotional Profile ⭐️</h3>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      <Link
+                        href="https://github.com/alramalho/self-tracking-software"
+                        className="underline"
+                      >
+                        We don&apos;t store your voice data
+                      </Link>
+                    </p>
+                  </div>
+                  <EmotionViewer messages={messagesData.data?.messages || []} />
+                </div>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
       {showEditActivityEntry && isOnesOwnProfile && (
