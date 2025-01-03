@@ -103,7 +103,7 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
                       message={message.text}
                       variant={role === "assistant" ? "received" : "sent"}
                     />
-                    <EmotionBadges emotions={message.emotions} />
+                    <EmotionBadges emotions={message.emotions} loading={false} />
                   </div>
                 </ChatBubble>
               );
