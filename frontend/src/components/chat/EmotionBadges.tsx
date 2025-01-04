@@ -39,7 +39,7 @@ export const EmotionBadges = ({
 
   return (
     <div className="flex items-center max-w-full gap-2 overflow-x-auto no-scrollbar w-full justify-center py-4">
-      <div className="flex overflow-x-auto no-scrollbar gap-2 px-4">
+      <div className="flex gap-2 px-4">
         {emotions.map((emotion, index) => (
           <div
             key={index}
