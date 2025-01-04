@@ -272,7 +272,7 @@ class PlanController:
         It is absolutely mandatory that all present sessions activity names are contained in the list of activities.
 
         Please only include these activities in plan:
-        {"\n - ".join([a for a in user_defined_activities])}
+        {"\n - ".join([str(a) for a in user_defined_activities])}
         """
 
         user_prompt = f"Please generate me a plan to achieve the goal of {goal} by {finishing_date}."
