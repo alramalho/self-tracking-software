@@ -8,9 +8,40 @@ type EmojiInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChan
   className?: string;
 };
 
-const isEmoji = (str: string) => {
-  // This regex matches most emoji characters, including skin tone modifiers and ZWJ sequences
-  const emojiRegex = /^(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|\ud83c[\ude32-\ude3a]|\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])+$/;
+const isEmoji = (str: string): boolean => {
+  // Individual components for better maintainability
+  const patterns = [
+      // Basic emoji ranges
+      '[\u{1F300}-\u{1F9FF}]', // Miscellaneous Symbols and Pictographs, Supplemental Symbols
+      '[\u{1F600}-\u{1F64F}]', // Emoticons
+      '[\u{1F680}-\u{1F6FF}]', // Transport and Map
+      '[\u{2600}-\u{26FF}]',   // Misc symbols
+      '[\u{2700}-\u{27BF}]',   // Dingbats
+      '[\u{1F900}-\u{1F9FF}]', // Supplemental Symbols and Pictographs
+      '[\u{1FA70}-\u{1FAFF}]', // Symbols and Pictographs Extended-A
+      
+      // Regional indicators for flags
+      '[\u{1F1E6}-\u{1F1FF}]',
+      
+      // Joiners and modifiers
+      '[\u{FE00}-\u{FE0F}]', // Variation Selectors
+      '[\u{1F3FB}-\u{1F3FF}]', // Skin tone modifiers
+      '\u200D', // Zero Width Joiner
+      
+      // Misc symbols often used in emoji sequences
+      '[\u{2B50}\u{2600}-\u{2B55}]', // Misc symbols
+      '[\u{23E9}-\u{23EC}]', // Media control
+      '[\u{23F0}\u{23F3}]',  // Clock faces
+      '[\u{2934}\u{2935}]',  // Arrows
+      '[\u{2B05}-\u{2B07}]'  // Directional arrows
+  ].join('|');
+
+  // Complete pattern that allows for sequences
+  const emojiRegex = new RegExp(
+      `^(?:${patterns})+$`,
+      'u' // Unicode flag is essential
+  );
+
   return emojiRegex.test(str);
 };
 
