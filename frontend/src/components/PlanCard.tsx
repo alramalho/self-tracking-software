@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import ConfirmDialog from "./ConfirmDialog";
-import PlanConfigurationForm from "./PlanConfigurationForm";
+import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
 import { GeneratedPlan } from "@/contexts/UserPlanContext";
 
 interface PlanCardProps {

@@ -10,7 +10,7 @@ import UsernameStep from "./UsernameStep";
 import InviteStep from "./InviteStep";
 import NotificationStep from "./NotificationStep";
 import toast from "react-hot-toast";
-import PlanConfigurationForm from "./PlanConfigurationForm";
+import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
 
 interface CreatePlanCardJourneyProps {
   children?: React.ReactNode;
