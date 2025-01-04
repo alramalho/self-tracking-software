@@ -78,7 +78,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
               }
               disabled={timesPerWeek >= 7}
             >
-              <Plus className="h-4 w-4" />
+              <Plus data-testid="plus" className="h-4 w-4" />
               <span className="sr-only">Increase</span>
             </Button>
           </div>

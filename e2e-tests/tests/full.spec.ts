@@ -14,7 +14,7 @@ test.describe.serial("App", () => {
 
     await page
       .getByLabel("Email address")
-      .fill("alexandre.ramalho+e2etest@gmail.com");
+      .fill("alexandre.ramalho.1998+e2etracking@gmail.com");
     await page
       .getByLabel("Password", { exact: true })
       .fill("adfasdfasdfasdfasd");
@@ -27,7 +27,7 @@ test.describe.serial("App", () => {
     }
   });
 
-  test("can sign up and create a specific plan", async () => {
+  test("can create a specific plan", async () => {
     // Navigate to Plans and start creating a new plan
     await page
       .locator("nav")
@@ -66,9 +66,6 @@ test.describe.serial("App", () => {
 
     await page.getByRole("button", { name: "Save Activity" }).click();
 
-    // Toggle "Only use selected activities"
-    await page.getByLabel("Only use selected activities").click();
-
     // Add additional customization
     await page
       .getByPlaceholder(
@@ -103,6 +100,57 @@ test.describe.serial("App", () => {
 
     // Store the current URL for the next test
     createdPlanUrl = page.url();
+  });
+
+  test.only("can create a times per week plan", async () => {
+    // Navigate to Plans and start creating a new plan
+    await page
+      .locator("nav")
+      .first()
+      .getByRole("link", { name: "Plans" })
+      .click();
+    await page.getByText("Create New Plan").click();
+
+    await page.getByText("Lifestyle").click();
+
+    await page
+      .getByLabel("Great, now what exactly do you want to do?")
+      .fill("I want to meditate regularly");
+
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page
+      .getByTestId("plan-configuration-form")
+      .getByPlaceholder("Enter an emoji")
+      .fill("🧘");
+
+    await page.getByText("push-ups").click();
+
+    // Create a new activity
+    await page.getByRole("button", { name: "Add New" }).click();
+    await page.getByRole("textbox", { name: "Enter an emoji" }).fill("🧘");
+    await page.getByPlaceholder("Activity Title").fill("Meditate");
+    await page
+      .getByPlaceholder("Measure (e.g., minutes, times)")
+      .fill("minutes");
+
+    await page.getByRole("button", { name: "Save Activity" }).click();
+
+    await page.getByRole("button", { name: "Save Activity" }).click();
+
+    // Add additional customization
+    await page
+      .getByPlaceholder(
+        "Add any specific requirements or preferences for your plan..."
+      )
+      .fill(
+        "I prefer morning workouts and would like to focus on cardio exercises"
+      );
+
+    await page.getByText("Weekly Count Goal").click();
+    await page.getByTestId("plus").click();
+    await page.getByTestId("plus").click();
+
+    await page.getByRole("button", { name: "Create Plan" }).click();
   });
 
   test("can edit an existing plan", async () => {
