@@ -14,8 +14,6 @@ interface ActivitiesStepProps {
   setExistingActivities: (activities: Activity[] | ((prev: Activity[]) => Activity[])) => void;
   newActivities: Activity[];
   setNewActivities: (activities: Activity[] | ((prev: Activity[]) => Activity[])) => void;
-  onlyTheseActivities: boolean;
-  setOnlyTheseActivities: (value: boolean) => void;
   description: string;
   setDescription: (description: string) => void;
 }
@@ -26,8 +24,6 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
   setExistingActivities,
   newActivities,
   setNewActivities,
-  onlyTheseActivities,
-  setOnlyTheseActivities,
   description,
   setDescription,
 }) => {
@@ -92,17 +88,6 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
             }
           />
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 mb-4">
-        <Switch
-          id="only-selected"
-          checked={onlyTheseActivities}
-          onCheckedChange={setOnlyTheseActivities}
-        />
-        <label htmlFor="only-selected" className="text-sm text-gray-500">
-          Only use selected activities
-        </label>
       </div>
 
       <div>

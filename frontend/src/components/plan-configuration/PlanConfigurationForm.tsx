@@ -36,7 +36,6 @@ interface PlanDurationType {
 
 interface CachedFormState {
   activities: Activity[];
-  onlyTheseActivities: boolean;
   description: string;
   selectedEmoji: string;
   planDurationType: PlanDurationType["type"];
@@ -98,7 +97,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const getDefaultState = (): CachedFormState => {
     return {
       activities: plan ? getPlanActivities(plan) : [],
-      onlyTheseActivities: true,
       description: "",
       selectedEmoji: plan?.emoji || "",
       planDurationType: plan?.duration_type,
@@ -114,9 +112,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
   const [activities, setActivities] = useState<Activity[]>(
     initialState.activities
-  );
-  const [onlyTheseActivities, setOnlyTheseActivities] = useState(
-    initialState.onlyTheseActivities
   );
   const [description, setDescription] = useState(initialState.description);
   const [selectedEmoji, setSelectedEmoji] = useState<string>(
@@ -168,7 +163,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     if (typeof window !== "undefined") {
       const stateToSave: CachedFormState = {
         activities: [...existingActivities, ...newActivities],
-        onlyTheseActivities,
         description,
         selectedEmoji,
         planDurationType: plan?.duration_type ?? planDuration.type,
@@ -188,7 +182,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   }, [
     existingActivities,
     newActivities,
-    onlyTheseActivities,
     description,
     selectedEmoji,
     currentFinishingDate,
@@ -212,7 +205,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         goal,
         finishingDate: currentFinishingDate?.split("T")[0], // remove time
         activities: [...existingActivities, ...newActivities], // Combine both for generation
-        onlyTheseActivities,
         description,
         isEdit,
       }).then((plan) => {
@@ -284,7 +276,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const hasMadeAnyChanges = useCallback(() => {
     const planToBeSaved = createPlanToConfirm();
 
-    if (!planData && !isEdit) return true; // New plan creation
     if (!planData) {
       return false;
     } // Edit mode but no plan data
@@ -309,11 +300,37 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     return Array.from(currentActivityIds).some((id) => !dbActivityIds.has(id));
   }, [createPlanToConfirm, planData, isEdit, userData?.activities]);
 
+  const isPlanComplete = () => {
+    const planToBeSaved = createPlanToConfirm();
+
+    if (!planToBeSaved.outline_type) return false;
+
+    if (planToBeSaved.outline_type == "specific" && !generatedPlan)
+      return false;
+    if (
+      planToBeSaved.outline_type == "times_per_week" &&
+      !planToBeSaved.times_per_week
+    )
+      return false;
+
+    return (
+      planToBeSaved.duration_type &&
+      planToBeSaved.finishing_date &&
+      planToBeSaved.goal &&
+      planToBeSaved.emoji &&
+      planToBeSaved?.activities &&
+      planToBeSaved?.activities?.length > 0
+    );
+  };
+
   const canConfirmPlan = () => {
     if (outlineType === "specific" && !generatedPlan) {
       return false;
-    } else {
+    }
+    if (isEdit) {
       return hasMadeAnyChanges();
+    } else {
+      return isPlanComplete();
     }
   };
   const handleConfirm = async () => {
@@ -394,7 +411,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     generatedPlan,
   ]);
 
-  const canGeneratePlan = () => {
+  const canGeneratePlan = useCallback(() => {
     // Basic requirements for all plan types
     const hasBasicInfo =
       planDuration.type &&
@@ -408,7 +425,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     // Additional requirements based on outline type
     if (outlineType === "times_per_week") {
-      return timesPerWeek > 0;
+      return false
     }
 
     if (outlineType === "specific") {
@@ -416,7 +433,16 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     }
 
     return false;
-  };
+  }, [
+    planDuration.type,
+    planDuration.date,
+    goal,
+    selectedEmoji,
+    existingActivities.length,
+    newActivities.length,
+    outlineType,
+    generatedPlan
+  ]);
 
   const shouldShowStep = (stepNumber: number) => {
     if (isEdit) return true;
@@ -469,8 +495,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             setExistingActivities={setExistingActivities}
             newActivities={newActivities}
             setNewActivities={setNewActivities}
-            onlyTheseActivities={onlyTheseActivities}
-            setOnlyTheseActivities={setOnlyTheseActivities}
             description={description}
             setDescription={setDescription}
           />

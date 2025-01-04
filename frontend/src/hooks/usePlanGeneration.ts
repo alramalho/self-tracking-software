@@ -5,7 +5,6 @@ interface PlanGenerationConfig {
   goal: string;
   finishingDate?: string;
   activities: Activity[];
-  onlyTheseActivities: boolean;
   description: string;
   isEdit?: boolean;
 }
@@ -16,25 +15,11 @@ export const usePlanGeneration = () => {
   const generatePlan = async (
     config: PlanGenerationConfig
   ): Promise<GeneratedPlan> => {
-    const selectedActivitiesText =
-      config.activities.length > 0
-        ? `Please ${
-            config.onlyTheseActivities
-              ? "only include"
-              : "include (but not only)"
-          } these activities in plan:\n${config.activities
-            .map(
-              (activity) =>
-                `- "${activity.title}" measured in "${activity.measure}" with emoji "${activity.emoji}""`
-            )
-            .join("\n")}\n\n`
-        : "";
-
     const descriptionPrefix = config.isEdit
       ? `\nThis is an edit to the existing plan with goal: "${config.goal}". \n\n`
       : "";
 
-    const fullDescription = `${descriptionPrefix}${selectedActivitiesText}${
+    const fullDescription = `${descriptionPrefix}${
       config.description
         ? `The user provided the additional description which you should solemly take into account over any other considerations or progressiveness: "${config.description}"`
         : ""

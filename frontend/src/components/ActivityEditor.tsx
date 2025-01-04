@@ -123,7 +123,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             <EmojiInput
               value={emoji}
               onChange={(emoji) => setEmoji(emoji)}
-              placeholder="Select an emoji"
+              placeholder="Enter an emoji"
             />
             <Input
               placeholder="Activity Title"

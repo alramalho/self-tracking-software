@@ -45,11 +45,6 @@ async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_u
         Activity(**activity) for activity in data.get("userDefinedActivities", [])
     ]
 
-    if not goal:
-        raise HTTPException(
-            status_code=400, detail="Goal not set in onboarding progress"
-        )
-
     plans = plan_controller.generate_plans(
         goal, finishing_date, plan_description, user_defined_activities
     )

@@ -254,7 +254,7 @@ class PlanController:
         goal: str,
         finishing_date: Optional[str] = None,
         plan_description: Optional[str] = None,
-        user_defined_activities: Optional[List[Activity]] = None,
+        user_defined_activities: List[Activity] = None,
     ) -> List[Dict]:
         logger.log("CONTROLLERS", f"Generating plans for goal: {goal}")
         current_date = datetime.now().strftime("%Y-%m-%d, %A")
@@ -270,6 +270,9 @@ class PlanController:
         The plan should be progressive (intensities or recurrence of activities should increase over time).
         The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
         It is absolutely mandatory that all present sessions activity names are contained in the list of activities.
+
+        Please only include these activities in plan:
+        {"\n - ".join([a for a in user_defined_activities])}
         """
 
         user_prompt = f"Please generate me a plan to achieve the goal of {goal} by {finishing_date}."
