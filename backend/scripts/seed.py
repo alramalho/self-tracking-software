@@ -288,6 +288,7 @@ def generate_dummy_data():
             return
 
     for plan_group in plan_groups:
+        plan_groups_gateway.create_plan_group(plan_group)
         for plan in plans:
             if plan.id in plan_group.plan_ids:
                 plan.plan_group_id = plan_group.id

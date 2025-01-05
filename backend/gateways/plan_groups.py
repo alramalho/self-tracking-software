@@ -11,6 +11,10 @@ class PlanGroupsGateway:
     def __init__(self):
         self.db_gateway = MongoDBGateway("plan_groups")
 
+    def create_plan_group(self, plan_group: PlanGroup):
+        self.db_gateway.write(plan_group.dict())
+        return plan_group
+
     def upsert_plan_group(self, plan_group: PlanGroup):
         self.db_gateway.write(plan_group.dict())
         return plan_group
