@@ -1,43 +1,30 @@
 import { useApiWithAuth } from "@/api";
-import { Activity, GeneratedPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
 
 interface PlanGenerationConfig {
   goal: string;
   finishingDate?: string;
   activities: Activity[];
-  description: string;
+  description?: string;
   isEdit?: boolean;
 }
 
-export const usePlanGeneration = () => {
+export function usePlanGeneration() {
   const api = useApiWithAuth();
 
-  const generatePlan = async (
+  const generateSessions = async (
     config: PlanGenerationConfig
-  ): Promise<GeneratedPlan> => {
-    const descriptionPrefix = config.isEdit
-      ? `\nThis is an edit to the existing plan with goal: "${config.goal}". \n\n`
-      : "";
-
-    const fullDescription = `${descriptionPrefix}${
-      config.description
-        ? `The user provided the additional description which you should solemly take into account over any other considerations or progressiveness: "${config.description}"`
-        : ""
-    }`;
-
-    const response = await api.post("/generate-plans", {
+  ): Promise<ApiPlan["sessions"]> => {
+    const response = await api.post("/generate-sessions", {
       goal: config.goal,
-      finishingDate: config.finishingDate,
-      planDescription: fullDescription,
-      userDefinedActivities: config.activities,
+      finishing_date: config.finishingDate,
+      activities: config.activities,
+      description: config.description,
+      is_edit: config.isEdit,
     });
 
-    if (!response.data.plans?.[0]) {
-      throw new Error("No plan generated");
-    }
-
-    return response.data.plans[0];
+    return response.data.sessions;
   };
 
-  return { generatePlan };
-};
+  return { generateSessions };
+}

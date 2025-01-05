@@ -17,6 +17,9 @@ from shared.utils import exclude_embedding_fields
 from entities.plan_invitation import PlanInvitation
 from constants import URL
 from entities.activity import Activity
+from entities.plan import PlanSession, Plan
+from bson import ObjectId
+from pydantic import BaseModel
 
 
 router = APIRouter()
@@ -29,6 +32,14 @@ plan_groups_gateway = PlanGroupsGateway()
 plan_invitations_gateway = PlanInvitationsGateway()
 
 
+class GenerateSessionsRequest(BaseModel):
+    goal: str
+    finishing_date: str | None = None
+    activities: List[Activity]
+    description: str | None = None
+    is_edit: bool | None = None
+
+
 @router.get("/generate-invitation-link")
 async def generate_copy_link(plan_id: str, user: User = Depends(is_clerk_user)):
     plan_invitation = PlanInvitation.new(plan_id, user.id, "external")
@@ -36,38 +47,14 @@ async def generate_copy_link(plan_id: str, user: User = Depends(is_clerk_user)):
     return {"link": f"{URL}/join-plan/{plan_invitation.id}"}
 
 
-@router.post("/generate-plans")
-async def generate_plans(data: Dict = Body(...), user: User = Depends(is_clerk_user)):
-    goal = data.get("goal")
-    finishing_date = data.get("finishingDate")
-    plan_description = data.get("planDescription")
-    user_defined_activities = [
-        Activity(**activity) for activity in data.get("userDefinedActivities", [])
-    ]
-
-    plans = plan_controller.generate_plans(
-        goal, finishing_date, plan_description, user_defined_activities
-    )
-    return {"plans": plans}
-
-
 @router.post("/create-plan")
 async def create_plan(
     plan_data: dict = Body(...), current_user: User = Depends(is_clerk_user)
-):
-    generated_plan_data = GeneratedPlanUpdate(
-        activities=plan_data.get("activities", []),
-        goal=plan_data.get("goal", ""),
-        emoji=plan_data.get("emoji", ""),
-        sessions=plan_data.get("sessions", []),
-        finishing_date=plan_data.get("finishing_date", ""),
-        notes=plan_data.get("notes", None),
-        outline_type=plan_data.get("outline_type", "specific"),
-        times_per_week=plan_data.get("times_per_week", None),
-    )
-    new_plan, created_activities = plan_controller.create_plan_from_generated_plan(
-        current_user.id, generated_plan_data
-    )
+):  
+    plan_data["user_id"] = current_user.id
+    plan_data["id"] = str(ObjectId())
+
+    new_plan = plan_controller.create_plan(Plan(**plan_data))
 
     # Create a PlanGroup for the new plan
     plan_group = PlanGroup.new(
@@ -93,7 +80,6 @@ async def create_plan(
     return {
         "plan": new_plan,
         "plan_group": plan_group,
-        "activities": created_activities,
     }
 
 
@@ -405,20 +391,19 @@ async def update_plan(
     return plan_controller.update_plan(plan)
 
 
-@router.post("/plans/{plan_id}/generated-update")
-async def generate_update_plan(
-    plan_id: str,
-    generated_plan_update: GeneratedPlanUpdate,
-    current_user: User = Depends(is_clerk_user),
-):
+@router.post("/generate-sessions")
+async def generate_sessions(data: GenerateSessionsRequest, user: User = Depends(is_clerk_user)):
     try:
-        updated_plan = plan_controller.update_plan_from_generated(
-            plan_id=plan_id,
-            user_id=current_user.id,
-            generated_plan_update=generated_plan_update,
+        sessions = plan_controller.generate_sessions(
+            goal=data.goal,
+            finishing_date=data.finishing_date,
+            activities=data.activities,
+            description=data.description,
+            is_edit=data.is_edit,
         )
-        return {"plan": updated_plan}
+        logger.info(f"Generated sessions: {sessions}")
+        return {"sessions": sessions}
     except Exception as e:
-        logger.error(f"Failed to update plan: {e}")
+        logger.error(f"Failed to generate sessions: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))

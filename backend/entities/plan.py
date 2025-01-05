@@ -10,12 +10,15 @@ class PlanSession(BaseModel):
     quantity: int
 
 
+class PlanMilestone(BaseModel):
+    date: str
+    description: str
+    
 class Plan(BaseModel):
     id: str
     user_id: str
     plan_group_id: Optional[str] = None
     goal: str
-    goal_embedding: Optional[List[float]] = None
     emoji: str | None = None
     finishing_date: Optional[str] = None
     sessions: List[PlanSession]
@@ -25,6 +28,7 @@ class Plan(BaseModel):
     outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
     times_per_week: Optional[int] = None
     notes: Optional[str] = None
+    milestones: Optional[List[PlanMilestone]] = None
     
     @classmethod
     def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: Optional[List[PlanSession]] = None, plan_group_id: Optional[str] = None, id: Optional[str] = None, duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None, notes: Optional[str] = None, outline_type: Optional[Literal["specific", "times_per_week"]] = "specific", times_per_week: Optional[int] = None) -> "Plan":

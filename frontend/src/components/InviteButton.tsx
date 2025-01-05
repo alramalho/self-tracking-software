@@ -12,15 +12,11 @@ import { useShare } from "@/hooks/useShare";
 interface InviteButtonProps {
   planId: string;
   onInviteSuccess: () => void;
-  buttonText?: string;
-  embedded?: boolean;
 }
 
 const InviteButton: React.FC<InviteButtonProps> = ({
   planId,
   onInviteSuccess,
-  buttonText = "Invite",
-  embedded = false,
 }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
@@ -113,39 +109,18 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     </Button>
   );
 
-  if (embedded) {
-    return (
-      <>
-        {shareOrCopyButton}
-        <Divider text="OR" />
-        <UserSearch
-          onUserClick={handleUserSelect}
-          selectedUsers={invitees}
-          onUserRemove={removeInvitee}
-        />
-        <Button
-          className="w-full mt-4"
-          onClick={handleInvite}
-          disabled={invitees.length === 0}
-        >
-          {buttonText} ({invitees.length})
-        </Button>
-      </>
-    );
-  }
   return (
-    <div className="relative">
+    <>
       <Button
-        variant="outline"
-        className="bg-gray-50"
+        variant="ghost"
         size="sm"
         onClick={(e) => {
           e.stopPropagation();
           setIsSearchOpen(!isSearchOpen);
         }}
+        className={`p-0`}
       >
-        <UserPlus className="h-4 w-4 mr-2" />
-        {buttonText}
+        <UserPlus className="h-4 w-4" />
       </Button>
       <AppleLikePopover
         open={isSearchOpen}
@@ -163,10 +138,10 @@ const InviteButton: React.FC<InviteButtonProps> = ({
           onClick={handleInvite}
           disabled={invitees.length === 0}
         >
-          {buttonText} ({invitees.length})
+          Invite ({invitees.length})
         </Button>
       </AppleLikePopover>
-    </div>
+    </>
   );
 };
 

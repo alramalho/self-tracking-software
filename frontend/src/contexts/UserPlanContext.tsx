@@ -81,6 +81,10 @@ export interface Plan {
   goal: string;
   finishing_date?: Date;
   plan_group_id?: string;
+  milestones?: {
+    date: Date;
+    description: string;
+  }[];
   sessions: {
     date: Date;
     descriptive_guide: string;
@@ -94,21 +98,28 @@ export interface Plan {
   times_per_week?: number;
 }
 
-export interface GeneratedPlan extends Omit<Plan, "finishing_date" | "members">{
-  overview: string;
-  finishing_date?: string;
-  activities: { id: string; emoji: string; title: string; measure: string }[];
-  intensity: string;
-}
-
-export interface ApiPlan extends Omit<Plan, "id" | "finishing_date" | "sessions"> {
+export interface ApiPlan {
   id: string;
+  user_id: string;
+  plan_group_id?: string;
+  goal: string;
+  emoji?: string;
   finishing_date?: string;
   sessions: {
     date: string;
     descriptive_guide: string;
     quantity: number;
     activity_id: string;
+  }[];
+  created_at: string;
+  deleted_at?: string;
+  duration_type?: "habit" | "lifestyle" | "custom";
+  outline_type?: "specific" | "times_per_week";
+  times_per_week?: number;
+  notes?: string;
+  milestones?: {
+    date: string;
+    description: string;
   }[];
 }
 
@@ -186,26 +197,6 @@ interface UserPlanContextType {
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
 
-export function convertGeneratedPlanToPlan(plan: GeneratedPlan): Plan {
-  return {
-    ...plan,
-    finishing_date: plan.finishing_date ? parseISO(plan.finishing_date) : undefined,
-  } as Plan;
-}
-
-export function convertGeneratedPlanToApiPlan(plan: GeneratedPlan): ApiPlan {
-  return {
-    ...plan,
-    finishing_date: plan.finishing_date
-      ? format(plan.finishing_date, "yyyy-MM-dd")
-      : undefined,
-    sessions: plan.sessions.map((session) => ({
-      ...session,
-      date: format(session.date, "yyyy-MM-dd"),
-    })),
-  } as ApiPlan;
-}
-
 export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]): Plan {
   return {
     ...plan,
@@ -219,7 +210,14 @@ export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]):
 }
 
 export function convertPlanToApiPlan(plan: Plan): ApiPlan {
-  return convertGeneratedPlanToApiPlan(plan as GeneratedPlan);
+  return {
+    ...plan,
+    finishing_date: plan.finishing_date ? format(plan.finishing_date, "yyyy-MM-dd") : undefined,
+    sessions: plan.sessions.map((session) => ({
+      ...session,
+      date: format(session.date, "yyyy-MM-dd"),
+    })),
+  } as ApiPlan;
 }
 
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({

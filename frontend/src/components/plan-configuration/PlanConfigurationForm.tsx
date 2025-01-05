@@ -4,7 +4,6 @@ import { Loader2 } from "lucide-react";
 import {
   Activity,
   ApiPlan,
-  GeneratedPlan,
   Plan,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
@@ -12,17 +11,15 @@ import { usePlanGeneration } from "@/hooks/usePlanGeneration";
 import toast from "react-hot-toast";
 import Divider from "../Divider";
 import Step from "./Step";
-import {
-  DurationStep,
-  GoalStep,
-  EmojiStep,
-  ActivitiesStep,
-  OutlineStep,
-  PreviewStep,
-} from "./steps";
+import MilestonesStep, { Milestone } from "./steps/MilestonesStep";
+import OutlineStep from "./steps/OutlineStep";
+import ActivitiesStep from "./steps/ActivitiesStep";
+import EmojiStep from "./steps/EmojiStep";
+import GoalStep from "./steps/GoalStep";
+import DurationStep from "./steps/DurationStep";
 
 interface PlanConfigurationFormProps {
-  onConfirm: (plan: GeneratedPlan) => Promise<void>;
+  onConfirm: (plan: ApiPlan) => Promise<void>;
   onClose?: () => void;
   title: string;
   isEdit?: boolean;
@@ -43,6 +40,7 @@ interface CachedFormState {
   outlineType: Plan["outline_type"];
   timesPerWeek: Plan["times_per_week"];
   goal: Plan["goal"];
+  milestones: { date: Date; description: string }[];
   expiresAt: number;
 }
 
@@ -104,15 +102,17 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       outlineType: plan?.outline_type,
       timesPerWeek: plan?.times_per_week,
       goal: plan?.goal || "",
+      milestones:
+        plan?.milestones?.map((m) => ({
+          date: new Date(m.date),
+          description: m.description,
+        })) || [],
       expiresAt: Date.now() + 12 * 60 * 60 * 1000, // 12 hours from now
     };
   };
 
   const initialState = loadInitialState();
 
-  const [activities, setActivities] = useState<Activity[]>(
-    initialState.activities
-  );
   const [description, setDescription] = useState(initialState.description);
   const [selectedEmoji, setSelectedEmoji] = useState<string>(
     initialState.selectedEmoji
@@ -122,13 +122,12 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   >(initialState.finishingDate || plan?.finishing_date);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(
-    null
-  );
-  const { generatePlan } = usePlanGeneration();
+  const [generatedSessions, setGeneratedSessions] = useState<ApiPlan['sessions'] | undefined>(undefined);
+  const { generateSessions } = usePlanGeneration();
   const [goal, setGoal] = useState(initialState.goal);
   const [goalConfirmed, setGoalConfirmed] = useState(false);
   const [planNotes, setPlanNotes] = useState("");
+  const [milestones, setMilestones] = useState<Milestone[]>(initialState.milestones || []);
   const [planDuration, setPlanDuration] = useState<PlanDurationType>({
     type: initialState.planDurationType
       ? initialState.planDurationType
@@ -137,6 +136,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       : undefined,
     date: initialState.finishingDate || currentFinishingDate,
   });
+
+  useEffect(() => {
+    console.log("milestones", milestones);
+  }, [milestones]);
 
   const [outlineType, setOutlineType] = useState<Plan["outline_type"]>(
     initialState.outlineType
@@ -170,6 +173,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         outlineType: outlineType,
         timesPerWeek: timesPerWeek,
         goal,
+        milestones: milestones,
         expiresAt: Date.now() + 12 * 60 * 60 * 1000,
       };
 
@@ -191,6 +195,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     isEdit,
     plan?.id,
     planDuration.type,
+    milestones,
   ]);
 
   const handleGenerate = async () => {
@@ -201,14 +206,14 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     setIsGenerating(true);
     await toast.promise(
-      generatePlan({
+      generateSessions({
         goal,
         finishingDate: currentFinishingDate?.split("T")[0], // remove time
         activities: [...existingActivities, ...newActivities], // Combine both for generation
         description,
         isEdit,
-      }).then((plan) => {
-        setGeneratedPlan(plan);
+      }).then((sessions) => {
+        setGeneratedSessions(sessions);
         setIsGenerating(false);
       }),
       {
@@ -219,32 +224,35 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     );
   };
 
-  const createPlanToConfirm = useCallback((): Partial<GeneratedPlan> => {
-    const basePlan = {
+  const createPlanToConfirm = useCallback((): ApiPlan => {
+    console.log("milestones", milestones);
+    const basePlan: Omit<ApiPlan, 'id' | 'user_id' | 'created_at'> = {
       goal,
       emoji: selectedEmoji,
       finishing_date: currentFinishingDate,
       notes: planNotes,
       duration_type: planDuration.type,
       outline_type: outlineType,
-      overview: "", // backwards compatibility
-      intensity: "", // backwards compatibility
-      activities: [...existingActivities, ...newActivities].map((activity) => ({
-        id: activity.id,
-        emoji: activity.emoji || "❓",
-        title: activity.title,
-        measure: activity.measure,
-      })),
+      milestones: milestones,
+      sessions: [],
     };
 
     if (outlineType === "specific") {
-      if (generatedPlan) {
+      if (generatedSessions) {
         return {
           ...basePlan,
-          ...generatedPlan,
+          sessions: generatedSessions,
+          id: plan?.id || '',
+          user_id: plan?.user_id || '',
+          created_at: plan?.created_at || new Date().toISOString(),
         };
       }
-      return basePlan;
+      return {
+        ...basePlan,
+        id: plan?.id || '',
+        user_id: plan?.user_id || '',
+        created_at: plan?.created_at || new Date().toISOString(),
+      };
     }
 
     // For times_per_week plans
@@ -252,13 +260,14 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       ...basePlan,
       times_per_week: timesPerWeek,
       sessions: [...existingActivities, ...newActivities].map((activity) => ({
-        date: new Date(currentFinishingDate || new Date().toISOString()),
+        date: currentFinishingDate || new Date().toISOString().split('T')[0],
         descriptive_guide: "",
         quantity: 1,
         activity_id: activity.id,
-        activity_name: activity.title,
-        emoji: activity.emoji || "❓",
       })),
+      id: plan?.id || '',
+      user_id: plan?.user_id || '',
+      created_at: plan?.created_at || new Date().toISOString(),
     };
   }, [
     goal,
@@ -270,7 +279,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     existingActivities,
     newActivities,
     timesPerWeek,
-    generatedPlan,
+    generatedSessions,
+    milestones,
+    plan,
   ]);
 
   const hasMadeAnyChanges = useCallback(() => {
@@ -287,10 +298,12 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     if (planToBeSaved.duration_type !== planData.duration_type) return true;
     if (planToBeSaved.outline_type !== planData.outline_type) return true;
     if (planToBeSaved.times_per_week !== planData.times_per_week) return true;
+    if (planToBeSaved.milestones !== planData.milestones) return true;
+    if (planToBeSaved.sessions !== planData.sessions) return true;
 
     // Check activities
     const currentActivityIds = new Set(
-      planToBeSaved.activities?.map((a) => a.id) ?? []
+      [...existingActivities, ...newActivities].map((a) => a.id)
     );
     const dbActivityIds = new Set(getPlanActivities(planData).map((a) => a.id));
 
@@ -298,15 +311,16 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     // Convert Set to Array for iteration
     return Array.from(currentActivityIds).some((id) => !dbActivityIds.has(id));
-  }, [createPlanToConfirm, planData, isEdit, userData?.activities]);
+  }, [createPlanToConfirm, planData, isEdit, userData?.activities, milestones, existingActivities, newActivities]);
 
-  const isPlanComplete = () => {
+  const isPlanComplete = useCallback(() => {
     const planToBeSaved = createPlanToConfirm();
 
     if (!planToBeSaved.outline_type) return false;
 
-    if (planToBeSaved.outline_type == "specific" && !generatedPlan)
+    if (planToBeSaved.outline_type == "specific" && !generatedSessions)
       return false;
+
     if (
       planToBeSaved.outline_type == "times_per_week" &&
       !planToBeSaved.times_per_week
@@ -318,21 +332,18 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       planToBeSaved.finishing_date &&
       planToBeSaved.goal &&
       planToBeSaved.emoji &&
-      planToBeSaved?.activities &&
-      planToBeSaved?.activities?.length > 0
+      [...existingActivities, ...newActivities].length > 0
     );
-  };
+  }, [createPlanToConfirm, generatedSessions, planData, existingActivities, newActivities]);
 
-  const canConfirmPlan = () => {
-    if (outlineType === "specific" && !generatedPlan) {
-      return false;
-    }
+  const canConfirmPlan = useCallback(() => {
     if (isEdit) {
       return hasMadeAnyChanges();
     } else {
       return isPlanComplete();
     }
-  };
+  }, [outlineType, generatedSessions, isEdit, hasMadeAnyChanges, isPlanComplete]);
+  
   const handleConfirm = async () => {
     try {
       setIsProcessing(true);
@@ -345,7 +356,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         : "createPlanJourneyState";
       localStorage.removeItem(cacheKey);
 
-      await onConfirm(planToConfirm as GeneratedPlan);
+      await onConfirm(planToConfirm as ApiPlan);
     } catch (error) {
       toast.error("Failed to confirm plan");
     } finally {
@@ -394,9 +405,16 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       setCurrentStep(5);
       scrollToStep(5);
     }
-    if (currentStep === 5 && outlineType == "specific") {
-      setCurrentStep(6);
-      scrollToStep(6);
+    if (currentStep === 5) {
+      if (outlineType === "specific" && generatedSessions) {
+        setCurrentStep(6);
+        scrollToStep(6);
+      }
+
+      if (outlineType === "times_per_week" && timesPerWeek) {
+        setCurrentStep(6);
+        scrollToStep(6);
+      }
     }
   }, [
     planDuration.date,
@@ -408,7 +426,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     newActivities,
     currentStep,
     isEdit,
-    generatedPlan,
+    generatedSessions,
   ]);
 
   const canGeneratePlan = useCallback(() => {
@@ -425,11 +443,11 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     // Additional requirements based on outline type
     if (outlineType === "times_per_week") {
-      return false
+      return false;
     }
 
     if (outlineType === "specific") {
-      return !generatedPlan;
+      return !generatedSessions;
     }
 
     return false;
@@ -441,7 +459,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     existingActivities.length,
     newActivities.length,
     outlineType,
-    generatedPlan
+    generatedSessions,
   ]);
 
   const shouldShowStep = (stepNumber: number) => {
@@ -507,24 +525,45 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             setOutlineType={setOutlineType}
             timesPerWeek={timesPerWeek}
             setTimesPerWeek={setTimesPerWeek}
+            title={title}
+            generatedSessions={generatedSessions}
+            onRegenerate={handleGenerate}
+            activities={[...existingActivities, ...newActivities]}
+            finishingDate={currentFinishingDate}
+          />
+          {canGeneratePlan() && (
+            <Button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="flex-1 gap-2 w-full mt-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Plan"
+              )}
+            </Button>
+          )}
+        </Step>
+
+        <Divider />
+
+        <Step
+          stepNumber={6}
+          isVisible={shouldShowStep(6)}
+          ref={stepRefs.step6}
+          className="space-y-6"
+        >
+          <MilestonesStep
+            milestones={milestones}
+            setMilestones={setMilestones}
           />
         </Step>
 
-        {outlineType === "specific" && generatedPlan && (
-          <Step
-            stepNumber={6}
-            isVisible={shouldShowStep(6)}
-            ref={stepRefs.step6}
-            className="space-y-6"
-          >
-            <Divider />
-            <PreviewStep
-              title={title}
-              generatedPlan={generatedPlan}
-              onRegenerate={handleGenerate}
-            />
-          </Step>
-        )}
+        <Divider />
 
         <div className="flex flex-col gap-2">
           {onClose && (
@@ -547,22 +586,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
                 "Confirm Update"
               ) : (
                 "Create Plan"
-              )}
-            </Button>
-          )}
-          {canGeneratePlan() && (
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="flex-1 gap-2"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Generate Plan"
               )}
             </Button>
           )}

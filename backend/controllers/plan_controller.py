@@ -142,35 +142,6 @@ class PlanController:
             if session.activity_id
         ]
 
-    def create_plan_from_generated_plan(
-        self,
-        user_id: str,
-        generated_plan_data: GeneratedPlanUpdate
-    ) -> Tuple[Plan, List[Activity]]:
-        logger.log(
-            "CONTROLLERS", f"Creating plan from generated plan for user {user_id}"
-        )
-        
-        # Process activities and sessions
-        new_plan_activities = self._process_generated_plan_activities(user_id, generated_plan_data)
-        sessions = self._create_plan_sessions(generated_plan_data)
-        
-        # Create new plan
-        plan = Plan.new(
-            user_id=user_id,
-            goal=generated_plan_data.goal,
-            emoji=generated_plan_data.emoji,
-            finishing_date=generated_plan_data.finishing_date,
-            notes=generated_plan_data.notes,
-            duration_type=generated_plan_data.duration_type,
-            sessions=sessions,
-            outline_type=generated_plan_data.outline_type,
-            times_per_week=generated_plan_data.times_per_week,
-        )
-        
-        self.db_gateway.write(plan.dict())
-        return plan, new_plan_activities
-
     def get_all_user_active_plans(self, user: User) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
         plans = []
@@ -248,162 +219,6 @@ class PlanController:
         else:
             logger.error(f"Plan not found: {plan_id}")
             return None
-
-    def generate_plans(
-        self,
-        goal: str,
-        finishing_date: Optional[str] = None,
-        plan_description: Optional[str] = None,
-        user_defined_activities: List[Activity] = None,
-    ) -> List[Dict]:
-        logger.log("CONTROLLERS", f"Generating plans for goal: {goal}")
-        current_date = datetime.now().strftime("%Y-%m-%d, %A")
-        if not finishing_date:
-            finishing_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
-
-        number_of_weeks = self._count_number_of_weeks_till(finishing_date)
-        system_prompt = f"""
-        You will act as a personal coach for the goal of {goal}, given the finishing date of {finishing_date} and that today is {current_date}.
-        No date should be before today ({current_date}).
-        For that, you will develop a progressive plan over the course of {number_of_weeks} weeks.
-        Keep the activties to a minimum.
-        The plan should be progressive (intensities or recurrence of activities should increase over time).
-        The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
-        It is absolutely mandatory that all present sessions activity names are contained in the list of activities.
-
-        Please only include these activities in plan:
-        {"\n - ".join([str(a) for a in user_defined_activities])}
-        """
-
-        user_prompt = f"Please generate me a plan to achieve the goal of {goal} by {finishing_date}."
-
-        if plan_description:
-            user_prompt += f"\nAdditional plan description: {plan_description}"
-
-        class GeneratedActivity(BaseModel):
-            emoji: str
-            title: str
-            measure: str = Field(
-                description="The unit of measure for this activity. (e.g. 'minutes', 'kilometers', 'times')"
-            )
-
-        class GeneratedSession(BaseModel):
-            date: str
-            activity_name: str = Field(
-                description="The name of the activity to be performed. Should match exactly with the activity title."
-            )
-            quantity: int = Field(
-                description="The quantity of the activity to be performed. Directly related to the actvity and should be measured in the same way."
-            )
-            descriptive_guide: str
-
-        class GeneratedSessionWeek(BaseModel):
-            week_number: int
-            reasoning: str = Field(
-                ...,
-                description="A step by step thinking on how intense the week should be given the ammount of weeks left to achieve the goal.",
-            )
-            sessions_per_week: str
-            sessions: List[GeneratedSession] = Field(
-                ...,
-                description="List of sessions for this plan. The length should be the same as the sessions_per_week.",
-            )
-
-        class GeneratedPlan(BaseModel):
-            emoji: str
-            overview: str = Field(..., description="A short overview of the plan")
-            activities: List[GeneratedActivity] = Field(
-                ..., description="List of activities for this plan"
-            )
-            sessions_weeks: List[GeneratedSessionWeek] = Field(
-                ..., description="List of sessions weeks for this plan"
-            )
-
-        def generate_plan_for_intensity(intensity: str, user_defined_activities: List[Activity]) -> Dict:
-            class GeneratePlansResponse(BaseModel):
-                reasoning: str = Field(
-                    ...,
-                    description=f"A reflection on what is the goal and how does that affect the plan and its progresison. Most notably, how it affects the intensity of the weeks, and how progressive should they be to culiminate init the goal of {goal} by the finishing date.",
-                )
-                plan: GeneratedPlan = Field(
-                    ..., description=f"The generated plan of {intensity} intensity"
-                )
-
-            response = ask_schema(
-                user_prompt,
-                f"{system_prompt}\nThis plan should be a {intensity} intensity plan.",
-                GeneratePlansResponse,
-            )
-
-            # Process activities with matching against existing ones
-            new_activities = []
-            for activity in response.plan.activities:
-                # Check if activity already exists (matching title and measure)
-                existing_activity = next(
-                    (a for a in user_defined_activities 
-                     if a.title.lower() == activity.title.lower() 
-                     and a.measure.lower() == activity.measure.lower()),
-                    None
-                )
-                
-                if existing_activity:
-                    # Use existing activity's data and ID
-                    new_activities.append({
-                        **activity.dict(),
-                        "id": existing_activity.id
-                    })
-                else:
-                    # Create new activity with new ID
-                    new_activities.append({
-                        **activity.dict(),
-                        "id": str(ObjectId())
-                    })
-
-            return {
-                "goal": goal,
-                "finishing_date": finishing_date,
-                "activities": new_activities,
-                "sessions": [
-                    {
-                        **session.dict(),
-                        "activity_id": next(
-                            (
-                                a["id"]
-                                for a in new_activities
-                                if a["title"].lower() == session.activity_name.lower()
-                            ),
-                            None,
-                        ),
-                    }
-                    for session_week in response.plan.sessions_weeks
-                    for session in session_week.sessions
-                    if session.date >= current_date
-                ],
-                "intensity": intensity,
-                "overview": response.plan.overview,
-            }
-
-        intensities = ["medium"]
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            future_to_intensity = {
-                executor.submit(generate_plan_for_intensity, intensity, user_defined_activities): intensity
-                for intensity in intensities
-            }
-            simplified_plans = []
-
-            for future in concurrent.futures.as_completed(future_to_intensity):
-                intensity = future_to_intensity[future]
-                try:
-                    plan = future.result()
-                    simplified_plans.append(plan)
-                except Exception as exc:
-                    logger.error(
-                        f"{intensity} intensity plan generation generated an exception: {exc}"
-                    )
-                    logger.error(traceback.format_exc())
-
-        return simplified_plans
 
     def _count_number_of_weeks_till(self, finishing_date: Optional[str] = None) -> int:
         if finishing_date:
@@ -638,43 +453,6 @@ class PlanController:
 
         return False, None
 
-    def update_plan_from_generated(
-        self,
-        plan_id: str,
-        user_id: str,
-        generated_plan_update: GeneratedPlanUpdate
-    ) -> Plan:
-        logger.log("CONTROLLERS", f"Updating plan {plan_id} from generated plan")
-        
-        # Get the existing plan
-        existing_plan = self.get_plan(plan_id)
-        if not existing_plan:
-            raise ValueError("Plan not found")
-        
-        if existing_plan.user_id != user_id:
-            raise ValueError("Not authorized to update this plan")
-        
-        # Process activities and sessions using shared methods
-        self._process_generated_plan_activities(user_id, generated_plan_update)
-        if generated_plan_update.sessions:
-            new_sessions = self._create_plan_sessions(generated_plan_update)
-        else:
-            new_sessions = existing_plan.sessions
-        
-        # Update the existing plan with new data while preserving important fields
-        existing_plan.goal = generated_plan_update.goal or existing_plan.goal
-        existing_plan.emoji = generated_plan_update.emoji or existing_plan.emoji
-        existing_plan.duration_type = generated_plan_update.duration_type or existing_plan.duration_type
-        existing_plan.finishing_date = generated_plan_update.finishing_date or existing_plan.finishing_date
-        existing_plan.notes = generated_plan_update.notes or existing_plan.notes
-        existing_plan.sessions = new_sessions
-        existing_plan.outline_type = generated_plan_update.outline_type or existing_plan.outline_type
-        existing_plan.times_per_week = generated_plan_update.times_per_week or existing_plan.times_per_week
-        
-        # Save the updated plan
-        self.update_plan(existing_plan)
-        
-        return existing_plan
 
     def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None, future_day_limit: int = None, plans: List[Plan] = None, ) -> str:
         """
@@ -811,6 +589,100 @@ class PlanController:
             plan_text.append(f"\nThis week's progress: {completed_sessions}/{plan.times_per_week} sessions completed")
         
         return "\n".join(plan_text)
+
+    def generate_sessions(
+        self,
+        goal: str,
+        finishing_date: Optional[str] = None,
+        activities: List[Activity] = None,
+        description: Optional[str] = None,
+        is_edit: Optional[bool] = None,
+    ) -> List[PlanSession]:
+        logger.log("CONTROLLERS", f"Generating sessions for goal: {goal}")
+        current_date = datetime.now().strftime("%Y-%m-%d, %A")
+        if not finishing_date:
+            finishing_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
+
+        number_of_weeks = self._count_number_of_weeks_till(finishing_date)
+        system_prompt = f"""
+        You will act as a personal coach for the goal of {goal}, given the finishing date of {finishing_date} and that today is {current_date}.
+        No date should be before today ({current_date}).
+        For that, you will develop a progressive plan over the course of {number_of_weeks} weeks.
+        Keep the activties to a minimum.
+        The plan should be progressive (intensities or recurrence of activities should increase over time).
+        The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
+        It is absolutely mandatory that all present sessions activity names are contained in the list of activities.
+
+        Please only include these activities in plan:
+        {"\n - ".join([str(a) for a in activities])}
+        """
+
+        user_prompt = f"Please generate me a plan to achieve the goal of {goal} by {finishing_date}."
+
+        if description:
+            user_prompt += f"\nAdditional description: {description}"
+
+        if is_edit:
+            user_prompt = f"This is an edit to the existing plan with goal: {goal}.\n\n{user_prompt}"
+
+        class GeneratedSession(BaseModel):
+            date: str
+            activity_name: str = Field(
+                description="The name of the activity to be performed. Should have no emoji to match exactly with the activity title."
+            )
+            quantity: int = Field(
+                description="The quantity of the activity to be performed. Directly related to the activity and should be measured in the same way."
+            )
+            descriptive_guide: str
+
+        class GeneratedSessionWeek(BaseModel):
+            week_number: int
+            reasoning: str = Field(
+                ...,
+                description="A step by step thinking on how intense the week should be given the amount of weeks left to achieve the goal.",
+            )
+            sessions: List[GeneratedSession] = Field(
+                ...,
+                description="List of sessions for this week.",
+            )
+
+        class GenerateSessionsResponse(BaseModel):
+            reasoning: str = Field(
+                ...,
+                description="A reflection on what is the goal and how does that affect the sessions progression.",
+            )
+            weeks: List[GeneratedSessionWeek] = Field(
+                ...,
+                description="List of weeks with their sessions.",
+            )
+
+        response = ask_schema(
+            user_prompt,
+            system_prompt,
+            GenerateSessionsResponse,
+        )
+
+        # Convert generated sessions to PlanSession objects
+        sessions = []
+        for week in response.weeks:
+            logger.info(f"Week {week.week_number}. Has {len(week.sessions)} sessions.")
+            for session in week.sessions:
+                # Find matching activity
+                activity = next(
+                    (a for a in activities 
+                     if a.title.lower() == session.activity_name.lower()),
+                    None
+                )
+                
+                if activity:
+                    sessions.append(PlanSession(
+                        date=session.date,
+                        activity_id=activity.id,
+                        descriptive_guide=session.descriptive_guide,
+                        quantity=session.quantity,
+                    ))
+
+        return sessions
 
 if __name__ == "__main__":
     from shared.logger import create_logger

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
 import { Loader2 } from "lucide-react";
-import { ApiPlan, GeneratedPlan, useUserPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import NameStep from "./NameStep";
 import UsernameStep from "./UsernameStep";
@@ -64,7 +64,7 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
 
   const { requestPermission, isPushGranted } = useNotifications();
 
-  const handlePlanSelection = async (plan: GeneratedPlan) => {
+  const createPlan = async (plan: ApiPlan) => {
     try {
       const response = await api.post("/create-plan", {
         ...plan,
@@ -72,7 +72,7 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
       const createdPlan = response.data.plan;
       setSelectedPlan(createdPlan);
       userDataQuery.refetch();
-      setStep(2);
+      setStep(1);
     } catch (error) {
       console.error("Plan creation error:", error);
       toast.error("Failed to create plan. Please try again.");
@@ -84,26 +84,11 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
       case 0:
         return (
           <PlanConfigurationForm
-            onConfirm={handlePlanSelection}
+            onConfirm={createPlan}
             title={`${name}'s New Plan`}
           />
         );
       case 1:
-        if (!selectedPlan) {
-          if (localStorage.getItem('createPlanCardJourneyState')) {
-            localStorage.removeItem('createPlanCardJourneyState');
-            window.location.reload();
-          }
-          return <span>Oops, something went wrong. Please be so kind to open a bug request!</span>;
-        }
-        return (
-          <InviteStep
-            selectedPlan={selectedPlan}
-            onNext={() => setStep(2)}
-            userDataQuery={userDataQuery}
-          />
-        );
-      case 2:
         return (
           <NotificationStep
             onComplete={handleComplete}
