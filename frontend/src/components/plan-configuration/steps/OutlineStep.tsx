@@ -1,15 +1,23 @@
 import React from "react";
-import Number from "../Number";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Plan, ApiPlan, Activity } from "@/contexts/UserPlanContext";
 import OutlineOption from "../OutlineOption";
-import { Plan } from "@/contexts/UserPlanContext";
+import NumberInput from "../NumberInput";
+import { Loader2 } from "lucide-react";
+import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
+import { parseISO } from "date-fns";
 
 interface OutlineStepProps {
   outlineType: Plan["outline_type"];
   setOutlineType: (type: Plan["outline_type"]) => void;
   timesPerWeek: number;
-  setTimesPerWeek: (times: number | ((prev: number) => number)) => void;
+  setTimesPerWeek: (times: number) => void;
+  title: string;
+  generatedSessions?: ApiPlan['sessions'];
+  onRegenerate: () => void;
+  activities: Activity[];
+  finishingDate?: string;
 }
 
 const OutlineStep: React.FC<OutlineStepProps> = ({
@@ -17,14 +25,27 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
   setOutlineType,
   timesPerWeek,
   setTimesPerWeek,
+  title,
+  generatedSessions,
+  onRegenerate,
+  activities,
+  finishingDate,
 }) => {
+  const convertToDisplayPlan = (sessions: ApiPlan['sessions']): Plan => {
+    return {
+      sessions: sessions.map(session => ({
+        ...session,
+        date: parseISO(session.date),
+        activity_name: activities.find(a => a.id === session.activity_id)?.title,
+      })),
+      finishing_date: finishingDate ? parseISO(finishingDate) : undefined,
+      goal: title,
+    } as Plan;
+  };
+
   return (
     <div className="space-y-4">
-      <label className="text-lg font-medium block flex items-center gap-2">
-        <Number>5</Number>
-        How would you like to outline your plan?
-      </label>
-
+      <Label>How would you like to outline your plan?</Label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <OutlineOption
           type="specific"
@@ -33,7 +54,6 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
           isSelected={outlineType === "specific"}
           onSelect={() => setOutlineType("specific")}
         />
-
         <OutlineOption
           type="times_per_week"
           title="✅ Weekly Count Goal"
@@ -44,48 +64,33 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
       </div>
 
       {outlineType === "times_per_week" && (
-        <div className="mt-4">
-          <label className="text-sm font-medium mb-2 block">
-            How many times per week?
-          </label>
-          <div className="flex items-center justify-center space-x-2 max-w-xs">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 shrink-0 rounded-full bg-secondary text-primary-secondary"
-              onClick={() =>
-                setTimesPerWeek((prev: number) => Math.max(1, prev - 1))
-              }
-              disabled={timesPerWeek <= 1}
-            >
-              <Minus className="h-4 w-4" />
-              <span className="sr-only">Decrease</span>
-            </Button>
-            <div className="flex-1 text-center">
-              <div className="text-4xl font-bold tracking-tighter">
-                {timesPerWeek}
-              </div>
-              <div className="text-[0.70rem] uppercase text-muted-foreground">
-                Times per week
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 shrink-0 rounded-full"
-              onClick={() =>
-                setTimesPerWeek((prev: number) => Math.min(7, prev + 1))
-              }
-              disabled={timesPerWeek >= 7}
-            >
-              <Plus data-testid="plus" className="h-4 w-4" />
-              <span className="sr-only">Increase</span>
-            </Button>
+        <div className="space-y-4">
+          <Label>How many times per week?</Label>
+          <NumberInput
+            value={timesPerWeek}
+            onChange={setTimesPerWeek}
+            min={1}
+            max={7}
+          />
+        </div>
+      )}
+
+      {outlineType === "specific" && generatedSessions && (
+        <div className="space-y-4">
+          <Label>Generated Schedule</Label>
+          <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 p-4">
+            <PlanSessionsRenderer 
+              plan={convertToDisplayPlan(generatedSessions)}
+              activities={activities}
+            />
           </div>
+          <Button onClick={onRegenerate} variant="outline" className="w-full">
+            Regenerate Schedule
+          </Button>
         </div>
       )}
     </div>
   );
 };
 
-export default OutlineStep; 
+export default OutlineStep;

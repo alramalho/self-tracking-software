@@ -9,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import InviteButton from "./InviteButton";
 import PlanCard from "./PlanCard";
 import { useRouter } from "next/navigation";
+import Divider from "./Divider";
 
 const PlansRenderer: React.FC = () => {
   const router = useRouter();
@@ -69,7 +70,7 @@ const PlansRenderer: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-2 gap-3 mb-6">
         {plans.map((plan) => (
           <PlanCard
             key={plan.id}
@@ -85,13 +86,15 @@ const PlansRenderer: React.FC = () => {
         <Link href="/create-new-plan" passHref>
           <Button
             variant="outline"
-            className="bg-gray-50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+            className="bg-gray-50 w-full h-full min-h-[120px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
           >
-            <Plus className="h-8 w-8 mb-2 text-gray-400" />
-            <span>Create New Plan</span>
+            <Plus className="h-6 w-6 mb-1 text-gray-400" />
+            <span className="text-sm">Create New Plan</span>
           </Button>
         </Link>
       </div>
+
+      <Divider />
 
       {selectedPlanId && plans.find((p) => p.id === selectedPlanId) && (
         <PlanRendererv2

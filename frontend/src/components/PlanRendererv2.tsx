@@ -2,23 +2,17 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   format,
   parseISO,
-  isToday,
-  isBefore,
-  isFuture,
   startOfWeek,
   endOfWeek,
   addWeeks,
   subWeeks,
   isAfter,
+  isBefore,
 } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
 import {
   ApiPlan,
-  Activity,
   useUserPlan,
   UserDataEntry,
-  PlanGroupMember,
   convertApiPlanToPlan,
 } from "@/contexts/UserPlanContext";
 import { LineChart } from "@/components/charts/line";
@@ -35,6 +29,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
+import { ProgressOverview } from "./ProgressOverview";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -71,9 +66,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [sessionData, setSessionData] = useState<
     { week: string; [key: string]: number | string }[]
   >([]);
-  const [selectedSession, setSelectedSession] = useState<
-    ApiPlan["sessions"][0] | null
-  >(null);
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
 
   // Get current user's activities
@@ -178,7 +170,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             const startDate = new Date();
             return Array.from({ length: 12 }).map((_, i) => {
               const date = new Date();
-              date.setDate(date.getDate() - (7 * i));
+              date.setDate(date.getDate() - 7 * i);
               return date;
             });
           }
@@ -221,7 +213,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
         // Calculate data for each user in the plan group
         groupPlans.forEach((plan) => {
-          const member = planGroupMembers.find((m) => m.user_id === plan.user_id);
+          const member = planGroupMembers.find(
+            (m) => m.user_id === plan.user_id
+          );
           if (!member) return;
 
           // Count completed sessions this week
@@ -319,47 +313,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       : undefined;
   };
 
-  const prepareCalendarData = (plan: ApiPlan) => {
-    const sessions = plan.sessions.map((session) => ({
-      ...session,
-      date: parseISO(session.date),
-    }));
-    const dates = sessions.map((session) => session.date);
-    const sessionsMap = new Map(
-      sessions.map((session) => [format(session.date, "yyyy-MM-dd"), session])
-    );
-
-    return { dates, sessionsMap };
-  };
-
-  const renderSessionDetails = (
-    session: ApiPlan["sessions"][0],
-    activity: Activity | undefined
-  ) => {
-    const sessionDate =
-      typeof session.date === "string" ? parseISO(session.date) : session.date;
-
-    return (
-      <div className="mb-4 p-4 bg-gray-100 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">
-          📆 {format(sessionDate, "EEEE, MMMM d")}
-        </h3>
-        <ul className="list-disc list-inside mb-2">
-          <li>
-            {session.quantity} {activity?.measure} of {activity?.title}
-          </li>
-        </ul>
-        <p className="text-sm text-gray-600">{session.descriptive_guide}</p>
-      </div>
-    );
-  };
-
-  function getMemberUsername(member: PlanGroupMember) {
-    return member.username === userData?.user?.username
-      ? "me"
-      : member.username;
-  }
-
   // Add this helper function near other helper functions
   const areAllWeeklyActivitiesCompleted = useCallback(() => {
     const currentWeekStart = startOfWeek(new Date());
@@ -378,6 +331,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   return (
     <div>
+      <div className="flex flex-row items-center justify-start gap-2 mb-8">
+        <span className="text-4xl">{selectedPlan.emoji}</span>
+        <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
+      </div>
+      <ProgressOverview milestones={selectedPlan.milestones} />
       {selectedPlan.outline_type === "specific" &&
         areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
       {planGroupMembers && planGroupMembers.length > 0 && (
@@ -439,29 +397,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       ) : null}
       <div className="bg-white border border-gray-200 rounded-lg p-4 mt-8">
-        <h2 className="text-2xl font-bold mb-4">
-          Activities Overview {selectedPlan.emoji}
-        </h2>
-        {/* <div className="flex flex-row flex-wrap gap-4">
-          {recentActivityEntries.length === 0 && (
-            <div className="text-sm text-gray-500">
-              No activity history yet.
-            </div>
-          )}
-          {recentActivityEntries.map((entry) => {
-            const activity = activities.find((a) => a.id === entry.activity_id);
-            if (!activity) return null;
+        <div className="flex flex-row items-center justify-start gap-2 mb-2">
+          <span className="text-4xl">🎯</span>
+          <h2 className="text-xl font-semibold mt-2">Activities Overview</h2>
+        </div>
 
-            return (
-              <ActivityEntryCard
-                key={`${entry.date}-${entry.activity_id}`}
-                entry={entry}
-                activity={activity}
-                completed={true}
-              />
-            );
-          })}
-        </div> */}
         {selectedPlan.outline_type === "specific" && (
           <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
             <span className="text-xs text-gray-500">Completed</span>
@@ -527,7 +467,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                         key={`${session.date}-${session.activity_id}`}
                         entry={session as Entry}
                         activity={activity}
-                        onClick={() => setSelectedSession(session)}
                         completed={completed}
                         completedOn={completedOn}
                       />
@@ -545,66 +484,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           )}
         </div>
       </div>
-      {/* 
-      <div className="mt-8 border border-gray-200 rounded-lg p-4 mb-8">
-        <h2 className="text-2xl font-bold mb-4">Calendar</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            {selectedSession && (
-              <>
-                {renderSessionDetails(
-                  selectedSession,
-                  activities.find((a) => a.id === selectedSession.activity_id)
-                )}
-              </>
-            )}
-          </div>
-          <Calendar
-            mode="multiple"
-            selected={prepareCalendarData(selectedPlan).dates}
-            className="rounded-md border"
-            components={{
-              Day: ({ date, ...props }) => {
-                const { sessionsMap } = prepareCalendarData(selectedPlan);
-                const sessionDate = format(date, "yyyy-MM-dd");
-                const session = sessionsMap.get(sessionDate);
-
-                return (
-                  <div
-                    className={cn(
-                      "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                      "relative flex items-center justify-center",
-                      session &&
-                        "bg-blue-50 h-9 w-9 rounded-full cursor-pointer",
-                      session && isFuture(date) && "bg-blue-100",
-                      isToday(date) && "font-extrabold",
-                      isBefore(date, new Date()) &&
-                        !isToday(date) &&
-                        "text-gray-400"
-                    )}
-                    {...props}
-                    onClick={() => {
-                      if (session && (isFuture(date) || isToday(date))) {
-                        setSelectedSession({
-                          ...session,
-                          date: format(
-                            typeof session.date === "string"
-                              ? parseISO(session.date)
-                              : session.date,
-                            "yyyy-MM-dd"
-                          ),
-                        });
-                      }
-                    }}
-                  >
-                    <span>{date.getDate()}</span>
-                  </div>
-                );
-              },
-            }}
-          />
-        </div>
-      </div> */}
 
       <Link href="/add" passHref>
         <Button

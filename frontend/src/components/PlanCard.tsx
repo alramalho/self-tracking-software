@@ -9,7 +9,6 @@ import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import ConfirmDialog from "./ConfirmDialog";
 import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
-import { GeneratedPlan } from "@/contexts/UserPlanContext";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -43,25 +42,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
 
-  const updatePlan = async (planId: string, updatedPlan: GeneratedPlan) => {
-    const response = await api.post<UpdatePlanResponse>(
-      `/plans/${planId}/generated-update`,
-      {
-        goal: updatedPlan.goal,
-        emoji: updatedPlan.emoji,
-        duration_type: updatedPlan.duration_type,
-        finishing_date: updatedPlan.finishing_date,
-        notes: updatedPlan.notes,
-        activities: updatedPlan.activities,
-        outline_type: updatedPlan.outline_type,
-        times_per_week: updatedPlan.times_per_week,
-        sessions: updatedPlan.sessions,
-      }
-    );
-    userDataQuery.refetch(); // Refresh user data to get updated plan
-    return response.data.plan;
-  };
-
   const handleLeavePlan = async () => {
     toast.promise(
       api.post(`/plans/${plan.id}/leave`).then(() => {
@@ -82,9 +62,25 @@ const PlanCard: React.FC<PlanCardProps> = ({
     setShowSettings(true);
   };
 
-  const handleEditPlan = async (updatedPlan: GeneratedPlan) => {
+  const handleEditPlan = async (updatedPlan: ApiPlan) => {
     try {
-      await updatePlan(plan.id!, updatedPlan);
+      const response = await api.post<UpdatePlanResponse>(
+        `/plans/${plan.id}/update`,
+        {
+          data: {
+            goal: updatedPlan.goal,
+            emoji: updatedPlan.emoji,
+            duration_type: updatedPlan.duration_type,
+            finishing_date: updatedPlan.finishing_date,
+            notes: updatedPlan.notes,
+            outline_type: updatedPlan.outline_type,
+            times_per_week: updatedPlan.times_per_week,
+            sessions: updatedPlan.sessions,
+            milestones: updatedPlan.milestones,
+          },
+        }
+      );
+      userDataQuery.refetch();
       setShowEditModal(false);
       toast.success("Plan updated successfully");
     } catch (error) {
@@ -97,7 +93,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
     <>
       <div
         data-testid="plan-card"
-        className={`flex flex-col p-6 rounded-lg border-2 cursor-pointer 
+        className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer relative 
           ${
             isSelected
               ? "border-blue-500 bg-blue-50"
@@ -105,30 +101,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
           } transition-colors duration-200`}
         onClick={() => onSelect(plan.id!)}
       >
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex items-start mb-2">
           <div className="flex items-center">
-            {plan.emoji && <span className="text-4xl mr-2">{plan.emoji}</span>}
-            <span className="text-xl font-medium">{plan.goal}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {!hideInviteButton && (
-              <InviteButton
-                planId={plan.id!}
-                onInviteSuccess={onInviteSuccess}
-              />
-            )}
-            <Button
-              data-testid="plan-settings-button"
-              variant="ghost"
-              size="icon"
-              onClick={handleSettingsClick}
-              className="h-8 w-8"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+            {plan.emoji && <span className="text-2xl mr-2">{plan.emoji}</span>}
+            <span className="text-base font-medium">{plan.goal}</span>
           </div>
         </div>
-        <span className="text-sm text-gray-500 mb-4">
+
+        <span className="text-xs text-gray-500 mb-2">
           📍{" "}
           {plan.finishing_date
             ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
@@ -138,14 +118,15 @@ const PlanCard: React.FC<PlanCardProps> = ({
               })
             : ""}
         </span>
+
         {planGroup && planGroup.members && (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             {planGroup.members.map((member) => {
               if (!currentUserId || member.user_id === currentUserId) {
                 return null;
               }
               return (
-                <Avatar key={member.user_id} className="w-8 h-8">
+                <Avatar key={member.user_id} className="w-6 h-6">
                   <AvatarImage
                     src={member.picture || ""}
                     alt={member.name || member.username}
@@ -158,6 +139,23 @@ const PlanCard: React.FC<PlanCardProps> = ({
             })}
           </div>
         )}
+
+        <div className="absolute top-2 right-3">
+          {!hideInviteButton && (
+            <InviteButton planId={plan.id!} onInviteSuccess={onInviteSuccess} />
+          )}
+        </div>
+        <div className="absolute bottom-2 right-2">
+          <Button
+            data-testid="plan-settings-button"
+            variant="ghost"
+            size="icon"
+            onClick={handleSettingsClick}
+            className="h-6 w-6"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <AppleLikePopover
