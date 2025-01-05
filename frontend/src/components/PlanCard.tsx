@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserPlanContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import InviteButton from "./InviteButton";
-import { Settings } from "lucide-react";
+import { Edit, Settings } from "lucide-react";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
@@ -91,70 +91,63 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   return (
     <>
-      <div
-        data-testid="plan-card"
-        className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer relative 
-          ${
+      <div className="relative">
+        <button
+          onClick={() => onSelect(plan.id!)}
+          className={`flex flex-col items-left justify-center p-4 rounded-lg border-2 ${
             isSelected
-              ? "border-blue-500 bg-blue-50"
-              : "bg-white border-gray-200"
-          } transition-colors duration-200`}
-        onClick={() => onSelect(plan.id!)}
-      >
-        <div className="flex items-start mb-2">
-          <div className="flex items-center">
-            {plan.emoji && <span className="text-2xl mr-2">{plan.emoji}</span>}
-            <span className="text-base font-medium">{plan.goal}</span>
-          </div>
-        </div>
+              ? "border-blue-500 bg-blue-100"
+              : "border-gray-300 bg-white"
+          } aspect-square w-full`}
+        >
+          {plan.emoji && (
+            <span className="text-2xl mb-2">{plan.emoji}</span>
+          )}
+          <span className="text-md font-medium text-left">
+            {plan.goal}
+          </span>
+          <span className="text-xs text-gray-500 text-left">
+            until {plan.finishing_date
+              ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : ""}
+          </span>
+          
+          {planGroup && planGroup.members && (
+            <div className="flex items-center space-x-1 mt-2">
+              {planGroup.members.map((member) => {
+                if (!currentUserId || member.user_id === currentUserId) {
+                  return null;
+                }
+                return (
+                  <Avatar key={member.user_id} className="w-6 h-6">
+                    <AvatarImage
+                      src={member.picture || ""}
+                      alt={member.name || member.username}
+                    />
+                    <AvatarFallback>
+                      {member.name?.[0] || member.username?.[0] || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                );
+              })}
+            </div>
+          )}
+        </button>
 
-        <span className="text-xs text-gray-500 mb-2">
-          📍{" "}
-          {plan.finishing_date
-            ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
-            : ""}
-        </span>
-
-        {planGroup && planGroup.members && (
-          <div className="flex items-center space-x-1">
-            {planGroup.members.map((member) => {
-              if (!currentUserId || member.user_id === currentUserId) {
-                return null;
-              }
-              return (
-                <Avatar key={member.user_id} className="w-6 h-6">
-                  <AvatarImage
-                    src={member.picture || ""}
-                    alt={member.name || member.username}
-                  />
-                  <AvatarFallback>
-                    {member.name?.[0] || member.username?.[0] || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="absolute top-2 right-3">
+        <div className="absolute top-2 right-2 flex gap-2">
           {!hideInviteButton && (
             <InviteButton planId={plan.id!} onInviteSuccess={onInviteSuccess} />
           )}
-        </div>
-        <div className="absolute bottom-2 right-2">
-          <Button
-            data-testid="plan-settings-button"
-            variant="ghost"
-            size="icon"
+          <button
             onClick={handleSettingsClick}
-            className="h-6 w-6"
+            className="p-1"
           >
             <Settings className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       </div>
 
