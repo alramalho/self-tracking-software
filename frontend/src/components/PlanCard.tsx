@@ -67,17 +67,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
       const response = await api.post<UpdatePlanResponse>(
         `/plans/${plan.id}/update`,
         {
-          data: {
-            goal: updatedPlan.goal,
-            emoji: updatedPlan.emoji,
-            duration_type: updatedPlan.duration_type,
-            finishing_date: updatedPlan.finishing_date,
-            notes: updatedPlan.notes,
-            outline_type: updatedPlan.outline_type,
-            times_per_week: updatedPlan.times_per_week,
-            sessions: updatedPlan.sessions,
-            milestones: updatedPlan.milestones,
-          },
+          data: updatedPlan,
         }
       );
       userDataQuery.refetch();
@@ -91,7 +81,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   return (
     <>
-      <div className="relative">
+      <div className="relative" data-testid="plan-card">
         <button
           onClick={() => onSelect(plan.id!)}
           className={`flex flex-col items-left justify-center p-4 rounded-lg border-2 ${
@@ -106,7 +96,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <span className="text-md font-medium text-left">
             {plan.goal}
           </span>
-          <span className="text-xs text-gray-500 text-left">
+          <span className="text-xs text-gray-500 text-left mt-1">
             until {plan.finishing_date
               ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
                   day: "numeric",
@@ -143,6 +133,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
             <InviteButton planId={plan.id!} onInviteSuccess={onInviteSuccess} />
           )}
           <button
+            data-testid="plan-settings-button"
             onClick={handleSettingsClick}
             className="p-1"
           >

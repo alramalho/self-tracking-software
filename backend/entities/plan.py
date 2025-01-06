@@ -24,6 +24,7 @@ class Plan(BaseModel):
     sessions: List[PlanSession]
     created_at: str
     deleted_at: Optional[str] = None
+    activity_ids: List[str] = []
     duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None
     outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
     times_per_week: Optional[int] = None

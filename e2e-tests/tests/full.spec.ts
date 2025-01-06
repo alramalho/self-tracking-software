@@ -50,7 +50,10 @@ test.describe.serial("App", () => {
 
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     // Select an emoji
-    await page.getByPlaceholder("Enter an emoji").fill("🙂");
+    await page
+      .getByTestId("plan-configuration-form")
+      .getByPlaceholder("Enter an emoji")
+      .fill("🙂");
 
     await page.getByText("push-ups").click();
 
@@ -58,11 +61,13 @@ test.describe.serial("App", () => {
     await page.getByRole("button", { name: "Add New" }).click();
     await page.getByPlaceholder("Activity Title").fill("Running");
     await page
+      .getByTestId("activity-editor")
+      .getByPlaceholder("Enter an emoji")
+      .fill("🙂");
+
+    await page
       .getByPlaceholder("Measure (e.g., minutes, times)")
       .fill("kilometers");
-
-    await page.getByPlaceholder("Enter an emoji").fill("🙂");
-    await page.getByRole("button", { name: "Save Activity" }).click();
 
     await page.getByRole("button", { name: "Save Activity" }).click();
 
@@ -85,9 +90,7 @@ test.describe.serial("App", () => {
     });
     await expect(page.getByText("💪 push-ups")).toBeVisible();
     await expect(
-      page.getByText(
-        "Goal: I want to exercise regularly and improve my fitness"
-      )
+      page.getByText("I want to exercise regularly and improve my fitness")
     ).toBeVisible();
 
     const filledCells = await page
@@ -102,7 +105,7 @@ test.describe.serial("App", () => {
     createdPlanUrl = page.url();
   });
 
-  test.only("can create a times per week plan", async () => {
+  test("can create a times per week plan", async () => {
     // Navigate to Plans and start creating a new plan
     await page
       .locator("nav")
@@ -127,7 +130,10 @@ test.describe.serial("App", () => {
 
     // Create a new activity
     await page.getByRole("button", { name: "Add New" }).click();
-    await page.getByRole("textbox", { name: "Enter an emoji" }).fill("🧘");
+    await page
+      .getByTestId("activity-editor")
+      .getByPlaceholder("Enter an emoji")
+      .fill("🙂");
     await page.getByPlaceholder("Activity Title").fill("Meditate");
     await page
       .getByPlaceholder("Measure (e.g., minutes, times)")

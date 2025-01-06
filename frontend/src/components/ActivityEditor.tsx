@@ -115,51 +115,53 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   return (
     <>
       <AppleLikePopover open={open} className="z-[70]" onClose={onClose}>
-        <h2 className="text-2xl font-bold mb-4">
-          {activity ? "Edit Activity" : "Add New Activity"}
-        </h2>
-        <div className="flex flex-col justify-between h-full">
-          <div className="flex flex-col gap-4">
-            <EmojiInput
-              value={emoji}
-              onChange={(emoji) => setEmoji(emoji)}
-              placeholder="Enter an emoji"
-            />
-            <Input
-              placeholder="Activity Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            {!activity && (
-              <Input
-                placeholder="Measure (e.g., minutes, times)"
-                value={measure}
-                onChange={(e) => setMeasure(e.target.value)}
+        <div data-testid="activity-editor">
+          <h2 className="text-2xl font-bold mb-4">
+            {activity ? "Edit Activity" : "Add New Activity"}
+          </h2>
+          <div className="flex flex-col justify-between h-full">
+            <div className="flex flex-col gap-4">
+              <EmojiInput
+                value={emoji}
+                onChange={(emoji) => setEmoji(emoji)}
+                placeholder="Enter an emoji"
               />
-            )}
-            {activity && (
-              <Button
-                onClick={handleDelete}
-                variant="destructive"
-                className="w-full"
-                disabled={isSaving}
-              >
-                {isDeleting ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4 mr-2" />
-                )}
-                Delete Activity
-              </Button>
-            )}
+              <Input
+                placeholder="Activity Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              {!activity && (
+                <Input
+                  placeholder="Measure (e.g., minutes, times)"
+                  value={measure}
+                  onChange={(e) => setMeasure(e.target.value)}
+                />
+              )}
+              {activity && (
+                <Button
+                  onClick={handleDelete}
+                  variant="destructive"
+                  className="w-full"
+                  disabled={isSaving}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  Delete Activity
+                </Button>
+              )}
+            </div>
+            <Button
+              onClick={handleSave}
+              className="w-full py-5 mt-8"
+              loading={isSaving}
+            >
+              Save Activity
+            </Button>
           </div>
-          <Button
-            onClick={handleSave}
-            className="w-full py-5 mt-8"
-            loading={isSaving}
-          >
-            Save Activity
-          </Button>
         </div>
       </AppleLikePopover>
 

@@ -80,6 +80,7 @@ export interface Plan {
   emoji?: string;
   goal: string;
   finishing_date?: Date;
+  activity_ids?: string[];
   plan_group_id?: string;
   milestones?: {
     date: Date;
@@ -105,6 +106,7 @@ export interface ApiPlan {
   goal: string;
   emoji?: string;
   finishing_date?: string;
+  activity_ids?: string[];
   sessions: {
     date: string;
     descriptive_guide: string;
