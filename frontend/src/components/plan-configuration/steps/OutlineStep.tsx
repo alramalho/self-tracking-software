@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Plan, ApiPlan, Activity } from "@/contexts/UserPlanContext";
@@ -14,8 +14,9 @@ interface OutlineStepProps {
   timesPerWeek: number;
   setTimesPerWeek: (times: number) => void;
   title: string;
-  generatedSessions?: ApiPlan['sessions'];
-  onRegenerate: () => void;
+  generatedSessions?: ApiPlan["sessions"];
+  canGenerate: () => boolean;
+  onGenerate: () => Promise<void>;
   activities: Activity[];
   finishingDate?: string;
 }
@@ -27,16 +28,26 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
   setTimesPerWeek,
   title,
   generatedSessions,
-  onRegenerate,
+  canGenerate,
+  onGenerate,
   activities,
   finishingDate,
 }) => {
-  const convertToDisplayPlan = (sessions: ApiPlan['sessions']): Plan => {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    await onGenerate();
+    setIsGenerating(false);
+  };
+
+  const convertToDisplayPlan = (sessions: ApiPlan["sessions"]): Plan => {
     return {
-      sessions: sessions.map(session => ({
+      sessions: sessions.map((session) => ({
         ...session,
         date: parseISO(session.date),
-        activity_name: activities.find(a => a.id === session.activity_id)?.title,
+        activity_name: activities.find((a) => a.id === session.activity_id)
+          ?.title,
       })),
       finishing_date: finishingDate ? parseISO(finishingDate) : undefined,
       goal: title,
@@ -79,15 +90,26 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
         <div className="space-y-4">
           <Label>Generated Schedule</Label>
           <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 p-4">
-            <PlanSessionsRenderer 
+            <PlanSessionsRenderer
               plan={convertToDisplayPlan(generatedSessions)}
               activities={activities}
             />
           </div>
-          <Button onClick={onRegenerate} variant="outline" className="w-full">
-            Regenerate Schedule
-          </Button>
         </div>
+      )}
+      {canGenerate() && (
+        <Button
+          variant={generatedSessions ? "outline" : "default"}
+          onClick={handleGenerate}
+          loading={isGenerating}
+          className="flex-1 gap-2 w-full mt-2"
+        >
+          {isGenerating
+            ? "Generating..."
+            : generatedSessions
+            ? "Regenerate"
+            : "Generate Plan"}
+        </Button>
       )}
     </div>
   );

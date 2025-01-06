@@ -417,11 +417,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             plan={convertApiPlanToPlan(
               selectedPlan,
               activities.filter((a) =>
-                selectedPlan.sessions.some((s) => s.activity_id === a.id)
+                selectedPlan.activity_ids?.includes(a.id)
               )
             )}
             activities={activities.filter((a) =>
-              selectedPlan.sessions.some((s) => s.activity_id === a.id)
+              selectedPlan.activity_ids?.includes(a.id)
             )}
           />
         ) : (

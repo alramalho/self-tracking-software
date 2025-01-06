@@ -23,9 +23,9 @@ const PlanActivityEntriesRenderer: React.FC<
   const planActivities = useMemo(
     () =>
       activities.filter((a) =>
-        plan.sessions.some((s) => s.activity_id === a.id)
+        plan.activity_ids?.includes(a.id)
       ),
-    [activities, plan.sessions]
+    [activities, plan.activity_ids]
   );
   const planActivityEntries = useMemo(
     () =>
