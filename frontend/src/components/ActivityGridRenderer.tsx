@@ -1,10 +1,9 @@
-import React, { useEffect } from 'react';
-import toast from "react-hot-toast";
-import { Activity, ActivityEntry } from '@/contexts/UserPlanContext';
-import BaseHeatmapRenderer from './common/BaseHeatmapRenderer';
-import { isSameDay } from 'date-fns';
-import { parseISO } from 'date-fns';
-import { subDays } from 'date-fns';
+import React, { useState } from "react";
+import { Activity, ActivityEntry } from "@/contexts/UserPlanContext";
+import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
+import { isSameDay, format } from "date-fns";
+import { parseISO } from "date-fns";
+import { subDays } from "date-fns";
 
 interface ActivityGridRendererProps {
   activities: Activity[];
@@ -17,12 +16,15 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   activities,
   activityEntries,
   timeRange,
-  endDate
+  endDate,
 }) => {
+  const [focusedDate, setFocusedDate] = useState<Date | null>(null);
 
-  const getActivityEntries = (activityId: string) => {
+  const getActivityEntriesData = () => {
     const result = activityEntries
-      .filter((entry) => entry.activity_id === activityId)
+      .filter((entry) =>
+        activities.map((a) => a.id).includes(entry.activity_id)
+      )
       .map((entry) => ({
         date: entry.date.replaceAll("-", "/"),
         count: entry.quantity,
@@ -30,86 +32,117 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     return result;
   };
 
-  const getIntensityForDate = (activityId: string) => (date: string) => {
+  const getIntensityForDate = (date: string) => {
     const entriesOnDate = activityEntries.filter(
-      (e) => e.activity_id === activityId && isSameDay(parseISO(e.date), date)
+      (e: ActivityEntry) =>
+        activities.map((a) => a.id).includes(e.activity_id) &&
+        isSameDay(parseISO(e.date), date)
     );
-    
+
     if (entriesOnDate.length === 0) return null;
 
-    const intensities = entriesOnDate.map(entry => {
-      const activityIndex = activities.findIndex(a => a.id === activityId);
+    const intensities = entriesOnDate
+      .map((entry) => {
+        const activity = activities.find((a) => a.id === entry.activity_id);
+        if (!activity) return null;
 
-      const quantities = activityEntries
-        .filter(e => e.activity_id === activityId)
-        .map(e => e.quantity);
-      const minQuantity = Math.min(...quantities);
-      const maxQuantity = Math.max(...quantities);
-      const intensityLevels = 5;
-      const intensityStep = (Math.max(maxQuantity-minQuantity, 1) / intensityLevels);
+        const activityIndex = activities.findIndex(
+          (a) => a.id === entry.activity_id
+        );
+        const activitySpecificEntries = activityEntries.filter(
+          (e: ActivityEntry) => e.activity_id === entry.activity_id
+        );
 
-      const intensity = Math.min(
-        Math.floor((entry.quantity - minQuantity) / intensityStep),
-        intensityLevels - 1
+        const quantities = activitySpecificEntries.map((e) => e.quantity);
+        const minQuantity = Math.min(...quantities);
+        const maxQuantity = Math.max(...quantities);
+        const intensityLevels = 5;
+        const intensityStep =
+          Math.max(maxQuantity - minQuantity, 1) / intensityLevels;
+
+        const intensity = Math.min(
+          Math.floor((entry.quantity - minQuantity) / intensityStep),
+          intensityLevels - 1
+        );
+
+        return { activityIndex, intensity };
+      })
+      .filter(
+        (item): item is { activityIndex: number; intensity: number } =>
+          item !== null
       );
-
-      return { activityIndex, intensity };
-    });
 
     return intensities;
   };
 
-  const handleDateClick = (activity: Activity) => (date: Date) => {
-    const formattedDate = date.toISOString().split('T')[0];
-    const entry = activityEntries.find(
-      (e) => e.activity_id === activity.id && isSameDay(parseISO(e.date), date)
+  const renderActivityViewer = () => {
+    if (!focusedDate) return null;
+
+    const entriesOnDate = activityEntries.filter(
+      (entry) =>
+        activities.map((a) => a.id).includes(entry.activity_id) &&
+        isSameDay(parseISO(entry.date), focusedDate)
     );
-    
-    const quantity = entry ? entry.quantity : 0;
-    if (quantity > 0) {
-      toast.success(
-        `On ${formattedDate} you have done "${activity.title}" ${quantity} ${activity.measure}!`
-      );
-    } else {
-      toast.error(
-        `On ${formattedDate} you have not done "${activity.title}"!`
-      );
-    }
+
+    return (
+      <div className="mt-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
+        <h3 className="text-lg font-semibold mb-4 text-left">
+          Activities on {format(focusedDate, "MMMM d, yyyy")}
+        </h3>
+        {entriesOnDate.length === 0 ? (
+          <p className="text-center text-gray-500">
+            No activities recorded for this date.
+          </p>
+        ) : (
+          <ul className="list-none space-y-4">
+            {entriesOnDate.map((entry, index) => {
+              const activity = activities.find(
+                (a) => a.id === entry.activity_id
+              );
+              if (!activity) return null;
+
+              return (
+                <li key={index}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-3xl">{activity.emoji}</span>
+                    <span className="text-md">{activity.title}</span>
+                    <span className="text-sm mt-1 text-gray-600">
+                      ({entry.quantity} {activity.measure})
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    );
   };
 
-  const startDate = subDays(
-    new Date(),
-    timeRange === "30 Days" ? 30 : 180
-  );
+  const startDate = subDays(new Date(), timeRange === "30 Days" ? 30 : 180);
 
   return (
-    <>
-      {activities.map((activity) => {
-        const value = getActivityEntries(activity.id);
-
-        return (
-          <div key={activity.id} className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
-            <div className="flex items-center space-x-3 mb-4">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {activity.emoji} {activity.title}
-              </h2>
-              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                {activity.measure}
-              </span>
-            </div>
-            <BaseHeatmapRenderer
-              activities={[activity]}
-              startDate={startDate}
-              endDate={endDate}
-              heatmapData={value}
-              onDateClick={handleDateClick(activity)}
-              noActivityLegend
-              getIntensityForDate={getIntensityForDate(activity.id)}
-            />
-          </div>
-        );
-      })}
-    </>
+    <div className="space-y-4">
+      <div className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
+        <div className="flex items-center space-x-3 mb-4">
+            <span className="text-lg font-semibold text-gray-800">
+              Non-plan activities
+            </span>
+            <span className="text-2xl font-semibold text-gray-800 ml-2">
+              {activities.map((a) => a.emoji)}
+            </span>
+        </div>
+        <BaseHeatmapRenderer
+          activities={activities}
+          startDate={startDate}
+          endDate={endDate}
+          heatmapData={getActivityEntriesData()}
+          onDateClick={setFocusedDate}
+          getIntensityForDate={getIntensityForDate}
+        />
+      </div>
+      <div className="flex justify-center">{renderActivityViewer()}</div>
+    </div>
   );
 };
 
