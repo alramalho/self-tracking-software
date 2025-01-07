@@ -139,7 +139,7 @@ const ProfilePage: React.FC = () => {
         {
           loading: "Sending friend request...",
           success: "Friend request sent successfully",
-          error: "Failed to send friend request"
+          error: "Failed to send friend request",
         }
       );
     }
@@ -160,7 +160,7 @@ const ProfilePage: React.FC = () => {
           {
             loading: `${action}ing friend request...`,
             success: `Friend request ${action}ed`,
-            error: `Failed to ${action} friend request`
+            error: `Failed to ${action} friend request`,
           }
         );
       }
@@ -172,21 +172,20 @@ const ProfilePage: React.FC = () => {
     posthog.reset();
   };
 
-  const getActivitiesNotInPlans = () => {
+  const activitiesNotInPlans = useMemo(() => {
     const planActivityIds = new Set(
       profileData?.plans?.flatMap((plan) =>
-        plan.sessions.map((session) => session.activity_id)
+        plan.activity_ids
       ) || []
     );
 
     // Filter activities that are not in plans AND have at least one activity entry
-    const result = activities.filter(
+    return activities.filter(
       (activity) =>
         !planActivityIds.has(activity.id) &&
         activityEntries.some((entry) => entry.activity_id === activity.id)
     );
-    return result;
-  };
+  }, [profileData?.plans, activities, activityEntries]);
 
   const handleTimeRangeChange = (value: "30 Days" | "180 Days") => {
     setTimeRange(value);
@@ -327,7 +326,7 @@ const ProfilePage: React.FC = () => {
               </>
             )}
           </div>
-          {isOwnProfile && ( 
+          {isOwnProfile && (
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Bell size={20} />
@@ -341,7 +340,10 @@ const ProfilePage: React.FC = () => {
                 className="cursor-pointer"
                 onClick={() => setShowUserProfile(true)}
               />
-              <Button variant="ghost" onClick={() => setShowLogoutConfirm(true)}>
+              <Button
+                variant="ghost"
+                onClick={() => setShowLogoutConfirm(true)}
+              >
                 <LogOut size={24} className="cursor-pointer" />
               </Button>
             </div>
@@ -349,7 +351,10 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {isOwnProfile && (
-          <AppleLikePopover open={showUserProfile} onClose={() => setShowUserProfile(false)}>
+          <AppleLikePopover
+            open={showUserProfile}
+            onClose={() => setShowUserProfile(false)}
+          >
             <div className="max-h-[80vh] overflow-y-auto">
               <UserProfile routing={"hash"} />
             </div>
@@ -357,7 +362,11 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="plans" className="w-full">
-          <TabsList className={`grid w-full h-13 bg-gray-50 ${isOnesOwnProfile ? "grid-cols-3" : "grid-cols-2"}`}>
+          <TabsList
+            className={`grid w-full h-13 bg-gray-50 ${
+              isOnesOwnProfile ? "grid-cols-3" : "grid-cols-2"
+            }`}
+          >
             <TabsTrigger value="plans">
               <div className="flex flex-col items-center">
                 <ChartArea size={22} />
@@ -381,6 +390,7 @@ const ProfilePage: React.FC = () => {
           </TabsList>
           <TabsContent value="plans">
             <div className="space-y-4">
+              <Divider className="w-full " text="Plans 👇" />
               {profileData.plans?.map((plan) => (
                 <div key={plan.id} className="p-4 border rounded-lg bg-white">
                   <div className="flex flex-row items-center gap-2 mb-4">
@@ -399,10 +409,10 @@ const ProfilePage: React.FC = () => {
                   You haven&apos;t created any plans yet.
                 </div>
               )}
-              {getActivitiesNotInPlans().length > 0 && (
+              {activitiesNotInPlans.length > 0 && (
                 <>
                   <div className="flex flex-row gap-4 justify-between items-center">
-                    <Divider className="w-full " text="Other Activities 👇" />
+                    <Divider className="w-full " text="Activities 👇" />
                     <div className="flex self-center">
                       <select
                         className="p-2 border rounded-md"
@@ -418,17 +428,16 @@ const ProfilePage: React.FC = () => {
                       </select>
                     </div>
                   </div>
-                  {getActivitiesNotInPlans().map((activity) => (
-                    <ActivityGridRenderer
-                      key={activity.id}
-                      activities={[activity]}
-                      activityEntries={activityEntries.filter(
-                        (entry) => entry.activity_id === activity.id
-                      )}
-                      timeRange={timeRange}
-                      endDate={endDate}
-                    />
-                  ))}
+                  <ActivityGridRenderer
+                    activities={activitiesNotInPlans}
+                    activityEntries={activityEntries.filter((entry) =>
+                      activitiesNotInPlans
+                        .map((a) => a.id)
+                        .includes(entry.activity_id)
+                    )}
+                    timeRange={timeRange}
+                    endDate={endDate}
+                  />
                 </>
               )}
             </div>
@@ -492,7 +501,9 @@ const ProfilePage: React.FC = () => {
               <div className="space-y-4">
                 <div className="p-4 border rounded-lg bg-white">
                   <div className="flex flex-row items-center gap-2 mb-4">
-                    <h3 className="text-lg font-semibold">Emotional Profile ⭐️</h3>
+                    <h3 className="text-lg font-semibold">
+                      Emotional Profile ⭐️
+                    </h3>
                     <p className="text-xs font-medium text-muted-foreground">
                       <Link
                         href="https://github.com/alramalho/self-tracking-software"

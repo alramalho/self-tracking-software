@@ -308,7 +308,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
           />
         </div>
       </div>
-      <div className="flex justify-start mt-4">{renderActivityLegend()}</div>
+      <div className="flex justify-start">{renderActivityLegend()}</div>
     </div>
   );
 };
