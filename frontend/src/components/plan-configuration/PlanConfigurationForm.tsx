@@ -59,6 +59,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   // Load initial state from localStorage or use defaults
   const loadInitialState = (): CachedFormState => {
     if (typeof window === "undefined") return getDefaultState();
+    if (isEdit) return getDefaultState();
 
     const cacheKey = isEdit
       ? `editPlanJourneyState_${plan?.id}`
@@ -82,12 +83,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   };
 
   function getPlanActivities(plan: ApiPlan): Activity[] {
-    const activityIds = new Set(
-      plan.sessions?.map((session) => session.activity_id) || []
-    );
     return (
       userData?.activities?.filter((activity) =>
-        activityIds.has(activity.id)
+        plan.activity_ids?.includes(activity.id)
       ) || []
     );
   }
@@ -150,9 +148,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
   // Split activities into existing and new
   const [existingActivities, setExistingActivities] = useState<Activity[]>(
-    initialState.activities.filter((a) =>
-      userData?.activities?.some((ua) => ua.id === a.id)
-    )
+    initialState.activities
   );
   const [newActivities, setNewActivities] = useState<Activity[]>(
     initialState.activities.filter(
