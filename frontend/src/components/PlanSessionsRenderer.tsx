@@ -32,27 +32,32 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   };
 
   const getIntensityForDate = (dateStr: string) => {
-    const session = plan.sessions.find(
+    const sessionsOnDate = plan.sessions.filter(
       (s) => format(s.date, "yyyy-MM-dd") === dateStr
     );
 
-    if (!session) return null;
+    if (sessionsOnDate.length === 0) return null;
 
-    const activityIndex = activities.findIndex(
-      (a) => a.id === session.activity_id
-    );
+    const intensities = sessionsOnDate.map(session => {
+      const activityIndex = activities.findIndex(
+        (a) => a.id === session.activity_id
+      );
 
-    const quantities = plan.sessions.map((s) => s.quantity);
-    const minQuantity = Math.min(...quantities);
-    const maxQuantity = Math.max(...quantities);
-    const intensityLevels = 5;
-    const intensityStep = (Math.max(maxQuantity-minQuantity, 1) / intensityLevels);
+      const quantities = plan.sessions.map((s) => s.quantity);
+      const minQuantity = Math.min(...quantities);
+      const maxQuantity = Math.max(...quantities);
+      const intensityLevels = 5;
+      const intensityStep = (Math.max(maxQuantity-minQuantity, 1) / intensityLevels);
 
-    const intensity = Math.min(
-      Math.floor((session.quantity - minQuantity) / intensityStep),
-      intensityLevels - 1
-    );
-    return { activityIndex, intensity };
+      const intensity = Math.min(
+        Math.floor((session.quantity - minQuantity) / intensityStep),
+        intensityLevels - 1
+      );
+
+      return { activityIndex, intensity };
+    });
+
+    return intensities;
   };
   const renderActivityViewer = () => {
     if (!focusedDate) return null;

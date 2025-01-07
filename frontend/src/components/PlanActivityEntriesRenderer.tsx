@@ -57,28 +57,34 @@ const PlanActivityEntriesRenderer: React.FC<
   };
 
   const getIntensityForDate = (dateStr: string) => {
-    const entry = planActivityEntries.find(
+    const entriesOnDate = planActivityEntries.filter(
       (e) => format(e.date, "yyyy-MM-dd") === dateStr
     );
 
-    if (!entry) return null;
+    if (entriesOnDate.length === 0) return null;
 
-    const activityIndex = planActivities.findIndex(
-      (a) => a.id === entry.activity_id
-    );
+    const intensities = entriesOnDate.map(entry => {
+      const activityIndex = planActivities.findIndex(
+        (a) => a.id === entry.activity_id
+      );
 
-    const quantities = planActivityEntries.map((e) => e.quantity);
-    const minQuantity = Math.min(...quantities);
-    const maxQuantity = Math.max(...quantities);
-    const intensityLevels = 5;
-    const intensityStep = (Math.max(maxQuantity - minQuantity, 1) / intensityLevels);
+      const quantities = planActivityEntries
+        .filter(e => e.activity_id === entry.activity_id)
+        .map(e => e.quantity);
+      const minQuantity = Math.min(...quantities);
+      const maxQuantity = Math.max(...quantities);
+      const intensityLevels = 5;
+      const intensityStep = (Math.max(maxQuantity - minQuantity, 1) / intensityLevels);
 
-    const intensity = Math.min(
-      Math.floor((entry.quantity - minQuantity) / intensityStep),
-      intensityLevels - 1
-    );
+      const intensity = Math.min(
+        Math.floor((entry.quantity - minQuantity) / intensityStep),
+        intensityLevels - 1
+      );
 
-    return { activityIndex, intensity };
+      return { activityIndex, intensity };
+    });
+
+    return intensities;
   };
 
 
