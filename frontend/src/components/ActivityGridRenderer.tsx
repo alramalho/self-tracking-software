@@ -31,28 +31,32 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   };
 
   const getIntensityForDate = (activityId: string) => (date: string) => {
-    const entry = activityEntries.find(
+    const entriesOnDate = activityEntries.filter(
       (e) => e.activity_id === activityId && isSameDay(parseISO(e.date), date)
     );
     
-    if (!entry) return null;
+    if (entriesOnDate.length === 0) return null;
 
-    const activityIndex = activities.findIndex(a => a.id === activityId);
+    const intensities = entriesOnDate.map(entry => {
+      const activityIndex = activities.findIndex(a => a.id === activityId);
 
-    const quantities = activityEntries
-      .filter(e => e.activity_id === activityId)
-      .map(e => e.quantity);
-    const minQuantity = Math.min(...quantities);
-    const maxQuantity = Math.max(...quantities);
-    const intensityLevels = 5;
-    const intensityStep = (Math.max(maxQuantity-minQuantity, 1) / intensityLevels);
+      const quantities = activityEntries
+        .filter(e => e.activity_id === activityId)
+        .map(e => e.quantity);
+      const minQuantity = Math.min(...quantities);
+      const maxQuantity = Math.max(...quantities);
+      const intensityLevels = 5;
+      const intensityStep = (Math.max(maxQuantity-minQuantity, 1) / intensityLevels);
 
-    const intensity = Math.min(
-      Math.floor((entry.quantity - minQuantity) / intensityStep),
-      intensityLevels - 1
-    );
+      const intensity = Math.min(
+        Math.floor((entry.quantity - minQuantity) / intensityStep),
+        intensityLevels - 1
+      );
 
-    return { activityIndex, intensity };
+      return { activityIndex, intensity };
+    });
+
+    return intensities;
   };
 
   const handleDateClick = (activity: Activity) => (date: Date) => {

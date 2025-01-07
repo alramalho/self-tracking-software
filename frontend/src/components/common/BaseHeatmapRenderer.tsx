@@ -16,7 +16,7 @@ export interface BaseHeatmapRendererProps {
   onDateClick: (date: Date) => void;
   getIntensityForDate: (
     date: string
-  ) => { activityIndex: number; intensity: number } | null;
+  ) => { activityIndex: number; intensity: number }[] | null;
   noActivityLegend?: boolean;
 }
 
@@ -112,9 +112,9 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             value={heatmapData}
             startDate={utcStartDate}
             endDate={utcEndDate}
-            width={45 + 24 * numberOfWeeks}
-            height={200}
-            rectSize={18}
+            width={45 + 26 * numberOfWeeks}
+            height={215}
+            rectSize={20}
             legendRender={() => <></>}
             rectProps={{
               rx: 4,
@@ -124,41 +124,185 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               const [year, month, day] = data.date.split('/').map(Number);
               const dateObj = new Date(Date.UTC(year, month - 1, day));
               
-              let color = "#EBEDF0";
-              let stroke = "none";
-              let strokeWidth = 0;
-              
-              const intensity = getIntensityForDate(
+              const intensities = getIntensityForDate(
                 format(dateObj, "yyyy-MM-dd")
               );
-              if (intensity && intensity.activityIndex !== -1) {
-                color = getActivityColor(
-                  intensity.activityIndex,
-                  intensity.intensity
-                );
-              }
 
               // Compare UTC dates for today check
               const today = new Date();
               const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-              if (dateObj.getTime() === todayUTC.getTime()) {
-                stroke = "#FF0000";
-                strokeWidth = 2;
-              }
+              const isCurrentDay = dateObj.getTime() === todayUTC.getTime();
+              
+              const renderRects = () => {
+                if (!intensities || intensities.length === 0) {
+                  return (
+                    <rect
+                      key={data.index}
+                      {...props}
+                      fill="#EBEDF0"
+                      stroke={isCurrentDay ? "#FF0000" : "none"}
+                      strokeWidth={isCurrentDay ? 2 : 0}
+                      rx={4}
+                    />
+                  );
+                }
+
+                const rects = [];
+                const rectWidth = Number(props.width) || 0;
+                const rectHeight = Number(props.height) || 0;
+                const baseX = Number(props.x) || 0;
+                const baseY = Number(props.y) || 0;
+                const gap = 1; // Gap between rectangles
+
+                if (intensities.length === 1) {
+                  // Single full-size rectangle
+                  rects.push(
+                    <rect
+                      key={0}
+                      {...props}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                      rx={4}
+                    />
+                  );
+                } else if (intensities.length === 2) {
+                  // Two vertical rectangles
+                  const halfWidth = (rectWidth - gap) / 2;
+                  rects.push(
+                    <path
+                      key={0}
+                      d={`M ${baseX + 4} ${baseY}
+                         L ${baseX + halfWidth} ${baseY}
+                         L ${baseX + halfWidth} ${baseY + rectHeight}
+                         L ${baseX + 4} ${baseY + rectHeight}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
+                         L ${baseX} ${baseY + 4}
+                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                    />,
+                    <path
+                      key={1}
+                      d={`M ${baseX + halfWidth + gap} ${baseY}
+                         L ${baseX + rectWidth - 4} ${baseY}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${baseY + 4}
+                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${baseY}`}
+                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity)}
+                    />
+                  );
+                } else if (intensities.length === 3) {
+                  // Two rectangles on top, one on bottom
+                  const halfWidth = (rectWidth - gap) / 2;
+                  const halfHeight = (rectHeight - gap) / 2;
+                  rects.push(
+                    <path
+                      key={0}
+                      d={`M ${baseX + 4} ${baseY}
+                         L ${baseX + halfWidth} ${baseY}
+                         L ${baseX + halfWidth} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + 4}
+                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                    />,
+                    <path
+                      key={1}
+                      d={`M ${baseX + halfWidth + gap} ${baseY}
+                         L ${baseX + rectWidth - 4} ${baseY}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${baseY + 4}
+                         L ${baseX + rectWidth} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY}`}
+                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity)}
+                    />,
+                    <path
+                      key={2}
+                      d={`M ${baseX} ${baseY + halfHeight + gap}
+                         L ${baseX + rectWidth} ${baseY + halfHeight + gap}
+                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
+                         L ${baseX + 4} ${baseY + rectHeight}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
+                         L ${baseX} ${baseY + halfHeight + gap}`}
+                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity)}
+                    />
+                  );
+                } else if (intensities.length >= 4) {
+                  // Four equal rectangles
+                  const halfWidth = (rectWidth - gap) / 2;
+                  const halfHeight = (rectHeight - gap) / 2;
+                  rects.push(
+                    <path
+                      key={0}
+                      d={`M ${baseX + 4} ${baseY}
+                         L ${baseX + halfWidth} ${baseY}
+                         L ${baseX + halfWidth} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + 4}
+                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                    />,
+                    <path
+                      key={1}
+                      d={`M ${baseX + halfWidth + gap} ${baseY}
+                         L ${baseX + rectWidth - 4} ${baseY}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${baseY + 4}
+                         L ${baseX + rectWidth} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY}`}
+                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity)}
+                    />,
+                    <path
+                      key={2}
+                      d={`M ${baseX} ${baseY + halfHeight + gap}
+                         L ${baseX + halfWidth} ${baseY + halfHeight + gap}
+                         L ${baseX + halfWidth} ${baseY + rectHeight}
+                         L ${baseX + 4} ${baseY + rectHeight}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
+                         L ${baseX} ${baseY + halfHeight + gap}`}
+                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity)}
+                    />,
+                    <path
+                      key={3}
+                      d={`M ${baseX + halfWidth + gap} ${baseY + halfHeight + gap}
+                         L ${baseX + rectWidth} ${baseY + halfHeight + gap}
+                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + halfHeight + gap}`}
+                      fill={getActivityColor(intensities[3].activityIndex, intensities[3].intensity)}
+                    />
+                  );
+                }
+
+                // Add today's border if needed
+                if (isCurrentDay) {
+                  rects.push(
+                    <rect
+                      key="today-border"
+                      {...props}
+                      fill="none"
+                      stroke="#FF0000"
+                      strokeWidth={2}
+                      rx={4}
+                    />
+                  );
+                }
+
+                return <g>{rects}</g>;
+              };
 
               return (
-                <rect
-                  key={data.index}
-                  {...props}
-                  fill={color}
-                  stroke={stroke}
-                  strokeWidth={strokeWidth}
+                <g
                   onClick={() => {
                     if (!isNaN(dateObj.getTime())) {
                       onDateClick(dateObj);
                     }
                   }}
-                />
+                >
+                  {renderRects()}
+                </g>
               );
             }}
           />
