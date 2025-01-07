@@ -136,11 +136,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       const memberData = getMemberData(username);
       if (!memberData) return [];
 
-      // Get all completed entries that match plan activities
-      const planActivityIds = new Set(plan.sessions.map((s) => s.activity_id));
-
       let completedEntries = memberData.activityEntries.filter((entry) =>
-        planActivityIds.has(entry.activity_id)
+        plan.activity_ids?.includes(entry.activity_id)
       );
 
       // Filter by date range if provided
