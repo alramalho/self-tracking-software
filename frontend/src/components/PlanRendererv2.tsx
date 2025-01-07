@@ -15,7 +15,7 @@ import {
   UserDataEntry,
   convertApiPlanToPlan,
 } from "@/contexts/UserPlanContext";
-import { LineChart } from "@/components/charts/line";
+import { BarChart } from "@/components/charts/bar";
 import { Loader2, PlusSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
@@ -30,6 +30,19 @@ import { Button } from "./ui/button";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
 import { ProgressOverview } from "./ProgressOverview";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -373,7 +386,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       ) : sessionData.length > 0 ? (
         <div className="mt-8 max-w-4xl">
-          <LineChart
+          <BarChart
             data={sessionData}
             xAxisKey="week"
             lines={[
@@ -382,11 +395,21 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 name: "Planned Sessions",
                 color: "hsl(var(--chart-1))",
               },
-              ...planGroupMembers.map((member, index) => ({
-                dataKey: member.username,
-                name: `${member.name}'s Sessions`,
-                color: `hsl(var(--chart-${index + 2}))`,
-              })),
+              ...planGroupMembers
+                .filter(member => member.username !== userData?.user?.username && member.username)
+                .map((member, index) => ({
+                  dataKey: member.username,
+                  name: `${member.name}'s Sessions`,
+                  color: `hsl(var(--chart-${index + 2}))`,
+                })),
+              // Add current user last
+              ...(userData?.user?.username ? [
+                {
+                  dataKey: userData.user.username,
+                  name: "Your Sessions",
+                  color: `hsl(var(--chart-${planGroupMembers.filter(member => member.username !== userData?.user?.username).length + 2}))`,
+                }
+              ] : []),
             ]}
             title={`Sessions Overview 📈`}
             description={`${sessionData[0].week} - ${
