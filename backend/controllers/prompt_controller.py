@@ -48,6 +48,7 @@ class PromptController:
             This is your proactive reach-out time.
             Analyze ALL information provided to you about the User (activities, preferences, conversation history) to craft a short, engaging notification.
             The goal of this notification is to encourage interaction.
+            You should focus on the plans which the user has done / logged THE LEAST.
 
             {day_based_preffix}
             
