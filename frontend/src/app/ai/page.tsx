@@ -713,16 +713,6 @@ const LogPage: React.FC = () => {
     }
   }, [messageId, messageText, messagesData.isSuccess, messagesData.data]);
 
-  if (!hasLoadedUserData)
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin mr-3" />
-        <div className="flex flex-col items-start">
-          <p className="text-left">Loading your data...</p>
-        </div>
-      </div>
-    );
-
   return (
     <>
       {!isUserWhitelisted && (

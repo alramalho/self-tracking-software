@@ -22,51 +22,16 @@ export default function ClientLayout({
 }) {
   const { isSignedIn, isLoaded } = useSession();
 
-  const [showServerMessage, setShowServerMessage] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowServerMessage(true);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!isLoaded) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin mr-3" />
-        <div className="flex flex-col items-start">
-          <p className="text-left">Loading your data...</p>
-          {showServerMessage && (
-            <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...
-              <br />
-              <Link
-                target="_blank"
-                href="https://ko-fi.com/alexramalho"
-                className="underline"
-              >
-                donate?
-              </Link>
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
-        <main className={cn(
-          "relative overflow-scroll",
-          isSignedIn 
-            ? "h-[calc(100dvh-4.7rem)]" 
-            : "h-[100dvh]"
-        )}>
-          <GeneralInitializer />
-          {children}
-          {isSignedIn && <BottomNav />}
+        <main
+          className={cn(
+            "relative overflow-scroll",
+            isSignedIn ? "h-[calc(100dvh-4.7rem)]" : "h-[100dvh]"
+          )}
+        >
+          <GeneralInitializer>{children}</GeneralInitializer>
         </main>
         <Toaster
           position="top-center"
