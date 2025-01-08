@@ -25,7 +25,7 @@ export default function OnboardingPage() {
 
   const onCloseCompletionDialog = () => {
     setShowCompletionDialog(false);
-    router.push("/profile/me");
+    router.push("/add");
   };
 
   return (
@@ -46,13 +46,12 @@ export default function OnboardingPage() {
               <DialogDescription className="text-center pt-4">
                 You&apos;ve successfully created your first activity!
                 <br />
-                Next, we advise you to add a plan so you can have some long term
-                aggregate visibility on your activities.
+                Kick it off by logging last week&apos;s activities. That way you&apos;ll already see some pretty graphs 😁
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-center pt-4">
               <Button onClick={onCloseCompletionDialog}>
-                Continue to your profile
+                Continue
               </Button>
             </div>
           </DialogContent>
