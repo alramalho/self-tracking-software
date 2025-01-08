@@ -26,10 +26,9 @@ export function WeeklySessionsChecklist({
   // Get current week's completed sessions count (unique days)
   const currentWeekStart = startOfWeek(new Date());
   const currentWeekEnd = endOfWeek(new Date());
-  const planActivityIds = plan.sessions.map((session) => session.activity_id);
 
   const completedSessionsThisWeek = activityEntries
-    .filter((entry) => planActivityIds.includes(entry.activity_id))
+    .filter((entry) => plan.activity_ids?.includes(entry.activity_id))
     .filter((entry) => {
       const entryDate = parseISO(entry.date);
       return entryDate >= currentWeekStart && entryDate <= currentWeekEnd;
