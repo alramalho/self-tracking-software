@@ -100,7 +100,7 @@ export default function OnboardingPage() {
                   <Button
                     variant="secondary"
                     className="mt-2 border-2 border-gray-300"
-                    onClick={() => router.push("/add?openAdd=true")}
+                    onClick={() => router.push("/add?onboardingRedirect=true")}
                   >
                     Create your first activity
                   </Button>
