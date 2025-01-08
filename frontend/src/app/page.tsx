@@ -5,7 +5,7 @@ import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { useRouter } from "next/navigation";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, UserPlus } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +14,8 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import { Loader2 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import Link from "next/link";
+import { useShare } from "@/hooks/useShare";
+import { useClipboard } from "@/hooks/useClipboard";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -21,6 +23,8 @@ const HomePage: React.FC = () => {
   const { useUserDataQuery, hasLoadedUserData, refetchAllData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { isSupported: isShareSupported, share } = useShare();
+  const [copied, copyToClipboard] = useClipboard();
 
   useEffect(() => {
     if (
@@ -116,7 +120,39 @@ const HomePage: React.FC = () => {
         </h2>
         {userData?.user?.friend_ids.length === 0 && (
           <div className="text-left text-gray-500">
-            You haven&apos;t added any friends yet.
+            You haven&apos;t added any friends yet 🙁
+            <br />
+            <span className="text-sm text-gray-500">
+                We really recommend you do.
+              </span>
+            <span className="text-sm text-gray-500">
+              <br/>
+              <br/>
+              <span className="underline cursor-pointer" onClick={() => setIsSearchOpen(true)}>
+                Search
+              </span>{" "}
+              for friends already using tracking.so, or invite new ones by {" "}
+              <span
+                className="underline cursor-pointer"
+                onClick={async () => {
+                  try {
+                    const link = `https://app.tracking.so/join/${userData?.user?.username}`;
+                    if (isShareSupported) {
+                      const success = await share(link);
+                      if (!success) throw new Error("Failed to share");
+                    } else {
+                      const success = await copyToClipboard(link);
+                      if (!success) throw new Error("Failed to copy");
+                    }
+                  } catch (error) {
+                    console.error("Failed to copy link to clipboard");
+                  }
+                }}
+              >
+                
+              sharing your profile link.
+              </span>{" "}
+            </span>
           </div>
         )}
         <TimelineRenderer />
