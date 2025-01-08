@@ -588,6 +588,7 @@ async def get_user_profile(username: str):
                 for plan in [
                     plan_controller.get_plan(plan_id) for plan_id in user.plan_ids
                 ]
+                if plan is not None
             ],
             "activities": activities_gateway.get_all_activities_by_user_id(user.id),
         }
