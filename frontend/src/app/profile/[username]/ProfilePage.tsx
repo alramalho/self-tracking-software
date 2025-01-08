@@ -367,13 +367,13 @@ const ProfilePage: React.FC = () => {
               className="w-full mb-3 bg-white"
               onClick={async () => {
                 try {
-                  const link = `https://app.tracking.so/join/${username}`;
+                  const link = `https://app.tracking.so/join/${userDataQuery.data?.user?.username}`;
                   if (isShareSupported) {
                     const success = await share(link);
-                  if (!success) throw new Error("Failed to share");
-                } else {
-                  const success = await copyToClipboard(link);
-                  if (!success) throw new Error("Failed to copy");
+                    if (!success) throw new Error("Failed to share");
+                  } else {
+                    const success = await copyToClipboard(link);
+                    if (!success) throw new Error("Failed to copy");
                   }
                 } catch (error) {
                   console.error("Failed to copy link to clipboard");
