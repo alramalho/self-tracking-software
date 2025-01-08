@@ -11,11 +11,6 @@ import { Button } from "@/components/ui/button";
 
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { Loader2 } from "lucide-react";
-import { useNotifications } from "@/hooks/useNotifications";
-import Link from "next/link";
-import { useShare } from "@/hooks/useShare";
-import { useClipboard } from "@/hooks/useClipboard";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -23,8 +18,6 @@ const HomePage: React.FC = () => {
   const { useUserDataQuery, hasLoadedUserData, refetchAllData } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { isSupported: isShareSupported, share } = useShare();
-  const [copied, copyToClipboard] = useClipboard();
 
   useEffect(() => {
     if (
@@ -39,39 +32,6 @@ const HomePage: React.FC = () => {
 
   if (!isSignedIn) {
     router.push("/signin");
-  }
-
-  const [showServerMessage, setShowServerMessage] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowServerMessage(true);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!hasLoadedUserData) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin mr-3" />
-        <div className="flex flex-col items-start">
-          <p className="text-left">Loading your data...</p>
-          {showServerMessage && (
-            <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...
-              <br />
-              <Link
-                target="_blank"
-                href="https://ko-fi.com/alexramalho"
-                className="underline"
-              >
-                donate?
-              </Link>
-            </span>
-          )}
-        </div>
-      </div>
-    );
   }
 
   const handleUserClick = (user: UserSearchResult) => {
@@ -118,44 +78,7 @@ const HomePage: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">
           Friend&apos;s last activities
         </h2>
-        {userData?.user?.friend_ids.length === 0 && (
-          <div className="text-left text-gray-500">
-            You haven&apos;t added any friends yet 🙁
-            <br />
-            <span className="text-sm text-gray-500">
-                We really recommend you do.
-              </span>
-            <span className="text-sm text-gray-500">
-              <br/>
-              <br/>
-              <span className="underline cursor-pointer" onClick={() => setIsSearchOpen(true)}>
-                Search
-              </span>{" "}
-              for friends already using tracking.so, or invite new ones by {" "}
-              <span
-                className="underline cursor-pointer"
-                onClick={async () => {
-                  try {
-                    const link = `https://app.tracking.so/join/${userData?.user?.username}`;
-                    if (isShareSupported) {
-                      const success = await share(link);
-                      if (!success) throw new Error("Failed to share");
-                    } else {
-                      const success = await copyToClipboard(link);
-                      if (!success) throw new Error("Failed to copy");
-                    }
-                  } catch (error) {
-                    console.error("Failed to copy link to clipboard");
-                  }
-                }}
-              >
-                
-              sharing your profile link.
-              </span>{" "}
-            </span>
-          </div>
-        )}
-        <TimelineRenderer />
+        <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)}/>
       </div>
 
       <AppleLikePopover

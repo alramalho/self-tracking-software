@@ -11,6 +11,9 @@ import { format, differenceInDays, startOfWeek, endOfWeek, isWithinInterval } fr
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
+import { useShare } from "@/hooks/useShare";
+import { useClipboard } from "@/hooks/useClipboard";
+import { toast } from "react-hot-toast";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -18,8 +21,12 @@ function isInCurrentWeek(date: string) {
   return isWithinInterval(entryDate, { start: startOfWeek(today), end: endOfWeek(today) });
 }
 
-const TimelineRenderer: React.FC = () => {
+const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
   const { timelineData } = useUserPlan();
+  const { isSupported: isShareSupported, share } = useShare();
+  const { useUserDataQuery } = useUserPlan();
+  const { data: userData } = useUserDataQuery("me");
+  const [copied, copyToClipboard] = useClipboard();
   const router = useRouter();
 
   if (timelineData.isLoading) {
@@ -32,7 +39,42 @@ const TimelineRenderer: React.FC = () => {
   }
 
   if (!timelineData.data) {
-    return <div className="text-center mt-8">No timeline data available. Try adding some friends!</div>;
+    return <div className="text-left text-gray-500">
+    You haven&apos;t added any friends yet 🙁
+    <br />
+    <span className="text-sm text-gray-500">
+        We really recommend you do.
+      </span>
+    <span className="text-sm text-gray-500">
+      <br/>
+      <br/>
+      <span className="underline cursor-pointer" onClick={onOpenSearch}>
+        Search
+      </span>{" "}
+      for friends already using tracking.so, or invite new ones by {" "}
+      <span
+        className="underline cursor-pointer"
+        onClick={async () => {
+          try {
+            const link = `https://app.tracking.so/join/${userData?.user?.username}`;
+            if (isShareSupported) {
+              const success = await share(link);
+              if (!success) throw new Error("Failed to share");
+            } else {
+              const success = await copyToClipboard(link);
+              if (!success) throw new Error("Failed to copy");
+              toast.success("Copied to clipboard");
+            }
+          } catch (error) {
+            console.error("Failed to copy link to clipboard");
+          }
+        }}
+      >
+        
+      sharing your profile link.
+      </span>{" "}
+    </span>
+  </div>
   }
 
   const sortedEntries = [...(timelineData.data.recommendedActivityEntries || [])].sort((a, b) => {
