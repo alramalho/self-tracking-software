@@ -51,6 +51,8 @@ import Divider from "@/components/Divider";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import { EmotionViewer } from "@/components/EmotionViewer";
 import { DemoEmotionViewer } from "@/components/DemoEmotionViewer";
+import { useShare } from "@/hooks/useShare";
+import { useClipboard } from "@/hooks/useClipboard";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -84,7 +86,8 @@ const ProfilePage: React.FC = () => {
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
   const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
-  const router = useRouter();
+  const { share, isSupported: isShareSupported } = useShare();
+  const [copied, copyToClipboard] = useClipboard();
   const isOnesOwnProfile =
     currentUser?.username === username || username === "me";
 
@@ -174,9 +177,7 @@ const ProfilePage: React.FC = () => {
 
   const activitiesNotInPlans = useMemo(() => {
     const planActivityIds = new Set(
-      profileData?.plans?.flatMap((plan) =>
-        plan.activity_ids
-      ) || []
+      profileData?.plans?.flatMap((plan) => plan.activity_ids) || []
     );
 
     // Filter activities that are not in plans AND have at least one activity entry
@@ -351,14 +352,37 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {isOwnProfile && (
-          <AppleLikePopover
-            open={showUserProfile}
-            onClose={() => setShowUserProfile(false)}
-          >
-            <div className="max-h-[80vh] overflow-y-auto">
-              <UserProfile routing={"hash"} />
-            </div>
-          </AppleLikePopover>
+          <>
+            <AppleLikePopover
+              open={showUserProfile}
+              onClose={() => setShowUserProfile(false)}
+            >
+              <div className="max-h-[80vh] overflow-y-auto">
+                <UserProfile routing={"hash"} />
+              </div>
+            </AppleLikePopover>
+
+            <Button
+              variant="outline"
+              className="w-full mb-3 bg-white"
+              onClick={async () => {
+                try {
+                  const link = `https://app.tracking.so/join/${username}`;
+                  if (isShareSupported) {
+                    const success = await share(link);
+                  if (!success) throw new Error("Failed to share");
+                } else {
+                  const success = await copyToClipboard(link);
+                  if (!success) throw new Error("Failed to copy");
+                  }
+                } catch (error) {
+                  console.error("Failed to copy link to clipboard");
+                }
+              }}
+            >
+              <UserPlus className="w-4 h-4 mr-2" />Invite friends
+            </Button>
+          </>
         )}
 
         <Tabs defaultValue="plans" className="w-full">
