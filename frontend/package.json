@@ -7,7 +7,8 @@
     "dev:https": "node server.js",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest"
   },
   "dependencies": {
     "@charkour/react-reactions": "^0.11.0",
@@ -57,14 +58,19 @@
     "vaul": "^1.1.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
+    "jsdom": "^25.0.1",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.7",
     "typescript": "^5",
+    "vitest": "^2.1.8",
     "webpack": "^5.90.3"
   }
 }
