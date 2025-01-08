@@ -9,9 +9,14 @@ import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-import { useApiWithAuth } from "@/api";
-import { useNotifications } from "@/hooks/useNotifications";
 import { Loader2, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const LogPage: React.FC = () => {
   const { useUserDataQuery } = useUserPlan();
@@ -28,7 +33,8 @@ const LogPage: React.FC = () => {
   const [measureType, setMeasureType] = useState<string>("");
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const searchParams = useSearchParams();
-  const shouldOpenAddNewActivityEditor = searchParams.get("openAdd");
+  const isOnboardingRedirect = searchParams.get("onboardingRedirect") === "true";
+  const [showDialog, setShowDialog] = useState(false);
 
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
@@ -70,6 +76,7 @@ const LogPage: React.FC = () => {
     setSelectedDate(new Date());
     setQuantity(0);
     setMeasureType("");
+
   };
 
   if (userDataQuery.isLoading) {
@@ -87,11 +94,36 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              <div className="flex flex-col items-center gap-4">
+                <span className="text-[60px] animate-bounce">🎯</span>
+                Great job!<br/><br/> Now, how was your last week?
+              </div>
+            </DialogTitle>
+            <DialogDescription className="text-center pt-4">
+              By logging your past activities you&apos;ll start seeing your graphs getting filled
+              <br/><br/> (you can do that without leaving this page)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center pt-4">
+            <Button onClick={() => setShowDialog(false)}>
+              Got it!
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
       <ActivitySelector
         activities={activities}
         selectedActivity={selectedActivity}
-        shouldOpenAddNewActivityEditor={shouldOpenAddNewActivityEditor === "true"}
+        shouldOpenAddNewActivityEditor={isOnboardingRedirect}
+        onSaveActivity={() => {
+          setShowDialog(true);
+        }}
         onSelectActivity={(a) => {
           handleSelectActivity(a);
           // scroll to quantity
