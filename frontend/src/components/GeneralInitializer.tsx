@@ -9,6 +9,9 @@ import AppNotInstalledPage from "./AppNotInstalledPage";
 import BottomNav from "./BottomNav";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import FeedbackForm from "./FeedbackForm";
+import { toast } from "react-hot-toast";
+import { useApiWithAuth } from "@/api";
 
 export default function GeneralInitializer({
   children,
@@ -22,12 +25,40 @@ export default function GeneralInitializer({
   const [hasRan, setHasRan] = useState(false);
 
   const [showServerMessage, setShowServerMessage] = useState(false);
+  const [showBugMessage, setShowBugMessage] = useState(false);
+  const [showBugDialog, setShowBugDialog] = useState(false);
+  const api = useApiWithAuth();
+
+  const email = userData?.user?.email || "";
+
+  const reportBug = async (text: string) => {
+    await toast.promise(
+      api.post("/report-feedback", {
+        email,
+        text,
+        type: "bug_report",
+      }),
+      {
+        loading: "Sending bug report...",
+        success: "Bug report sent successfully!",
+        error: "Failed to send bug report",
+      }
+    );
+  };
+
+
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer1 = setTimeout(() => {
       setShowServerMessage(true);
     }, 4000);
+    const timer2 = setTimeout(() => {
+      setShowBugMessage(true);
+    }, 16000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, []);
 
   useEffect(() => {
@@ -44,32 +75,56 @@ export default function GeneralInitializer({
     }
   }, [isSignedIn, hasLoadedUserData, userData, hasRan]);
 
-  if (!isAppInstalled && process.env.NEXT_PUBLIC_ENVIRONMENT !== "development") {
+  if (
+    !isAppInstalled &&
+    process.env.NEXT_PUBLIC_ENVIRONMENT !== "development"
+  ) {
     return <AppNotInstalledPage />;
   }
 
-
   if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin mr-3" />
-        <div className="flex flex-col items-start">
-          <p className="text-left">Loading your data...</p>
-          {showServerMessage && (
-            <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...
-              <br />
-              <Link
-                target="_blank"
-                href="https://ko-fi.com/alexramalho"
-                className="underline"
-              >
-                donate?
-              </Link>
-            </span>
-          )}
+      <>
+        {showBugDialog && (
+          <FeedbackForm
+            title="🐞 Report a Bug"
+            email={email}
+            placeholder="Please describe the bug you encountered..."
+            onSubmit={reportBug}
+            onClose={() => setShowBugDialog(false)}
+          />
+        )}
+        <div className="h-screen flex items-center justify-center">
+          <Loader2 className="w-10 h-10 animate-spin mr-3" />
+          <div className="flex flex-col items-start">
+            <p className="text-left">Loading your data...</p>
+            {showServerMessage && (
+              <span className="text-gray-500 text-sm text-left">
+                we run on cheap servers...
+                <br />
+                <Link
+                  target="_blank"
+                  href="https://ko-fi.com/alexramalho"
+                  className="underline"
+                >
+                  donate?
+                </Link>
+              </span>
+            )}
+            {showBugMessage && (
+              <span className="text-gray-500 text-sm text-left">
+                okay this is weird... <br />
+                <span
+                  className="underline cursor-pointer"
+                  onClick={() => setShowBugDialog(true)}
+                >
+                  you may get in contact now
+                </span>
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 

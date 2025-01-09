@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
 import { parseISO, format, addMinutes, differenceInDays } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
@@ -412,7 +412,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     useUserDataQuery,
     useMultipleUsersDataQuery,
     hasLoadedUserData: userDataQuery.isSuccess && !!userDataQuery.data,
-    hasLoadedTimelineData: timelineData.isSuccess,
+    hasLoadedTimelineData: timelineData.isSuccess && !!timelineData.data,
     timelineData,
     messagesData,
     notificationsData,
