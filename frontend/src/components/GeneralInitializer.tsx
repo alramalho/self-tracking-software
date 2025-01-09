@@ -49,7 +49,7 @@ export default function GeneralInitializer({
   }
 
 
-  if (!isLoaded || !hasLoadedUserData) {
+  if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
