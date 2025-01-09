@@ -7,7 +7,8 @@ import { useSession } from "@clerk/nextjs";
 import { useNotifications } from "@/hooks/useNotifications";
 import AppNotInstalledPage from "./AppNotInstalledPage";
 import BottomNav from "./BottomNav";
-import { Link, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 export default function GeneralInitializer({
   children,
