@@ -25,6 +25,7 @@ export default function ClientLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <UserPlanProviderWrapper>
+        <NotificationsProvider>
         <main
           className={cn(
             "relative overflow-scroll",
@@ -39,7 +40,8 @@ export default function ClientLayout({
             bottom: "5rem",
             zIndex: 101,
           }}
-        />
+          />
+        </NotificationsProvider>
       </UserPlanProviderWrapper>
     </QueryClientProvider>
   );

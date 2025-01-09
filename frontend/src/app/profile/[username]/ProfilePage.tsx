@@ -18,7 +18,6 @@ import {
 import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/hooks/useNotifications";
-import ActivitiesRenderer from "@/components/ActivitiesRenderer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
