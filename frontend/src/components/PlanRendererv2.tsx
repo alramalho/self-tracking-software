@@ -175,14 +175,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       // Get all dates from plans and completed entries
       const allDates = [
         ...groupPlans.flatMap((plan) => {
-          if (plan.outline_type === "times_per_week") {
-            // For times_per_week plans, generate dates based on times_per_week
-            return Array.from({ length: 1 }).map((_, i) => {
-              const date = new Date();
-              date.setDate(date.getDate() - 7 * i);
-              return date;
-            });
-          }
           return plan.sessions.map((s) => parseISO(s.date));
         }),
         ...groupPlans.flatMap((plan) =>
