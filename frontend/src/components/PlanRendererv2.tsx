@@ -177,8 +177,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         ...groupPlans.flatMap((plan) => {
           if (plan.outline_type === "times_per_week") {
             // For times_per_week plans, generate dates based on times_per_week
-            const startDate = new Date();
-            return Array.from({ length: 12 }).map((_, i) => {
+            return Array.from({ length: 1 }).map((_, i) => {
               const date = new Date();
               date.setDate(date.getDate() - 7 * i);
               return date;
@@ -190,6 +189,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
         ),
       ].sort((a, b) => a.getTime() - b.getTime());
+
+      console.log({ groupPlans });
+      console.log({ allDates });
 
       if (allDates.length === 0) {
         setLoading(false);
@@ -345,10 +347,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <span className="text-4xl">{selectedPlan.emoji}</span>
         <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
       </div>
-      <ProgressOverview milestones={selectedPlan.milestones} />
       {selectedPlan.outline_type === "specific" &&
         areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
-      {planGroupMembers && planGroupMembers.length > 0 && (
+      {planGroupMembers && planGroupMembers.length >= 2 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
           <div className="flex flex-row flex-wrap gap-6">
@@ -376,46 +377,61 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </div>
         </div>
       )}
+      <ProgressOverview milestones={selectedPlan.milestones} />
       {loading ? (
         <div className="flex items-center justify-center mt-8">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading session data...</span>
         </div>
-      ) : sessionData.length > 0 ? (
-        <div className="mt-8 max-w-4xl">
-          <BarChart
-            data={sessionData}
-            xAxisKey="week"
-            lines={[
-              {
-                dataKey: "planned",
-                name: "Planned Sessions",
-                color: "hsl(var(--chart-1))",
-              },
-              ...planGroupMembers
-                .filter(member => member.username !== userData?.user?.username && member.username)
-                .map((member, index) => ({
-                  dataKey: member.username,
-                  name: `${member.name}'s Sessions`,
-                  color: `hsl(var(--chart-${index + 2}))`,
-                })),
-              // Add current user last
-              ...(userData?.user?.username ? [
+      ) : (
+        sessionData.length > 0 &&
+        planGroupMembers.length >= 2 && (
+          <div className="mt-8 max-w-4xl">
+            <BarChart
+              data={sessionData}
+              xAxisKey="week"
+              lines={[
                 {
-                  dataKey: userData.user.username,
-                  name: "Your Sessions",
-                  color: `hsl(var(--chart-${planGroupMembers.filter(member => member.username !== userData?.user?.username).length + 2}))`,
-                }
-              ] : []),
-            ]}
-            title={`Sessions Overview 📈`}
-            description={`${sessionData[0].week} - ${
-              sessionData[sessionData.length - 1].week
-            }`}
-            currentDate={new Date()}
-          />
-        </div>
-      ) : null}
+                  dataKey: "planned",
+                  name: "Planned Sessions",
+                  color: "hsl(var(--chart-1))",
+                },
+                ...planGroupMembers
+                  .filter(
+                    (member) =>
+                      member.username !== userData?.user?.username &&
+                      member.username
+                  )
+                  .map((member, index) => ({
+                    dataKey: member.username,
+                    name: `${member.name}'s Sessions`,
+                    color: `hsl(var(--chart-${index + 2}))`,
+                  })),
+                // Add current user last
+                ...(userData?.user?.username
+                  ? [
+                      {
+                        dataKey: userData.user.username,
+                        name: "Your Sessions",
+                        color: `hsl(var(--chart-${
+                          planGroupMembers.filter(
+                            (member) =>
+                              member.username !== userData?.user?.username
+                          ).length + 2
+                        }))`,
+                      },
+                    ]
+                  : []),
+              ]}
+              title={`Sessions Overview 📈`}
+              description={`${sessionData[0].week} - ${
+                sessionData[sessionData.length - 1].week
+              }`}
+              currentDate={new Date()}
+            />
+          </div>
+        )
+      )}
       <div className="bg-white border border-gray-200 rounded-lg p-4 mt-8">
         <div className="flex flex-row items-center justify-start gap-2 mb-2">
           <span className="text-4xl">🎯</span>
