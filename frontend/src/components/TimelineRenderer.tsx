@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   useUserPlan,
   ActivityEntry,
@@ -22,12 +22,16 @@ function isInCurrentWeek(date: string) {
 }
 
 const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
-  const { timelineData } = useUserPlan();
+  const { timelineData, hasLoadedTimelineData } = useUserPlan();
   const { isSupported: isShareSupported, share } = useShare();
   const { useUserDataQuery } = useUserPlan();
   const { data: userData } = useUserDataQuery("me");
   const [copied, copyToClipboard] = useClipboard();
   const router = useRouter();
+
+  useEffect(() => {
+    timelineData.refetch();
+  }, []);
 
   if (timelineData.isLoading) {
     return (
@@ -38,7 +42,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
     );
   }
 
-  if (!timelineData.data) {
+  if (hasLoadedTimelineData && !timelineData.data) {
     return <div className="text-left text-gray-500">
     You haven&apos;t added any friends yet 🙁
     <br />
