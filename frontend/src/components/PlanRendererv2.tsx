@@ -376,8 +376,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <span className="ml-2">Loading session data...</span>
         </div>
       ) : (
-        sessionData.length > 0 &&
-        planGroupMembers.length >= 2 && (
+        sessionData.length > 0 && (
           <div className="mt-8 max-w-4xl">
             <BarChart
               data={sessionData}
