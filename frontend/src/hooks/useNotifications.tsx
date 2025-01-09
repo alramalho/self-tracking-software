@@ -6,10 +6,13 @@ import React, {
   useState,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react";
 import { isNotifySupported } from "@/app/swSupport";
 import { useApiWithAuth } from "@/api";
 import { arrayBufferToBase64Async } from "@/lib/utils";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import type { Notification } from "@/contexts/UserPlanContext";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -43,6 +46,7 @@ export const NotificationsProvider = ({
 }: {
   children: ReactNode;
 }) => {
+  const { notificationsData } = useUserPlan();
   const [notificationCount, setNotificationCount] = useState(0);
 
   const [isAppInstalled, setIsAppInstalled] = useState(false);
@@ -56,6 +60,15 @@ export const NotificationsProvider = ({
     useState<ServiceWorkerRegistration | null>(null);
 
   const api = useApiWithAuth();
+
+  useEffect(() => {
+    if (notificationsData.data) {
+      const nonConcludedNotificationsCount = notificationsData.data.notifications?.filter(
+        (notification: Notification) => notification.status !== "concluded"
+      ).length || 0;
+      navigator.setAppBadge && navigator.setAppBadge(nonConcludedNotificationsCount);
+    }
+  }, [notificationsData.data]);
 
   useEffect(() => {
     subscription
@@ -92,7 +105,6 @@ export const NotificationsProvider = ({
         );
         registration.active.addEventListener("push", (event) => {
           console.log("Push message received from within:", event);
-
         });
         if (registration.active.state === "activated") {
           console.log(
@@ -167,10 +179,6 @@ export const NotificationsProvider = ({
       );
     }
   }, []);
-
-  useEffect(() => {
-    navigator.setAppBadge && navigator.setAppBadge(notificationCount);
-  }, [notificationCount]);
 
   const addToNotificationCount = (count: number) =>
     setNotificationCount((prev) => prev + count);
@@ -257,7 +265,6 @@ export const NotificationsProvider = ({
       console.log("Error: " + err);
     }
   };
-
 
   // Define updatePwaStatus using useCallback
   const updatePwaStatus = React.useCallback(

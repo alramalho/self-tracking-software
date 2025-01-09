@@ -272,7 +272,7 @@ class NotificationManager:
                         "body": body,
                         "icon": icon,
                         "url": url,
-                        "badge": self.get_pending_notifications_count(user_id),
+                        "badge": self.get_non_concluded_notifications_count(user_id),
                     }
                 ),
                 vapid_private_key=VAPID_PRIVATE_KEY,
@@ -290,7 +290,7 @@ class NotificationManager:
             logger.error(f"WebPush error: {ex}")
             logger.error(traceback.format_exc())
 
-    def get_pending_notifications_count(self, user_id: str) -> int:
+    def get_non_concluded_notifications_count(self, user_id: str) -> int:
         notifications = self.get_all_for_user(user_id)
         return len(
             [
