@@ -50,6 +50,7 @@ class PromptController:
             The goal of this notification is to encourage interaction.
             You should focus on the plans which the user has done / logged THE LEAST.
 
+
             {day_based_preffix}
             
             You may craft your message as a brief, inspiring quote, a meaningful tip, or a personal question tailored to the user's goals and activities. Aim for a balance that sparks curiosity and invites a response.
@@ -66,7 +67,7 @@ class PromptController:
             Current date and time in UTC:
             {datetime.now(pytz.UTC).strftime("%A, %B %d, %Y at %I:%M %p %Z")}
 
-            Favour messages that are simple questions or have quotes.
+            Carefully analyse user plans and how old are they. If they are old enough (>2 weeks) and stale, mention it, and ask for a specific probable reason that the user might be dropping the plan.
 
             Examples of badly written messages include:
             - "How's your meditation practice going? Remember, even 5 minutes can make a difference!", the tone is too condescending
@@ -76,6 +77,7 @@ class PromptController:
             - "Did you read today?", for a user with a reading activity. It's good because it's direct question and very simple
             - "You haven't logged an activity in a while. Everything okay?", for a user who hasn't logged any activities in the past week. It's good because it's direct
             - "'Music gives a soul to the universe, wings to the mind, flight to the imagination.' – Plato. Tell me, how's your music practice going?", for a user interested in music. It's good because it's a quote, and it's a question.
+            - "I notice you haven't picked up reading in 2 weeks. Not enjoying your book?". This is a GREAT message because it mentions a common reason for people to drop a plan, and a specific user plan
 
             Here are the last messages you've sent him, try to diversify your message to avoid repetition:
             {notification_history}

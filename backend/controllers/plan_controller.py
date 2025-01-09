@@ -2,11 +2,12 @@ from gateways.database.mongodb import MongoDBGateway
 from gateways.plan_invitations import PlanInvitationsGateway
 from entities.plan import Plan, PlanSession
 from entities.plan_group import PlanGroupMember
-from entities.activity import Activity
+from entities.activity import Activity, ActivityEntry
 from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
 from typing import List, Optional, Dict, Any, Tuple, Literal
 from pydantic import BaseModel, Field, create_model
+from shared.utils import count_weeks_between_dates
 from gateways.activities import ActivitiesGateway, ActivityAlreadyExistsException
 from gateways.users import UsersGateway
 from datetime import datetime, timedelta, UTC
@@ -58,18 +59,21 @@ class PlanController:
         week_end = week_start + timedelta(days=6)
         
         # Check if all activities were completed this week
-        all_activities_for_plan = []
+        all_activity_entries_for_plan: List[ActivityEntry] = []
         for activity_id in activity_ids:
-            all_activities_for_plan.extend(self.activities_gateway.get_all_activity_entries_by_activity_id(activity_id))
+            all_activity_entries_for_plan.extend(self.activities_gateway.get_all_activity_entries_by_activity_id(activity_id))
 
-        this_week_activity_entries_for_plan = [entry for entry in all_activities_for_plan if week_start <= datetime.fromisoformat(entry.date).replace(tzinfo=UTC) <= week_end]
+
+        number_of_weeks_old = count_weeks_between_dates(datetime.fromisoformat(plan.created_at), datetime.now(UTC))
+
+        this_week_activity_entries_for_plan = [entry for entry in all_activity_entries_for_plan if week_start <= datetime.fromisoformat(entry.date).replace(tzinfo=UTC) <= week_end]
 
         is_week_completed = any([self.is_week_finisher_of_plan(entry.id, plan) for entry in this_week_activity_entries_for_plan])
         
         activities_str = "', '".join(activity_names)
         completion_str = "completed all of these activities!" if is_week_completed else "didn't complete all their planned activities"
         
-        return f"'{plan.goal}' - with activities '{activities_str}'. Last week user {completion_str}"
+        return f"'{plan.goal}' is {number_of_weeks_old} weeks old - with activities '{activities_str}'. Last week user {completion_str}"
 
     def get_readable_plans(self, user_id: str) -> str:
         logger.log("CONTROLLERS", f"Getting readable plans for user {user_id}")

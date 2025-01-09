@@ -8,12 +8,14 @@ from entities.notification import Notification
 from gateways.users import UsersGateway
 from gateways.aws.s3 import S3Gateway
 from gateways.activities import ActivitiesGateway
+from pydantic import Field
+
 from datetime import datetime, timedelta, date
 from pytz import UTC
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
 from emails.loops import send_loops_event
-from ai.llm import ask_text
+from ai.llm import ask_schema
 from controllers.prompt_controller import PromptController
 from shared.logger import logger
 from bson import ObjectId
@@ -126,7 +128,7 @@ async def _process_checkin_notifications(
 ) -> dict:
     notifications_processed = []
 
-    filtered_users = [u for u in users if posthog.feature_enabled("ai-bot-access", u.id)]
+    filtered_users = [u for u in users if posthog.feature_enabled("ai-bot-access", u.id) or ENVIRONMENT == "dev"]
     
     for user in filtered_users:
 
@@ -135,7 +137,11 @@ async def _process_checkin_notifications(
         )
 
         message_id = str(ObjectId())
-        message = ask_text(prompt, "").strip('"')
+        class ReasoningSchema(BaseModel):
+            message: str = Field(..., description="The message to be sent to the user")
+            reasoning: str = Field(..., description="The step by step detailed reasoning analysing your instructions and how to craft the most effective message to the user")
+
+        message = ask_schema(prompt, 'You are a helpful assistant', pymodel=ReasoningSchema, temperature=0.7).message.strip('"')
 
         notification = Notification.new(
             user_id=user.id,

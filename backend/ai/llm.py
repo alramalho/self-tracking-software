@@ -29,7 +29,7 @@ def ask_text(text: str, system: str, model: str = LLM_MODEL, temperature: float 
 
 T = TypeVar("T", bound=BaseModel)
 
-def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL) -> T:
+def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL, temperature: float = 0) -> T:
     start_time = time.time()
 
     # logger.debug(f"Asking schema: \n{pymodel.model_json_schema()}\nText: '{text}'\nSystem: '{system}'")
@@ -41,6 +41,7 @@ def ask_schema(text: str, system: str, pymodel: Type[T], model: str = LLM_MODEL)
             {"role": "user", "content": text},
         ],
         response_format=pymodel,
+        temperature=temperature,
     )
     result = completion.choices[0].message.parsed
 
