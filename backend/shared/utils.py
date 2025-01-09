@@ -1,5 +1,8 @@
 from datetime import UTC, datetime, timedelta, timezone
 
+def count_weeks_between_dates(start_date: datetime, end_date: datetime) -> int:
+    return (end_date - start_date).days // 7
+
 def time_ago(iso_str):
     if (
         " ago" in iso_str.lower()
