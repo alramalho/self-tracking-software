@@ -76,7 +76,7 @@ every_message_flowchart = {
         text="Analyse user's activity name and inform the user that you couldn't find the activity in his activities list.",
     ),
     "Converse": Node(
-        text="Taking into account the conversation history, converse with the user in succint messages.",
+        text="Taking into account the conversation history, converse with the user in succint messages. Your message must fit the conversation flow.",
         temperature=1,
     ),
 }
