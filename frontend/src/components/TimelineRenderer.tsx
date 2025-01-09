@@ -33,7 +33,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
     timelineData.refetch();
   }, []);
 
-  if (timelineData.isLoading) {
+  if (!hasLoadedTimelineData) {
     return (
       <div className="flex justify-center items-center w-full">
         <Loader2 className="animate-spin text-gray-500" />
