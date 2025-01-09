@@ -81,7 +81,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
   </div>
   }
 
-  const sortedEntries = [...(timelineData.data.recommendedActivityEntries || [])].sort((a, b) => {
+  const sortedEntries = [...(timelineData.data?.recommendedActivityEntries || [])].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
