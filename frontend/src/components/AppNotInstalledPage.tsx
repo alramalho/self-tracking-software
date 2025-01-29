@@ -12,8 +12,7 @@ import {
 import { usePathname } from "next/navigation";
 import InstallPWATabs from "./InstallPWATabs";
 
-const AppNotInstalledPage: React.FC = () => {
-  const [isAppInstallModalOpen, setIsAppInstallModalOpen] = useState(true);
+const AppNotInstalledPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const pathname = usePathname();
   const excludedRoutes = [
     "/signin",
@@ -31,11 +30,10 @@ const AppNotInstalledPage: React.FC = () => {
 
   return (
     <>
-      {isAppInstallModalOpen && (
-        <div className="h-screen w-screen fixed flex z-[60] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto">
-          <button
-            data-testid="close-app-install-modal"
-            onClick={() => setIsAppInstallModalOpen(false)}
+      <div className="h-screen w-screen fixed flex z-[60] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto">
+        <button
+          data-testid="close-app-install-modal"
+            onClick={onClose}
             className="absolute top-4 right-4 p-2 bg-transparent rounded-full transition-colors duration-200 z-[51]"
             aria-label="Close"
           >
@@ -55,9 +53,8 @@ const AppNotInstalledPage: React.FC = () => {
               To install, just follow these steps 👇
             </h2>
             <InstallPWATabs />
-          </div>
         </div>
-      )}
+      </div>
     </>
   );
 };

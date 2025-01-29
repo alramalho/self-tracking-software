@@ -23,6 +23,7 @@ export default function GeneralInitializer({
   const { data: userData } = useUserDataQuery("me");
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRan, setHasRan] = useState(false);
+  const [isAppInstallModalClosed, setIsAppInstallModalClosed] = useState(false);
 
   const [showServerMessage, setShowServerMessage] = useState(false);
   const [showBugMessage, setShowBugMessage] = useState(false);
@@ -45,7 +46,6 @@ export default function GeneralInitializer({
       }
     );
   };
-
 
   useEffect(() => {
     const timer1 = setTimeout(() => {
@@ -78,9 +78,12 @@ export default function GeneralInitializer({
   if (
     !isAppInstalled &&
     isSignedIn &&
+    !isAppInstallModalClosed &&
     process.env.NEXT_PUBLIC_ENVIRONMENT !== "development"
   ) {
-    return <AppNotInstalledPage />;
+    return (
+      <AppNotInstalledPage onClose={() => setIsAppInstallModalClosed(true)} />
+    );
   }
 
   if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
