@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import axios from "axios";
-import { useQuery, UseQueryResult } from "@tanstack/react-query";
+import { useQuery, UseQueryResult, useQueryClient } from "@tanstack/react-query";
 import { usePostHog } from "posthog-js/react";
 export interface Activity {
   id: string;
@@ -230,6 +230,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const { signOut } = useClerk();
   const api = useApiWithAuth();
   const posthog = usePostHog();
+  const queryClient = useQueryClient();
 
   const handleAuthError = (err: unknown) => {
     if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -238,6 +239,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         icon: '🔒',
         duration: 5000,
       });
+      queryClient.clear();
       signOut({ redirectUrl: window.location.pathname });
       posthog.reset()
       throw err;
@@ -372,8 +374,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    enabled: isSignedIn,
+    enabled: !!isSignedIn,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false,
   });
 
   const notificationsData = useQuery({
@@ -387,8 +390,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    enabled: isSignedIn,
+    enabled: !!isSignedIn,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false,
   });
 
   const userDataQuery = useUserDataQuery("me");
@@ -427,6 +431,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     );
   };
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      queryClient.clear();
+    }
+  }, [isSignedIn, queryClient]);
 
   const context = {
     userDataQuery,
