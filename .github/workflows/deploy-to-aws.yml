@@ -43,7 +43,7 @@ jobs:
           OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "https://api.axiom.co/v1/logs"
           AXIOM_ORG_ID: "tracking.software"
           AXIOM_DATASET: "app.tracking.so"
-          AXIOM_BATCH_SIZE: "50"
+          AXIOM_BATCH_SIZE: "5"
           
         run: |
           cd aws-infrastructure
