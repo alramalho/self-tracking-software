@@ -9,7 +9,7 @@ class AxiomSink:
         self.enabled = os.getenv("OTEL_ENABLED", "").lower() == "true"
         self.dataset = os.getenv("AXIOM_DATASET", os.getenv("OTEL_DATASET"))
         self.batch = []
-        self.batch_size = int(os.getenv("AXIOM_BATCH_SIZE", "100"))
+        self.batch_size = int(os.getenv("AXIOM_BATCH_SIZE", "50"))
         
         if not self.enabled:
             print("Axiom logging is disabled. Set OTEL_ENABLED=true to enable it.", file=sys.stderr)
