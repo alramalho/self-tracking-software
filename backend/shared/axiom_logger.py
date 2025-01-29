@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from datetime import datetime
 from loguru import logger
 import axiom_py
@@ -9,7 +10,11 @@ class AxiomSink:
         self.enabled = os.getenv("OTEL_ENABLED", "").lower() == "true"
         self.dataset = os.getenv("AXIOM_DATASET", os.getenv("OTEL_DATASET"))
         self.batch = []
-        self.batch_size = int(os.getenv("AXIOM_BATCH_SIZE", "50"))
+        # Smaller batch size for Lambda environments
+        self.batch_size = int(os.getenv("AXIOM_BATCH_SIZE", "10"))
+        self.last_flush = time.time()
+        # Flush every 5 seconds by default, or sooner if batch is full
+        self.flush_interval_seconds = float(os.getenv("AXIOM_FLUSH_INTERVAL", "5"))
         
         if not self.enabled:
             print("Axiom logging is disabled. Set OTEL_ENABLED=true to enable it.", file=sys.stderr)
@@ -18,7 +23,7 @@ class AxiomSink:
         try:
             # Initialize Axiom client (it will automatically use AXIOM_TOKEN or AXIOM_API_KEY env var)
             self.client = axiom_py.Client()
-            print(f"✨ Axiom logging initialized for dataset: {self.dataset}", file=sys.stderr)
+            print(f"✨ Axiom logging initialized for dataset: {self.dataset} (batch size: {self.batch_size})", file=sys.stderr)
         except Exception as e:
             print(f"Failed to initialize Axiom client: {str(e)}", file=sys.stderr)
             self.enabled = False
@@ -54,7 +59,9 @@ class AxiomSink:
 
             self.batch.append(event)
             
-            if len(self.batch) >= self.batch_size:
+            # Flush if batch is full or if enough time has passed
+            if (len(self.batch) >= self.batch_size or 
+                time.time() - self.last_flush >= self.flush_interval_seconds):
                 self._send_batch()
 
         except Exception as e:
@@ -78,6 +85,7 @@ class AxiomSink:
         
         finally:
             self.batch = []
+            self.last_flush = time.time()
 
 def setup_axiom_logging():
     """Configure loguru to send logs to Axiom"""
@@ -91,6 +99,11 @@ def setup_axiom_logging():
         serialize=True  # This ensures all fields are properly serialized
     )
     
-    # Also make sure we flush logs on program exit
+    # Register flush on exit
     import atexit
-    atexit.register(axiom_sink._send_batch) 
+    atexit.register(axiom_sink._send_batch)
+    
+    # For Lambda environments, also expose the flush method
+    if os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return axiom_sink._send_batch
+    return None 
