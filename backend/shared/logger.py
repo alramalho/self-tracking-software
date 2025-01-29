@@ -4,6 +4,7 @@ import sys
 
 from loguru import logger
 from constants import ENVIRONMENT
+from .axiom_logger import setup_axiom_logging
 
 
 def log_level_exists(level):
@@ -56,4 +57,8 @@ def create_logger(level="INFO"):
         logger.level("LOOPS", no=20, color="<yellow>", icon="📧")
         logger.log("LOOPS", "LOOPS logger created")
 
-    logger.info(f"Using {ENVIRONMENT.capitalize()} enviroment! ⚠️")
+    logger.warning(f"Using {ENVIRONMENT.capitalize()} enviroment! ⚠️")
+
+    setup_axiom_logging()
+
+    return logger
