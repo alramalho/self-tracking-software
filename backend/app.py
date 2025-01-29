@@ -30,9 +30,12 @@ from auth.clerk import get_token_from_request, validate_token
 from gateways.users import UsersGateway
 from entities.user import User
 from typing import Optional
+from telemetry import init_telemetry
+
 app = FastAPI()
 
-
+# Initialize OpenTelemetry
+init_telemetry(app)
 
 async def get_user_from_request(request: Request) -> Optional[User]:
     try:
@@ -133,6 +136,11 @@ app.add_middleware(
 )
 
 from fastapi import HTTPException
+
+@app.get("/health")
+def read_root():
+    logger.info("Health check")
+    return {"status": "ok"}
 
 @app.get("/exception")
 def read_root():
