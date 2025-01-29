@@ -77,6 +77,7 @@ export default function GeneralInitializer({
 
   if (
     !isAppInstalled &&
+    isSignedIn &&
     process.env.NEXT_PUBLIC_ENVIRONMENT !== "development"
   ) {
     return <AppNotInstalledPage />;
