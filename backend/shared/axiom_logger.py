@@ -1,20 +1,34 @@
 import os
 import sys
 import time
+import uuid
+from contextvars import ContextVar
 from datetime import datetime
 from loguru import logger
+from constants import ENVIRONMENT, AXIOM_DATASET, AXIOM_BATCH_SIZE, AXIOM_FLUSH_INTERVAL, OTEL_ENABLED
 import axiom_py
+
+# Create a context variable to store the correlation ID
+correlation_id = ContextVar('correlation_id', default=None)
+
+def get_correlation_id():
+    """Get the current correlation ID or generate a new one"""
+    current_id = correlation_id.get()
+    if current_id is None:
+        current_id = f"{ENVIRONMENT.lower()}-{str(uuid.uuid4())}"
+        correlation_id.set(current_id)
+    return current_id
 
 class AxiomSink:
     def __init__(self):
-        self.enabled = os.getenv("OTEL_ENABLED", "").lower() == "true"
-        self.dataset = os.getenv("AXIOM_DATASET", os.getenv("OTEL_DATASET"))
+        self.enabled = OTEL_ENABLED.lower() == "true"
+        self.dataset = AXIOM_DATASET
         self.batch = []
         # Smaller batch size for Lambda environments
-        self.batch_size = int(os.getenv("AXIOM_BATCH_SIZE", "10"))
+        self.batch_size = int(AXIOM_BATCH_SIZE)
         self.last_flush = time.time()
         # Flush every 5 seconds by default, or sooner if batch is full
-        self.flush_interval_seconds = float(os.getenv("AXIOM_FLUSH_INTERVAL", "5"))
+        self.flush_interval_seconds = float(AXIOM_FLUSH_INTERVAL)
         
         if not self.enabled:
             print("Axiom logging is disabled. Set OTEL_ENABLED=true to enable it.", file=sys.stderr)
@@ -44,7 +58,8 @@ class AxiomSink:
                 "process": record["process"].name,
                 "thread": record["thread"].name,
                 "environment": os.getenv("ENVIRONMENT", "unknown"),
-                "service": "tracking-so-backend"
+                "service": "tracking-so-backend",
+                "correlation_id": get_correlation_id()  # Add correlation ID to every log
             }
 
             # Add exception info if present
