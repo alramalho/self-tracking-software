@@ -44,6 +44,19 @@ export class ApiStack extends cdk.Stack {
           OVERRIDE_AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
           OVERRIDE_AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
           LOOPS_API_KEY: process.env.LOOPS_API_KEY!,
+
+          // OpenTelemetry Configuration
+          OTEL_ENABLED: process.env.OTEL_ENABLED!,
+          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+            process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
+          OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
+            process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
+
+          // Axiom Configuration
+          AXIOM_TOKEN: process.env.AXIOM_TOKEN!,
+          AXIOM_ORG_ID: process.env.AXIOM_ORG_ID!,
+          AXIOM_DATASET: process.env.AXIOM_DATASET!,
+          AXIOM_BATCH_SIZE: process.env.AXIOM_BATCH_SIZE!,
         },
       }
     );

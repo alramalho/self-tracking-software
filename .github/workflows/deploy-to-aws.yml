@@ -36,6 +36,14 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           LOOPS_API_KEY: ${{ secrets.LOOPS_API_KEY }}
+          # Axiom Configuration
+          AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
+          OTEL_ENABLED: "true"
+          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://api.axiom.co/v1/traces"
+          OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "https://api.axiom.co/v1/logs"
+          AXIOM_ORG_ID: "tracking.software"
+          AXIOM_DATASET: "app.tracking.so"
+          AXIOM_BATCH_SIZE: "50"
           
         run: |
           cd aws-infrastructure
