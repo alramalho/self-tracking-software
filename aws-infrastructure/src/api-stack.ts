@@ -27,7 +27,7 @@ export class ApiStack extends cdk.Stack {
           path.join(__dirname, "..", "..", "backend")
         ),
         timeout: cdk.Duration.seconds(899),
-        memorySize: 512,
+        memorySize: 1024,
         architecture: lambda.Architecture.X86_64,
         logRetention: cdk.aws_logs.RetentionDays.ONE_WEEK,
         environment: {
