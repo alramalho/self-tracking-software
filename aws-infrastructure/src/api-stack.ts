@@ -72,7 +72,7 @@ export class ApiStack extends cdk.Stack {
     const aliasOptions = {
       aliasName: "live",
       version: version,
-      provisionedConcurrentExecutions: 0,
+      provisionedConcurrentExecutions: 1,
       description: `Deployment ${Date.now()}`,
     };
 
