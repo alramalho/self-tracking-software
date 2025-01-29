@@ -88,8 +88,7 @@ def setup_axiom_logging():
         axiom_sink.write,
         level=os.getenv("LOG_LEVEL", "INFO"),
         format="{time} | {level} | {message} | {extra}",
-        serialize=True,  # This ensures all fields are properly serialized
-        enqueue=True    # This makes the logger thread-safe
+        serialize=True  # This ensures all fields are properly serialized
     )
     
     # Also make sure we flush logs on program exit
