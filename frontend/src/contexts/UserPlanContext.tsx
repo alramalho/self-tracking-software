@@ -231,6 +231,20 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const api = useApiWithAuth();
   const posthog = usePostHog();
 
+  const handleAuthError = (err: unknown) => {
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      router.push("/signin");
+      toast.error("You are not authorized to access this page. Please log in again.", {
+        icon: '🔒',
+        duration: 5000,
+      });
+      signOut({ redirectUrl: window.location.pathname });
+      posthog.reset()
+      throw err;
+    }
+    throw err;
+  };
+
   const fetchUserData = async ({username = "me"}: {username?: string} = {}): Promise<UserDataEntry> => {
     if (!isSignedIn) {
       throw new Error("User not signed in");
@@ -264,18 +278,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       return transformedData;
     } catch (err: unknown) {
       console.error('Error in fetchUserData:', err);
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        router.push("/signin");
-        toast.error("You are not authorized to access this page. Please log in again.", {
-          icon: '🔒',
-          duration: 5000,
-        });
-        signOut({ redirectUrl: window.location.pathname });
-        posthog.reset()
-      } else {
-        router.push("/");
-        toast.error("Failed to fetch user data. Please try again.");
-      }
+      handleAuthError(err);
+      router.push("/");
+      toast.error("Failed to fetch user data. Please try again.");
       throw err;
     }
   };
@@ -292,6 +297,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         expiresAt: addMinutes(new Date(), 10).toISOString(),
       } as TimelineData;
     } catch (err) {
+      handleAuthError(err);
       toast.error("Failed to fetch timeline data. Please try again.");
       throw err;
     }
@@ -314,39 +320,74 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const useMultipleUsersDataQuery = (usernames: string[]) => useQuery({
     queryKey: ['multipleUsersData', usernames.sort().join(',')],
     queryFn: async () => {
-      const response = await api.get('/load-users-data', {
-        params: { usernames: usernames.join(',') }
-      });
-      const transformedData: Record<string, UserDataEntry> = {};
-      for (const [key, value] of Object.entries(response.data)) {
-        const typedValue = value as {
-          user: any;
-          activities: any[];
-          activity_entries: any[];
-          mood_reports: any[];
-          plans: any[];
-          plan_groups: any[];
-          sent_friend_requests?: any[];
-          received_friend_requests?: any[];
-          messages: any[];
-        };
+      try {
+        const response = await api.get('/load-users-data', {
+          params: { usernames: usernames.join(',') }
+        });
+        const transformedData: Record<string, UserDataEntry> = {};
+        for (const [key, value] of Object.entries(response.data)) {
+          const typedValue = value as {
+            user: any;
+            activities: any[];
+            activity_entries: any[];
+            mood_reports: any[];
+            plans: any[];
+            plan_groups: any[];
+            sent_friend_requests?: any[];
+            received_friend_requests?: any[];
+            messages: any[];
+          };
 
-        transformedData[key] = {
-          user: typedValue.user,
-          activities: typedValue.activities,
-          activityEntries: typedValue.activity_entries,
-          moodReports: typedValue.mood_reports,
-          plans: typedValue.plans,
-          planGroups: typedValue.plan_groups,
-          sentFriendRequests: typedValue.sent_friend_requests || [],
-          receivedFriendRequests: typedValue.received_friend_requests || [],
-          notifications: [],
-          expiresAt: addMinutes(new Date(), 10).toISOString(),
-        };
+          transformedData[key] = {
+            user: typedValue.user,
+            activities: typedValue.activities,
+            activityEntries: typedValue.activity_entries,
+            moodReports: typedValue.mood_reports,
+            plans: typedValue.plans,
+            planGroups: typedValue.plan_groups,
+            sentFriendRequests: typedValue.sent_friend_requests || [],
+            receivedFriendRequests: typedValue.received_friend_requests || [],
+            notifications: [],
+            expiresAt: addMinutes(new Date(), 10).toISOString(),
+          };
+        }
+        return transformedData;
+      } catch (err) {
+        handleAuthError(err);
+        throw err;
       }
-      return transformedData;
     },
     enabled: isSignedIn && usernames.length > 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const messagesData = useQuery({
+    queryKey: ['messagesData'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/load-messages');
+        return response.data;
+      } catch (err) {
+        handleAuthError(err);
+        throw err;
+      }
+    },
+    enabled: isSignedIn,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const notificationsData = useQuery({
+    queryKey: ['notificationsData'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/load-notifications');
+        return response.data;
+      } catch (err) {
+        handleAuthError(err);
+        throw err;
+      }
+    },
+    enabled: isSignedIn,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -386,26 +427,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     );
   };
-
-  const messagesData = useQuery({
-    queryKey: ['messagesData'],
-    queryFn: async () => {
-      const response = await api.get('/load-messages');
-      return response.data;
-    },
-    enabled: isSignedIn,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  const notificationsData = useQuery({
-    queryKey: ['notificationsData'],
-    queryFn: async () => {
-      const response = await api.get('/load-notifications');
-      return response.data;
-    },
-    enabled: isSignedIn,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
 
   const context = {
     userDataQuery,
