@@ -235,6 +235,7 @@ export const NotificationsProvider = ({
             });
             if (pm === "granted") {
               try {
+                toast.success("Subscribing to push notifications");
                 const subscription = await reg.pushManager.subscribe({
                   userVisibleOnly: true,
                   applicationServerKey:
@@ -243,6 +244,7 @@ export const NotificationsProvider = ({
                 setSubscription(subscription);
                 console.log("Push endpoint:" + subscription.endpoint);
                 // Use api in a useCallback hook
+                toast.success("Updating PWA status");
                 await updatePwaStatus(subscription);
               } catch (err) {
                 console.error("Failed to subscribe:", err);
@@ -250,6 +252,7 @@ export const NotificationsProvider = ({
               }
             } else {
               console.log("Push manager permission state is: " + pm);
+              toast.success("Push manager permission state is: " + pm);
             }
           } else {
             console.log("Registration not available");
@@ -286,8 +289,6 @@ export const NotificationsProvider = ({
       const response = await api.get("/get-pwa-subscription");
       const storedEndpoint = response.data.stored_endpoint;
 
-      toast.success("Current subscription endpoint: " + currentSubscription?.endpoint);
-      toast.success("Stored endpoint: " + storedEndpoint);
 
       // Request new permission if:
       // 1. We have no current subscription but push is granted
