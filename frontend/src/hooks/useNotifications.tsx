@@ -13,6 +13,7 @@ import { useApiWithAuth } from "@/api";
 import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import type { Notification } from "@/contexts/UserPlanContext";
+import { toast } from "react-hot-toast";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -267,11 +268,18 @@ export const NotificationsProvider = ({
   };
 
   const validateAndUpdateSubscription = async () => {
-    if (!isPushGranted || !registration) return;
+    if (!isPushGranted) return;
 
     try {
+      // Get registration if we don't have it
+      const reg = registration || await navigator.serviceWorker.ready;
+      if (!reg) {
+        toast.error('No service worker registration available');
+        return;
+      }
+
       // Get current subscription
-      const currentSubscription = await registration.pushManager.getSubscription();
+      const currentSubscription = await reg.pushManager.getSubscription();
       
       // Get stored endpoint from backend
       const response = await api.get("/get-pwa-subscription");
@@ -284,7 +292,7 @@ export const NotificationsProvider = ({
         await requestPermission();
       }
     } catch (error) {
-      console.error("Failed to get subscription:", error);
+      console.error("Failed to validate subscription:", error);
     }
   };
 
