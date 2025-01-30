@@ -266,14 +266,6 @@ export const NotificationsProvider = ({
     }
   };
 
-  useEffect(() => {
-    if (isPushGranted) {
-      // This is a workaround to ensure that the subscription is updated everytime we load and the user grants permission
-      // This should not be done like this, but listen to subscription change events. Instead, this is a workaround.
-      requestPermission();
-    }
-  }, []);
-
   const validateAndUpdateSubscription = useCallback(async () => {
     if (!isPushGranted || !registration) return;
 
