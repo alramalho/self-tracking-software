@@ -290,7 +290,7 @@ export const NotificationsProvider = ({
 
   useEffect(() => {
     validateAndUpdateSubscription();
-  }, []);
+  }, [isPushGranted, registration]);
 
   // Define updatePwaStatus using useCallback
   const updatePwaStatus = React.useCallback(
