@@ -222,13 +222,8 @@ export const NotificationsProvider = ({
   const requestPermission = async () => {
     try {
       if (isPwaSupported) {
-        let granted = isPushGranted || false;
-        if (!granted) {
-          let notifiactionResult = await Notification.requestPermission();
-          if (notifiactionResult === "granted") {
-            granted = true;
-          }
-        }
+        const notificationPermissionResult = await Notification.requestPermission();
+        const granted = isPushGranted || notificationPermissionResult === "granted";
         if (granted) {
           setIsPushGranted(true);
 
@@ -265,7 +260,7 @@ export const NotificationsProvider = ({
           }
         } else {
           console.log(
-            "Notification permission was not granted. State: " + result
+            "Notification permission was not granted. State: " + notificationPermissionResult
           );
         }
       } else {
