@@ -266,6 +266,40 @@ export const NotificationsProvider = ({
     }
   };
 
+  useEffect(() => {
+    if (isPushGranted) {
+      // This is a workaround to ensure that the subscription is updated everytime we load and the user grants permission
+      // This should not be done like this, but listen to subscription change events. Instead, this is a workaround.
+      requestPermission();
+    }
+  }, []);
+
+  const validateAndUpdateSubscription = useCallback(async () => {
+    if (!isPushGranted || !registration) return;
+
+    try {
+      // Get current subscription
+      const currentSubscription = await registration.pushManager.getSubscription();
+      
+      // Get stored endpoint from backend
+      const response = await api.get("/get-pwa-subscription");
+      const storedEndpoint = response.data.stored_endpoint;
+
+      // Request new permission if:
+      // 1. We have no current subscription but push is granted
+      // 2. Current subscription endpoint differs from stored one
+      if (!currentSubscription || (storedEndpoint && currentSubscription.endpoint !== storedEndpoint)) {
+        await requestPermission();
+      }
+    } catch (error) {
+      console.error("Failed to get subscription:", error);
+    }
+  }, [isPushGranted, registration, api, requestPermission]);
+
+  useEffect(() => {
+    validateAndUpdateSubscription();
+  }, [validateAndUpdateSubscription]);
+
   // Define updatePwaStatus using useCallback
   const updatePwaStatus = React.useCallback(
     async (subscription: PushSubscription) => {

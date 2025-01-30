@@ -182,3 +182,9 @@ async def clear_all_notifications(user: User = Depends(is_clerk_user)):
                 notification_manager.conclude_notification(notification.id)
                 
     return {"message": "All notifications cleared except latest engagement"}
+
+@router.get("/get-pwa-subscription")
+async def get_pwa_subscription(user: User = Depends(is_clerk_user)):
+    # Get the stored subscription endpoint from the user
+    stored_endpoint = user.pwa_subscription_endpoint
+    return {"stored_endpoint": stored_endpoint}
