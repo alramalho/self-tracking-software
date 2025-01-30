@@ -222,8 +222,14 @@ export const NotificationsProvider = ({
   const requestPermission = async () => {
     try {
       if (isPwaSupported) {
-        const result = await Notification.requestPermission();
-        if (result === "granted") {
+        let granted = isPushGranted || false;
+        if (!granted) {
+          let notifiactionResult = await Notification.requestPermission();
+          if (notifiactionResult === "granted") {
+            granted = true;
+          }
+        }
+        if (granted) {
           setIsPushGranted(true);
 
           // Wait for the registration to be available
