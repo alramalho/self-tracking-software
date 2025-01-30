@@ -227,14 +227,15 @@ export const NotificationsProvider = ({
           setIsPushGranted(true);
 
           // Wait for the registration to be available
-          if (registration) {
+          const reg = registration || await navigator.serviceWorker.ready;
+          if (reg) {
             // Check permission state again
-            const pm = await registration.pushManager.permissionState({
+            const pm = await reg.pushManager.permissionState({
               userVisibleOnly: true,
             });
             if (pm === "granted") {
               try {
-                const subscription = await registration.pushManager.subscribe({
+                const subscription = await reg.pushManager.subscribe({
                   userVisibleOnly: true,
                   applicationServerKey:
                     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
