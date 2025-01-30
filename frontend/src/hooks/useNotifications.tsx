@@ -285,7 +285,7 @@ export const NotificationsProvider = ({
       const response = await api.get("/get-pwa-subscription");
       const storedEndpoint = response.data.stored_endpoint;
 
-      toast.success("Current subscription: " + currentSubscription);
+      toast.success("Current subscription endpoint: " + currentSubscription?.endpoint);
       toast.success("Stored endpoint: " + storedEndpoint);
 
       // Request new permission if:
