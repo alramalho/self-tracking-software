@@ -266,7 +266,7 @@ export const NotificationsProvider = ({
     }
   };
 
-  const validateAndUpdateSubscription = useCallback(async () => {
+  const validateAndUpdateSubscription = async () => {
     if (!isPushGranted || !registration) return;
 
     try {
@@ -286,11 +286,11 @@ export const NotificationsProvider = ({
     } catch (error) {
       console.error("Failed to get subscription:", error);
     }
-  }, [isPushGranted, registration, api, requestPermission]);
+  };
 
   useEffect(() => {
     validateAndUpdateSubscription();
-  }, [validateAndUpdateSubscription]);
+  }, []);
 
   // Define updatePwaStatus using useCallback
   const updatePwaStatus = React.useCallback(
