@@ -285,10 +285,14 @@ export const NotificationsProvider = ({
       const response = await api.get("/get-pwa-subscription");
       const storedEndpoint = response.data.stored_endpoint;
 
+      toast.success("Current subscription: " + currentSubscription);
+      toast.success("Stored endpoint: " + storedEndpoint);
+
       // Request new permission if:
       // 1. We have no current subscription but push is granted
       // 2. Current subscription endpoint differs from stored one
       if (!currentSubscription || (storedEndpoint && currentSubscription.endpoint !== storedEndpoint)) {
+        toast.success("Requesting permission");
         await requestPermission();
       }
     } catch (error) {
