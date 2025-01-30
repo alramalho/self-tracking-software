@@ -13,7 +13,6 @@ import { useApiWithAuth } from "@/api";
 import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import type { Notification } from "@/contexts/UserPlanContext";
-import { toast } from "react-hot-toast";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -236,7 +235,6 @@ export const NotificationsProvider = ({
             });
             if (pm === "granted") {
               try {
-                toast.success("Subscribing to push notifications");
                 const subscription = await reg.pushManager.subscribe({
                   userVisibleOnly: true,
                   applicationServerKey:
@@ -245,7 +243,6 @@ export const NotificationsProvider = ({
                 setSubscription(subscription);
                 console.log("Push endpoint:" + subscription.endpoint);
                 // Use api in a useCallback hook
-                toast.success("Updating PWA status");
                 await updatePwaStatus(subscription);
               } catch (err) {
                 console.error("Failed to subscribe:", err);
@@ -253,7 +250,6 @@ export const NotificationsProvider = ({
               }
             } else {
               console.log("Push manager permission state is: " + pm);
-              toast.success("Push manager permission state is: " + pm);
             }
           } else {
             console.log("Registration not available");
@@ -279,7 +275,7 @@ export const NotificationsProvider = ({
       // Get registration if we don't have it
       const reg = registration || await navigator.serviceWorker.ready;
       if (!reg) {
-        toast.error('No service worker registration available');
+        console.error('No service worker registration available');
         return;
       }
 
@@ -295,7 +291,6 @@ export const NotificationsProvider = ({
       // 1. We have no current subscription but push is granted
       // 2. Current subscription endpoint differs from stored one
       if (!currentSubscription || (storedEndpoint && currentSubscription.endpoint !== storedEndpoint)) {
-        toast.success("Requesting permission");
         await requestPermission();
       }
     } catch (error) {
