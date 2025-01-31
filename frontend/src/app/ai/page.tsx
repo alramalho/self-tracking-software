@@ -488,11 +488,16 @@ const LogPage: React.FC = () => {
       return;
     }
 
-    await authedApi.post("/log-activity", {
-      activity_id: activity.id,
-      iso_date_string: activityEntry.date,
-      quantity: activityEntry.quantity,
-      has_photo: false,
+    const formData = new FormData();
+    formData.append("activity_id", activity.id);
+    formData.append("iso_date_string", activityEntry.date);
+    formData.append("quantity", activityEntry.quantity.toString());
+    formData.append("isPublic", "false");
+
+    await authedApi.post("/log-activity", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
 
     setPendingActivityResponses((prev) => ({
