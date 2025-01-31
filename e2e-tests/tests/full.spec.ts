@@ -20,20 +20,15 @@ test.describe.serial("App", () => {
       .fill("adfasdfasdfasdfasd");
     await page.getByRole("button", { name: "Continue", exact: true }).click();
 
-    try {
-      await page.getByTestId("close-app-install-modal").click();
-    } catch (error) {
-      // Ignore if modal is not present
+    const closeButton = page.getByTestId("close-app-install-modal");
+    if (await closeButton.isVisible()) {
+      await closeButton.click();
     }
   });
 
   test("can create a specific plan", async () => {
     // Navigate to Plans and start creating a new plan
-    await page
-      .locator("nav")
-      .first()
-      .getByRole("link", { name: "Plans" })
-      .click();
+    await page.locator("nav").first().getByText("Plans").click();
     await page.getByText("Create New Plan").click();
 
     // Fill in the plan configuration form
@@ -43,18 +38,34 @@ test.describe.serial("App", () => {
     await page.getByLabel("Set a custom finishing date").click();
     await page.getByRole("dialog").waitFor();
     await page.getByTestId("day-picker").locator("td").last().click();
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
+    // Fill in goal
     await page
       .getByLabel("Great, now what exactly do you want to do?")
       .fill("I want to exercise regularly and improve my fitness");
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
     // Select an emoji
     await page
       .getByTestId("plan-configuration-form")
       .getByPlaceholder("Enter an emoji")
       .fill("🙂");
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
+    // Select and create activities
     await page.getByText("push-ups").click();
 
     // Create a new activity
@@ -79,9 +90,14 @@ test.describe.serial("App", () => {
       .fill(
         "I prefer morning workouts and would like to focus on cardio exercises"
       );
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
+    // Configure outline and generate plan
     await page.getByText("Specific Schedule").click();
-    // Generate and create the plan
     await page.getByRole("button", { name: "Generate Plan" }).click();
 
     // Verify the created plan
@@ -98,6 +114,11 @@ test.describe.serial("App", () => {
       .count();
     expect(filledCells).toBeGreaterThan(0);
 
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
     await page.getByRole("button", { name: "Create Plan" }).click();
     await page.getByText("Enable Notifications").click();
 
@@ -107,24 +128,34 @@ test.describe.serial("App", () => {
 
   test("can create a times per week plan", async () => {
     // Navigate to Plans and start creating a new plan
-    await page
-      .locator("nav")
-      .first()
-      .getByRole("link", { name: "Plans" })
-      .click();
+    await page.locator("nav").first().getByText("Plans").click();
     await page.getByText("Create New Plan").click();
 
     await page.getByText("Lifestyle").click();
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
     await page
       .getByLabel("Great, now what exactly do you want to do?")
       .fill("I want to meditate regularly");
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page
       .getByTestId("plan-configuration-form")
       .getByPlaceholder("Enter an emoji")
       .fill("🧘");
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
     await page.getByText("push-ups").click();
 
@@ -140,8 +171,11 @@ test.describe.serial("App", () => {
       .fill("minutes");
 
     await page.getByRole("button", { name: "Save Activity" }).click();
-
-    await page.getByRole("button", { name: "Save Activity" }).click();
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
     // Add additional customization
     await page
@@ -155,16 +189,17 @@ test.describe.serial("App", () => {
     await page.getByText("Weekly Count Goal").click();
     await page.getByTestId("plus").click();
     await page.getByTestId("plus").click();
+    await page
+      .getByRole("button", { name: "Next", exact: true })
+      .and(page.locator("button:not([disabled])"))
+      .last()
+      .click();
 
     await page.getByRole("button", { name: "Create Plan" }).click();
   });
 
   test("can edit an existing plan", async () => {
-    await page
-      .locator("nav")
-      .first()
-      .getByRole("link", { name: "Plans" })
-      .click();
+    await page.locator("nav").first().getByText("Plans").click();
 
     await page
       .getByText("I want to exercise regularly and improve my fitness")
@@ -196,8 +231,8 @@ test.describe.serial("App", () => {
     await page.waitForTimeout(1000);
 
     await page.getByRole("button", { name: "Generate Plan" }).click();
-    await expect(page.getByText("Generating your plan...")).toBeVisible();
-    await expect(page.getByText("Generating your plan...")).not.toBeVisible({
+    await expect(page.getByText("Generating...")).toBeVisible();
+    await expect(page.getByText("Generating...")).not.toBeVisible({
       timeout: 15000,
     });
 

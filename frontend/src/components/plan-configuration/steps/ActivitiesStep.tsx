@@ -1,92 +1,75 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Number from "../Number";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import ActivitySelector from "@/components/ActivitySelector";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 import ActivityItem from "../ActivityItem";
+import { Plus } from "lucide-react";
+import ActivityEditor from "@/components/ActivityEditor";
 
 interface ActivitiesStepProps {
-  userData: {
-    activities?: Activity[];
-  } | null;
-  existingActivities: Activity[];
-  setExistingActivities: (activities: Activity[] | ((prev: Activity[]) => Activity[])) => void;
-  newActivities: Activity[];
-  setNewActivities: (activities: Activity[] | ((prev: Activity[]) => Activity[])) => void;
+  onActivitiesChange: (activities: Activity[]) => void;
+  initialActivities?: Activity[];
   description: string;
   setDescription: (description: string) => void;
 }
 
 const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
-  userData,
-  existingActivities,
-  setExistingActivities,
-  newActivities,
-  setNewActivities,
+  onActivitiesChange,
+  initialActivities = [],
   description,
   setDescription,
 }) => {
+  const { useUserDataQuery } = useUserPlan();
+  const { data: userData } = useUserDataQuery("me");
+  const [showActivityEditor, setShowActivityEditor] = useState(false);
+  const [selectedActivities, setSelectedActivities] = useState<Activity[]>(initialActivities);
+
+  // Update parent component when selected activities change
+  useEffect(() => {
+    onActivitiesChange(selectedActivities);
+  }, [selectedActivities, onActivitiesChange]);
+
+  const handleSaveActivity = (activity: Activity) => {
+    setSelectedActivities((prev) => [...prev, activity]);
+  };
+
+  const handleToggleActivity = (activity: Activity) => {
+    setSelectedActivities((prev) =>
+      prev.some((a) => a.id === activity.id)
+        ? prev.filter((a) => a.id !== activity.id)
+        : [...prev, activity]
+    );
+  };
+
   return (
     <div className="space-y-8">
       <div>
         <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
           <Number>4</Number>
-          Your Existing Activities
+          Your Activities
         </h3>
-        {userData?.activities && userData.activities.length > 0 && (
-          <div>
-            <p className="text-sm text-gray-500 mb-4">
-              Select from activities you&apos;ve already created
-            </p>
-            <div
-              data-testid="existing-activities"
-              className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4"
-            >
-              {userData.activities
-                .filter(
-                  (activity) =>
-                    !newActivities.some((na) => na.id === activity.id)
-                )
-                .map((activity) => (
-                  <ActivityItem
-                    key={activity.id}
-                    activity={activity}
-                    isSelected={existingActivities.some(
-                      (a) => a.id === activity.id
-                    )}
-                    onToggle={() => {
-                      setExistingActivities((prev: Activity[]) =>
-                        prev.some((a: Activity) => a.id === activity.id)
-                          ? prev.filter((a: Activity) => a.id !== activity.id)
-                          : [...prev, activity]
-                      );
-                    }}
-                  />
-                ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Create New Activities</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Add new activities for this plan
-          </p>
-          <ActivitySelector
-            activities={newActivities}
-            selectedActivity={undefined}
-            onSelectActivity={(activity: Activity) => {
-              setNewActivities((prev: Activity[]) =>
-                prev.some((a: Activity) => a.id === activity.id)
-                  ? prev.filter((a: Activity) => a.id !== activity.id)
-                  : [...prev, activity]
-              );
-            }}
-            onSaveActivity={(activity: Activity) =>
-              setNewActivities((prev: Activity[]) => [...prev, activity])
-            }
-          />
+        <p className="text-sm text-gray-500 mb-4">
+          Select from activities you&apos;ve already created or add new ones
+        </p>
+        <div
+          data-testid="existing-activities"
+          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4"
+        >
+          {userData?.activities?.map((activity) => (
+            <ActivityItem
+              key={activity.id}
+              activity={activity}
+              isSelected={selectedActivities.some((a) => a.id === activity.id)}
+              onToggle={() => handleToggleActivity(activity)}
+            />
+          ))}
+          <button
+            onClick={() => setShowActivityEditor(true)}
+            className="flex flex-col items-center justify-center p-4 rounded-lg border-2 border-dashed border-gray-300 aspect-square hover:bg-gray-50"
+          >
+            <Plus className="h-8 w-8 text-gray-400 mb-2" />
+            <span className="text-sm font-medium text-gray-500">Add New</span>
+          </button>
         </div>
       </div>
 
@@ -105,6 +88,12 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
           className="mb-4"
         />
       </div>
+
+      <ActivityEditor
+        open={showActivityEditor}
+        onClose={() => setShowActivityEditor(false)}
+        onSave={handleSaveActivity}
+      />
     </div>
   );
 };
