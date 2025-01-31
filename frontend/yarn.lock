@@ -3500,6 +3500,11 @@ hast-to-hyperscript@^9.0.0:
     unist-util-is "^4.0.0"
     web-namespaces "^1.0.0"
 
+heic2any@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/heic2any/-/heic2any-0.0.4.tgz#eddb8e6fec53c8583a6e18b65069bb5e8d19028a"
+  integrity sha512-3lLnZiDELfabVH87htnRolZ2iehX9zwpRyGNz22GKXIu0fznlblf0/ftppXKNqS26dqFSeqfIBhAmAj/uSp0cA==
+
 hex-rgb@^4.1.0:
   version "4.3.0"
   resolved "https://registry.npmjs.org/hex-rgb/-/hex-rgb-4.3.0.tgz"
