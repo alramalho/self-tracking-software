@@ -4,6 +4,7 @@ import { Activity } from "@/contexts/UserPlanContext";
 interface ActivityItemProps {
   activity: Activity;
   isSelected: boolean;
+  className?: string;
   onToggle: () => void;
 }
 
@@ -11,6 +12,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
   activity,
   isSelected,
   onToggle,
+  className,
 }) => {
   return (
     <div
@@ -19,7 +21,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
         isSelected
           ? "border-blue-500 bg-blue-50"
           : "border-gray-200 hover:bg-gray-50"
-      }`}
+      } ${className}`}
     >
       <div className="relative w-full h-full flex flex-col items-start justify-center">
         {isSelected && (
