@@ -16,7 +16,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
   max,
 }) => {
   return (
-    <div className="flex items-center justify-center space-x-2 max-w-xs">
+    <div className="flex items-center justify-center space-x-2 max-w-xs mx-auto">
       <Button
         variant="outline"
         size="icon"

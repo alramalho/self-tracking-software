@@ -7,6 +7,7 @@ import NumberInput from "../NumberInput";
 import { Loader2 } from "lucide-react";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { parseISO } from "date-fns";
+import Number from "../Number";
 
 interface OutlineStepProps {
   outlineType: Plan["outline_type"];
@@ -56,21 +57,27 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
 
   return (
     <div className="space-y-4">
-      <Label>How would you like to outline your plan?</Label>
+            <label
+        className="text-lg font-medium mb-2 block flex items-center gap-2"
+        htmlFor="goal"
+      >
+        <Number>5</Number>
+        How would you like to outline your plan?
+      </label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OutlineOption
-          type="specific"
-          title="📆 Specific Schedule"
-          description="An AI generated plan with a specific weekly schedule"
-          isSelected={outlineType === "specific"}
-          onSelect={() => setOutlineType("specific")}
-        />
         <OutlineOption
           type="times_per_week"
           title="✅ Weekly Count Goal"
-          description="A self-serve plan with just a number of sessions per week"
+          description="A simple, self-serve plan with just a number of sessions per week"
           isSelected={outlineType === "times_per_week"}
           onSelect={() => setOutlineType("times_per_week")}
+        />
+        <OutlineOption
+          type="specific"
+          title="📆 Specific Schedule"
+          description="A more complex AI generated plan with a specific weekly schedule"
+          isSelected={outlineType === "specific"}
+          onSelect={() => setOutlineType("specific")}
         />
       </div>
 

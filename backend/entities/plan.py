@@ -32,7 +32,7 @@ class Plan(BaseModel):
     milestones: Optional[List[PlanMilestone]] = None
     
     @classmethod
-    def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: Optional[List[PlanSession]] = None, plan_group_id: Optional[str] = None, id: Optional[str] = None, duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None, notes: Optional[str] = None, outline_type: Optional[Literal["specific", "times_per_week"]] = "specific", times_per_week: Optional[int] = None) -> "Plan":
+    def new(cls, user_id: str, goal: str, emoji: str, finishing_date: Optional[str], sessions: Optional[List[PlanSession]] = None, plan_group_id: Optional[str] = None, id: Optional[str] = None, duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None, notes: Optional[str] = None, outline_type: Optional[Literal["specific", "times_per_week"]] = "specific", times_per_week: Optional[int] = None, activity_ids: Optional[List[str]] = None) -> "Plan":
         return cls(
             id=id or str(ObjectId()),
             user_id=user_id,
@@ -46,4 +46,5 @@ class Plan(BaseModel):
             notes=notes,
             outline_type=outline_type,
             times_per_week=times_per_week,
+            activity_ids=activity_ids,
         )

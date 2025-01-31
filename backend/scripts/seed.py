@@ -104,6 +104,7 @@ def generate_dummy_data():
             goal="Run a marathon",
             emoji="🏃",
             finishing_date=(datetime.datetime.now() + timedelta(days=90)).isoformat(),
+            activity_ids=[activities[0].id],
             sessions=[
                 PlanSession(
                     date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
@@ -119,6 +120,7 @@ def generate_dummy_data():
             goal="Meditate daily",
             emoji="🧘",
             finishing_date=(datetime.datetime.now() + timedelta(days=30)).isoformat(),
+            activity_ids=[activities[1].id],
             sessions=[
                 PlanSession(
                     date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
@@ -134,6 +136,7 @@ def generate_dummy_data():
             goal="100 push-ups challenge",
             emoji="💪",
             finishing_date=(datetime.datetime.now() + timedelta(days=30)).isoformat(),
+            activity_ids=[activities[2].id],
             sessions=[
                 PlanSession(
                     date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
@@ -149,6 +152,7 @@ def generate_dummy_data():
             goal="Learn guitar",
             emoji="🎸",
             finishing_date=(datetime.datetime.now() + timedelta(days=60)).isoformat(),
+            activity_ids=[activities[9].id],
             sessions=[
                 PlanSession(
                     date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
