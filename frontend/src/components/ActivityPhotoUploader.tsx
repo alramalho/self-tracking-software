@@ -74,8 +74,10 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       <h2 className="text-2xl font-bold mb-4">📸 Add a proof!</h2>
       <div className="space-y-4">
         <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50"
-          onClick={() => document.getElementById("photo-input")?.click()}
+          className={`border-2 border-dashed border-gray-300 rounded-lg p-8 text-center ${
+            isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'
+          }`}
+          onClick={() => !isUploading && document.getElementById("photo-input")?.click()}
         >
           {selectedFile ? (
             <img
@@ -96,6 +98,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           accept="image/*"
           onChange={handleFileChange}
           className="hidden"
+          disabled={isUploading}
         />
         <div className="mb-3">
           <Info className="w-5 h-5 text-gray-500 mb-1 mr-2 inline" />
@@ -109,6 +112,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           onClick={logActivity}
           className="w-full"
           loading={isUploading}
+          disabled={isUploading}
         >
           {selectedFile ? "Upload" : "Log without photo"}
         </Button>
