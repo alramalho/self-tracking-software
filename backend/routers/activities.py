@@ -47,53 +47,85 @@ async def get_activity_entries(user: User = Depends(is_clerk_user)):
 
 @router.post("/log-activity", response_model=ActivityEntryResponse)
 async def log_activity(
-    activity_id: str = Body(...),
-    iso_date_string: str = Body(...),
-    quantity: int = Body(...),
-    has_photo: bool = Body(False),
+    activity_id: str = Form(...),
+    iso_date_string: str = Form(...),
+    quantity: int = Form(...),
+    photo: UploadFile = None,
+    isPublic: bool = Form(False),
     user: User = Depends(is_clerk_user),
 ):
-    activity_entry = ActivityEntry.new(
-        user_id=user.id,
-        activity_id=activity_id,
-        quantity=quantity,
-        date=iso_date_string,
-    )
-
-    entry = None
     try:
-        entry = activities_gateway.create_activity_entry(activity_entry)
-    except ActivityEntryAlreadyExistsException:
-        entry = activities_gateway.get_activity_entry_by_activity_and_date(activity_id, iso_date_string)
-        if entry:
-            entry = activities_gateway.update_activity_entry(
-                entry.id,
-                {
-                    "quantity": quantity + entry.quantity,
-                },
-            )
-    except ActivityDoesNotExistException:
-        raise HTTPException(status_code=404, detail="Activity does not exist")
+        activity_entry = ActivityEntry.new(
+            user_id=user.id,
+            activity_id=activity_id,
+            quantity=quantity,
+            date=iso_date_string,
+        )
 
-    if has_photo:
-        for friend_id in user.friend_ids:
-            logger.info(f"Creating notification for friend '{friend_id}'")
-            activity = activities_gateway.get_activity_by_id(activity_id)
-            message = f"Your friend {user.name} just uploaded a photo 📸 after logging {quantity} {activity.measure} of {activity.emoji} {activity.title} "
-            await notification_manager.create_and_process_notification(
-                Notification.new(
-                    user_id=friend_id,
-                    message=message,
-                    type="info",
-                    related_data={
-                        "picture": user.picture,
-                        "name": user.name,
-                        "username": user.username,
+        entry = None
+        try:
+            entry = activities_gateway.create_activity_entry(activity_entry)
+        except ActivityEntryAlreadyExistsException:
+            entry = activities_gateway.get_activity_entry_by_activity_and_date(activity_id, iso_date_string)
+            if entry:
+                entry = activities_gateway.update_activity_entry(
+                    entry.id,
+                    {
+                        "quantity": quantity + entry.quantity,
                     },
                 )
+        except ActivityDoesNotExistException:
+            raise HTTPException(status_code=404, detail="Activity does not exist")
+
+        # Handle photo upload if provided
+        if photo:
+            s3_gateway = S3Gateway()
+            photo_id = str(uuid.uuid4())
+            _, file_extension = os.path.splitext(photo.filename)
+            s3_path = f"/users/{user.id}/activity_entries/{entry.id}/photos/{photo_id}{file_extension}"
+
+            s3_gateway.upload(await photo.read(), s3_path)
+
+            expiration = 604799  # 7 days (max for s3 presigned url)
+            presigned_url = s3_gateway.generate_presigned_url(s3_path, expiration)
+
+            image_expires_at = datetime.now() + timedelta(seconds=expiration)
+
+            image_info = ImageInfo(
+                s3_path=s3_path,
+                url=presigned_url,
+                expires_at=image_expires_at.isoformat(),
+                created_at=datetime.now().isoformat(),
+                is_public=isPublic,
             )
 
-    return entry
+            entry = activities_gateway.update_activity_entry(
+                entry.id, {"image": image_info.dict()}
+            )
+
+            # Create notifications for friends about the photo
+            for friend_id in user.friend_ids:
+                logger.info(f"Creating notification for friend '{friend_id}'")
+                activity = activities_gateway.get_activity_by_id(activity_id)
+                message = f"Your friend {user.name} just uploaded a photo 📸 after logging {quantity} {activity.measure} of {activity.emoji} {activity.title} "
+                await notification_manager.create_and_process_notification(
+                    Notification.new(
+                        user_id=friend_id,
+                        message=message,
+                        type="info",
+                        related_data={
+                            "picture": user.picture,
+                            "name": user.name,
+                            "username": user.username,
+                        },
+                    )
+                )
+
+        return entry
+
+    except Exception as e:
+        logger.error(f"Error logging activity: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to log activity")
 
 
 @router.get("/recent-activities")
@@ -121,51 +153,6 @@ async def upsert_activity(
         )
         created_activity = activities_gateway.create_activity(new_activity)
         return created_activity
-
-
-@router.post("/store-activity-photo")
-async def store_activity_photo(
-    photo: UploadFile = File(...),
-    activityEntryId: str = Form(...),
-    isPublic: bool = Form(...),
-    user: User = Depends(is_clerk_user),
-):
-    logger.info(f"Storing activity photo for user '{user.id}'")
-    try:
-        s3_gateway = S3Gateway()
-
-        photo_id = str(uuid.uuid4())
-        _, file_extension = os.path.splitext(photo.filename)
-        s3_path = f"/users/{user.id}/activity_entries/{activityEntryId}/photos/{photo_id}{file_extension}"
-
-        s3_gateway.upload(await photo.read(), s3_path)
-
-        expiration = 604799  # 7 days (max for s3 presigned url)
-        presigned_url = s3_gateway.generate_presigned_url(s3_path, expiration)
-
-        image_expires_at = datetime.now() + timedelta(seconds=expiration)
-
-        image_info = ImageInfo(
-            s3_path=s3_path,
-            url=presigned_url,
-            expires_at=image_expires_at.isoformat(),
-            created_at=datetime.now().isoformat(),
-            is_public=isPublic,
-        )
-
-        updated_entry = activities_gateway.update_activity_entry(
-            activityEntryId, {"image": image_info.dict()}
-        )
-
-        return {
-            "message": "Photo uploaded successfully",
-            "updated_entry": updated_entry,
-            "presigned_url": presigned_url,
-            }
-    except Exception as e:
-        logger.error(f"Error storing activity photo: {str(e)}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Failed to store activity photo")
-
 
 
 @router.put("/activity-entries/{activity_entry_id}")
