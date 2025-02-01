@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { useApiWithAuth } from "@/api";
 import { useUserPlan } from "@/contexts/UserPlanContext";
@@ -6,7 +8,6 @@ import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Info, Mic, Loader2 } from "lucide-react";
-import heic2any from "heic2any";
 import { Textarea } from "@/components/ui/textarea";
 import { useMicrophone } from "@/hooks/useMicrophone";
 
@@ -14,7 +15,11 @@ const MAX_FILE_SIZE = 150 * 1024; // 150KB in bytes
 const MAX_WIDTH = 1200; // Max width for the compressed image
 const QUALITY = 0.7; // Initial quality setting for compression
 
+// Move compression logic to a client-side utility
 const compressImage = async (file: File): Promise<File> => {
+  // Only run in browser environment
+  if (typeof window === 'undefined') return file;
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -26,7 +31,6 @@ const compressImage = async (file: File): Promise<File> => {
         let width = img.width;
         let height = img.height;
 
-        // Calculate new dimensions maintaining aspect ratio
         if (width > MAX_WIDTH) {
           height = Math.round((height * MAX_WIDTH) / width);
           width = MAX_WIDTH;
@@ -43,16 +47,14 @@ const compressImage = async (file: File): Promise<File> => {
 
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Try different quality settings until we get a file size under MAX_FILE_SIZE
         let quality = QUALITY;
         let dataUrl: string;
 
         do {
           dataUrl = canvas.toDataURL("image/jpeg", quality);
           quality -= 0.1;
-        } while (dataUrl.length > MAX_FILE_SIZE * 1.37 && quality > 0.1); // 1.37 factor to account for base64 encoding
+        } while (dataUrl.length > MAX_FILE_SIZE * 1.37 && quality > 0.1);
 
-        // Convert base64 to Blob
         const byteString = atob(dataUrl.split(",")[1]);
         const mimeString = dataUrl.split(",")[0].split(":")[1].split(";")[0];
         const ab = new ArrayBuffer(byteString.length);
@@ -109,15 +111,15 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       try {
-        // Show loading toast for large HEIC files
         let toastId;
         if (file.type === "image/heic" || file.type === "image/heif") {
           toastId = toast.loading("Converting HEIC image...");
         }
 
-        // Convert HEIC to JPEG if necessary
         let processedFile = file;
         if (file.type === "image/heic" || file.type === "image/heif") {
+          // Dynamically import heic2any only when needed
+          const heic2any = (await import('heic2any')).default;
           const blob = (await heic2any({
             blob: file,
             toType: "image/jpeg",
@@ -131,7 +133,6 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           if (toastId) toast.dismiss(toastId);
         }
 
-        // Compress the image
         const compressedFile = await compressImage(processedFile);
         console.log(
           `Original size: ${file.size / 1024}KB, Compressed size: ${
