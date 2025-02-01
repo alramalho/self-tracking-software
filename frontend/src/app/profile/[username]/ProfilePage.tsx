@@ -488,6 +488,7 @@ const ProfilePage: React.FC = () => {
                         activityEntryReactions={entry.reactions || {}}
                         activityMeasure={activity?.measure || ""}
                         isoDate={entry.date}
+                        description={entry.description}
                         daysUntilExpiration={
                           entry.image?.expires_at
                             ? differenceInDays(

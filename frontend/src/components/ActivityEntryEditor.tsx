@@ -9,12 +9,14 @@ import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Trash2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ActivityEntry {
   id: string;
   quantity: number;
   date: string;
   activity_id: string;
+  description?: string;
 }
 
 interface ActivityEntryEditorProps {
@@ -34,6 +36,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   const [date, setDate] = useState(
     format(new Date(activityEntry.date), "yyyy-MM-dd'T'HH:mm")
   );
+  const [description, setDescription] = useState(activityEntry.description || "");
   const [isSaving, setIsSaving] = useState(false);
   const { fetchUserData, useUserDataQuery, refetchUserData } = useUserPlan();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,11 +67,10 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
       await api.put(`/activity-entries/${activityEntry.id}`, {
         quantity: Number(quantity),
         date: new Date(date).toISOString(),
+        description,
       });
       
-      userDataQuery.refetch();
-
-      await fetchUserData();
+      await userDataQuery.refetch();
       toast.success("Activity entry updated successfully!");
       onClose();
     } catch (error) {
@@ -97,6 +99,15 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
             type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add a description..."
+            className="min-h-[80px]"
           />
         </div>
         <Button onClick={handleSave} className="w-full" disabled={isSaving}>

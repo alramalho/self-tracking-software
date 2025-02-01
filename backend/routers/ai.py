@@ -7,7 +7,7 @@ from loguru import logger
 import json
 import base64
 import traceback
-from fastapi import WebSocket, Request, HTTPException, status
+from fastapi import WebSocket, Request, HTTPException, status, Form, UploadFile, File
 from auth.clerk import is_clerk_user_ws
 from auth.clerk import is_clerk_user_ws
 from services.notification_manager import NotificationManager
@@ -310,3 +310,25 @@ async def send_system_message(request: Request, user: User = Depends(is_clerk_us
     ))
 
     return {"status": "success"}
+
+
+@router.post("/transcribe")
+async def transcribe_audio(
+    audio_data: str = Form(...),
+    audio_format: str = Form(...),
+    user: User = Depends(is_clerk_user)
+):
+    try:
+        # Decode base64 audio data
+        audio_bytes = base64.b64decode(audio_data)
+        
+        # Run transcription in executor to not block
+        text = await asyncio.get_event_loop().run_in_executor(
+            executor, stt.speech_to_text, audio_bytes, audio_format
+        )
+        
+        return {"text": text}
+    except Exception as e:
+        logger.error(f"Error in transcription: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))

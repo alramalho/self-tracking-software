@@ -75,6 +75,7 @@ class ActivityEntry(BaseModel):
     created_at: str
     image: Optional[ImageInfo] = None
     reactions: dict[str, List[str]] = Field(default_factory=dict, description="Mapping of emoji to list of user")
+    description: Optional[str] = Field(default=None, description="Optional description of the activity entry")
     deleted_at: Optional[str] = None
 
     @classmethod
@@ -87,6 +88,7 @@ class ActivityEntry(BaseModel):
         id: Optional[str] = None,
         image: Optional[ImageInfo] = None,
         reactions: Optional[dict[str, List[str]]] = None,
+        description: Optional[str] = None,
     ) -> "ActivityEntry":
         return cls(
             id=id or str(ObjectId()),
@@ -97,6 +99,7 @@ class ActivityEntry(BaseModel):
             created_at=datetime.now(UTC).isoformat(),
             image=image,
             reactions=reactions or {},
+            description=description,
         )
 
 

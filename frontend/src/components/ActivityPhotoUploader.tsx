@@ -5,8 +5,10 @@ import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/useNotifications";
-import { Info } from "lucide-react";
+import { Info, Mic, Loader2 } from "lucide-react";
 import heic2any from "heic2any";
+import { Textarea } from "@/components/ui/textarea";
+import { useMicrophone } from "@/hooks/useMicrophone";
 
 const MAX_FILE_SIZE = 150 * 1024; // 150KB in bytes
 const MAX_WIDTH = 1200; // Max width for the compressed image
@@ -20,7 +22,7 @@ const compressImage = async (file: File): Promise<File> => {
       const img = new Image();
       img.src = event.target?.result as string;
       img.onload = () => {
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         let width = img.width;
         let height = img.height;
 
@@ -32,10 +34,10 @@ const compressImage = async (file: File): Promise<File> => {
 
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        
+        const ctx = canvas.getContext("2d");
+
         if (!ctx) {
-          reject(new Error('Could not get canvas context'));
+          reject(new Error("Could not get canvas context"));
           return;
         }
 
@@ -44,25 +46,27 @@ const compressImage = async (file: File): Promise<File> => {
         // Try different quality settings until we get a file size under MAX_FILE_SIZE
         let quality = QUALITY;
         let dataUrl: string;
-        
+
         do {
-          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
           quality -= 0.1;
         } while (dataUrl.length > MAX_FILE_SIZE * 1.37 && quality > 0.1); // 1.37 factor to account for base64 encoding
 
         // Convert base64 to Blob
-        const byteString = atob(dataUrl.split(',')[1]);
-        const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+        const byteString = atob(dataUrl.split(",")[1]);
+        const mimeString = dataUrl.split(",")[0].split(":")[1].split(";")[0];
         const ab = new ArrayBuffer(byteString.length);
         const ia = new Uint8Array(ab);
-        
+
         for (let i = 0; i < byteString.length; i++) {
           ia[i] = byteString.charCodeAt(i);
         }
 
         const blob = new Blob([ab], { type: mimeString });
-        const compressedFile = new File([blob], file.name, { type: 'image/jpeg' });
-        
+        const compressedFile = new File([blob], file.name, {
+          type: "image/jpeg",
+        });
+
         resolve(compressedFile);
       };
       img.onerror = (error) => reject(error);
@@ -91,12 +95,17 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isPublic, setisPublic] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [description, setDescription] = useState("");
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const { useUserDataQuery } = useUserPlan();
   const userDataQuery = useUserDataQuery("me");
   const { addToNotificationCount } = useNotifications();
   const api = useApiWithAuth();
+  const { isRecording, toggleRecording } = useMicrophone();
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       try {
@@ -109,23 +118,57 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         // Convert HEIC to JPEG if necessary
         let processedFile = file;
         if (file.type === "image/heic" || file.type === "image/heif") {
-          const blob = await heic2any({
+          const blob = (await heic2any({
             blob: file,
             toType: "image/jpeg",
-            quality: 0.8
-          }) as Blob;
-          processedFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' });
+            quality: 0.8,
+          })) as Blob;
+          processedFile = new File(
+            [blob],
+            file.name.replace(/\.heic$/i, ".jpg"),
+            { type: "image/jpeg" }
+          );
           if (toastId) toast.dismiss(toastId);
         }
 
         // Compress the image
         const compressedFile = await compressImage(processedFile);
-        console.log(`Original size: ${file.size / 1024}KB, Compressed size: ${compressedFile.size / 1024}KB`);
+        console.log(
+          `Original size: ${file.size / 1024}KB, Compressed size: ${
+            compressedFile.size / 1024
+          }KB`
+        );
         setSelectedFile(compressedFile);
       } catch (error) {
-        console.error('Error processing image:', error);
-        toast.error('Failed to process image. Please try again.');
+        console.error("Error processing image:", error);
+        toast.error("Failed to process image. Please try again.");
       }
+    }
+  };
+
+  const handleVoiceRecording = async (
+    audioData: string,
+    audioFormat: string
+  ) => {
+    try {
+      setIsTranscribing(true);
+      const formData = new FormData();
+      formData.append("audio_data", audioData);
+      formData.append("audio_format", audioFormat);
+
+      const response = await api.post("/ai/transcribe", formData);
+      const transcribedText = response.data.text;
+
+      // Append transcribed text to existing description
+      setDescription((prev) => {
+        const separator = prev ? " " : "";
+        return prev + separator + transcribedText;
+      });
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      toast.error("Failed to transcribe audio. Please try again.");
+    } finally {
+      setIsTranscribing(false);
     }
   };
 
@@ -137,7 +180,8 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       formData.append("iso_date_string", activityData.date.toISOString());
       formData.append("quantity", activityData.quantity.toString());
       formData.append("isPublic", isPublic.toString());
-      
+      formData.append("description", description);
+
       if (selectedFile) {
         formData.append("photo", selectedFile);
       }
@@ -149,7 +193,11 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       });
 
       userDataQuery.refetch();
-      toast.success(selectedFile ? "Activity logged with photo successfully!" : "Activity logged successfully!");
+      toast.success(
+        selectedFile
+          ? "Activity logged with photo successfully!"
+          : "Activity logged successfully!"
+      );
       addToNotificationCount(1);
       onSuccess();
     } catch (error) {
@@ -166,9 +214,13 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       <div className="space-y-4">
         <div
           className={`border-2 border-dashed border-gray-300 rounded-lg p-8 text-center ${
-            isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'
+            isUploading
+              ? "opacity-50 cursor-not-allowed"
+              : "cursor-pointer hover:bg-gray-50"
           }`}
-          onClick={() => !isUploading && document.getElementById("photo-input")?.click()}
+          onClick={() =>
+            !isUploading && document.getElementById("photo-input")?.click()
+          }
         >
           {selectedFile ? (
             <img
@@ -191,10 +243,43 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           className="hidden"
           disabled={isUploading}
         />
+        <div className="space-y-2">
+          <label
+            htmlFor="description"
+            className="text-sm font-medium text-gray-700 "
+          >
+            <span>Description (optional)</span>
+          </label>
+          <div className="flex flex-row items-center justify-between gap-4">
+            <Textarea
+              id="description"
+              placeholder="How was your activity? Share your thoughts..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full min-h-[80px]"
+              disabled={isUploading}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-12 w-12 ${
+                isRecording ? "text-red-500" : ""
+              } ${isTranscribing ? "opacity-50" : ""}`}
+              onClick={() => toggleRecording(handleVoiceRecording)}
+              disabled={isTranscribing}
+            >
+              {isTranscribing ? (
+                <Loader2 className="h-12 w-12 animate-spin" />
+              ) : (
+                <Mic className="h-12 w-12 text-gray-500" />
+              )}
+            </Button>
+          </div>
+        </div>
         <div className="mb-3">
           <Info className="w-5 h-5 text-gray-500 mb-1 mr-2 inline" />
           <p className="text-md text-gray-500 mb-6 inline">
-            Only you and your friends can see this photo until it expires after
+            Only you and your friends can see this info until it expires after
             7 days.
           </p>
         </div>
