@@ -52,6 +52,7 @@ async def log_activity(
     quantity: int = Form(...),
     photo: UploadFile = None,
     isPublic: bool = Form(False),
+    description: str = Form(None),
     user: User = Depends(is_clerk_user),
 ):
     try:
@@ -60,6 +61,7 @@ async def log_activity(
             activity_id=activity_id,
             quantity=quantity,
             date=iso_date_string,
+            description=description,
         )
 
         entry = None
@@ -72,6 +74,7 @@ async def log_activity(
                     entry.id,
                     {
                         "quantity": quantity + entry.quantity,
+                        "description": description,
                     },
                 )
         except ActivityDoesNotExistException:
@@ -178,6 +181,7 @@ async def update_activity_entry(
             {
                 "quantity": update_data.get("quantity", existing_entry.quantity),
                 "date": update_data.get("date", existing_entry.date),
+                "description": update_data.get("description", existing_entry.description),
             },
         )
 

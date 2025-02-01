@@ -16,19 +16,22 @@ export interface Activity {
   user_id?: string;
 }
 
+export interface ImageInfo {
+  s3_path?: string;
+  url?: string;
+  expires_at?: string;
+  created_at?: string;
+  is_public?: boolean;
+}
+
 export interface ActivityEntry {
   id: string;
   activity_id: string;
   quantity: number;
   date: string;
-  reactions?: Record<string, string[]>; // emoji -> usernames
-  image?: {
-    s3_path?: string;
-    url?: string;
-    expires_at?: string;
-    created_at?: string;
-    is_public?: boolean;
-  };
+  image?: ImageInfo;
+  reactions?: Record<string, string[]>;
+  description?: string;
 }
 
 export interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}

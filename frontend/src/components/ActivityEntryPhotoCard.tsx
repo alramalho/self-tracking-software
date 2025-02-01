@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Edit, Smile } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
@@ -44,6 +44,7 @@ interface ActivityEntryPhotoCardProps {
   onEditClick?: () => void;
   onAvatarClick?: () => void;
   activityEntryId: string;
+  description?: string;
 }
 
 interface ReactionCount {
@@ -77,6 +78,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   onAvatarClick,
   onEditClick,
   activityEntryId,
+  description,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>(
@@ -90,6 +92,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [showUserList, setShowUserList] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (textRef.current) {
+      const lineHeight = parseInt(window.getComputedStyle(textRef.current).lineHeight);
+      const height = textRef.current.scrollHeight;
+      const lines = height / lineHeight;
+      setShouldShowReadMore(lines > 3);
+    }
+  }, [description]);
 
   // todo: use react query
   async function getReactions() {
@@ -171,78 +185,105 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }`;
   };
 
+  const hasImage = imageUrl && !hasImageExpired;
+
   return (
     <div className="bg-white border rounded-lg overflow-hidden relative">
-      {imageUrl && !hasImageExpired && (
-        <div className="relative max-h-full max-w-full mx-auto">
-          <img
-            src={imageUrl}
-            alt={activityTitle}
-            className="w-full h-full max-h-[400px] object-cover"
-          />
-          <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2">
-            {Object.entries(reactions).map(([emoji, usernames]) => {
-              return (
-                <button
-                  key={emoji}
-                  onClick={() => handleReactionClick(emoji)}
-                  className={`inline-flex items-center border border-gray-200 border-gray-100 rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
-                    usernames.includes(currentUserUsername || "")
-                      ? "border-blue-400 bg-blue-50"
-                      : "bg-white "
-                  }`}
-                >
-                  <span className="text-base">{emoji}</span>
-                  {showUserList[emoji] ? (
-                    <span className="text-gray-600 font-medium">
-                      {formatUserList(usernames)}
-                    </span>
-                  ) : (
-                    <span className="text-gray-600 font-medium">
-                      {usernames.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {imageUrl && !hasImageExpired && !isOwnActivityEntry && (
-            <>
-              <div className="absolute bottom-0 right-2">
-                {showEmojiPicker ? (
-                  <ReactionBarSelector
-                    iconSize={24}
-                    style={{
-                      backgroundColor: "#f7f7f7",
-                    }}
-                    reactions={Object.entries(REACTION_EMOJI_MAPPING).map(
-                      ([key, value]) => ({
-                        label: key,
-                        node: <div>{value}</div>,
-                        key,
-                      })
-                    )}
-                    onSelect={(key) =>
-                      handleReactionClick(
-                        REACTION_EMOJI_MAPPING[
-                          key as keyof typeof REACTION_EMOJI_MAPPING
-                        ]
-                      )
-                    }
-                  />
-                ) : (
+      {hasImage && (
+        <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
+          <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
+            <img
+              src={imageUrl}
+              alt={activityTitle}
+              className="w-full h-full max-h-[400px] object-cover rounded-2xl"
+            />
+            <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
+              {Object.entries(reactions).map(([emoji, usernames]) => {
+                return (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowEmojiPicker(!showEmojiPicker);
-                    }}
-                    className="inline-flex items-center space-x-1 bg-white rounded-full p-2 transition-all shadow-md"
+                    key={emoji}
+                    onClick={() => handleReactionClick(emoji)}
+                    className={`inline-flex items-center border border-gray-200 border-gray-100 rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
+                      usernames.includes(currentUserUsername || "")
+                        ? "border-blue-400 bg-blue-50"
+                        : "bg-white "
+                    }`}
                   >
-                    <Smile className="h-6 w-6 text-gray-500" />
+                    <span className="text-base">{emoji}</span>
+                    {showUserList[emoji] ? (
+                      <span className="text-gray-600 font-medium">
+                        {formatUserList(usernames)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 font-medium">
+                        {usernames.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {hasImage && !isOwnActivityEntry && (
+              <>
+                <div className={`absolute bottom-0 right-2 z-30 ${description ? 'mb-8' : 'mb-2'}`}>
+                  {showEmojiPicker ? (
+                    <ReactionBarSelector
+                      iconSize={24}
+                      style={{
+                        backgroundColor: "#f7f7f7",
+                        zIndex: 40,
+                      }}
+                      reactions={Object.entries(REACTION_EMOJI_MAPPING).map(
+                        ([key, value]) => ({
+                          label: key,
+                          node: <div>{value}</div>,
+                          key,
+                        })
+                      )}
+                      onSelect={(key) =>
+                        handleReactionClick(
+                          REACTION_EMOJI_MAPPING[
+                            key as keyof typeof REACTION_EMOJI_MAPPING
+                          ]
+                        )
+                      }
+                    />
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEmojiPicker(!showEmojiPicker);
+                      }}
+                      className={`inline-flex items-center space-x-1 bg-white rounded-full p-2 transition-all shadow-md`}
+                    >
+                      <Smile className={`h-6 w-6 text-gray-500`} />
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          {hasImage && description && (
+            <div className="relative -mt-6 mx-2">
+              <div className="relative rounded-2xl overflow-hidden bg-white/20 backdrop-blur-lg shadow-lg border border-white/20 p-4">
+                <div className={`relative ${!isExpanded && 'max-h-[4.5em]'} ${shouldShowReadMore && !isExpanded && 'overflow-hidden'}`}>
+                  <p ref={textRef} className="text-gray-800 font-medium text-sm relative z-10">
+                    {description}
+                  </p>
+                  {shouldShowReadMore && !isExpanded && (
+                    <div className="absolute bottom-0 right-0 left-0 h-6 bg-gradient-to-t from-white/80 to-transparent" />
+                  )}
+                </div>
+                {shouldShowReadMore && (
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="text-gray-500 underline text-xs font-medium mt-1"
+                  >
+                    {isExpanded ? 'Show less' : 'Read more'}
                   </button>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -267,7 +308,26 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             </div>
           </div>
         </div>
-        {imageUrl && !hasImageExpired && (
+        {!hasImage && description && (
+          <div className={`mt-3 ${!isExpanded && 'max-h-[4.5em]'} ${shouldShowReadMore && !isExpanded && 'overflow-hidden'} relative`}>
+            <p ref={textRef} className="text-gray-700 text-sm">
+              {description}
+            </p>
+            {shouldShowReadMore && !isExpanded && (
+              <div className="absolute bottom-0 right-0 left-0 h-6 bg-gradient-to-t from-white to-transparent" />
+            )}
+            {shouldShowReadMore && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-blue-500 text-xs font-medium mt-1 hover:text-blue-600"
+              >
+                {isExpanded ? 'Show less' : 'Read more'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {hasImage && (
           <span className="text-xs text-gray-400 mt-2">
             Image expires{" "}
             {daysUntilExpiration > 0

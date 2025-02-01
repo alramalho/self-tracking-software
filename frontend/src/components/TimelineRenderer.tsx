@@ -116,6 +116,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
               activityEntryReactions={entry.reactions || {}}
               activityMeasure={activity.measure}
               isoDate={entry.date}
+              description={entry.description}
               userPicture={user?.picture}
               daysUntilExpiration={daysUntilExpiration}
               hasImageExpired={hasImageExpired}
