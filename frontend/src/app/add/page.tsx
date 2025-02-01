@@ -31,8 +31,6 @@ const LogPage: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(0);
   const [measureType, setMeasureType] = useState<string>("");
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
-  const searchParams = useSearchParams();
-  const [showDialog, setShowDialog] = useState(false);
 
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
@@ -97,9 +95,6 @@ const LogPage: React.FC = () => {
       <ActivitySelector
         activities={activities}
         selectedActivity={selectedActivity}
-        onSaveActivity={() => {
-          setShowDialog(true);
-        }}
         onSelectActivity={(a) => {
           handleSelectActivity(a);
           // scroll to quantity
