@@ -1,6 +1,9 @@
 from pydantic import BaseModel
 from typing import TypeVar, Type
 import time
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models.gemini import GeminiModel
@@ -24,6 +27,30 @@ def get_model(model: str = LLM_MODEL):
     else:
         raise ValueError(f"Invalid model: {model}")
 
+def run_async_in_sync(coro):
+    result = None
+    error = None
+    
+    def run_in_thread():
+        nonlocal result, error
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(coro)
+            loop.close()
+        except Exception as e:
+            error = e
+
+    # Run the coroutine in a separate thread
+    thread = Thread(target=run_in_thread)
+    thread.start()
+    thread.join()
+    
+    if error:
+        raise error
+    return result
+
 def ask_text(
     text: str, system: str, model: str = LLM_MODEL, temperature: float = 0
 ) -> str:
@@ -33,9 +60,9 @@ def ask_text(
         system_prompt=system,
         model_settings={'temperature': temperature},
     )
-    result = agent.run_sync(text)
+    # Instead of run_sync, use our custom async runner
+    result = run_async_in_sync(agent.run(text))
     return result.data.text
-
 
 def ask_schema(
     text: str,
@@ -52,12 +79,12 @@ def ask_schema(
         system_prompt=system,
         model_settings={'temperature': temperature},
     )
-    result = agent.run_sync(text)
+    # Instead of run_sync, use our custom async runner
+    result = run_async_in_sync(agent.run(text))
 
     elapsed_time = (time.time() - start_time) * 1000
     # logger.debug(f"Elapsed time for '{model}' ask_schema call: {elapsed_time:.2f} ms")
     return result.data
-
 
 async def ask_text_async(
     text: str, system: str, model: str = LLM_MODEL, temperature: float = 0
@@ -75,7 +102,6 @@ async def ask_text_async(
     elapsed_time = (time.time() - start_time) * 1000
     # logger.debug(f"Elapsed time for '{model}' ask_text_async call: {elapsed_time:.2f} ms")
     return result.data.text
-
 
 async def ask_schema_async(
     text: str,
