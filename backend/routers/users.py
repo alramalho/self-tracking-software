@@ -11,6 +11,7 @@ from controllers.plan_controller import PlanController
 from gateways.plan_groups import PlanGroupsGateway
 from entities.notification import Notification
 from services.notification_manager import NotificationManager
+from services.telegram_service import TelegramService
 from constants import MAX_TIMELINE_ENTRIES
 import re
 import concurrent.futures
@@ -556,6 +557,9 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
         posthog.capture(
             distinct_id=user.id, event=type_, properties={"email": email, "text": text}
         )
+
+        if type_ == "bug_report":
+            TelegramService().send_bug_report_feedback(reporter_username=user.username, reporter_id=user.id, email=email, message=text)
 
         return {"status": "success"}
     except Exception as e:
