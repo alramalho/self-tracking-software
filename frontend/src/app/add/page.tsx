@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import BottomNav from "@/components/BottomNav";
 import ActivitySelector from "@/components/ActivitySelector";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
@@ -33,7 +32,6 @@ const LogPage: React.FC = () => {
   const [measureType, setMeasureType] = useState<string>("");
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const searchParams = useSearchParams();
-  const isOnboardingRedirect = searchParams.get("onboardingRedirect") === "true";
   const [showDialog, setShowDialog] = useState(false);
 
   const handleSelectActivity = (activity: Activity) => {
@@ -94,33 +92,11 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center">
-              <div className="flex flex-col items-center gap-4">
-                <span className="text-[60px] animate-bounce">🎯</span>
-                Great job!<br/><br/> Now, how was your last week?
-              </div>
-            </DialogTitle>
-            <DialogDescription className="text-center pt-4">
-              By logging your past activities you&apos;ll start seeing your graphs getting filled
-              <br/><br/> (you can do that without leaving this page)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center pt-4">
-            <Button onClick={() => setShowDialog(false)}>
-              Got it!
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
       <ActivitySelector
         activities={activities}
         selectedActivity={selectedActivity}
-        shouldOpenAddNewActivityEditor={isOnboardingRedirect}
         onSaveActivity={() => {
           setShowDialog(true);
         }}

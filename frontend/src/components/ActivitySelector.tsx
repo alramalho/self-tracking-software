@@ -10,7 +10,6 @@ interface ActivitySelectorProps {
   onSelectActivity: (activity: Activity) => void;
   onSaveActivity?: (activity: Activity) => void;
   canAddNewActivity?: boolean;
-  shouldOpenAddNewActivityEditor?: boolean;
 }
 
 const ActivitySelector: React.FC<ActivitySelectorProps> = ({
@@ -19,9 +18,8 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
   onSelectActivity,
   onSaveActivity,
   canAddNewActivity = true,
-  shouldOpenAddNewActivityEditor = false,
 }) => {
-  const [showEditor, setShowEditor] = useState(shouldOpenAddNewActivityEditor);
+  const [showEditor, setShowEditor] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
 
   const handleAddActivity = () => {
