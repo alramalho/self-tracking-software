@@ -31,6 +31,7 @@ from gateways.users import UsersGateway
 from entities.user import User
 from typing import Optional
 from telemetry import init_telemetry
+from services.telegram_service import TelegramService
 
 app = FastAPI()
 
@@ -52,6 +53,10 @@ async def get_user_from_request(request: Request) -> Optional[User]:
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
+        super().__init__(app)
+        self.telegram = TelegramService()
+
     async def dispatch(self, request: Request, call_next):
         try:
             response = await call_next(request)
@@ -79,6 +84,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                         "status_code": response.status_code,
                     },
                 )
+
+                # Send error notification to Telegram
+                self.telegram.send_error_notification(
+                    error_message=error_message,
+                    user_username=user.username if user else "unknown",
+                    user_id=user_id,
+                    path=request.url.path,
+                    method=request.method
+                )
+
                 logger.error(error_message)
 
             # Re-create the response with the consumed body
@@ -105,6 +120,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "status_code": 500,
                 },
             )
+
+            # Send error notification to Telegram
+            self.telegram.send_error_notification(
+                error_message=error_message,
+                user_id=user_id,
+                path=request.url.path,
+                method=request.method
+            )
+
             logger.error(error_message)
             
             return Response(

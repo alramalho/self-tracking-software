@@ -57,6 +57,9 @@ export class ApiStack extends cdk.Stack {
           AXIOM_ORG_ID: process.env.AXIOM_ORG_ID!,
           AXIOM_DATASET: process.env.AXIOM_DATASET!,
           AXIOM_BATCH_SIZE: process.env.AXIOM_BATCH_SIZE!,
+
+          TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
+          TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
         },
       }
     );

@@ -44,6 +44,8 @@ jobs:
           AXIOM_ORG_ID: "tracking.software"
           AXIOM_DATASET: "app.tracking.so"
           AXIOM_BATCH_SIZE: "5"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           
         run: |
           cd aws-infrastructure
