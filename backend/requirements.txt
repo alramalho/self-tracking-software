@@ -26,3 +26,4 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-requests
 opentelemetry-exporter-otlp
 axiom-py
+pydantic-ai
