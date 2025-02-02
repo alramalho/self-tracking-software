@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { validateEnv } from "@/lib/env";
 import { PHProvider } from "./providers";
 import PostHogPageView from "./PostHogPageView";
+import { Toaster } from "react-hot-toast"
 
 const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 

@@ -325,7 +325,7 @@ export const NotificationsProvider = ({
         console.log("Failed to update PWA status: " + error);
       }
     },
-    [api]
+    []
   );
 
   const sendPushNotification = async (
