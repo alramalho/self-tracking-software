@@ -4,12 +4,19 @@ interface LogEvent {
   extra?: Record<string, any>;
 }
 
+interface UserInfo {
+  email?: string | null;
+  username?: string | null;
+}
+
 class Logger {
   private static instance: Logger;
   private batch: LogEvent[] = [];
   private batchSize: number = 10;
   private flushInterval: number = 5000; // 5 seconds
   private timer: NodeJS.Timeout | null = null;
+  private authToken: string | null = null;
+  private userInfo: UserInfo | null = null;
 
   private constructor() {
     this.setupFlushInterval();
@@ -20,6 +27,14 @@ class Logger {
       Logger.instance = new Logger();
     }
     return Logger.instance;
+  }
+
+  public setAuthToken(token: string | null) {
+    this.authToken = token;
+  }
+
+  public setUserInfo(info: UserInfo | null) {
+    this.userInfo = info;
   }
 
   private setupFlushInterval() {
@@ -65,15 +80,25 @@ class Logger {
 
     try {
       for (const event of batchToSend) {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+
+        if (this.authToken) {
+          headers["Authorization"] = `Bearer ${this.authToken}`;
+        }
+
         await fetch("/api/log", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             ...event,
             time: new Date().toISOString(),
             service: "tracking-so-frontend",
+            ...(this.userInfo && {
+              email: this.userInfo.email,
+              username: this.userInfo.username,
+            }),
           }),
         });
       }

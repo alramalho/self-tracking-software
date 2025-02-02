@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 
 const AXIOM_DATASET = process.env.AXIOM_DATASET;
 const AXIOM_TOKEN = process.env.AXIOM_TOKEN;
@@ -9,6 +10,8 @@ interface LogEvent {
   level: string;
   message: string;
   service: string;
+  email?: string;
+  username?: string;
   extra?: Record<string, any>;
 }
 
@@ -22,6 +25,7 @@ export async function POST(request: Request) {
 
   try {
     const event = await request.json();
+    const headersList = headers();
 
     // Ensure all required fields are present
     const logEvent: LogEvent = {
@@ -29,7 +33,13 @@ export async function POST(request: Request) {
       level: event.level || "info",
       message: event.message || "",
       service: event.service || "tracking-so-frontend",
-      extra: event.extra,
+      email: event.email,
+      username: event.username,
+      extra: {
+        ...event.extra,
+        url: event.extra?.url || headersList.get("referer"),
+        user_agent: headersList.get("user-agent"),
+      },
     };
 
     const response = await fetch(AXIOM_INGEST_URL, {
