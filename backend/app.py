@@ -23,6 +23,7 @@ from routers.admin import router as admin_router
 from routers.notifications import router as notifications_router
 from routers.tally import router as tally_router
 from routers.ai import router as ai_router
+from routers.metrics import router as metrics_router
 from starlette.middleware.base import BaseHTTPMiddleware
 from analytics.posthog import posthog
 from fastapi.responses import Response
@@ -150,6 +151,7 @@ app.include_router(notifications_router)
 app.include_router(ai_router)
 app.include_router(admin_router)
 app.include_router(tally_router)
+app.include_router(metrics_router)
 
 app.add_middleware(
     CORSMiddleware,
