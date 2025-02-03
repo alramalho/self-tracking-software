@@ -28,13 +28,15 @@ export default function ClientLayout({
       <LoggerProvider>
         <UserPlanProviderWrapper>
           <NotificationsProvider>
-            <main
-              className={cn(
-                "relative overflow-scroll",
-                isSignedIn ? "h-[calc(100dvh-4.7rem)]" : "h-[100dvh]"
-              )}
-            >
-              <GeneralInitializer>{children}</GeneralInitializer>
+            <main className="relative h-[100dvh]">
+              <div 
+                className={cn(
+                  "absolute inset-0 overflow-auto",
+                  isSignedIn ? "pb-[4.7rem]" : ""
+                )}
+              >
+                <GeneralInitializer>{children}</GeneralInitializer>
+              </div>
             </main>
             <Toaster
               position="top-center"
