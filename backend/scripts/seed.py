@@ -13,6 +13,7 @@ from entities.plan_group import PlanGroup, PlanGroupMember
 from gateways.users import UsersGateway
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
+from gateways.metrics import MetricsGateway
 from controllers.plan_controller import PlanController
 from gateways.plan_groups import PlanGroupsGateway
 from services.notification_manager import NotificationManager
@@ -22,6 +23,7 @@ from constants import MONGO_DB_CONNECTION_STRING, MONGO_DB_NAME, ENVIRONMENT
 from bson import ObjectId
 from loguru import logger
 import random
+from entities.metric import Metric, MetricEntry
 
 def delete_all_data():
     if ENVIRONMENT != "dev":
@@ -31,7 +33,7 @@ def delete_all_data():
     client = MongoClient(MONGO_DB_CONNECTION_STRING)
     db_name = f"{MONGO_DB_NAME.lower()}_{ENVIRONMENT.lower()}"
     db = client[db_name]
-    collections = ["users", "activities", "mood_reports", "plans", "plan_groups", "friend_requests", "notifications"]   
+    collections = ["users", "activities", "mood_reports", "plans", "plan_groups", "friend_requests", "notifications", "metrics", "metric_entries"]   
     logger.info(f"Cleaning all data from {db_name}...")
     for collection in collections:
         logger.info(f"Cleaning {collection}...")
@@ -43,6 +45,7 @@ def generate_dummy_data():
     users_gateway = UsersGateway()
     activities_gateway = ActivitiesGateway()
     moods_gateway = MoodsGateway()
+    metrics_gateway = MetricsGateway()
     plan_controller = PlanController()
     plan_groups_gateway = PlanGroupsGateway()
     notification_manager = NotificationManager()
@@ -55,48 +58,87 @@ def generate_dummy_data():
         User.new(id=str(ObjectId("666666666666666666666668")), name="Charlie", email="charlie@example.com", username="charlie"),
         User.new(id=str(ObjectId("666666666666666666666669")), name="Tomas", email="tomas@example.com", username="tomas", picture="https://example.com/tomas.jpg")
     ]
-    # Create activities
-    activities = [
-        Activity.new(id=str(ObjectId("666666666666666666666669")), user_id=users[0].id, title="Running", measure="kilometers", emoji="🏃"),
-        Activity.new(id=str(ObjectId("66666666666666666666666a")), user_id=users[1].id, title="Meditation", measure="minutes", emoji="🧘"),
-        Activity.new(id=str(ObjectId("66666666666666666666666b")), user_id=users[2].id, title="Push-ups", measure="repetitions", emoji="💪"),
-        Activity.new(id=str(ObjectId("66666666666666666666666c")), user_id=users[3].id, title="Cycling", measure="kilometers", emoji="🚴"),
-        Activity.new(id=str(ObjectId("66666666666666666666666d")), user_id=users[0].id, title="Swimming", measure="laps", emoji="🏊"),
-        Activity.new(id=str(ObjectId("66666666666666666666666e")), user_id=users[1].id, title="Yoga", measure="minutes", emoji="🧘‍♀️"),
-        Activity.new(id=str(ObjectId("66666666666666666666666f")), user_id=users[2].id, title="Reading", measure="pages", emoji="📚"),
-        Activity.new(id=str(ObjectId("666666666666666666666670")), user_id=users[3].id, title="Cooking", measure="dishes", emoji="👨‍🍳"),
-        Activity.new(id=str(ObjectId("666666666666666666666671")), user_id=users[0].id, title="Gardening", measure="minutes", emoji="🌱"),
-        Activity.new(id=str(ObjectId("666666666666666666666672")), user_id=users[4].id, title="Guitar", measure="minutes", emoji="🎸")
+    # Create metrics - only happiness for testing
+    metrics = [
+        Metric.new(user_id=users[0].id, title="Happiness", emoji="😊"),
     ]
 
-    # Generate dates within the last month
-    def random_date_last_month():
-        end = datetime.datetime.now()
-        start = end - timedelta(days=30)
-        return start + timedelta(
-            seconds=int((end - start).total_seconds() * random.random())
+    # Create activities for Alex (user[0]) - just running and meditation
+    alex_activities = [
+        Activity.new(id=str(ObjectId("666666666666666666666669")), user_id=users[0].id, title="Running", measure="kilometers", emoji="🏃"),
+        Activity.new(id=str(ObjectId("66666666666666666666666d")), user_id=users[0].id, title="Meditation", measure="minutes", emoji="🧘"),
+    ]
+
+    # Replace the activities list
+    activities = alex_activities
+
+    # Generate 20 entries over a 60-day period (roughly 3 days apart)
+    metric_entries = []
+    activity_entries = []
+    
+    base_date = datetime.datetime.now() - timedelta(days=60)
+    
+    for i in range(20):
+        # Space out entries roughly 3 days apart
+        current_date = (base_date + timedelta(days=i*3)).replace(
+            hour=random.randint(8, 20),  # Random hour between 8 AM and 8 PM
+            minute=random.randint(0, 59)
+        ).isoformat()
+        
+        # Simulate running on even-numbered entries (strong positive correlation)
+        if i % 2 == 0:
+            # Morning run
+            run_time = (datetime.datetime.fromisoformat(current_date)
+                       .replace(hour=8, minute=random.randint(0, 59))
+                       .isoformat())
+            activity_entries.append(
+                ActivityEntry.new(
+                    user_id=users[0].id,
+                    activity_id=alex_activities[0].id,  # Running
+                    quantity=5,
+                    date=run_time
+                )
+            )
+        
+        # Simulate meditation on odd-numbered entries (no correlation)
+        if i % 2 == 1:
+            # Evening meditation
+            meditation_time = (datetime.datetime.fromisoformat(current_date)
+                            .replace(hour=20, minute=random.randint(0, 59))
+                            .isoformat())
+            activity_entries.append(
+                ActivityEntry.new(
+                    user_id=users[0].id,
+                    activity_id=alex_activities[1].id,  # Meditation
+                    quantity=15,
+                    date=meditation_time
+                )
+            )
+
+        # Log happiness rating in the evening
+        rating_time = (datetime.datetime.fromisoformat(current_date)
+                      .replace(hour=22, minute=random.randint(0, 59))
+                      .isoformat())
+        
+        # Happiness rating - high (4-5) on running days, random (1-5) on non-running days
+        did_run = any(e.activity_id == alex_activities[0].id and 
+                     datetime.datetime.fromisoformat(e.date).date() == 
+                     datetime.datetime.fromisoformat(current_date).date() 
+                     for e in activity_entries)
+        happiness_rating = random.randint(4, 5) if did_run else random.randint(1, 5)
+        
+        metric_entries.append(
+            MetricEntry.new(
+                user_id=users[0].id,
+                metric_id=metrics[0].id,
+                rating=happiness_rating,
+                date=rating_time
+            )
         )
 
-    activity_entries = [
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666672")), activity_id=activities[0].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id, image=ImageInfo.new(url="https://media.istockphoto.com/id/578104104/vector/step-to-instruction-in-push-up.jpg?s=612x612&w=0&k=20&c=AYSyhYJB-98AZL2Euig4fygTjdxliyE8TWHGfXNO6go=")),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666673")), activity_id=activities[1].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666674")), activity_id=activities[2].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[2].id, image=ImageInfo.new(url="https://media.istockphoto.com/id/578104104/vector/step-to-instruction-in-push-up.jpg?s=612x612&w=0&k=20&c=AYSyhYJB-98AZL2Euig4fygTjdxliyE8TWHGfXNO6go=")),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666675")), activity_id=activities[3].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[3].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666676")), activity_id=activities[4].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666677")), activity_id=activities[5].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666678")), activity_id=activities[0].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[2].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666679")), activity_id=activities[1].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[3].id),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667a")), activity_id=activities[2].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[0].id),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667b")), activity_id=activities[3].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[2].id),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667c")), activity_id=activities[4].id, quantity=10, date=random_date_last_month().isoformat(), user_id=users[3].id),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667d")), activity_id=activities[5].id, quantity=10, date=datetime.datetime.now().isoformat(), user_id=users[1].id),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667e")), activity_id=activities[6].id, quantity=50, date=random_date_last_month().isoformat(), user_id=users[0].id),
-        ActivityEntry.new(id=str(ObjectId("66666666666666666666667f")), activity_id=activities[7].id, quantity=2, date=datetime.datetime.now().isoformat(), user_id=users[2].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666680")), activity_id=activities[8].id, quantity=30, date=random_date_last_month().isoformat(), user_id=users[3].id),
-        ActivityEntry.new(id=str(ObjectId("666666666666666666666681")), activity_id=activities[9].id, quantity=45, date=random_date_last_month().isoformat(), user_id=users[4].id),
-    ]
-
-    # Create plans
+    # Skip other users' activities
+    
+    # Create a simple plan for running and meditation
     plans = [
         Plan.new(
             id=str(ObjectId("666666666666666666666681")),
@@ -104,7 +146,7 @@ def generate_dummy_data():
             goal="Run a marathon",
             emoji="🏃",
             finishing_date=(datetime.datetime.now() + timedelta(days=90)).isoformat(),
-            activity_ids=[activities[0].id],
+            activity_ids=[activities[0].id],  # Running
             sessions=[
                 PlanSession(
                     date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
@@ -120,7 +162,7 @@ def generate_dummy_data():
             goal="Meditate daily",
             emoji="🧘",
             finishing_date=(datetime.datetime.now() + timedelta(days=30)).isoformat(),
-            activity_ids=[activities[1].id],
+            activity_ids=[activities[1].id],  # Meditation
             sessions=[
                 PlanSession(
                     date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
@@ -129,66 +171,31 @@ def generate_dummy_data():
                     quantity=15
                 ) for i in range(30)
             ]
-        ),
-        Plan.new(
-            id=str(ObjectId("666666666666666666666683")),
-            user_id=users[2].id,
-            goal="100 push-ups challenge",
-            emoji="💪",
-            finishing_date=(datetime.datetime.now() + timedelta(days=30)).isoformat(),
-            activity_ids=[activities[2].id],
-            sessions=[
-                PlanSession(
-                    date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
-                    descriptive_guide=f"Do {20 + i*3} push-ups",
-                    activity_id=activities[2].id,
-                    quantity=20 + i*3
-                ) for i in range(30)
-            ],
-        ),
-        Plan.new(
-            id=str(ObjectId("666666666666666666666684")),
-            user_id=users[4].id,
-            goal="Learn guitar",
-            emoji="🎸",
-            finishing_date=(datetime.datetime.now() + timedelta(days=60)).isoformat(),
-            activity_ids=[activities[9].id],
-            sessions=[
-                PlanSession(
-                    date=(datetime.datetime.now() + timedelta(days=i)).isoformat(),
-                    descriptive_guide="Practice guitar for 30 minutes",
-                    activity_id=activities[9].id,
-                    quantity=30
-                ) for i in range(60)
-            ],
         )
     ]
 
-    # Create plan groups
+    # Create plan groups with only our two plans
     plan_groups = [
         PlanGroup.new(
             id=str(ObjectId("666666666666666666666685")),
-            plan_ids=[plans[1].id],
+            plan_ids=[plans[1].id],  # Meditation plan
             members=[
                 PlanGroupMember(user_id=users[1].id, username=users[1].username, name=users[1].name, picture=users[1].picture),
             ],
         ),
         PlanGroup.new(
             id=str(ObjectId("666666666666666666666686")),
-            plan_ids=[plans[2].id, plans[0].id],
+            plan_ids=[plans[0].id],  # Running plan
             members=[
-                PlanGroupMember(user_id=users[2].id, username=users[2].username, name=users[2].name, picture=users[2].picture),
                 PlanGroupMember(user_id=users[0].id, username=users[0].username, name=users[0].name, picture=users[0].picture),
             ],
         ),
     ]
 
-    # Create plan invitations
+    # Create plan invitations for only our two plans
     plan_invitations = [
         PlanInvitation.new(id=str(ObjectId("666666666666666666666687")), plan_id=plans[0].id, sender_id=users[0].id, recipient_id=users[1].id),
         PlanInvitation.new(id=str(ObjectId("666666666666666666666688")), plan_id=plans[1].id, sender_id=users[1].id, recipient_id=users[2].id),
-        PlanInvitation.new(id=str(ObjectId("666666666666666666666689")), plan_id=plans[2].id, sender_id=users[2].id, recipient_id=users[3].id),
-        PlanInvitation.new(id=str(ObjectId("66666666666666666666668a")), plan_id=plans[3].id, sender_id=users[4].id, recipient_id=users[0].id),
     ]
 
     # Create friend requests
@@ -280,6 +287,12 @@ def generate_dummy_data():
 
     for activity_entry in activity_entries:
         activities_gateway.create_activity_entry(activity_entry)
+
+    for metric in metrics:
+        metrics_gateway.create_metric(metric)
+
+    for metric_entry in metric_entries:
+        metrics_gateway.create_metric_entry(metric_entry)
 
     for plan in plans:
         try:

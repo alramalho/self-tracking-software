@@ -88,6 +88,14 @@ class Logger {
           headers["Authorization"] = `Bearer ${this.authToken}`;
         }
 
+        if (
+          process.env.NEXT_PUBLIC_ENVIRONMENT?.toLowerCase().includes(
+            "development"
+          )
+        ) {
+          return;
+        }
+
         await fetch("/api/log", {
           method: "POST",
           headers,
