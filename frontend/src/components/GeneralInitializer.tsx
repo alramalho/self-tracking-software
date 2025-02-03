@@ -98,7 +98,7 @@ export default function GeneralInitializer({
             onClose={() => setShowBugDialog(false)}
           />
         )}
-        <div className="h-screen flex items-center justify-center">
+        <div className="fixed inset-0 flex items-center justify-center">
           <Loader2 className="w-10 h-10 animate-spin mr-3" />
           <div className="flex flex-col items-start">
             <p className="text-left">Loading your data...</p>
