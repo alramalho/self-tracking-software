@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InsightsBanner } from "@/components/InsightsBanner";
 
 const LogPage: React.FC = () => {
   const { useUserDataQuery } = useUserPlan();
@@ -31,6 +32,7 @@ const LogPage: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(0);
   const [measureType, setMeasureType] = useState<string>("");
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
+  const [showInsightsBanner, setShowInsightsBanner] = useState(false);
 
   const handleSelectActivity = (activity: Activity) => {
     setSelectedActivity(activity);
@@ -67,6 +69,7 @@ const LogPage: React.FC = () => {
 
   const handleActivityLogged = () => {
     setShowPhotoUploader(false);
+    setShowInsightsBanner(true);
     // Reset form
     setSelectedActivity(undefined);
     setSelectedDate(new Date());
@@ -176,6 +179,10 @@ const LogPage: React.FC = () => {
         }}
         onClose={() => setShowPhotoUploader(false)}
         onSuccess={handleActivityLogged}
+      />
+      <InsightsBanner
+        open={showInsightsBanner}
+        onClose={() => setShowInsightsBanner(false)}
       />
     </div>
   );

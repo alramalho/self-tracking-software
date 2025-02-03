@@ -104,6 +104,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   const { addToNotificationCount } = useNotifications();
   const api = useApiWithAuth();
   const { isRecording, toggleRecording } = useMicrophone();
+  const [showInsightsBanner, setShowInsightsBanner] = useState(false);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -200,6 +201,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           : "Activity logged successfully!"
       );
       addToNotificationCount(1);
+
       onSuccess();
     } catch (error) {
       console.error("Error:", error);
