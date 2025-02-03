@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ExampleCorrelations } from "@/components/ExampleCorrelations";
 import { MetricRater } from "@/components/MetricRater";
+import { useUserPlan } from "@/contexts/UserPlanContext";
 
 const metrics = [
   { title: "Happiness", emoji: "😊" },
@@ -20,6 +21,8 @@ const metrics = [
 export function InsightsOnboarding() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const { useMetricsAndEntriesQuery } = useUserPlan();
+  const metricsQuery = useMetricsAndEntriesQuery();
   const { isPushGranted, requestPermission } = useNotifications();
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
@@ -145,7 +148,10 @@ export function InsightsOnboarding() {
             metricId={createdMetricId!}
             metricTitle={selectedMetricData.title}
             metricEmoji={selectedMetricData.emoji}
-            onRatingSubmitted={() => router.push("/insights/dashboard")}
+            onRatingSubmitted={() => {
+                metricsQuery.refetch();
+                router.push("/insights/dashboard")
+            }}
           />
         );
       default:
