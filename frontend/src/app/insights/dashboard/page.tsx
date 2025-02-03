@@ -219,9 +219,6 @@ export default function InsightsDashboardPage() {
             {isDisabled && (
               <p className="text-sm text-black italic mt-4">
                 ✅ You have already logged your {metric.title} today.{" "}
-                <Link href="/ai" className="underline pointer-events-auto">
-                  Notify me tomorrow
-                </Link>
               </p>
             )}
           </Card>
