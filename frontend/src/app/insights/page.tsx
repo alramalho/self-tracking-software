@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ProgressDots } from "@/components/ProgressDots";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
-import { Bell, ChevronRight } from "lucide-react";
+import { Bell, ChevronRight, ChartBar, Eclipse } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
@@ -208,9 +208,53 @@ export default function InsightsPage() {
   };
 
   return (
-    <div className="container mx-auto py-10 max-w-3xl">
-      <ProgressDots current={step} max={3} />
-      <div className="space-y-8">{renderStep()}</div>
+    <div className="container mx-auto py-10 max-w-3xl space-y-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-2xl font-bold">
+          Insights & AI
+        </h1>
+        <p className="text-md text-muted-foreground">
+          Discover patterns in your activities and get AI-powered assistance
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Insights Card */}
+        <Card
+          className="p-6 transition-all cursor-pointer hover:scale-105"
+          onClick={() => router.push("/insights/dashboard")}
+        >
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <ChartBar className="w-6 h-6 text-blue-500" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-semibold text-lg mb-2">Activity Insights</h3>
+              <p className="text-sm text-muted-foreground">
+                Discover patterns and correlations between your activities and well-being metrics
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* AI Card */}
+        <Card
+          className="p-6 transition-all cursor-pointer hover:scale-105"
+          onClick={() => router.push("/ai")}
+        >
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <Eclipse className="w-6 h-6 text-blue-500" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-semibold text-lg mb-2">AI Assistant</h3>
+              <p className="text-sm text-muted-foreground">
+                Analyze emotions and extract activities from your entries with AI-powered tools
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

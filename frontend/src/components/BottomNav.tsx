@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChartArea, ChartGantt, Eclipse, Eye, Flame, Home, Loader2, Pencil, PlusSquare, Route, Search, Sparkle, Sprout, User } from "lucide-react";
+import { ChartArea, ChartGantt, Eclipse, Eye, Flame, Home, Loader2, Pencil, PlusSquare, Route, ScanFace, Search, Sparkle, Sprout, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
@@ -14,8 +14,8 @@ const BottomNav = () => {
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isLoadingAi, setIsLoadingAi] = useState(false);
   const pathname = usePathname();
 
   const isActiveRoute = (route: string) => {
@@ -27,8 +27,8 @@ const BottomNav = () => {
     setIsLoadingFeed(false);
     setIsLoadingPlans(false);
     setIsLoadingLog(false);
+    setIsLoadingInsights(false);
     setIsLoadingProfile(false);
-    setIsLoadingAi(false);
   }, [pathname]);
 
   return (
@@ -94,23 +94,23 @@ const BottomNav = () => {
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/add') ? 'Add' : ''}</span>
           </Link>
           <Link
-            href={`/ai`}
+            href="/insights"
             className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
-              isActiveRoute('/ai') 
+              isActiveRoute('/insights') 
               ? 'text-blue-500 scale-110 -translate-y-0.5' 
               : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => {
-              if (pathname !== "/ai") {
-                setIsLoadingAi(true)
+              if (!pathname.startsWith("/insights")) {
+                setIsLoadingInsights(true)
               }
             }}
           >
-            {isLoadingAi ? <Loader2 size={24} className="animate-spin" /> : <Eclipse size={24} strokeWidth={2.5} />}
-            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/ai') ? 'Coach' : ''}</span>
+            {isLoadingInsights ? <Loader2 size={24} className="animate-spin" /> : <ScanFace size={24} strokeWidth={2.5} />}
+            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/insights') ? 'Insights' : ''}</span>
           </Link>
           <Link
-            href={`/profile/me`}
+            href="/profile/me"
             className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
               isActiveRoute('/profile') 
               ? 'text-blue-500 scale-110 -translate-y-0.5' 
