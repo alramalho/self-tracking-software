@@ -66,7 +66,6 @@ export default function InsightsPage() {
     } finally {
       setIsLoading(false);
     }
-    setStep(3);
   };
 
   const handleSubmitRating = async () => {

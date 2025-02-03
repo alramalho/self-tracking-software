@@ -125,6 +125,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # Send error notification to Telegram
             self.telegram.send_error_notification(
                 error_message=error_message,
+                user_username=user.username if user else "unknown",
                 user_id=user_id,
                 path=request.url.path,
                 method=request.method
