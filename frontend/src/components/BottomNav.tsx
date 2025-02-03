@@ -34,72 +34,96 @@ const BottomNav = () => {
   return (
     <>
       <FloatingActionMenu />
-      <nav className="fixed bottom-0 left-0 right-0 bg-gray-100/50 backdrop-blur-md shadow-lg border-t-2 border-gray-300 pb-2 z-[50]">
-        <div className="flex justify-around">
+      <nav className="fixed bottom-0 left-0 right-0 bg-transparent backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-[50]">
+        <div className="flex justify-around items-center py-2 px-4 max-w-screen-xl mx-auto">
           <Link
             href="/"
-            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/') ? 'text-blue-500' : 'text-gray-600'} relative`}
+            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+              isActiveRoute('/') 
+              ? 'text-blue-500 scale-110 -translate-y-0.5' 
+              : 'text-gray-500 hover:text-gray-700'
+            } relative`}
             onClick={() =>{
               if (pathname !== "/")  {
                 setIsLoadingFeed(true)
               }
             }}
           >
-            {isLoadingFeed ? <Loader2 size={24} className="animate-spin" /> : <Home size={24} />}
+            {isLoadingFeed ? <Loader2 size={24} className="animate-spin" /> : <Home size={24} strokeWidth={2.5} />}
             {notificationCount > 0 && (
-              <div className="absolute top-1 right-1 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-[14px] font-bold -mt-1 -mr-1">
+              <div className="absolute top-0 right-0 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
                 {notificationCount > 99 ? '99+' : notificationCount}
               </div>
             )}
-            <span className="text-xs mt-1">Home</span>
+            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/') ? 'Home' : ''}</span>
           </Link>
           <Link
             href="/plans"
-            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/plans') ? 'text-blue-500' : 'text-gray-600'}`}
+            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+              isActiveRoute('/plans') 
+              ? 'text-blue-500 scale-110 -translate-y-0.5' 
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
             onClick={() => {
               if (pathname !== "/plans") {
                 setIsLoadingPlans(true)
               }
             }}
           >
-            {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartArea size={24} />}
-            <span className="text-xs mt-1">Plans</span>
+            {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartArea size={24} strokeWidth={2.5} />}
+            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/plans') ? 'Plans' : ''}</span>
           </Link>
           <Link
             href="/add"
-            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/add') ? 'text-blue-500' : 'text-gray-600'}`}
+            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+              isActiveRoute('/add') 
+              ? 'text-blue-500 scale-110 -translate-y-0.5' 
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
             onClick={() => {
               if (pathname !== "/add") {
                 setIsLoadingLog(true)
               }
             }}
           >
-            {isLoadingLog ? <Loader2 size={30} className="animate-spin" /> : <PlusSquare size={30} />}
-            <span className="text-xs mt-1">Add</span>
+            {isLoadingLog ? <Loader2 size={30} className="animate-spin" /> : 
+            <div className="bg-blue-500 rounded-full p-2">
+              <PlusSquare size={24} strokeWidth={2.5} className="text-white" />
+            </div>
+            }
+            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/add') ? 'Add' : ''}</span>
           </Link>
           <Link
             href={`/ai`}
-            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/ai') ? 'text-blue-500' : 'text-gray-600'} text-center`}
+            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+              isActiveRoute('/ai') 
+              ? 'text-blue-500 scale-110 -translate-y-0.5' 
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
             onClick={() => {
               if (pathname !== "/ai") {
                 setIsLoadingAi(true)
               }
             }}
           >
-            {isLoadingAi ? <Loader2 size={24} className="animate-spin" /> : <Eclipse size={24} />}
-            <span className="text-xs mt-1">Coach</span>
+            {isLoadingAi ? <Loader2 size={24} className="animate-spin" /> : <Eclipse size={24} strokeWidth={2.5} />}
+            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/ai') ? 'Coach' : ''}</span>
           </Link>
           <Link
             href={`/profile/me`}
-            className={`flex flex-col justify-center items-center p-2 ${isActiveRoute('/profile') ? 'text-blue-500' : 'text-gray-600'}`}
+            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+              isActiveRoute('/profile') 
+              ? 'text-blue-500 scale-110 -translate-y-0.5' 
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
             onClick={() => {
               if (pathname !== "/profile/me") {
                 setIsLoadingProfile(true)
               }
             }}
           >
-            {isLoadingProfile ? <Loader2 size={24} className="animate-spin" /> : <User size={24} />}
-            <span className="text-xs mt-1">Profile</span>
+            {isLoadingProfile ? <Loader2 size={24} className="animate-spin" /> : <User size={24} strokeWidth={2.5} />}
+            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/profile') ? 'Profile' : ''}</span>
           </Link>
         </div>
       </nav>
