@@ -43,6 +43,20 @@ export interface MoodReport {
   score: string;
 }
 
+export interface Metric {
+  id: string;
+  title: string;
+  emoji: string;
+}
+
+export interface MetricEntry {
+  id: string;
+  metric_id: string;
+  rating: number;
+  date: string;
+  created_at: string;
+}
+
 export interface User {
   id: string;
   name?: string;
@@ -187,9 +201,10 @@ export interface UserData {
   [username: string]: UserDataEntry;
 }
 
-interface UserPlanContextType {
+export interface UserPlanContextType {
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
   useMultipleUsersDataQuery: (usernames: string[]) => UseQueryResult<Record<string, UserDataEntry>>;
+  useMetricsAndEntriesQuery: () => UseQueryResult<{metrics: Metric[], entries: MetricEntry[]}>;
   hasLoadedUserData: boolean; 
   hasLoadedTimelineData: boolean;
   timelineData: UseQueryResult<TimelineData | null>;
@@ -435,6 +450,27 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const useMetricsAndEntriesQuery = () => useQuery({
+    queryKey: ['metricsAndEntries'],
+    queryFn: async () => {
+      try {
+        const [metricsResponse, entriesResponse] = await Promise.all([
+          api.get('/metrics'),
+          api.get('/metric-entries')
+        ]);
+        return {
+          metrics: metricsResponse.data as Metric[],
+          entries: entriesResponse.data as MetricEntry[]
+        };
+      } catch (err) {
+        handleAuthError(err);
+        throw err;
+      }
+    },
+    enabled: isSignedIn,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   useEffect(() => {
     if (!isSignedIn) {
       queryClient.clear();
@@ -445,6 +481,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     userDataQuery,
     useUserDataQuery,
     useMultipleUsersDataQuery,
+    useMetricsAndEntriesQuery,
     hasLoadedUserData: userDataQuery.isSuccess && !!userDataQuery.data,
     hasLoadedTimelineData: timelineData.isSuccess && !!timelineData.data,
     timelineData,
