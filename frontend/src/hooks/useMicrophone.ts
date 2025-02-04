@@ -1,5 +1,5 @@
 import { arrayBufferToBase64Async } from "@/lib/utils";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 
 type FinishedCallback = (audioData: string, audioFormat: string) => void;
@@ -47,6 +47,10 @@ export const useMicrophone = () => {
           mimeType: selectedType,
         });
 
+        mediaRecorderRef.current.onstart = () => {
+          setIsRecording(true);
+        };
+
         mediaRecorderRef.current.ondataavailable = (event) => {
           if (event.data.size > 0) {
             chunksRef.current.push(event.data);
@@ -71,7 +75,6 @@ export const useMicrophone = () => {
         };
 
         mediaRecorderRef.current.start(1000);
-        setIsRecording(true);
         isCancellingRef.current = false;
       } catch (error) {
         console.error("Error accessing microphone:", error);
@@ -108,6 +111,10 @@ export const useMicrophone = () => {
     },
     [isRecording, startRecording, stopRecording]
   );
+
+  useEffect(() => {
+    console.log("isRecording", isRecording);
+  }, [isRecording]);
 
   return { isRecording, toggleRecording, cancelRecording };
 };
