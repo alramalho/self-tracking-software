@@ -49,7 +49,6 @@ async def get_user(user: User = Depends(is_clerk_user)):
 async def load_users_data(
     usernames: str | None = Query(None), current_user: User = Depends(is_clerk_user)
 ):
-    start_time = time.time()
     try:
         results = {}
         
@@ -75,6 +74,8 @@ async def load_users_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 async def _load_single_user_data(user: User, current_user: User):
+    start_time = time.time()
+    
     with concurrent.futures.ThreadPoolExecutor() as executor:
         activities_future = executor.submit(
             activities_gateway.get_all_activities_by_user_id, user.id

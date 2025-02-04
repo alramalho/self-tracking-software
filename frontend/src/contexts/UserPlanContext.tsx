@@ -206,6 +206,8 @@ export interface UserPlanContextType {
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
   useMultipleUsersDataQuery: (usernames: string[]) => UseQueryResult<Record<string, UserDataEntry>>;
   useMetricsAndEntriesQuery: () => UseQueryResult<{metrics: Metric[], entries: MetricEntry[]}>;
+  useHasMetricsToLogToday: () => boolean;
+  useIsMetricLoggedToday: (metricId: string) => boolean;
   hasLoadedUserData: boolean; 
   hasLoadedTimelineData: boolean;
   timelineData: UseQueryResult<TimelineData | null>;
@@ -501,6 +503,32 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  const useIsMetricLoggedToday = (metricId: string) => {
+    const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
+    const entries = metricsAndEntriesData?.entries || [];
+    const today = new Date().toISOString().split('T')[0];
+
+    return entries.some(entry => 
+      entry.metric_id === metricId && 
+      entry.date.split('T')[0] === today
+    );
+  };
+
+  const useHasMetricsToLogToday = () => {
+    const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
+    const metrics = metricsAndEntriesData?.metrics || [];
+    const entries = metricsAndEntriesData?.entries || [];
+    const today = new Date().toISOString().split('T')[0];
+
+    // Check if there are any metrics that haven't been logged today
+    return metrics.some(metric => 
+      !entries.some(entry => 
+        entry.metric_id === metric.id && 
+        entry.date.split('T')[0] === today
+      )
+    );
+  };
+
   useEffect(() => {
     if (!isSignedIn) {
       queryClient.clear();
@@ -512,6 +540,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     useUserDataQuery,
     useMultipleUsersDataQuery,
     useMetricsAndEntriesQuery,
+    useIsMetricLoggedToday,
+    useHasMetricsToLogToday,
     hasLoadedUserData: currentUserDataQuery.isSuccess && !!currentUserDataQuery.data,
     hasLoadedTimelineData: timelineData.isSuccess && !!timelineData.data,
     timelineData,
