@@ -11,10 +11,11 @@ export function MetricRaters() {
   const entries = metricsAndEntriesData?.entries || [];
 
   const metricLoggingDisabled = (metric: Metric) => {
+    const today = new Date().toISOString().split('T')[0];
     return entries.some(
       (entry) =>
         entry.metric_id === metric.id &&
-        entry.date.split("T")[0] === new Date().toISOString().split("T")[0]
+        entry.date.split("T")[0] === today
     );
   };
 

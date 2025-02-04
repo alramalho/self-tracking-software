@@ -16,9 +16,15 @@ interface InsightsBannerProps {
 export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const router = useRouter();
   const { isPushGranted, requestPermission } = useNotifications();
-  const { useMetricsAndEntriesQuery } = useUserPlan();
+  const { useMetricsAndEntriesQuery, useHasMetricsToLogToday } = useUserPlan();
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
+  const hasMetricsToLogToday = useHasMetricsToLogToday();
+
+  // Don't show the banner if there are still metrics to log today
+  if (hasMetricsToLogToday) {
+    return null;
+  }
 
   const requestNotificationPermission = async () => {
     try {
