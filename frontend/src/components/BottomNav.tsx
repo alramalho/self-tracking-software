@@ -16,6 +16,10 @@ const BottomNav = () => {
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const { useUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery("me");
+  const userData = userDataQuery.data;
+  const userUsername = userData?.user?.username ?? "me";
   const pathname = usePathname();
 
   const isActiveRoute = (route: string) => {
@@ -110,14 +114,14 @@ const BottomNav = () => {
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/insights') ? 'Insights' : ''}</span>
           </Link>
           <Link
-            href="/profile/me"
+            href={`/profile/${userUsername}`}
             className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
               isActiveRoute('/profile') 
               ? 'text-blue-500 scale-110 -translate-y-0.5' 
               : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => {
-              if (pathname !== "/profile/me") {
+              if (pathname !== `/profile/${userUsername}`) {
                 setIsLoadingProfile(true)
               }
             }}
