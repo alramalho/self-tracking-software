@@ -12,8 +12,10 @@ import { Loader2, X } from "lucide-react";
 import { InsightsBanner } from "@/components/InsightsBanner";
 
 const LogPage: React.FC = () => {
-  const { useCurrentUserDataQuery, useHasMetricsToLogToday } = useUserPlan();
+  const { useCurrentUserDataQuery, useHasMetricsToLogToday, useMetricsAndEntriesQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
+  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
+  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const { data: userData } = currentUserDataQuery;
   const activities = userData?.activities || [];
   const [selectedActivity, setSelectedActivity] = useState<
@@ -26,6 +28,7 @@ const LogPage: React.FC = () => {
   const [measureType, setMeasureType] = useState<string>("");
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const [showInsightsBanner, setShowInsightsBanner] = useState(false);
+  const hasMetrics = metricsAndEntriesData?.metrics?.length ?? 0 > 0;
   const hasMetricsToLogToday = useHasMetricsToLogToday();
 
   const handleSelectActivity = (activity: Activity) => {
@@ -64,7 +67,7 @@ const LogPage: React.FC = () => {
   const handleActivityLogged = () => {
     setShowPhotoUploader(false);
     // Only show insights banner if there are no more metrics to log today
-    if (hasMetricsToLogToday) {
+    if (hasMetricsToLogToday || !hasMetrics) {
       setShowInsightsBanner(true);
     }
     // Reset form
