@@ -4,10 +4,7 @@ import { useApiWithAuth } from "@/api";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useMemo, useState } from "react";
-import { MetricRater } from "@/components/MetricRater";
-import { Router } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { CorrelationEntry } from "@/components/CorrelationEntry";
 import {
   useUserPlan,
@@ -16,6 +13,7 @@ import {
   MetricEntry,
 } from "@/contexts/UserPlanContext";
 import Divider from "@/components/Divider";
+import { MetricRaters } from "@/components/MetricRaters";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -31,21 +29,12 @@ export default function InsightsDashboardPage() {
   const activities = userData?.activities || [];
   const activityEntries = userData?.activityEntries || [];
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     if (userData && metricsAndEntriesData) {
       setIsLoading(false);
     }
   }, [userData, metricsAndEntriesData]);
-
-  const metricLoggingDisabled = (metric: Metric) => {
-    return entries.some(
-      (entry) =>
-        entry.metric_id === metric.id &&
-        entry.date.split("T")[0] === new Date().toISOString().split("T")[0]
-    );
-  };
 
   // Find the metric with the most entries
   const metricEntryCounts = metrics.map((metric) => ({
@@ -106,39 +95,6 @@ export default function InsightsDashboardPage() {
     );
   };
 
-  const renderMetricRaters = () => (
-    <>
-      {metrics.map((metric) => {
-        const isDisabled = metricLoggingDisabled(metric);
-        return (
-          <Card
-            key={metric.id}
-            className={`p-8 ${
-              isDisabled ? "opacity-50 pointer-events-none" : ""
-            }`}
-          >
-            <MetricRater
-              metricId={metric.id}
-              metricTitle={metric.title}
-              metricEmoji={metric.emoji}
-              onRatingSubmitted={handleRatingSubmitted}
-            />
-
-            {isDisabled && (
-              <p className="text-sm text-black italic mt-4">
-                ✅ You have already logged your {metric.title} today.{" "}
-              </p>
-            )}
-          </Card>
-        );
-      })}
-    </>
-  );
-
-  const handleRatingSubmitted = () => {
-    metricsAndEntriesQuery.refetch();
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto py-10 max-w-3xl">
@@ -156,7 +112,7 @@ export default function InsightsDashboardPage() {
     return (
       <div className="container mx-auto py-10 max-w-3xl space-y-8">
         {renderProgressUI(15)}
-        {renderMetricRaters()}
+        <MetricRaters />
       </div>
     );
   }
@@ -311,7 +267,7 @@ export default function InsightsDashboardPage() {
 
       <Divider />
       {/* Always show metric raters at the bottom */}
-      {renderMetricRaters()}
+      <MetricRaters />
     </div>
   );
 }

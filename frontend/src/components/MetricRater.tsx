@@ -62,13 +62,13 @@ export function MetricRater({
         <div className="text-4xl">{metricEmoji}</div>
       </div>
 
-      <div className="flex justify-center gap-4 my-12">
+      <div className="flex justify-center gap-2 my-12">
         {[1, 2, 3, 4, 5].map((rating) => (
           <button
             key={rating}
             onClick={() => setSelectedRating(rating)}
             className={`
-              w-16 h-16 rounded-full text-2xl font-bold
+              w-16 h-16 rounded-xl text-2xl font-bold
               transition-all duration-200
               border-2 bg-background
               ${ratingColors[rating as keyof typeof ratingColors]}
