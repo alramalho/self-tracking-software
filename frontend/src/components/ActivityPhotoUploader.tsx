@@ -104,7 +104,6 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   const { addToNotificationCount } = useNotifications();
   const api = useApiWithAuth();
   const { isRecording, toggleRecording } = useMicrophone();
-  const [showInsightsBanner, setShowInsightsBanner] = useState(false);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -265,16 +264,18 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-12 w-12 ${
-                isRecording ? "text-red-500" : ""
-              } ${isTranscribing ? "opacity-50" : ""}`}
+              className={`h-12 w-12 ${isTranscribing ? "opacity-50" : ""}`}
               onClick={() => toggleRecording(handleVoiceRecording)}
               disabled={isTranscribing}
             >
               {isTranscribing ? (
                 <Loader2 className="h-12 w-12 animate-spin" />
               ) : (
-                <Mic className="h-12 w-12 text-gray-500" />
+                isRecording ? (
+                  <Mic className="h-12 w-12 text-red-400" />
+                ) : (
+                  <Mic className="h-12 w-12 text-gray-500" />
+                )
               )}
             </Button>
           </div>
