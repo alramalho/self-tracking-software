@@ -40,11 +40,10 @@ export default function ClientPage({
 }) {
   const router = useRouter();
   const api = useApiWithAuth();
-  const { useUserDataQuery } = useUserPlan();
+  const { useCurrentUserDataQuery } = useUserPlan();
   const { isSignedIn } = useSession();
-
-  const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const [planData, setPlanData] = useState<PlanInvitationData | null>(null);
   const [activityAssociations, setActivityAssociations] = useState<{
     [key: string]: string;
@@ -86,7 +85,7 @@ export default function ClientPage({
       await api.post(`/accept-plan-invitation/${params.plan_invitation_id}`, {
         activity_associations: activityAssociations,
       });
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       toast.success("Plan invitation accepted successfully!");
       router.push("/plans");
     } catch (error) {
@@ -153,7 +152,7 @@ export default function ClientPage({
     );
   }
 
-  if (userDataQuery.isLoading) {
+  if (currentUserDataQuery.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />

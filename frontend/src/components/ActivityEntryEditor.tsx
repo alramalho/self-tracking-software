@@ -38,10 +38,10 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   );
   const [description, setDescription] = useState(activityEntry.description || "");
   const [isSaving, setIsSaving] = useState(false);
-  const { fetchUserData, useUserDataQuery, refetchUserData } = useUserPlan();
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const userDataQuery = useUserDataQuery("me");
   const api = useApiWithAuth();
 
 
@@ -70,7 +70,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         description,
       });
       
-      await userDataQuery.refetch();
+      await currentUserDataQuery.refetch();
       toast.success("Activity entry updated successfully!");
       onClose();
     } catch (error) {

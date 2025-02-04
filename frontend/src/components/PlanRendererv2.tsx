@@ -30,28 +30,15 @@ import { Button } from "./ui/button";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
 import { ProgressOverview } from "./ProgressOverview";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
 }
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
-  const { useUserDataQuery, useMultipleUsersDataQuery, fetchUserData } =
+  const { useCurrentUserDataQuery, useMultipleUsersDataQuery, fetchUserData } =
     useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const [loading, setLoading] = useState(true);
 
   // Get usernames of all plan group members except current user
@@ -71,8 +58,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   // Replace getUserData function with this helper
   const getMemberData = (username: string): UserDataEntry | undefined => {
-    if (username === "me" || username === userData?.user?.username)
-      return userData;
+    if (username === userData?.user?.username) return userData;
     return membersData?.[username];
   };
 

@@ -20,8 +20,8 @@ const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity corre
 
 export default function InsightsDashboardPage() {
   const api = useApiWithAuth();
-  const { useUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics || [];

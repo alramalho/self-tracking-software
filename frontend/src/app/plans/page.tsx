@@ -11,9 +11,9 @@ import { Loader2 } from "lucide-react";
 const PlansPage: React.FC = () => {
   
   const { isSignedIn } = useSession();
-  const { useUserDataQuery } = useUserPlan();
+  const { useCurrentUserDataQuery } = useUserPlan();
   const [showServerMessage, setShowServerMessage] = useState(false);
-  const { data: userData } = useUserDataQuery("me");
+  const { data: userData } = useCurrentUserDataQuery();
 
   useEffect(() => {
     const timer = setTimeout(() => {

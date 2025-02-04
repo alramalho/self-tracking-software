@@ -25,8 +25,9 @@ function formatDate(dateString: string) {
 }
 
 export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   // Scroll to bottom on mount and when messages change

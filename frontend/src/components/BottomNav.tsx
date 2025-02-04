@@ -16,10 +16,10 @@ const BottomNav = () => {
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const userDataQuery = useCurrentUserDataQuery();
   const userData = userDataQuery.data;
-  const userUsername = userData?.user?.username ?? "me";
+  const userUsername = userData?.user?.username;
   const pathname = usePathname();
 
   const isActiveRoute = (route: string) => {
@@ -34,6 +34,10 @@ const BottomNav = () => {
     setIsLoadingInsights(false);
     setIsLoadingProfile(false);
   }, [pathname]);
+
+  if (!userUsername) {
+    return null; // Or loading state
+  }
 
   return (
     <>
@@ -121,7 +125,7 @@ const BottomNav = () => {
               : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => {
-              if (pathname !== `/profile/${userUsername}`) {
+              if (!pathname.startsWith(`/profile/${userUsername}`)) {
                 setIsLoadingProfile(true)
               }
             }}

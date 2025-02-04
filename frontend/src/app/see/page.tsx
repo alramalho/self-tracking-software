@@ -33,10 +33,10 @@ const SeePage: React.FC = () => {
   const [moodReports, setMoodReports] = useState<MoodReport[]>([]);
   const [timeRange, setTimeRange] = useState("Last 3 Months");
   const apiClient = useApiWithAuth();
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const activities = userDataQuery.data?.activities || [];
-  const activityEntries = userDataQuery.data?.activityEntries || [];
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
+  const activities = userData?.activities || [];
+  const activityEntries = userData?.activityEntries || [];
 
   useEffect(() => {
     const fetchData = async () => {

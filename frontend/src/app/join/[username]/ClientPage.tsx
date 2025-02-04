@@ -22,9 +22,8 @@ export default function ClientPage({
 }) {
   const router = useRouter();
   const api = useApiWithAuth();
-  const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
-  const currentUserQuery = useUserDataQuery("me");
-  const { data: currentUser } = currentUserQuery;
+  const { useCurrentUserDataQuery, hasLoadedUserData } = useUserPlan();
+  const { data: currentUser } = useCurrentUserDataQuery();
   const { isSignedIn } = useSession();
   const [inviterData, setInviterData] = useState<{
     user: User;

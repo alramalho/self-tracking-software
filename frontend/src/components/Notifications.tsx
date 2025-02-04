@@ -12,10 +12,7 @@ import { Remark } from "react-remark";
 interface NotificationsProps {}
 
 const Notifications: React.FC<NotificationsProps> = () => {
-  const { useUserDataQuery, refetchUserData, notificationsData } =
-    useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
+  const { notificationsData } = useUserPlan();
   const router = useRouter();
   const api = useApiWithAuth();
 

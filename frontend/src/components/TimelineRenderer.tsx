@@ -24,8 +24,9 @@ function isInCurrentWeek(date: string) {
 const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
   const { timelineData, hasLoadedTimelineData } = useUserPlan();
   const { isSupported: isShareSupported, share } = useShare();
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const [copied, copyToClipboard] = useClipboard();
   const router = useRouter();
 

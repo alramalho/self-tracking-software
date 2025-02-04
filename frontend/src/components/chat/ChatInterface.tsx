@@ -14,8 +14,9 @@ interface ChatInterfaceProps {
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages }) => {
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   
   return (
     <div className="w-full max-w-3xl mx-auto px-4">

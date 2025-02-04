@@ -89,8 +89,8 @@ export default function OnboardingPage() {
   const api = useApiWithAuth();
   const [step, setStep] = useState(1);
   const [selectedPlanKey, setSelectedPlanKey] = useState<string>();
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
   const { requestPermission, isPushGranted } = useNotifications();
   const { share, isSupported: isShareSupported } = useShare();
   const [copied, copyToClipboard] = useClipboard();
@@ -144,7 +144,7 @@ export default function OnboardingPage() {
 
       await api.post("/create-plan", apiPlan);
       toast.success(`Created plan successfully!`);
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       setStep(3);
     } catch (error) {
       console.error("Plan creation error:", error);
@@ -156,7 +156,7 @@ export default function OnboardingPage() {
 
   const handleInviteFriends = async () => {
     try {
-      const link = `https://app.tracking.so/join/${userDataQuery.data?.user?.username}`;
+      const link = `https://app.tracking.so/join/${currentUserDataQuery.data?.user?.username}`;
       if (isShareSupported) {
         const success = await share(link);
         if (!success) throw new Error("Failed to share");
@@ -175,7 +175,7 @@ export default function OnboardingPage() {
     try {
       await api.post("/create-plan", plan);
       toast.success("Created custom plan successfully!");
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       setStep(3);
     } catch (error) {
       console.error("Plan creation error:", error);

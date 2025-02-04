@@ -32,9 +32,9 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
   
   const [selectedPlan, setSelectedPlan] = useState<ApiPlan | null>(null);
   const api = useApiWithAuth();
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
 
   useEffect(() => {
     if (userData?.user?.username) {
@@ -68,7 +68,7 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
       });
       const createdPlan = response.data.plan;
       setSelectedPlan(createdPlan);
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       setStep(1);
     } catch (error) {
       console.error("Plan creation error:", error);
@@ -101,7 +101,7 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 z-[51]">
       {children}
-      {userDataQuery.isLoading ? (
+      {currentUserDataQuery.isLoading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin">
           Loading your progress..
         </Loader2>

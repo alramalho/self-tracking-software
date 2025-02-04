@@ -84,8 +84,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [reactions, setReactions] = useState<ReactionCount>(
     activityEntryReactions
   );
-  const { useUserDataQuery } = useUserPlan();
-  const userData = useUserDataQuery("me").data;
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
   const currentUserUsername = userData?.user?.username;
   const isOwnActivityEntry = userData?.user?.username === userUsername;
   const api = useApiWithAuth();

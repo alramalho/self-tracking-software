@@ -59,16 +59,15 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const { useUserDataQuery, refetchUserData, messagesData } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
+  const { useCurrentUserDataQuery, useUserDataQuery, refetchUserData, messagesData } = useUserPlan();
+  const currentUserQuery = useCurrentUserDataQuery();
   const params = useParams();
   const username = params.username as string;
-  const currentUser = userDataQuery.data?.user;
-  const currentUserSentFriendRequests = userDataQuery.data?.sentFriendRequests;
+  const currentUser = currentUserQuery.data?.user;
+  const currentUserSentFriendRequests = currentUserQuery.data?.sentFriendRequests;
   const currentUserReceivedFriendRequests =
-    userDataQuery.data?.receivedFriendRequests;
-  const isOwnProfile = currentUser?.username === username || username === "me";
+    currentUserQuery.data?.receivedFriendRequests;
+  const isOwnProfile = currentUser?.id === currentUserQuery.data?.user?.id;
   const profileDataQuery = useUserDataQuery(username);
   const profileData = profileDataQuery.data;
   const { activityEntries, activities } = profileData || {
@@ -88,23 +87,23 @@ const ProfilePage: React.FC = () => {
   const { share, isSupported: isShareSupported } = useShare();
   const [copied, copyToClipboard] = useClipboard();
   const isOnesOwnProfile =
-    currentUser?.username === username || username === "me";
+    currentUser?.id === profileData?.user?.id;
 
   useEffect(() => {
-    if (username === "me" && userDataQuery.data?.user?.username) {
+    if (currentUser?.username && !username) {
       window.history.replaceState(
         null,
         "",
-        `/profile/${userDataQuery.data.user.username}`
+        `/profile/${currentUser.username}`
       );
     }
-  }, [username, userDataQuery.data?.user?.username]);
+  }, [currentUser?.username, username]);
 
   useEffect(() => {
     if (!profileData) {
-      isOwnProfile ? userDataQuery.refetch() : profileDataQuery.refetch();
+      isOwnProfile ? currentUserQuery.refetch() : profileDataQuery.refetch();
     }
-  }, [username, userDataQuery, isOwnProfile, profileDataQuery]);
+  }, [username, currentUserQuery, isOwnProfile, profileDataQuery]);
 
   useEffect(() => {
     if (isOwnProfile) {
@@ -136,7 +135,7 @@ const ProfilePage: React.FC = () => {
       await toast.promise(
         (async () => {
           await api.post(`/send-friend-request/${profileData!.user!.id}`);
-          await userDataQuery.refetch();
+          await currentUserQuery.refetch();
         })(),
         {
           loading: "Sending friend request...",
@@ -157,7 +156,7 @@ const ProfilePage: React.FC = () => {
         await toast.promise(
           (async () => {
             await api.post(`${action}-friend-request/${request.id}`);
-            await userDataQuery.refetch();
+            await currentUserQuery.refetch();
           })(),
           {
             loading: `${action}ing friend request...`,
@@ -200,7 +199,7 @@ const ProfilePage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  if (userDataQuery.isLoading || profileDataQuery.isLoading) {
+  if (currentUserQuery.isLoading || profileDataQuery.isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
@@ -233,9 +232,7 @@ const ProfilePage: React.FC = () => {
   const user = profileData.user;
 
   const getUsername = (user: User | null) => {
-    return user?.username === userDataQuery.data?.user?.username
-      ? "me"
-      : user?.username;
+    return user?.username;
   };
 
   const hasPendingReceivedFriendRequest = () => {
@@ -366,7 +363,7 @@ const ProfilePage: React.FC = () => {
               className="w-full mb-3 bg-white"
               onClick={async () => {
                 try {
-                  const link = `https://app.tracking.so/join/${userDataQuery.data?.user?.username}`;
+                  const link = `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`;
                   if (isShareSupported) {
                     const success = await share(link);
                     if (!success) throw new Error("Failed to share");

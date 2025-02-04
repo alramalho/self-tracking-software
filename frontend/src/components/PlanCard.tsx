@@ -39,8 +39,9 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const api = useApiWithAuth();
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
 
   const handleLeavePlan = async () => {
     toast.promise(
