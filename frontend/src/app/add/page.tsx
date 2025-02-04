@@ -160,7 +160,7 @@ const LogPage: React.FC = () => {
         )}
       </div>
       <div className="mt-8">
-        <div className="fixed bottom-0 left-0 right-0 p-3 pb-[6.4rem] bg-white border-t-2 z-[45]">
+        <div className="fixed bottom-0 left-0 right-0 p-3 pb-[6.7rem] bg-white border-t-2 z-[45]">
           <Button
             onClick={handleLogActivity}
             className="w-full bg-black text-white h-10"
