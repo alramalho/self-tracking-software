@@ -1,29 +1,17 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { ChartBar, Eclipse } from "lucide-react";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { useApiWithAuth } from "@/api";
 
 export default function InsightsPage() {
   const router = useRouter();
-  const api = useApiWithAuth();
-
-  useEffect(() => {
-    // Check if user has any metrics, if not redirect to onboarding
-    const checkMetrics = async () => {
-      try {
-        const response = await api.get("/metrics");
-        if (!response.data || response.data.length === 0) {
-          router.push("/insights/onboarding");
-        }
-      } catch (error) {
-        console.error("Error checking metrics:", error);
-      }
-    };
-    checkMetrics();
-  }, []);
+  const { useMetricsAndEntriesQuery } = useUserPlan();
+  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
+  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
+  const metrics = metricsAndEntriesData?.metrics || [];
+  const hasMetrics = metrics.length > 0;
 
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
@@ -38,7 +26,13 @@ export default function InsightsPage() {
         {/* Insights Card */}
         <Card
           className="p-6 transition-all cursor-pointer hover:scale-105"
-          onClick={() => router.push("/insights/dashboard")}
+          onClick={() => {
+            if (hasMetrics) {
+              router.push("/insights/dashboard");
+            } else {
+              router.push("/insights/onboarding");
+            }
+          }}
         >
           <div className="flex items-center gap-4">
             <span className="text-4xl">📊</span>
