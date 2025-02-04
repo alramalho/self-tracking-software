@@ -29,18 +29,17 @@ class PromptController:
             ]
         elif weekday == 4:  # Friday
             options = [
-                "It's Friday—how did your week shape up?",
+                "It's Friday — how did your week go? I can log anything you've forgot :)",
                 "Happy Friday. Any highlights from this week you'd like to share?"
             ]
         elif weekday in [5, 6]:  # Saturday/Sunday
             options = [
-                "Hope you're having a good weekend. Any thoughts for the week ahead?",
-                "Enjoy your weekend. What's one idea for next week?"
+                "Hope you're having a good weekend. Any thoughts for the week ahead? Maybe picking up a little run?",
             ]
         else:  # Tuesday or Thursday
             options = [
                 "Hope you're having a good day. What's on your mind?",
-                "Quick check-in: any small wins to celebrate today?"
+                "Quick check-in: how's your day going? anything you did you haven't logged today?"
             ]
         return random.choice(options)
 
@@ -62,7 +61,7 @@ class PromptController:
 
         prompt = f"""
 You are Jarvis, a friendly assistant communicating in {user.language}. Your goal is to send a short, human, and engaging check-in message to the user.
-You are able to log past activities for the user.
+You are able to log past activities for the user, on which your notifications should be based.
 
 Use the following day-specific inspiration as context for your tone and content:
 "{day_based_prefix}"
