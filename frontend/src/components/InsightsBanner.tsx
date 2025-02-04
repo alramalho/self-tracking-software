@@ -43,35 +43,36 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
     <AppleLikePopover open={open} onClose={onClose}>
       {hasMetrics ? (
         <div className="space-y-4 p-6">
-          <h2 className="text-xl font-semibold mb-4">Activity Logged Successfully! How are you feeling?</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Activity Logged Successfully! How are you feeling?
+          </h2>
           <MetricRaters />
         </div>
       ) : (
-        <Card className="p-8">
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h1 className="text-2xl font-bold">
-                Try our Activity Insights!
-              </h1>
-              <p className="text-md text-muted-foreground">
-                See how your activities affect your well-being with our powerful correlation tools
-              </p>
-            </div>
-
-            <ExampleCorrelations />
-
-            <div className="flex flex-col items-center gap-4">
-              <Button
-                size="lg"
-                className="w-full max-w-sm"
-                onClick={requestNotificationPermission}
-              >
-                <ChevronRight className="w-4 h-4 mr-2" />
-                Get Started
-              </Button>
-            </div>
+        <div className="space-y-8">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-bold mt-8">
+              📊 Try our Activity Insights!
+            </h1>
+            <p className="text-md text-muted-foreground">
+              See how your activities affect your well-being with our powerful
+              correlation tools
+            </p>
           </div>
-        </Card>
+
+          <ExampleCorrelations />
+
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              size="lg"
+              className="w-full max-w-sm"
+              onClick={requestNotificationPermission}
+            >
+              <ChevronRight className="w-4 h-4 mr-2" />
+              Get Started
+            </Button>
+          </div>
+        </div>
       )}
     </AppleLikePopover>
   );
