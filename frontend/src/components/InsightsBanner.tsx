@@ -1,7 +1,11 @@
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ChartBar } from "lucide-react";
-import { ExampleCorrelations } from "./ExampleCorrelations";
+import { Card } from "@/components/ui/card";
+import { ChevronRight } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useRouter } from "next/navigation";
+import { ExampleCorrelations } from "@/components/ExampleCorrelations";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import { MetricRaters } from "@/components/MetricRaters";
 import AppleLikePopover from "./AppleLikePopover";
 
 interface InsightsBannerProps {
@@ -9,41 +13,60 @@ interface InsightsBannerProps {
   onClose: () => void;
 }
 
-export const InsightsBanner: React.FC<InsightsBannerProps> = ({ open, onClose }) => {
+export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const router = useRouter();
+  const { isPushGranted, requestPermission } = useNotifications();
+  const { useMetricsAndEntriesQuery } = useUserPlan();
+  const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
+  const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
 
-  const handleViewInsights = () => {
-    router.push("/insights");
-    onClose();
+  const requestNotificationPermission = async () => {
+    try {
+      if (isPushGranted) {
+        router.push("/insights/onboarding");
+      } else {
+        await requestPermission();
+      }
+      onClose();
+    } catch (error) {
+      console.error("Error requesting notification permission:", error);
+    }
   };
 
   return (
-    <AppleLikePopover open={open} onClose={onClose} className="bg-gray-50">
-      <div className="pt-6">
-        {/* Welcome text */}
-        <div className="text-center mb-8">
-          <div className="flex flex-row items-center justify-center gap-5 mb-4">
-            <span className="text-[40px] animate-wiggle">👋</span>
-            <span className="text-2xl font-bold font-mono">Hey!</span>
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">
-            Discover Your Activity Patterns
-          </h2>
-          <p className="mt-4 text-gray-600">
-            Track how your activities affect your well-being and discover meaningful patterns.
-          </p>
+    <AppleLikePopover open={open} onClose={onClose}>
+      {hasMetrics ? (
+        <div className="space-y-4 p-6">
+          <h2 className="text-xl font-semibold mb-4">Activity Logged Successfully! How are you feeling?</h2>
+          <MetricRaters />
         </div>
+      ) : (
+        <Card className="p-8">
+          <div className="space-y-8">
+            <div className="text-center space-y-4">
+              <h1 className="text-2xl font-bold">
+                Try our Activity Insights!
+              </h1>
+              <p className="text-md text-muted-foreground">
+                See how your activities affect your well-being with our powerful correlation tools
+              </p>
+            </div>
 
-        <div className="space-y-6">
-          <ExampleCorrelations />
-          
-          <div className="flex justify-end">
-            <Button onClick={handleViewInsights} className="w-full">
-              View Insights Dashboard
-            </Button>
+            <ExampleCorrelations />
+
+            <div className="flex flex-col items-center gap-4">
+              <Button
+                size="lg"
+                className="w-full max-w-sm"
+                onClick={requestNotificationPermission}
+              >
+                <ChevronRight className="w-4 h-4 mr-2" />
+                Get Started
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </Card>
+      )}
     </AppleLikePopover>
   );
-}; 
+}

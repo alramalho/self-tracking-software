@@ -28,9 +28,7 @@ export default function InsightsPage() {
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
       <div className="text-center space-y-4">
-        <h1 className="text-2xl font-bold">
-          Insights & AI
-        </h1>
+        <h1 className="text-2xl font-bold">Insights & AI</h1>
         <p className="text-md text-muted-foreground">
           Discover patterns in your activities and get AI-powered assistance
         </p>
@@ -42,14 +40,13 @@ export default function InsightsPage() {
           className="p-6 transition-all cursor-pointer hover:scale-105"
           onClick={() => router.push("/insights/dashboard")}
         >
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-              <ChartBar className="w-6 h-6 text-blue-500" />
-            </div>
-            <div className="text-center">
+          <div className="flex items-center gap-4">
+            <span className="text-4xl">📊</span>
+            <div>
               <h3 className="font-semibold text-lg mb-2">Activity Insights</h3>
               <p className="text-sm text-muted-foreground">
-                Discover patterns and correlations between your activities and well-being metrics
+                Discover patterns and correlations between your activities and
+                well-being metrics
               </p>
             </div>
           </div>
@@ -60,14 +57,13 @@ export default function InsightsPage() {
           className="p-6 transition-all cursor-pointer hover:scale-105"
           onClick={() => router.push("/ai")}
         >
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-              <Eclipse className="w-6 h-6 text-blue-500" />
-            </div>
-            <div className="text-center">
+          <div className="flex items-center gap-4">
+            <span className="text-4xl">🤖</span>
+            <div>
               <h3 className="font-semibold text-lg mb-2">AI Assistant</h3>
               <p className="text-sm text-muted-foreground">
-                Analyze emotions and extract activities from your entries with AI-powered tools
+                Analyze emotions and extract activities from your entries with
+                AI-powered tools
               </p>
             </div>
           </div>
