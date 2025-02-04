@@ -41,7 +41,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
 
   const handleLeavePlan = async () => {
     toast.promise(
@@ -71,7 +70,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           data: updatedPlan,
         }
       );
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       setShowEditModal(false);
       toast.success("Plan updated successfully");
     } catch (error) {
