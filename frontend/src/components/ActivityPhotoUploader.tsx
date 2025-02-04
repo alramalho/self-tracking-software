@@ -100,7 +100,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   const [description, setDescription] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const currentUserDataQuery = useCurrentUserDataQuery();
   const { addToNotificationCount } = useNotifications();
   const api = useApiWithAuth();
   const { isRecording, toggleRecording } = useMicrophone();
@@ -193,7 +193,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         },
       });
 
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       toast.success(
         selectedFile
           ? "Activity logged with photo successfully!"

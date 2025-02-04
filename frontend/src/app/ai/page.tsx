@@ -156,7 +156,8 @@ const LogPage: React.FC = () => {
   const { addToNotificationCount, sendPushNotification } = useNotifications();
 
   const { useCurrentUserDataQuery, messagesData } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
 
   const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
   const posthogFeatureFlagsInitialized =
@@ -540,7 +541,7 @@ const LogPage: React.FC = () => {
 
       await authedApi.post("/ai/send-system-message", { message });
       sendMessage("done!", false);
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       setPendingActivityResponses({ accepted: [], rejected: [] });
     }
   };
@@ -567,7 +568,7 @@ const LogPage: React.FC = () => {
     sendMessage("done!", false);
 
     setSuggestedTimesPerWeek(null);
-    userDataQuery.refetch();
+    currentUserDataQuery.refetch();
   };
 
   const handleTimesPerWeekRejection = async () => {
@@ -658,7 +659,7 @@ const LogPage: React.FC = () => {
     const message = `User accepted the suggested sessions for the plan: \n${sessionsStr}`;
     await authedApi.post("/ai/send-system-message", { message });
     sendMessage("done!", false);
-    userDataQuery.refetch();
+    currentUserDataQuery.refetch();
   };
 
   const handleSessionsRejection = async (sessions: PlanSession[]) => {
