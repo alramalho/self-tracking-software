@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ExampleCorrelations } from "@/components/ExampleCorrelations";
 import { MetricRater } from "@/components/MetricRater";
+import { useUserPlan } from "@/contexts/UserPlanContext";
 
 const metrics = [
   { title: "Happiness", emoji: "😊" },
@@ -26,6 +27,8 @@ export default function OnboardingPage() {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [createdMetricId, setCreatedMetricId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { useMetricsAndEntriesQuery } = useUserPlan();
+  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const api = useApiWithAuth();
 
   const requestNotificationPermission = async () => {
@@ -163,7 +166,10 @@ export default function OnboardingPage() {
             metricId={createdMetricId!}
             metricTitle={selectedMetricData.title}
             metricEmoji={selectedMetricData.emoji}
-            onRatingSubmitted={() => router.push("/insights/dashboard")}
+            onRatingSubmitted={() => {
+              metricsAndEntriesQuery.refetch();
+              router.push("/insights/dashboard");
+            }}
           />
         );
       default:
