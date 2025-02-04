@@ -13,9 +13,9 @@ import Divider from "./Divider";
 
 const PlansRenderer: React.FC = () => {
   const router = useRouter();
-  const { useUserDataQuery, refetchUserData } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
+  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   useEffect(() => {

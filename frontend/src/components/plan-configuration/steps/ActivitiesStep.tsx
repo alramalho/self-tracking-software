@@ -19,8 +19,9 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
   description,
   setDescription,
 }) => {
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const [showActivityEditor, setShowActivityEditor] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<Activity[]>(initialActivities);
 

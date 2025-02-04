@@ -27,8 +27,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [emoji, setEmoji] = useState(activity?.emoji || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { useUserDataQuery, refetchUserData } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
+  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
   const api = useApiWithAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -92,7 +92,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     setIsDeleting(true);
     try {
       await api.delete(`/activities/${activity!.id}`);
-      userDataQuery.refetch();
+      currentUserDataQuery.refetch();
       toast.success("Activity deleted successfully!");
       onClose();
     } catch (error: any) {

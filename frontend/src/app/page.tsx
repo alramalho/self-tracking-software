@@ -15,8 +15,8 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { useUserDataQuery, hasLoadedUserData, refetchAllData } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery, hasLoadedUserData, refetchAllData } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {

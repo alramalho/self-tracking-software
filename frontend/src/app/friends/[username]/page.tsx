@@ -14,9 +14,9 @@ import { Search, UserPlus } from "lucide-react";
 const FriendsPage: React.FC<{ params: { username: string } }> = ({
   params,
 }) => {
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery(params.username || "me");
-  const selfUserDataQuery = useUserDataQuery("me");
+  const { useUserDataQuery, useCurrentUserDataQuery } = useUserPlan();
+  const userDataQuery = useUserDataQuery(params.username);
+  const selfUserDataQuery = useCurrentUserDataQuery();
   const userData = userDataQuery.data;
   const selfUserData = selfUserDataQuery.data;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -24,8 +24,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
   const router = useRouter();
 
   const isOwnProfile =
-    params.username === selfUserData?.user?.username ||
-    params.username === "me";
+    params.username === selfUserData?.user?.username;
 
   const handleUserClick = (user: UserSearchResult) => {
     setIsSearchOpen(false);

@@ -202,6 +202,7 @@ export interface UserData {
 }
 
 export interface UserPlanContextType {
+  useCurrentUserDataQuery: () => UseQueryResult<UserDataEntry>;
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
   useMultipleUsersDataQuery: (usernames: string[]) => UseQueryResult<Record<string, UserDataEntry>>;
   useMetricsAndEntriesQuery: () => UseQueryResult<{metrics: Metric[], entries: MetricEntry[]}>;
@@ -265,17 +266,17 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     throw err;
   };
 
-  const fetchUserData = async ({username = "me"}: {username?: string} = {}): Promise<UserDataEntry> => {
+  const fetchUserData = async ({username}: {username?: string} = {}): Promise<UserDataEntry> => {
     if (!isSignedIn) {
       throw new Error("User not signed in");
     }
 
     try {
       const response = await api.get('/load-users-data', {
-        params: { usernames: username }
+        params: username ? { usernames: username } : undefined
       });
       
-      const userData = response.data[username];
+      const userData = username ? response.data[username] : response.data.current;
       
       if (!userData) {
         console.error('No user data found in response:', response.data);
@@ -323,12 +324,41 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const useUserDataQuery = (username: string) => useQuery({
-    queryKey: ['userData', username],
-    queryFn: () => fetchUserData({ username }),
-    enabled: isSignedIn,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const useCurrentUserDataQuery = () => {
+    const query = useQuery({
+      queryKey: ['currentUserData'],
+      queryFn: () => fetchUserData(),
+      enabled: isSignedIn,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    // When current user data is successfully fetched, also cache it under the username key
+    useEffect(() => {
+      if (query.data?.user?.username) {
+        queryClient.setQueryData(['userData', query.data.user.username], query.data);
+      }
+    }, [query.data?.user?.username]);
+
+    return query;
+  };
+
+  const useUserDataQuery = (username: string) => {
+    const currentUserQuery = useCurrentUserDataQuery();
+    
+    return useQuery({
+      queryKey: ['userData', username],
+      queryFn: () => fetchUserData({ username }),
+      enabled: isSignedIn && !!username,
+      staleTime: 1000 * 60 * 5, // 5 minutes,
+      // If the requested username matches current user's username, use that data instead
+      initialData: () => {
+        if (currentUserQuery.data?.user?.username?.toLowerCase() === username.toLowerCase()) {
+          return currentUserQuery.data;
+        }
+        return undefined;
+      }
+    });
+  };
 
   const timelineData = useQuery({
     queryKey: ['timelineData'],
@@ -413,11 +443,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     retry: false,
   });
 
-  const userDataQuery = useUserDataQuery("me");
+  const currentUserDataQuery = useCurrentUserDataQuery();
 
   const refetchUserData = async () => {
     return toast.promise(
-      userDataQuery.refetch().then(result => {
+      currentUserDataQuery.refetch().then(result => {
         if (result.error) throw result.error;
         if (!result.data) throw new Error("User data is undefined");
         return result.data;
@@ -433,7 +463,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const refetchAllData = async () => {
     return toast.promise(
       Promise.all([
-        userDataQuery.refetch(),
+        currentUserDataQuery.refetch(),
         timelineData.refetch(),
         notificationsData.refetch(),
         messagesData.refetch()
@@ -478,11 +508,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [isSignedIn, queryClient]);
 
   const context = {
-    userDataQuery,
+    useCurrentUserDataQuery,
     useUserDataQuery,
     useMultipleUsersDataQuery,
     useMetricsAndEntriesQuery,
-    hasLoadedUserData: userDataQuery.isSuccess && !!userDataQuery.data,
+    hasLoadedUserData: currentUserDataQuery.isSuccess && !!currentUserDataQuery.data,
     hasLoadedTimelineData: timelineData.isSuccess && !!timelineData.data,
     timelineData,
     messagesData,

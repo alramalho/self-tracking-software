@@ -12,8 +12,9 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
   const [showBugForm, setShowBugForm] = useState(false);
   const [showHelpForm, setShowHelpForm] = useState(false);
   const [showFeatureForm, setShowFeatureForm] = useState(false);
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const email = userData?.user?.email || "";
   const api = useApiWithAuth();
 

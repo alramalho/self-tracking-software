@@ -27,8 +27,9 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
   onReject,
   disabled,
 }) => {
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const plan = userData?.plans.find((p) => p.id === plan_id);
 
   return (

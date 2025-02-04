@@ -21,14 +21,12 @@ export const AccessRestrictionPopover: React.FC<
 > = ({
   isOpen,
   onClose,
-  referredUsers,
-  requiredReferrals,
-  onShareReferral,
   onRequestAccess,
 }) => {
   const api = useApiWithAuth();
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const email = userData?.user?.email || "";
   const [text, setText] = useState("I want to try the AI because");
   

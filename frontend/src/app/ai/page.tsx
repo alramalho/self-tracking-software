@@ -155,9 +155,8 @@ const LogPage: React.FC = () => {
   const { addToQueue, stopAudio } = useSpeaker();
   const { addToNotificationCount, sendPushNotification } = useNotifications();
 
-  const { useUserDataQuery, hasLoadedUserData, messagesData } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const { data: userData } = userDataQuery;
+  const { useCurrentUserDataQuery, messagesData } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
 
   const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
   const posthogFeatureFlagsInitialized =

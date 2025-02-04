@@ -9,19 +9,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { Loader2, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { InsightsBanner } from "@/components/InsightsBanner";
 
 const LogPage: React.FC = () => {
-  const { useUserDataQuery } = useUserPlan();
-  const userDataQuery = useUserDataQuery("me");
-  const userData = userDataQuery.data;
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const activities = userData?.activities || [];
   const [selectedActivity, setSelectedActivity] = useState<
     Activity | undefined
@@ -78,7 +71,7 @@ const LogPage: React.FC = () => {
 
   };
 
-  if (userDataQuery.isLoading) {
+  if (currentUserDataQuery.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -87,8 +80,8 @@ const LogPage: React.FC = () => {
     );
   }
 
-  if (userDataQuery.isError) {
-    return <div>Error: {userDataQuery.error.message}</div>;
+  if (currentUserDataQuery.isError) {
+    return <div>Error: {currentUserDataQuery.error.message}</div>;
   }
 
   return (

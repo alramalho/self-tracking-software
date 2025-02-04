@@ -19,8 +19,9 @@ export default function GeneralInitializer({
   children: React.ReactNode;
 }) {
   const { isSignedIn, isLoaded } = useSession();
-  const { useUserDataQuery, hasLoadedUserData } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery, hasLoadedUserData } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRan, setHasRan] = useState(false);
   const [isAppInstallModalClosed, setIsAppInstallModalClosed] = useState(false);

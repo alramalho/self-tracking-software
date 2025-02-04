@@ -38,8 +38,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   title,
   isEdit = false,
 }) => {
-  const { useUserDataQuery } = useUserPlan();
-  const { data: userData } = useUserDataQuery("me");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
 
   // Initialize state from plan if editing, otherwise use defaults
   const [description, setDescription] = useState(plan?.notes || "");

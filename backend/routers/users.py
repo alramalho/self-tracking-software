@@ -47,190 +47,26 @@ async def get_user(user: User = Depends(is_clerk_user)):
 
 @router.get("/load-users-data")
 async def load_users_data(
-    usernames: str = Query(...), current_user: User = Depends(is_clerk_user)
+    usernames: str | None = Query(None), current_user: User = Depends(is_clerk_user)
 ):
     start_time = time.time()
     try:
         results = {}
-        usernames = usernames.split(",")
-        for username in usernames:
-            if username == "me":
-                user = current_user
-            else:
-                user = users_gateway.get_user_by_safely("username", username.lower())
-                if not user:
-                    continue
-            # Reuse existing concurrent fetching logic
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                activities_future = executor.submit(
-                    activities_gateway.get_all_activities_by_user_id, user.id
-                )
-                entries_future = executor.submit(
-                    activities_gateway.get_all_activity_entries_by_user_id, user.id
-                )
-                mood_reports_future = executor.submit(
-                    moods_gateway.get_all_mood_reports_by_user_id, user.id
-                )
-
-                plans_future = executor.submit(
-                    plan_controller.get_all_user_active_plans, user
-                )
-                plan_groups_future = executor.submit(
-                    plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
-                )
-                friend_requests_sent_future = executor.submit(
-                    users_gateway.friend_request_gateway.get_pending_sent_requests,
-                    user.id,
-                )
-                friend_requests_received_future = executor.submit(
-                    users_gateway.friend_request_gateway.get_pending_received_requests,
-                    user.id,
-                )
-
-                activities = [
-                    exclude_embedding_fields(activity.dict())
-                    for activity in activities_future.result()
-                ]
-                entries = [entry.dict() for entry in entries_future.result()]
-                mood_reports = [
-                    report.dict() for report in mood_reports_future.result()
-                ]
-                plans = [
-                    exclude_embedding_fields(plan.dict())
-                    for plan in plans_future.result()
-                ]
-                plan_groups = [
-                    plan_group.dict() for plan_group in plan_groups_future.result()
-                ]
-                sent_friend_requests = [
-                    request.dict() for request in friend_requests_sent_future.result()
-                ]
-                received_friend_requests = [
-                    request.dict()
-                    for request in friend_requests_received_future.result()
-                ]
-
-            # Generate custom bio
-            bio_parts = []
-            if plans:
-                plan_goals = [f"{plan['emoji']} {plan['goal']}" for plan in plans[:3]]
-                if len(plans) > 3:
-                    bio_parts.append(
-                        f"Working on {len(plans)} plans including {', '.join(plan_goals[:-1])} and {plan_goals[-1]}"
-                    )
-                elif len(plans) > 1:
-                    bio_parts.append(
-                        f"Working on {', '.join(plan_goals[:-1])} and {plan_goals[-1]}"
-                    )
-                else:
-                    bio_parts.append(f"Working on {plan_goals[0]}")
-
-            # Add activities info to bio
-            activity_categories = {}
-            for activity in activities:
-                category = activity.get("category", "Other")
-                if category not in activity_categories:
-                    activity_categories[category] = []
-                activity_categories[category].append(activity)
-
-            if activities:
-                activity_summary = []
-                for category, acts in activity_categories.items():
-                    if len(acts) > 0:
-                        emojis = " ".join(act["emoji"] for act in acts[:3])
-                        activity_summary.append(f"{category}: {emojis}")
-
-                if activity_summary:
-                    bio_parts.append("Tracking " + " • ".join(activity_summary))
-
-            # Combine bio parts
-            generated_bio = (
-                " | ".join(bio_parts) if bio_parts else "Just joined tracking.so!"
-            )
-
-            # Process plans to include activities
-            activity_map = {activity["id"]: activity for activity in activities}
-
-            for plan in plans:
-                plan_activity_ids = set(
-                    session["activity_id"] for session in plan["sessions"]
-                )
-                plan["activities"] = [
-                    activity_map[activity_id]
-                    for activity_id in plan_activity_ids
-                    if activity_id in activity_map
-                ]
-
-            if current_user.id != user.id and not users_gateway.are_friends(
-                current_user.id, user.id
-            ):
-                logger.info(
-                    f"Removing photos from activity entries for {user.id} because {current_user.id} is not friends with them"
-                )
-                # remove photos from activity entries
-                for entry in entries:
-                    entry.pop("image", None)
-
-            results[username] = {
-                "user": {
-                    **user.dict(),
-                    "generated_bio": generated_bio,
-                },
-                "activities": activities,
-                "activity_entries": entries,
-                "mood_reports": mood_reports,
-                "plans": plans,
-                "plan_groups": plan_groups,
-            }
-
-            if current_user.id == user.id:
-                results[username]["sent_friend_requests"] = sent_friend_requests
-                results[username]["received_friend_requests"] = received_friend_requests
-
-            if username == "me" or username == current_user.username:
-                try:
-                    execution_time = time.time() - start_time
-                    posthog.capture(
-                        distinct_id=user.id,
-                        event="load-user-data",
-                        properties={
-                            "$set": {
-                                "email": user.email,
-                                "name": user.name,
-                                "username": user.username,
-                                "plans_count": len(plans),
-                                "plan_groups_count": len(plan_groups),
-                                "referral_count": len(user.referred_user_ids),
-                                "activities_count": len(activities),
-                                "activity_entries_count": len(entries),
-                                "friend_count": len(current_user.friend_ids),
-                            }
-                        },
-                    )
-                    posthog.capture(
-                        distinct_id=user.id,
-                        event="load-user-data-latency",
-                        properties={"latency_seconds": round(execution_time, 3)},
-                    )
-
-                    upsert_loops_contact(
-                        email=user.email,
-                        first_name=user.name,
-                        user_id=user.id,
-                        custom_properties={
-                            "username": user.username,
-                            "plansCount": len(plans),
-                            "planGroupsCount": len(plan_groups),
-                            "activitiesCount": len(activities),
-                            "referralCount": len(user.referred_user_ids),
-                            "activityEntriesCount": len(entries),
-                            "friendCount": len(current_user.friend_ids),
-                        },
-                    )
-
-                except Exception as e:
-                    logger.error(traceback.format_exc())
-                    logger.error(f"Failed to capture pageview: {e}")
+        
+        # If no usernames provided, return current user data
+        if not usernames:
+            user_data = await _load_single_user_data(current_user, current_user)
+            return {"current": user_data}
+            
+        # Otherwise load data for specified usernames
+        usernames_list = usernames.split(",")
+        for username in usernames_list:
+            user = users_gateway.get_user_by_safely("username", username.lower())
+            if not user:
+                continue
+            
+            user_data = await _load_single_user_data(user, current_user)
+            results[username] = user_data
 
         return results
     except Exception as e:
@@ -238,13 +74,186 @@ async def load_users_data(
         logger.error(f"Failed to load multiple users data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+async def _load_single_user_data(user: User, current_user: User):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        activities_future = executor.submit(
+            activities_gateway.get_all_activities_by_user_id, user.id
+        )
+        entries_future = executor.submit(
+            activities_gateway.get_all_activity_entries_by_user_id, user.id
+        )
+        mood_reports_future = executor.submit(
+            moods_gateway.get_all_mood_reports_by_user_id, user.id
+        )
+        plans_future = executor.submit(
+            plan_controller.get_all_user_active_plans, user
+        )
+        plan_groups_future = executor.submit(
+            plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
+        )
+        friend_requests_sent_future = executor.submit(
+            users_gateway.friend_request_gateway.get_pending_sent_requests,
+            user.id,
+        )
+        friend_requests_received_future = executor.submit(
+            users_gateway.friend_request_gateway.get_pending_received_requests,
+            user.id,
+        )
+
+        activities = [
+            exclude_embedding_fields(activity.dict())
+            for activity in activities_future.result()
+        ]
+        entries = [entry.dict() for entry in entries_future.result()]
+        mood_reports = [
+            report.dict() for report in mood_reports_future.result()
+        ]
+        plans = [
+            exclude_embedding_fields(plan.dict())
+            for plan in plans_future.result()
+        ]
+        plan_groups = [
+            plan_group.dict() for plan_group in plan_groups_future.result()
+        ]
+        sent_friend_requests = [
+            request.dict() for request in friend_requests_sent_future.result()
+        ]
+        received_friend_requests = [
+            request.dict() for request in friend_requests_received_future.result()
+        ]
+
+    # Generate custom bio
+    bio_parts = []
+    if plans:
+        plan_goals = [f"{plan['emoji']} {plan['goal']}" for plan in plans[:3]]
+        if len(plans) > 3:
+            bio_parts.append(
+                f"Working on {len(plans)} plans including {', '.join(plan_goals[:-1])} and {plan_goals[-1]}"
+            )
+        elif len(plans) > 1:
+            bio_parts.append(
+                f"Working on {', '.join(plan_goals[:-1])} and {plan_goals[-1]}"
+            )
+        else:
+            bio_parts.append(f"Working on {plan_goals[0]}")
+
+    # Add activities info to bio
+    activity_categories = {}
+    for activity in activities:
+        category = activity.get("category", "Other")
+        if category not in activity_categories:
+            activity_categories[category] = []
+        activity_categories[category].append(activity)
+
+    if activities:
+        activity_summary = []
+        for category, acts in activity_categories.items():
+            if len(acts) > 0:
+                emojis = " ".join(act["emoji"] for act in acts[:3])
+                activity_summary.append(f"{category}: {emojis}")
+
+        if activity_summary:
+            bio_parts.append("Tracking " + " • ".join(activity_summary))
+
+    # Combine bio parts
+    generated_bio = (
+        " | ".join(bio_parts) if bio_parts else "Just joined tracking.so!"
+    )
+
+    # Process plans to include activities
+    activity_map = {activity["id"]: activity for activity in activities}
+
+    for plan in plans:
+        plan_activity_ids = set(
+            session["activity_id"] for session in plan["sessions"]
+        )
+        plan["activities"] = [
+            activity_map[activity_id]
+            for activity_id in plan_activity_ids
+            if activity_id in activity_map
+        ]
+
+    if current_user.id != user.id and not users_gateway.are_friends(
+        current_user.id, user.id
+    ):
+        logger.info(
+            f"Removing photos from activity entries for {user.id} because {current_user.id} is not friends with them"
+        )
+        # remove photos from activity entries
+        for entry in entries:
+            entry.pop("image", None)
+
+    result = {
+        "user": {
+            **user.dict(),
+            "generated_bio": generated_bio,
+        },
+        "activities": activities,
+        "activity_entries": entries,
+        "mood_reports": mood_reports,
+        "plans": plans,
+        "plan_groups": plan_groups,
+    }
+
+    if current_user.id == user.id:
+        result["sent_friend_requests"] = sent_friend_requests
+        result["received_friend_requests"] = received_friend_requests
+
+        try:
+            execution_time = time.time() - start_time
+            posthog.capture(
+                distinct_id=user.id,
+                event="load-user-data",
+                properties={
+                    "$set": {
+                        "email": user.email,
+                        "name": user.name,
+                        "username": user.username,
+                        "plans_count": len(plans),
+                        "plan_groups_count": len(plan_groups),
+                        "referral_count": len(user.referred_user_ids),
+                        "activities_count": len(activities),
+                        "activity_entries_count": len(entries),
+                        "friend_count": len(current_user.friend_ids),
+                    }
+                },
+            )
+            posthog.capture(
+                distinct_id=user.id,
+                event="load-user-data-latency",
+                properties={"latency_seconds": round(execution_time, 3)},
+            )
+
+            upsert_loops_contact(
+                email=user.email,
+                first_name=user.name,
+                user_id=user.id,
+                custom_properties={
+                    "username": user.username,
+                    "plansCount": len(plans),
+                    "planGroupsCount": len(plan_groups),
+                    "activitiesCount": len(activities),
+                    "referralCount": len(user.referred_user_ids),
+                    "activityEntriesCount": len(entries),
+                    "friendCount": len(current_user.friend_ids),
+                },
+            )
+
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            logger.error(f"Failed to capture pageview: {e}")
+
+    return result
+
 
 @router.get("/friends/{username}")
 async def get_user_friends(username: str, current_user: User = Depends(is_clerk_user)):
-    if username == "me":
+    if username.lower() == current_user.username.lower():
         user = current_user
     else:
         user = users_gateway.get_user_by_safely("username", username.lower())
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
     friends = [users_gateway.get_user_by_id(friend_id) for friend_id in user.friend_ids]
 
@@ -263,7 +272,7 @@ async def get_user_friends(username: str, current_user: User = Depends(is_clerk_
 @router.get("/check-username/{username}")
 async def check_username(username: str):
     user = users_gateway.get_user_by_safely("username", username)
-    return {"exists": user is not None or username == "me"}
+    return {"exists": user is not None}
 
 
 @router.post("/update-user")
@@ -304,7 +313,7 @@ async def get_friend_count(user: User = Depends(is_clerk_user)):
 
 @router.get("/user/{username}")
 async def get_user_profile(username: str, current_user: User = Depends(is_clerk_user)):
-    if username == "me":
+    if username.lower() == current_user.username.lower():
         return current_user
 
     user = users_gateway.get_user_by_safely("username", username)
