@@ -4,14 +4,15 @@ import { Card } from "@/components/ui/card";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 export default function InsightsPage() {
   const router = useRouter();
   const { useMetricsAndEntriesQuery } = useUserPlan();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
+  const { data: metricsAndEntriesData, isLoading } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics || [];
-  const hasMetrics = metrics.length > 0;
+  const hasMetrics = !isLoading && metrics.length > 0;
 
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
@@ -25,12 +26,14 @@ export default function InsightsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Insights Card */}
         <Card
-          className="p-6 transition-all cursor-pointer hover:scale-105"
+          className={`p-6 transition-all cursor-pointer hover:scale-105 relative ${isLoading ? 'opacity-70' : ''}`}
           onClick={() => {
-            if (hasMetrics) {
-              router.push("/insights/dashboard");
-            } else {
-              router.push("/insights/onboarding");
+            if (!isLoading) {
+              if (hasMetrics) {
+                router.push("/insights/dashboard");
+              } else {
+                router.push("/insights/onboarding");
+              }
             }
           }}
         >
@@ -44,6 +47,11 @@ export default function InsightsPage() {
               </p>
             </div>
           </div>
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/5">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </Card>
 
         {/* AI Card */}
