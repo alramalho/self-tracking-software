@@ -387,7 +387,7 @@ const ProfilePage: React.FC = () => {
         <Tabs defaultValue="plans" className="w-full">
           <TabsList
             className={`grid w-full h-13 bg-gray-50 ${
-              isOnesOwnProfile ? "grid-cols-3" : "grid-cols-2"
+              isOnesOwnProfile && userHasAccessToAi ? "grid-cols-3" : "grid-cols-2"
             }`}
           >
             <TabsTrigger value="plans">
