@@ -67,6 +67,7 @@ export default function OnboardingPage() {
       });
 
       setCreatedMetricId(response.data.id);
+      metricsAndEntriesQuery.refetch();
       toast.success("Metric created successfully");
       setStep(3);
     } catch (error) {

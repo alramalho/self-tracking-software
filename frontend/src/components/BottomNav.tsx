@@ -102,7 +102,7 @@ const BottomNav = () => {
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/add') ? 'Add' : ''}</span>
           </Link>
           <Link
-            href="/insights"
+            href="/insights/dashboard"
             className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
               isActiveRoute('/insights') 
               ? 'text-blue-500 scale-110 -translate-y-0.5' 
