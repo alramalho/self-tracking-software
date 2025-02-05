@@ -7,6 +7,7 @@ import { ExampleCorrelations } from "@/components/ExampleCorrelations";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { MetricRaters } from "@/components/MetricRaters";
 import AppleLikePopover from "./AppleLikePopover";
+import { useEffect } from "react";
 
 interface InsightsBannerProps {
   open: boolean;
@@ -15,39 +16,39 @@ interface InsightsBannerProps {
 
 export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const router = useRouter();
-  const { isPushGranted, requestPermission } = useNotifications();
   const { useMetricsAndEntriesQuery, useHasMetricsToLogToday } = useUserPlan();
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
   const hasMetricsToLogToday = useHasMetricsToLogToday();
 
-  // Don't show the banner if there are still metrics to log today
-  if (hasMetricsToLogToday) {
-    return null;
-  }
-
-  const requestNotificationPermission = async () => {
-    try {
-      if (isPushGranted) {
-        router.push("/insights/onboarding");
-      } else {
-        await requestPermission();
-      }
-      onClose();
-    } catch (error) {
-      console.error("Error requesting notification permission:", error);
-    }
-  };
+  useEffect(() => {
+    console.log("rendering insights banner");
+  }, []);
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       {hasMetrics ? (
-        <div className="space-y-4 p-6">
-          <h2 className="text-xl font-semibold mb-4">
-            Activity Logged Successfully! How are you feeling?
-          </h2>
-          <MetricRaters />
-        </div>
+        <>
+          {hasMetricsToLogToday ? (
+            <div className="space-y-4 p-6">
+              {(() => {
+                const now = new Date();
+                const hours = now.getHours();
+                const minutes = now.getMinutes();
+                const timeString = `${hours % 12 || 12}:${minutes.toString().padStart(2, '0')}${hours >= 12 ? 'pm' : 'am'}`;
+                
+                return hours >= 16 ? (
+                  <h2 className="text-xl font-semibold mb-4 text-center">
+                    It&apos;s {timeString}, let&apos;s log your metrics 😊
+                  </h2>
+                ) : (
+                  <h2 className="text-xl font-semibold mb-4 text-center">Log your metrics to get insights</h2>
+                );
+              })()}
+              <MetricRaters />
+            </div>
+          ) : null}
+        </>
       ) : (
         <div className="space-y-8">
           <div className="text-center space-y-4">
@@ -66,10 +67,10 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
             <Button
               size="lg"
               className="w-full max-w-sm"
-              onClick={requestNotificationPermission}
+              onClick={() => router.push("/insights/onboarding")}
             >
               <ChevronRight className="w-4 h-4 mr-2" />
-              Get Started
+              Go to insights page
             </Button>
           </div>
         </div>

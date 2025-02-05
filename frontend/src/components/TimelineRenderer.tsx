@@ -106,35 +106,36 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
           const hasImageExpired = !entry.image || !entry.image.expires_at || new Date(entry.image.expires_at) < new Date();
 
           return (
-            <>
-            <ActivityEntryPhotoCard
-              key={entry.id}
-              imageUrl={entry.image?.url}
-              activityEntryId={entry.id}
-              activityTitle={activity.title}
-              activityEmoji={activity.emoji || ""}
-              activityEntryQuantity={entry.quantity}
-              activityEntryReactions={entry.reactions || {}}
-              activityMeasure={activity.measure}
-              isoDate={entry.date}
-              description={entry.description}
-              userPicture={user?.picture}
-              daysUntilExpiration={daysUntilExpiration}
-              hasImageExpired={hasImageExpired}
-              userName={user?.name}
-              userUsername={user?.username}
-              onAvatarClick={() => {
-                router.push(`/profile/${user?.username}`);
-              }}
-            />
-            {entry.is_week_finisher && isInCurrentWeek(entry.date) && (
-              <WeeklyCompletionCard
-                small
-                username={user?.name}
-                planName={entry.plan_finished_name}
+            <React.Fragment key={entry.id}>
+              <ActivityEntryPhotoCard
+                key={entry.id}
+                imageUrl={entry.image?.url}
+                activityEntryId={entry.id}
+                activityTitle={activity.title}
+                activityEmoji={activity.emoji || ""}
+                activityEntryQuantity={entry.quantity}
+                activityEntryReactions={entry.reactions || {}}
+                activityMeasure={activity.measure}
+                isoDate={entry.date}
+                description={entry.description}
+                userPicture={user?.picture}
+                daysUntilExpiration={daysUntilExpiration}
+                hasImageExpired={hasImageExpired}
+                userName={user?.name}
+                userUsername={user?.username}
+                onAvatarClick={() => {
+                  router.push(`/profile/${user?.username}`);
+                }}
               />
-            )}
-            </>
+              {entry.is_week_finisher && isInCurrentWeek(entry.date) && (
+                <WeeklyCompletionCard
+                  key={`${entry.id}-completion`}
+                  small
+                  username={user?.name}
+                  planName={entry.plan_finished_name}
+                />
+              )}
+            </React.Fragment>
           );
         })}
     </div>
