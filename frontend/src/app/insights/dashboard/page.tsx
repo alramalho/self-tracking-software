@@ -14,27 +14,28 @@ import {
 } from "@/contexts/UserPlanContext";
 import Divider from "@/components/Divider";
 import { MetricRaters } from "@/components/MetricRaters";
+import { Loader2 } from "lucide-react";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 
 export default function InsightsDashboardPage() {
-  const api = useApiWithAuth();
-  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
+  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery, useHasMetricsToLogToday } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
+  const { data: metricsAndEntriesData, isLoading } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics || [];
   const entries = metricsAndEntriesData?.entries || [];
   const activities = userData?.activities || [];
   const activityEntries = userData?.activityEntries || [];
-  const [isLoading, setIsLoading] = useState(true);
+  const hasMetrics = metrics.length > 0;
+  const router = useRouter();
 
   useEffect(() => {
-    if (userData && metricsAndEntriesData) {
-      setIsLoading(false);
+    if (!hasMetrics) {
+      router.push("/insights/onboarding");
     }
-  }, [userData, metricsAndEntriesData]);
+  }, [isLoading, hasMetrics]);
 
   // Find the metric with the most entries
   const metricEntryCounts = metrics.map((metric) => ({
@@ -44,10 +45,16 @@ export default function InsightsDashboardPage() {
   const maxEntries = Math.max(...metricEntryCounts.map((m) => m.count));
 
   const renderProgressUI = (targetEntries: number, specificMetric?: Metric) => {
-    const metricsToShow = specificMetric 
-      ? [{ metric: specificMetric, count: entries.filter((e) => e.metric_id === specificMetric.id).length }] 
+    const metricsToShow = specificMetric
+      ? [
+          {
+            metric: specificMetric,
+            count: entries.filter((e) => e.metric_id === specificMetric.id)
+              .length,
+          },
+        ]
       : metricEntryCounts;
-    
+
     return (
       <Card className="p-8">
         <div className="space-y-6">
@@ -63,32 +70,30 @@ export default function InsightsDashboardPage() {
           )}
 
           <div className="space-y-4">
-            {metricsToShow.map(
-              ({ metric, count }) => {
-                const progressPercent = (count / targetEntries) * 100;
-                return (
-                  <div key={metric.id} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>
-                        {metric.emoji} {metric.title}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {count} / {targetEntries} entries
-                      </span>
-                    </div>
-                    <Progress
-                      value={progressPercent}
-                      className="h-2"
-                      indicatorColor="bg-blue-500"
-                    />
-                    <p className="text-sm text-muted-foreground text-center mt-2">
-                      {targetEntries - count} more entries needed for stronger
-                      correlation analysis
-                    </p>
+            {metricsToShow.map(({ metric, count }) => {
+              const progressPercent = (count / targetEntries) * 100;
+              return (
+                <div key={metric.id} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>
+                      {metric.emoji} {metric.title}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {count} / {targetEntries} entries
+                    </span>
                   </div>
-                );
-              }
-            )}
+                  <Progress
+                    value={progressPercent}
+                    className="h-2"
+                    indicatorColor="bg-blue-500"
+                  />
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    {targetEntries - count} more entries needed for stronger
+                    correlation analysis
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </Card>
@@ -97,13 +102,9 @@ export default function InsightsDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-10 max-w-3xl">
-        <Card className="p-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-secondary rounded w-3/4"></div>
-            <div className="h-4 bg-secondary rounded w-1/2"></div>
-          </div>
-        </Card>
+      <div className="fixed inset-0 flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin mr-3" />
+        <p className="text-left">Loading your metrics...</p>
       </div>
     );
   }
@@ -159,10 +160,7 @@ export default function InsightsDashboardPage() {
   const calculateMetricCorrelations = (metricId: string) => {
     const metricEntries = entries
       .filter((entry) => entry.metric_id === metricId)
-      .sort(
-        (a, b) =>
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const correlations = activities
       .map((activity) => {
