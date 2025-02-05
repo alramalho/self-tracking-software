@@ -87,7 +87,7 @@ export default function OnboardingPage() {
               <div className="text-center space-y-4">
                 <ScanFace className="w-12 h-12 text-blue-500 mx-auto" />
                 <h1 className="text-2xl font-bold">
-                  Welcome to your insights dashboard!
+                  Welcome to your insights!
                 </h1>
                 <p className="text-md text-muted-foreground">
                   This is a page dedicated to correlate a metric of your

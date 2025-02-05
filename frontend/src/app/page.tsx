@@ -8,17 +8,34 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { Search, RefreshCw, UserPlus } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan } from "@/contexts/UserPlanContext";
+import { InsightsBanner } from "@/components/InsightsBanner";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { useCurrentUserDataQuery, hasLoadedUserData, refetchAllData } = useUserPlan();
+  const {
+    useCurrentUserDataQuery,
+    hasLoadedUserData,
+    refetchAllData,
+    useHasMetricsToLogToday,
+    useMetricsAndEntriesQuery,
+  } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
+  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
+  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
+  const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
+  const hasMetricsToLogToday = useHasMetricsToLogToday();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [insightsBannerOpen, setInsightsBannerOpen] = useState(false);
+  const [insightsBannerMuteUntil, setInsightsBannerMuteUntil] = useLocalStorage<string | null>("insightsBannerMuteUntil", null);
 
+  useEffect(() => {
+    console.log("insightsBannerOpen", insightsBannerOpen);
+  }, [insightsBannerOpen]);
   useEffect(() => {
     if (
       isSignedIn &&
@@ -27,8 +44,17 @@ const HomePage: React.FC = () => {
       userData?.activities?.length === 0
     ) {
       router.push("/onboarding");
+    } else if (!hasMetrics || hasMetricsToLogToday) {
+      const muteUntilDate = insightsBannerMuteUntil ? new Date(insightsBannerMuteUntil) : null;
+      const now = new Date();
+      console.log("muteUntilDate", muteUntilDate);
+      console.log("now", now);
+      console.log("!muteUntilDate", !muteUntilDate);
+      if (!muteUntilDate || now > muteUntilDate) {
+        setInsightsBannerOpen(true);
+      }
     }
-  }, [userData, isSignedIn, hasLoadedUserData]);
+  }, [userData, isSignedIn, hasLoadedUserData, insightsBannerMuteUntil]);
 
   if (!isSignedIn) {
     router.push("/signin");
@@ -41,6 +67,14 @@ const HomePage: React.FC = () => {
 
   const handleRefresh = async () => {
     await refetchAllData();
+  };
+
+  const handleBannerClose = () => {
+    setInsightsBannerOpen(false);
+    // Set mute until 1 hour from now
+    const muteUntil = new Date();
+    muteUntil.setHours(muteUntil.getHours() + 1);
+    setInsightsBannerMuteUntil(muteUntil.toISOString());
   };
 
   return (
@@ -78,7 +112,7 @@ const HomePage: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">
           Friend&apos;s last activities
         </h2>
-        <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)}/>
+        <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)} />
       </div>
 
       <AppleLikePopover
@@ -90,6 +124,11 @@ const HomePage: React.FC = () => {
           <UserSearch onUserClick={handleUserClick} />
         </div>
       </AppleLikePopover>
+
+      <InsightsBanner
+        open={insightsBannerOpen}
+        onClose={handleBannerClose}
+      />
     </div>
   );
 };

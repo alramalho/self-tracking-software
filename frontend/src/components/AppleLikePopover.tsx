@@ -6,6 +6,7 @@ import {
   DrawerContent,
   DrawerTrigger,
   DrawerClose,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 
 interface AppleLikePopoverProps {
@@ -14,6 +15,7 @@ interface AppleLikePopoverProps {
   unclosable?: boolean;
   className?: string;
   open?: boolean;
+  title?: string;
 }
 
 const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
@@ -22,10 +24,12 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   unclosable = false,
   className,
   open = false,
+  title = "Content",
 }) => {
   return (
     <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DrawerContent className={`px-4 pb-4 ${className}`}>
+        <DrawerTitle className="sr-only">{title}</DrawerTitle>
         {!unclosable && (
           <DrawerClose asChild>
             <Button
