@@ -21,7 +21,6 @@ export function LoggerProvider({ children }: { children: React.ReactNode }) {
         });
       }
       
-      console.log("✨ Logger initialized");
     });
 
     // Cleanup on unmount

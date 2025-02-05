@@ -112,9 +112,5 @@ export const useMicrophone = () => {
     [isRecording, startRecording, stopRecording]
   );
 
-  useEffect(() => {
-    console.log("isRecording", isRecording);
-  }, [isRecording]);
-
   return { isRecording, toggleRecording, cancelRecording };
 };

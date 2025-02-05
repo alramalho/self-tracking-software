@@ -20,10 +20,8 @@ installSerwist({
 
 // Modify your existing showNotification code
 self.addEventListener("push", function (event: any) {
-  console.log("Push message received:", event);
   if (event.data) {
     const data = event.data.json();
-    console.log("Push data:", data);
     event.waitUntil(
       self.registration.showNotification(data.title, {
         body: data.body,
@@ -37,7 +35,6 @@ self.addEventListener("push", function (event: any) {
 
 // Add this new event listener
 self.addEventListener("notificationclick", function (event: any) {
-  console.log("Notification clicked:", event);
   event.notification.close();
 
   if (event.notification.data && event.notification.data.url) {

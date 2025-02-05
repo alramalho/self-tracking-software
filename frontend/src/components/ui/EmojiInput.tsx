@@ -58,8 +58,6 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
 }) => {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    console.log(`evaluating ${newValue}`);
-    console.log(isOneEmoji(newValue));
     // Only accept if it's empty or a single emoji
     if (newValue === "" || (isOneEmoji(newValue))) {
       onChange(newValue);

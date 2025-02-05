@@ -18,7 +18,6 @@ export async function generateMetadata(
       if (!res.ok) throw new Error("Failed to fetch user data");
       return res.json();
     });
-    console.log({ userData });
     const user = userData.user;
     if (!user) throw new Error("User not found");
 
@@ -39,7 +38,6 @@ export async function generateMetadata(
       ogImageUrl.searchParams.append("currentlyWorkingOnGoal", userData.plans[0]?.goal);
     }
     
-    console.log({ ogImageUrl: ogImageUrl.toString() });
     return {
       title,
       description,
