@@ -168,8 +168,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         ),
       ].sort((a, b) => a.getTime() - b.getTime());
 
-      console.log({ groupPlans });
-      console.log({ allDates });
 
       if (allDates.length === 0) {
         setLoading(false);

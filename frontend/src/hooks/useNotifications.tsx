@@ -34,7 +34,6 @@ interface NotificationsContextType {
   isAppInstalled: boolean;
   isPushGranted: boolean;
   setIsPushGranted: (isPushGranted: boolean) => void;
-  alertSubscriptionEndpoint: () => void;
 }
 
 const NotificationsContext = createContext<
@@ -91,37 +90,6 @@ export const NotificationsProvider = ({
       console.log("Subscription:" + subscription.endpoint);
     }
   }, [subscription]);
-
-  useEffect(() => {
-    if (registration) {
-      console.log(
-        `Registration: ${JSON.stringify(
-          registration
-        )}\nRegistration.active: ${JSON.stringify(registration.active)}\n`
-      );
-      if (registration.active) {
-        console.log(
-          "Registration.active: " + JSON.stringify(registration.active)
-        );
-        registration.active.addEventListener("push", (event) => {
-          console.log("Push message received from within:", event);
-        });
-        if (registration.active.state === "activated") {
-          console.log(
-            "Registration.active.state: " + registration.active.state
-          );
-        }
-      }
-    }
-  }, [registration]);
-
-  const alertSubscriptionEndpoint = () => {
-    if (subscription) {
-      console.log("Subscription:" + subscription.endpoint);
-    } else {
-      console.log("No subscription");
-    }
-  };
 
   useEffect(() => {
     const isInPWA = window.matchMedia("(display-mode: standalone)").matches;
@@ -241,12 +209,10 @@ export const NotificationsProvider = ({
                     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
                 });
                 setSubscription(subscription);
-                console.log("Push endpoint:" + subscription.endpoint);
                 // Use api in a useCallback hook
                 await updatePwaStatus(subscription);
               } catch (err) {
                 console.error("Failed to subscribe:", err);
-                console.log("Failed to subscribe: " + err);
               }
             } else {
               console.log("Push manager permission state is: " + pm);
@@ -360,7 +326,6 @@ export const NotificationsProvider = ({
         isAppInstalled,
         isPushGranted,
         setIsPushGranted,
-        alertSubscriptionEndpoint,
       }}
     >
       {children}
