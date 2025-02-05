@@ -32,7 +32,7 @@ export default function InsightsDashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!hasMetrics) {
+    if (!isLoading && !hasMetrics) {
       router.push("/insights/onboarding");
     }
   }, [isLoading, hasMetrics]);
