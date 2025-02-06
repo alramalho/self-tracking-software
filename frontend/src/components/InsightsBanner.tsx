@@ -41,7 +41,7 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
               <MetricRaters onAllRatingsSubmitted={onClose} />
             </>
           ) : (
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-4 py-8">
               <Clock className="w-12 h-12 mx-auto text-gray-400" />
               <h2 className="text-xl font-semibold">
                 Metrics can be logged after 4 PM
