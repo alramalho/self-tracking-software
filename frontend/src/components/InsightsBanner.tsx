@@ -26,10 +26,6 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const timeString = `${hours % 12 || 12}:${minutes.toString().padStart(2, '0')}${hours >= 12 ? 'pm' : 'am'}`;
   const canLogMetrics = hours >= 16;
 
-  useEffect(() => {
-    console.log("rendering insights banner");
-  }, []);
-
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       {hasMetrics ? (
