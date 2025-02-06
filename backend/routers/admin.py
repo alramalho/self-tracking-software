@@ -15,8 +15,7 @@ from pytz import UTC
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
 from emails.loops import send_loops_event
-from ai.llm import ask_schema
-from controllers.prompt_controller import PromptController
+from controllers.prompt_controller import RecurrentMessageGenerator
 from shared.logger import logger
 from bson import ObjectId
 from entities.message import Message
@@ -35,7 +34,7 @@ notification_manager = NotificationManager()
 activities_gateway = ActivitiesGateway()
 s3_gateway = S3Gateway()
 ses_gateway = SESGateway()
-prompt_controller = PromptController()
+prompt_controller = RecurrentMessageGenerator()
 limiter = Limiter(key_func=get_remote_address)
 
 ALLOWED_ORIGINS: Set[str] = {
@@ -46,6 +45,7 @@ ALLOWED_ORIGINS: Set[str] = {
 BLACKLISTED_IPS: Set[str] = set()  # Add known bad IPs
 MAX_ERROR_LENGTH = 1000  # Prevent huge error messages
 
+message_generator = RecurrentMessageGenerator()
 
 async def admin_auth(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -131,59 +131,55 @@ async def _process_checkin_notifications(
     filtered_users = [u for u in users if posthog.feature_enabled("ai-bot-access", u.id) or ENVIRONMENT == "dev"]
     
     for user in filtered_users:
+        try:
+            message_id = str(ObjectId())
+            message = await message_generator.generate_message(user.id, "user-recurrent-checkin")
 
-        prompt = prompt_controller.get_prompt(
-            user.id, "user-recurrent-checkin"
-        )
-
-        message_id = str(ObjectId())
-        class ReasoningSchema(BaseModel):
-            message: str = Field(..., description="The message to be sent to the user")
-            reasoning: str = Field(..., description="The step by step detailed reasoning analysing your instructions and how to craft the most effective message to the user")
-
-        message = ask_schema(prompt, 'You are a helpful assistant', pymodel=ReasoningSchema, temperature=0.7).message.strip('"')
-
-        notification = Notification.new(
-            user_id=user.id,
-            message=message,
-            type="engagement",
-            recurrence=None,
-            related_data={
-                "message_id": message_id,
-                "message_text": message,
-            },
-        )
-
-        if not dry_run:
-            notification = await notification_manager.create_and_process_notification(
-                notification
+            notification = Notification.new(
+                user_id=user.id,
+                message=message,
+                type="engagement",
+                recurrence=None,
+                related_data={
+                    "message_id": message_id,
+                    "message_text": message,
+                },
             )
-            memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
-            memory.write(
-                Message.new(
-                    id=message_id,
-                    text=message,
-                    sender_name="Jarvis",
-                    sender_id="0",
-                    recipient_name=user.name,
-                    recipient_id=user.id,
-                    emotions=[],
+
+            if not dry_run:
+                notification = await notification_manager.create_and_process_notification(
+                    notification
                 )
-            )
+                memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+                memory.write(
+                    Message.new(
+                        id=message_id,
+                        text=message,
+                        sender_name="Jarvis",
+                        sender_id="0",
+                        recipient_name=user.name,
+                        recipient_id=user.id,
+                        emotions=[],
+                    )
+                )
 
-        notifications_processed.append(
-            {
-                "user": {
-                    "username": user.username,
-                    "id": user.id,
-                },
-                "notification": {
-                    "message": notification.message,
-                    "sent_at": notification.created_at,
-                    "id": notification.id,
-                },
-            }
-        )
+            notifications_processed.append(
+                {
+                    "user": {
+                        "username": user.username,
+                        "id": user.id,
+                    },
+                    "notification": {
+                        "message": notification.message,
+                        "sent_at": notification.created_at,
+                        "id": notification.id,
+                    },
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error processing notification for user {user.username}: {str(e)}")
+            continue
+
     return {"notifications_processed": notifications_processed}
 
 
