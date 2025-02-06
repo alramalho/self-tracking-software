@@ -13,14 +13,17 @@ import {
   MetricEntry,
 } from "@/contexts/UserPlanContext";
 import Divider from "@/components/Divider";
-import { MetricRaters } from "@/components/MetricRaters";
 import { Loader2 } from "lucide-react";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 
 export default function InsightsDashboardPage() {
-  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery, useHasMetricsToLogToday } = useUserPlan();
+  const {
+    useCurrentUserDataQuery,
+    useMetricsAndEntriesQuery,
+    useHasMetricsToLogToday,
+  } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData, isLoading } = metricsAndEntriesQuery;
@@ -69,7 +72,7 @@ export default function InsightsDashboardPage() {
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {metricsToShow.map(({ metric, count }) => {
               const progressPercent = (count / targetEntries) * 100;
               return (
@@ -87,13 +90,12 @@ export default function InsightsDashboardPage() {
                     className="h-2"
                     indicatorColor="bg-blue-500"
                   />
-                  <p className="text-sm text-muted-foreground text-center mt-2">
-                    {targetEntries - count} more entries needed for stronger
-                    correlation analysis
-                  </p>
                 </div>
               );
             })}
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Rate {targetEntries} entries to generate meaningful insights.
+            </p>
           </div>
         </div>
       </Card>
@@ -105,15 +107,6 @@ export default function InsightsDashboardPage() {
       <div className="fixed inset-0 flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
         <p className="text-left">Loading your metrics...</p>
-      </div>
-    );
-  }
-
-  if (maxEntries < 15) {
-    return (
-      <div className="container mx-auto py-10 max-w-3xl space-y-8">
-        {renderProgressUI(15)}
-        <MetricRaters />
       </div>
     );
   }
@@ -206,54 +199,6 @@ export default function InsightsDashboardPage() {
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
       <div className="space-y-4">
-        {metrics.map((metric) => {
-          const metricEntryCount = entries.filter(
-            (e) => e.metric_id === metric.id
-          ).length;
-          if (metricEntryCount >= 15) {
-            const correlations = calculateMetricCorrelations(metric.id);
-            if (correlations.length > 0) {
-              return (
-                <Card key={metric.id} className="p-8">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <h2 className="text-2xl font-bold">
-                        {metric.emoji} {metric.title} Insights
-                      </h2>
-                      <p className="text-muted-foreground">
-                        Here&apos;s how your activities correlate with your{" "}
-                        {metric.title.toLowerCase()}:
-                      </p>
-                    </div>
-                    <div className="space-y-4">
-                      {correlations.map((correlation) => (
-                        <CorrelationEntry
-                          key={correlation!.activity.id}
-                          title={`${correlation!.activity.emoji} ${
-                            correlation!.activity.title
-                          }`}
-                          pearsonValue={correlation!.correlation}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground italic">
-                      These percentages show the Pearson correlation coefficient
-                      between your happiness and activities. A positive
-                      correlation means the activity tends to increase your
-                      happiness, while a negative correlation means it tends to
-                      decrease it. The stronger the correlation (closer to +/-
-                      100%), the stronger the relationship.
-                    </p>
-                  </div>
-                </Card>
-              );
-            } else {
-              return renderProgressUI(15, metric);
-            }
-          }
-          return renderProgressUI(15, metric);
-        })}
-
         {/* Show progress UI for next milestone if no correlations are found */}
         {!metrics.some((metric) => {
           const count = entries.filter((e) => e.metric_id === metric.id).length;
@@ -262,10 +207,6 @@ export default function InsightsDashboardPage() {
           return correlations.length > 0;
         }) && renderProgressUI(getNextMilestone(maxEntries))}
       </div>
-
-      <Divider />
-      {/* Always show metric raters at the bottom */}
-      <MetricRaters />
     </div>
   );
 }

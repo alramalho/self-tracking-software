@@ -23,35 +23,35 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const now = new Date();
   const hours = now.getHours();
   const minutes = now.getMinutes();
-  const timeString = `${hours % 12 || 12}:${minutes.toString().padStart(2, '0')}${hours >= 12 ? 'pm' : 'am'}`;
-  const canLogMetrics = hours >= 16;
+  const timeString = `${hours % 12 || 12}:${minutes
+    .toString()
+    .padStart(2, "0")}${hours >= 12 ? "pm" : "am"}`;
+  const canLogMetrics =
+    process.env.NEXT_PUBLIC_ENVIRONMENT === "development" ? true : hours >= 16;
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       {hasMetrics ? (
         <>
-          {hasMetricsToLogToday ? (
-            <div className="space-y-4 p-6">
-              {canLogMetrics ? (
-                <>
-                  <h2 className="text-xl font-semibold mb-4 text-center">
-                    It&apos;s {timeString}, let&apos;s log your metrics 😊
-                  </h2>
-                  <MetricRaters />
-                </>
-              ) : (
-                <div className="text-center space-y-4">
-                  <Clock className="w-12 h-12 mx-auto text-gray-400" />
-                  <h2 className="text-xl font-semibold">
-                    Metrics can be logged after 4 PM
-                  </h2>
-                  <p className="text-gray-500">
-                    This helps you reflect on your entire day. Come back at 4 PM to log your metrics!
-                  </p>
-                </div>
-              )}
+          {canLogMetrics ? (
+            <>
+              <h2 className="text-xl font-semibold m-4 mt-6 text-center">
+                It&apos;s {timeString}, let&apos;s log your metrics 😊
+              </h2>
+              <MetricRaters onAllRatingsSubmitted={onClose} />
+            </>
+          ) : (
+            <div className="text-center space-y-4">
+              <Clock className="w-12 h-12 mx-auto text-gray-400" />
+              <h2 className="text-xl font-semibold">
+                Metrics can be logged after 4 PM
+              </h2>
+              <p className="text-gray-500">
+                This helps you reflect on your entire day. Come back at 4 PM to
+                log your metrics!
+              </p>
             </div>
-          ) : null}
+          )}
         </>
       ) : (
         <div className="space-y-8">
