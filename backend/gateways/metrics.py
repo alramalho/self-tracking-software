@@ -112,15 +112,21 @@ class MetricsGateway:
         self.metric_entries_db_gateway.write(entry.dict())
         logger.info(f"MetricEntry {entry_id} marked as deleted")
 
-    def get_readable_metrics_and_entries(self, user_id: str, lookback_days: int = 7) -> None:
+    def get_readable_metrics_and_entries(self, user_id: str, lookback_days: int = 7) -> str:
         """Prints a readable report showing the user's metrics and their ratings over the specified number of past days."""
         metrics_list = self.get_all_metrics_by_user_id(user_id)
         metric_entries = self.get_all_metric_entries_by_user_id(user_id)
 
+        if len(metrics_list) == 0:
+            return "The user has no metrics"
+
+        # Build the output string
+        output = []
+
         # Summary
         metric_titles = [metric.title for metric in metrics_list]
-        print(f"- The user has {len(metrics_list)} metrics ({', '.join(metric_titles)})")
-        print(f"- Here are the ratings of the past {lookback_days} days")
+        output.append(f"- The user has {len(metrics_list)} metrics ({', '.join(metric_titles)})")
+        output.append(f"- Here are the ratings of the past {lookback_days} days")
 
         # Create mapping from metric id to title
         metric_by_id = {metric.id: metric.title for metric in metrics_list}
@@ -144,6 +150,8 @@ class MetricsGateway:
                 if entry_date == target_day:
                     day_entries.append(f"{metric_by_id.get(entry.metric_id, 'Unknown')} {entry.rating}/5")
             if day_entries:
-                print(f"  - {day_label}: {', '.join(day_entries)}")
+                output.append(f"  - {day_label}: {', '.join(day_entries)}")
             else:
-                print(f"  - {day_label}: No reports") 
+                output.append(f"  - {day_label}: No reports")
+        
+        return "\n".join(output) 
