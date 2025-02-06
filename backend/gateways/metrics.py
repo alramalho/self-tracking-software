@@ -1,7 +1,7 @@
 from typing import List, Optional
 from entities.metric import Metric, MetricEntry
 from gateways.database.mongodb import MongoDBGateway
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, date, UTC
 from loguru import logger
 from pymongo.errors import DuplicateKeyError
 
@@ -110,4 +110,40 @@ class MetricsGateway:
             raise MetricEntryDoesNotExistException()
         entry.deleted_at = datetime.now(UTC).isoformat()
         self.metric_entries_db_gateway.write(entry.dict())
-        logger.info(f"MetricEntry {entry_id} marked as deleted") 
+        logger.info(f"MetricEntry {entry_id} marked as deleted")
+
+    def get_readable_metrics_and_entries(self, user_id: str, lookback_days: int = 7) -> None:
+        """Prints a readable report showing the user's metrics and their ratings over the specified number of past days."""
+        metrics_list = self.get_all_metrics_by_user_id(user_id)
+        metric_entries = self.get_all_metric_entries_by_user_id(user_id)
+
+        # Summary
+        metric_titles = [metric.title for metric in metrics_list]
+        print(f"- The user has {len(metrics_list)} metrics ({', '.join(metric_titles)})")
+        print(f"- Here are the ratings of the past {lookback_days} days")
+
+        # Create mapping from metric id to title
+        metric_by_id = {metric.id: metric.title for metric in metrics_list}
+        today = date.today()
+
+        for i in range(lookback_days):
+            target_day = today - timedelta(days=i)
+            if i == 0:
+                day_label = "Today"
+            elif i == 1:
+                day_label = "Yesterday"
+            else:
+                day_label = f"{i} days ago"
+
+            day_entries = []
+            for entry in metric_entries:
+                try:
+                    entry_date = datetime.fromisoformat(entry.date).date()
+                except Exception:
+                    continue
+                if entry_date == target_day:
+                    day_entries.append(f"{metric_by_id.get(entry.metric_id, 'Unknown')} {entry.rating}/5")
+            if day_entries:
+                print(f"  - {day_label}: {', '.join(day_entries)}")
+            else:
+                print(f"  - {day_label}: No reports") 

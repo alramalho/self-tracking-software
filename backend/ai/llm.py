@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import TypeVar, Type
 import time
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from shared.logger import logger
 from threading import Thread
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
@@ -72,6 +72,8 @@ def ask_schema(
     temperature: float = 0,
 ) -> T:
     start_time = time.time()
+
+    logger.info(f"Asking schema {text}")
 
     agent: Agent[None, T] = Agent(
         get_model(model),

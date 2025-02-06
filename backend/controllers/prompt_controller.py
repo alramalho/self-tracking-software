@@ -5,7 +5,7 @@ import random
 
 from gateways.activities import ActivitiesGateway
 from controllers.plan_controller import PlanController
-
+from gateways.metrics import MetricsGateway
 class PromptController:
     def get_prompt(self, user_id: str, prompt_tag: str) -> str:
         if prompt_tag == "user-recurrent-checkin":
@@ -50,6 +50,7 @@ class PromptController:
         notification_manager = NotificationManager()
         activities_gateway = ActivitiesGateway()
         plan_controller = PlanController()
+        metrics_gateway = MetricsGateway()
 
         notification_history = "\n".join(
             [notification.message for notification in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)]
@@ -70,6 +71,7 @@ Here’s some quick info about the user:
 - Activities: {[str(a) for a in activities_gateway.get_all_activities_by_user_id(user_id)]}
 - Recent Activities: {activities_gateway.get_readable_recent_activity_entries(user_id)}
 - Plans: {plan_controller.get_readable_plans(user_id)}
+- Metrics: {metrics_gateway.get_readable_metrics_and_entries(user_id)}
 
 Current UTC time: {datetime.now(pytz.UTC).strftime("%A, %B %d, %Y at %I:%M %p %Z")}
 
