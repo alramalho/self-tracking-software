@@ -1,72 +1,57 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
+import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
+import { toast } from "react-hot-toast";
+import { Loader2, Plus } from "lucide-react";
+import { InsightsBanner } from "@/components/InsightsBanner";
+import { Card } from "@/components/ui/card";
 import ActivitySelector from "@/components/ActivitySelector";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
-import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import { toast } from "react-hot-toast";
-import { Loader2, X } from "lucide-react";
-import { InsightsBanner } from "@/components/InsightsBanner";
+import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
+
+interface ActivityLogData {
+  date: Date;
+  quantity: number;
+}
 
 const LogPage: React.FC = () => {
-  const { useCurrentUserDataQuery } = useUserPlan();
+  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
+  const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const activities = userData?.activities || [];
-  const [selectedActivity, setSelectedActivity] = useState<
-    Activity | undefined
-  >(undefined);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    new Date()
-  );
-  const [quantity, setQuantity] = useState<number>(0);
-  const [measureType, setMeasureType] = useState<string>("");
+  const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>();
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
+  const [showInsightsBanner, setShowInsightsBanner] = useState(false);
+  const [showActivityLogger, setShowActivityLogger] = useState(false);
+  const [activityLogData, setActivityLogData] = useState<ActivityLogData | null>(null);
 
-  const handleSelectActivity = (activity: Activity) => {
+  const handleActivitySelected = (activity: Activity) => {
     setSelectedActivity(activity);
-    setMeasureType(activity.measure || "");
-    setQuantity(0); // Reset quantity when changing activity
+    setShowActivityLogger(true);
   };
 
-  const handleSelectDate = (date: Date | undefined) => {
-    if (date && date <= new Date()) {
-      const utcDate = new Date(
-        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-      );
-      setSelectedDate(utcDate);
-    }
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  };
-
-  const handleQuantityChange = (amount: number) => {
-    setQuantity(Math.max(0, quantity + amount));
-  };
-
-  const handleQuickSelect = (value: number) => {
-    setQuantity(value);
-  };
-
-  const handleLogActivity = () => {
-    if (!selectedActivity || !selectedDate) {
-      toast.error("Please select an activity and date.");
-      return;
-    }
-
+  const handleActivityLogSubmit = (data: ActivityLogData) => {
+    setActivityLogData(data);
+    setShowActivityLogger(false);
     setShowPhotoUploader(true);
   };
 
   const handleActivityLogged = () => {
     setShowPhotoUploader(false);
-    // Reset form
     setSelectedActivity(undefined);
-    setSelectedDate(new Date());
-    setQuantity(0);
-    setMeasureType("");
+    setActivityLogData(null);
   };
+
+  const metrics = metricsAndEntriesData?.metrics ?? [];
+  const hasMetrics = metrics.length > 0;
+  
+  const metricEmojis = metrics.slice(0, 3).map(m => m.emoji).filter(Boolean);
+  const metricTitles = metrics.map(m => m.title);
+  const displayTitle = metricTitles.length > 1 
+    ? `${metricTitles[0]}${metricTitles.length > 1 ? '...' : ''}`
+    : metricTitles[0] ?? "Rate your day";
 
   if (currentUserDataQuery.isLoading) {
     return (
@@ -83,93 +68,61 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
+      {hasMetrics && (
+        <>
+          <h1 className="text-2xl font-bold mb-6">Log Metrics</h1>
+          <Card
+            className="mb-8 p-4 cursor-pointer border-2 border-gray-300 transition-colors"
+            onClick={() => setShowInsightsBanner(true)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1">
+                  {metricEmojis.map((emoji, index) => (
+                    <span key={index} className="text-lg">{emoji}</span>
+                  ))}
+                </div>
+                <span className="text-lg ml-2">{displayTitle}</span>
+              </div>
+              <Plus className="w-5 h-5 text-gray-500" />
+            </div>
+          </Card>
+
+          <InsightsBanner
+            open={showInsightsBanner}
+            onClose={() => setShowInsightsBanner(false)}
+          />
+        </>
+      )}
 
       <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
       <ActivitySelector
         activities={activities}
         selectedActivity={selectedActivity}
-        onSelectActivity={(a) => {
-          handleSelectActivity(a);
-          // scroll to quantity
-          window.scrollTo({
-            top: document.body.scrollHeight,
-            behavior: "smooth",
-          });
-        }}
+        onSelectActivity={handleActivitySelected}
       />
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Select Date</h2>
-          <Calendar
-            id="calendar"
-            mode="single"
-            selected={selectedDate}
-            onSelect={(date) => {
-              handleSelectDate(date);
-            }}
-            className="rounded-md border"
-            disableFutureDates={true}
+
+      {selectedActivity && (
+        <>
+          <ActivityLoggerPopover
+            open={showActivityLogger}
+            onClose={() => setShowActivityLogger(false)}
+            selectedActivity={selectedActivity}
+            onSubmit={handleActivityLogSubmit}
           />
-        </div>
-        {selectedActivity && (
-          <div id="quantity">
-            <h2 className="text-xl font-semibold mb-2">{measureType}</h2>
-            <div className="flex items-center justify-center space-x-4">
-              <Button
-                onClick={() => handleQuantityChange(-1)}
-                variant="outline"
-                size="icon"
-                className="bg-white"
-              >
-                -
-              </Button>
-              <span className="text-2xl font-bold">{quantity}</span>
-              <Button
-                onClick={() => handleQuantityChange(1)}
-                variant="outline"
-                size="icon"
-                className="bg-white"
-              >
-                +
-              </Button>
-            </div>
-            <div className="mt-4 flex justify-center space-x-2">
-              {[10, 30, 45, 60, 90].map((value) => (
-                <Button
-                  key={value}
-                  onClick={() => handleQuickSelect(value)}
-                  variant="secondary"
-                  className="bg-white"
-                  size="sm"
-                >
-                  {value}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="mt-8">
-        <div className="fixed bottom-0 left-0 right-0 p-3 pb-[6.7rem] bg-white border-t-2 z-[45]">
-          <Button
-            onClick={handleLogActivity}
-            className="w-full bg-black text-white h-10"
-            disabled={!selectedActivity || !selectedDate || quantity === 0}
-          >
-            Log Activity
-          </Button>
-        </div>
-      </div>
-      <ActivityPhotoUploader
-        open={showPhotoUploader}
-        activityData={{
-          activityId: selectedActivity?.id ?? "",
-          date: selectedDate ?? new Date(),
-          quantity: quantity,
-        }}
-        onClose={() => setShowPhotoUploader(false)}
-        onSuccess={handleActivityLogged}
-      />
+
+          <ActivityPhotoUploader
+            open={showPhotoUploader}
+            activityData={{
+              activityId: selectedActivity.id,
+              date: activityLogData?.date ?? new Date(),
+              quantity: activityLogData?.quantity ?? 0,
+            }}
+            onClose={() => setShowPhotoUploader(false)}
+            onSuccess={handleActivityLogged}
+          />
+        </>
+      )}
     </div>
   );
 };
