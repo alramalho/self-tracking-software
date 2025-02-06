@@ -19,27 +19,27 @@ class PromptController:
         
         if weekday == 0:  # Monday
             options = [
-                "Happy Monday! Ready to kick off the week?",
-                "It's Monday—let's start fresh. What's on your agenda today?"
+                "Ready to kick off the week?",
+                "What's on your agenda this week?"
             ]
         elif weekday == 2:  # Wednesday
             options = [
-                f"It's Wednesday. Noticed you recently did: {recent_activities}. How's it going?",
+                f"Noticed you recently did: {recent_activities}. How's it going?",
                 f"Midweek check: you've been busy with {recent_activities}. What's next?"
             ]
         elif weekday == 4:  # Friday
             options = [
-                "It's Friday — how did your week go? I can log anything you've forgot :)",
-                "Happy Friday. Any highlights from this week you'd like to share?"
+                "how did your week go? I can log anything you've forgot :)",
+                "Any highlights from this week you'd like to share?"
             ]
         elif weekday in [5, 6]:  # Saturday/Sunday
             options = [
-                "Hope you're having a good weekend. Any thoughts for the week ahead? Maybe picking up a little run?",
+                "How you doing :) got plans for next week?",
             ]
         else:  # Tuesday or Thursday
             options = [
-                "Hope you're having a good day. What's on your mind?",
-                "Quick check-in: how's your day going? anything you did you haven't logged today?"
+                "Hope your week has been going good. What's on your mind?",
+                "Quick check-in: how's your week going? anything you did you haven't logged?"
             ]
         return random.choice(options)
 
