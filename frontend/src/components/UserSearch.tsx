@@ -68,6 +68,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = []
         placeholder="Search users..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+        className="bg-white"
       />
       <ul className="mt-2">
         {searchResults.map((user) => (
