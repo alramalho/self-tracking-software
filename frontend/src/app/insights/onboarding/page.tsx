@@ -127,7 +127,8 @@ export default function OnboardingPage() {
     try {
       // Submit all ratings in sequence
       for (const metricId of createdMetricIds) {
-        await api.post(`/metrics/${metricId}/entries`, {
+        await api.post(`/log-metric`, {
+          metric_id: metricId,
           rating: ratings[metricId],
           description: description,
         });
