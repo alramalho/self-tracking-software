@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 
 from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
@@ -76,19 +76,18 @@ class ActivitiesGateway:
         for activity_id in all_activities_dict.keys():
             all_activity_entries.extend(self.get_all_activity_entries_by_activity_id(activity_id))
 
-        ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.created_at, reverse=True)
+        ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.date, reverse=True)
         
-        if past_day_limit is not None:
-            # Filter entries within the past_day_limit
-            current_date = datetime.now(UTC)
-            filtered_entries = [
-                entry for entry in ordered_activity_entries 
-                if (current_date - datetime.fromisoformat(entry.created_at)).days <= past_day_limit
-            ]
-            ordered_activity_entries = filtered_entries
-        else:
-            # Apply limit only if past_day_limit is not specified
-            ordered_activity_entries = ordered_activity_entries[:limit]
+        # Filter entries within the past_day_limit using timedelta for accurate comparison
+        current_date = datetime.now(UTC)
+        filtered_entries = []
+        for entry in ordered_activity_entries:
+            entry_date = datetime.fromisoformat(entry.date)
+            if entry_date.tzinfo is None:
+                entry_date = entry_date.replace(tzinfo=UTC)
+            if (current_date - entry_date) <= timedelta(days=past_day_limit):
+                filtered_entries.append(entry)
+        ordered_activity_entries = filtered_entries
         
         # return the date of the entry in the format 'Oct 27, 2024' + the title of the respective activity
         readable_activity_entries: List[str] = []
@@ -106,7 +105,7 @@ class ActivitiesGateway:
     
     def get_most_recent_activity_entries(self, user_id: str, limit: int = 5) -> List[ActivityEntry]:
         all_activity_entries = self.get_all_activity_entries_by_user_id(user_id)
-        ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.created_at, reverse=True)
+        ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.date, reverse=True)
         return ordered_activity_entries[:limit]
 
     def create_activity(self, activity: Activity) -> Activity:
