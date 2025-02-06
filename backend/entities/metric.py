@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from bson import ObjectId
-
+from typing import Optional
 class Metric(BaseModel):
     id: str
     user_id: str
@@ -30,9 +30,10 @@ class MetricEntry(BaseModel):
     date: str
     created_at: str
     updated_at: str
+    description: Optional[str] = None
 
     @classmethod
-    def new(cls, user_id: str, metric_id: str, rating: int, date: str = None):
+    def new(cls, user_id: str, metric_id: str, rating: int, date: str = None, description: Optional[str] = None):
         now = datetime.now().isoformat()
         return cls(
             id=str(ObjectId()),
@@ -42,4 +43,5 @@ class MetricEntry(BaseModel):
             date=date or now,
             created_at=now,
             updated_at=now,
+            description=description,
         )

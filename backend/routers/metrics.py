@@ -66,6 +66,7 @@ async def log_metric(
             metric_id=metric_data["metric_id"],
             rating=metric_data["rating"],
             date=metric_data.get("date"),
+            description=metric_data.get("description"),
         )
 
         # Check if an entry already exists for this date

@@ -8,7 +8,7 @@ import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Info, Mic, Loader2 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import { useMicrophone } from "@/hooks/useMicrophone";
 
 const MAX_FILE_SIZE = 150 * 1024; // 150KB in bytes
@@ -245,41 +245,13 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           className="hidden"
           disabled={isUploading}
         />
-        <div className="space-y-2">
-          <label
-            htmlFor="description"
-            className="text-sm font-medium text-gray-700 "
-          >
-            <span>Description (optional)</span>
-          </label>
-          <div className="flex flex-row items-center justify-between gap-4">
-            <Textarea
-              id="description"
-              placeholder="How was your activity? Share your thoughts..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full min-h-[80px]"
-              disabled={isUploading}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-12 w-12 ${isTranscribing ? "opacity-50" : ""}`}
-              onClick={() => toggleRecording(handleVoiceRecording)}
-              disabled={isTranscribing}
-            >
-              {isTranscribing ? (
-                <Loader2 className="h-12 w-12 animate-spin" />
-              ) : (
-                isRecording ? (
-                  <Mic className="h-12 w-12 text-red-400" />
-                ) : (
-                  <Mic className="h-12 w-12 text-gray-500" />
-                )
-              )}
-            </Button>
-          </div>
-        </div>
+        <TextAreaWithVoice
+          label="Description (optional)"
+          value={description}
+          onChange={setDescription}
+          placeholder="How was your activity? Share your thoughts..."
+          disabled={isUploading}
+        />
         <div className="mb-3">
           <Info className="w-5 h-5 text-gray-500 mb-1 mr-2 inline" />
           <p className="text-md text-gray-500 mb-6 inline">
