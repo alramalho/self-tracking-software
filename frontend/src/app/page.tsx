@@ -26,16 +26,12 @@ const HomePage: React.FC = () => {
   } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
+  const { data: metricsAndEntriesData, isFetched: metricsAndEntriesFetched } = metricsAndEntriesQuery;
   const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
   const hasMetricsToLogToday = useHasMetricsToLogToday();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [insightsBannerOpen, setInsightsBannerOpen] = useState(false);
   const [insightsBannerMuteUntil, setInsightsBannerMuteUntil] = useLocalStorage<string | null>("insightsBannerMuteUntil", null);
-
-  useEffect(() => {
-    console.log("insightsBannerOpen", insightsBannerOpen);
-  }, [insightsBannerOpen]);
   useEffect(() => {
     if (
       isSignedIn &&
@@ -44,17 +40,19 @@ const HomePage: React.FC = () => {
       userData?.activities?.length === 0
     ) {
       router.push("/onboarding");
-    } else if (!hasMetrics || hasMetricsToLogToday) {
+    } else if (metricsAndEntriesFetched && (!hasMetrics || hasMetricsToLogToday)) {
       const muteUntilDate = insightsBannerMuteUntil ? new Date(insightsBannerMuteUntil) : null;
       const now = new Date();
-      console.log("muteUntilDate", muteUntilDate);
-      console.log("now", now);
-      console.log("!muteUntilDate", !muteUntilDate);
       if (!muteUntilDate || now > muteUntilDate) {
-        setInsightsBannerOpen(true);
+        if (hasMetrics && hasMetricsToLogToday && now.getHours() <= 16) {
+          setInsightsBannerOpen(false);
+        } else {
+          setInsightsBannerOpen(true);
+          console.log("what");
+        }
       }
     }
-  }, [userData, isSignedIn, hasLoadedUserData, insightsBannerMuteUntil]);
+  }, [userData, isSignedIn, hasLoadedUserData, insightsBannerMuteUntil, metricsAndEntriesFetched]);
 
   if (!isSignedIn) {
     router.push("/signin");

@@ -77,12 +77,18 @@ const LogPage: React.FC = () => {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex -space-x-1">
+                <div className="flex">
                   {metricEmojis.map((emoji, index) => (
-                    <span key={index} className="text-lg">{emoji}</span>
+                    <span 
+                      key={index} 
+                      className="text-2xl relative -ml-2 first:ml-0" 
+                      style={{ zIndex: metricEmojis.length - index }}
+                    >
+                      {emoji}
+                    </span>
                   ))}
                 </div>
-                <span className="text-lg ml-2">{displayTitle}</span>
+                <span className="text-lg ml-2 font-medium">{displayTitle}</span>
               </div>
               <Plus className="w-5 h-5 text-gray-500" />
             </div>
