@@ -8,6 +8,8 @@ import { useClerk } from "@clerk/nextjs";
 import axios from "axios";
 import { useQuery, UseQueryResult, useQueryClient } from "@tanstack/react-query";
 import { usePostHog } from "posthog-js/react";
+import { logger } from "@/utils/logger";
+
 export interface Activity {
   id: string;
   title: string;
@@ -67,6 +69,7 @@ export interface User {
   friend_ids: string[];
   referred_user_ids: string[];
   pending_friend_requests: string[];
+  timezone?: string;
 }
 
 interface FriendRequest {
@@ -216,6 +219,7 @@ export interface UserPlanContextType {
   fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<UserDataEntry>;
   refetchUserData: () => Promise<UserDataEntry>;
   refetchAllData: () => Promise<UserDataEntry>;
+  updateTimezone: () => Promise<void>;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
@@ -529,6 +533,35 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const updateTimezone = async () => {
+    if (!isSignedIn) return;
+
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const response = await api.post('/update-timezone', { timezone });
+      currentUserDataQuery.refetch()
+      return response.data;
+    } catch (err) {
+      handleAuthError(err);
+      if (axios.isAxiosError(err) && err.response?.status === 400) {
+        logger.error(`Invalid timezone: ${err.response.data.detail}`);
+        toast.error("Failed to set timezone: Invalid timezone format");
+      } else {
+        toast.error("Failed to update timezone");
+      }
+      throw err;
+    }
+  };
+
+  // Add updateTimezone to the effect that runs when the user signs in
+  useEffect(() => {
+    if (isSignedIn && currentUserDataQuery.data?.user && !currentUserDataQuery.data.user.timezone) {
+      updateTimezone().catch(err => {
+        logger.error("Failed to update timezone on initial load:", err);
+      });
+    }
+  }, [isSignedIn, currentUserDataQuery.data?.user]);
+
   useEffect(() => {
     if (!isSignedIn) {
       queryClient.clear();
@@ -549,7 +582,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     notificationsData,
     fetchUserData,
     refetchUserData,
-    refetchAllData
+    refetchAllData,
+    updateTimezone
   };
 
   return (

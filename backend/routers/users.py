@@ -22,6 +22,8 @@ from analytics.posthog import posthog
 import time
 from emails.loops import upsert_loops_contact
 from gateways.messages import MessagesGateway
+from pytz import all_timezones
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -663,4 +665,21 @@ async def load_messages(current_user: User = Depends(is_clerk_user)):
     except Exception as e:
         logger.error(f"Failed to load messages: {e}")
         logger.error(f"Traceback: \n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class TimezoneUpdate(BaseModel):
+    timezone: str
+
+@router.post("/update-timezone")
+async def update_timezone(body: TimezoneUpdate, user: User = Depends(is_clerk_user)):
+    try:
+        if body.timezone not in all_timezones:
+            raise HTTPException(status_code=400, detail=f"Invalid timezone: {body.timezone}. Must be a valid pytz timezone.")
+            
+        updated_user = users_gateway.update_fields(user.id, {"timezone": body.timezone})
+        return {"message": "Timezone updated successfully", "user": updated_user}
+    except Exception as e:
+        logger.error(f"Failed to update timezone: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
