@@ -8,9 +8,8 @@ from loguru import logger
 
 from gateways.activities import ActivitiesGateway
 from controllers.plan_controller import PlanController
-from gateways.metrics import MetricsGateway
 from ai.assistant.flowchart_framework import FlowchartLLMFramework
-from gateways.activities import ActivitiesGateway
+from gateways.messages import MessagesGateway
 from ai.assistant.flowchart_nodes import Node, NodeType
 
 class PlanCompletionAnalysis(BaseModel):
@@ -73,21 +72,27 @@ class RecurrentMessageGenerator:
         plan_controller = PlanController()
         activities_gateway = ActivitiesGateway()
         users_gateway = UsersGateway()
-
+        notification_manager = NotificationManager()
         user = users_gateway.get_user_by_id(user_id)
 
         system_prompt = f"""You are Jarvis, a friendly assistant communicating in {user.language}. 
 Your goal is to send a short, direct message about the user's primary plan progress this week.
 Focus on remaining sessions and time left to complete them.
 Keep messages concise and actionable.
+Keep attentive to your past sent messages, not to repeat the same tone.
 Example: \"You're missing just one session of running 5km this week, there's still 3 days until the new week clock starts. You can do it 💪"\""""
 
         framework = FlowchartLLMFramework(recurrent_checkin_flowchart, system_prompt)
 
+        plans = plan_controller.get_readable_plans(user_id)
+        if not plans:
+            return "Hi, I'm Jarvis 👋. I see you don't have plans yet. They are an effective way to set milestones and I keep you in check!"
+
         context = {
-            "plans": plan_controller.get_readable_plans(user_id),
+            "plans": plan_controller.get_readable_plans(user_id)[0],
             "activity_history": activities_gateway.get_readable_recent_activity_entries(user_id),
             "current_time": datetime.now(pytz.UTC).strftime("%b %d, %Y, %A"),
+            "sent_messages": [n.message for n in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)],
             "language": user.language
         }
 
