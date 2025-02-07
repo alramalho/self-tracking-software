@@ -43,6 +43,7 @@ interface ActivityEntryPhotoCardProps {
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
+  onUsernameClick?: () => void;
   activityEntryId: string;
   description?: string;
 }
@@ -77,6 +78,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   editable,
   onAvatarClick,
   onEditClick,
+  onUsernameClick,
   activityEntryId,
   description,
 }) => {
@@ -298,7 +300,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               {activityEmoji}
             </span>
             <div className="flex flex-col">
-              <span className="text-sm text-gray-500">@{userUsername}</span>
+              <span 
+                className="text-sm text-gray-500 hover:underline cursor-pointer" 
+                onClick={onUsernameClick}
+              >
+                @{userUsername}
+              </span>
               <span className="font-semibold">
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>

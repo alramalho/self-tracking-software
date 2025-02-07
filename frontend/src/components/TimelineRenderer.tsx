@@ -126,6 +126,9 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
                 onAvatarClick={() => {
                   router.push(`/profile/${user?.username}`);
                 }}
+                onUsernameClick={() => {
+                  router.push(`/profile/${user?.username}`);
+                }}
               />
               {entry.is_week_finisher && isInCurrentWeek(entry.date) && (
                 <WeeklyCompletionCard
