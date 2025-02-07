@@ -18,7 +18,7 @@ class Notification(BaseModel):
     aws_cronjob_id: Optional[str] = None
     prompt_tag: Optional[str] = None
     status: Literal["pending", "processed", "opened", "concluded"] = "pending"
-    type: Literal["friend_request", "plan_invitation", "engagement", "info"] = "info"
+    type: Literal["friend_request", "plan_invitation", "engagement", "info", "metric-checkin"] = "info"
     related_id: Optional[str] = None  # For storing friend request or plan invitation IDs
     related_data: Optional[dict] = None
 
