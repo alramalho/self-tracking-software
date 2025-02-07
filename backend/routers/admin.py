@@ -28,6 +28,7 @@ from typing import Optional, Set
 from slowapi import Limiter
 from gateways.metrics import MetricsGateway
 from slowapi.util import get_remote_address
+import pytz
 
 router = APIRouter()
 security = HTTPBearer()
@@ -132,37 +133,51 @@ async def _process_metrics_notification(
 ) -> dict:
     notifications_processed = []
     for user in users:
-        missing_metrics_today, missing_metric_entries_today = (
-            metrics_gateway.get_missing_metric_and_entries_today_by_user_id(user.id)
-        )
-        missing_metrics_titles = [
-            f"{metric.title.lower()} {metric.emoji}"
-            for metric in missing_metrics_today
-        ]
-        missing_metrics_titles_str = " and ".join([", ".join(missing_metrics_titles[:-1]), missing_metrics_titles[-1]]) if len(missing_metrics_titles) > 1 else missing_metrics_titles[0] if missing_metrics_titles else ""
-        if len(missing_metric_entries_today) > 0:
-            notification = Notification.new(
-                user_id=user.id,
-                message=f"Almost midnight! Don't forget to rate your {missing_metrics_titles_str} today",
-                type="info",
-                recurrence=None,
+        try:
+            # Get user's local time - default to UTC if timezone not set
+            user_tz = pytz.timezone(user.timezone) if user.timezone else UTC
+            user_local_time = datetime.now(UTC).astimezone(user_tz)
+            
+            # Only process if it's 21:00 in user's timezone
+            if user_local_time.hour != 21:
+                continue
+                
+            missing_metrics_today, missing_metric_entries_today = (
+                metrics_gateway.get_missing_metric_and_entries_today_by_user_id(user.id)
             )
-            if not dry_run:
-                notification = (
-                    await notification_manager.create_and_process_notification(
-                        notification
-                    )
+            missing_metrics_titles = [
+                f"{metric.title.lower()} {metric.emoji}"
+                for metric in missing_metrics_today
+            ]
+            missing_metrics_titles_str = " and ".join([", ".join(missing_metrics_titles[:-1]), missing_metrics_titles[-1]]) if len(missing_metrics_titles) > 1 else missing_metrics_titles[0] if missing_metrics_titles else ""
+            if len(missing_metric_entries_today) > 0:
+                notification = Notification.new(
+                    user_id=user.id,
+                    message=f"Almost midnight! Don't forget to rate your {missing_metrics_titles_str} today",
+                    type="metric-checkin",
+                    recurrence=None,
                 )
+                if not dry_run:
+                    notification = (
+                        await notification_manager.create_and_process_notification(
+                            notification
+                        )
+                    )
 
-            notifications_processed.append(
-                {
-                    "user": {
-                        "username": user.username,
-                        "id": user.id,
-                    },
-                    "notification_message": notification.message,
-                }
-            )
+                notifications_processed.append(
+                    {
+                        "user": {
+                            "username": user.username,
+                            "id": user.id,
+                            "timezone": user.timezone or "UTC",
+                            "local_time": user_local_time.strftime("%H:%M"),
+                        },
+                        "notification_message": notification.message,
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Error processing metrics notification for user {user.username}: {str(e)}")
+            continue
 
     return {"notifications_processed": notifications_processed}
 

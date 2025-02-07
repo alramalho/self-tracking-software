@@ -135,7 +135,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             </button>
           </>
         );
-      case "info":
+      default:
         return (
           <>
             <button
@@ -147,8 +147,6 @@ const Notifications: React.FC<NotificationsProps> = () => {
             </button>
           </>
         );
-      default:
-        return null;
     }
   };
 
