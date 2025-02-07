@@ -86,12 +86,6 @@ export const NotificationsProvider = ({
   }, [isPushGranted]);
 
   useEffect(() => {
-    if (subscription) {
-      console.log("Subscription:" + subscription.endpoint);
-    }
-  }, [subscription]);
-
-  useEffect(() => {
     const isInPWA = window.matchMedia("(display-mode: standalone)").matches;
     setIsAppInstalled(isInPWA);
   }, []);
@@ -109,10 +103,6 @@ export const NotificationsProvider = ({
       } catch (err) {
         console.info(err);
       }
-
-      const beforeinstallprompt = (event: any) => {
-        console.log("Before install prompt: " + event);
-      };
 
       const appinstalled = (event: any) => {
         console.log("App installed: " + event);
@@ -134,11 +124,9 @@ export const NotificationsProvider = ({
         .catch((err: any) => console.log(err))
         .catch((err: Error) => console.warn(err));
 
-      window.addEventListener("beforeinstallprompt", beforeinstallprompt);
       window.addEventListener("appinstalled", appinstalled);
 
       return () => {
-        window.removeEventListener("beforeinstallprompt", beforeinstallprompt);
         window.removeEventListener("appinstalled", appinstalled);
       };
     } else {
@@ -285,7 +273,6 @@ export const NotificationsProvider = ({
           pwa_subscription_key: p256dh,
           pwa_subscription_auth_token: auth,
         });
-        console.log("PWA status updated");
       } catch (error) {
         console.error("Failed to update PWA status:", error);
         console.log("Failed to update PWA status: " + error);
