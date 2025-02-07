@@ -4,6 +4,7 @@ from gateways.database.mongodb import MongoDBGateway
 from datetime import datetime, timedelta, date, UTC
 from loguru import logger
 from pymongo.errors import DuplicateKeyError
+from typing import Tuple
 
 class MetricDoesNotExistException(Exception):
     pass
@@ -155,3 +156,14 @@ class MetricsGateway:
                 output.append(f"  - {day_label}: No reports")
         
         return "\n".join(output) 
+    
+    def get_missing_metric_and_entries_today_by_user_id(self, user_id: str) -> Tuple[List[Metric], List[MetricEntry]]:
+        metrics = self.get_all_metrics_by_user_id(user_id)
+        missing_metrics_today = []
+        missing_metric_entries_today = []
+        for metric in metrics:
+            entry = self.get_metric_entry_by_metric_and_date(metric.id, datetime.now(UTC).isoformat())
+            if not entry:
+                missing_metrics_today.append(metric)
+                missing_metric_entries_today.append(entry)
+        return missing_metrics_today, missing_metric_entries_today

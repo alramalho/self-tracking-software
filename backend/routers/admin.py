@@ -25,6 +25,7 @@ import json
 from pydantic import BaseModel
 from typing import Optional, Set
 from slowapi import Limiter
+from gateways.metrics import MetricsGateway
 from slowapi.util import get_remote_address
 
 router = APIRouter()
@@ -35,6 +36,7 @@ activities_gateway = ActivitiesGateway()
 s3_gateway = S3Gateway()
 ses_gateway = SESGateway()
 prompt_controller = RecurrentMessageGenerator()
+metrics_gateway = MetricsGateway()
 limiter = Limiter(key_func=get_remote_address)
 
 ALLOWED_ORIGINS: Set[str] = {
@@ -46,6 +48,7 @@ BLACKLISTED_IPS: Set[str] = set()  # Add known bad IPs
 MAX_ERROR_LENGTH = 1000  # Prevent huge error messages
 
 message_generator = RecurrentMessageGenerator()
+
 
 async def admin_auth(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -123,17 +126,55 @@ async def send_notification_to_all_users(
     return {"message": f"Notification sent successfully to {sent} users"}
 
 
+async def _process_metrics_notification(
+    users: list[User], dry_run: bool = True
+) -> dict:
+    notifications_processed = []
+    for user in users:
+        missing_metrics_today, missing_metric_entries_today = (
+            metrics_gateway.get_missing_metric_and_entries_today_by_user_id(user.id)
+        )
+        missing_metrics_titles = [
+            f"{metric.title.lower()} {metric.emoji}"
+            for metric in missing_metrics_today
+        ]
+        missing_metrics_titles_str = " and ".join([", ".join(missing_metrics_titles[:-1]), missing_metrics_titles[-1]]) if len(missing_metrics_titles) > 1 else missing_metrics_titles[0] if missing_metrics_titles else ""
+        if len(missing_metric_entries_today) > 0:
+            notification = Notification.new(
+                user_id=user.id,
+                message=f"Almost midnight! Don't forget to rate your {missing_metrics_titles_str} today",
+                type="info",
+                recurrence=None,
+            )
+            if not dry_run:
+                notification = (
+                    await notification_manager.create_and_process_notification(
+                        notification
+                    )
+                )
+
+            notifications_processed.append(notification)
+
+    return {"notifications_processed": notifications_processed}
+
+
 async def _process_checkin_notifications(
     users: list[User], dry_run: bool = True
 ) -> dict:
     notifications_processed = []
 
-    filtered_users = [u for u in users if posthog.feature_enabled("ai-bot-access", u.id) or ENVIRONMENT == "dev"]
-    
+    filtered_users = [
+        u
+        for u in users
+        if posthog.feature_enabled("ai-bot-access", u.id) or ENVIRONMENT == "dev"
+    ]
+
     for user in filtered_users:
         try:
             message_id = str(ObjectId())
-            message = await message_generator.generate_message(user.id, "user-recurrent-checkin")
+            message = await message_generator.generate_message(
+                user.id, "user-recurrent-checkin"
+            )
 
             notification = Notification.new(
                 user_id=user.id,
@@ -147,8 +188,10 @@ async def _process_checkin_notifications(
             )
 
             if not dry_run:
-                notification = await notification_manager.create_and_process_notification(
-                    notification
+                notification = (
+                    await notification_manager.create_and_process_notification(
+                        notification
+                    )
                 )
                 memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
                 memory.write(
@@ -177,7 +220,9 @@ async def _process_checkin_notifications(
                 }
             )
         except Exception as e:
-            logger.error(f"Error processing notification for user {user.username}: {str(e)}")
+            logger.error(
+                f"Error processing notification for user {user.username}: {str(e)}"
+            )
             continue
 
     return {"notifications_processed": notifications_processed}
@@ -214,10 +259,14 @@ async def _process_unactivated_emails(users: list[User], dry_run: bool = True) -
     triggered_users = []
     for user in unactivated_users:
         if user.unactivated_email_sent_at:
-            logger.info(f"Unactivated email already sent to '{user.username}', skipping")
+            logger.info(
+                f"Unactivated email already sent to '{user.username}', skipping"
+            )
             continue
         send_loops_event(user.email, "unactivated")
-        users_gateway.update_fields(user.id, {"unactivated_email_sent_at": datetime.now(UTC).isoformat()})
+        users_gateway.update_fields(
+            user.id, {"unactivated_email_sent_at": datetime.now(UTC).isoformat()}
+        )
         posthog.capture(distinct_id=user.id, event="unactivated_loops_event_triggered")
         triggered_users.append(user.username)
 
@@ -235,6 +284,27 @@ def json_serial(obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
     raise TypeError(f"Type {type(obj)} not serializable")
+
+
+@router.post("/run-daily-metrics-notification")
+async def run_daily_metrics_notification(
+    request: Request, verified: User = Depends(admin_auth)
+):
+
+    body = await request.json()
+    filter_usernames = body.get("filter_usernames", [])
+    dry_run = body.get("dry_run", True)
+
+    users = users_gateway.get_all_users()
+    if len(filter_usernames) > 0:
+        users = [user for user in users if user.username in filter_usernames]
+
+    metrics_notification_result = await _process_metrics_notification(users, dry_run)
+
+    return {
+        "dry_run": dry_run,
+        "metrics_notification_result": metrics_notification_result,
+    }
 
 
 @router.post("/run-daily-job")
@@ -280,7 +350,7 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     }
 
     if send_report:
-        current_time = datetime.now(UTC).strftime('%Y-%m-%d')
+        current_time = datetime.now(UTC).strftime("%Y-%m-%d")
         ses_gateway.send_email(
             to="alexandre.ramalho.1998@gmail.com",
             subject=f"Daily Job for Tracking.so [{ENVIRONMENT}] [{current_time}]",
