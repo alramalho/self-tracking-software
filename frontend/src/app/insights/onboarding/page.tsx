@@ -196,7 +196,7 @@ export default function OnboardingPage() {
               {metrics.map((metric) => (
                 <Card
                   key={metric.title}
-                  className={`p-6 transition-all cursor-pointer hover:scale-105 ${
+                  className={`p-6 transition-all cursor-pointer ${
                     selectedMetrics.includes(metric.title) ? "ring-2 ring-primary" : ""
                   }`}
                   onClick={() => toggleMetricSelection(metric.title)}
