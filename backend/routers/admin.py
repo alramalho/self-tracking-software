@@ -456,6 +456,8 @@ async def log_error(error: GlobalErrorLog, request: Request):
         # 5. Add security context to logs
         context["origin"] = origin
         context["passed_security"] = True
+        context["user_id"] = error.user_clerk_id
+        context["user_username"] = user.username if user else "unknown"
 
         # Log to your regular logging system
         logger.error("Client Error", extra=context)
