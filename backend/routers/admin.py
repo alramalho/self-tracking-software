@@ -9,6 +9,7 @@ from gateways.users import UsersGateway
 from gateways.aws.s3 import S3Gateway
 from gateways.activities import ActivitiesGateway
 from pydantic import Field
+from services.telegram_service import TelegramService
 
 from datetime import datetime, timedelta, date
 from pytz import UTC
@@ -381,6 +382,7 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
 
 class GlobalErrorLog(BaseModel):
     error_message: str
+    user_clerk_id: Optional[str] = None
     error_digest: Optional[str] = None
     url: str
     referrer: str
@@ -428,8 +430,18 @@ async def log_error(error: GlobalErrorLog, request: Request):
             except:
                 referrer_domain = error.referrer
 
+
+        user = None
+        try:
+            user = users_gateway.get_user_by("clerk_id", error.user_clerk_id)
+        except:
+            logger.warning(f"User with clerk_id '{error.user_clerk_id}' not found")
+            pass
+
         # Add request context to the log
         context = {
+            "user_clerk_id": error.user_clerk_id,
+            "user_username": user.username if user else "unknown",
             "error_message": error.error_message,
             "error_digest": error.error_digest,
             "url": error.url,
@@ -451,6 +463,16 @@ async def log_error(error: GlobalErrorLog, request: Request):
         # Track in PostHog
         posthog.capture(
             distinct_id="anonymous", event="client_error", properties=context
+        )
+        telegram = TelegramService()
+        # Send error notification to Telegram
+        
+        telegram.send_error_notification(
+            error_message=f"500 page client error: {error.error_message}",
+            user_username=user.username if user else "unknown",
+            user_id=error.user_clerk_id,
+            path=request.url.path,
+            method=request.method
         )
 
         # Send email for critical errors in production

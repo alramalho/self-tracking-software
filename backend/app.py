@@ -85,7 +85,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                         "status_code": response.status_code,
                     },
                 )
-
                 # Send error notification to Telegram
                 self.telegram.send_error_notification(
                     error_message=error_message,
