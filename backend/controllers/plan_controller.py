@@ -49,31 +49,39 @@ class PlanController:
 
     def _get_readable_plan(self, plan: Plan) -> str:
         # Get unique activities for this plan
-        activity_ids = {session.activity_id for session in plan.sessions}
-        activities = [self.activities_gateway.get_activity_by_id(aid) for aid in activity_ids]
+        activities = [self.activities_gateway.get_activity_by_id(aid) for aid in plan.activity_ids]
         activity_names = [a.title for a in activities if a]
         
         # Get current week's activity entries
         today = datetime.now(UTC)
-        week_start = today - timedelta(days=today.weekday())
+        week_start = (today - timedelta(days=today.weekday() + 1)).replace(hour=0, minute=0, second=0, microsecond=0)
         week_end = week_start + timedelta(days=6)
         
         # Check if all activities were completed this week
         all_activity_entries_for_plan: List[ActivityEntry] = []
-        for activity_id in activity_ids:
+        for activity_id in plan.activity_ids:
             all_activity_entries_for_plan.extend(self.activities_gateway.get_all_activity_entries_by_activity_id(activity_id))
-
 
         number_of_weeks_old = count_weeks_between_dates(datetime.fromisoformat(plan.created_at), datetime.now(UTC))
 
-        this_week_activity_entries_for_plan = [entry for entry in all_activity_entries_for_plan if week_start <= datetime.fromisoformat(entry.date).replace(tzinfo=UTC) <= week_end]
+        # Group activity entries by date and count at most 1 per day
+        daily_completions = set()
+        for entry in all_activity_entries_for_plan:
+            entry_date = datetime.fromisoformat(entry.date).replace(tzinfo=UTC)
+            if week_start <= entry_date <= week_end:
+                daily_completions.add(entry_date.date())
 
-        is_week_completed = any([self.is_week_finisher_of_plan(entry.id, plan) for entry in this_week_activity_entries_for_plan])
-        
+        # Get planned activities count based on outline_type
+        if plan.outline_type == "times_per_week":
+            planned_count = plan.times_per_week
+        else:  # specific
+            planned_count = len([session for session in plan.sessions 
+                               if week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end])
+
         activities_str = "', '".join(activity_names)
-        completion_str = "completed all of these activities!" if is_week_completed else "didn't complete all their planned activities"
+        completion_str = f"This week the user had planned {planned_count} activities and completed {len(daily_completions)}"
         
-        return f"'{plan.goal}' is {number_of_weeks_old} weeks old - with activities '{activities_str}'. Last week user {completion_str}"
+        return f"'{plan.goal}' is {number_of_weeks_old} weeks old - with activities '{activities_str}'. {completion_str}"
 
     def get_readable_plans(self, user_id: str) -> str:
         logger.log("CONTROLLERS", f"Getting readable plans for user {user_id}")

@@ -419,6 +419,8 @@ class FlowchartLLMFramework:
         return list(loop_nodes)
 
     async def run(self, input_string: str):
+
+        print(f"Running flowchart with input: {input_string}")
         self.loop_visit_count = {}
         current_node_id = self.start_node
         context = {"initial_input": input_string}
