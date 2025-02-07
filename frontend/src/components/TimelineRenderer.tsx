@@ -23,11 +23,9 @@ function isInCurrentWeek(date: string) {
 
 const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
   const { timelineData, hasLoadedTimelineData } = useUserPlan();
-  const { isSupported: isShareSupported, share } = useShare();
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const [copied, copyToClipboard] = useClipboard();
   const router = useRouter();
 
   useEffect(() => {
@@ -43,44 +41,6 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
     );
   }
 
-  if (hasLoadedTimelineData && !timelineData.data) {
-    return <div className="text-left text-gray-500">
-    You haven&apos;t added any friends yet 🙁
-    <br />
-    <span className="text-sm text-gray-500">
-        We really recommend you do.
-      </span>
-    <span className="text-sm text-gray-500">
-      <br/>
-      <br/>
-      <span className="underline cursor-pointer" onClick={onOpenSearch}>
-        Search
-      </span>{" "}
-      for friends already using tracking.so, or invite new ones by {" "}
-      <span
-        className="underline cursor-pointer"
-        onClick={async () => {
-          try {
-            const link = `https://app.tracking.so/join/${userData?.user?.username}`;
-            if (isShareSupported) {
-              const success = await share(link);
-              if (!success) throw new Error("Failed to share");
-            } else {
-              const success = await copyToClipboard(link);
-              if (!success) throw new Error("Failed to copy");
-              toast.success("Copied to clipboard");
-            }
-          } catch (error) {
-            console.error("Failed to copy link to clipboard");
-          }
-        }}
-      >
-        
-      sharing your profile link.
-      </span>{" "}
-    </span>
-  </div>
-  }
 
   const sortedEntries = [...(timelineData.data?.recommendedActivityEntries || [])].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
