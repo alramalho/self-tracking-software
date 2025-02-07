@@ -153,7 +153,15 @@ async def _process_metrics_notification(
                     )
                 )
 
-            notifications_processed.append(notification)
+            notifications_processed.append(
+                {
+                    "user": {
+                        "username": user.username,
+                        "id": user.id,
+                    },
+                    "notification_message": notification.message,
+                }
+            )
 
     return {"notifications_processed": notifications_processed}
 
@@ -293,6 +301,7 @@ async def run_daily_metrics_notification(
 
     body = await request.json()
     filter_usernames = body.get("filter_usernames", [])
+    send_report = body.get("send_report", False)
     dry_run = body.get("dry_run", True)
 
     users = users_gateway.get_all_users()
@@ -300,6 +309,14 @@ async def run_daily_metrics_notification(
         users = [user for user in users if user.username in filter_usernames]
 
     metrics_notification_result = await _process_metrics_notification(users, dry_run)
+
+    if send_report:
+        current_time = datetime.now(UTC).strftime("%Y-%m-%d")
+        ses_gateway.send_email(
+            to="alexandre.ramalho.1998@gmail.com",
+            subject=f"Daily Metrics Notification for Tracking.so [{ENVIRONMENT}] [{current_time}]",
+            html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(metrics_notification_result, indent=2, default=json_serial)}</pre>",
+        )
 
     return {
         "dry_run": dry_run,
