@@ -310,18 +310,20 @@ async def run_daily_metrics_notification(
 
     metrics_notification_result = await _process_metrics_notification(users, dry_run)
 
+    result = {
+        "dry_run": dry_run,
+        "metrics_notification_result": metrics_notification_result,
+    }
+
     if send_report:
         current_time = datetime.now(UTC).strftime("%Y-%m-%d")
         ses_gateway.send_email(
             to="alexandre.ramalho.1998@gmail.com",
             subject=f"Daily Metrics Notification for Tracking.so [{ENVIRONMENT}] [{current_time}]",
-            html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(metrics_notification_result, indent=2, default=json_serial)}</pre>",
+            html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(result, indent=2, default=json_serial)}</pre>",
         )
 
-    return {
-        "dry_run": dry_run,
-        "metrics_notification_result": metrics_notification_result,
-    }
+    return result
 
 
 @router.post("/run-daily-job")
