@@ -64,7 +64,7 @@ class MetricsGateway:
     def get_metric_entry_by_metric_and_date(self, metric_id: str, date: str) -> Optional[MetricEntry]:
         entries = self.metric_entries_db_gateway.query("metric_id", metric_id)
         for entry in entries:
-            if entry["date"] == date:
+            if datetime.fromisoformat(entry["date"]).date() == datetime.fromisoformat(date).date():
                 return MetricEntry(**entry)
         return None
 
