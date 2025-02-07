@@ -13,6 +13,9 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { InsightsBanner } from "@/components/InsightsBanner";
+import { useShare } from "@/hooks/useShare";
+import { useClipboard } from "@/hooks/useClipboard";
+import { toast } from "react-hot-toast";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -26,12 +29,18 @@ const HomePage: React.FC = () => {
   } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData, isFetched: metricsAndEntriesFetched } = metricsAndEntriesQuery;
+  const { data: metricsAndEntriesData, isFetched: metricsAndEntriesFetched } =
+    metricsAndEntriesQuery;
   const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
   const hasMetricsToLogToday = useHasMetricsToLogToday();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [insightsBannerOpen, setInsightsBannerOpen] = useState(false);
-  const [insightsBannerMuteUntil, setInsightsBannerMuteUntil] = useLocalStorage<string | null>("insightsBannerMuteUntil", null);
+  const [insightsBannerMuteUntil, setInsightsBannerMuteUntil] = useLocalStorage<
+    string | null
+  >("insightsBannerMuteUntil", null);
+  const { isSupported: isShareSupported, share } = useShare();
+  const [copied, copyToClipboard] = useClipboard();
+
   useEffect(() => {
     if (
       isSignedIn &&
@@ -40,8 +49,13 @@ const HomePage: React.FC = () => {
       userData?.activities?.length === 0
     ) {
       router.push("/onboarding");
-    } else if (metricsAndEntriesFetched && (!hasMetrics || hasMetricsToLogToday)) {
-      const muteUntilDate = insightsBannerMuteUntil ? new Date(insightsBannerMuteUntil) : null;
+    } else if (
+      metricsAndEntriesFetched &&
+      (!hasMetrics || hasMetricsToLogToday)
+    ) {
+      const muteUntilDate = insightsBannerMuteUntil
+        ? new Date(insightsBannerMuteUntil)
+        : null;
       const now = new Date();
       if (!muteUntilDate || now > muteUntilDate) {
         if (hasMetrics && hasMetricsToLogToday && now.getHours() <= 16) {
@@ -52,7 +66,13 @@ const HomePage: React.FC = () => {
         }
       }
     }
-  }, [userData, isSignedIn, hasLoadedUserData, insightsBannerMuteUntil, metricsAndEntriesFetched]);
+  }, [
+    userData,
+    isSignedIn,
+    hasLoadedUserData,
+    insightsBannerMuteUntil,
+    metricsAndEntriesFetched,
+  ]);
 
   if (!isSignedIn) {
     router.push("/signin");
@@ -110,7 +130,48 @@ const HomePage: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">
           Friend&apos;s last activities
         </h2>
-        <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)} />
+        {userData?.user?.friend_ids?.length === 0 && (
+          <>
+            <div className="text-left text-gray-500">
+              You haven&apos;t added any friends yet 🙁
+              <br />
+              <span className="text-sm text-gray-500">
+                Studies show that having accountability partners increases your chances of achieving goals by up to 95%! Add friends to boost your success.
+              </span>
+              <span className="text-sm text-gray-500">
+                <br />
+                <br />
+                <span
+                  className="underline cursor-pointer"
+                  onClick={() => setIsSearchOpen(true)}
+                >
+                  Search
+                </span>{" "}
+                for friends already using tracking.so, or invite new ones by{" "}
+                <span
+                  className="underline cursor-pointer"
+                  onClick={async () => {
+                    try {
+                      const link = `https://app.tracking.so/join/${userData?.user?.username}`;
+                      if (isShareSupported) {
+                        const success = await share(link);
+                        if (!success) throw new Error("Failed to share");
+                      } else {
+                        const success = await copyToClipboard(link);
+                        if (!success) throw new Error("Failed to copy");
+                        toast.success("Copied to clipboard");
+                      }
+                    } catch (error) {
+                      console.error("Failed to copy link to clipboard");
+                    }
+                  }}
+                >
+                  sharing your profile link.
+                </span>{" "}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       <AppleLikePopover
@@ -123,10 +184,7 @@ const HomePage: React.FC = () => {
         </div>
       </AppleLikePopover>
 
-      <InsightsBanner
-        open={insightsBannerOpen}
-        onClose={handleBannerClose}
-      />
+      <InsightsBanner open={insightsBannerOpen} onClose={handleBannerClose} />
     </div>
   );
 };
