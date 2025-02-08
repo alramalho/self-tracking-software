@@ -168,7 +168,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         ),
       ].sort((a, b) => a.getTime() - b.getTime());
 
-
       if (allDates.length === 0) {
         setLoading(false);
         return;
@@ -323,37 +322,98 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <span className="text-4xl">{selectedPlan.emoji}</span>
         <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
       </div>
-      {selectedPlan.outline_type === "specific" &&
-        areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
-      {planGroupMembers && planGroupMembers.length >= 2 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
-          <div className="flex flex-row flex-wrap gap-6">
-            {planGroupMembers.map((member) => (
-              <div
-                key={member.user_id}
-                className="flex flex-row flex-nowrap gap-2 items-center"
-              >
-                <Link href={`/profile/${member.username}`}>
-                  <Avatar className="w-12 h-12 text-2xl">
-                    <AvatarImage
-                      src={member.picture || ""}
-                      alt={member.name || member.username}
-                    />
-                    <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
-                  </Avatar>
-                </Link>
-                <div className="text-lg text-gray-800">
-                  {userData?.user?.username === member.username
-                    ? "You"
-                    : member.name}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       <ProgressOverview milestones={selectedPlan.milestones} />
+
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="flex flex-row items-center justify-start gap-2 mb-2">
+          <span className="text-4xl">🎯</span>
+          <h2 className="text-xl font-semibold mt-2">Activities Overview</h2>
+        </div>
+
+        {selectedPlan.outline_type === "times_per_week" && (
+          <WeeklySessionsChecklist
+            plan={selectedPlan}
+            activityEntries={activityEntries}
+          />
+        )}
+
+        {selectedPlan.outline_type === "specific" &&
+          areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
+
+        {selectedPlan.outline_type === "specific" && (
+          <>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">This week</h2>
+
+              <span className="text-sm text-gray-500 ">
+                Completed activities are calculated on a per week count basis.
+              </span>
+            </div>
+            <div className="flex flex-row flex-wrap gap-4">
+              {selectedPlan.sessions
+                .filter((session) => {
+                  const sessionDate = parseISO(session.date);
+                  const endOfCurrentWeek = endOfWeek(new Date());
+                  const beginningOfCurrentWeek = startOfWeek(new Date());
+                  return (
+                    isAfter(sessionDate, beginningOfCurrentWeek) &&
+                    isBefore(sessionDate, endOfCurrentWeek)
+                  );
+                })
+                .map((session) => {
+                  const activity = activities.find(
+                    (a) => a.id === session.activity_id
+                  );
+                  const completed = isSessionCompleted(session);
+                  const completedOn = getCompletedOn(session);
+                  if (!activity) return null;
+
+                  return (
+                    <SmallActivityEntryCard
+                      key={`${session.date}-${session.activity_id}`}
+                      entry={session as Entry}
+                      activity={activity}
+                      completed={completed}
+                      completedOn={completedOn}
+                    />
+                  );
+                })}
+            </div>
+          </>
+        )}
+        <div className="mt-8">
+          {selectedPlan.outline_type === "specific" && (
+            <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
+              <span className="text-xs text-gray-500">Completed</span>
+              <Switch
+                checked={displayFutureActivities}
+                onCheckedChange={setDisplayFutureActivities}
+              />
+              <span className="text-xs text-gray-500">Planned</span>
+            </div>
+          )}
+          {displayFutureActivities ? (
+            <PlanSessionsRenderer
+              plan={convertApiPlanToPlan(
+                selectedPlan,
+                activities.filter((a) =>
+                  selectedPlan.activity_ids?.includes(a.id)
+                )
+              )}
+              activities={activities.filter((a) =>
+                selectedPlan.activity_ids?.includes(a.id)
+              )}
+            />
+          ) : (
+            <PlanActivityEntriesRenderer
+              plan={convertApiPlanToPlan(selectedPlan, activities)}
+              activities={activities}
+              activityEntries={activityEntries}
+            />
+          )}
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center mt-8">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -407,94 +467,35 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </div>
         )
       )}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mt-8">
-        <div className="flex flex-row items-center justify-start gap-2 mb-2">
-          <span className="text-4xl">🎯</span>
-          <h2 className="text-xl font-semibold mt-2">Activities Overview</h2>
-        </div>
 
-        {selectedPlan.outline_type === "specific" && (
-          <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
-            <span className="text-xs text-gray-500">Completed</span>
-            <Switch
-              checked={displayFutureActivities}
-              onCheckedChange={setDisplayFutureActivities}
-            />
-            <span className="text-xs text-gray-500">Planned</span>
+      {planGroupMembers && planGroupMembers.length >= 2 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mt-8">
+          <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
+          <div className="flex flex-row flex-wrap gap-6">
+            {planGroupMembers.map((member) => (
+              <div
+                key={member.user_id}
+                className="flex flex-row flex-nowrap gap-2 items-center"
+              >
+                <Link href={`/profile/${member.username}`}>
+                  <Avatar className="w-12 h-12 text-2xl">
+                    <AvatarImage
+                      src={member.picture || ""}
+                      alt={member.name || member.username}
+                    />
+                    <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
+                  </Avatar>
+                </Link>
+                <div className="text-lg text-gray-800">
+                  {userData?.user?.username === member.username
+                    ? "You"
+                    : member.name}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-        {displayFutureActivities ? (
-          <PlanSessionsRenderer
-            plan={convertApiPlanToPlan(
-              selectedPlan,
-              activities.filter((a) =>
-                selectedPlan.activity_ids?.includes(a.id)
-              )
-            )}
-            activities={activities.filter((a) =>
-              selectedPlan.activity_ids?.includes(a.id)
-            )}
-          />
-        ) : (
-          <PlanActivityEntriesRenderer
-            plan={convertApiPlanToPlan(selectedPlan, activities)}
-            activities={activities}
-            activityEntries={activityEntries}
-          />
-        )}
-        <div className="mt-8">
-          {selectedPlan.outline_type === "specific" && (
-            <>
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  This week
-                </h2>
-
-                <span className="text-sm text-gray-500 ">
-                  Completed activities are calculated on a per week count basis.
-                </span>
-              </div>
-              <div className="flex flex-row flex-wrap gap-4">
-                {selectedPlan.sessions
-                  .filter((session) => {
-                    const sessionDate = parseISO(session.date);
-                    const endOfCurrentWeek = endOfWeek(new Date());
-                    const beginningOfCurrentWeek = startOfWeek(new Date());
-                    return (
-                      isAfter(sessionDate, beginningOfCurrentWeek) &&
-                      isBefore(sessionDate, endOfCurrentWeek)
-                    );
-                  })
-                  .map((session) => {
-                    const activity = activities.find(
-                      (a) => a.id === session.activity_id
-                    );
-                    const completed = isSessionCompleted(session);
-                    const completedOn = getCompletedOn(session);
-                    if (!activity) return null;
-
-                    return (
-                      <SmallActivityEntryCard
-                        key={`${session.date}-${session.activity_id}`}
-                        entry={session as Entry}
-                        activity={activity}
-                        completed={completed}
-                        completedOn={completedOn}
-                      />
-                    );
-                  })}
-              </div>
-            </>
-          )}
-
-          {selectedPlan.outline_type === "times_per_week" && (
-            <WeeklySessionsChecklist
-              plan={selectedPlan}
-              activityEntries={activityEntries}
-            />
-          )}
         </div>
-      </div>
+      )}
 
       <Link href="/add" passHref>
         <Button
