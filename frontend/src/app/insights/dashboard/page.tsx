@@ -37,7 +37,7 @@ export default function InsightsDashboardPage() {
   const hasMetrics = metrics.length > 0;
   const router = useRouter();
   const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw as ThemeColor);
+  const variants = getThemeVariants(themeColors.raw);
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {

@@ -39,7 +39,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   onPlanRemoved,
 }) => {
   const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw as ThemeColor);
+  const variants = getThemeVariants(themeColors.raw);
   const [showSettings, setShowSettings] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);

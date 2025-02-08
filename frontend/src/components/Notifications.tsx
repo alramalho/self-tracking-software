@@ -18,7 +18,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
   const router = useRouter();
   const api = useApiWithAuth();
   const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw as ThemeColor);
+  const variants = getThemeVariants(themeColors.raw);
 
   const handleNotificationAction = async (
     notification: Notification,

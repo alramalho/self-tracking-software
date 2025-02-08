@@ -43,7 +43,7 @@ const HomePage: React.FC = () => {
   const { isSupported: isShareSupported, share } = useShare();
   const [copied, copyToClipboard] = useClipboard();
   const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw as ThemeColor);
+  const variants = getThemeVariants(themeColors.raw);
 
   useEffect(() => {
     if (

@@ -16,7 +16,7 @@ export const ActivityCard = ({
   onEditClick?: () => void;
 }) => {
   const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw as ThemeColor);
+  const variants = getThemeVariants(themeColors.raw);
 
   return (
     <div className="relative">

@@ -17,7 +17,7 @@ export const OutlineOption = ({
   onClick,
 }: OutlineOptionProps) => {
   const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw as ThemeColor);
+  const variants = getThemeVariants(themeColors.raw);
 
   return (
     <button
