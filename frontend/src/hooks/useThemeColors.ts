@@ -1,9 +1,9 @@
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { getThemeConfig, ThemeConfig } from "@/utils/theme";
+import { getThemeVariants, ThemeVariants } from "@/utils/theme";
 
-export const useThemeColors = (): ThemeConfig => {
+export const useThemeColors = (): ThemeVariants => {
   const { currentTheme } = useUserPlan();
-  return getThemeConfig(currentTheme);
+  return getThemeVariants(currentTheme);
 };
 
 export const useThemeColor = (): string => {

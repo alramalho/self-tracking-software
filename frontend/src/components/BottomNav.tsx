@@ -52,7 +52,7 @@ const BottomNav = () => {
     return null;
   }
 
-  const activeThemeClass = themeTextClasses[themeColors.raw as keyof typeof themeTextClasses];
+  const activeThemeClass = themeTextClasses[themeColors.raw];
 
   return (
     <>

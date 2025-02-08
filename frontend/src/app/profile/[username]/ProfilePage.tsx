@@ -53,7 +53,7 @@ import { EmotionViewer } from "@/components/EmotionViewer";
 import { DemoEmotionViewer } from "@/components/DemoEmotionViewer";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
-import { ThemeColor, getThemeConfig } from "@/utils/theme";
+import { ThemeColor, getThemeVariants } from "@/utils/theme";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -414,7 +414,6 @@ const ProfilePage: React.FC = () => {
                 <h3 className="text-lg font-semibold mb-4">Color Themes</h3>
                 <div className="grid gap-4">
                   {colorPalettes.map((palette) => {
-                    const themeConfig = getThemeConfig(palette.color);
                     const isSelected = currentTheme === palette.color;
                     return (
                       <div
@@ -429,9 +428,9 @@ const ProfilePage: React.FC = () => {
                           <span className="font-medium">{palette.name}</span>
                         </div>
                         <div className="flex gap-2 ml-auto">
-                          <div className={`w-6 h-6 rounded-full ${themeConfig.primary}`}></div>
-                          <div className={`w-6 h-6 rounded-full ${themeConfig.secondary}`}></div>
-                          <div className={`w-6 h-6 rounded-full ${themeConfig.accent}`}></div>
+                          <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).primary}`}></div>
+                          <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).secondary}`}></div>
+                          <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).accent}`}></div>
                         </div>
                       </div>
                     );

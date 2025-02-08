@@ -578,10 +578,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await api.post('/update-theme', { theme_base_color: color });
       await currentUserDataQuery.refetch();
-      toast.success('Theme updated successfully');
     } catch (err) {
       handleAuthError(err);
-      toast.error('Failed to update theme');
       throw err;
     }
   };

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useUserPlan } from './UserPlanContext';
-import { ThemeColor, getThemeConfig } from '@/utils/theme';
+import { ThemeColor, getThemeVariants } from '@/utils/theme';
 
 interface ThemeContextType {
   currentTheme: ThemeColor;
@@ -28,23 +28,23 @@ const getComputedColor = (className: string): string => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentTheme, updateTheme } = useUserPlan();
-  const themeConfig = getThemeConfig(currentTheme);
+  const themeVariants = getThemeVariants(currentTheme);
 
   useEffect(() => {
     // Set CSS variables
     const root = document.documentElement;
-    Object.entries(themeConfig.cssVars).forEach(([key, className]) => {
+    Object.entries(themeVariants.cssVars).forEach(([key, className]) => {
       const computedColor = getComputedColor(className);
       root.style.setProperty(`--${key}`, computedColor);
     });
-  }, [currentTheme, themeConfig]);
+  }, [currentTheme, themeVariants]);
 
   const getThemeClass = (type: 'primary' | 'secondary' | 'accent' | 'hover' | 'border' | 'background') => {
-    return themeConfig[type];
+    return themeVariants[type];
   };
 
   const getTextClass = () => {
-    return `text-${currentTheme}-500`;
+    return themeVariants.text;
   };
 
   const value = {

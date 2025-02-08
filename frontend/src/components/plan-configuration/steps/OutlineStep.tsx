@@ -66,18 +66,16 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
       </label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <OutlineOption
-          type="times_per_week"
           title="✅ Weekly Count Goal"
           description="A simple, self-serve plan with just a number of sessions per week"
-          isSelected={outlineType === "times_per_week"}
-          onSelect={() => setOutlineType("times_per_week")}
+          selected={outlineType === "times_per_week"}
+          onClick={() => setOutlineType("times_per_week")}
         />
         <OutlineOption
-          type="specific"
           title="📆 Specific Schedule"
           description="A more complex AI generated plan with a specific weekly schedule"
-          isSelected={outlineType === "specific"}
-          onSelect={() => setOutlineType("specific")}
+          selected={outlineType === "specific"}
+          onClick={() => setOutlineType("specific")}
         />
       </div>
 
