@@ -683,3 +683,20 @@ async def update_timezone(body: TimezoneUpdate, user: User = Depends(is_clerk_us
         logger.error(f"Failed to update timezone: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class ThemeUpdate(BaseModel):
+    theme_base_color: str
+
+@router.post("/update-theme")
+async def update_theme(body: ThemeUpdate, user: User = Depends(is_clerk_user)):
+    try:
+        if body.theme_base_color not in ["slate", "blue", "violet", "amber", "emerald", "rose"]:
+            raise HTTPException(status_code=400, detail=f"Invalid theme color: {body.theme_base_color}")
+            
+        updated_user = users_gateway.update_fields(user.id, {"theme_base_color": body.theme_base_color})
+        return {"message": "Theme updated successfully", "user": updated_user}
+    except Exception as e:
+        logger.error(f"Failed to update theme: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))

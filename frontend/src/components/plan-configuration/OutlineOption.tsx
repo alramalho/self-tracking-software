@@ -1,36 +1,39 @@
 import { Check } from "lucide-react";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants, ThemeColor } from "@/utils/theme";
+import { cn } from "@/lib/utils";
 
 interface OutlineOptionProps {
-  type: "specific" | "times_per_week";
   title: string;
   description: string;
-  isSelected: boolean;
-  onSelect: () => void;
+  selected: boolean;
+  onClick: () => void;
 }
 
-const OutlineOption: React.FC<OutlineOptionProps> = ({
-  type,
+export const OutlineOption = ({
   title,
   description,
-  isSelected,
-  onSelect,
-}) => {
-  return (
-    <div
-      onClick={onSelect}
-      className={`relative flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${
-        isSelected
-          ? "border-blue-500 bg-blue-50"
-          : "border-gray-200 hover:bg-gray-50"
-      }`}
-    >
-      {isSelected && (
-        <Check className="absolute top-3 right-3 h-4 w-4 text-blue-500" />
-      )}
-      <h4 className="font-medium mb-1">{title}</h4>
-      <p className="text-sm text-gray-500">{description}</p>
-    </div>
-  );
-};
+  selected,
+  onClick,
+}: OutlineOptionProps) => {
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw as ThemeColor);
 
-export default OutlineOption; 
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative p-4 rounded-lg border-2 transition-all w-full text-left",
+        selected
+          ? cn(variants.card.selected.border, variants.card.selected.bg)
+          : "border-gray-300 bg-white"
+      )}
+    >
+      <h3 className="font-medium">{title}</h3>
+      <p className="text-sm text-gray-500">{description}</p>
+      {selected && (
+        <Check className={cn("absolute top-3 right-3 h-4 w-4", variants.text)} />
+      )}
+    </button>
+  );
+}; 

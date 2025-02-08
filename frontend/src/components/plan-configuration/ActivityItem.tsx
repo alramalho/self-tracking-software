@@ -1,5 +1,8 @@
 import { Check } from "lucide-react";
 import { Activity } from "@/contexts/UserPlanContext";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants, ThemeColor } from "@/utils/theme";
+import { twMerge } from "tailwind-merge";
 
 interface ActivityItemProps {
   activity: Activity;
@@ -14,18 +17,21 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
   onToggle,
   className,
 }) => {
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw as ThemeColor);
+
   return (
     <div
       onClick={onToggle}
       className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 aspect-square cursor-pointer transition-colors ${
         isSelected
-          ? "border-blue-500 bg-blue-50"
+          ? twMerge(variants.card.selected.border, variants.card.selected.bg)
           : "border-gray-200 hover:bg-gray-50"
       } ${className}`}
     >
       <div className="relative w-full h-full flex flex-col items-start justify-center">
         {isSelected && (
-          <Check className="absolute top-0 right-0 h-4 w-4 text-blue-500" />
+          <Check className={`absolute top-0 right-0 h-4 w-4 ${variants.text}`} />
         )}
         <span className="text-xl">{activity.emoji}</span>
         <p className="text-sm font-medium text-left">{activity.title}</p>

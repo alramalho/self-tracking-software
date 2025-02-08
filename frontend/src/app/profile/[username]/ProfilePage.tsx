@@ -14,6 +14,7 @@ import {
   X,
   Star,
   SquareActivity,
+  Paintbrush,
 } from "lucide-react";
 import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
@@ -52,6 +53,7 @@ import { EmotionViewer } from "@/components/EmotionViewer";
 import { DemoEmotionViewer } from "@/components/DemoEmotionViewer";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
+import { ThemeColor, getThemeConfig } from "@/utils/theme";
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -59,7 +61,7 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const { useCurrentUserDataQuery, useUserDataQuery, refetchUserData, messagesData } = useUserPlan();
+  const { useCurrentUserDataQuery, useUserDataQuery, refetchUserData, messagesData, updateTheme, currentTheme } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const params = useParams();
   const username = params.username as string;
@@ -88,6 +90,34 @@ const ProfilePage: React.FC = () => {
   const [copied, copyToClipboard] = useClipboard();
   const isOnesOwnProfile =
     currentUser?.id === profileData?.user?.id;
+  const [showColorPalette, setShowColorPalette] = useState(false);
+
+  const colorPalettes = [
+    {
+      name: "Slate",
+      color: "slate" as ThemeColor,
+    },
+    {
+      name: "Blue",
+      color: "blue" as ThemeColor,
+    },
+    {
+      name: "Violet",
+      color: "violet" as ThemeColor,
+    },
+    {
+      name: "Emerald",
+      color: "emerald" as ThemeColor,
+    },
+    {
+      name: "Rose",
+      color: "rose" as ThemeColor,
+    },
+    {
+      name: "Amber",
+      color: "amber" as ThemeColor,
+    },
+  ];
 
   useEffect(() => {
     if (currentUser?.username && !username) {
@@ -198,6 +228,17 @@ const ProfilePage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  const handleThemeChange = async (color: ThemeColor) => {
+    try {
+      await updateTheme(color);
+      toast.success(`Theme updated to ${color}`);
+      setShowColorPalette(false);
+    } catch (error) {
+      console.error('Failed to update theme:', error);
+      toast.error('Failed to update theme');
+    }
+  };
 
   if (currentUserQuery.isLoading || profileDataQuery.isLoading) {
     return (
@@ -337,12 +378,11 @@ const ProfilePage: React.FC = () => {
                 className="cursor-pointer"
                 onClick={() => setShowUserProfile(true)}
               />
-              <Button
-                variant="ghost"
-                onClick={() => setShowLogoutConfirm(true)}
-              >
-                <LogOut size={24} className="cursor-pointer" />
-              </Button>
+              <Paintbrush
+                size={24}
+                className="cursor-pointer"
+                onClick={() => setShowColorPalette(true)}
+              />
             </div>
           )}
         </div>
@@ -354,7 +394,49 @@ const ProfilePage: React.FC = () => {
               onClose={() => setShowUserProfile(false)}
             >
               <div className="max-h-[80vh] overflow-y-auto">
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="w-full mb-4 flex items-center justify-center gap-2"
+                >
+                  <LogOut size={20} />
+                  <span>Logout</span>
+                </Button>
                 <UserProfile routing={"hash"} />
+              </div>
+            </AppleLikePopover>
+
+            <AppleLikePopover
+              open={showColorPalette}
+              onClose={() => setShowColorPalette(false)}
+            >
+              <div className="p-4 space-y-4">
+                <h3 className="text-lg font-semibold mb-4">Color Themes</h3>
+                <div className="grid gap-4">
+                  {colorPalettes.map((palette) => {
+                    const themeConfig = getThemeConfig(palette.color);
+                    const isSelected = currentTheme === palette.color;
+                    return (
+                      <div
+                        key={palette.name}
+                        className={`flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${
+                          isSelected ? `ring-2 ring-offset-2 ring-${palette.color}-500` : ''
+                        }`}
+                        onClick={() => handleThemeChange(palette.color)}
+                      >
+                        <div className="flex items-center gap-2">
+                          {isSelected && <Check className={`w-4 h-4 text-${palette.color}-500`} />}
+                          <span className="font-medium">{palette.name}</span>
+                        </div>
+                        <div className="flex gap-2 ml-auto">
+                          <div className={`w-6 h-6 rounded-full ${themeConfig.primary}`}></div>
+                          <div className={`w-6 h-6 rounded-full ${themeConfig.secondary}`}></div>
+                          <div className={`w-6 h-6 rounded-full ${themeConfig.accent}`}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </AppleLikePopover>
 
@@ -383,7 +465,7 @@ const ProfilePage: React.FC = () => {
 
         <Tabs defaultValue="plans" className="w-full">
           <TabsList
-            className={`grid w-full h-13 bg-gray-50 ${
+            className={`grid w-full h-13 bg-gray-50/50 ${
               isOnesOwnProfile && userHasAccessToAi ? "grid-cols-3" : "grid-cols-2"
             }`}
           >

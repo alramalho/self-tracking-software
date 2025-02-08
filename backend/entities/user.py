@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 from bson import ObjectId
 
 
@@ -26,6 +26,7 @@ class User(BaseModel):
     plan_invitations: List[str] = Field(default_factory=list)
     referred_user_ids: List[str] = Field(default_factory=list)
     unactivated_email_sent_at: Optional[datetime] = None
+    theme_base_color: Literal["slate", "blue", "violet", "amber", "emerald", "rose"] = "blue"
 
     @classmethod
     def new(

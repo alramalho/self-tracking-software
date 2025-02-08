@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import posthog from "posthog-js";
 import { Remark } from "react-remark";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants, ThemeColor } from "@/utils/theme";
 
 interface NotificationsProps {}
 
@@ -15,6 +17,8 @@ const Notifications: React.FC<NotificationsProps> = () => {
   const { notificationsData } = useUserPlan();
   const router = useRouter();
   const api = useApiWithAuth();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw as ThemeColor);
 
   const handleNotificationAction = async (
     notification: Notification,
@@ -110,7 +114,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
         return (
           <button
             onClick={() => handleNotificationAction(notification, "view")}
-            className={`${buttonClasses} bg-blue-100 text-blue-600 hover:bg-blue-200`}
+            className={`${buttonClasses} ${variants.fadedBg} ${variants.text} hover:bg-blue-200`}
             aria-label="View"
           >
             <Eye size={iconSize} />
@@ -121,14 +125,14 @@ const Notifications: React.FC<NotificationsProps> = () => {
           <>
             <button
               onClick={() => handleNotificationAction(notification, "respond")}
-              className={`${buttonClasses} bg-blue-100 text-blue-600 hover:bg-blue-200`}
+              className={`${buttonClasses} ${variants.fadedBg} ${variants.text} hover:bg-blue-200`}
               aria-label="Respond"
             >
               <MessageSquare size={iconSize} />
             </button>
             <button
               onClick={() => handleNotificationAction(notification, "dismiss")}
-              className={`${buttonClasses} bg-gray-100 text-gray-600 hover:bg-gray-200 ml-2`}
+              className={`${buttonClasses} ${variants.fadedBg} ${variants.text} hover:bg-gray-200 ml-2`}
               aria-label="Dismiss"
             >
               <X size={iconSize} />
@@ -189,7 +193,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
                 key={notification.id}
                 className={`shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 ${
                   notification.type === "engagement"
-                    ? "bg-gradient-to-r from-blue-50 to-green-50 border border-green-100"
+                    ? `${variants.card.selected.bg} border ${variants.card.selected.border}`
                     : "bg-white border border-gray-200"
                 }`}
               >

@@ -9,6 +9,7 @@ import axios from "axios";
 import { useQuery, UseQueryResult, useQueryClient } from "@tanstack/react-query";
 import { usePostHog } from "posthog-js/react";
 import { logger } from "@/utils/logger";
+import { ThemeColor } from "@/utils/theme";
 
 export interface Activity {
   id: string;
@@ -70,6 +71,7 @@ export interface User {
   referred_user_ids: string[];
   pending_friend_requests: string[];
   timezone?: string;
+  theme_base_color?: ThemeColor;
 }
 
 interface FriendRequest {
@@ -220,6 +222,8 @@ export interface UserPlanContextType {
   refetchUserData: () => Promise<UserDataEntry>;
   refetchAllData: () => Promise<UserDataEntry>;
   updateTimezone: () => Promise<void>;
+  updateTheme: (color: ThemeColor) => Promise<void>;
+  currentTheme: ThemeColor;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
@@ -568,6 +572,22 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [isSignedIn, queryClient]);
 
+  const updateTheme = async (color: ThemeColor) => {
+    if (!isSignedIn) return;
+
+    try {
+      await api.post('/update-theme', { theme_base_color: color });
+      await currentUserDataQuery.refetch();
+      toast.success('Theme updated successfully');
+    } catch (err) {
+      handleAuthError(err);
+      toast.error('Failed to update theme');
+      throw err;
+    }
+  };
+
+  const currentTheme = currentUserDataQuery.data?.user?.theme_base_color || 'blue';
+
   const context = {
     useCurrentUserDataQuery,
     useUserDataQuery,
@@ -583,7 +603,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchUserData,
     refetchUserData,
     refetchAllData,
-    updateTimezone
+    updateTimezone,
+    updateTheme,
+    currentTheme,
   };
 
   return (

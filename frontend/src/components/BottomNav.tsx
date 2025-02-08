@@ -1,13 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChartArea, ChartGantt, Eclipse, Eye, Flame, Home, Loader2, Pencil, PlusSquare, Route, ScanFace, Search, Sparkle, Sprout, User } from "lucide-react";
+import { ChartArea, Home, Loader2, PlusSquare, ScanFace, User } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useSession } from "@clerk/clerk-react";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import FloatingActionMenu from "./FloatingActionMenu";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
+import { ThemeColor } from "@/utils/theme";
+
+// This forces Tailwind to include these classes in the build
+const themeTextClasses: Record<ThemeColor, string> = {
+  slate: "text-slate-500",
+  blue: "text-blue-500",
+  violet: "text-violet-500",
+  amber: "text-amber-500",
+  emerald: "text-emerald-500",
+  rose: "text-rose-500",
+};
 
 const BottomNav = () => {
   const { notificationCount } = useNotifications();
@@ -21,6 +33,7 @@ const BottomNav = () => {
   const userData = userDataQuery.data;
   const userUsername = userData?.user?.username;
   const pathname = usePathname();
+  const themeColors = useThemeColors();
 
   const isActiveRoute = (route: string) => {
     if (route === '/') return pathname === '/';
@@ -36,8 +49,10 @@ const BottomNav = () => {
   }, [pathname]);
 
   if (!userUsername) {
-    return null; // Or loading state
+    return null;
   }
+
+  const activeThemeClass = themeTextClasses[themeColors.raw as keyof typeof themeTextClasses];
 
   return (
     <>
@@ -46,14 +61,15 @@ const BottomNav = () => {
         <div className="flex justify-around items-center py-2 px-4 max-w-screen-xl mx-auto">
           <Link
             href="/"
-            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+            className={cn(
+              "flex flex-col justify-center items-center p-2 transition-all duration-200 relative",
               isActiveRoute('/') 
-              ? 'text-blue-500 scale-110 -translate-y-0.5' 
-              : 'text-gray-500 hover:text-gray-700'
-            } relative`}
-            onClick={() =>{
-              if (pathname !== "/")  {
-                setIsLoadingFeed(true)
+                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                : "text-gray-500 hover:text-gray-700"
+            )}
+            onClick={() => {
+              if (pathname !== "/") {
+                setIsLoadingFeed(true);
               }
             }}
           >
@@ -65,68 +81,76 @@ const BottomNav = () => {
             )}
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/') ? 'Home' : ''}</span>
           </Link>
+
           <Link
             href="/plans"
-            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+            className={cn(
+              "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/plans') 
-              ? 'text-blue-500 scale-110 -translate-y-0.5' 
-              : 'text-gray-500 hover:text-gray-700'
-            }`}
+                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => {
               if (pathname !== "/plans") {
-                setIsLoadingPlans(true)
+                setIsLoadingPlans(true);
               }
             }}
           >
             {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartArea size={24} strokeWidth={2.5} />}
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/plans') ? 'Plans' : ''}</span>
           </Link>
+
           <Link
             href="/add"
-            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+            className={cn(
+              "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/add') 
-              ? 'text-blue-500 scale-110 -translate-y-0.5' 
-              : 'text-gray-500 hover:text-gray-700'
-            }`}
+                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => {
               if (pathname !== "/add") {
-                setIsLoadingLog(true)
+                setIsLoadingLog(true);
               }
             }}
           >
             {isLoadingLog ? <Loader2 size={30} className="animate-spin" /> : 
-            <div className="bg-blue-500 rounded-full p-2">
-              <PlusSquare size={24} strokeWidth={2.5} className="text-white" />
-            </div>
+              <div className={`${themeColors.primary} rounded-full p-2`}>
+                <PlusSquare size={24} strokeWidth={2.5} className="text-white" />
+              </div>
             }
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/add') ? 'Add' : ''}</span>
           </Link>
+
           <Link
             href="/insights/dashboard"
-            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+            className={cn(
+              "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/insights') 
-              ? 'text-blue-500 scale-110 -translate-y-0.5' 
-              : 'text-gray-500 hover:text-gray-700'
-            }`}
+                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => {
               if (!pathname.startsWith("/insights")) {
-                setIsLoadingInsights(true)
+                setIsLoadingInsights(true);
               }
             }}
           >
             {isLoadingInsights ? <Loader2 size={24} className="animate-spin" /> : <ScanFace size={24} strokeWidth={2.5} />}
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/insights') ? 'Insights' : ''}</span>
           </Link>
+
           <Link
             href={`/profile/${userUsername}`}
-            className={`flex flex-col justify-center items-center p-2 transition-all duration-200 ${
+            className={cn(
+              "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/profile') 
-              ? 'text-blue-500 scale-110 -translate-y-0.5' 
-              : 'text-gray-500 hover:text-gray-700'
-            }`}
+                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => {
               if (!pathname.startsWith(`/profile/${userUsername}`)) {
-                setIsLoadingProfile(true)
+                setIsLoadingProfile(true);
               }
             }}
           >

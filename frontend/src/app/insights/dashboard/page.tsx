@@ -14,6 +14,9 @@ import {
 } from "@/contexts/UserPlanContext";
 import Divider from "@/components/Divider";
 import { Loader2 } from "lucide-react";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { ThemeColor } from "@/utils/theme";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -33,6 +36,8 @@ export default function InsightsDashboardPage() {
   const activityEntries = userData?.activityEntries || [];
   const hasMetrics = metrics.length > 0;
   const router = useRouter();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw as ThemeColor);
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -88,7 +93,7 @@ export default function InsightsDashboardPage() {
                   <Progress
                     value={progressPercent}
                     className="h-2"
-                    indicatorColor="bg-blue-500"
+                    indicatorColor={variants.indicator.active}
                   />
                 </div>
               );

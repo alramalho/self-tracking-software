@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Plan, ApiPlan, Activity } from "@/contexts/UserPlanContext";
-import OutlineOption from "../OutlineOption";
+import { OutlineOption } from "../OutlineOption";
 import NumberInput from "../NumberInput";
 import { Loader2 } from "lucide-react";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
