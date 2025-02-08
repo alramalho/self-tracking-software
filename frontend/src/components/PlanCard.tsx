@@ -9,6 +9,9 @@ import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import ConfirmDialog from "./ConfirmDialog";
 import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
+import { useThemeColors } from "@/hooks/useThemeColors";  
+import { getThemeVariants, ThemeColor } from "@/utils/theme";
+import { twMerge } from "tailwind-merge";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -35,6 +38,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
   hideInviteButton = false,
   onPlanRemoved,
 }) => {
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw as ThemeColor);
   const [showSettings, setShowSettings] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -86,7 +91,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           onClick={() => onSelect(plan.id!)}
           className={`flex flex-col items-left justify-center p-4 rounded-lg border-2 ${
             isSelected
-              ? "border-blue-500 bg-blue-100"
+              ? twMerge(variants.card.selected.border, variants.card.selected.bg)
               : "border-gray-300 bg-white"
           } aspect-square w-full`}
         >

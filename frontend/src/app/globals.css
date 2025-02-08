@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 body {
-  background: #F4F4F4;
+  background: var(--appBackground, #F4F4F4);
 }
+
 .markdown ul {
   list-style-type: disc;
   list-style-position: inside;

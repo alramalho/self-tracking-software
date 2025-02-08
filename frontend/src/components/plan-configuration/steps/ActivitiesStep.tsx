@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Number from "../Number";
 import { Textarea } from "@/components/ui/textarea";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
-import ActivityItem from "../ActivityItem";
+import ActivityItem  from "../ActivityItem";
 import { Plus } from "lucide-react";
 import ActivityEditor from "@/components/ActivityEditor";
 

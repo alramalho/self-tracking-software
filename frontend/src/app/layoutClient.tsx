@@ -13,6 +13,7 @@ import GeneralInitializer from "@/components/GeneralInitializer";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { LoggerProvider } from "@/components/LoggerProvider";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const queryClient = new QueryClient();
 
@@ -27,25 +28,27 @@ export default function ClientLayout({
     <QueryClientProvider client={queryClient}>
       <LoggerProvider>
         <UserPlanProviderWrapper>
-          <NotificationsProvider>
-            <main className="relative h-[100dvh]">
-              <div 
-                className={cn(
-                  "absolute inset-0 overflow-auto",
-                  isSignedIn ? "pb-[4.7rem]" : ""
-                )}
-              >
-                <GeneralInitializer>{children}</GeneralInitializer>
-              </div>
-            </main>
-            <Toaster
-              position="top-center"
-              containerStyle={{
-                bottom: "5rem",
-                zIndex: 101,
-              }}
-            />
-          </NotificationsProvider>
+          <ThemeProvider>
+            <NotificationsProvider>
+              <main className="relative h-[100dvh]">
+                <div
+                  className={cn(
+                    "absolute inset-0 overflow-auto",
+                    isSignedIn ? "pb-[4.7rem]" : ""
+                  )}
+                >
+                  <GeneralInitializer>{children}</GeneralInitializer>
+                </div>
+              </main>
+              <Toaster
+                position="top-center"
+                containerStyle={{
+                  bottom: "5rem",
+                  zIndex: 101,
+                }}
+              />
+            </NotificationsProvider>
+          </ThemeProvider>
         </UserPlanProviderWrapper>
       </LoggerProvider>
     </QueryClientProvider>

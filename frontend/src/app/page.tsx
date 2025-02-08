@@ -16,6 +16,8 @@ import { InsightsBanner } from "@/components/InsightsBanner";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
 import { toast } from "react-hot-toast";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants, ThemeColor } from "@/utils/theme";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -40,6 +42,8 @@ const HomePage: React.FC = () => {
   >("insightsBannerMuteUntil", null);
   const { isSupported: isShareSupported, share } = useShare();
   const [copied, copyToClipboard] = useClipboard();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw as ThemeColor);
 
   useEffect(() => {
     if (
@@ -101,8 +105,8 @@ const HomePage: React.FC = () => {
         <div className="flex flex-row gap-3 items-center text-center">
           <span className="mb-2 text-[40px]">🎯</span>
           <h2 className="text-xl font-bold tracking-tight text-gray-900">
-            <span className="text-blue-500 break-normal text-nowrap">
-              tracking.<span className="text-blue-300">so</span>
+            <span className={`${variants.text} break-normal text-nowrap`}>
+              tracking.<span className={`${variants.fadedText}`}>so</span>
             </span>
           </h2>
         </div>
