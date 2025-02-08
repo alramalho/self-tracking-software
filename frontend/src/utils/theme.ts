@@ -1,10 +1,12 @@
-export type ThemeColor =
+export type BaseThemeColor =
   | "slate"
   | "blue"
   | "violet"
   | "amber"
   | "emerald"
   | "rose";
+
+export type ThemeColor = BaseThemeColor | "random";
 
 // All possible theme variants
 export interface ThemeVariants {
@@ -43,7 +45,7 @@ export interface ThemeVariants {
 }
 
 // Force Tailwind to generate all theme classes
-export const themeVariants: Record<ThemeColor, ThemeVariants> = {
+export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   slate: {
     raw: "slate",
     bg: "bg-slate-500",
@@ -57,7 +59,7 @@ export const themeVariants: Record<ThemeColor, ThemeVariants> = {
     hover: "hover:bg-slate-100",
     background: "bg-slate-50",
     cssVars: {
-      appBackground: "bg-slate-50/40",
+      appBackground: "bg-gray-50",
     },
     card: {
       selected: {
@@ -88,7 +90,7 @@ export const themeVariants: Record<ThemeColor, ThemeVariants> = {
     hover: "hover:bg-blue-100",
     background: "bg-blue-50",
     cssVars: {
-      appBackground: "bg-blue-50/40",
+      appBackground: "bg-gray-50",
     },
     card: {
       selected: {
@@ -119,7 +121,7 @@ export const themeVariants: Record<ThemeColor, ThemeVariants> = {
     hover: "hover:bg-violet-100",
     background: "bg-violet-50",
     cssVars: {
-      appBackground: "bg-violet-50/40",
+      appBackground: "bg-gray-50",
     },
     card: {
       selected: {
@@ -150,7 +152,7 @@ export const themeVariants: Record<ThemeColor, ThemeVariants> = {
     hover: "hover:bg-amber-100",
     background: "bg-amber-50",
     cssVars: {
-      appBackground: "bg-amber-50/40",
+      appBackground: "bg-gray-50",
     },
     card: {
       selected: {
@@ -181,7 +183,7 @@ export const themeVariants: Record<ThemeColor, ThemeVariants> = {
     hover: "hover:bg-emerald-100",
     background: "bg-emerald-50",
     cssVars: {
-      appBackground: "bg-emerald-50/40",
+      appBackground: "bg-gray-50",
     },
     card: {
       selected: {
@@ -212,7 +214,7 @@ export const themeVariants: Record<ThemeColor, ThemeVariants> = {
     hover: "hover:bg-rose-100",
     background: "bg-rose-50",
     cssVars: {
-      appBackground: "bg-rose-50/40",
+      appBackground: "bg-gray-50",
     },
     card: {
       selected: {
@@ -233,6 +235,18 @@ export const themeVariants: Record<ThemeColor, ThemeVariants> = {
 };
 
 export const getThemeVariants = (color: ThemeColor): ThemeVariants => {
+  if (color === "random") {
+    const colors: BaseThemeColor[] = [
+      "slate",
+      "blue",
+      "violet",
+      "amber",
+      "emerald",
+      "rose",
+    ];
+    const randomIndex = Math.floor(Math.random() * colors.length);
+    return themeVariants[colors[randomIndex]];
+  }
   return themeVariants[color];
 };
 
