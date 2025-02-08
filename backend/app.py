@@ -61,6 +61,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:
             response = await call_next(request)
+            logger.info(f"{request.method} {request.url.path} {response.status_code}")
 
             # Get the response body
             response_body = b""
