@@ -9,10 +9,11 @@ import { usePathname } from "next/navigation";
 import FloatingActionMenu from "./FloatingActionMenu";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
-import { ThemeColor } from "@/utils/theme";
+import { BaseThemeColor } from "@/utils/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 // This forces Tailwind to include these classes in the build
-const themeTextClasses: Record<ThemeColor, string> = {
+const themeTextClasses: Record<BaseThemeColor, string> = {
   slate: "text-slate-500",
   blue: "text-blue-500",
   violet: "text-violet-500",
@@ -34,6 +35,7 @@ const BottomNav = () => {
   const userUsername = userData?.user?.username;
   const pathname = usePathname();
   const themeColors = useThemeColors();
+  const { effectiveTheme } = useTheme();
 
   const isActiveRoute = (route: string) => {
     if (route === '/') return pathname === '/';
@@ -52,7 +54,7 @@ const BottomNav = () => {
     return null;
   }
 
-  const activeThemeClass = themeTextClasses[themeColors.raw];
+  const activeThemeClass = themeTextClasses[effectiveTheme];
 
   return (
     <>
