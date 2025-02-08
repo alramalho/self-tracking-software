@@ -54,6 +54,7 @@ import { DemoEmotionViewer } from "@/components/DemoEmotionViewer";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
 import { ThemeColor, getThemeVariants } from "@/utils/theme";
+import { useTheme } from '@/contexts/ThemeContext';
 
 const ProfilePage: React.FC = () => {
   const { clearNotifications } = useNotifications();
@@ -62,6 +63,7 @@ const ProfilePage: React.FC = () => {
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
   const { useCurrentUserDataQuery, useUserDataQuery, refetchUserData, messagesData, updateTheme, currentTheme } = useUserPlan();
+  const { randomTimeLeft } = useTheme();
   const currentUserQuery = useCurrentUserDataQuery();
   const params = useParams();
   const username = params.username as string;
@@ -93,6 +95,10 @@ const ProfilePage: React.FC = () => {
   const [showColorPalette, setShowColorPalette] = useState(false);
 
   const colorPalettes = [
+    {
+      name: "Random",
+      color: "random" as ThemeColor,
+    },
     {
       name: "Slate",
       color: "slate" as ThemeColor,
@@ -419,19 +425,26 @@ const ProfilePage: React.FC = () => {
                       <div
                         key={palette.name}
                         className={`flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${
-                          isSelected ? `ring-2 ring-offset-2 ring-${palette.color}-500` : ''
+                          isSelected ? `ring-2 ring-offset-2 ${palette.color === 'random' ? 'ring-gray-500' : `ring-${palette.color}-500`}` : ''
                         }`}
                         onClick={() => handleThemeChange(palette.color)}
                       >
                         <div className="flex items-center gap-2">
-                          {isSelected && <Check className={`w-4 h-4 text-${palette.color}-500`} />}
-                          <span className="font-medium">{palette.name}</span>
+                          {isSelected && <Check className={`w-4 h-4 ${palette.color === 'random' ? 'text-gray-500' : `text-${palette.color}-500`}`} />}
+                          <div className="flex flex-col">
+                            <span className="font-medium">{palette.name}</span>
+                            {palette.color === 'random' && isSelected && (
+                              <span className="text-xs text-gray-500">{randomTimeLeft}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex gap-2 ml-auto">
-                          <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).primary}`}></div>
-                          <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).secondary}`}></div>
-                          <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).accent}`}></div>
-                        </div>
+                        {palette.color !== 'random' && (
+                          <div className="flex gap-2 ml-auto">
+                            <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).primary}`}></div>
+                            <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).secondary}`}></div>
+                            <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).accent}`}></div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

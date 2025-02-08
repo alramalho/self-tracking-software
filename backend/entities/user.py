@@ -26,7 +26,7 @@ class User(BaseModel):
     plan_invitations: List[str] = Field(default_factory=list)
     referred_user_ids: List[str] = Field(default_factory=list)
     unactivated_email_sent_at: Optional[datetime] = None
-    theme_base_color: Literal["slate", "blue", "violet", "amber", "emerald", "rose"] = "blue"
+    theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"] = "random"
 
     @classmethod
     def new(

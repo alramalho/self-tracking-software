@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, Query, Request
 from loguru import logger
-from typing import List
+from typing import List, Literal
 from auth.clerk import is_clerk_user
 from entities.user import User
 from gateways.users import UsersGateway
@@ -686,14 +686,11 @@ async def update_timezone(body: TimezoneUpdate, user: User = Depends(is_clerk_us
 
 
 class ThemeUpdate(BaseModel):
-    theme_base_color: str
+    theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"]
 
 @router.post("/update-theme")
 async def update_theme(body: ThemeUpdate, user: User = Depends(is_clerk_user)):
     try:
-        if body.theme_base_color not in ["slate", "blue", "violet", "amber", "emerald", "rose"]:
-            raise HTTPException(status_code=400, detail=f"Invalid theme color: {body.theme_base_color}")
-            
         updated_user = users_gateway.update_fields(user.id, {"theme_base_color": body.theme_base_color})
         return {"message": "Theme updated successfully", "user": updated_user}
     except Exception as e:

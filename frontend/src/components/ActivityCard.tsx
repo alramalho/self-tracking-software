@@ -18,6 +18,7 @@ export const ActivityCard = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
+
   return (
     <div className="relative">
       <button
