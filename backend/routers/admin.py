@@ -331,7 +331,7 @@ async def run_daily_metrics_notification(
         "metrics_notification_result": metrics_notification_result,
     }
 
-    if send_report:
+    if send_report and len(metrics_notification_result.get("notifications_processed", [])) > 0:
         current_time = datetime.now(UTC).strftime("%Y-%m-%d")
         ses_gateway.send_email(
             to="alexandre.ramalho.1998@gmail.com",
