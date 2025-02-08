@@ -130,7 +130,7 @@ const HomePage: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">
           Friend&apos;s last activities
         </h2>
-        {userData?.user?.friend_ids?.length === 0 && (
+        {userData?.user?.friend_ids?.length === 0 ? (
           <>
             <div className="text-left text-gray-500">
               You haven&apos;t added any friends yet 🙁
@@ -171,6 +171,8 @@ const HomePage: React.FC = () => {
               </span>
             </div>
           </>
+        ) : (
+          <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)} />
         )}
       </div>
 
