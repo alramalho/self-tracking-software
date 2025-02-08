@@ -52,7 +52,7 @@ export function WeeklySessionsChecklist({
           }
           return prev;
         });
-      }, 300);
+      }, 500);
 
       return () => clearInterval(timer);
     }
@@ -65,9 +65,6 @@ export function WeeklySessionsChecklist({
 
   return (
     <div ref={ref}>
-      <h3 className="text-lg font-semibold mb-4 text-gray-900">
-        Weekly Progress
-      </h3>
       <div className="flex flex-row gap-2 items-center justify-center mt-7">
         {Array.from({ length: plan.times_per_week }).map((_, index) => (
           <div
