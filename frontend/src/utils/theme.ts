@@ -49,7 +49,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   slate: {
     raw: "slate",
     bg: "bg-slate-500",
-    fadedBg: "bg-slate-100",
+    fadedBg: "bg-slate-200/50",
     text: "text-slate-500",
     fadedText: "text-slate-300",
     border: "border-slate-400",
@@ -64,7 +64,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     card: {
       selected: {
         border: "border-slate-400",
-        bg: "bg-slate-50",
+        bg: "bg-slate-100",
       },
     },
     button: {
