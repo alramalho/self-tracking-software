@@ -421,18 +421,24 @@ const ProfilePage: React.FC = () => {
                 <div className="grid gap-4">
                   {colorPalettes.map((palette) => {
                     const isSelected = currentTheme === palette.color;
+                    const isLocked = palette.color !== 'random';
                     return (
                       <div
                         key={palette.name}
-                        className={`flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${
+                        className={`flex items-center gap-4 p-3 border rounded-lg ${
+                          isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'
+                        } ${
                           isSelected ? `ring-2 ring-offset-2 ${palette.color === 'random' ? 'ring-gray-500' : `ring-${palette.color}-500`}` : ''
                         }`}
-                        onClick={() => handleThemeChange(palette.color)}
+                        onClick={() => !isLocked && handleThemeChange(palette.color)}
                       >
                         <div className="flex items-center gap-2">
                           {isSelected && <Check className={`w-4 h-4 ${palette.color === 'random' ? 'text-gray-500' : `text-${palette.color}-500`}`} />}
                           <div className="flex flex-col">
-                            <span className="font-medium">{palette.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{palette.name}</span>
+                              {isLocked && <span className="text-xs text-gray-500">🔒 Coming soon</span>}
+                            </div>
                             {palette.color === 'random' && isSelected && (
                               <span className="text-xs text-gray-500">{randomTimeLeft}</span>
                             )}
