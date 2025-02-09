@@ -33,12 +33,14 @@ export default function GeneralInitializer({
 
   const email = userData?.user?.email || "";
 
-  const reportBug = async (text: string) => {
+  const reportBug = async (text: string, email: string) => {
     await toast.promise(
-      api.post("/report-feedback", {
-        email,
-        text,
-        type: "bug_report",
+      fetch('/api/report-bug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, text }),
       }),
       {
         loading: "Sending bug report...",
@@ -87,7 +89,7 @@ export default function GeneralInitializer({
     );
   }
 
-  if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
+  if (true || !isLoaded || (isSignedIn && !hasLoadedUserData)) {
     return (
       <>
         {showBugDialog && (
@@ -95,8 +97,9 @@ export default function GeneralInitializer({
             title="🐞 Report a Bug"
             email={email}
             placeholder="Please describe the bug you encountered..."
-            onSubmit={reportBug}
+            onSubmit={(text) => reportBug(text, email)}
             onClose={() => setShowBugDialog(false)}
+            isEmailEditable={true}
           />
         )}
         <div className="fixed inset-0 flex items-center justify-center">
