@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Union
 from bson import ObjectId
 
 class PlanSession(BaseModel):
@@ -9,10 +9,21 @@ class PlanSession(BaseModel):
     descriptive_guide: str = Field(..., description="A note describing the session")
     quantity: int
 
+class PlanMilestoneCriteria(BaseModel):
+    """Represents a single activity requirement."""
+    activity_id: str
+    quantity: int
+
+class PlanMilestoneCriteriaGroup(BaseModel):
+    """Groups criteria with an AND or OR junction."""
+    junction: Literal["AND", "OR"]
+    criteria: List[Union["PlanMilestoneCriteria", "PlanMilestoneCriteriaGroup"]]
 
 class PlanMilestone(BaseModel):
+    """Defines a milestone with a list of criteria groups."""
     date: str
     description: str
+    criteria: List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]
     
 class Plan(BaseModel):
     id: str
