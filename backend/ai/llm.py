@@ -17,7 +17,7 @@ class TextResponse(BaseModel):
 
 def get_model(model: str = LLM_MODEL):
     if 'deepseek' in model:
-        return OpenAIModel(model, api_key=DEEPSEEK_API_KEY)
+        return OpenAIModel(model, base_url='https://api.deepseek.com', api_key=DEEPSEEK_API_KEY)
     elif 'gpt' in model:
         return OpenAIModel(model, api_key=OPENAI_API_KEY)
     elif 'gemini' in model:
