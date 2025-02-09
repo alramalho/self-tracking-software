@@ -75,8 +75,12 @@ const PREDEFINED_PLANS: Record<string, PredefinedPlan> = {
       const date = new Date();
       date.setMonth(date.getMonth() + i + 1);
       return {
-        date: date.toISOString().split("T")[0],
+        date,
         description: `Book ${i + 1}`,
+        criteria: [{
+          activity_id: "reading",
+          quantity: 200
+        }]
       };
     }),
     sessions: [],
