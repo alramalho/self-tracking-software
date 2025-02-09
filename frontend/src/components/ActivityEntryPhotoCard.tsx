@@ -6,6 +6,9 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import { parseISO, format, isToday, isYesterday, differenceInCalendarDays } from 'date-fns';
+import { twMerge } from "tailwind-merge";
+import { getThemeVariants } from "@/utils/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const getFormattedDate = (date: string) => {
   const parsedDate = parseISO(date);
@@ -90,7 +93,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { data: userData } = useCurrentUserDataQuery();
   const currentUserUsername = userData?.user?.username;
   const isOwnActivityEntry = userData?.user?.username === userUsername;
-  const api = useApiWithAuth();
+  const api = useApiWithAuth(); 
+  const { effectiveTheme } = useTheme();
+  const variants = getThemeVariants(effectiveTheme);
   const [showUserList, setShowUserList] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -190,7 +195,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const hasImage = imageUrl && !hasImageExpired;
 
   return (
-    <div className="bg-white border rounded-lg overflow-hidden relative">
+    <div className="bg-white/50 border rounded-lg overflow-hidden relative">
       {hasImage && (
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
@@ -205,19 +210,19 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                   <button
                     key={emoji}
                     onClick={() => handleReactionClick(emoji)}
-                    className={`inline-flex items-center border border-gray-200 border-gray-100 rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
+                    className={`inline-flex border  border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
                       usernames.includes(currentUserUsername || "")
-                        ? "border-blue-400 bg-blue-50"
-                        : "bg-white "
+                        ? variants.card.selected.glassBg
+                        : variants.card.glassBg
                     }`}
                   >
                     <span className="text-base">{emoji}</span>
                     {showUserList[emoji] ? (
-                      <span className="text-gray-600 font-medium">
+                      <span className="text-gray-800 font-medium">
                         {formatUserList(usernames)}
                       </span>
                     ) : (
-                      <span className="text-gray-600 font-medium">
+                      <span className="text-gray-800 font-medium">
                         {usernames.length}
                       </span>
                     )}
@@ -232,7 +237,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     <ReactionBarSelector
                       iconSize={24}
                       style={{
-                        backgroundColor: "#f7f7f7",
+                        border: `1px solid rgba(255, 255, 255, 0.2)`,
+                        backgroundColor: "rgba(255, 255, 255, 0.5)",
                         zIndex: 40,
                       }}
                       reactions={Object.entries(REACTION_EMOJI_MAPPING).map(
@@ -256,9 +262,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                         e.stopPropagation();
                         setShowEmojiPicker(!showEmojiPicker);
                       }}
-                      className={`inline-flex items-center space-x-1 bg-white rounded-full p-2 transition-all shadow-md`}
+                      className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
                     >
-                      <Smile className={`h-6 w-6 text-gray-500`} />
+                      <Smile className={`h-6 w-6 text-gray-800`} />
                     </button>
                   )}
                 </div>
@@ -267,13 +273,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </div>
           {hasImage && description && (
             <div className="relative -mt-6 mx-2">
-              <div className="relative rounded-2xl overflow-hidden bg-white/20 backdrop-blur-lg shadow-lg border border-white/20 p-4">
+              <div className={`relative rounded-2xl overflow-hidden ${variants.card.glassBg} backdrop-blur-lg shadow-lg border border-white/20 p-4`}>
                 <div className={`relative ${!isExpanded && 'max-h-[4.5em]'} ${shouldShowReadMore && !isExpanded && 'overflow-hidden'}`}>
                   <p ref={textRef} className="text-gray-800 font-medium text-sm relative z-10">
                     {description}
                   </p>
                   {shouldShowReadMore && !isExpanded && (
-                    <div className="absolute bottom-0 right-0 left-0 h-6 bg-gradient-to-t from-white/80 to-transparent" />
+                    <div className="absolute bottom-0 right-0 left-0 h-6" />
                   )}
                 </div>
                 {shouldShowReadMore && (
@@ -321,7 +327,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               {description}
             </p>
             {shouldShowReadMore && !isExpanded && (
-              <div className="absolute bottom-0 right-0 left-0 h-6 bg-gradient-to-t from-white to-transparent" />
+              <div className="absolute bottom-0 right-0 left-0 h-6" />
             )}
             {shouldShowReadMore && (
               <button
