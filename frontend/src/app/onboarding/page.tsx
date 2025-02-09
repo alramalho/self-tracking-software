@@ -63,6 +63,9 @@ const PREDEFINED_PLANS: Record<string, PredefinedPlan> = {
     times_per_week: 5,
     outline_type: "times_per_week",
     duration_type: "habit",
+    finishing_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     activities: [
       {
         id: "reading",
@@ -77,10 +80,12 @@ const PREDEFINED_PLANS: Record<string, PredefinedPlan> = {
       return {
         date,
         description: `Book ${i + 1}`,
-        criteria: [{
-          activity_id: "reading",
-          quantity: 200
-        }]
+        criteria: [
+          {
+            activity_id: "reading",
+            quantity: 200,
+          },
+        ],
       };
     }),
     sessions: [],
@@ -103,7 +108,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     // Find the scrollable container and scroll it to top
-    const container = document.querySelector('#onboarding-page');
+    const container = document.querySelector("#onboarding-page");
     if (container) {
       container.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -140,6 +145,7 @@ export default function OnboardingPage() {
         outline_type: "times_per_week" as const,
         times_per_week: plan.times_per_week,
         duration_type: plan.duration_type,
+        finishing_date: plan.finishing_date,
         activity_ids: activityIds,
         milestones: plan.milestones,
         sessions: [],
@@ -383,7 +389,7 @@ export default function OnboardingPage() {
               <Button
                 className="w-full mt-8"
                 size="lg"
-                onClick={() => router.push("/")}
+                onClick={() => router.push("/plans")}
               >
                 Continue to Dashboard
               </Button>
