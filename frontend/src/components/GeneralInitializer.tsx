@@ -89,7 +89,7 @@ export default function GeneralInitializer({
     );
   }
 
-  if (true || !isLoaded || (isSignedIn && !hasLoadedUserData)) {
+  if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
     return (
       <>
         {showBugDialog && (
