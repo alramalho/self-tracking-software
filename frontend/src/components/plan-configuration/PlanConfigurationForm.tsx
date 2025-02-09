@@ -5,13 +5,14 @@ import {
   Activity,
   ApiPlan,
   Plan,
+  PlanMilestone,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
 import { usePlanGeneration } from "@/hooks/usePlanGeneration";
 import toast from "react-hot-toast";
 import Divider from "../Divider";
 import Step from "./Step";
-import MilestonesStep, { Milestone } from "./steps/MilestonesStep";
+import MilestonesStep from "./steps/MilestonesStep";
 import OutlineStep from "./steps/OutlineStep";
 import ActivitiesStep from "./steps/ActivitiesStep";
 import EmojiStep from "./steps/EmojiStep";
@@ -50,7 +51,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const [generatedSessions, setGeneratedSessions] = useState<ApiPlan["sessions"]>();
   const [goal, setGoal] = useState(plan?.goal || "");
   const [planNotes, setPlanNotes] = useState("");
-  const [milestones, setMilestones] = useState<Milestone[]>(plan?.milestones || []);
+  const [milestones, setMilestones] = useState<PlanMilestone[]>(plan?.milestones || []);
   const [planDuration, setPlanDuration] = useState<PlanDurationType>({
     type: plan?.duration_type,
     date: plan?.finishing_date,
@@ -387,6 +388,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         <Step stepNumber={6} isVisible={shouldShowStep(6)} ref={stepRefs.step6}>
           <Divider />
           <MilestonesStep
+            activities={selectedActivities}
             milestones={milestones}
             setMilestones={setMilestones}
           />

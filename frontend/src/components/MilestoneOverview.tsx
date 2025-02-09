@@ -2,20 +2,20 @@ import { cn } from "@/lib/utils";
 import { ApiPlan } from "@/contexts/UserPlanContext";
 import { format, parseISO } from "date-fns";
 
-interface ProgressOverviewProps {
+interface MilestoneOverviewProps {
   milestones: ApiPlan['milestones'];
 }
 
-export function ProgressOverview({ milestones }: ProgressOverviewProps) {
+export function MilestoneOverview({ milestones }: MilestoneOverviewProps) {
   if (!milestones || milestones.length === 0) return null;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4 mb-4">
       <div className="flex flex-row items-center justify-start gap-2">
         <span className="text-4xl">⛳️</span>
-        <h2 className="text-xl font-semibold">Progress Overview</h2>
+        <h2 className="text-xl font-semibold">Milestone Overview</h2>
       </div>
-      <div className="flex flex-row gap-2 items-center justify-center mt-7">
+      <div className="ml-2 max-w-full h-[120px] flex flex-row gap-2 items-start flex-nowrap mt-7 overflow-x-auto">
         {milestones.map((milestone, index) => (
           <div
             key={index}

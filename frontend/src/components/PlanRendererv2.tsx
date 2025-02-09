@@ -29,7 +29,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
-import { ProgressOverview } from "./ProgressOverview";
+import { MilestoneOverview } from "./MilestoneOverview";
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
 }
@@ -322,7 +322,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <span className="text-4xl">{selectedPlan.emoji}</span>
         <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
       </div>
-      <ProgressOverview milestones={selectedPlan.milestones} />
+      <MilestoneOverview milestones={selectedPlan.milestones} />
 
       <div className="bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex flex-row items-center justify-start gap-2 mb-2">
