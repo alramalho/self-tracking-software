@@ -18,7 +18,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
   const email = userData?.user?.email || "";
   const api = useApiWithAuth();
 
-  const reportBug = async (text: string) => {
+  const reportBug = async (text: string, email: string) => {
     await toast.promise(
       api.post("/report-feedback", {
         email,
@@ -33,7 +33,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
     );
   };
 
-  const getHelp = async (text: string) => {
+  const getHelp = async (text: string, email: string) => {
     await toast.promise(
       api.post("/report-feedback", {
         email,
@@ -48,7 +48,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
     );
   };
 
-  const suggestFeature = async (text: string) => {
+  const suggestFeature = async (text: string, email: string) => {
     await toast.promise(
       api.post("/report-feedback", {
         email,

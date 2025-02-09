@@ -8,24 +8,27 @@ interface FeedbackFormProps {
   title: string;
   email: string;
   placeholder?: string;
-  onSubmit: (text: string) => void;
-  onClose: () => void;
   defaultValue?: string;
+  onSubmit: (text: string, email: string) => void;
+  onClose: () => void;
+  isEmailEditable?: boolean;
 }
 
 const FeedbackForm = ({ 
   title, 
-  email, 
+  email: initialEmail, 
   placeholder = "Please describe your issue...",
   defaultValue,
   onSubmit, 
   onClose,
+  isEmailEditable = false,
 }: FeedbackFormProps) => {
   const [text, setText] = useState(defaultValue || "");
+  const [email, setEmail] = useState(initialEmail);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(text);
+    onSubmit(text, email);
     setText("");
     onClose();
   };
@@ -48,8 +51,10 @@ const FeedbackForm = ({
             <input
               type="email"
               value={email}
-              disabled
+              onChange={(e) => isEmailEditable && setEmail(e.target.value)}
+              disabled={!isEmailEditable}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50"
+              required
             />
           </div>
           
