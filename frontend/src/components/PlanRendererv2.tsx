@@ -322,7 +322,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <span className="text-4xl">{selectedPlan.emoji}</span>
         <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
       </div>
-      <MilestoneOverview milestones={selectedPlan.milestones} />
+      {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
+        <div className="mb-8">
+          <MilestoneOverview milestones={selectedPlan.milestones} />
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex flex-row items-center justify-start gap-2 mb-2">
