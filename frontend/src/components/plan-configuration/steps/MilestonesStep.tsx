@@ -63,7 +63,9 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
       description: previousMilestone ? previousMilestone.description : "",
       criteria: [{
         activity_id: defaultActivityId,
-        quantity: 0
+        quantity: previousMilestone && 'activity_id' in previousMilestone.criteria[0] 
+          ? (previousMilestone.criteria[0] as PlanMilestoneCriteria).quantity 
+          : 0
       }]
     };
     setMilestones((prevMilestones) => [...prevMilestones, newMilestone]);
@@ -258,12 +260,13 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
 
       <div className="flex gap-2">
         <Button
-          onClick={() => setMilestones([])}
+          onClick={() => setMilestones(prev => prev.slice(0, -1))}
           variant="outline"
           className="gap-2 border-2 bg-gray-50 w-1/2"
           disabled={milestones.length === 0}
         >
           <Minus className="h-4 w-4" />
+          Remove Last
         </Button>
         <Button
           onClick={addMilestone}
