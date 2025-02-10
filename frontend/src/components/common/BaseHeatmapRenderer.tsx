@@ -115,7 +115,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             width={45 + 26 * numberOfWeeks}
             height={215}
             rectSize={20}
-            legendRender={() => <></>}
+            legendRender={() => <React.Fragment key={crypto.randomUUID()} />}
             rectProps={{
               rx: 4,
             }}
