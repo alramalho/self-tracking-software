@@ -7,6 +7,7 @@ import Number from "../Number";
 import { ApiPlan, Activity, PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup } from "@/contexts/UserPlanContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { cn } from "@/lib/utils";
 
 interface MilestonesStepProps {
   milestones?: PlanMilestone[];
@@ -19,6 +20,11 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   setMilestones = () => {},
   activities = [],
 }) => {
+  // Track validation state
+  const [validationErrors, setValidationErrors] = useState<{
+    [key: number]: { title?: boolean; criteria?: { [key: number]: boolean } }
+  }>({});
+
   // Add recursive validation function
   const hasValidActivities = (
     criterion: PlanMilestoneCriteria | PlanMilestoneCriteriaGroup,
@@ -53,6 +59,38 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     }
   }, [activities, milestones, setMilestones]);
 
+  // Validation effect
+  useEffect(() => {
+    const errors: typeof validationErrors = {};
+    
+    milestones.forEach((milestone, index) => {
+      const milestoneErrors: typeof validationErrors[number] = {};
+      
+      // Check title
+      if (!milestone.description?.trim()) {
+        milestoneErrors.title = true;
+      }
+      
+      // Check criteria
+      const criteriaErrors: { [key: number]: boolean } = {};
+      milestone.criteria.forEach((criterion, criterionIndex) => {
+        if ('activity_id' in criterion && criterion.quantity <= 0) {
+          criteriaErrors[criterionIndex] = true;
+        }
+      });
+      
+      if (Object.keys(criteriaErrors).length > 0) {
+        milestoneErrors.criteria = criteriaErrors;
+      }
+      
+      if (Object.keys(milestoneErrors).length > 0) {
+        errors[index] = milestoneErrors;
+      }
+    });
+    
+    setValidationErrors(errors);
+  }, [milestones]);
+
   const addMilestone = () => {
     const defaultActivityId = activities.length > 0 ? activities[0].id : "";
     const previousMilestone = milestones[milestones.length - 1];
@@ -61,12 +99,10 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
       date: previousMilestone 
         ? new Date(new Date(previousMilestone.date).setMonth(new Date(previousMilestone.date).getMonth() + 1))
         : new Date(),
-      description: previousMilestone ? previousMilestone.description : "",
+      description: "",
       criteria: [{
         activity_id: defaultActivityId,
-        quantity: previousMilestone && 'activity_id' in previousMilestone.criteria[0] 
-          ? (previousMilestone.criteria[0] as PlanMilestoneCriteria).quantity 
-          : 0
+        quantity: 1
       }]
     };
     setMilestones((prevMilestones) => [...prevMilestones, newMilestone]);
@@ -117,7 +153,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
         if (i === milestoneIndex) {
           return {
             ...milestone,
-            criteria: [...milestone.criteria, { activity_id: defaultActivityId, quantity: 0 }]
+            criteria: [...milestone.criteria, { activity_id: defaultActivityId, quantity: 1 }]
           };
         }
         return milestone;
@@ -158,21 +194,33 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
       <div className="space-y-4">
         {milestones.map((milestone, milestoneIndex) => (
           <div key={milestoneIndex} className="space-y-4">
-            <div className="flex flex-col gap-4 p-4 border rounded-lg">
+            <div className={cn(
+              "flex flex-col gap-4 p-4 border rounded-lg",
+              validationErrors[milestoneIndex]?.title && "border-red-500"
+            )}>
               <div className="flex items-center gap-3">
                 <div className="text-3xl">⛳️</div>
                 <div className="flex-1 flex items-center gap-3">
                   <DatePicker
+                    className="max-w-[150px]"
                     selected={ensureDate(milestone.date)}
                     onSelect={(date) => date && updateMilestone(milestoneIndex, "date", date)}
                   />
-                  <Input
-                    value={milestone.description}
-                    onChange={(e) =>
-                      updateMilestone(milestoneIndex, "description", e.target.value)
-                    }
-                    placeholder="Title"
-                  />
+                  <div className="flex-1">
+                    <Input
+                      value={milestone.description}
+                      onChange={(e) =>
+                        updateMilestone(milestoneIndex, "description", e.target.value)
+                      }
+                      placeholder="Title"
+                      className={cn(
+                        validationErrors[milestoneIndex]?.title && "border-red-500 focus-visible:ring-red-500"
+                      )}
+                    />
+                    {validationErrors[milestoneIndex]?.title && (
+                      <p className="text-sm text-red-500 mt-1">Title is required</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -212,20 +260,28 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input
-                      type="number"
-                      className="w-24"
-                      value={(criterion as PlanMilestoneCriteria).quantity}
-                      onChange={(e) =>
-                        updateCriteria(
-                          milestoneIndex,
-                          criteriaIndex,
-                          "quantity",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      placeholder="Quantity"
-                    />
+                    <div className="flex flex-col gap-1">
+                      <Input
+                        type="number"
+                        className={cn(
+                          "w-24",
+                          validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && "border-red-500 focus-visible:ring-red-500"
+                        )}
+                        value={(criterion as PlanMilestoneCriteria).quantity}
+                        onChange={(e) =>
+                          updateCriteria(
+                            milestoneIndex,
+                            criteriaIndex,
+                            "quantity",
+                            Math.max(1, parseInt(e.target.value) || 0)
+                          )
+                        }
+                        placeholder="Quantity"
+                      />
+                      {validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && (
+                        <p className="text-sm text-red-500">Must be greater than 0</p>
+                      )}
+                    </div>
                     <span className="text-sm text-gray-500">
                       {activities.find(
                         (a) => a.id === (criterion as PlanMilestoneCriteria).activity_id

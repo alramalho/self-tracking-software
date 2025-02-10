@@ -220,7 +220,33 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     return currentStep === 6 && isPlanComplete();
   }, [isEdit, hasMadeAnyChanges, isPlanComplete, currentStep]);
 
+  const validateMilestones = useCallback(() => {
+    if (!milestones.length) return true; // Milestones are optional
+
+    for (const milestone of milestones) {
+      // Check title
+      if (!milestone.description?.trim()) {
+        toast.error("All milestones must have a title");
+        return false;
+      }
+
+      // Check criteria
+      for (const criterion of milestone.criteria) {
+        if ('activity_id' in criterion && criterion.quantity <= 0) {
+          toast.error("All milestone criteria must have a quantity greater than 0");
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }, [milestones]);
+
   const handleConfirm = async () => {
+    if (!validateMilestones()) {
+      return;
+    }
+
     try {
       setIsProcessing(true);
       await onConfirm(createPlanToConfirm());
