@@ -19,6 +19,7 @@ interface DatePickerProps {
   disablePastDates?: boolean;
   disableFutureDates?: boolean;
   id?: string;
+  className?: string;
 }
 
 export function DatePicker({
@@ -27,6 +28,7 @@ export function DatePicker({
   disablePastDates,
   disableFutureDates,
   id,
+  className,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const today = new Date();
@@ -46,11 +48,12 @@ export function DatePicker({
           variant={"outline"}
           className={cn(
             "w-[280px] justify-start text-left font-normal",
+            className,
             !selected && "text-muted-foreground"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {selected ? format(selected, "PPP") : <span>Pick a date</span>}
+          {selected ? format(selected, "PP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
