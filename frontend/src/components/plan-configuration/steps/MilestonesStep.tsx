@@ -6,6 +6,7 @@ import { Plus, Minus } from "lucide-react";
 import Number from "../Number";
 import { ApiPlan, Activity, PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup } from "@/contexts/UserPlanContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface MilestonesStepProps {
   milestones?: PlanMilestone[];
@@ -161,12 +162,9 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
               <div className="flex items-center gap-3">
                 <div className="text-3xl">⛳️</div>
                 <div className="flex-1 flex items-center gap-3">
-                  <Input
-                    type="date"
-                    value={ensureDate(milestone.date).toISOString().split("T")[0]}
-                    onChange={(e) =>
-                      updateMilestone(milestoneIndex, "date", new Date(e.target.value))
-                    }
+                  <DatePicker
+                    selected={ensureDate(milestone.date)}
+                    onSelect={(date) => date && updateMilestone(milestoneIndex, "date", date)}
                   />
                   <Input
                     value={milestone.description}
