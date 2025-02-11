@@ -20,7 +20,7 @@ export const ActivityCard = ({
 
 
   return (
-    <div className="relative">
+    <div className="relative" data-testid="activity-card">
       <button
         onClick={onClick}
         className={cn(
