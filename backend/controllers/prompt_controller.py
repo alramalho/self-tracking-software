@@ -85,11 +85,9 @@ Example: \"You're missing just one session of running 5km this week, there's sti
         framework = FlowchartLLMFramework(recurrent_checkin_flowchart, system_prompt)
 
         plans = plan_controller.get_readable_plans(user_id)
-        if not plans:
-            return "Hi, I'm Jarvis 👋. I see you don't have plans yet. They are an effective way to set milestones and I keep you in check!"
 
         context = {
-            "plans": plan_controller.get_readable_plans(user_id)[0],
+            "plans": plan_controller.get_readable_plans(user_id)[0] if plans else "User has no plans.",
             "activity_history": activities_gateway.get_readable_recent_activity_entries(user_id),
             "current_time": datetime.now(pytz.UTC).strftime("%b %d, %Y, %A"),
             "sent_messages": [n.message for n in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)],
