@@ -324,7 +324,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       </div>
       {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
         <div className="mb-8">
-          <MilestoneOverview milestones={selectedPlan.milestones} />
+          <MilestoneOverview milestones={selectedPlan.milestones} planId={selectedPlan.id} />
         </div>
       )}
 

@@ -20,11 +20,13 @@ from entities.activity import Activity
 from entities.plan import PlanSession, Plan
 from bson import ObjectId
 from pydantic import BaseModel
+from controllers.milestones_controller import MilestonesController
 
 
 router = APIRouter()
 
 plan_controller = PlanController()
+milestones_controller = MilestonesController()
 users_gateway = UsersGateway()
 activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
@@ -405,5 +407,23 @@ async def generate_sessions(data: GenerateSessionsRequest, user: User = Depends(
         return {"sessions": sessions}
     except Exception as e:
         logger.error(f"Failed to generate sessions: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/calculate-plan-milestone-progress/{plan_id}")
+async def calculate_plan_milestone_progress(plan_id: str, user: User = Depends(is_clerk_user)):
+    try:
+        plan = plan_controller.get_plan(plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found")
+
+        if plan.user_id != user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this plan")
+
+        milestones_progress = milestones_controller.calculate_plan_milestones_progress(plan)
+        return milestones_progress
+    except Exception as e:
+        logger.error(f"Failed to calculate milestone progress: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))

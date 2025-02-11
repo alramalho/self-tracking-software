@@ -2,131 +2,81 @@ import { cn } from "@/lib/utils";
 import { PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup, useUserPlan } from "@/contexts/UserPlanContext";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
+import { useQuery } from "@tanstack/react-query";
+import { useApiWithAuth } from "@/api";
+import { Loader2 } from "lucide-react";
+
+interface MilestoneProgress {
+  milestone_id: string;
+  description: string;
+  date: string;
+  progress: number;
+  is_completed: boolean;
+  criteria_progress: Array<{
+    type: "criterion" | "group";
+    activity_id?: string;
+    quantity?: number;
+    current_quantity?: number;
+    progress: number;
+    junction?: "AND" | "OR";
+    criteria_progress?: Array<any>;
+  }>;
+}
+
+interface NextMilestoneResponse {
+  plan_id: string;
+  next_milestone: MilestoneProgress | null;
+}
 
 interface MilestoneOverviewProps {
+  planId: string;
   milestones: PlanMilestone[];
 }
 
-export function MilestoneOverview({ milestones }: MilestoneOverviewProps) {
+export function MilestoneOverview({ planId, milestones }: MilestoneOverviewProps) {
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const activityEntries = userData?.activityEntries || [];
+  const api = useApiWithAuth();
+
+  const { data: milestoneResponse, isLoading } = useQuery<NextMilestoneResponse>({
+    queryKey: ['milestoneProgress', planId],
+    queryFn: async () => {
+      const response = await api.get(`/calculate-plan-milestone-progress/${planId}`);
+      return response.data;
+    },
+    enabled: !!planId && milestones?.length > 0,
+  });
 
   if (!milestones || milestones.length === 0) return null;
+  if (isLoading) return <div className="flex justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  if (!milestoneResponse?.next_milestone) return null;
 
-  // Get the next milestone (first uncompleted future milestone, or first uncompleted milestone, or last milestone)
-  const getNextMilestone = () => {
-    const now = new Date();
-    
-    const orderedMilestones = milestones.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    // First try to find the next uncompleted future milestone
-    const nextFutureMilestone = orderedMilestones.find(m => 
-      new Date(m.date) > now && calculateProgress(m) < 100
-    );
-    if (nextFutureMilestone) return nextFutureMilestone;
-
-    // If no future uncompleted milestone, find the first uncompleted milestone
-    const firstUncompletedMilestone = orderedMilestones.find(m => calculateProgress(m) < 100);
-    if (firstUncompletedMilestone) return firstUncompletedMilestone;
-
-    // If all are completed, return the last milestone
-    const lastMilestone = orderedMilestones[orderedMilestones.length - 1];
-    return lastMilestone;
-  };
-
-  const calculateProgress = (milestone: PlanMilestone) => {
-    if (!milestone.criteria) return 0;
-
-    // Helper function to get the date range for a milestone
-    const getMilestoneRange = (milestone: PlanMilestone): { start: Date; end: Date } => {
-      const milestoneDate = new Date(milestone.date);
-      
-      // Find the previous milestone with the same activity
-      const previousMilestone = milestones
-        .filter(m => new Date(m.date) < milestoneDate)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-      
-
-      const range = {
-        start: previousMilestone ? new Date(previousMilestone.date) : new Date(0),
-        end: milestoneDate
-      };
-      
-      return range;
-    };
-
-    // Helper function to calculate progress for a single criterion
-    const calculateCriterionProgress = (criterion: PlanMilestoneCriteria): number => {
-      if (!criterion.activity_id) return 0;
-
-      const { start, end } = getMilestoneRange(milestone);
-
-      const relevantEntries = activityEntries.filter(entry => 
-        entry.activity_id === criterion.activity_id &&
-        new Date(entry.date) > start &&
-        new Date(entry.date) <= end
-      );
-
-      const totalQuantity = relevantEntries.reduce((sum, entry) => sum + entry.quantity, 0);
-      return Math.min(100, (totalQuantity / criterion.quantity) * 100);
-    };
-
-    // Helper function to calculate progress for a group
-    const calculateGroupProgress = (group: PlanMilestoneCriteriaGroup): number => {
-      if (!group.criteria || group.criteria.length === 0) return 0;
-
-      const progresses = group.criteria.map(criterion => 
-        calculateMilestoneCriteriaProgress(criterion)
-      );
-
-
-      return group.junction === "AND" ? Math.min(...progresses) : Math.max(...progresses);
-    };
-
-    // Helper function to determine type and calculate progress accordingly
-    const calculateMilestoneCriteriaProgress = (
-      criterion: PlanMilestoneCriteria | PlanMilestoneCriteriaGroup
-    ): number => {
-      if ('activity_id' in criterion) {
-        return calculateCriterionProgress(criterion);
-      }
-      if ('criteria' in criterion) {
-        return calculateGroupProgress(criterion);
-      }
-      return 0;
-    };
-
-
-    // Calculate progress for each criterion and use AND logic (minimum) for the overall progress
-    return Math.min(...milestone.criteria.map(calculateMilestoneCriteriaProgress));
-  };
-
-  const milestone = getNextMilestone();
-  const progress = calculateProgress(milestone);
-  const isComplete = progress >= 100;
+  const nextMilestone = milestoneResponse.next_milestone;
+  const progress = nextMilestone.progress;
+  const isComplete = nextMilestone.is_completed;
 
   // Helper function to recursively render criteria and groups
-  const renderCriteriaOrGroup = (criterionOrGroup: PlanMilestoneCriteria | PlanMilestoneCriteriaGroup, level = 0) => {
-    if ('activity_id' in criterionOrGroup) {
-      const activity = userData?.activities?.find(a => a.id === criterionOrGroup.activity_id);
+  const renderCriteriaOrGroup = (criterionProgress: any, level = 0) => {
+    if (criterionProgress.type === 'criterion') {
+      const activity = userData?.activities?.find(a => a.id === criterionProgress.activity_id);
       if (!activity) return null;
 
       return (
         <div className="text-sm text-gray-600" style={{ marginLeft: `${level * 16}px` }}>
-          {activity.emoji} {criterionOrGroup.quantity} {activity.measure} of {activity.title}
+          {activity.emoji} {criterionProgress.quantity} {activity.measure} of {activity.title}
+          {criterionProgress.current_quantity > 0 && ` (${criterionProgress.current_quantity} done)`}
         </div>
       );
     }
 
-    if ('criteria' in criterionOrGroup) {
+    if (criterionProgress.type === 'group') {
       return (
         <div style={{ marginLeft: `${level * 16}px` }}>
           <div className="text-sm font-medium text-gray-700">
-            {criterionOrGroup.junction === "AND" ? "All of:" : "Any of:"}
+            {criterionProgress.junction === "AND" ? "All of:" : "Any of:"}
           </div>
           <div className="space-y-1">
-            {criterionOrGroup.criteria.map((c, i) => (
+            {criterionProgress.criteria_progress.map((c: any, i: number) => (
               <div key={i}>{renderCriteriaOrGroup(c, level + 1)}</div>
             ))}
           </div>
@@ -147,14 +97,14 @@ export function MilestoneOverview({ milestones }: MilestoneOverviewProps) {
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between">
           <div className="flex flex-col">
-            <h3 className="text-lg font-semibold">{milestone.description || 'Untitled Milestone'}</h3>
+            <h3 className="text-lg font-semibold">{nextMilestone.description || 'Untitled Milestone'}</h3>
             <p className="text-sm text-gray-500">
-              Due {format(new Date(milestone.date), 'MMM d, yyyy')}
+              Due {format(new Date(nextMilestone.date), 'MMM d, yyyy')}
             </p>
           </div>
           <span className="text-4xl">
-            {milestone.criteria?.[0] && 'activity_id' in milestone.criteria[0] 
-              ? userData?.activities?.find(a => a.id === (milestone.criteria[0] as PlanMilestoneCriteria).activity_id)?.emoji 
+            {nextMilestone.criteria_progress?.[0]?.activity_id 
+              ? userData?.activities?.find(a => a.id === nextMilestone.criteria_progress[0].activity_id)?.emoji 
               : '📍'}
           </span>
         </div>
@@ -172,7 +122,7 @@ export function MilestoneOverview({ milestones }: MilestoneOverviewProps) {
         </div>
 
         <div className="space-y-2">
-          {milestone.criteria?.map((criterion, index) => (
+          {nextMilestone.criteria_progress?.map((criterion: any, index: number) => (
             <div key={index}>{renderCriteriaOrGroup(criterion)}</div>
           ))}
         </div>

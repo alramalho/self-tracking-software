@@ -24,7 +24,7 @@ class PlanMilestone(BaseModel):
     date: str
     description: str
     criteria: List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]
-    
+
 class Plan(BaseModel):
     id: str
     user_id: str

@@ -1,11 +1,11 @@
 from gateways.database.mongodb import MongoDBGateway
 from gateways.plan_invitations import PlanInvitationsGateway
-from entities.plan import Plan, PlanSession
+from entities.plan import Plan, PlanSession, PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup
 from entities.plan_group import PlanGroupMember
 from entities.activity import Activity, ActivityEntry
 from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
-from typing import List, Optional, Dict, Any, Tuple, Literal
+from typing import List, Optional, Dict, Any, Tuple, Literal, Union
 from pydantic import BaseModel, Field, create_model
 from shared.utils import count_weeks_between_dates
 from gateways.activities import ActivitiesGateway, ActivityAlreadyExistsException
@@ -20,6 +20,20 @@ from copy import deepcopy
 from gateways.plan_groups import PlanGroupsGateway
 import traceback
 from shared.utils import days_ago
+
+class PlanMilestoneProgress(BaseModel):
+    """Response entity for milestone progress"""
+    milestone_id: str
+    description: str
+    date: str
+    progress: float
+    is_completed: bool
+    criteria_progress: List[Dict[str, Any]]
+
+class NextMilestoneResponse(BaseModel):
+    """Response entity for the next milestone endpoint"""
+    plan_id: str
+    next_milestone: Optional[PlanMilestoneProgress]
 
 class PlanActivityUpdate(BaseModel):
     id: str
