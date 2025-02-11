@@ -2,7 +2,7 @@ import React, { useState, Dispatch, SetStateAction, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, Info } from "lucide-react";
 import Number from "../Number";
 import { ApiPlan, Activity, PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup } from "@/contexts/UserPlanContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,7 +22,11 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
 }) => {
   // Track validation state
   const [validationErrors, setValidationErrors] = useState<{
-    [key: number]: { title?: boolean; criteria?: { [key: number]: boolean } }
+    [key: number]: { 
+      title?: boolean; 
+      criteria?: { [key: number]: boolean };
+      decreasingTarget?: boolean;
+    }
   }>({});
 
   // Add recursive validation function
@@ -71,18 +75,6 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
         milestoneErrors.title = true;
       }
       
-      // Check criteria
-      const criteriaErrors: { [key: number]: boolean } = {};
-      milestone.criteria.forEach((criterion, criterionIndex) => {
-        if ('activity_id' in criterion && criterion.quantity <= 0) {
-          criteriaErrors[criterionIndex] = true;
-        }
-      });
-      
-      if (Object.keys(criteriaErrors).length > 0) {
-        milestoneErrors.criteria = criteriaErrors;
-      }
-      
       if (Object.keys(milestoneErrors).length > 0) {
         errors[index] = milestoneErrors;
       }
@@ -90,6 +82,72 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     
     setValidationErrors(errors);
   }, [milestones]);
+
+  // Validate quantity on blur
+  const validateQuantity = (
+    milestoneIndex: number,
+    criteriaIndex: number,
+    quantity: number
+  ) => {
+    const errors = { ...validationErrors };
+    
+    if (quantity <= 0) {
+      errors[milestoneIndex] = {
+        ...errors[milestoneIndex],
+        criteria: {
+          ...(errors[milestoneIndex]?.criteria || {}),
+          [criteriaIndex]: true
+        }
+      };
+    } else {
+      // Clear the error if it exists
+      if (errors[milestoneIndex]?.criteria?.[criteriaIndex]) {
+        delete errors[milestoneIndex].criteria![criteriaIndex];
+        if (Object.keys(errors[milestoneIndex].criteria!).length === 0) {
+          delete errors[milestoneIndex].criteria;
+          if (Object.keys(errors[milestoneIndex]).length === 0) {
+            delete errors[milestoneIndex];
+          }
+        }
+      }
+    }
+
+    setValidationErrors(errors);
+  };
+
+  // Validate milestone targets are increasing
+  const validateMilestoneTargets = (
+    milestoneIndex: number,
+    currentMilestone: PlanMilestone,
+  ) => {
+    const errors = { ...validationErrors };
+    
+    // Get previous milestone's total target
+    const previousMilestone = milestones[milestoneIndex - 1];
+    const previousTotal = previousMilestone?.criteria.reduce((sum, c) => 
+      'quantity' in c ? sum + c.quantity : sum, 0) || 0;
+
+    // Get current milestone's total target
+    const currentTotal = currentMilestone.criteria.reduce((sum, c) => 
+      'quantity' in c ? sum + (c.quantity || 0) : sum, 0);
+
+    if (milestoneIndex > 0 && currentTotal <= previousTotal) {
+      errors[milestoneIndex] = {
+        ...errors[milestoneIndex],
+        decreasingTarget: true,
+      };
+    } else {
+      // Clear the error if it exists
+      if (errors[milestoneIndex]?.decreasingTarget) {
+        delete errors[milestoneIndex].decreasingTarget;
+        if (Object.keys(errors[milestoneIndex]).length === 0) {
+          delete errors[milestoneIndex];
+        }
+      }
+    }
+
+    setValidationErrors(errors);
+  };
 
   const addMilestone = () => {
     const defaultActivityId = activities.length > 0 ? activities[0].id : "";
@@ -125,25 +183,24 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     );
   };
 
+  // Update the updateCriteria function to not include validation
   const updateCriteria = (
     milestoneIndex: number,
     criteriaIndex: number,
     field: keyof PlanMilestoneCriteria,
     value: string | number
   ) => {
-    setMilestones((prevMilestones) =>
-      prevMilestones.map((milestone, i) => {
-        if (i === milestoneIndex) {
-          const newCriteria = [...milestone.criteria] as PlanMilestoneCriteria[];
-          newCriteria[criteriaIndex] = {
-            ...newCriteria[criteriaIndex] as PlanMilestoneCriteria,
-            [field]: value
-          };
-          return { ...milestone, criteria: newCriteria };
-        }
-        return milestone;
-      })
-    );
+    const newMilestones = [...milestones];
+    const milestone = newMilestones[milestoneIndex];
+    const criteria = milestone.criteria[criteriaIndex] as PlanMilestoneCriteria;
+
+    const updatedCriteria = {
+      ...criteria,
+      [field]: value,
+    };
+
+    milestone.criteria[criteriaIndex] = updatedCriteria;
+    setMilestones(newMilestones);
   };
 
   const addCriteria = (milestoneIndex: number) => {
@@ -176,7 +233,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <div className="flex items-start gap-2">
           <Number className="mt-1">6</Number>
@@ -273,9 +330,14 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                             milestoneIndex,
                             criteriaIndex,
                             "quantity",
-                            Math.max(1, parseInt(e.target.value) || 0)
+                            parseInt(e.target.value) || 0
                           )
                         }
+                        onBlur={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          validateQuantity(milestoneIndex, criteriaIndex, value);
+                          validateMilestoneTargets(milestoneIndex, milestones[milestoneIndex]);
+                        }}
                         placeholder="Quantity"
                       />
                       {validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && (
@@ -308,6 +370,12 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                 </Button>
               </div>
             </div>
+
+            {validationErrors[milestoneIndex]?.decreasingTarget && (
+              <div className="text-red-500 text-sm mt-2">
+                Total target must be greater than the previous milestone&apos;s target
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -331,6 +399,14 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
           <Plus className="h-4 w-4" />
           Add Next Milestone
         </Button>
+      </div>
+
+      <div className="mt-6 flex items-start space-x-2">
+        <Info className="w-5 h-5 text-gray-500 mt-1 flex-shrink-0" />
+        <p className="text-sm text-gray-500">
+          Milestone targets are cumulative, meaning each milestone&apos;s total target should be greater than the previous one. 
+          For example, if your first milestone is 100km and your second is 300km, you need to run a total of 300km by the second milestone.
+        </p>
       </div>
     </div>
   );
