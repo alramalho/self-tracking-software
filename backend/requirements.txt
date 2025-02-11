@@ -27,3 +27,4 @@ opentelemetry-instrumentation-requests
 opentelemetry-exporter-otlp
 axiom-py
 pydantic-ai
+pytest-mock

@@ -118,7 +118,7 @@ class MilestonesController:
                 return {"type": "group", "progress": 0}
 
             criteria_progress = [
-                calculate_criterion_progress(criterion)
+                calculate_milestone_criteria_progress(criterion)
                 for criterion in group.criteria
             ]
 
@@ -159,4 +159,56 @@ class MilestonesController:
             progress=overall_progress,
             is_completed=overall_progress >= 100,
             criteria_progress=criteria_progress
-        ) 
+        )
+
+    def get_readable_next_milestone(self, plan: Plan) -> str:
+        """Get a human readable string describing the next milestone and its progress"""
+        next_milestone_response = self.calculate_plan_milestones_progress(plan)
+        
+        if not next_milestone_response.next_milestone:
+            return "No milestones found in the plan."
+            
+        milestone = next_milestone_response.next_milestone
+        
+        # Parse the date into a more readable format
+        date_obj = datetime.fromisoformat(milestone.date)
+        formatted_date = date_obj.strftime("%d %b %Y")
+        
+        if not milestone.criteria_progress:
+            return f"Next milestone '{milestone.description}' is due on {formatted_date}."
+
+        def format_criterion(criterion: Dict[str, Any]) -> str:
+            if criterion["type"] == "criterion":
+                target_quantity = criterion.get("quantity", 0)
+                current_quantity = criterion.get("current_quantity", 0)
+                progress = int(criterion.get("progress", 0))
+                return f"'{current_quantity}' out of '{target_quantity}' pages ({progress}% complete)"
+            
+            # Handle group type
+            if criterion["type"] == "group":
+                junction = criterion.get("junction", "AND")
+                sub_criteria = criterion.get("criteria_progress", [])
+                
+                if not sub_criteria:
+                    return ""
+                
+                formatted_sub_criteria = [format_criterion(c) for c in sub_criteria]
+                connector = " AND " if junction == "AND" else " OR "
+                return f"({connector.join(formatted_sub_criteria)})"
+            
+            return ""
+
+        # Build the complete milestone description
+        criteria_descriptions = []
+        for criterion in milestone.criteria_progress:
+            formatted = format_criterion(criterion)
+            if formatted:
+                criteria_descriptions.append(formatted)
+
+        if not criteria_descriptions:
+            return f"Next milestone '{milestone.description}' is due on {formatted_date}."
+
+        # Join all criteria with proper conjunctions
+        criteria_text = " AND ".join(criteria_descriptions)
+        
+        return f"Next milestone '{milestone.description}' is due on {formatted_date}. Current progress: {criteria_text}. Overall completion: {int(milestone.progress)}%." 
