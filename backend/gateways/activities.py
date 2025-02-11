@@ -4,8 +4,9 @@ from entities.activity import Activity, ActivityEntry
 from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
 from shared.utils import days_ago
-from typing import List
+from typing import List, Optional
 from pymongo.errors import DuplicateKeyError
+
 from bson import ObjectId
 from entities.user import User
 class ActivityDoesNotExistException(Exception):
@@ -66,11 +67,22 @@ class ActivitiesGateway:
     def get_all_activity_entries_by_activity_id(self, activity_id: str) -> list[ActivityEntry]:
         return [ActivityEntry(**data) for data in self.activity_entries_db_gateway.query("activity_id", activity_id)]
     
-    def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5, past_day_limit: int = 7) -> str:
+    def get_readable_activity_entry(self, activity_entry: ActivityEntry, activity: Optional[Activity] = None) -> str:
+        if activity is None:
+            activity = self.get_activity_by_id(activity_entry.activity_id)
+            
+        formatted_date = datetime.fromisoformat(activity_entry.date).strftime("%A, %b %d %Y")
+        quantity = activity_entry.quantity
+        activity_title = activity.title
+        activity_measure = activity.measure
+        
+        return f"{formatted_date} ({days_ago(activity_entry.date)}) - {activity_title} ({quantity} {activity_measure})"
+
+    def get_recent_activity_entries(self, user_id: str, past_day_limit: int = 7) -> tuple[dict[str, Activity], list[ActivityEntry]]:
         all_activities_dict = {activity.id: activity for activity in self.get_all_activities_by_user_id(user_id)}
 
         if len(all_activities_dict) == 0:
-            return f"(User has not done any activities during the past {past_day_limit} days)"
+            return all_activities_dict, []
 
         all_activity_entries: List[ActivityEntry] = []
         for activity_id in all_activities_dict.keys():
@@ -87,19 +99,19 @@ class ActivitiesGateway:
                 entry_date = entry_date.replace(tzinfo=UTC)
             if (current_date - entry_date) <= timedelta(days=past_day_limit):
                 filtered_entries.append(entry)
-        ordered_activity_entries = filtered_entries
-        
-        # return the date of the entry in the format 'Oct 27, 2024' + the title of the respective activity
-        readable_activity_entries: List[str] = []
-        for activity_entry in ordered_activity_entries:
-            respective_activity = all_activities_dict[activity_entry.activity_id]
+                
+        return all_activities_dict, filtered_entries
 
-            formatted_date = datetime.fromisoformat(activity_entry.date).strftime("%A, %b %d %Y")
-            quantity = activity_entry.quantity
-            activity_title = respective_activity.title
-            activity_measure = respective_activity.measure
-            
-            readable_activity_entries.append(f"{formatted_date} ({days_ago(activity_entry.date)}) - {activity_title} ({quantity} {activity_measure})")
+    def get_readable_recent_activity_entries(self, user_id: str, limit: int = 5, past_day_limit: int = 7) -> str:
+        all_activities_dict, ordered_activity_entries = self.get_recent_activity_entries(user_id, past_day_limit)
+
+        if len(all_activities_dict) == 0:
+            return f"(User has not done any activities during the past {past_day_limit} days)"
+        
+        readable_activity_entries = [
+            self.get_readable_activity_entry(activity_entry, all_activities_dict[activity_entry.activity_id])
+            for activity_entry in ordered_activity_entries
+        ]
 
         return "\n".join(readable_activity_entries)
     
