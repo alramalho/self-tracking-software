@@ -69,9 +69,9 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
       selected: {
         border: "border-slate-400",
         bg: "bg-slate-100",
-        glassBg: "bg-slate-100/50",
+        glassBg: "bg-slate-100/70",
       },
-      glassBg: "bg-slate-100/50",
+      glassBg: "bg-slate-100/40",
     },
     button: {
       solid: "bg-slate-500 hover:bg-slate-600",
@@ -103,9 +103,9 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
       selected: {
         border: "border-blue-400",
         bg: "bg-blue-100",
-        glassBg: "bg-blue-100/50",
+        glassBg: "bg-blue-100/70",
       },
-      glassBg: "bg-blue-100/50",
+      glassBg: "bg-blue-100/40",
     },
     button: {
       solid: "bg-blue-500 hover:bg-blue-600",
@@ -137,9 +137,9 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
       selected: {
         border: "border-violet-500",
         bg: "bg-violet-50",
-        glassBg: "bg-violet-100/50",
+        glassBg: "bg-violet-100/70",
       },
-      glassBg: "bg-violet-100/50",
+      glassBg: "bg-violet-100/40",
     },
     button: {
       solid: "bg-violet-500 hover:bg-violet-600",
@@ -171,9 +171,9 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
       selected: {
         border: "border-amber-400",
         bg: "bg-amber-50",
-        glassBg: "bg-amber-100/50",
+        glassBg: "bg-amber-100/70",
       },
-      glassBg: "bg-amber-100/50",
+      glassBg: "bg-amber-100/40",
     },
     button: {
       solid: "bg-amber-500 hover:bg-amber-600",
@@ -205,9 +205,9 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
       selected: {
         border: "border-emerald-400",
         bg: "bg-emerald-50",
-        glassBg: "bg-emerald-100/50",
+        glassBg: "bg-emerald-100/70",
       },
-      glassBg: "bg-emerald-100/50",
+      glassBg: "bg-emerald-100/40",
     },
     button: {
       solid: "bg-emerald-500 hover:bg-emerald-600",
@@ -239,9 +239,9 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
       selected: {
         border: "border-rose-400",
         bg: "bg-rose-50",
-        glassBg: "bg-rose-100/50",
+        glassBg: "bg-rose-100/70",
       },
-      glassBg: "bg-rose-100/50",
+      glassBg: "bg-rose-100/40",
     },
     button: {
       solid: "bg-rose-500 hover:bg-rose-600",
