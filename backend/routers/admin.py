@@ -29,7 +29,7 @@ from slowapi import Limiter
 from gateways.metrics import MetricsGateway
 from slowapi.util import get_remote_address
 import pytz
-
+import traceback
 router = APIRouter()
 security = HTTPBearer()
 users_gateway = UsersGateway()
@@ -244,6 +244,7 @@ async def _process_checkin_notifications(
                 }
             )
         except Exception as e:
+            logger.error(traceback.format_exc())
             logger.error(
                 f"Error processing notification for user {user.username}: {str(e)}"
             )

@@ -61,7 +61,7 @@ class PlanController:
         self.plan_groups_gateway = PlanGroupsGateway()
         logger.log("CONTROLLERS", "PlanController initialized")
 
-    def _get_readable_plan(self, plan: Plan) -> str:
+    def get_readable_plan(self, plan: Plan) -> str:
         # Get unique activities for this plan
         activities = [self.activities_gateway.get_activity_by_id(aid) for aid in plan.activity_ids]
         activity_names = [a.title for a in activities if a]

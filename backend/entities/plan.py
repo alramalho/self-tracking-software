@@ -40,7 +40,7 @@ class Plan(BaseModel):
     goal: str
     emoji: str | None = None
     finishing_date: Optional[str] = None
-    sessions: List[PlanSession]
+    sessions: List[PlanSession] = []
     created_at: str
     deleted_at: Optional[str] = None
     activity_ids: List[str] = []
@@ -57,7 +57,7 @@ class Plan(BaseModel):
         goal: str,
         emoji: str,
         finishing_date: Optional[str],
-        sessions: Optional[List[PlanSession]] = None,
+        sessions: Optional[List[PlanSession]] = [],
         plan_group_id: Optional[str] = None,
         id: Optional[str] = None,
         duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None,

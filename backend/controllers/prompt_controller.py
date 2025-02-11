@@ -1,5 +1,5 @@
 from typing import Dict
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import random
 from pydantic import BaseModel, Field
@@ -8,53 +8,42 @@ from loguru import logger
 
 from gateways.activities import ActivitiesGateway
 from controllers.plan_controller import PlanController
+from controllers.milestones_controller import MilestonesController
 from ai.assistant.flowchart_framework import FlowchartLLMFramework
 from gateways.messages import MessagesGateway
 from ai.assistant.flowchart_nodes import Node, NodeType
 
-class PlanCompletionAnalysis(BaseModel):
-    plan_name: str = Field(..., description="The name of the plan being analyzed")
-    analysis: str = Field(..., description="Analysis of why the plan is/isn't being followed. You must mention the activity count this week, the target activity count, and count of days left until Saturday (included)")
+class NotificationAnalysis(BaseModel):
+    has_recent_milestone_notification: bool = Field(..., description="Whether there was a milestone notification in the last 3 days")
 
 recurrent_checkin_flowchart = {
-    "AnalyzePrimaryPlan": Node(
-        text="""Analyze the current week on the first plan in the user's plan list. Consider:
+    "CheckRecentNotifications": Node(
+        text="""Analyze the recent notifications sent to the user in the last 3 days.
+        Look for any notifications that mention the milestones or lack thereof.
+        
+        Choose:
+        - "HasRecentMilestone" if there was a milestone mentioning notification in the last 3 days
+        - "NoRecentMilestone" if there were no milestone notifications""",
+        output_schema=NotificationAnalysis,
+        connections={
+            "HasRecentMilestone": "AnalyzeWeeklyProgress",
+            "NoRecentMilestone": "HandleMilestoneUpdate"
+        }
+    ),
+
+    "HandleMilestoneUpdate": Node(
+        text="""Generate a message about the next milestone progress.
+        Use the milestone_update from the context to craft a personalized message about their progress towards the next milestone.""",
+        temperature=1.0
+    ),
+
+    "AnalyzeWeeklyProgress": Node(
+        text="""Analyze in your reasoning the current week on the first plan in the user's plan list. Consider:
         1. Calculate completion rate (completed sessions / total sessions for this week)
         2. Count number of missed sessions for this week
         3. Calculate days left until week ends
         
-        Choose:
-        - "AllCompleted" if all sessions are done for the week
-        - "OnTrack" if most sessions are done and there's time for the rest
-        - "NeedsPush" if there are missing sessions but still time to complete
-        - "Struggling" if many sessions are missed""",
-        output_schema=PlanCompletionAnalysis,
-        connections={
-            "AllCompleted": "HandleCompletedPlan",
-            "OnTrack": "HandleOnTrackPlan",
-            "NeedsPush": "HandleNeedsPushPlan",
-            "Struggling": "HandleStrugglingPlan"
-        }
-    ),
-    
-    "HandleCompletedPlan": Node(
-        text="""Generate a congratulatory message for completing all sessions""",
-        temperature=1.0
-    ),
-    
-    "HandleOnTrackPlan": Node(
-        text="""Generate an encouraging message for being on track. Mention the number of sessions left and the days left still though""",
-        temperature=1.0
-    ),
-    
-    "HandleNeedsPushPlan": Node(
-        text="""Generate a motivational message about completing remaining sessions.""",
-        temperature=1.0
-    ),
-    
-    "HandleStrugglingPlan": Node(
-        text="""Generate a supportive message for struggling progress.""",
-        temperature=1.0
+        Then, depending on that, you should generate a coach like message to be sent to the user.""",
     )
 }
 
@@ -73,25 +62,36 @@ class RecurrentMessageGenerator:
         activities_gateway = ActivitiesGateway()
         users_gateway = UsersGateway()
         notification_manager = NotificationManager()
+        milestones_controller = MilestonesController()
         user = users_gateway.get_user_by_id(user_id)
 
         system_prompt = f"""You are Jarvis, a friendly assistant communicating in {user.language}. 
-Your goal is to send a short, direct message about the user's primary plan progress this week.
-Focus on remaining sessions and time left to complete them.
-Keep messages concise and actionable.
+Your goal is to send a short, direct message about either the user's milestone progress or their weekly plan progress.
+Focus on being encouraging and actionable.
+Keep messages concise and actionable
 Keep attentive to your past sent messages, not to repeat the same tone.
 Example: \"You're missing just one session of running 5km this week, there's still 3 days until the new week clock starts. You can do it 💪"\""""
 
         framework = FlowchartLLMFramework(recurrent_checkin_flowchart, system_prompt)
+        user = users_gateway.get_user_by_id(user_id)
+        plans = plan_controller.get_all_user_active_plans(user)
+        first_plan = plans[0] if plans else None
+        first_readable_plan = plan_controller.get_readable_plan(first_plan) if first_plan else None
+        milestone_update = milestones_controller.get_readable_next_milestone(first_plan) if first_plan else None
 
-        plans = plan_controller.get_readable_plans(user_id)
+        # Get all activities and filter for plan if exists
+        all_activity_entries = activities_gateway.get_all_activity_entries_by_user_id(user_id)
+        filtered_activity_entries = [a for a in all_activity_entries if a.activity_id in first_plan.activity_ids]
+
+        readable_activities = [activities_gateway.get_readable_activity_entry(activity_entry) for activity_entry in filtered_activity_entries]
 
         context = {
-            "plans": plan_controller.get_readable_plans(user_id)[0] if plans else "User has no plans.",
-            "activity_history": activities_gateway.get_readable_recent_activity_entries(user_id),
+            "plans": first_readable_plan if first_readable_plan else "User has no plans.",
+            "activity_history": readable_activities,
             "current_time": datetime.now(pytz.UTC).strftime("%b %d, %Y, %A"),
             "sent_messages": [n.message for n in notification_manager.get_last_notifications_sent_to_user(user_id, limit=5)],
-            "language": user.language
+            "language": user.language,
+            "milestone_update": milestone_update
         }
 
         try:
