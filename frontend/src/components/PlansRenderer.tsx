@@ -70,7 +70,7 @@ const PlansRenderer: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 mb-6">
         {plans.map((plan) => (
           <PlanCard
             key={plan.id}
