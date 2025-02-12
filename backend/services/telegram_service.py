@@ -3,7 +3,7 @@ import requests
 from loguru import logger
 from constants import ENVIRONMENT, TELEGRAM_CHAT_ID, TELEGRAM_BOT_TOKEN
 from typing import Optional
-
+import traceback
 class TelegramService:
     _instance = None
 
@@ -39,9 +39,13 @@ class TelegramService:
                     "parse_mode": "HTML"
                 }
             )
+            if not response.ok:
+                logger.error(f"Telegram API error: Status {response.status_code}")
+                logger.error(f"Response content: {response.text}")
             response.raise_for_status()
             return response.json()
         except Exception as e:
+            logger.error(traceback.format_exc())
             logger.error(f"Failed to send Telegram message: {str(e)}")
             return None
 
