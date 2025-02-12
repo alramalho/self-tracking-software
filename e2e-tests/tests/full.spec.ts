@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { test, expect, Page } from "@playwright/test";
 import { clerkSetup, setupClerkTestingToken } from "@clerk/testing/playwright";
 
@@ -14,10 +15,13 @@ test.describe.serial("App", () => {
 
     await page
       .getByLabel("Email address")
-      .fill("alexandre.ramalho.1998+e2etracking@gmail.com");
+      .fill(
+        process.env.APP_TEST_USER_EMAIL ||
+          "alexandre.ramalho.1998+e2etracking@gmail.com"
+      );
     await page
       .getByLabel("Password", { exact: true })
-      .fill("adfasdfasdfasdfasd");
+      .fill(process.env.APP_TEST_USER_PASSWORD || "adfasdfasdfasdfasd");
     await page.getByRole("button", { name: "Continue", exact: true }).click();
 
     const closeButton = page.getByTestId("close-app-install-modal");

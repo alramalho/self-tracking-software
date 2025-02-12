@@ -82,7 +82,8 @@ export default function GeneralInitializer({
     !isAppInstalled &&
     isSignedIn &&
     !isAppInstallModalClosed &&
-    process.env.NEXT_PUBLIC_ENVIRONMENT !== "development"
+    process.env.NEXT_PUBLIC_ENVIRONMENT !== "development" &&
+    userData?.user?.email !== process.env.NEXT_PUBLIC_APP_TEST_USER_EMAIL
   ) {
     return (
       <AppNotInstalledPage onClose={() => setIsAppInstallModalClosed(true)} />
