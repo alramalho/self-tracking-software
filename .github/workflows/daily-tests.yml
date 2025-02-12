@@ -34,7 +34,7 @@ jobs:
           cd backend
           OUTPUT=$(./scripts/run_tests.sh 2>&1) || {
             echo "$OUTPUT" > test_output.txt
-            python scripts/notify_test_failure.py "Backend Tests" "$(cat test_output.txt)"
+            python -m scripts.notify_test_failure "Backend Tests" "$(cat test_output.txt)"
             exit 1
           }
           
