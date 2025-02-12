@@ -1,9 +1,89 @@
+from shared.logger import create_logger
+create_logger("DEBUG")
 import pytest
-import asyncio
 from ai.assistant.flowchart_framework import FlowchartLLMFramework
-from scripts.spike import FLOWCHART
 import time
-from typing import Dict, Any, List
+from ai.assistant.flowchart_nodes import Node, LoopStartNode, LoopContinueNode
+from pydantic import BaseModel, Field
+from typing import List
+from entities.plan import PlanSession
+
+class AllPlanNamesSchema(BaseModel):
+    plan_names: List[str] = Field(..., description="All plan names")
+
+class SuggestedNextWeekSessions(BaseModel):
+    plan_name: str = Field(..., description="The name of the plan")
+    next_week_sessions: List[PlanSession] = Field(
+        ..., description="The sessions to be added to the plan for the upcoming week"
+    )
+
+
+# Simpler flowchart demonstrating parallel paths and dependencies
+FLOWCHART = {
+    "HasRequest": Node(
+        text="Did the user made you request, question or instruction?",
+        connections={"Yes": "Answer", "No": "ExtractPlanNames"},
+    ),
+    "Answer": Node(
+        text="Address the user's request, having in mind your goals and purpose.",
+    ),
+    "ExtractPlanNames": Node(
+        text="Extract all plan names from the users plan list.",
+        connections={"default": "StartPlanLoop"},
+        output_schema=AllPlanNamesSchema,
+    ),
+    "StartPlanLoop": LoopStartNode(
+        text="",
+        iterator="current_plan",
+        collection="plan_names",
+        connections={"default": "CheckPlanDiscussed"},
+        needs=["ExtractPlanNames"],
+        end_node="NexPlan"
+    ),
+    "CheckPlanDiscussed": Node(
+        text="Based exclusively on the conversation history, did you ask the user if he wants to discuss the plan '${current_plan}'?",
+        connections={"Yes": "CheckUserWantsToDiscussPlan", "No": "AskToDiscussPlan"},
+    ),
+    "AskToDiscussPlan": Node(
+        text="Ask the user if they would like to discuss the plan '${current_plan}', making a bridge to the conversation and giving an overview on how the plan is doing by the outlook of recent user activity.",
+        temperature=1,
+    ),
+    "CheckUserWantsToDiscussPlan": Node(
+        text="Based exclusively on the conversation history, has the user accepted to discuss the plan '${current_plan}'?",
+        connections={"Yes": "CheckUserMentionedNextWeekPlans", "No": "NextPlan"},
+    ),
+    "CheckUserMentionedNextWeekPlans": Node(
+        text="Did the user explictly mention in the conversation history which upcoming week's sessions for plan ${current_plan}' he is intending on doing? Note that a mention that no adjustments are needed is also an explicit mention and should be answered with 'Yes'",
+        connections={"Yes": "ShouldSuggestChanges", "No": "AskNextWeekPlans"},
+    ),
+    "AskNextWeekPlans": Node(
+        text="Remind the user of his upcoming week planned sessions for '${current_plan}' and ask what's his plans about it / if he plans on doing them all.",
+        temperature=1,
+    ),
+    "ShouldSuggestChanges": Node(
+        text="Based on recent conversation history & user's intentions regarding the plan '${current_plan}', should you suggest any change to '${current_plan}' upcoming week's sessions? You must start your reasoning with \"Based on the conversation history for plan '${current_plan}' ...\".",
+        connections={"Yes": "SuggestChanges", "No": "NextPlan"},
+    ),
+    "SuggestChanges": Node(
+        text="Analyse and suggest changes for plan '${current_plan}'. You can only make changes to the plan sessions date & details.",
+        temperature=1,
+        output_schema=SuggestedNextWeekSessions,
+        connections={"default": "InformTheUsreAboutTheChanges"},
+    ),
+    "InformTheUsreAboutTheChanges": Node(
+        text="Inform the user that you've generated sessions replacing next week's ones for plan '${current_plan}', which now he needs to accept or reject.",
+        needs=["SuggestChanges"],
+    ),
+    "NextPlan": LoopContinueNode(
+        text="",
+        connections={"HasMore": "StartPlanLoop", "Complete": "Conclude"},
+        needs=["StartPlanLoop"],
+    ),
+    "Conclude": Node(
+        text="Congratulate the user for making this far in the conversation, wrap up the conversation with a summary of what was discussed and what actions were decided and tell him you'll see him next week!",
+        temperature=1,
+    ),
+}
 
 
 @pytest.fixture
