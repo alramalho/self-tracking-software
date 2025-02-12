@@ -1,7 +1,7 @@
 import os
 import requests
 from loguru import logger
-from constants import ENVIRONMENT
+from constants import ENVIRONMENT, TELEGRAM_CHAT_ID, TELEGRAM_BOT_TOKEN
 from typing import Optional
 
 class TelegramService:
@@ -15,8 +15,8 @@ class TelegramService:
 
     def __init__(self):
         if not self._initialized:
-            self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-            self.chat_id = os.getenv("TELEGRAM_CHAT_ID")
+            self.bot_token = TELEGRAM_BOT_TOKEN
+            self.chat_id = TELEGRAM_CHAT_ID
             self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
             self._initialized = True
 
