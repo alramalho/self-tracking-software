@@ -74,12 +74,14 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          OUTPUT=$(yarn test 2>&1) || {
-            echo "$OUTPUT" > test_output.txt
+          OUTPUT=$(yarn test 2>&1)
+          echo "$OUTPUT"
+          echo "$OUTPUT" > test_output.txt
+          if [ $? -ne 0 ]; then
             cd ../backend
             python -m scripts.notify_test_failure "E2E Tests" "$(cat ../e2e-tests/test_output.txt)"
             exit 1
-          }
+          fi
 
       - name: Upload E2E test results
         if: steps.e2e_tests.outcome == 'failure'
