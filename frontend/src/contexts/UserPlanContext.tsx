@@ -267,7 +267,7 @@ export function convertPlanToApiPlan(plan: Plan): ApiPlan {
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { isSignedIn } = useSession();
+  const { isSignedIn, isLoaded } = useSession();
   const router = useRouter();
   const { signOut } = useClerk();
   const api = useApiWithAuth();
@@ -348,10 +348,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const useCurrentUserDataQuery = () => {
+    const { isSignedIn, isLoaded } = useSession();
+    
     const query = useQuery({
       queryKey: ['currentUserData'],
       queryFn: () => fetchUserData(),
-      enabled: isSignedIn,
+      enabled: isLoaded && isSignedIn,
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
@@ -366,12 +368,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const useUserDataQuery = (username: string) => {
+    const { isSignedIn, isLoaded } = useSession();
     const currentUserQuery = useCurrentUserDataQuery();
     
     return useQuery({
       queryKey: ['userData', username],
       queryFn: () => fetchUserData({ username }),
-      enabled: isSignedIn && !!username,
+      enabled: isLoaded && isSignedIn && !!username,
       staleTime: 1000 * 60 * 5, // 5 minutes,
       // If the requested username matches current user's username, use that data instead
       initialData: () => {
