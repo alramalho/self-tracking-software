@@ -11,7 +11,7 @@ def notify_test_failure(test_type: str, error_output: str):
         f"❌ <b>Daily Tests Failed</b>\n\n"
         f"<b>Test Type:</b> {test_type}\n"
         f"<b>Environment:</b> {os.getenv('ENVIRONMENT', 'production')}\n"
-        f"<b>Error Output:</b>\n<pre>{error_output[2000:]}</pre>"  # Limit error message length
+        f"<b>Error Output:</b>\n<pre>{error_output[1000:]}</pre>"  # Limit error message length
     )
     
     telegram.send_message(message)
