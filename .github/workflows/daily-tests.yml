@@ -32,11 +32,13 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           cd backend
-          OUTPUT=$(./scripts/run_tests.sh 2>&1) || {
-            echo "$OUTPUT" > test_output.txt
+          OUTPUT=$(./scripts/run_tests.sh 2>&1)
+          echo "$OUTPUT"
+          echo "$OUTPUT" > test_output.txt
+          if [ $? -ne 0 ]; then
             python -m scripts.notify_test_failure "Backend Tests" "$(cat test_output.txt)"
             exit 1
-          }
+          fi
           
       - name: Upload backend test results
         if: steps.backend_tests.outcome == 'failure'
