@@ -1,1 +1,1 @@
-python -m pytest tests/test_flowchart_framework.py -v -s
+python -m pytest -vv -s -x --ignore=tests/test_week_analyser.py

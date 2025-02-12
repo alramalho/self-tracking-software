@@ -114,12 +114,11 @@ class MetricsGateway:
         logger.info(f"MetricEntry {entry_id} marked as deleted")
 
     def get_readable_metrics_and_entries(self, user_id: str, lookback_days: int = 7) -> str:
-        """Prints a readable report showing the user's metrics and their ratings over the specified number of past days."""
         metrics_list = self.get_all_metrics_by_user_id(user_id)
         metric_entries = self.get_all_metric_entries_by_user_id(user_id)
 
-        if len(metrics_list) == 0:
-            return "The user has no metrics"
+        if len(metric_entries) == 0:
+            return f"The user submitted no metrics in the last {lookback_days} days"
 
         # Build the output string
         output = []
@@ -128,6 +127,7 @@ class MetricsGateway:
         metric_titles = [metric.title for metric in metrics_list]
         output.append(f"- The user has {len(metrics_list)} metrics ({', '.join(metric_titles)})")
         output.append(f"- Here are the ratings of the past {lookback_days} days")
+        output.append("  (When available, user's responses to 'Anything specific that influenced your ratings today?' are shown in parentheses)")
 
         # Create mapping from metric id to title
         metric_by_id = {metric.id: metric.title for metric in metrics_list}
@@ -149,13 +149,16 @@ class MetricsGateway:
                 except Exception:
                     continue
                 if entry_date == target_day:
-                    day_entries.append(f"{metric_by_id.get(entry.metric_id, 'Unknown')} {entry.rating}/5")
+                    entry_text = f"{metric_by_id.get(entry.metric_id, 'Unknown')} {entry.rating}/5"
+                    if entry.description:
+                        entry_text += f" (User's note: {entry.description})"
+                    day_entries.append(entry_text)
             if day_entries:
                 output.append(f"  - {day_label}: {', '.join(day_entries)}")
             else:
                 output.append(f"  - {day_label}: No reports")
         
-        return "\n".join(output) 
+        return "\n".join(output)
     
     def get_missing_metric_and_entries_today_by_user_id(self, user_id: str) -> Tuple[List[Metric], List[MetricEntry]]:
         metrics = self.get_all_metrics_by_user_id(user_id)
