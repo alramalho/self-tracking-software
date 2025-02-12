@@ -34,7 +34,7 @@ JINA_API_KEY=os.getenv("JINA_API_KEY")
 
 URL = "http://localhost:3000" if ENVIRONMENT == "dev" else "https://app.tracking.so"
 
-POSTHOG_API_KEY=os.getenv("POSTHOG_API_KEY")
+POSTHOG_API_KEY=os.getenv("POSTHOG_API_KEY", "")
 POSTHOG_HOST="https://eu.i.posthog.com"
 
 ADMIN_API_KEY=os.getenv("ADMIN_API_KEY")
