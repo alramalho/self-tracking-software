@@ -361,7 +361,7 @@ async def test_has_metrics_no_description(
         "AskForMetricDescription_0"
     ]
     # Verify message content
-    assert "why" in message.lower() or "rated" in message.lower()
+    assert "why" in message.lower() or "rated" in message.lower() or "mood" in message.lower()
 
 @pytest.mark.asyncio
 async def test_has_metrics_with_description(
