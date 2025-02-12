@@ -21,7 +21,7 @@ def notify_test_failure(test_type: str, error_output: str):
     message = (
         f"❌ <b>Daily Tests Failed</b>\n\n"
         f"<b>Test Type:</b> {test_type}\n"
-        f"<b>Environment:</b> {os.getenv('ENVIRONMENT', 'production')}\n"
+        f"<b>Environment:</b> {os.getenv('ENVIRONMENT', 'development')}\n"
         f"<b>Error Output:</b>\n<pre>{truncated_error}</pre>"
     )
     

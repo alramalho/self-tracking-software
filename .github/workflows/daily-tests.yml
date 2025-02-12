@@ -68,6 +68,7 @@ jobs:
         working-directory: e2e-tests
         env:
           BASE_URL: "https://app.tracking.so"
+          ENVIRONMENT: "production"
           APP_TEST_USER_EMAIL: "alexandre.ramalho.1998+e2etracking@gmail.com"
           APP_TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
