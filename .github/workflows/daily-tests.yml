@@ -74,7 +74,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          OUTPUT=$(yarn test 2>&1)
+          OUTPUT=$(yarn test:ci 2>&1)
           echo "$OUTPUT"
           echo "$OUTPUT" > test_output.txt
           if [ $? -ne 0 ]; then
