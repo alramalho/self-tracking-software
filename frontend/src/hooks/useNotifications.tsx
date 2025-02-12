@@ -13,6 +13,7 @@ import { useApiWithAuth } from "@/api";
 import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import type { Notification } from "@/contexts/UserPlanContext";
+import { useSession } from "@clerk/nextjs";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -46,6 +47,7 @@ export const NotificationsProvider = ({
   children: ReactNode;
 }) => {
   const { notificationsData } = useUserPlan();
+  const { isSignedIn } = useSession();
   const [notificationCount, setNotificationCount] = useState(0);
 
   const [isAppInstalled, setIsAppInstalled] = useState(false);
@@ -223,7 +225,7 @@ export const NotificationsProvider = ({
   };
 
   const validateAndUpdateSubscription = async () => {
-    if (!isPushGranted) return;
+    if (!isPushGranted || !isSignedIn) return;
 
     try {
       // Get registration if we don't have it
@@ -240,7 +242,6 @@ export const NotificationsProvider = ({
       const response = await api.get("/get-pwa-subscription");
       const storedEndpoint = response.data.stored_endpoint;
 
-
       // Request new permission if:
       // 1. We have no current subscription but push is granted
       // 2. Current subscription endpoint differs from stored one
@@ -248,7 +249,8 @@ export const NotificationsProvider = ({
         await requestPermission();
       }
     } catch (error) {
-      console.error("Failed to validate subscription:", error);
+      // Silently handle error as this is a background validation
+      console.debug('Error validating subscription:', error);
     }
   };
 
