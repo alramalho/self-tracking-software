@@ -1,3 +1,5 @@
+from shared.logger import create_logger
+logger = create_logger()
 import sys
 import os
 from services.telegram_service import TelegramService
@@ -14,7 +16,12 @@ def notify_test_failure(test_type: str, error_output: str):
     
     telegram.send_message(message)
 
+    logger.info(f"Set notification \n'{message}'\n to Telegram")
+
 if __name__ == "__main__":
+
+    logger.info("Sending test failure notification")
+
     if len(sys.argv) != 3:
         print("Usage: python notify_test_failure.py <test_type> <error_output>")
         sys.exit(1)
