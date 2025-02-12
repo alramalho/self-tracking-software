@@ -38,6 +38,14 @@ jobs:
             exit 1
           }
           
+      - name: Upload backend test results
+        if: steps.backend_tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-output
+          path: backend/test_output.txt
+          retention-days: 3
+          
       - name: Setup Node.js
         if: steps.backend_tests.outcome == 'success'
         uses: actions/setup-node@v3
@@ -69,6 +77,14 @@ jobs:
             python -m scripts.notify_test_failure "E2E Tests" "$(cat ../e2e-tests/test_output.txt)"
             exit 1
           }
+
+      - name: Upload E2E test results
+        if: steps.e2e_tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-output
+          path: e2e-tests/test_output.txt
+          retention-days: 3
 
       - name: Check test results
         if: always()
