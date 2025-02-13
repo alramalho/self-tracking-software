@@ -23,18 +23,21 @@ class MetricsAnalysis(BaseModel):
     has_recent_metrics: bool = Field(..., description="Whether there were any metrics logged in the last 2 days")
     last_metric_has_description: bool = Field(..., description="Whether the most recent metric has a description")
 
+class MetricsMessageAnalysis(BaseModel):
+    has_recent_metrics_message: bool = Field(..., description="Whether there was a metrics-related message in the last 3 days")
+
 recurrent_checkin_flowchart = {
     "CheckRecentNotifications": Node(
         text="""Analyze the recent notifications sent to the user in the last 3 days.
-        Look for any notifications that mention the milestones or lack thereof.
-        
+        Look for any notifications that contain the word 'milestones,' regardless of context.
+                
         Choose:
-        - "HasRecentMilestone" if there was a milestone mentioning notification in the last 3 days
-        - "NoRecentMilestone" if there were no milestone notifications""",
+        - "MessagesMentionMilestone" if any notification in the last 3 days contains the word 'milestones' in any form.
+        - "MessagesDoNotMentionMilestone" only if no notification in the last 3 days contains the word 'milestones' at all.""",
         output_schema=NotificationAnalysis,
         connections={
-            "HasRecentMilestone": "CheckRecentMetrics",
-            "NoRecentMilestone": "HandleMilestoneUpdate"
+            "MessagesMentionMilestone": "CheckRecentMetrics",
+            "MessagesDoNotMentionMilestone": "HandleMilestoneUpdate"
         }
     ),
 
@@ -45,25 +48,39 @@ recurrent_checkin_flowchart = {
 
     "CheckRecentMetrics": Node(
         text="""Analyze the metrics data from the context.
-        Check if there are any metrics logged in the last 2 days and if the most recent one has a description.
+        Check if there are any metrics **entries** logged in the last 2 days and if the most recent one has a description.
         
         Output both whether there are recent metrics and whether the last one has a description.""",
         output_schema=MetricsAnalysis,
         connections={
-            "NoRecentMetrics": "AskForMetrics",
-            "HasMetricsWithNoDescription": "AskForMetricDescription",
-            "HasMetricsWithDescription": "AnalyzeWeeklyProgress"
+            "NoRecentMetricEntries": "AskForMetricsEntries",
+            "RecentMetricEntriesWithNoDescription": "CheckRecentMetricsMessages",
+            "RecentMetricEntriesWithDescription": "AnalyzeWeeklyProgress"
         }
     ),
 
-    "AskForMetrics": Node(
-        text="""Generate a message asking the user to log their metrics.
-        Explain that metrics are important to understand what's working for them in a data-driven way.
+    "CheckRecentMetricsMessages": Node(
+        text="""Analyze the recent notifications sent to the user in the last 3 days.
+        Look for any notifications that contain words related to 'metrics', 'rating', or 'description'.
+        
+        Choose:
+        - "MessagesMentionMetrics" if any notification in the last 3 days contains metrics-related words.
+        - "MessagesDoNotMentionMetrics" if no notification mentions metrics.""",
+        output_schema=MetricsMessageAnalysis,
+        connections={
+            "MessagesMentionMetrics": "AnalyzeWeeklyProgress",
+            "MessagesDoNotMentionMetrics": "AskForMetricEntryDescription"
+        }
+    ),
+
+    "AskForMetricsEntries": Node(
+        text="""Generate a message telling the user that you've noticed he hasn't logged any metrics lately.
+        Explain that metrics are important to understand what's working for them in a data-driven way. Some possible (does not mean the user has them) metrics are happiness, energy, or productivity.
         Keep the message encouraging and highlight the benefits of tracking metrics.""",
         temperature=1.0
     ),
 
-    "AskForMetricDescription": Node(
+    "AskForMetricEntryDescription": Node(
         text="""Generate a message asking the user to provide more context about their recent metric ratings.
         Ask them to explain why they rated the way they did, as this helps understand their progress better.""",
         temperature=1.0
