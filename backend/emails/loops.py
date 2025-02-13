@@ -59,7 +59,7 @@ def _make_loops_request(
     }
 
     try:
-        logger.log("LOOPS", f"{method} {endpoint}")
+        logger.debug(f"{method} {endpoint}")
         response = requests.request(
             method=method, 
             url=url, 
@@ -129,7 +129,7 @@ def find_loops_contact(email: Optional[str] = None, user_id: Optional[str] = Non
     if user_id:
         params["userId"] = user_id
         
-    logger.log("LOOPS", f"Finding contact with params: {params}")
+    logger.debug(f"Finding contact with params: {params}")
     response = _make_loops_request("GET", "contacts/find", params=params)
     contacts = response if isinstance(response, list) else []  # type: ignore
     return contacts[0] if contacts else None
@@ -146,7 +146,7 @@ def create_loops_contact(
     mailing_lists: Optional[Dict[str, bool]] = None,
     custom_properties: Optional[Dict[str, Union[str, int, float, bool]]] = None
 ) -> LoopsContactResponse:
-    logger.log("LOOPS", f"Creating contact {email}")
+    logger.debug(f"Creating contact {email}")
     payload = _build_contact_payload(
         email, first_name, last_name, source, 
         subscribed, user_group, user_id, mailing_lists,
@@ -166,7 +166,7 @@ def update_loops_contact(
     mailing_lists: Optional[Dict[str, bool]] = None,
     custom_properties: Optional[Dict[str, Union[str, int, float, bool]]] = None
 ) -> LoopsContactResponse:
-    logger.log("LOOPS", f"Updating contact {email}")
+    logger.debug(f"Updating contact {email}")
     payload = _build_contact_payload(
         email, first_name, last_name, source,
         subscribed, user_group, user_id, mailing_lists,
@@ -186,21 +186,21 @@ def upsert_loops_contact(
     mailing_lists: Optional[Dict[str, bool]] = None,
     custom_properties: Optional[Dict[str, Union[str, int, float, bool]]] = None
 ) -> LoopsContactResponse:
-    logger.log("LOOPS", f"Upserting contact {email}")
+    logger.debug(f"Upserting contact {email}")
     if custom_properties:
-        logger.log("LOOPS", f"With custom properties: {custom_properties}")
+        logger.debug(f"With custom properties: {custom_properties}")
         
     existing_contact = find_loops_contact(email=email)
     
     if existing_contact:
-        logger.log("LOOPS", f"Contact {email} exists, updating")
+        logger.debug(f"Contact {email} exists, updating")
         return update_loops_contact(
             email, first_name, last_name, source,
             subscribed, user_group, user_id, mailing_lists,
             custom_properties
         )
     
-    logger.log("LOOPS", f"Contact {email} not found, creating")
+    logger.debug(f"Contact {email} not found, creating")
     return create_loops_contact(
         email, first_name, last_name, source,
         subscribed, user_group, user_id, mailing_lists,
@@ -209,14 +209,14 @@ def upsert_loops_contact(
 
 
 def delete_loops_contact(email: str, user_id: Optional[str] = None) -> LoopsDeleteResponse:
-    logger.log("LOOPS", f"Attempting to delete contact {email}")
+    logger.debug(f"Attempting to delete contact {email}")
     existing_contact = find_loops_contact(email=email)
     
     if not existing_contact:
-        logger.log("LOOPS", f"Contact {email} not found, skipping delete")
+        logger.debug(f"Contact {email} not found, skipping delete")
         return {"success": True, "message": "Contact not found"}
         
-    logger.log("LOOPS", f"Deleting contact {email}")
+    logger.debug(f"Deleting contact {email}")
     payload = {"email": email}
     if user_id:
         payload["userId"] = user_id
@@ -243,9 +243,9 @@ def send_loops_event(
     Returns:
         Response from Loops API with success status
     """
-    logger.log("LOOPS", f"Sending event {event_name} for {email}")
+    logger.debug(f"Sending event {event_name} for {email}")
     if event_properties:
-        logger.log("LOOPS", f"With properties: {event_properties}")
+        logger.debug(f"With properties: {event_properties}")
         
     payload = {
         "email": email,
