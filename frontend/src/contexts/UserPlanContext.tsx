@@ -241,6 +241,35 @@ export interface UserPlanContextType {
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
 
+const smallRetryMechanism = async <T,>(
+  callback: () => Promise<T>,
+  options?: {
+    retryDelays?: number[];
+    shouldRetry?: (error: unknown) => boolean;
+  }
+): Promise<T> => {
+  const retryDelays = options?.retryDelays || [1000, 3000, 6000]; // Default delays in milliseconds
+  let attempt = 0;
+
+  while (attempt < retryDelays.length) {
+    try {
+      return await callback();
+    } catch (err) {
+      console.error(`Error in attempt ${attempt + 1}:`, err);
+      
+      const shouldRetry = options?.shouldRetry?.(err) ?? true;
+      if (attempt === retryDelays.length - 1 || !shouldRetry) {
+        throw err;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+      attempt++;
+    }
+  }
+
+  throw new Error("Failed after all retries");
+};
+
 export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]): Plan {
   return {
     ...plan,
@@ -295,33 +324,41 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
-      const response = await api.get('/load-users-data', {
-        params: username ? { usernames: username } : undefined
-      });
-      
-      const userData = username ? response.data[username] : response.data.current;
-      
-      if (!userData) {
-        console.error('No user data found in response:', response.data);
-        throw new Error('No user data found in response');
-      }
+      return await smallRetryMechanism(
+        async () => {
+          const response = await api.get('/load-users-data', {
+            params: username ? { usernames: username } : undefined
+          });
+          
+          const userData = username ? response.data[username] : response.data.current;
+          
+          if (!userData) {
+            console.error('No user data found in response:', response.data);
+            throw new Error('No user data found in response');
+          }
 
-      const transformedData: UserDataEntry = {
-        user: userData.user || null,
-        plans: userData.plans || [],
-        planGroups: userData.plan_groups || [],
-        activities: userData.activities || [],
-        activityEntries: userData.activity_entries || [],
-        moodReports: userData.mood_reports || [],
-        sentFriendRequests: userData.sent_friend_requests || [],
-        receivedFriendRequests: userData.received_friend_requests || [],
-        notifications: [],
-        expiresAt: addMinutes(new Date(), 10).toISOString(),
-      };
+          const transformedData: UserDataEntry = {
+            user: userData.user || null,
+            plans: userData.plans || [],
+            planGroups: userData.plan_groups || [],
+            activities: userData.activities || [],
+            activityEntries: userData.activity_entries || [],
+            moodReports: userData.mood_reports || [],
+            sentFriendRequests: userData.sent_friend_requests || [],
+            receivedFriendRequests: userData.received_friend_requests || [],
+            notifications: [],
+            expiresAt: addMinutes(new Date(), 10).toISOString(),
+          };
 
-      return transformedData;
-    } catch (err: unknown) {
-      console.error('Error in fetchUserData:', err);
+          return transformedData;
+        },
+        {
+          shouldRetry: (err) => 
+            axios.isAxiosError(err) && 
+            (err.response?.status === 404 || err.response?.status === 401)
+        }
+      );
+    } catch (err) {
       handleAuthError(err);
       router.push("/");
       toast.error("Failed to fetch user data. Please try again.");
