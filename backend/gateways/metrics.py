@@ -125,8 +125,8 @@ class MetricsGateway:
 
         # Summary
         metric_titles = [metric.title for metric in metrics_list]
-        output.append(f"- The user has {len(metrics_list)} metrics ({', '.join(metric_titles)})")
-        output.append(f"- Here are the ratings of the past {lookback_days} days")
+        output.append(f"- The user has created {len(metrics_list)} metrics ({', '.join(metric_titles)})")
+        output.append(f"- Here are the logged metric entries of the past {lookback_days} days")
         output.append("  (When available, user's responses to 'Anything specific that influenced your ratings today?' are shown in parentheses)")
 
         # Create mapping from metric id to title

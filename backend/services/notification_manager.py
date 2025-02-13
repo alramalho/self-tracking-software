@@ -166,7 +166,7 @@ class NotificationManager:
             for item in self.db_gateway.query("user_id", user_id)
             if item["status"] != "concluded"
         ]
-        notifications.sort(key=lambda x: x.created_at, reverse=True)
+        notifications.sort(key=lambda x: x.created_at)
         return notifications
 
     def get_last_notifications_sent_to_user(
@@ -174,9 +174,9 @@ class NotificationManager:
     ) -> List[Notification]:
         notifications = [n for n in self.get_all_for_user(user_id) if n.processed_at]
         ordered_notifications = sorted(
-            notifications, key=lambda x: x.processed_at, reverse=True
+            notifications, key=lambda x: x.processed_at
         )
-        return ordered_notifications[:limit]
+        return ordered_notifications[limit:]
 
     def _update_notification(self, notification: Notification):
         self.db_gateway.write(notification.dict())

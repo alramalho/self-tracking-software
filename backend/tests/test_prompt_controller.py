@@ -209,7 +209,6 @@ async def test_has_plans_no_milestones_no_milestone_messages(test_user, test_pla
     
     generator.plan_controller = MagicMock(spec=PlanController)
     generator.plan_controller.get_all_user_active_plans.return_value = [test_plan]
-    generator.plan_controller.get_readable_plan.return_value = "Test Plan with Running and Reading activities"
     
     generator.milestones_controller = MagicMock(spec=MilestonesController)
     generator.milestones_controller.get_readable_next_milestone.return_value = None
@@ -219,9 +218,11 @@ async def test_has_plans_no_milestones_no_milestone_messages(test_user, test_pla
     
     generator.activities_gateway = MagicMock(spec=ActivitiesGateway)
     generator.activities_gateway.get_all_activity_entries_by_user_id.return_value = []
+    generator.activities_gateway.get_activity_by_id.side_effect = lambda aid: next((a for a in test_activities if a.id == aid), None)
 
     generator.metrics_gateway = MagicMock(spec=MetricsGateway)
-    generator.metrics_gateway.get_readable_metrics_and_entries.return_value = "No metrics in the last 2 days"
+    generator.metrics_gateway.get_all_metrics_by_user_id.return_value = []
+    generator.metrics_gateway.get_all_metric_entries_by_user_id.return_value = []
     
     message = await generator.generate_message(test_user.id, "user-recurrent-checkin")
     
@@ -247,7 +248,6 @@ async def test_has_plans_has_milestones_no_milestone_messages(test_user, test_pl
     
     generator.plan_controller = MagicMock(spec=PlanController)
     generator.plan_controller.get_all_user_active_plans.return_value = [test_plan]
-    generator.plan_controller.get_readable_plan.return_value = "Test Plan with Running and Reading activities"
     
     generator.milestones_controller = MagicMock(spec=MilestonesController)
     generator.milestones_controller.get_readable_next_milestone.return_value = "Complete 3 more activities to reach First Milestone"
@@ -257,9 +257,11 @@ async def test_has_plans_has_milestones_no_milestone_messages(test_user, test_pl
     
     generator.activities_gateway = MagicMock(spec=ActivitiesGateway)
     generator.activities_gateway.get_all_activity_entries_by_user_id.return_value = []
+    generator.activities_gateway.get_activity_by_id.side_effect = lambda aid: next((a for a in test_activities if a.id == aid), None)
 
     generator.metrics_gateway = MagicMock(spec=MetricsGateway)
-    generator.metrics_gateway.get_readable_metrics_and_entries.return_value = "No metrics in the last 2 days"
+    generator.metrics_gateway.get_all_metrics_by_user_id.return_value = []
+    generator.metrics_gateway.get_all_metric_entries_by_user_id.return_value = []
     
     message = await generator.generate_message(test_user.id, "user-recurrent-checkin")
     
@@ -285,7 +287,6 @@ async def test_has_plans_has_milestones_has_messages(test_user, test_plan, test_
     
     generator.plan_controller = MagicMock(spec=PlanController)
     generator.plan_controller.get_all_user_active_plans.return_value = [test_plan]
-    generator.plan_controller.get_readable_plan.return_value = "Test Plan with Running and Reading activities"
     
     generator.milestones_controller = MagicMock(spec=MilestonesController)
     generator.milestones_controller.get_readable_next_milestone.return_value = "Complete 3 more activities to reach First Milestone"
@@ -295,9 +296,11 @@ async def test_has_plans_has_milestones_has_messages(test_user, test_plan, test_
     
     generator.activities_gateway = MagicMock(spec=ActivitiesGateway)
     generator.activities_gateway.get_all_activity_entries_by_user_id.return_value = []
+    generator.activities_gateway.get_activity_by_id.side_effect = lambda aid: next((a for a in test_activities if a.id == aid), None)
 
     generator.metrics_gateway = MagicMock(spec=MetricsGateway)
-    generator.metrics_gateway.get_readable_metrics_and_entries.return_value = "No metrics in the last 2 days"
+    generator.metrics_gateway.get_all_metrics_by_user_id.return_value = []
+    generator.metrics_gateway.get_all_metric_entries_by_user_id.return_value = []
     
     message = await generator.generate_message(test_user.id, "user-recurrent-checkin")
     
@@ -307,7 +310,7 @@ async def test_has_plans_has_milestones_has_messages(test_user, test_plan, test_
     assert generator.framework.execution_path == [
         "CheckRecentNotifications_0",
         "CheckRecentMetrics_0",
-        "AskForMetrics_0"
+        "AskForMetricsEntries_0"
     ]
     # Verify message content
     assert "track" in message.lower() or "log" in message.lower()
@@ -343,12 +346,10 @@ async def test_has_metrics_no_description(
     
     generator.activities_gateway = MagicMock(spec=ActivitiesGateway)
     generator.activities_gateway.get_all_activity_entries_by_user_id.return_value = test_activity_entries
-    generator.activities_gateway.get_readable_activity_entry = MagicMock(return_value="30 minutes of Running")
 
     generator.metrics_gateway = MagicMock(spec=MetricsGateway)
     generator.metrics_gateway.get_all_metrics_by_user_id.return_value = test_metrics
     generator.metrics_gateway.get_all_metric_entries_by_user_id.return_value = test_metric_entries
-    generator.metrics_gateway.get_readable_metrics_and_entries.return_value = "Energy: 4/5, Mood: 5/5"
     
     message = await generator.generate_message(test_user.id, "user-recurrent-checkin")
     
@@ -358,7 +359,8 @@ async def test_has_metrics_no_description(
     assert generator.framework.execution_path == [
         "CheckRecentNotifications_0",
         "CheckRecentMetrics_0",
-        "AskForMetricDescription_0"
+        "CheckRecentMetricsMessages_0",
+        "AskForMetricEntryDescription_0"
     ]
     # Verify message content
     assert "why" in message.lower() or "rated" in message.lower() or "mood" in message.lower()
@@ -384,7 +386,6 @@ async def test_has_metrics_with_description(
     
     generator.plan_controller = MagicMock(spec=PlanController)
     generator.plan_controller.get_all_user_active_plans.return_value = [test_plan]
-    generator.plan_controller.get_readable_plan.return_value = test_readable_plan
     
     generator.milestones_controller = MagicMock(spec=MilestonesController)
     generator.milestones_controller.get_readable_next_milestone.return_value = test_milestone_update
@@ -394,12 +395,10 @@ async def test_has_metrics_with_description(
     
     generator.activities_gateway = MagicMock(spec=ActivitiesGateway)
     generator.activities_gateway.get_all_activity_entries_by_user_id.return_value = test_activity_entries
-    generator.activities_gateway.get_readable_activity_entry = MagicMock(return_value="30 minutes of Running")
 
     generator.metrics_gateway = MagicMock(spec=MetricsGateway)
     generator.metrics_gateway.get_all_metrics_by_user_id.return_value = test_metrics
     generator.metrics_gateway.get_all_metric_entries_by_user_id.return_value = test_metric_entries_with_descriptions
-    generator.metrics_gateway.get_readable_metrics_and_entries.return_value = "Energy: 4/5 (Feeling great after morning workout), Mood: 5/5 (Had a productive day)"
     
     message = await generator.generate_message(test_user.id, "user-recurrent-checkin")
     
@@ -409,6 +408,66 @@ async def test_has_metrics_with_description(
     assert generator.framework.execution_path == [
         "CheckRecentNotifications_0",
         "CheckRecentMetrics_0",
+        "AnalyzeWeeklyProgress_0"
+    ]
+    # Verify message content
+    assert any(word in message.lower() for word in ["week", "session", "progress"]) 
+
+@pytest.mark.asyncio
+async def test_has_metrics_no_description_but_recent_messages(
+    test_user, 
+    test_plan,
+    test_metrics,
+    test_metric_entries,
+    test_recent_milestone_notification,
+    test_activity_entries,
+    test_milestone_update,
+    test_readable_plan
+):
+    """Test scenario where user has metrics without descriptions but has recent metrics messages"""
+    # Create generator instance
+    generator = RecurrentMessageGenerator()
+    
+    # Mock instance attributes
+    generator.users_gateway = MagicMock(spec=UsersGateway)
+    generator.users_gateway.get_user_by_id.return_value = test_user
+    
+    generator.plan_controller = MagicMock(spec=PlanController)
+    generator.plan_controller.get_all_user_active_plans.return_value = [test_plan]
+    generator.plan_controller.get_readable_plan.return_value = test_readable_plan
+    
+    generator.milestones_controller = MagicMock(spec=MilestonesController)
+    generator.milestones_controller.get_readable_next_milestone.return_value = test_milestone_update
+    
+    generator.notification_manager = MagicMock(spec=NotificationManager)
+    # Add a recent metrics-related message
+    metrics_notification = Notification.new(
+        message="How are you feeling about your metrics? Can you tell me more about your ratings?",
+        user_id="666666666666666666666666",
+        type="info",
+        created_at=(datetime.now(UTC) - timedelta(days=1)).isoformat()
+    )
+    generator.notification_manager.get_last_notifications_sent_to_user.return_value = [
+        test_recent_milestone_notification,
+        metrics_notification
+    ]
+    
+    generator.activities_gateway = MagicMock(spec=ActivitiesGateway)
+    generator.activities_gateway.get_all_activity_entries_by_user_id.return_value = test_activity_entries
+
+    generator.metrics_gateway = MagicMock(spec=MetricsGateway)
+    generator.metrics_gateway.get_all_metrics_by_user_id.return_value = test_metrics
+    generator.metrics_gateway.get_all_metric_entries_by_user_id.return_value = test_metric_entries
+    
+    message = await generator.generate_message(test_user.id, "user-recurrent-checkin")
+    
+    assert message is not None
+    assert isinstance(message, str)
+    # Verify execution path
+    assert generator.framework.execution_path == [
+        "CheckRecentNotifications_0",
+        "CheckRecentMetrics_0",
+        "CheckRecentMetricsMessages_0",
         "AnalyzeWeeklyProgress_0"
     ]
     # Verify message content
