@@ -71,7 +71,6 @@ const ProfilePage: React.FC = () => {
   const currentUserSentFriendRequests = currentUserQuery.data?.sentFriendRequests;
   const currentUserReceivedFriendRequests =
     currentUserQuery.data?.receivedFriendRequests;
-  const isOwnProfile = currentUser?.id === currentUserQuery.data?.user?.id;
   const profileDataQuery = useUserDataQuery(username);
   const profileData = profileDataQuery.data;
   const { activityEntries, activities } = profileData || {
@@ -93,7 +92,7 @@ const ProfilePage: React.FC = () => {
   const isOnesOwnProfile =
     currentUser?.id === profileData?.user?.id;
   const [showColorPalette, setShowColorPalette] = useState(false);
-
+  
   const colorPalettes = [
     {
       name: "Random",
@@ -137,15 +136,15 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (!profileData) {
-      isOwnProfile ? currentUserQuery.refetch() : profileDataQuery.refetch();
+      isOnesOwnProfile ? currentUserQuery.refetch() : profileDataQuery.refetch();
     }
-  }, [username, currentUserQuery, isOwnProfile, profileDataQuery]);
+  }, [username, currentUserQuery, isOnesOwnProfile, profileDataQuery]);
 
   useEffect(() => {
-    if (isOwnProfile) {
+    if (isOnesOwnProfile) {
       clearNotifications();
     }
-  }, [isOwnProfile, clearNotifications]);
+  }, [isOnesOwnProfile, clearNotifications]);
 
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
@@ -321,7 +320,7 @@ const ProfilePage: React.FC = () => {
                 <p className="text-sm text-gray-500">Friends</p>
               </div>
             </Link>
-            {!isOwnProfile && !isFriend() && (
+            {!isOnesOwnProfile && !isFriend() && (
               <>
                 {hasPendingReceivedFriendRequest() ? (
                   <div className="flex flex-col items-center gap-2">
@@ -370,7 +369,7 @@ const ProfilePage: React.FC = () => {
               </>
             )}
           </div>
-          {isOwnProfile && (
+          {isOnesOwnProfile && (
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Bell size={20} />
@@ -393,7 +392,7 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
 
-        {isOwnProfile && (
+        {isOnesOwnProfile && (
           <>
             <AppleLikePopover
               open={showUserProfile}
