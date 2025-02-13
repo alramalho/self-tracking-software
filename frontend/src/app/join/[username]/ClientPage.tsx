@@ -68,8 +68,6 @@ export default function ClientPage({
     return <div>Error: User profile not found</div>;
   }
 
-  console.log({inviterData});
-
   const handleSendFriendRequest = async () => {
     try {
       setIsSendingRequest(true);
