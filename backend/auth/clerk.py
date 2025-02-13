@@ -36,7 +36,6 @@ def get_token_from_request(request: Request) -> str:
     return token
 
 async def get_token_from_websocket(websocket: WebSocket) -> str:
-    logger.log('AUTH', 'Getting token from websocket')
     # Try to get the token from the WebSocket query parameters
     token = websocket.query_params.get("token")
     if not token:
@@ -44,7 +43,7 @@ async def get_token_from_websocket(websocket: WebSocket) -> str:
         token = websocket.cookies.get("__session")
     
     if not token:
-        logger.log('AUTH', "Token not found in query params or session cookie")
+        logger.error('AUTH', "Token not found in query params or session cookie")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No authentication information available",
@@ -53,7 +52,6 @@ async def get_token_from_websocket(websocket: WebSocket) -> str:
     return token
 
 async def validate_token(token: str) -> Tuple[bool, str]:
-    logger.log("AUTH", "Validating token")
 
     # if ENVIRONMENT == "dev":
     #     return True
@@ -69,7 +67,6 @@ async def validate_token(token: str) -> Tuple[bool, str]:
         # Check token expiration
         exp = payload.get("exp")
         clerk_id = payload.get("sub")
-        logger.info(f"User w/ clerk id {clerk_id} authorized.")
 
         if not exp:
             logger.error("Token does not have an expiration date")
@@ -89,7 +86,6 @@ async def validate_token(token: str) -> Tuple[bool, str]:
 
 async def is_clerk_user(token: str = Depends(get_token_from_request)) -> User:
     validated, clerk_id = await validate_token(token)
-    print(f"Clerk ID: {clerk_id}")
     if validated:
         user = UsersGateway().get_user_by_safely("clerk_id", clerk_id)
         if not user:
