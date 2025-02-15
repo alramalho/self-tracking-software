@@ -140,7 +140,11 @@ const HomePage: React.FC = () => {
               You haven&apos;t added any friends yet 🙁
               <br />
               <span className="text-sm text-gray-500">
-                Studies show that having accountability partners increases your chances of achieving goals by up to 95%! Add friends to boost your success.
+                Studies show that having accountability partners{" "}
+                <span className="font-bold">increases your chances of achieving goals by up to 95%!</span>
+                <br />
+                <br />
+                Add friends to boost your success.
               </span>
               <span className="text-sm text-gray-500">
                 <br />
