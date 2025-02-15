@@ -2,7 +2,6 @@ import React from "react";
 import Number from "../Number";
 import DurationOption from "../DurationOption";
 import { DatePicker } from "@/components/ui/date-picker";
-import { addDays } from "date-fns";
 
 interface DurationStepProps {
   planDuration: {
@@ -15,15 +14,6 @@ interface DurationStepProps {
   setPlanNotes: (notes: string) => void;
 }
 
-const getDateFromDurationType = (type: "habit" | "lifestyle"): string => {
-  const today = new Date();
-  if (type === "habit") {
-    return addDays(today, 21).toISOString(); // 21 days for habit
-  } else {
-    return addDays(today, 90).toISOString(); // 90 days for lifestyle
-  }
-};
-
 const DurationStep: React.FC<DurationStepProps> = ({
   planDuration,
   currentFinishingDate,
@@ -32,68 +22,70 @@ const DurationStep: React.FC<DurationStepProps> = ({
   setPlanNotes,
 }) => {
   return (
-    <div className="space-y-4">
-      <label className="text-lg font-medium block flex items-center gap-2">
-        <Number>1</Number>
-        What are you trying to achieve?
-      </label>
+    <div className="space-y-8">
+      {/* Duration Type Selection */}
+      <div className="space-y-4">
+        <label className="text-lg font-medium block flex items-center gap-2">
+          <Number>1</Number>
+          What type of plan is this?
+        </label>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <DurationOption
-          type="habit"
-          emoji="🌱"
-          title="Habit Creation"
-          description="This will set the finishing date to 21 days from now"
-          isSelected={planDuration.type === "habit"}
-          onSelect={() => {
-            const newDate = getDateFromDurationType("habit");
-            setPlanDuration({ type: "habit", date: newDate });
-            setCurrentFinishingDate(newDate);
-            setPlanNotes(
-              "This plan is an habit creation plan (21 days). In order to consider the habit created, all weeks must be completed."
-            );
-          }}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <DurationOption
+            type="habit"
+            emoji="🌱"
+            title="Habit Creation"
+            isSelected={planDuration.type === "habit"}
+            onSelect={() => {
+              setPlanDuration({ type: "habit", date: currentFinishingDate });
+              setPlanNotes(
+                "This plan is a habit creation plan. In order to consider the habit created, all weeks must be completed."
+              );
+            }}
+          />
 
-        <DurationOption
-          type="lifestyle"
-          emoji="🚀"
-          title="Lifestyle Improvement"
-          description="This will set the finishing date to 90 days from now"
-          isSelected={planDuration.type === "lifestyle"}
-          onSelect={() => {
-            const newDate = getDateFromDurationType("lifestyle");
-            setPlanDuration({ type: "lifestyle", date: newDate });
-            setCurrentFinishingDate(newDate);
-            setPlanNotes(
-              "This plan is an lifestyle improvement plan (90 days). In order to consider the lifestyle improved, at least 90% of the weeks must be completed."
-            );
-          }}
-        />
+          <DurationOption
+            type="lifestyle"
+            emoji="🚀"
+            title="Lifestyle Improvement"
+            isSelected={planDuration.type === "lifestyle"}
+            onSelect={() => {
+              setPlanDuration({ type: "lifestyle", date: currentFinishingDate });
+              setPlanNotes(
+                "This plan is a lifestyle improvement plan. In order to consider the lifestyle improved, at least 90% of the weeks must be completed."
+              );
+            }}
+          />
 
-        <DurationOption
-          type="custom"
-          emoji="⚡️"
-          title="Custom"
-          description="Set your own timeline for achieving your goals"
-          isSelected={planDuration.type === "custom"}
-          onSelect={() => {
-            setPlanDuration({
-              type: "custom",
-              date: currentFinishingDate,
-            });
-            setPlanNotes("");
-          }}
-        />
+          <DurationOption
+            type="custom"
+            emoji="⚡️"
+            title="Custom"
+            isSelected={planDuration.type === "custom"}
+            onSelect={() => {
+              setPlanDuration({
+                type: "custom",
+                date: currentFinishingDate,
+              });
+              setPlanNotes("");
+            }}
+          />
+        </div>
       </div>
 
-      {planDuration.type === "custom" && (
-        <div className="mt-4">
+      {/* Optional Finishing Date Selection */}
+      <div className="space-y-4">
+        <label className="text-lg font-medium block flex items-center gap-2">
+          <Number>2</Number>
+          When do you want to finish? (Optional)
+        </label>
+        
+        <div>
           <label
             className="text-sm font-medium mb-2 block"
             htmlFor="date-picker-trigger"
           >
-            Set a custom finishing date
+            Set a target date (optional)
           </label>
           <DatePicker
             id="date-picker-trigger"
@@ -105,12 +97,12 @@ const DurationStep: React.FC<DurationStepProps> = ({
             onSelect={(date: Date | undefined) => {
               const newDate = date?.toISOString();
               setCurrentFinishingDate(newDate);
-              setPlanDuration({ type: "custom", date: newDate });
+              setPlanDuration({ ...planDuration, date: newDate });
             }}
             disablePastDates={true}
           />
         </div>
-      )}
+      </div>
     </div>
   );
 };

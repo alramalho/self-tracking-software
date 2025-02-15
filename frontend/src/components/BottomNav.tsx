@@ -63,6 +63,7 @@ const BottomNav = () => {
         <div className="flex justify-around items-center py-2 px-4 max-w-screen-xl mx-auto">
           <Link
             href="/"
+            data-testid="nav-home"
             className={cn(
               "flex flex-col justify-center items-center p-2 transition-all duration-200 relative",
               isActiveRoute('/') 
@@ -86,6 +87,7 @@ const BottomNav = () => {
 
           <Link
             href="/plans"
+            data-testid="nav-plans"
             className={cn(
               "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/plans') 
@@ -104,6 +106,7 @@ const BottomNav = () => {
 
           <Link
             href="/add"
+            data-testid="nav-add"
             className={cn(
               "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/add') 
@@ -126,6 +129,7 @@ const BottomNav = () => {
 
           <Link
             href="/insights/dashboard"
+            data-testid="nav-insights"
             className={cn(
               "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/insights') 
@@ -144,6 +148,7 @@ const BottomNav = () => {
 
           <Link
             href={`/profile/${userUsername}`}
+            data-testid="nav-profile"
             className={cn(
               "flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/profile') 

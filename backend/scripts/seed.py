@@ -67,6 +67,7 @@ def generate_dummy_data():
     alex_activities = [
         Activity.new(id=str(ObjectId("666666666666666666666669")), user_id=users[0].id, title="Running", measure="kilometers", emoji="🏃"),
         Activity.new(id=str(ObjectId("66666666666666666666666d")), user_id=users[0].id, title="Meditation", measure="minutes", emoji="🧘"),
+        Activity.new(id=str(ObjectId("66666666666666666666666e")), user_id=users[2].id, title="push-ups", measure="times", emoji="💪"),
     ]
 
     # Replace the activities list

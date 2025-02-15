@@ -8,18 +8,21 @@ import { Loader2 } from "lucide-react";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { parseISO } from "date-fns";
 import Number from "../Number";
+import { Textarea } from "@/components/ui/textarea";
 
 interface OutlineStepProps {
-  outlineType: Plan["outline_type"];
-  setOutlineType: (type: Plan["outline_type"]) => void;
+  outlineType: "specific" | "times_per_week" | undefined;
+  setOutlineType: (type: "specific" | "times_per_week") => void;
   timesPerWeek: number;
   setTimesPerWeek: (times: number) => void;
   title: string;
-  generatedSessions?: ApiPlan["sessions"];
+  generatedSessions: any[] | undefined;
   canGenerate: () => boolean;
-  onGenerate: () => Promise<void>;
+  onGenerate: () => void;
   activities: Activity[];
   finishingDate?: string;
+  description: string;
+  setDescription: (description: string) => void;
 }
 
 const OutlineStep: React.FC<OutlineStepProps> = ({
@@ -33,6 +36,8 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
   onGenerate,
   activities,
   finishingDate,
+  description,
+  setDescription,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -56,27 +61,30 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-            <label
-        className="text-lg font-medium mb-2 block flex items-center gap-2"
-        htmlFor="goal"
-      >
-        <Number>5</Number>
-        How would you like to outline your plan?
-      </label>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OutlineOption
-          title="✅ Weekly Count Goal"
-          description="A simple, self-serve plan with just a number of sessions per week"
-          selected={outlineType === "times_per_week"}
-          onClick={() => setOutlineType("times_per_week")}
-        />
-        <OutlineOption
-          title="📆 Specific Schedule"
-          description="A more complex AI generated plan with a specific weekly schedule"
-          selected={outlineType === "specific"}
-          onClick={() => setOutlineType("specific")}
-        />
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          <Number>5</Number>
+          How would you like to track your progress?
+        </h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Choose how you want to structure your plan
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <OutlineOption
+            title="✅ Weekly Count Goal"
+            description="A simple, self-serve plan with just a number of sessions per week"
+            selected={outlineType === "times_per_week"}
+            onClick={() => setOutlineType("times_per_week")}
+          />
+          <OutlineOption
+            title="📆 Specific Schedule"
+            description="A more complex AI generated plan with a specific weekly schedule"
+            selected={outlineType === "specific"}
+            onClick={() => setOutlineType("specific")}
+          />
+        </div>
       </div>
 
       {outlineType === "times_per_week" && (
@@ -91,30 +99,57 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
         </div>
       )}
 
-      {outlineType === "specific" && generatedSessions && (
+      {outlineType === "specific" && (
         <div className="space-y-4">
-          <Label>Generated Schedule</Label>
-          <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 p-4">
-            <PlanSessionsRenderer
-              plan={convertToDisplayPlan(generatedSessions)}
-              activities={activities}
+          <div>
+            <label
+              htmlFor="customization-input"
+              className="text-lg font-semibold mb-2 block"
+            >
+              Additional Customization
+            </label>
+            <p className="text-sm text-gray-500 mb-2">
+              Add any specific requirements or preferences to help generate your
+              schedule
+            </p>
+            <Textarea
+              id="customization-input"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Example: I prefer morning workouts, I want to alternate between activities, etc..."
+              className="mb-4"
             />
           </div>
+
+          <div className="flex flex-col gap-4">
+            {canGenerate() && (
+              <Button
+                variant={generatedSessions ? "outline" : "default"}
+                onClick={handleGenerate}
+                loading={isGenerating}
+                className="flex-1 gap-2 w-full mt-2"
+              >
+                {isGenerating
+                  ? "Generating..."
+                  : generatedSessions
+                  ? "Regenerate"
+                  : "Generate Plan"}
+              </Button>
+            )}
+
+            {generatedSessions && (
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold">Generated Schedule</h4>
+                <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 p-4">
+                  <PlanSessionsRenderer
+                    plan={convertToDisplayPlan(generatedSessions)}
+                    activities={activities}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-      {canGenerate() && (
-        <Button
-          variant={generatedSessions ? "outline" : "default"}
-          onClick={handleGenerate}
-          loading={isGenerating}
-          className="flex-1 gap-2 w-full mt-2"
-        >
-          {isGenerating
-            ? "Generating..."
-            : generatedSessions
-            ? "Regenerate"
-            : "Generate Plan"}
-        </Button>
       )}
     </div>
   );

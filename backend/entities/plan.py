@@ -56,7 +56,7 @@ class Plan(BaseModel):
         user_id: str,
         goal: str,
         emoji: str,
-        finishing_date: Optional[str],
+        finishing_date: Optional[str] = None,
         sessions: Optional[List[PlanSession]] = [],
         plan_group_id: Optional[str] = None,
         id: Optional[str] = None,

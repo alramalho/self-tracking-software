@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import ConfirmDialog from "./ConfirmDialog";
 import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
-import { useThemeColors } from "@/hooks/useThemeColors";  
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { twMerge } from "tailwind-merge";
 
@@ -91,26 +91,33 @@ const PlanCard: React.FC<PlanCardProps> = ({
           onClick={() => onSelect(plan.id!)}
           className={`flex flex-col items-left justify-center p-4 rounded-lg border-2 ${
             isSelected
-              ? twMerge(variants.card.selected.border, variants.card.selected.bg)
+              ? twMerge(
+                  variants.card.selected.border,
+                  variants.card.selected.bg
+                )
               : "border-gray-300 bg-white"
           } aspect-square w-full`}
         >
           {plan.emoji && (
-            <span className="text-2xl mb-2">{plan.emoji}</span>
+            <span className="text-2xl mb-2 text-left">{plan.emoji}</span>
           )}
-          <span className="text-md font-medium text-left">
-            {plan.goal}
-          </span>
-          <span className="text-xs text-gray-500 text-left mt-1">
-            until {plan.finishing_date
-              ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })
-              : ""}
-          </span>
-          
+          <span className="text-md font-medium text-left">{plan.goal}</span>
+          {plan.finishing_date ? (
+            <span className="text-xs text-gray-500 text-left mt-1">
+              until{" "}
+              {plan.finishing_date
+                ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : ""}
+            </span>
+          ) : (
+            <span className="text-xs text-gray-500 text-left mt-1">
+              no end date
+            </span>
+          )}
           {planGroup && planGroup.members && (
             <div className="flex items-center space-x-1 mt-2">
               {planGroup.members.map((member) => {

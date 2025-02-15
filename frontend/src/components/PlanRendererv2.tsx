@@ -390,6 +390,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
               <span className="text-xs text-gray-500">Completed</span>
               <Switch
+                data-testid="display-future-activities-switch"
                 checked={displayFutureActivities}
                 onCheckedChange={setDisplayFutureActivities}
               />
