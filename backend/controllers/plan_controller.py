@@ -174,8 +174,9 @@ class PlanController:
         for plan_id in user.plan_ids:
             plan = self.get_plan(plan_id)
             current_date = datetime.now(UTC)
-            if plan and plan.finishing_date and current_date < datetime.fromisoformat(plan.finishing_date).replace(tzinfo=UTC):
-                plans.append(plan)
+            if plan and plan.finishing_date and current_date > datetime.fromisoformat(plan.finishing_date).replace(tzinfo=UTC):
+                continue
+            plans.append(plan)
         return plans
 
     def get_recommended_plans(self, user: User, limit: int = 5) -> List[Plan]:
@@ -627,7 +628,7 @@ class PlanController:
         logger.log("CONTROLLERS", f"Generating sessions for goal: {goal}")
         current_date = datetime.now().strftime("%Y-%m-%d, %A")
         if not finishing_date:
-            finishing_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
+            finishing_date = (datetime.now() + timedelta(days=120)).strftime("%Y-%m-%d")
 
         number_of_weeks = self._count_number_of_weeks_till(finishing_date)
         system_prompt = f"""

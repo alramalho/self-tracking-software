@@ -10,6 +10,7 @@ import posthog from "posthog-js";
 import { Remark } from "react-remark";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
+import { formatTimeAgo } from "@/lib/utils";
 
 interface NotificationsProps {}
 
@@ -225,11 +226,17 @@ const Notifications: React.FC<NotificationsProps> = () => {
                     >
                       <div className="markdown text-sm text-gray-700">
                         <Remark>{notification.message}</Remark>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {formatTimeAgo(notification.created_at)}
+                        </div>
                       </div>
                     </Link>
                   ) : (
                     <div className="markdown text-sm text-gray-700">
                       <Remark>{notification.message}</Remark>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {formatTimeAgo(notification.created_at)}
+                      </div>
                     </div>
                   )}
                 </div>

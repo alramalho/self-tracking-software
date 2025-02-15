@@ -33,6 +33,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
         {!unclosable && (
           <DrawerClose asChild>
             <Button
+              data-testid="close-popover"
               variant="ghost"
               size="icon"
               className="absolute top-4 right-4 z-[51]"

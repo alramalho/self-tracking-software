@@ -68,7 +68,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const canProgressToNextStep = useCallback((step: number) => {
     switch (step) {
       case 1:
-        return !!planDuration.type && !!planDuration.date;
+        return !!planDuration.type;
       case 2:
         return !!goal.trim();
       case 3:
@@ -191,7 +191,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const isPlanComplete = useCallback(() => {
     const hasRequiredFields = 
       planDuration.type &&
-      planDuration.date &&
       goal.trim() !== "" &&
       selectedEmoji &&
       selectedActivities.length > 0 &&
@@ -279,11 +278,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   };
 
   const canGeneratePlan = useCallback(() => {
-
     // Basic requirements for all plan types
     const hasBasicInfo =
       planDuration.type &&
-      planDuration.date &&
       goal.trim() !== "" &&
       selectedEmoji &&
       selectedActivities.length > 0;
@@ -298,7 +295,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     return true;
   }, [
     planDuration.type,
-    planDuration.date,
     goal,
     selectedEmoji,
     selectedActivities.length,
@@ -370,8 +366,6 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           <ActivitiesStep
             onActivitiesChange={setSelectedActivities}
             initialActivities={selectedActivities}
-            description={description}
-            setDescription={setDescription}
           />
           {!isEdit && (
             <div className="flex justify-end mt-4">
@@ -398,6 +392,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             onGenerate={handleGenerate}
             activities={selectedActivities}
             finishingDate={currentFinishingDate}
+            description={description}
+            setDescription={setDescription}
           />
           {!isEdit && (
             <div className="flex justify-end mt-4">

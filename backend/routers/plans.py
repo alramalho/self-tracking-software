@@ -398,7 +398,7 @@ async def generate_sessions(data: GenerateSessionsRequest, user: User = Depends(
     try:
         sessions = plan_controller.generate_sessions(
             goal=data.goal,
-            finishing_date=data.finishing_date,
+            finishing_date=data.finishing_date.split("T")[0] if data.finishing_date else None,
             activities=data.activities,
             description=data.description,
             is_edit=data.is_edit,

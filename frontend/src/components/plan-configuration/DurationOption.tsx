@@ -6,7 +6,6 @@ import { twMerge } from "tailwind-merge";
 interface DurationOptionProps {
   type: "habit" | "lifestyle" | "custom";
   title: string;
-  description: string;
   emoji: string;
   isSelected: boolean;
   onSelect: () => void;
@@ -15,7 +14,6 @@ interface DurationOptionProps {
 const DurationOption: React.FC<DurationOptionProps> = ({
   type,
   title,
-  description,
   emoji,
   isSelected,
   onSelect,
@@ -37,7 +35,6 @@ const DurationOption: React.FC<DurationOptionProps> = ({
       )}
       <span className="text-2xl mb-2">{emoji}</span>
       <h4 className="font-medium mb-1">{title}</h4>
-      <p className="text-sm text-gray-500">{description}</p>
     </div>
   );
 };

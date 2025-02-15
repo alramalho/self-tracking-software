@@ -30,16 +30,26 @@ test.describe.serial("App", () => {
     }
   });
 
+  async function closePopoverIfPresent() {
+    const closeButton = page.getByTestId("close-popover");
+    if (await closeButton.isVisible()) {
+      await closeButton.click();
+    }
+  }
+
   test("can create a specific plan", async () => {
+    await page.waitForTimeout(1500);
+    await closePopoverIfPresent();
+
     // Navigate to Plans and start creating a new plan
-    await page.locator("nav").first().getByText("Plans").click();
+    await page.getByTestId("nav-plans").click();
     await page.getByText("Create New Plan").click();
 
-    // Fill in the plan configuration form
+    // Step 1: Duration Type and Optional Finishing Date
     await page.getByText("Custom", { exact: true }).click();
 
-    // Set a custom finishing date
-    await page.getByLabel("Set a custom finishing date").click();
+    // Optional: Set a finishing date
+    await page.getByLabel("Set a target date (optional)").click();
     await page.getByRole("dialog").waitFor();
     await page.getByTestId("day-picker").locator("td").last().click();
     await page
@@ -48,7 +58,7 @@ test.describe.serial("App", () => {
       .last()
       .click();
 
-    // Fill in goal
+    // Step 2: Fill in goal
     await page
       .getByLabel("Great, now what exactly do you want to do?")
       .fill("I want to exercise regularly and improve my fitness");
@@ -58,7 +68,7 @@ test.describe.serial("App", () => {
       .last()
       .click();
 
-    // Select an emoji
+    // Step 3: Select an emoji
     await page
       .getByTestId("plan-configuration-form")
       .getByPlaceholder("Enter an emoji")
@@ -69,7 +79,6 @@ test.describe.serial("App", () => {
       .last()
       .click();
 
-    // Select and create activities
     await page.getByText("push-ups").click();
 
     // Create a new activity
@@ -79,34 +88,33 @@ test.describe.serial("App", () => {
       .getByTestId("activity-editor")
       .getByPlaceholder("Enter an emoji")
       .fill("🙂");
-
     await page
       .getByPlaceholder("Measure (e.g., minutes, times)")
       .fill("kilometers");
-
     await page.getByRole("button", { name: "Save Activity" }).click();
-
-    // Add additional customization
-    await page
-      .getByPlaceholder(
-        "Add any specific requirements or preferences for your plan..."
-      )
-      .fill(
-        "I prefer morning workouts and would like to focus on cardio exercises"
-      );
     await page
       .getByRole("button", { name: "Next", exact: true })
       .and(page.locator("button:not([disabled])"))
       .last()
       .click();
 
-    // Configure outline and generate plan
+    // Step 5: Configure outline and generate plan
     await page.getByText("Specific Schedule").click();
+
+    // Add customization for specific schedule
+    await page
+      .getByPlaceholder(
+        "Example: I prefer morning workouts, I want to alternate between activities, etc..."
+      )
+      .fill(
+        "I prefer morning workouts and would like to focus on cardio exercises"
+      );
+
     await page.getByRole("button", { name: "Generate Plan" }).click();
 
-    // Verify the created plan
+    // Verify the generated plan
     await expect(page.getByText("🙂 running")).toBeVisible({
-      timeout: 15000,
+      timeout: 20000,
     });
     await expect(page.getByText("💪 push-ups")).toBeVisible();
     await expect(
@@ -126,22 +134,24 @@ test.describe.serial("App", () => {
     await page.getByRole("button", { name: "Create Plan" }).click();
     await page.getByText("Enable Notifications").click();
 
-    // Store the current URL for the next test
     createdPlanUrl = page.url();
   });
 
   test("can create a times per week plan", async () => {
     // Navigate to Plans and start creating a new plan
-    await page.locator("nav").first().getByText("Plans").click();
+    await page.getByTestId("nav-plans").click();
     await page.getByText("Create New Plan").click();
 
+    // Step 1: Duration Type and Optional Finishing Date
     await page.getByText("Lifestyle").click();
+    // Optional: Set a finishing date (skipping in this test)
     await page
       .getByRole("button", { name: "Next", exact: true })
       .and(page.locator("button:not([disabled])"))
       .last()
       .click();
 
+    // Step 2: Fill in goal
     await page
       .getByLabel("Great, now what exactly do you want to do?")
       .fill("I want to meditate regularly");
@@ -151,6 +161,7 @@ test.describe.serial("App", () => {
       .last()
       .click();
 
+    // Step 3: Select an emoji
     await page
       .getByTestId("plan-configuration-form")
       .getByPlaceholder("Enter an emoji")
@@ -161,6 +172,7 @@ test.describe.serial("App", () => {
       .last()
       .click();
 
+    // Step 4: Select and create activities
     await page.getByText("push-ups").click();
 
     // Create a new activity
@@ -173,7 +185,6 @@ test.describe.serial("App", () => {
     await page
       .getByPlaceholder("Measure (e.g., minutes, times)")
       .fill("minutes");
-
     await page.getByRole("button", { name: "Save Activity" }).click();
     await page
       .getByRole("button", { name: "Next", exact: true })
@@ -181,15 +192,7 @@ test.describe.serial("App", () => {
       .last()
       .click();
 
-    // Add additional customization
-    await page
-      .getByPlaceholder(
-        "Add any specific requirements or preferences for your plan..."
-      )
-      .fill(
-        "I prefer morning workouts and would like to focus on cardio exercises"
-      );
-
+    // Step 5: Configure outline
     await page.getByText("Weekly Count Goal").click();
     await page.getByTestId("plus").click();
     await page.getByTestId("plus").click();
@@ -203,7 +206,7 @@ test.describe.serial("App", () => {
   });
 
   test("can edit an existing plan", async () => {
-    await page.locator("nav").first().getByText("Plans").click();
+    await page.getByTestId("nav-plans").click();
 
     await page
       .getByText("I want to exercise regularly and improve my fitness")
@@ -214,6 +217,7 @@ test.describe.serial("App", () => {
     await expect(page.getByText("🙂 running")).toBeVisible();
     await expect(page.getByText("💪 push-ups")).toBeVisible();
 
+    await page.getByTestId("display-future-activities-switch").click();
     const initialFilledCells = await page
       .locator('rect[fill]:not([fill="#EBEDF0"])')
       .count();
