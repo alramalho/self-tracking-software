@@ -30,14 +30,22 @@ async def user_event_webhook(request: Request):
     try:
         payload = await request.json()
         event_type = payload.get("type")
+        data = payload.get("data")
 
         logger.info(f"Received clerk webhook {event_type}")
         
-        data = payload.get("data")
         if not event_type or not data:
             raise HTTPException(status_code=400, detail="Missing event type or data")
 
         user_clerk_id = data["id"]
+        users_gateway = UsersGateway()
+
+        if event_type == "user.deleted":
+            user = users_gateway.get_user_by("clerk_id", user_clerk_id)
+            users_gateway.delete_user(user_id=user.id)
+            return {"status": "success", "message": "User deleted successfully"}
+
+        # Process user data for create and update events
         email_address = data["email_addresses"][0]["email_address"]
         first_name = data["first_name"]
         last_name = data["last_name"]
@@ -56,56 +64,32 @@ async def user_event_webhook(request: Request):
                 logger.info(f"No picture found for user {user_clerk_id}")
         else:
             logger.info(f"No external accounts found for user {user_clerk_id}")
-        users_gateway = UsersGateway()
+
+        user_data = {
+            "email": email_address,
+            "name": f"{first_name} {last_name}",
+            "username": username,
+            "clerk_id": user_clerk_id,
+            "picture": picture,
+        }
 
         if event_type == "user.created":
             user = users_gateway.get_user_by_safely("email", email_address)
             if user:
-                users_gateway.update_fields(
-                    user.id,
-                    {
-                        "email": email_address,
-                        "name": f"{first_name} {last_name}",
-                        "clerk_id": user_clerk_id,
-                        "username": username,
-                        "picture": picture,  # Add the picture field
-                    },
-                )
+                users_gateway.update_fields(user.id, user_data)
                 logger.info(f"User with email '{email_address}' updated.")
             else:
-                logger.info(
-                    f"User with email '{email_address}' not found. Creating new user."
-                )
-                users_gateway.create_user(
-                    User.new(
-                        email=email_address,
-                        name=f"{first_name} {last_name}",
-                        username=username,
-                        clerk_id=user_clerk_id,
-                        picture=picture,  # Add the picture field
-                    )
-                )
+                logger.info(f"User with email '{email_address}' not found. Creating new user.")
+                users_gateway.create_user(User.new(**user_data))
             return {"status": "success", "message": "User created successfully"}
+            
         elif event_type == "user.updated":
             user = users_gateway.get_user_by_safely("clerk_id", user_clerk_id)
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
 
-            users_gateway.update_fields(
-                user.id,
-                {
-                    "email": email_address,
-                    "name": f"{first_name} {last_name}",
-                    "username": username,
-                    "clerk_id": user_clerk_id,
-                    "picture": picture,  # Add the picture field
-                },
-            )
+            users_gateway.update_fields(user.id, user_data)
             return {"status": "success", "message": "User updated successfully"}
-        elif event_type == "user.deleted":
-            user = users_gateway.get_user_by("clerk_id", user_clerk_id)
-            users_gateway.delete_user(user_id=user.id)
-            return {"status": "success", "message": "User deleted successfully"}
         else:
             error_msg = f"Unhandled event type: {event_type}"
             logger.error(error_msg)
