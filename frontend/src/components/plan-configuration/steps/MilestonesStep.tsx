@@ -2,12 +2,15 @@ import React, { useState, Dispatch, SetStateAction, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Minus, Info } from "lucide-react";
+import { Plus, Minus, Info, Check } from "lucide-react";
 import Number from "../Number";
 import { ApiPlan, Activity, PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup } from "@/contexts/UserPlanContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
+import Divider from "@/components/Divider";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
 
 interface MilestonesStepProps {
   milestones?: PlanMilestone[];
@@ -20,6 +23,9 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   setMilestones = () => {},
   activities = [],
 }) => {
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
+
   // Track validation state
   const [validationErrors, setValidationErrors] = useState<{
     [key: number]: { 
@@ -55,7 +61,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     const activityIds = new Set(activities.map(a => a.id));
     
     const cleanedMilestones = milestones.filter(milestone => 
-      milestone.criteria.every(criterion => hasValidActivities(criterion, activityIds))
+      !milestone.criteria || (milestone.criteria && milestone.criteria.every(criterion => hasValidActivities(criterion, activityIds)))
     );
 
     if (cleanedMilestones.length !== milestones.length) {
@@ -124,11 +130,11 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     
     // Get previous milestone's total target
     const previousMilestone = milestones[milestoneIndex - 1];
-    const previousTotal = previousMilestone?.criteria.reduce((sum, c) => 
+    const previousTotal = previousMilestone?.criteria?.reduce((sum, c) => 
       'quantity' in c ? sum + c.quantity : sum, 0) || 0;
 
     // Get current milestone's total target
-    const currentTotal = currentMilestone.criteria.reduce((sum, c) => 
+    const currentTotal = (currentMilestone.criteria || []).reduce((sum, c) => 
       'quantity' in c ? sum + (c.quantity || 0) : sum, 0);
 
     if (milestoneIndex > 0 && currentTotal <= previousTotal) {
@@ -150,7 +156,6 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   };
 
   const addMilestone = () => {
-    const defaultActivityId = activities.length > 0 ? activities[0].id : "";
     const previousMilestone = milestones[milestones.length - 1];
     
     const newMilestone: PlanMilestone = {
@@ -158,10 +163,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
         ? new Date(new Date(previousMilestone.date).setMonth(new Date(previousMilestone.date).getMonth() + 1))
         : new Date(),
       description: "",
-      criteria: [{
-        activity_id: defaultActivityId,
-        quantity: 1
-      }]
+      progress: 0,
     };
     setMilestones((prevMilestones) => [...prevMilestones, newMilestone]);
   };
@@ -174,7 +176,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   const updateMilestone = (
     index: number,
     field: keyof PlanMilestone,
-    value: string | Date | (PlanMilestoneCriteria | PlanMilestoneCriteriaGroup)[]
+    value: string | Date | (PlanMilestoneCriteria | PlanMilestoneCriteriaGroup)[] | number | null
   ) => {
     setMilestones((prevMilestones) =>
       prevMilestones.map((milestone, i) =>
@@ -183,7 +185,13 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     );
   };
 
-  // Update the updateCriteria function to not include validation
+  const adjustProgress = (milestoneIndex: number, increment: boolean) => {
+    const milestone = milestones[milestoneIndex];
+    const currentProgress = milestone.progress ?? 0;
+    const newProgress = Math.min(Math.max(currentProgress + (increment ? 10 : -10), 0), 100);
+    updateMilestone(milestoneIndex, "progress", newProgress);
+  };
+
   const updateCriteria = (
     milestoneIndex: number,
     criteriaIndex: number,
@@ -192,6 +200,11 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   ) => {
     const newMilestones = [...milestones];
     const milestone = newMilestones[milestoneIndex];
+    
+    if (!milestone.criteria) {
+      milestone.criteria = [];
+    }
+    
     const criteria = milestone.criteria[criteriaIndex] as PlanMilestoneCriteria;
 
     const updatedCriteria = {
@@ -208,9 +221,10 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     setMilestones((prevMilestones) =>
       prevMilestones.map((milestone, i) => {
         if (i === milestoneIndex) {
+          const currentCriteria = milestone.criteria || [];
           return {
             ...milestone,
-            criteria: [...milestone.criteria, { activity_id: defaultActivityId, quantity: 1 }]
+            criteria: [...currentCriteria, { activity_id: defaultActivityId, quantity: 1 }]
           };
         }
         return milestone;
@@ -221,7 +235,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   const removeCriteria = (milestoneIndex: number, criteriaIndex: number) => {
     setMilestones((prevMilestones) =>
       prevMilestones.map((milestone, i) => {
-        if (i === milestoneIndex) {
+        if (i === milestoneIndex && milestone.criteria) {
           return {
             ...milestone,
             criteria: milestone.criteria.filter((_, j) => j !== criteriaIndex)
@@ -255,119 +269,190 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
               "flex flex-col gap-4 p-4 border rounded-lg",
               validationErrors[milestoneIndex]?.title && "border-red-500"
             )}>
-              <div className="flex items-center gap-3">
-                <div className="text-3xl">⛳️</div>
-                <div className="flex-1 flex items-center gap-3">
+              <div className="flex gap-4">
+                <div className="text-6xl my-auto">⛳️</div>
+                <div className="flex-1 flex flex-col gap-3">
+                  <Input
+                    value={milestone.description}
+                    onChange={(e) =>
+                      updateMilestone(milestoneIndex, "description", e.target.value)
+                    }
+                    placeholder="Milestone title"
+                    className={cn(
+                      "text-lg font-medium bg-white",
+                      validationErrors[milestoneIndex]?.title && "border-red-500 focus-visible:ring-red-500"
+                    )}
+                  />
+                  {validationErrors[milestoneIndex]?.title && (
+                    <p className="text-sm text-red-500">Title is required</p>
+                  )}
                   <DatePicker
-                    className="max-w-[150px]"
+                    className="w-[150px]"
                     selected={ensureDate(milestone.date)}
                     onSelect={(date) => date && updateMilestone(milestoneIndex, "date", date)}
                   />
-                  <div className="flex-1">
-                    <Input
-                      value={milestone.description}
-                      onChange={(e) =>
-                        updateMilestone(milestoneIndex, "description", e.target.value)
-                      }
-                      placeholder="Title"
-                      className={cn(
-                        validationErrors[milestoneIndex]?.title && "border-red-500 focus-visible:ring-red-500"
-                      )}
-                    />
-                    {validationErrors[milestoneIndex]?.title && (
-                      <p className="text-sm text-red-500 mt-1">Title is required</p>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                {milestone.criteria.map((criterion, criteriaIndex) => (
-                  <div key={criteriaIndex} className="flex items-center gap-2">
-                    {criteriaIndex > 0 && (
-                      <Select
-                        value="OR"
-                        onValueChange={(value) => {
-                          // Handle junction change
-                        }}
-                      >
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="AND">AND</SelectItem>
-                          <SelectItem value="OR">OR</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <Select
-                      value={(criterion as PlanMilestoneCriteria).activity_id}
-                      onValueChange={(value) =>
-                        updateCriteria(milestoneIndex, criteriaIndex, "activity_id", value)
+              <Divider />
+
+              <div className="space-y-4">
+                <div className="flex justify-center gap-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (milestone.criteria?.length) {
+                        updateMilestone(milestoneIndex, "criteria", null);
+                        updateMilestone(milestoneIndex, "progress", 0);
                       }
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select activity" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activities.map((activity) => (
-                          <SelectItem key={activity.id} value={activity.id}>
-                            {activity.emoji} {activity.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex flex-col gap-1">
-                      <Input
-                        type="number"
-                        className={cn(
-                          "w-24",
-                          validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && "border-red-500 focus-visible:ring-red-500"
-                        )}
-                        value={(criterion as PlanMilestoneCriteria).quantity}
-                        onChange={(e) =>
-                          updateCriteria(
-                            milestoneIndex,
-                            criteriaIndex,
-                            "quantity",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                        onBlur={(e) => {
-                          const value = parseInt(e.target.value) || 0;
-                          validateQuantity(milestoneIndex, criteriaIndex, value);
-                          validateMilestoneTargets(milestoneIndex, milestones[milestoneIndex]);
-                        }}
-                        placeholder="Quantity"
-                      />
-                      {validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && (
-                        <p className="text-sm text-red-500">Must be greater than 0</p>
-                      )}
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {activities.find(
-                        (a) => a.id === (criterion as PlanMilestoneCriteria).activity_id
-                      )?.measure || "units"}
-                    </span>
-                    {milestone.criteria.length > 1 && (
+                    }}
+                    className={cn(
+                      "flex-1",
+                      !milestone.criteria?.length && cn("border-2", variants.card.selected.border, variants.card.selected.bg),
+                      milestone.criteria?.length && "bg-white"
+                    )}
+                  >
+                    Manual Progress
+                    {!milestone.criteria?.length && <Check className={cn("ml-2 h-4 w-4", variants.text)}/>}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (!milestone.criteria?.length) {
+                        updateMilestone(milestoneIndex, "progress", null);
+                        addCriteria(milestoneIndex);
+                      }
+                    }}
+                    className={cn(
+                      "flex-1",
+                      milestone.criteria?.length && cn("border-2",variants.card.selected.border, variants.card.selected.bg),
+                      !milestone.criteria?.length && "bg-white"
+                    )}
+                  >
+                    Activity Criteria 
+                    {milestone.criteria?.length && <Check className={cn("ml-2 h-4 w-4", variants.text)}/>}
+                  </Button>
+                </div>
+
+                {(!milestone.criteria || milestone.criteria.length === 0) ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <div className="flex items-center gap-3">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => removeCriteria(milestoneIndex, criteriaIndex)}
+                        onClick={() => adjustProgress(milestoneIndex, false)}
+                        disabled={typeof milestone.progress !== 'number' || milestone.progress <= 0}
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
-                    )}
+                      <div className="flex flex-col items-center">
+                        <div className="text-2xl font-semibold">
+                          {typeof milestone.progress === 'number' ? milestone.progress : 0}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          PERCENT
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => adjustProgress(milestoneIndex, true)}
+                        disabled={typeof milestone.progress === 'number' && milestone.progress >= 100}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addCriteria(milestoneIndex)}
-                  className="mt-2"
-                >
-                  <Plus className="h-4 w-4 mr-2" /> Add Criteria
-                </Button>
+                ) : (
+                  <div className="space-y-2">
+                    {milestone.criteria.map((criterion, criteriaIndex) => (
+                      <div key={criteriaIndex} className="flex items-center gap-2">
+                        {criteriaIndex > 0 && (
+                          <Select
+                            value="OR"
+                            onValueChange={(value) => {
+                              // Handle junction change
+                            }}
+                          >
+                            <SelectTrigger className="w-20">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="AND">AND</SelectItem>
+                              <SelectItem value="OR">OR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Select
+                          value={(criterion as PlanMilestoneCriteria).activity_id}
+                          onValueChange={(value) =>
+                            updateCriteria(milestoneIndex, criteriaIndex, "activity_id", value)
+                          }
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select activity" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activities.map((activity) => (
+                              <SelectItem key={activity.id} value={activity.id}>
+                                {activity.emoji} {activity.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex flex-col gap-1">
+                          <Input
+                            type="number"
+                            className={cn(
+                              "w-24",
+                              validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && "border-red-500 focus-visible:ring-red-500"
+                            )}
+                            value={(criterion as PlanMilestoneCriteria).quantity}
+                            onChange={(e) =>
+                              updateCriteria(
+                                milestoneIndex,
+                                criteriaIndex,
+                                "quantity",
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            onBlur={(e) => {
+                              const value = parseInt(e.target.value) || 0;
+                              validateQuantity(milestoneIndex, criteriaIndex, value);
+                              validateMilestoneTargets(milestoneIndex, milestones[milestoneIndex]);
+                            }}
+                            placeholder="Quantity"
+                          />
+                          {validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && (
+                            <p className="text-sm text-red-500">Must be greater than 0</p>
+                          )}
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {activities.find(
+                            (a) => a.id === (criterion as PlanMilestoneCriteria).activity_id
+                          )?.measure || "units"}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeCriteria(milestoneIndex, criteriaIndex)}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addCriteria(milestoneIndex)}
+                      className="mt-2"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add Another Criteria
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -30,7 +30,8 @@ class PlanMilestone(BaseModel):
 
     date: str
     description: str
-    criteria: List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]
+    criteria: Optional[List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]] = None
+    progress: Optional[float] = None  # Progress as a percentage (0-100)
 
 
 class Plan(BaseModel):

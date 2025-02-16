@@ -46,6 +46,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
+  
 
   const handleLeavePlan = async () => {
     toast.promise(
@@ -195,6 +196,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
       />
 
       <AppleLikePopover
+        className={"bg-gray-50"}
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
       >

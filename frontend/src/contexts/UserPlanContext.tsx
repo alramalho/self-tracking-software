@@ -110,7 +110,8 @@ export interface PlanMilestoneCriteriaGroup {
 export interface PlanMilestone {
   date: Date;
   description: string;
-  criteria: (PlanMilestoneCriteria | PlanMilestoneCriteriaGroup)[];
+  criteria?: (PlanMilestoneCriteria | PlanMilestoneCriteriaGroup)[];
+  progress?: number;
 }
 
 export interface Plan {
