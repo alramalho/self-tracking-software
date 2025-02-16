@@ -176,7 +176,8 @@ class PlanController:
             current_date = datetime.now(UTC)
             if plan and plan.finishing_date and current_date > datetime.fromisoformat(plan.finishing_date).replace(tzinfo=UTC):
                 continue
-            plans.append(plan)
+            if plan is not None:
+                plans.append(plan)
         return plans
 
     def get_recommended_plans(self, user: User, limit: int = 5) -> List[Plan]:
