@@ -230,7 +230,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       }
 
       // Check criteria
-      for (const criterion of milestone.criteria) {
+      for (const criterion of milestone.criteria || []) {
         if ('activity_id' in criterion && criterion.quantity <= 0) {
           toast.error("All milestone criteria must have a quantity greater than 0");
           return false;

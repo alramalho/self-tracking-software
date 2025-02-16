@@ -427,3 +427,32 @@ async def calculate_plan_milestone_progress(plan_id: str, user: User = Depends(i
         logger.error(f"Failed to calculate milestone progress: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/update-milestone-progress/{plan_id}")
+async def update_milestone_progress(
+    plan_id: str,
+    data: dict = Body(...),
+    user: User = Depends(is_clerk_user)
+):
+    try:
+        plan = plan_controller.get_plan(plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found")
+
+        if plan.user_id != user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this plan")
+
+        # Find and update the milestone
+        for milestone in plan.milestones:
+            if (milestone.description == data["milestone_description"] and 
+                milestone.date == data["milestone_date"]):
+                milestone.progress = data["progress"]
+                break
+
+        plan_controller.update_plan(plan)
+        return {"message": "Milestone progress updated successfully"}
+    except Exception as e:
+        logger.error(f"Failed to update milestone progress: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))

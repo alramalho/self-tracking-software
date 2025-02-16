@@ -39,29 +39,23 @@ class MilestonesController:
 
         # Sort milestones by date
         sorted_milestones = sorted(plan.milestones, key=lambda x: x.date)
-        now = datetime.now(UTC)
 
-        # Find the next milestone
+        # Calculate progress for all milestones
+        milestone_progress_list = [
+            self._calculate_milestone_progress(milestone, activity_entries)
+            for milestone in sorted_milestones
+        ]
+
+        # Find the first uncompleted milestone
         next_milestone = None
-
-        # First try to find the next uncompleted future milestone
-        for milestone in sorted_milestones:
-            progress = self._calculate_milestone_progress(milestone, activity_entries)
-            if datetime.fromisoformat(milestone.date).replace(tzinfo=UTC) > now and not progress.is_completed:
+        for progress in milestone_progress_list:
+            if not progress.is_completed:
                 next_milestone = progress
                 break
 
-        if not next_milestone:
-            # If no future uncompleted milestone, find the first uncompleted milestone
-            for milestone in sorted_milestones:
-                progress = self._calculate_milestone_progress(milestone, activity_entries)
-                if not progress.is_completed:
-                    next_milestone = progress
-                    break
-
-        if not next_milestone and sorted_milestones:
-            # If all are completed, return the last milestone
-            next_milestone = self._calculate_milestone_progress(sorted_milestones[-1], activity_entries)
+        # If all milestones are completed, return the last one
+        if not next_milestone and milestone_progress_list:
+            next_milestone = milestone_progress_list[-1]
 
         return NextMilestoneResponse(
             plan_id=plan.id,
@@ -74,13 +68,14 @@ class MilestonesController:
         activity_entries: List[ActivityEntry]
     ) -> PlanMilestoneProgress:
         """Calculate progress for a single milestone"""
+        # For milestones without criteria, use the manual progress
         if not milestone.criteria:
             return PlanMilestoneProgress(
                 milestone_id=str(ObjectId()),
                 description=milestone.description,
                 date=milestone.date,
-                progress=0,
-                is_completed=False,
+                progress=milestone.progress or 0,
+                is_completed=(milestone.progress or 0) >= 100,
                 criteria_progress=[]
             )
 

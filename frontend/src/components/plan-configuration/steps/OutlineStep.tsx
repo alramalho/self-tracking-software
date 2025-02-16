@@ -117,7 +117,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Example: I prefer morning workouts, I want to alternate between activities, etc..."
-              className="mb-4"
+              className="mb-4 bg-white"
             />
           </div>
 

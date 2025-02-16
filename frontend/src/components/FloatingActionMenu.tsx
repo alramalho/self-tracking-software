@@ -63,7 +63,9 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
     );
   };
 
-  const buttonContainerClasses = isOpen ? "flex items-center gap-3 group" : "hidden";
+  const buttonContainerClasses = isOpen
+    ? "flex items-center gap-3 group"
+    : "hidden";
   const buttonClasses =
     "w-12 h-12 bg-white rounded-full flex items-center justify-center " +
     "text-gray-600 shadow-md hover:shadow-lg border border-gray-200 " +
@@ -79,7 +81,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
 
   return (
     <>
-      <div className={`fixed bottom-20 right-2 ${className} z-[40]`}>
+      <div className={`fixed bottom-[5.4rem] right-2 ${className} z-[40]`}>
         <div
           className={`flex flex-col-reverse gap-3 items-end transition-all duration-200 mb-3
             ${
@@ -88,61 +90,56 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
                 : "opacity-0 translate-y-4 pointer-events-none"
             }`}
         >
-            <div className={buttonContainerClasses}>
-              <span className={labelClasses}>Get Help</span>
-              <button
-                className={buttonClasses}
-                onClick={() => setShowHelpForm(true)}
-              >
-                <HelpCircle
-                  size={24}
-                  className="text-gray-600 hover:text-gray-800"
-                />
-              </button>
-            </div>
-
-            <div className={buttonContainerClasses}>
-              <span className={labelClasses}>Report Bug</span>
-              <button
-                className={buttonClasses}
-                onClick={() => setShowBugForm(true)}
-              >
-                <Bug size={24} className="text-gray-600 hover:text-gray-800" />
-              </button>
-            </div>
-
-            <div className={buttonContainerClasses}>
-              <span className={labelClasses}>Suggest Feature</span>
-              <button
-                className={buttonClasses}
-                onClick={() => setShowFeatureForm(true)}
-              >
-                <MessageSquarePlus
-                  size={24}
-                  className="text-gray-600 hover:text-gray-800"
-                />
-              </button>
-            </div>
-          </div>
-
-        <div>
-          {isOpen && <span className={labelClasses}>Close Menu</span>}
-          <button
-            className={`${mainButtonClasses} ${
-              isOpen ? "bg-gray-50" : "bg-white"
-            } pointer-events-auto`}
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? (
-              <X size={24} className="text-gray-600 hover:text-gray-800" />
-            ) : (
+          <div className={buttonContainerClasses}>
+            <span className={labelClasses}>Get Help</span>
+            <button
+              className={buttonClasses}
+              onClick={() => setShowHelpForm(true)}
+            >
               <HelpCircle
                 size={24}
                 className="text-gray-600 hover:text-gray-800"
               />
-            )}
-          </button>
+            </button>
+          </div>
+
+          <div className={buttonContainerClasses}>
+            <span className={labelClasses}>Report Bug</span>
+            <button
+              className={buttonClasses}
+              onClick={() => setShowBugForm(true)}
+            >
+              <Bug size={24} className="text-gray-600 hover:text-gray-800" />
+            </button>
+          </div>
+
+          <div className={buttonContainerClasses}>
+            <span className={labelClasses}>Suggest Feature</span>
+            <button
+              className={buttonClasses}
+              onClick={() => setShowFeatureForm(true)}
+            >
+              <MessageSquarePlus
+                size={24}
+                className="text-gray-600 hover:text-gray-800"
+              />
+            </button>
+          </div>
         </div>
+
+        {isOpen && <span className={labelClasses}>Close Menu</span>}
+        <button
+          className={`${mainButtonClasses} ${
+            isOpen ? "bg-gray-50" : "bg-white opacity-80"
+          } pointer-events-auto`}
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? (
+            <X size={24} className="text-gray-600 hover:text-gray-800" />
+          ) : (
+            <Bug size={24} className="text-gray-600 hover:text-gray-800" />
+          )}
+        </button>
       </div>
 
       {showBugForm && (
