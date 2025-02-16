@@ -490,6 +490,7 @@ async def log_error(error: GlobalErrorLog, request: Request):
             user_username=user.username if user else "unknown",
             user_id=error.user_clerk_id,
             path=request.url.path,
+            status_code="500",
             method=request.method
         )
 

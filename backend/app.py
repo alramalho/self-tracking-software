@@ -92,7 +92,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     user_username=user.username if user else "unknown",
                     user_id=user_id,
                     path=request.url.path,
-                    method=request.method
+                    method=request.method,
+                    status_code=str(response.status_code)
                 )
 
                 logger.error(error_message)
@@ -128,7 +129,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 user_username=user.username if user else "unknown",
                 user_id=user_id,
                 path=request.url.path,
-                method=request.method
+                method=request.method,
+                status_code="500"
             )
 
             logger.error(error_message)
