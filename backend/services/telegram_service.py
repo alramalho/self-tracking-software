@@ -49,7 +49,7 @@ class TelegramService:
             logger.error(f"Failed to send Telegram message: {str(e)}")
             return None
 
-    def send_error_notification(self, error_message: str, user_username: str, user_id: str, path: str, method: str) -> None:
+    def send_error_notification(self, error_message: str, user_username: str, user_id: str, path: str, method: str, status_code: str) -> None:
         """Send a formatted error notification to Telegram."""
 
         message = (
@@ -57,6 +57,7 @@ class TelegramService:
             f"<b>Environment:</b> {ENVIRONMENT}\n"
             f"<b>User ID:</b> {user_id}\n"
             f"<b>Path:</b> {path}\n"
+            f"<b>Status Code:</b> {status_code}\n"
             f"<b>Method:</b> {method}\n"
             f"<b>Error:</b>\n<pre>{error_message[:1000]}</pre>"  # Limit error message length
         )
