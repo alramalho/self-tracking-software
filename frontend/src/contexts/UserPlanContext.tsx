@@ -427,7 +427,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const timelineData = useQuery({
     queryKey: ['timelineData'],
     queryFn: fetchTimelineDataFn,
-    enabled: isSignedIn,
+    enabled: isSignedIn && isLoaded,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -486,7 +486,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && isLoaded,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
   });
@@ -502,7 +502,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         throw err;
       }
     },
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && isLoaded,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
   });
