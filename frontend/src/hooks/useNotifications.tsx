@@ -17,8 +17,10 @@ import { useSession } from "@clerk/nextjs";
 
 interface NotificationsContextType {
   notificationCount: number;
-  addToNotificationCount: (count: number) => void;
-  clearNotifications: () => void;
+  profileNotificationCount: number;
+  addToNotificationCount: (count: number, type?: 'profile' | 'general') => void;
+  clearGeneralNotifications: () => void;
+  clearProfileNotifications: () => void;
   sendLocalNotification: (
     title: string,
     body: string,
@@ -49,6 +51,7 @@ export const NotificationsProvider = ({
   const { notificationsData } = useUserPlan();
   const { isSignedIn } = useSession();
   const [notificationCount, setNotificationCount] = useState(0);
+  const [profileNotificationCount, setProfileNotificationCount] = useState(0);
 
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(
@@ -138,11 +141,29 @@ export const NotificationsProvider = ({
     }
   }, []);
 
-  const addToNotificationCount = (count: number) =>
-    setNotificationCount((prev) => prev + count);
+  const addToNotificationCount = (count: number, type: 'profile' | 'general' = 'general') => {
+    if (type === 'profile') {
+      setProfileNotificationCount(prev => prev + count);
+    } else {
+      setNotificationCount(prev => prev + count);
+    }
+  };
 
-  const clearNotifications = async () => {
+  const clearGeneralNotifications = async () => {
     setNotificationCount(0);
+    
+    if (navigator.clearAppBadge) {
+      await navigator.clearAppBadge();
+    }
+    if (registration) {
+      const notifications = await registration.getNotifications();
+      notifications.forEach((notification) => notification.close());
+    }
+  };
+
+  const clearProfileNotifications = async () => {
+    setProfileNotificationCount(0);
+    
     if (navigator.clearAppBadge) {
       await navigator.clearAppBadge();
     }
@@ -307,8 +328,10 @@ export const NotificationsProvider = ({
     <NotificationsContext.Provider
       value={{
         notificationCount,
+        profileNotificationCount,
         addToNotificationCount,
-        clearNotifications,
+        clearGeneralNotifications,
+        clearProfileNotifications,
         sendLocalNotification,
         sendPushNotification,
         requestPermission,
