@@ -456,3 +456,19 @@ async def update_milestone_progress(
         logger.error(f"Failed to update milestone progress: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/plans/update-plan-order")
+async def update_plan_order(
+    data: dict = Body(...), 
+    current_user: User = Depends(is_clerk_user)
+):
+    try:
+        plan_ids = data["plan_ids"]
+        # Update the user's plan_ids with the new order
+        updated_user = users_gateway.update_fields(current_user.id, {"plan_ids": plan_ids})
+        return {"message": "Plan order updated successfully", "user": updated_user}
+    except Exception as e:
+        logger.error(f"Failed to update plan order: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))
