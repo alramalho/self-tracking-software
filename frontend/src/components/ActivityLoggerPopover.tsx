@@ -61,7 +61,7 @@ export function ActivityLoggerPopover({
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2">Select Date</h3>
+          <h3 className="text-lg font-semibold mb-2 text-center">Select Date</h3>
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -72,7 +72,7 @@ export function ActivityLoggerPopover({
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-4">{selectedActivity.measure}</h3>
+          <h3 className="text-lg font-semibold mb-4 text-center">how many <i>{selectedActivity.measure}</i>?</h3>
           <div className="flex items-center justify-center space-x-4">
             <Button
               onClick={() => handleQuantityChange(-1)}
