@@ -23,7 +23,7 @@ const themeTextClasses: Record<BaseThemeColor, string> = {
 };
 
 const BottomNav = () => {
-  const { notificationCount } = useNotifications();
+  const { notificationCount, profileNotificationCount } = useNotifications();
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
@@ -150,7 +150,7 @@ const BottomNav = () => {
             href={`/profile/${userUsername}`}
             data-testid="nav-profile"
             className={cn(
-              "flex flex-col justify-center items-center p-2 transition-all duration-200",
+              "relative flex flex-col justify-center items-center p-2 transition-all duration-200",
               isActiveRoute('/profile') 
                 ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
                 : "text-gray-500 hover:text-gray-700"
@@ -162,6 +162,11 @@ const BottomNav = () => {
             }}
           >
             {isLoadingProfile ? <Loader2 size={24} className="animate-spin" /> : <User size={24} strokeWidth={2.5} />}
+            {profileNotificationCount > 0 && (
+              <div className="absolute top-0 right-0 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
+                {profileNotificationCount > 99 ? '99+' : profileNotificationCount}
+              </div>
+            )}
             <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/profile') ? 'Profile' : ''}</span>
           </Link>
         </div>

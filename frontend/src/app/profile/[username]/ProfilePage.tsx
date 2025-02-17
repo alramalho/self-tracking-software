@@ -57,7 +57,7 @@ import { ThemeColor, getThemeVariants } from "@/utils/theme";
 import { useTheme } from '@/contexts/ThemeContext';
 
 const ProfilePage: React.FC = () => {
-  const { clearNotifications } = useNotifications();
+  const { clearProfileNotifications } = useNotifications();
   const { signOut } = useClerk();
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
@@ -142,9 +142,9 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (isOnesOwnProfile) {
-      clearNotifications();
+      clearProfileNotifications();
     }
-  }, [isOnesOwnProfile, clearNotifications]);
+  }, [isOnesOwnProfile, clearProfileNotifications]);
 
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {

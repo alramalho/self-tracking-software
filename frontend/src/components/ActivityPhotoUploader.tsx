@@ -199,7 +199,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           ? "Activity logged with photo successfully!"
           : "Activity logged successfully!"
       );
-      addToNotificationCount(1);
+      addToNotificationCount(1, 'profile');
 
       onSuccess();
     } catch (error) {
