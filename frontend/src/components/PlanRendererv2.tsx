@@ -30,6 +30,13 @@ import { Button } from "./ui/button";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
 import { MilestoneOverview } from "./MilestoneOverview";
+import { useApiWithAuth } from "@/api";
+import toast from "react-hot-toast";
+import AppleLikePopover from "./AppleLikePopover";
+import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
+import { usePlanEdit } from "@/hooks/usePlanEdit";
+import { PlanEditModal } from "./PlanEditModal";
+
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
 }
@@ -40,6 +47,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const [loading, setLoading] = useState(true);
+  const { showEditModal, setShowEditModal, handleEditPlan } = usePlanEdit();
+  const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
+  const api = useApiWithAuth();
 
   // Get usernames of all plan group members except current user
   const memberUsernames = useMemo(() => {
@@ -324,7 +334,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       </div>
       {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
         <div className="mb-8">
-          <MilestoneOverview milestones={selectedPlan.milestones} planId={selectedPlan.id} />
+          <MilestoneOverview 
+            milestones={selectedPlan.milestones} 
+            planId={selectedPlan.id} 
+            onEdit={() => {
+              setOpenedFromMilestone(true);
+              setShowEditModal(true);
+            }}
+          />
         </div>
       )}
 
@@ -511,6 +528,17 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <span>Log Activity</span>
         </Button>
       </Link>
+
+      <PlanEditModal
+        plan={selectedPlan}
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setOpenedFromMilestone(false);
+        }}
+        onConfirm={(updatedPlan) => handleEditPlan(selectedPlan, updatedPlan)}
+        scrollToMilestones={openedFromMilestone}
+      />
     </div>
   );
 }
