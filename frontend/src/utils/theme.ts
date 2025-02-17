@@ -18,6 +18,7 @@ export interface ThemeVariants {
   text: string;
   border: string;
   fadedText: string;
+  veryFadedText: string;
   primary: string;
   secondary: string;
   accent: string;
@@ -56,6 +57,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     text: "text-slate-500",
     darkText: "text-slate-800",
     fadedText: "text-slate-300",
+    veryFadedText: "text-slate-200",
     border: "border-slate-400",
     primary: "bg-slate-500",
     secondary: "bg-slate-400",
@@ -90,6 +92,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     text: "text-blue-500",
     darkText: "text-blue-800",
     fadedText: "text-blue-300",
+    veryFadedText: "text-blue-200",
     border: "border-blue-400",
     primary: "bg-blue-500",
     secondary: "bg-blue-400",
@@ -124,6 +127,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     text: "text-violet-500",
     darkText: "text-violet-800",
     fadedText: "text-violet-300",
+    veryFadedText: "text-violet-200",
     border: "border-violet-500",
     primary: "bg-violet-500",
     secondary: "bg-violet-400",
@@ -158,6 +162,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     text: "text-amber-500",
     darkText: "text-amber-700",
     fadedText: "text-amber-300",
+    veryFadedText: "text-amber-200",
     border: "border-amber-400",
     primary: "bg-amber-500",
     secondary: "bg-amber-400",
@@ -192,6 +197,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     text: "text-emerald-500",
     darkText: "text-emerald-800",
     fadedText: "text-emerald-300",
+    veryFadedText: "text-emerald-200",
     border: "border-emerald-400",
     primary: "bg-emerald-500",
     secondary: "bg-emerald-400",
@@ -226,6 +232,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     text: "text-rose-500",
     darkText: "text-rose-800",
     fadedText: "text-rose-300",
+    veryFadedText: "text-rose-200",
     border: "border-rose-400",
     primary: "bg-rose-500",
     secondary: "bg-rose-400",
