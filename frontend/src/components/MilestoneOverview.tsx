@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
-import { Loader2, Minus, Plus } from "lucide-react";
+import { Loader2, Minus, Plus, Pencil } from "lucide-react";
 import { useEffect, useCallback, useState } from "react";
 import { Button } from "./ui/button";
 import { toast } from "react-hot-toast";
@@ -39,11 +39,13 @@ interface NextMilestoneResponse {
 interface MilestoneOverviewProps {
   planId: string;
   milestones: PlanMilestone[];
+  onEdit?: () => void;
 }
 
 export function MilestoneOverview({
   planId,
   milestones,
+  onEdit,
 }: MilestoneOverviewProps) {
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
@@ -187,9 +189,21 @@ export function MilestoneOverview({
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex flex-row items-center justify-start gap-2 mb-4">
-        <span className="text-4xl">⛳️</span>
-        <h2 className="text-xl font-semibold mt-2">Next Milestone</h2>
+      <div className="flex flex-row items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-4xl">⛳️</span>
+          <h2 className="text-xl font-semibold mt-2">Next Milestone</h2>
+        </div>
+        {onEdit && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onEdit}
+            className="h-8 w-8"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

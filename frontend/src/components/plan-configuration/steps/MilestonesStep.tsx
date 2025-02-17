@@ -253,10 +253,10 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
           <Number className="mt-1">6</Number>
           <div className="flex flex-col gap-2">
             <Label className="text-lg font-medium">
-              What is your next milestone in this plan?
+              What are your next milestones in this plan?
             </Label>
             <p className="text-sm text-gray-500">
-              Set a specific milestone that you want to achieve next in your plan. You can update this as you progress.
+              Set specific milestones that you want to achieve next in your plan. You can update this as you progress.
             </p>
           </div>
         </div>

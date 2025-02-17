@@ -12,6 +12,8 @@ import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { twMerge } from "tailwind-merge";
+import { usePlanEdit } from "@/hooks/usePlanEdit";
+import { PlanEditModal } from "./PlanEditModal";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -41,12 +43,9 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showSettings, setShowSettings] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const api = useApiWithAuth();
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  
+  const { showEditModal, setShowEditModal, handleEditPlan } = usePlanEdit();
 
   const handleLeavePlan = async () => {
     toast.promise(
@@ -66,23 +65,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const handleSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowSettings(true);
-  };
-
-  const handleEditPlan = async (updatedPlan: ApiPlan) => {
-    try {
-      const response = await api.post<UpdatePlanResponse>(
-        `/plans/${plan.id}/update`,
-        {
-          data: updatedPlan,
-        }
-      );
-      currentUserDataQuery.refetch();
-      setShowEditModal(false);
-      toast.success("Plan updated successfully");
-    } catch (error) {
-      console.error("Failed to update plan:", error);
-      toast.error("Failed to update plan");
-    }
   };
 
   return (
@@ -195,19 +177,12 @@ const PlanCard: React.FC<PlanCardProps> = ({
         variant="destructive"
       />
 
-      <AppleLikePopover
-        className={"bg-gray-50"}
-        open={showEditModal}
+      <PlanEditModal
+        plan={plan}
+        isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-      >
-        <PlanConfigurationForm
-          isEdit={true}
-          plan={plan}
-          title={plan.goal}
-          onClose={() => setShowEditModal(false)}
-          onConfirm={handleEditPlan}
-        />
-      </AppleLikePopover>
+        onConfirm={(updatedPlan) => handleEditPlan(plan, updatedPlan)}
+      />
     </>
   );
 };

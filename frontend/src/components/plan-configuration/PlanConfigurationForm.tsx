@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import {
@@ -25,6 +25,7 @@ interface PlanConfigurationFormProps {
   title: string;
   isEdit?: boolean;
   plan?: ApiPlan;
+  scrollToMilestones?: boolean;
 }
 
 interface PlanDurationType {
@@ -38,6 +39,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   onClose,
   title,
   isEdit = false,
+  scrollToMilestones = false,
 }) => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
@@ -300,6 +302,12 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     selectedActivities.length,
     outlineType,
   ]);
+
+  useEffect(() => {
+    if (scrollToMilestones && isEdit) {
+      stepRefs.step6.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [scrollToMilestones, isEdit]);
 
   return (
     <div data-testid="plan-configuration-form" className="space-y-6">
