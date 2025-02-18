@@ -1,14 +1,11 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CorrelationEntry } from "@/components/CorrelationEntry";
 import {
   useUserPlan,
-  ActivityEntry,
   Metric,
   MetricEntry,
 } from "@/contexts/UserPlanContext";
@@ -16,7 +13,7 @@ import Divider from "@/components/Divider";
 import { Loader2 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { ThemeColor } from "@/utils/theme";
+import { CorrelationEntry } from "@/components/CorrelationEntry";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -62,6 +59,8 @@ export default function InsightsDashboardPage() {
           },
         ]
       : metricEntryCounts;
+
+    console.log({metricsToShow});
 
     return (
       <Card className="p-8">
@@ -120,18 +119,18 @@ export default function InsightsDashboardPage() {
   const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
     const n = x.length;
     if (n !== y.length || n === 0) return 0;
-
-    const sum1 = x.reduce((a, b) => a + b);
-    const sum2 = y.reduce((a, b) => a + b);
-    const sum1Sq = x.reduce((a, b) => a + b * b);
-    const sum2Sq = y.reduce((a, b) => a + b * b);
+  
+    const sum1 = x.reduce((a, b) => a + b, 0);
+    const sum2 = y.reduce((a, b) => a + b, 0);
+    const sum1Sq = x.reduce((a, b) => a + b * b, 0);
+    const sum2Sq = y.reduce((a, b) => a + b * b, 0);
     const pSum = x.reduce((a, b, i) => a + b * y[i], 0);
-
+  
     const num = pSum - (sum1 * sum2) / n;
     const den = Math.sqrt(
       (sum1Sq - (sum1 * sum1) / n) * (sum2Sq - (sum2 * sum2) / n)
     );
-
+  
     return den === 0 ? 0 : num / den;
   };
 
@@ -204,13 +203,43 @@ export default function InsightsDashboardPage() {
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
       <div className="space-y-4">
-        {/* Show progress UI for next milestone if no correlations are found */}
-        {!metrics.some((metric) => {
+        {metrics.map((metric) => {
           const count = entries.filter((e) => e.metric_id === metric.id).length;
-          const correlations =
-            count >= 15 ? calculateMetricCorrelations(metric.id) : [];
-          return correlations.length > 0;
-        }) && renderProgressUI(getNextMilestone(maxEntries))}
+          const correlations = count >= 15 ? calculateMetricCorrelations(metric.id) : [];
+          const hasCorrelations = correlations.length > 0;
+
+          if (!hasCorrelations) {
+            const nextMilestone = getNextMilestone(count);
+            return renderProgressUI(nextMilestone, metric);
+          }
+
+          console.log({correlations});
+          return (
+            <Card key={metric.id} className="p-8">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold">
+                    {metric.emoji} {metric.title} Insights
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Here&apos;s how your activities correlate with {metric.title.toLowerCase()}
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  {correlations.map((correlation) => {
+                    return (
+                      <CorrelationEntry
+                        key={correlation!.activity.id}
+                        title={correlation!.activity.title}
+                        pearsonValue={correlation!.correlation}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
