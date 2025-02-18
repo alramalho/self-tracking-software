@@ -71,21 +71,17 @@ export default function InsightsDashboardPage() {
         ]
       : metricEntryCounts;
 
-    console.log({metricsToShow});
-
     return (
       <Card className="p-8">
         <div className="space-y-6">
-          {!specificMetric && (
-            <div className="space-y-2 text-center">
-              <h2 className="text-2xl font-bold">Building your insights</h2>
-              <p className="text-muted-foreground">
-                {targetEntries === 15
-                  ? "We need more data to generate meaningful insights. Keep logging your metrics daily!"
-                  : "We've analyzed your data but haven't found meaningful correlations with your activities yet. This could mean your activities and metrics don't overlap enough, or we need more data to find reliable patterns. Keep logging!"}
-              </p>
-            </div>
-          )}
+          <div className="space-y-2 text-center">
+            <h2 className="text-2xl font-bold">Building your insights</h2>
+            <p className="text-muted-foreground">
+              {targetEntries === 15
+                ? "We need more data to generate meaningful insights. Keep logging your metrics daily!"
+                : "We've analyzed your data but haven't found meaningful correlations with your activities yet. This could mean your activities and metrics don't overlap enough, or we need more data to find reliable patterns. Keep logging!"}
+            </p>
+          </div>
 
           <div className="space-y-6">
             {metricsToShow.map(({ metric, count }) => {
