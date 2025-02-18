@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   useUserPlan,
@@ -10,13 +10,23 @@ import {
   MetricEntry,
 } from "@/contexts/UserPlanContext";
 import Divider from "@/components/Divider";
-import { Loader2 } from "lucide-react";
+import { Loader2, HelpCircle } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { CorrelationEntry } from "@/components/CorrelationEntry";
+import { Button } from "@/components/ui/button";
+import AppleLikePopover from "@/components/AppleLikePopover";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
+
+const ratingColors = {
+  1: "text-red-500",
+  2: "text-orange-500",
+  3: "text-yellow-500",
+  4: "text-lime-500",
+  5: "text-green-500",
+} as const;
 
 export default function InsightsDashboardPage() {
   const {
@@ -35,6 +45,7 @@ export default function InsightsDashboardPage() {
   const router = useRouter();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -213,30 +224,109 @@ export default function InsightsDashboardPage() {
             return renderProgressUI(nextMilestone, metric);
           }
 
-          console.log({correlations});
           return (
             <Card key={metric.id} className="p-8">
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold">
-                    {metric.emoji} {metric.title} Insights
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Here&apos;s how your activities correlate with {metric.title.toLowerCase()}
-                  </p>
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">
+                      {metric.emoji} {metric.title} Insights
+                    </h2>
+                    <p className="text-muted-foreground">
+                      Here&apos;s how your activities correlate with {metric.title.toLowerCase()}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-gray-400 hover:text-gray-600"
+                    onClick={() => setHelpMetricId(metric.id)}
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                  </Button>
                 </div>
                 <div className="space-y-4">
-                  {correlations.map((correlation) => {
-                    return (
-                      <CorrelationEntry
-                        key={correlation!.activity.id}
-                        title={correlation!.activity.title}
-                        pearsonValue={correlation!.correlation}
-                      />
-                    );
-                  })}
+                  {correlations.map((correlation) => (
+                    <CorrelationEntry
+                      key={correlation!.activity.id}
+                      title={`${correlation!.activity.emoji} ${correlation!.activity.title}`}
+                      pearsonValue={correlation!.correlation}
+                    />
+                  ))}
                 </div>
               </div>
+
+              <AppleLikePopover
+                open={helpMetricId === metric.id}
+                onClose={() => setHelpMetricId(null)}
+                title="Understanding Correlation"
+              >
+                <div className="pt-8 space-y-4 mb-4">
+                  <h3 className="text-lg font-semibold">Understanding Pearson Correlation</h3>
+                  
+                  <p className="text-sm text-gray-600">
+                    Pearson correlation measures how well two things move together, from -100% (perfect opposite) to +100% (perfect match).
+                  </p>
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium mb-2">Real Example:</p>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Let&apos;s look at running activity and productivity over 7 days:
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <tbody>
+                          <tr className="border-b">
+                            <th className="text-left pb-2 pr-4">Day</th>
+                            <td className="px-3">1</td>
+                            <td className="px-3">2</td>
+                            <td className="px-3">3</td>
+                            <td className="px-3">4</td>
+                            <td className="px-3">5</td>
+                            <td className="px-3">6</td>
+                            <td className="px-3">7</td>
+                          </tr>
+                          <tr>
+                            <th className="text-left py-2 pr-4">Running</th>
+                            <td className="px-3">✅</td>
+                            <td className="px-3">❌</td>
+                            <td className="px-3">✅</td>
+                            <td className="px-3">✅</td>
+                            <td className="px-3">❌</td>
+                            <td className="px-3">✅</td>
+                            <td className="px-3">❌</td>
+                          </tr>
+                          <tr>
+                            <th className="text-left py-2 pr-4">Productivity</th>
+                            <td className={`px-3 font-medium ${ratingColors[4]}`}>4</td>
+                            <td className={`px-3 font-medium ${ratingColors[2]}`}>2</td>
+                            <td className={`px-3 font-medium ${ratingColors[5]}`}>5</td>
+                            <td className={`px-3 font-medium ${ratingColors[2]}`}>2</td>
+                            <td className={`px-3 font-medium ${ratingColors[2]}`}>2</td>
+                            <td className={`px-3 font-medium ${ratingColors[4]}`}>4</td>
+                            <td className={`px-3 font-medium ${ratingColors[4]}`}>4</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="mt-4 text-sm">
+                      A correlation of +60% means that about 60% of the time, when one value goes up, the other goes up too. Looking at the pattern above:
+                    </p>
+                    <ul className="mt-2 text-sm space-y-1 ml-4 list-disc">
+                      <li>Running days usually mean higher productivity (<span className={ratingColors[4]}>4</span>-<span className={ratingColors[5]}>5</span>), but not always</li>
+                      <li>Non-running days usually mean lower productivity (<span className={ratingColors[2]}>2</span>), but not always</li>
+                      <li>The pattern matches about 60% of the time (4 out of 7 days follow the expected pattern)</li>
+                    </ul>
+                    <p className="mt-3 text-sm text-gray-600">
+                      Think of it like this: if you see someone went running, you&apos;d have a 60% chance of correctly guessing they had higher productivity that day - better than random chance, but not a guarantee.
+                    </p>
+                  </div>
+
+                  <div className="text-xs text-gray-500 mt-4">
+                    Note: Correlations below 10% are shown in gray as they would only let you make correct predictions 10% of the time - barely better than random chance.
+                  </div>
+                </div>
+              </AppleLikePopover>
             </Card>
           );
         })}
