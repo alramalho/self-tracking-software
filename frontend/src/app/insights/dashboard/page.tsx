@@ -9,7 +9,6 @@ import {
   Metric,
   MetricEntry,
 } from "@/contexts/UserPlanContext";
-import Divider from "@/components/Divider";
 import { Loader2, HelpCircle } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
@@ -75,7 +74,7 @@ export default function InsightsDashboardPage() {
       <Card className="p-8">
         <div className="space-y-6">
           <div className="space-y-2 text-center">
-            <h2 className="text-2xl font-bold">Building your insights</h2>
+            <h2 className="text-2xl font-bold">⚡️ Building your insights</h2>
             <p className="text-muted-foreground">
               {targetEntries === 15
                 ? "We need more data to generate meaningful insights. Keep logging your metrics daily!"
