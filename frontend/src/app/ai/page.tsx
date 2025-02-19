@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useMessageHistory, Message } from "@/hooks/useMessageHistory";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
@@ -41,6 +41,7 @@ import { SuggestionContainer } from '@/components/SuggestionContainer';
 import { SuggestionBase } from '@/types/suggestions';
 import { activitySuggestionHandler } from '@/suggestions/activitySuggestion';
 import { suggestionRegistry } from '@/lib/suggestionRegistry';
+import { PlanBuildingContainer, CompletePlan } from '@/components/PlanBuildingContainer';
 
 const REFERRAL_COUNT = 2;
 
@@ -303,7 +304,19 @@ const LogPage: React.FC = () => {
   };
 
   const hasPendingChanges = useCallback(() => {
-    return suggestions.length > 0;
+    return suggestions.some(s => {
+      switch (s.type) {
+        case 'activity':
+        case 'plan_sessions':
+          return true; // These require explicit accept/reject actions
+        case 'plan_goal':
+        case 'plan_activities':
+        case 'plan_type':
+          return false; // These are informational, no action required
+        default:
+          return false;
+      }
+    });
   }, [suggestions]);
 
   const handleSendMessage = async (text: string) => {
@@ -464,6 +477,53 @@ const LogPage: React.FC = () => {
     };
   }, []); // Empty deps array since we only want to register once
 
+  // Separate activity and plan suggestions
+  const activitySuggestions = useMemo(() => 
+    suggestions.filter(s => s.type === "activity")
+  , [suggestions]);
+
+  const planSuggestions = useMemo(() => 
+    suggestions.filter(s => s.type.startsWith("plan_"))
+  , [suggestions]);
+
+  const handlePlanAccepted = async (plan: CompletePlan) => {
+    try {
+      await authedApi.post("/create-plan", plan);
+      
+      // Send system message to maintain AI memory
+      await authedApi.post("/ai/send-system-message", {
+        message: `User accepted the plan with goal: ${plan.goal}`
+      });
+      
+      // Remove all plan suggestions
+      setSuggestions(prev => prev.filter(s => !s.type.startsWith("plan_")));
+      
+      // Send a message to the AI to continue the conversation
+      sendMessage("Great, I've accepted the plan!", false);
+    } catch (error) {
+      toast.error("Failed to create plan");
+      throw error;
+    }
+  };
+
+  const handlePlanRejected = async () => {
+    try {
+      // Send system message to maintain AI memory
+      await authedApi.post("/ai/send-system-message", {
+        message: "User rejected the plan creation"
+      });
+      
+      // Remove all plan suggestions
+      setSuggestions(prev => prev.filter(s => !s.type.startsWith("plan_")));
+      
+      // Send a message to the AI to continue the conversation
+      sendMessage("I don't want to create this plan. Let's try something else.", false);
+    } catch (error) {
+      toast.error("Failed to reject plan");
+      throw error;
+    }
+  };
+
   return (
     <>
       {!isUserWhitelisted && (
@@ -599,11 +659,22 @@ const LogPage: React.FC = () => {
                   variants={itemVariants}
                   className="flex flex-col gap-4 px-4 mb-4"
                 >
-                  <SuggestionContainer 
-                    suggestions={suggestions}
-                    isConnected={isConnected}
-                    onSuggestionHandled={handleSuggestionHandled}
-                  />
+                  {activitySuggestions.length > 0 && (
+                    <SuggestionContainer 
+                      suggestions={activitySuggestions}
+                      onSuggestionHandled={handleSuggestionHandled}
+                      isConnected={isConnected}
+                    />
+                  )}
+                  
+                  {planSuggestions.length > 0 && (
+                    <PlanBuildingContainer
+                      suggestions={planSuggestions}
+                      onPlanAccepted={handlePlanAccepted}
+                      onPlanRejected={handlePlanRejected}
+                      disabled={!isConnected}
+                    />
+                  )}
                 </motion.div>
               </motion.div>
             )}
