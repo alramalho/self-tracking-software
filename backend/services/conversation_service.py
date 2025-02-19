@@ -8,7 +8,6 @@ from ai.llm import ask_schema, ask_text
 from datetime import datetime
 from ai.assistant.activity_extractor import ActivityExtractorAssistant, ExtractedActivityEntry
 from ai.assistant.week_analyser import WeekAnalyserAssistant, EnrichedPlanSessions, ExtractedTimesPerWeek 
-from ai.assistant.plan_coach_assistant import PlanCoachAgent
 from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
@@ -43,7 +42,7 @@ messages_gateway = MessagesGateway()
 
 async def talk_with_assistant(
     user_id: str, user_input: str, websocket: WebSocket = None, message_id: str = None, emotions: List[Emotion] = []
-) -> Tuple[str, List[ExtractedActivityEntry] | EnrichedPlanSessions | ExtractedTimesPerWeek | Plan]:
+) -> str:
     try:
         user = users_gateway.get_user_by_id(user_id)
         memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
@@ -59,6 +58,10 @@ async def talk_with_assistant(
                 websocket=websocket,
             )
         else:
+            # assistant = PlanCreationAssistant(
+            #     memory=memory,
+            #     user=user,
+            # )
             # assistant = PlanCoachAgent(
             #     memory=memory,
             #     user=user,
