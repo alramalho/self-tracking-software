@@ -30,7 +30,7 @@ class PlanMilestone(BaseModel):
 
     date: str
     description: str
-    criteria: Optional[List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]] = None
+    criteria: Optional[List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]] = Field(..., description="The criteria that need to be met to achieve the milestone. If unexistent it means the milestone progress is manually updated.")
     progress: Optional[float] = None  # Progress as a percentage (0-100)
 
 

@@ -15,6 +15,8 @@ from .flowchart_nodes import (
     LoopContinueNode,
     NodeType,
 )
+from bson import ObjectId
+from fastapi import WebSocket
 
 activities_gateway = ActivitiesGateway()
 
@@ -88,11 +90,17 @@ class ActivityExtractorAssistant(object):
         user: User,
         user_activities: List[Activity],
         memory: Memory,
+        websocket: WebSocket = None,
     ):
         self.name = "Jarvis"
         self.memory = memory
         self.user = user
         self.user_activities = user_activities
+        self.websocket = websocket
+
+    async def send_websocket_message(self, message_type: str, data: dict):
+        if self.websocket:
+            await self.websocket.send_json({"type": message_type, **data})
 
     async def get_response(
         self, user_input: str, message_id: str, emotions: List[Emotion] = []
@@ -130,7 +138,7 @@ class ActivityExtractorAssistant(object):
         
 
         activities_str = "\n- ".join([str(a) for a in self.user_activities]) if len(self.user_activities) > 0 else "(User has not started tracking any activities yet)"
-        result, extracted = await self.framework.run(
+        result_message, extracted = await self.framework.run(
             f"""
         
         Here's the user's existing activities:
@@ -148,15 +156,15 @@ class ActivityExtractorAssistant(object):
         """
         )
 
-        jarvis_prefix = re.match(r"^Jarvis\s*\([^)]*\)\s*:\s*", result)
+        jarvis_prefix = re.match(r"^Jarvis\s*\([^)]*\)\s*:\s*", result_message)
         if jarvis_prefix:
-            result = result[len(jarvis_prefix.group(0)) :]
-        elif result.startswith(f"{self.name}:"):
-            result = result[len(f"{self.name}:") :]
+            result_message = result_message[len(jarvis_prefix.group(0)) :]
+        elif result_message.startswith(f"{self.name}:"):
+            result_message = result_message[len(f"{self.name}:") :]
 
         self.memory.write(
             Message.new(
-                result,
+                result_message,
                 sender_name=self.name,
                 sender_id="0",
                 recipient_name=self.user.name,
@@ -164,7 +172,7 @@ class ActivityExtractorAssistant(object):
             )
         )
 
-        logger.info(f"FRAMEWORK RESULT: {result}")
+        logger.info(f"FRAMEWORK RESULT: {result_message}")
         logger.info(f"EXTRACTED: {extracted}")
 
         # Aggregate activities from all ExtractActivity nodes
@@ -173,4 +181,28 @@ class ActivityExtractorAssistant(object):
             if key.startswith("ExtractActivity_"):
                 all_activities.extend(extracted[key].activities)
         
-        return result, all_activities
+        # If we have extracted activities, send them via websocket
+        if all_activities:
+            existing_entries = activities_gateway.get_all_activity_entries_by_user_id(self.user.id)
+            activity_entries = [
+                ae
+                for ae in all_activities
+                if not any(
+                    existing.activity_id == ae.activity_id and existing.date == ae.date
+                    for existing in existing_entries
+                )
+            ]
+            unique_activity_ids = {entry.activity_id for entry in activity_entries}
+            activities = [
+                activities_gateway.get_activity_by_id(activity_id)
+                for activity_id in unique_activity_ids
+            ]
+            await self.send_websocket_message(
+                "suggested_activity_entries",
+                {
+                    "activities": [activity.dict() for activity in activities],
+                    "activity_entries": [{"id": str(ObjectId()), **activity_entry.dict()} for activity_entry in activity_entries],
+                }
+            )
+        
+        return result_message

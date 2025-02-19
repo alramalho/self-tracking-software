@@ -19,6 +19,7 @@ from .flowchart_nodes import (
     LoopContinueNode,
     NodeType,
 )
+from fastapi import WebSocket
 
 activities_gateway = ActivitiesGateway()
 plan_controller = PlanController()
@@ -193,12 +194,14 @@ class WeekAnalyserAssistant(object):
         user_activities: List[Activity],
         user_plans: List[Plan],
         memory: Memory,
+        websocket: WebSocket = None,
     ):
         self.name = "Jarvis"
         self.memory = memory
         self.user = user
         self.user_activities = user_activities
         self.user_plans = user_plans
+        self.websocket = websocket
 
         system_prompt = f"""You are {self.name}, an AI assistant helping the adapt their plans for the following week. 
         Respond to the user in the same language that he talks to you in.
@@ -212,6 +215,9 @@ class WeekAnalyserAssistant(object):
             lookahead_depth=3,
         )
 
+    async def send_websocket_message(self, message_type: str, data: dict):
+        if self.websocket:
+            await self.websocket.send_json({"type": message_type, **data})
 
     async def get_response(
         self, user_input: str, message_id: str = None, emotions: List[Emotion] = []
@@ -227,7 +233,6 @@ class WeekAnalyserAssistant(object):
                 emotions=emotions,
             )
         )
-
 
         # For days since last Sunday (inclusive)
         lookback_days = max(
@@ -272,10 +277,10 @@ class WeekAnalyserAssistant(object):
                 memory=self.memory,
                 user=self.user,
                 user_activities=self.user_activities,
+                websocket=self.websocket,
             )
             return await assistant.get_response(user_input, message_id, emotions)
         
-
         self.memory.write(
                 Message.new(
                     result,
@@ -299,7 +304,17 @@ class WeekAnalyserAssistant(object):
                         <= datetime.now().date() + timedelta(days=lookahead_days)
                     ]
 
-                    # Aggregate sessions from all SuggestedChanges nodes
+                    # Send the suggested sessions via websocket
+                    await self.send_websocket_message(
+                        "suggested_next_week_sessions",
+                        {
+                            "next_week_sessions": [session.dict() for session in extracted[key].next_week_sessions],
+                            "old_sessions": [session.dict() for session in old_sessions],
+                            "plan_id": plan_id,
+                        }
+                    )
+
+                    # Return the enriched sessions
                     return result, EnrichedPlanSessions(
                         plan_id=plan_id,
                         sessions=extracted[key].next_week_sessions,
@@ -308,6 +323,18 @@ class WeekAnalyserAssistant(object):
                 elif extracted[key].plan_type == "times_per_week":
                     plan_id = plan_name_to_id[extracted[key].plan_name]
                     plan = [p for p in self.user_plans if p.id == plan_id][0]
+
+                    # Send the suggested times per week via websocket
+                    await self.send_websocket_message(
+                        "suggested_times_per_week",
+                        {
+                            "times_per_week": extracted[key].next_week_times_per_week,
+                            "old_times_per_week": plan.times_per_week,
+                            "plan_id": plan_id,
+                        }
+                    )
+
+                    # Return the extracted times per week
                     return result, ExtractedTimesPerWeek(
                         plan_id=plan_id,
                         old_times_per_week=plan.times_per_week,
@@ -318,5 +345,5 @@ class WeekAnalyserAssistant(object):
             else:
                 continue
 
-        return result, None
+        return result
 

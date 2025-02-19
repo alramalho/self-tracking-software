@@ -8,7 +8,8 @@ from ai.llm import ask_schema, ask_text
 from datetime import datetime
 from ai.assistant.activity_extractor import ActivityExtractorAssistant, ExtractedActivityEntry
 from ai.assistant.week_analyser import WeekAnalyserAssistant, EnrichedPlanSessions, ExtractedTimesPerWeek 
-import pytz
+from ai.assistant.plan_coach_assistant import PlanCoachAgent
+from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
 
@@ -41,8 +42,8 @@ messages_gateway = MessagesGateway()
 
 
 async def talk_with_assistant(
-    user_id: str, user_input: str, message_id: str = None, emotions: List[Emotion] = []
-) -> Tuple[str, List[ExtractedActivityEntry] | EnrichedPlanSessions | ExtractedTimesPerWeek]:
+    user_id: str, user_input: str, websocket: WebSocket = None, message_id: str = None, emotions: List[Emotion] = []
+) -> Tuple[str, List[ExtractedActivityEntry] | EnrichedPlanSessions | ExtractedTimesPerWeek | Plan]:
     try:
         user = users_gateway.get_user_by_id(user_id)
         memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
@@ -55,12 +56,18 @@ async def talk_with_assistant(
                 user=user,
                 user_activities=user_activities,
                 user_plans=user_plans,
+                websocket=websocket,
             )
         else:
+            # assistant = PlanCoachAgent(
+            #     memory=memory,
+            #     user=user,
+            # )
             assistant = ActivityExtractorAssistant(
                 memory=memory,
                 user=user,
                 user_activities=user_activities,
+                websocket=websocket,
             )
             
         return await assistant.get_response(
@@ -113,53 +120,10 @@ async def process_message(
             emotions = []
 
     # Run talk_with_assistant in a separate thread
-    text_response, extracted_data = await loop.run_in_executor(
+    text_response = await loop.run_in_executor(
         executor,
-        lambda: asyncio.run(talk_with_assistant(user_id, message, message_id, emotions))
+        lambda: asyncio.run(talk_with_assistant(user_id, message, websocket, message_id, emotions))
     )
-
-    # Check if the extracted data is activity entries
-    if extracted_data and isinstance(extracted_data, list) and extracted_data and isinstance(extracted_data[0], ExtractedActivityEntry):
-        existing_entries = activities_gateway.get_all_activity_entries_by_user_id(user_id)
-        activity_entries = [
-            ae
-            for ae in extracted_data
-            if not any(
-                existing.activity_id == ae.activity_id and existing.date == ae.date
-                for existing in existing_entries
-            )
-        ]
-        unique_activity_ids = {entry.activity_id for entry in activity_entries}
-        activities = [
-            activities_gateway.get_activity_by_id(activity_id)
-            for activity_id in unique_activity_ids
-        ]
-        await websocket.send_json(
-            {
-                "type": "suggested_activity_entries", 
-                "activities": [activity.dict() for activity in activities],
-                "activity_entries": [{"id": str(ObjectId()), **activity_entry.dict()} for activity_entry in activity_entries],
-            }
-        )
-    # Check if the extracted data is next week sessions
-    elif extracted_data and isinstance(extracted_data, EnrichedPlanSessions):
-        await websocket.send_json(
-            {
-                "type": "suggested_next_week_sessions",
-                "next_week_sessions": [session.dict() for session in extracted_data.sessions],
-                "old_sessions": [session.dict() for session in extracted_data.old_sessions],
-                "plan_id": extracted_data.plan_id,
-            }
-        )
-    elif extracted_data and isinstance(extracted_data, ExtractedTimesPerWeek):
-        await websocket.send_json(
-            {
-                "type": "suggested_times_per_week",
-                "times_per_week": extracted_data.new_times_per_week,
-                "old_times_per_week": extracted_data.old_times_per_week,
-                "plan_id": extracted_data.plan_id,
-            }
-        )
 
     audio_response = None
     if output_mode == "voice":
@@ -167,7 +131,7 @@ async def process_message(
             executor, tts.text_to_speech, text_response
         )
 
-    return text_response, audio_response, extracted_data
+    return text_response, audio_response
 
 
 def initiate_recurrent_checkin(user_id: str) -> Notification:
