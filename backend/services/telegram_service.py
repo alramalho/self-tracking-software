@@ -23,9 +23,6 @@ class TelegramService:
     def send_message(self, message: str) -> Optional[dict]:
         """Send a message to the configured Telegram chat."""
 
-        if "dev" in ENVIRONMENT:
-            message = f"🚨 <b>Error Detected on DEV</b>\n\n"
-
         if not self.bot_token or not self.chat_id:
             logger.warning("Telegram credentials not configured, skipping message")
             return None
