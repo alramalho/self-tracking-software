@@ -170,13 +170,19 @@ class FlowchartLLMFramework:
                     self.extracted[node_instance_id] = schema
                     return schema, None, None # if output schema is provided, the return is the result of the schema
                 else:
-                    result = await ask_text_async(
+                    class ReasoningSchema(BaseModel):
+                        reasoning: str = Field(..., description="Your step by step reasoning analysing how do address the instruction within <instruction>, culminating in a 'decision'. The 'Context' nearby provides an history of your previous thought chain, possibly relevant for instructions that seemingly refer pre-existing content.")
+                        message: str = Field(..., description="The actual message to be sent to the user.")
+
+                    result = await ask_schema_async(
                         text=full_prompt,
                         system=self.system_prompt,
+                        pymodel=ReasoningSchema,
                         model=LLM_MODEL,
                         temperature=temperature,
                     )
-                    return None, None, result # if an end node, the return is the actual output message of the system
+                    self.extracted[node_instance_id] = result
+                    return None, None, result.message # if an end node, the return is the actual output message of the system
         except Exception as e:
             logger.error(f"Error in LLM function: {e}")
             raise
