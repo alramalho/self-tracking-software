@@ -123,6 +123,7 @@ async def load_notifications(user: User = Depends(is_clerk_user)):
         for n in notification_manager.get_all_for_user(user.id)
         if n.status != "concluded"
     ]
+    notifications.sort(key=lambda x: x.created_at, reverse=True)
     for notification in notifications:
         if notification.status == "processed":
             notification_manager.mark_as_opened(notification.id)
