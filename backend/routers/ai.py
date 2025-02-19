@@ -86,7 +86,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         audio_data = message.get("audio_data")
                         audio_format = message.get("audio_format")
 
-                        text_response, audio_response, _ = await process_message(
+                        text_response, audio_response = await process_message(
                             websocket,
                             user.id,
                             text,

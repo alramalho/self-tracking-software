@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useMessageHistory, Message } from "@/hooks/useMessageHistory"; // Add this import
+import { useMessageHistory, Message } from "@/hooks/useMessageHistory";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
 import toast from "react-hot-toast";
@@ -13,24 +13,15 @@ import {
   VolumeX,
   Loader2,
   History,
-} from "lucide-react"; // Add this import
+} from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApiWithAuth } from "@/api";
-
-import {
-  Activity,
-  ActivityEntry,
-  Emotion,
-  useUserPlan,
-} from "@/contexts/UserPlanContext";
+import { Emotion, useUserPlan } from "@/contexts/UserPlanContext";
 import { Button } from "@/components/ui/button";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useShare } from "@/hooks/useShare";
-import ActivitySuggestion from "@/components/ActivitySuggestion";
-import PlanUpdateBanner, { PlanSession } from "@/components/PlanUpdateBanner";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,21 +37,12 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { AccessRestrictionPopover } from "@/components/chat/AccessRestrictionPopover";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { motion, AnimatePresence } from "framer-motion";
-import PlanTimesPerWeekUpdateBanner from "@/components/PlanTimesPerWeekUpdateBanner";
+import { SuggestionContainer } from '@/components/SuggestionContainer';
+import { SuggestionBase } from '@/types/suggestions';
+import { activitySuggestionHandler } from '@/suggestions/activitySuggestion';
+import { suggestionRegistry } from '@/lib/suggestionRegistry';
 
 const REFERRAL_COUNT = 2;
-
-type ExtractedPlanSessions = {
-  plan_id: string;
-  sessions: PlanSession[];
-  old_sessions: PlanSession[];
-};
-
-type ExtractedTimesPerWeek = {
-  plan_id: string;
-  old_times_per_week: number;
-  new_times_per_week: number;
-};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -160,29 +142,21 @@ const LogPage: React.FC = () => {
   const { data: userData } = currentUserDataQuery;
 
   const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
-  const posthogFeatureFlagsInitialized =
-    typeof isFeatureEnabled !== "undefined";
+  const posthogFeatureFlagsInitialized = typeof isFeatureEnabled !== "undefined";
   const [isUserWhitelisted, setIsUserWhitelisted] = useState<boolean>(false);
   const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
   const [areEmotionsLoading, setAreEmotionsLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (posthogFeatureFlagsInitialized) {
-      setIsUserWhitelisted(isFeatureEnabled);
-    }
-  }, [posthogFeatureFlagsInitialized, isFeatureEnabled]);
 
   const searchParams = useSearchParams();
   const notificationId = searchParams.get("notification_id");
   const messageId = searchParams.get("messageId");
   const messageText = searchParams.get("messageText");
-  const [isInitialMessageAnimating, setIsInitialMessageAnimating] =
-    useState(true);
+  const [isInitialMessageAnimating, setIsInitialMessageAnimating] = useState(true);
 
   const [transcription, setTranscription] = useState<string>("");
   const [outputMode, setOutputMode] = useState<"voice" | "text">("text");
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { messages, addMessage, clearMessages } = useMessageHistory(); // Update this line
+  const { messages, addMessage, clearMessages } = useMessageHistory();
   const router = useRouter();
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -192,30 +166,15 @@ const LogPage: React.FC = () => {
   const { share, isSupported: isShareSupported } = useShare();
 
   const [currentEmotions, setCurrentEmotions] = useState<Emotion[]>([]);
-  const [suggestedActivities, setSuggestedActivities] = useLocalStorage<
-    Activity[]
-  >("suggested_activities", []);
-  const [suggestedActivityEntries, setSuggestedActivityEntries] =
-    useLocalStorage<ActivityEntry[]>("suggested_activity_entries", []);
-  const [suggestedNextWeekSessions, setSuggestedNextWeekSessions] =
-    useLocalStorage<ExtractedPlanSessions | null>(
-      "suggested_next_week_sessions",
-      null
-    );
-  const [suggestedTimesPerWeek, setSuggestedTimesPerWeek] =
-    useLocalStorage<ExtractedTimesPerWeek | null>(
-      "suggested_times_per_week",
-      null
-    );
-
+  const [suggestions, setSuggestions] = useState<SuggestionBase[]>([]);
   const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
-
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
-  const [pendingActivityResponses, setPendingActivityResponses] = useState<{
-    accepted: { activity: Activity; entry: ActivityEntry }[];
-    rejected: { activity: Activity; entry: ActivityEntry }[];
-  }>({ accepted: [], rejected: [] });
+  useEffect(() => {
+    if (posthogFeatureFlagsInitialized) {
+      setIsUserWhitelisted(isFeatureEnabled);
+    }
+  }, [posthogFeatureFlagsInitialized, isFeatureEnabled]);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -259,7 +218,10 @@ const LogPage: React.FC = () => {
       toast.error("Failed to connect to WebSocket");
     }
   }, [getToken]);
-
+  
+  useEffect(() => {
+    console.log({suggestions});
+  }, [suggestions]);
   useEffect(() => {
     if (isUserWhitelisted) {
       connectWebSocket();
@@ -321,21 +283,8 @@ const LogPage: React.FC = () => {
         if (emotionLoadingTimeoutRef.current) {
           clearTimeout(emotionLoadingTimeoutRef.current);
         }
-      } else if (data.type === "suggested_activity_entries") {
-        setSuggestedActivityEntries(data.activity_entries);
-        setSuggestedActivities(data.activities);
-      } else if (data.type === "suggested_next_week_sessions") {
-        setSuggestedNextWeekSessions({
-          sessions: data.next_week_sessions,
-          old_sessions: data.old_sessions,
-          plan_id: data.plan_id,
-        } as ExtractedPlanSessions);
-      } else if (data.type === "suggested_times_per_week") {
-        setSuggestedTimesPerWeek({
-          new_times_per_week: data.times_per_week,
-          old_times_per_week: data.old_times_per_week,
-          plan_id: data.plan_id,
-        } as ExtractedTimesPerWeek);
+      } else if (data.type === "suggestions") {
+        setSuggestions(prev => [...prev, ...data.suggestions]);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -354,19 +303,8 @@ const LogPage: React.FC = () => {
   };
 
   const hasPendingChanges = useCallback(() => {
-    return (
-      (suggestedActivityEntries && suggestedActivityEntries.length > 0) ||
-      (suggestedNextWeekSessions &&
-        suggestedNextWeekSessions.sessions.length > 0) ||
-      (suggestedTimesPerWeek &&
-        suggestedTimesPerWeek.new_times_per_week !==
-          suggestedTimesPerWeek.old_times_per_week)
-    );
-  }, [
-    suggestedActivityEntries,
-    suggestedNextWeekSessions,
-    suggestedTimesPerWeek,
-  ]);
+    return suggestions.length > 0;
+  }, [suggestions]);
 
   const handleSendMessage = async (text: string) => {
     if (socket && isConnected) {
@@ -479,213 +417,9 @@ const LogPage: React.FC = () => {
       .replace(",", "");
   }
 
-  const handleActivityAcceptance = async (
-    activityEntry: ActivityEntry,
-    activity: Activity
-  ) => {
-    if (!isConnected || !socket) {
-      toast.error("Not connected to server");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("activity_id", activity.id);
-    formData.append("iso_date_string", activityEntry.date);
-    formData.append("quantity", activityEntry.quantity.toString());
-    formData.append("isPublic", "false");
-
-    await authedApi.post("/log-activity", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    setPendingActivityResponses((prev) => ({
-      ...prev,
-      accepted: [...prev.accepted, { activity, entry: activityEntry }],
-    }));
-
-    setSuggestedActivityEntries((entries) =>
-      entries.filter((entry) => entry.id !== activityEntry.id)
-    );
-
-    if (suggestedActivityEntries.length === 1) {
-      const acceptedActivitiesStr = [
-        ...pendingActivityResponses.accepted,
-        { activity, entry: activityEntry },
-      ]
-        .map(
-          ({ activity, entry }) =>
-            `${entry.quantity} ${activity.measure} '${
-              activity.title
-            }' in ${toReadableDate(entry.date)}`
-        )
-        .join("\n - ");
-
-      const rejectedActivitiesStr = pendingActivityResponses.rejected
-        .map(
-          ({ activity, entry }) =>
-            `${entry.quantity} ${activity.measure} '${
-              activity.title
-            }' in ${toReadableDate(entry.date)}`
-        )
-        .join("\n - ");
-
-      let message = "";
-      if (acceptedActivitiesStr) {
-        message += `User accepted and logged the following activities:\n${acceptedActivitiesStr}\n`;
-      }
-      if (rejectedActivitiesStr) {
-        message += `User rejected the following activities:\n${rejectedActivitiesStr}`;
-      }
-
-      await authedApi.post("/ai/send-system-message", { message });
-      sendMessage("done!", false);
-      currentUserDataQuery.refetch();
-      setPendingActivityResponses({ accepted: [], rejected: [] });
-    }
-  };
-
-  const handleTimesPerWeekAcceptance = async () => {
-    if (!isConnected || !socket) {
-      toast.error("Not connected to server");
-      return;
-    }
-
-    const oldTimesPerWeek = suggestedTimesPerWeek?.old_times_per_week;
-    const newTimesPerWeek = suggestedTimesPerWeek?.new_times_per_week;
-    const planId = suggestedTimesPerWeek?.plan_id;
-
-    await authedApi.post(`/plans/${planId}/update`, {
-      data: {
-        times_per_week: newTimesPerWeek,
-      },
-    });
-
-    await authedApi.post("/ai/send-system-message", {
-      message: `User accepted the changes of ${oldTimesPerWeek} to ${newTimesPerWeek} times per week`,
-    });
-    sendMessage("done!", false);
-
-    setSuggestedTimesPerWeek(null);
-    currentUserDataQuery.refetch();
-  };
-
-  const handleTimesPerWeekRejection = async () => {
-    const oldTimesPerWeek = suggestedTimesPerWeek?.old_times_per_week;
-    const newTimesPerWeek = suggestedTimesPerWeek?.new_times_per_week;
-
-    await authedApi.post("/ai/send-system-message", {
-      message: `User rejected the changes of ${oldTimesPerWeek} to ${newTimesPerWeek} times per week`,
-    });
-    sendMessage("done!", false);
-
-    setSuggestedTimesPerWeek(null);
-  };
-
-  const handleActivityRejection = async (
-    activityEntry: ActivityEntry,
-    activity: Activity
-  ) => {
-    if (!isConnected || !socket) {
-      toast.error("Not connected to server");
-      return;
-    }
-
-    setPendingActivityResponses((prev) => ({
-      ...prev,
-      rejected: [...prev.rejected, { activity, entry: activityEntry }],
-    }));
-
-    setSuggestedActivityEntries((entries) =>
-      entries.filter((entry) => entry.id !== activityEntry.id)
-    );
-
-    if (suggestedActivityEntries.length === 1) {
-      const acceptedActivitiesStr = pendingActivityResponses.accepted
-        .map(
-          ({ activity, entry }) =>
-            `${entry.quantity} ${activity.measure} of ${
-              activity.title
-            } in ${toReadableDate(entry.date)}`
-        )
-        .join("\n");
-
-      const rejectedActivitiesStr = [
-        ...pendingActivityResponses.rejected,
-        { activity, entry: activityEntry },
-      ]
-        .map(
-          ({ activity, entry }) =>
-            `${entry.quantity} ${activity.measure} of ${
-              activity.title
-            } in ${toReadableDate(entry.date)}`
-        )
-        .join("\n");
-
-      let message = "";
-      if (acceptedActivitiesStr) {
-        message += `User accepted and logged the following activities:\n${acceptedActivitiesStr}\n`;
-      }
-      if (rejectedActivitiesStr) {
-        message += `User rejected the following activities:\n${rejectedActivitiesStr}`;
-      }
-
-      await authedApi.post("/ai/send-system-message", { message });
-      sendMessage("done!", false);
-      setPendingActivityResponses({ accepted: [], rejected: [] });
-    }
-  };
-
-  const handleSessionsAcceptance = async (sessions: PlanSession[]) => {
-    if (!isConnected || !socket || !suggestedNextWeekSessions) {
-      toast.error("Not connected to server");
-      return;
-    }
-
-    setSuggestedNextWeekSessions(null);
-
-    const sessionsStr = sessions
-      .map((session) => {
-        const activity = userData?.activities.find(
-          (a) => a.id === session.activity_id
-        );
-        return `${session.quantity} ${activity?.measure} of ${
-          activity?.title
-        } (${session.descriptive_guide}) in ${toReadableDate(session.date)}`;
-      })
-      .join("\n");
-
-    const message = `User accepted the suggested sessions for the plan: \n${sessionsStr}`;
-    await authedApi.post("/ai/send-system-message", { message });
-    sendMessage("done!", false);
-    currentUserDataQuery.refetch();
-  };
-
-  const handleSessionsRejection = async (sessions: PlanSession[]) => {
-    if (!isConnected || !socket || !suggestedNextWeekSessions) {
-      toast.error("Not connected to server");
-      return;
-    }
-
-    // Clear suggested sessions
-    setSuggestedNextWeekSessions(null);
-
-    // Format sessions into readable string
-    const sessionsStr = sessions
-      .map((session) => {
-        const activity = userData?.activities.find(
-          (a) => a.id === session.activity_id
-        );
-        return `${session.quantity} ${activity?.measure} of ${
-          activity?.title
-        } (${session.descriptive_guide}) in ${toReadableDate(session.date)}`;
-      })
-      .join("\n");
-
-    const message = `User rejected the suggested sessions for the plan: \n${sessionsStr}`;
-    await authedApi.post("/ai/send-system-message", { message });
-    sendMessage("done!", false);
+  const handleSuggestionHandled = (handled: SuggestionBase) => {
+    setSuggestions(prev => prev.filter(s => s.id !== handled.id));
+    sendMessage(`done!`);
   };
 
   useEffect(() => {
@@ -717,6 +451,18 @@ const LogPage: React.FC = () => {
       setIsInitialMessageAnimating(false);
     }
   }, [messageId, messageText, messagesData.isSuccess, messagesData.data]);
+
+  // Initialize suggestion handlers
+  useEffect(() => {
+    // Register all suggestion handlers
+    suggestionRegistry.register(activitySuggestionHandler);
+
+    // Cleanup on unmount
+    return () => {
+      // Clear all handlers
+      suggestionRegistry.clear();
+    };
+  }, []); // Empty deps array since we only want to register once
 
   return (
     <>
@@ -783,9 +529,7 @@ const LogPage: React.FC = () => {
 
                 <motion.div
                   variants={itemVariants}
-                  className={`flex-1 flex flex-col items-center justify-center gap-4 p-4 ${
-                    suggestedActivityEntries.length > 0 ? "mb-4" : ""
-                  }`}
+                  className="flex-1 flex flex-col items-center justify-center gap-4 p-4"
                 >
                   <AnimatePresence mode="wait">
                     {!isConnected ? (
@@ -855,49 +599,11 @@ const LogPage: React.FC = () => {
                   variants={itemVariants}
                   className="flex flex-col gap-4 px-4 mb-4"
                 >
-                  {suggestedActivityEntries.map((activityEntry) => {
-                    const activity = suggestedActivities.find(
-                      (a) => a.id === activityEntry.activity_id
-                    );
-                    if (!activity) return null;
-                    return (
-                      <ActivitySuggestion
-                        key={activityEntry.id}
-                        activity={activity}
-                        disabled={!isConnected}
-                        activityEntry={activityEntry}
-                        onAccept={handleActivityAcceptance}
-                        onReject={handleActivityRejection}
-                      />
-                    );
-                  })}
-
-                  {suggestedNextWeekSessions &&
-                    suggestedNextWeekSessions.sessions.length > 0 && (
-                      <PlanUpdateBanner
-                        sessions={suggestedNextWeekSessions.sessions}
-                        old_sessions={suggestedNextWeekSessions.old_sessions}
-                        plan_id={suggestedNextWeekSessions.plan_id}
-                        disabled={!isConnected}
-                        onAccept={handleSessionsAcceptance}
-                        onReject={handleSessionsRejection}
-                      />
-                    )}
-
-                  {suggestedTimesPerWeek && (
-                    <PlanTimesPerWeekUpdateBanner
-                      times_per_week={suggestedTimesPerWeek.new_times_per_week}
-                      old_times_per_week={
-                        suggestedTimesPerWeek.old_times_per_week
-                      }
-                      plan={userData?.plans.find(
-                        (p) => p.id === suggestedTimesPerWeek.plan_id
-                      )}
-                      disabled={!isConnected}
-                      onAccept={handleTimesPerWeekAcceptance}
-                      onReject={handleTimesPerWeekRejection}
-                    />
-                  )}
+                  <SuggestionContainer 
+                    suggestions={suggestions}
+                    isConnected={isConnected}
+                    onSuggestionHandled={handleSuggestionHandled}
+                  />
                 </motion.div>
               </motion.div>
             )}
@@ -910,8 +616,7 @@ const LogPage: React.FC = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Pending Changes</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Please accept or reject the pending activities/sessions before
-                  sending new messages.
+                  Please accept or reject the pending suggestions before sending new messages.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

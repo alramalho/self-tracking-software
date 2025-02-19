@@ -2,46 +2,67 @@ import React, { useState } from 'react';
 import { Check, X, Loader2 } from 'lucide-react';
 import { useApiWithAuth } from '@/api';
 import toast from 'react-hot-toast';
-import { Activity, ActivityEntry } from '@/contexts/UserPlanContext';
+import { Activity, ActivityEntry } from '@/types/activities';
 
 interface ActivitySuggestionProps {
   activity: Activity;
   activityEntry: ActivityEntry;
-  onAccept: (activityEntry: ActivityEntry, activity: Activity) => void;
-  onReject: (activityEntry: ActivityEntry, activity: Activity) => void;
   disabled: boolean;
+  onSuggestionHandled: () => void;
 }
 
 const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
   activity,
   activityEntry,
-  onAccept,
-  onReject,
   disabled,
+  onSuggestionHandled
 }) => {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const buttonClasses = "p-2 rounded-full transition-colors duration-200 flex items-center justify-center";
   const iconSize = 20;
+  const api = useApiWithAuth();
 
   const handleAccept = async () => {
-    setIsAccepting(true);
-    await onAccept(activityEntry, activity);
-  };
-
-  const handleReject = async () => {
-    setIsRejecting(true);
     try {
-      await onReject(activityEntry, activity);
-    } finally {
-      setIsRejecting(false);
+      const formData = new FormData();
+      formData.append("activity_id", activity.id);
+      formData.append("iso_date_string", activityEntry.date);
+      formData.append("quantity", activityEntry.quantity.toString());
+      formData.append("isPublic", "false");
+
+      await api.post("/log-activity", formData);
+      
+      // Send system message to maintain AI memory
+      await api.post("/ai/send-system-message", {
+        message: `User logged ${activity.title} for ${activityEntry.date} with ${activityEntry.quantity} ${activity.measure}`
+      });
+      
+      toast.success(`Logged ${activity.title} for ${activityEntry.date}`);
+      onSuggestionHandled();
+    } catch (error) {
+      toast.error("Failed to log activity");
+      throw error;
+    }
+  };
+  
+  const handleReject = async () => {
+    try {
+      // Send system message to maintain AI memory
+      await api.post("/ai/send-system-message", {
+        message: `User rejected logging ${activity.title} for ${activityEntry.date} with ${activityEntry.quantity} ${activity.measure}`
+      });
+      onSuggestionHandled();
+    } catch (error) {
+      toast.error("Failed to reject activity");
+      throw error;
     }
   };
 
   return (
     <div onClick={() => {
       if (disabled) {
-        toast.error('You must be connected to the AI to talk to it.');
+        toast.error('You must be connected to the AI to accept or reject suggestions.');
         return;
       };
     }} className={`${disabled ? 'opacity-50' : ''} bg-white drop-shadow-md border border-gray-200 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 `}>

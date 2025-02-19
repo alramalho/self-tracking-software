@@ -1,9 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional, Union
 from ai.assistant.memory import Memory
 from entities.message import Message, Emotion
 from entities.user import User
-from entities.activity import Activity
+from entities.activity import Activity, ActivityEntry
+from entities.mood_report import MoodReport
+from gateways.database.mongodb import MongoDBGateway
+from ai.assistant.memory import DatabaseMemory
+from ai.llm import ask_schema, ask_text
 from datetime import datetime
 import re
 from loguru import logger
@@ -17,6 +21,7 @@ from .flowchart_nodes import (
 )
 from bson import ObjectId
 from fastapi import WebSocket
+from ai.suggestions import ActivitySuggestion, AssistantSuggestion
 
 activities_gateway = ActivitiesGateway()
 
@@ -78,7 +83,7 @@ every_message_flowchart = {
         text="Analyse user's activity name and inform the user that you couldn't find the activity in his activities list.",
     ),
     "Converse": Node(
-        text="Taking into account the conversation history, converse with the user in succint messages. Your message must fit the conversation flow.",
+        text="Taking into account the conversation history flow (and system messages if present), converse with the user in succint messages. Your message must fit the conversation flow.",
         temperature=1,
     ),
 }
@@ -104,7 +109,7 @@ class ActivityExtractorAssistant(object):
 
     async def get_response(
         self, user_input: str, message_id: str, emotions: List[Emotion] = []
-    ) -> Tuple[str, List[ExtractedActivityEntry]]:
+    ) -> str:
         is_first_message_in_more_than_a_day = (
             len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
         )
@@ -175,34 +180,34 @@ class ActivityExtractorAssistant(object):
         logger.info(f"FRAMEWORK RESULT: {result_message}")
         logger.info(f"EXTRACTED: {extracted}")
 
+        suggestions: List[AssistantSuggestion] = []
+        
         # Aggregate activities from all ExtractActivity nodes
         all_activities = []
         for key in extracted:
             if key.startswith("ExtractActivity_"):
                 all_activities.extend(extracted[key].activities)
         
-        # If we have extracted activities, send them via websocket
+        # If we have extracted activities, create suggestions
         if all_activities:
             existing_entries = activities_gateway.get_all_activity_entries_by_user_id(self.user.id)
             activity_entries = [
-                ae
-                for ae in all_activities
+                ae for ae in all_activities
                 if not any(
                     existing.activity_id == ae.activity_id and existing.date == ae.date
                     for existing in existing_entries
                 )
             ]
-            unique_activity_ids = {entry.activity_id for entry in activity_entries}
-            activities = [
-                activities_gateway.get_activity_by_id(activity_id)
-                for activity_id in unique_activity_ids
-            ]
-            await self.send_websocket_message(
-                "suggested_activity_entries",
-                {
-                    "activities": [activity.dict() for activity in activities],
-                    "activity_entries": [{"id": str(ObjectId()), **activity_entry.dict()} for activity_entry in activity_entries],
-                }
-            )
+            
+            for entry in activity_entries:
+                activity = activities_gateway.get_activity_by_id(entry.activity_id)
+                suggestion = ActivitySuggestion.from_activity_entry(entry, activity)
+                suggestions.append(suggestion)
+            
+            if suggestions:
+                await self.send_websocket_message(
+                    "suggestions",
+                    {"suggestions": [s.dict() for s in suggestions]}
+                )
         
         return result_message
