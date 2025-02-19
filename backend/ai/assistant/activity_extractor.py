@@ -110,9 +110,7 @@ class ActivityExtractorAssistant(object):
     async def get_response(
         self, user_input: str, message_id: str, emotions: List[Emotion] = []
     ) -> str:
-        is_first_message_in_more_than_a_day = (
-            len(self.memory.read_all(max_words=1000, max_age_in_minutes=1440)) == 0
-        )
+
 
         self.memory.write(
             Message.new(

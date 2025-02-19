@@ -11,6 +11,7 @@ from ai.assistant.week_analyser import WeekAnalyserAssistant, EnrichedPlanSessio
 from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+from ai.assistant.plan_creation_assistant import PlanCreationAssistant
 
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
@@ -58,23 +59,26 @@ async def talk_with_assistant(
                 websocket=websocket,
             )
         else:
-            # assistant = PlanCreationAssistant(
-            #     memory=memory,
-            #     user=user,
-            # )
+            assistant = PlanCreationAssistant(
+                user=user,
+                memory=memory,
+                websocket=websocket,
+            )
             # assistant = PlanCoachAgent(
             #     memory=memory,
             #     user=user,
             # )
-            assistant = ActivityExtractorAssistant(
-                memory=memory,
-                user=user,
-                user_activities=user_activities,
-                websocket=websocket,
-            )
+            # assistant = ActivityExtractorAssistant(
+            #     memory=memory,
+            #     user=user,
+            #     user_activities=user_activities,
+            #     websocket=websocket,
+            # )
             
         return await assistant.get_response(
-            user_input=user_input, message_id=message_id, emotions=emotions
+            user_input=user_input,
+            message_id=message_id,
+            emotions=emotions,
         )
     except Exception as e:
         logger.error(f"Error in talk_with_assistant: {e}")
