@@ -2,7 +2,7 @@ import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useState, useCallback, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 
-type FinishedCallback = (audioData: string, audioFormat: string) => void;
+export type FinishedCallback = (audioData: string, audioFormat: string) => void;
 
 export const useMicrophone = () => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
