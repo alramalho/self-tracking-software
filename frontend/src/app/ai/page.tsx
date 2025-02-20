@@ -8,7 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { useMessageHistory, Message } from "@/hooks/useMessageHistory";
-import { useMicrophone } from "@/hooks/useMicrophone";
+import { FinishedCallback, useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
 import { useRive, useStateMachineInput } from "@rive-app/react-canvas-lite";
 import toast from "react-hot-toast";
@@ -192,19 +192,31 @@ const LogPage: React.FC = () => {
     autoplay: true,
   });
 
-  const numberStateTransition = useStateMachineInput(rive, "State", "number", 0);
+  const numberStateTransition = useStateMachineInput(
+    rive,
+    "State",
+    "number",
+    0
+  );
 
   useEffect(() => {
     if (!numberStateTransition) return;
-    
+
     if (isRecording) {
       numberStateTransition.value = 2;
     } else if (isAISpeaking) {
       numberStateTransition.value = 1;
-    } else {
+    } else if (isLoading) {
       numberStateTransition.value = 0;
+    } else {
+      numberStateTransition.value = 3;
     }
-  }, [isRecording, isAISpeaking, numberStateTransition]);
+  }, [isRecording, isAISpeaking, numberStateTransition, isLoading]);
+
+  const handleToggleRecording = (onFinished: FinishedCallback) => {
+    stopAudio();
+    toggleRecording(onFinished);
+  };
 
   useEffect(() => {
     if (posthogFeatureFlagsInitialized) {
@@ -389,7 +401,6 @@ const LogPage: React.FC = () => {
       setShowPendingChangesAlert(true);
       return;
     }
-    console.log({ outputMode, socket, isConnected });
     if (socket && isConnected) {
       setIsLoading(true);
       setAreEmotionsLoading(true); // voice always triggers emotion analysis
@@ -613,9 +624,15 @@ const LogPage: React.FC = () => {
                 {isVoiceMode && (
                   <>
                     <div className="flex flex-col items-center justify-center w-full h-full">
-                      <div className="flex flex-col items-center justify-center w-[200px] h-[200px]">
-                        <RiveComponent />
-                      </div>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.35, duration: 0.6 }}
+                      >
+                        <div className="flex flex-col items-center justify-center w-[200px] h-[200px]">
+                          <RiveComponent />
+                        </div>
+                      </motion.div>
                     </div>
                   </>
                 )}
@@ -704,7 +721,7 @@ const LogPage: React.FC = () => {
                             isConnected={isConnected}
                             isLoading={isLoading}
                             isRecording={isRecording}
-                            toggleRecording={toggleRecording}
+                            toggleRecording={handleToggleRecording}
                             cancelRecording={cancelRecording}
                             onVoiceSent={handleVoiceSent}
                             onModeToggle={handleVoiceModeToggle}
