@@ -28,3 +28,4 @@ opentelemetry-exporter-otlp
 axiom-py
 pydantic-ai
 pytest-mock
+replicate

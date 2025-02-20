@@ -10,7 +10,7 @@ from ai.assistant.activity_extractor import ActivityExtractorAssistant, Extracte
 from ai.assistant.week_analyser import WeekAnalyserAssistant, EnrichedPlanSessions, ExtractedTimesPerWeek 
 from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
-from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS
+from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS, REPLICATE_TTS_MODEL
 from ai.assistant.plan_creation_assistant import PlanCreationAssistant
 
 from gateways.activities import ActivitiesGateway
@@ -135,7 +135,7 @@ async def process_message(
     audio_response = None
     if output_mode == "voice":
         audio_response = await loop.run_in_executor(
-            executor, tts.text_to_speech, text_response
+            executor, tts.text_to_speech, text_response, REPLICATE_TTS_MODEL
         )
 
     return text_response, audio_response
