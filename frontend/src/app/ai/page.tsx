@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useMessageHistory, Message } from "@/hooks/useMessageHistory";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
@@ -37,11 +43,15 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { AccessRestrictionPopover } from "@/components/chat/AccessRestrictionPopover";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { SuggestionContainer } from '@/components/SuggestionContainer';
-import { SuggestionBase } from '@/types/suggestions';
-import { activitySuggestionHandler } from '@/suggestions/activitySuggestion';
-import { suggestionRegistry } from '@/lib/suggestionRegistry';
-import { PlanBuildingContainer, CompletePlan } from '@/components/PlanBuildingContainer';
+import { SuggestionContainer } from "@/components/SuggestionContainer";
+import { SuggestionBase } from "@/types/suggestions";
+import { activitySuggestionHandler } from "@/suggestions/activitySuggestion";
+import { suggestionRegistry } from "@/lib/suggestionRegistry";
+import {
+  PlanBuildingContainer,
+  CompletePlan,
+} from "@/components/PlanBuildingContainer";
+import { VoiceModeInput } from "@/components/chat/VoiceModeInput";
 
 const REFERRAL_COUNT = 2;
 
@@ -143,7 +153,8 @@ const LogPage: React.FC = () => {
   const { data: userData } = currentUserDataQuery;
 
   const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
-  const posthogFeatureFlagsInitialized = typeof isFeatureEnabled !== "undefined";
+  const posthogFeatureFlagsInitialized =
+    typeof isFeatureEnabled !== "undefined";
   const [isUserWhitelisted, setIsUserWhitelisted] = useState<boolean>(false);
   const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
   const [areEmotionsLoading, setAreEmotionsLoading] = useState<boolean>(false);
@@ -152,7 +163,8 @@ const LogPage: React.FC = () => {
   const notificationId = searchParams.get("notification_id");
   const messageId = searchParams.get("messageId");
   const messageText = searchParams.get("messageText");
-  const [isInitialMessageAnimating, setIsInitialMessageAnimating] = useState(true);
+  const [isInitialMessageAnimating, setIsInitialMessageAnimating] =
+    useState(true);
 
   const [transcription, setTranscription] = useState<string>("");
   const [outputMode, setOutputMode] = useState<"voice" | "text">("text");
@@ -170,6 +182,7 @@ const LogPage: React.FC = () => {
   const [suggestions, setSuggestions] = useState<SuggestionBase[]>([]);
   const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
 
   useEffect(() => {
     if (posthogFeatureFlagsInitialized) {
@@ -219,9 +232,9 @@ const LogPage: React.FC = () => {
       toast.error("Failed to connect to WebSocket");
     }
   }, [getToken]);
-  
+
   useEffect(() => {
-    console.log({suggestions});
+    console.log({ suggestions });
   }, [suggestions]);
   useEffect(() => {
     if (isUserWhitelisted) {
@@ -285,7 +298,7 @@ const LogPage: React.FC = () => {
           clearTimeout(emotionLoadingTimeoutRef.current);
         }
       } else if (data.type === "suggestions") {
-        setSuggestions(prev => [...prev, ...data.suggestions]);
+        setSuggestions((prev) => [...prev, ...data.suggestions]);
       }
     };
   }, [socket, handleIncomingMessage]);
@@ -304,14 +317,14 @@ const LogPage: React.FC = () => {
   };
 
   const hasPendingChanges = useCallback(() => {
-    return suggestions.some(s => {
+    return suggestions.some((s) => {
       switch (s.type) {
-        case 'activity':
-        case 'plan_sessions':
+        case "activity":
+        case "plan_sessions":
           return true; // These require explicit accept/reject actions
-        case 'plan_goal':
-        case 'plan_activities':
-        case 'plan_type':
+        case "plan_goal":
+        case "plan_activities":
+        case "plan_type":
           return false; // These are informational, no action required
         default:
           return false;
@@ -332,11 +345,6 @@ const LogPage: React.FC = () => {
     }
   };
 
-  const toggleOutputMode = () => {
-    setOutputMode((prevMode) => (prevMode === "voice" ? "text" : "voice"));
-    stopAudio();
-  };
-
   function sendMessage(message: string, visible: boolean = true) {
     setIsLoading(true);
     socket?.send(
@@ -355,12 +363,11 @@ const LogPage: React.FC = () => {
   }
 
   const handleVoiceSent = (audioData: string, audioFormat: string) => {
-    
     if (hasPendingChanges()) {
       setShowPendingChangesAlert(true);
       return;
     }
-    
+    console.log({ outputMode, socket, isConnected });
     if (socket && isConnected) {
       setIsLoading(true);
       setAreEmotionsLoading(true); // voice always triggers emotion analysis
@@ -431,7 +438,7 @@ const LogPage: React.FC = () => {
   }
 
   const handleSuggestionHandled = (handled: SuggestionBase) => {
-    setSuggestions(prev => prev.filter(s => s.id !== handled.id));
+    setSuggestions((prev) => prev.filter((s) => s.id !== handled.id));
     sendMessage(`done!`);
   };
 
@@ -478,26 +485,28 @@ const LogPage: React.FC = () => {
   }, []); // Empty deps array since we only want to register once
 
   // Separate activity and plan suggestions
-  const activitySuggestions = useMemo(() => 
-    suggestions.filter(s => s.type === "activity")
-  , [suggestions]);
+  const activitySuggestions = useMemo(
+    () => suggestions.filter((s) => s.type === "activity"),
+    [suggestions]
+  );
 
-  const planSuggestions = useMemo(() => 
-    suggestions.filter(s => s.type.startsWith("plan_"))
-  , [suggestions]);
+  const planSuggestions = useMemo(
+    () => suggestions.filter((s) => s.type.startsWith("plan_")),
+    [suggestions]
+  );
 
   const handlePlanAccepted = async (plan: CompletePlan) => {
     try {
       await authedApi.post("/create-plan", plan);
-      
+
       // Send system message to maintain AI memory
       await authedApi.post("/ai/send-system-message", {
-        message: `User accepted the plan with goal: ${plan.goal}`
+        message: `User accepted the plan with goal: ${plan.goal}`,
       });
-      
+
       // Remove all plan suggestions
-      setSuggestions(prev => prev.filter(s => !s.type.startsWith("plan_")));
-      
+      setSuggestions((prev) => prev.filter((s) => !s.type.startsWith("plan_")));
+
       // Send a message to the AI to continue the conversation
       sendMessage("Great, I've accepted the plan!", false);
     } catch (error) {
@@ -510,19 +519,35 @@ const LogPage: React.FC = () => {
     try {
       // Send system message to maintain AI memory
       await authedApi.post("/ai/send-system-message", {
-        message: "User rejected the plan creation"
+        message: "User rejected the plan creation",
       });
-      
+
       // Remove all plan suggestions
-      setSuggestions(prev => prev.filter(s => !s.type.startsWith("plan_")));
-      
+      setSuggestions((prev) => prev.filter((s) => !s.type.startsWith("plan_")));
+
       // Send a message to the AI to continue the conversation
-      sendMessage("I don't want to create this plan. Let's try something else.", false);
+      sendMessage(
+        "I don't want to create this plan. Let's try something else.",
+        false
+      );
     } catch (error) {
       toast.error("Failed to reject plan");
       throw error;
     }
   };
+
+  const handleVoiceModeToggle = () => {
+    setIsVoiceMode((prev) => !prev);
+    stopAudio();
+  };
+
+  useEffect(() => {
+    if (isVoiceMode) {
+      setOutputMode("voice");
+    } else {
+      setOutputMode("text");
+    }
+  }, [isVoiceMode]);
 
   return (
     <>
@@ -563,6 +588,7 @@ const LogPage: React.FC = () => {
                 initial="hidden"
                 animate="visible"
               >
+                {!isVoiceMode && (
                 <motion.div
                   variants={itemVariants}
                   className="relative bg-white min-h-[150px] max-h-[550px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
@@ -582,9 +608,13 @@ const LogPage: React.FC = () => {
                   </div>
                   <ChatInterface messages={messages.slice(-2)} />
                 </motion.div>
+                )} 
 
                 <motion.div className="flex flex-col items-center justify-center">
-                  <EmotionBadges emotions={currentEmotions} loading={areEmotionsLoading}/>
+                  <EmotionBadges
+                    emotions={currentEmotions}
+                    loading={areEmotionsLoading}
+                  />
                 </motion.div>
 
                 <motion.div
@@ -637,22 +667,32 @@ const LogPage: React.FC = () => {
                         exit="exit"
                         className="flex flex-row items-center justify-center w-full max-w-full"
                       >
-                        <div className="border-[4px] bg-white shadow-inner rounded-full border-gray-700 w-full max-w-[600px] min-w-[220px] min-h-[4rem] flex items-center justify-between">
+                        {isVoiceMode ? (
+                          <VoiceModeInput
+                            isConnected={isConnected}
+                            isLoading={isLoading}
+                            onVoiceSent={handleVoiceSent}
+                            onModeToggle={handleVoiceModeToggle}
+                          />
+                        ) : (
                           <ChatInput
                             isConnected={isConnected}
                             isLoading={isLoading}
                             onTextSent={handleSendMessage}
                             onVoiceSent={handleVoiceSent}
+                            onVoiceModeToggle={handleVoiceModeToggle}
                           />
-                        </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  <div className="text-center -mt-1 mb-2">
-                    <span className="text-xs text-gray-400">
-                      ⚠️ Emotion analysis only available on voice mode
-                    </span>
-                  </div>
+                  { isConnected && !isVoiceMode &&
+                    <div className="text-center -mt-1 mb-2">
+                      <span className="text-xs text-gray-400">
+                        ⚠️ Emotion analysis only available on voice input
+                      </span>
+                    </div>
+                  }
                 </motion.div>
 
                 <motion.div
@@ -660,13 +700,13 @@ const LogPage: React.FC = () => {
                   className="flex flex-col gap-4 px-4 mb-4"
                 >
                   {activitySuggestions.length > 0 && (
-                    <SuggestionContainer 
+                    <SuggestionContainer
                       suggestions={activitySuggestions}
                       onSuggestionHandled={handleSuggestionHandled}
                       isConnected={isConnected}
                     />
                   )}
-                  
+
                   {planSuggestions.length > 0 && (
                     <PlanBuildingContainer
                       suggestions={planSuggestions}
@@ -687,7 +727,8 @@ const LogPage: React.FC = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Pending Changes</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Please accept or reject the pending suggestions before sending new messages.
+                  Please accept or reject the pending suggestions before sending
+                  new messages.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

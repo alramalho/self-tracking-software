@@ -619,7 +619,7 @@ class PlanCreationAssistant:
             "5. The type of plan (specific dates or times per week) "
             "6. The sessions/frequency "
             "Analyze the available context (especially the conversation history) to understand how to best continue the conversation given your goal. "
-            "Write in prose and concise messages. Be friendly, and make smooth transitions between steps if you want to ask something. Remember, anything that you'd asked to extract must be solely based on the conversation history."
+            "Write in prose and concise messages and be friendly. No matter what you're tasked with, always make smooth transitions between the user last input & your message. Remember, anything that you'd asked to extract must be solely based on the conversation history."
         )
 
         self.framework = FlowchartLLMFramework(plan_creation_flowchart, system_prompt)
