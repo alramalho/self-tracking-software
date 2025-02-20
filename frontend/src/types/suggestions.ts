@@ -1,4 +1,8 @@
-import { Activity, ActivityEntry } from "./activities";
+import {
+  Activity,
+  ActivityEntry,
+  PlanMilestone,
+} from "@/contexts/UserPlanContext";
 
 export interface SuggestionBase {
   id: string;
@@ -27,6 +31,7 @@ export interface PlanActivitySuggestionData extends SuggestionBase {
   type: "plan_activities";
   data: {
     activities: Array<{
+      activity_id: string;
       activity_name: string;
       emoji: string;
       measure: string;
@@ -47,10 +52,26 @@ export interface PlanSessionsSuggestionData extends SuggestionBase {
     sessions:
       | Array<{
           date: string;
+          activity_id: string;
           activity_name: string;
           quantity: number;
         }>
       | number; // number for times_per_week frequency
+  };
+}
+
+export interface PlanMilestoneSuggestionData extends SuggestionBase {
+  type: "plan_milestones";
+  data: {
+    milestones: PlanMilestone[];
+  };
+}
+
+export interface PlanFinishingDateSuggestionData extends SuggestionBase {
+  type: "plan_finishing_date";
+  data: {
+    finishing_date: string; // YYYY-MM-DD format
+    explanation?: string; // Optional explanation for the suggested date
   };
 }
 
