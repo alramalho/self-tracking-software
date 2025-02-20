@@ -1,12 +1,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Send, X } from "lucide-react";
-import { useMicrophone } from "@/hooks/useMicrophone";
+import { FinishedCallback, useMicrophone } from "@/hooks/useMicrophone";
 import { InputContainer } from "./InputContainer";
 
 interface VoiceModeInputProps {
   isConnected: boolean;
   isLoading: boolean;
+  isRecording: boolean;
+  toggleRecording: (onFinished: FinishedCallback) => void;
+  cancelRecording: () => void;
   onVoiceSent: (audioData: string, audioFormat: string) => void;
   onModeToggle: () => void;
 }
@@ -14,10 +17,12 @@ interface VoiceModeInputProps {
 export const VoiceModeInput: React.FC<VoiceModeInputProps> = ({
   isConnected,
   isLoading,
+  isRecording,
+  toggleRecording,
+  cancelRecording,
   onVoiceSent,
   onModeToggle,
 }) => {
-  const { isRecording, toggleRecording, cancelRecording } = useMicrophone();
 
   const startRecording = () => {
     if (!isConnected || isLoading) return;

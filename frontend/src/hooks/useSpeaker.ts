@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 export const useSpeaker = () => {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const audioQueue = useRef<ArrayBuffer[]>([]); // Initialize with an empty array
-  const isPlaying = useRef<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const currentSource = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export const useSpeaker = () => {
     async (arrayBuffer: ArrayBuffer) => {
       if (!audioContext) return;
 
-      isPlaying.current = true;
+      setIsPlaying(true);
       try {
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         const source = audioContext.createBufferSource();
@@ -30,14 +30,14 @@ export const useSpeaker = () => {
         source.buffer = audioBuffer;
         source.connect(audioContext.destination);
         source.onended = () => {
-          isPlaying.current = false;
+          setIsPlaying(false);
           currentSource.current = null;
           playNext();
         };
         source.start();
       } catch (error) {
         console.error("Error playing audio:", error);
-        isPlaying.current = false;
+        setIsPlaying(false);
         currentSource.current = null;
         playNext();
       }
@@ -50,18 +50,18 @@ export const useSpeaker = () => {
       currentSource.current.stop();
       currentSource.current = null;
     }
-    isPlaying.current = false;
+    setIsPlaying(false);
     audioQueue.current = [];
   }, []);
 
   const playNext = useCallback(() => {
-    if (audioQueue.current.length > 0 && !isPlaying.current) {
+    if (audioQueue.current.length > 0 && !isPlaying) {
       const nextAudio = audioQueue.current.shift();
       if (nextAudio) {
         playAudio(nextAudio);
       }
     }
-  }, [playAudio]);
+  }, [playAudio, isPlaying]);
 
   const addToQueue = useCallback(
     (arrayBuffer: ArrayBuffer) => {
@@ -71,5 +71,5 @@ export const useSpeaker = () => {
     [playNext]
   );
 
-  return { addToQueue, stopAudio };
+  return { addToQueue, stopAudio, isPlaying };
 };

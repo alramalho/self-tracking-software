@@ -10,6 +10,7 @@ import React, {
 import { useMessageHistory, Message } from "@/hooks/useMessageHistory";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useSpeaker } from "@/hooks/useSpeaker";
+import { useRive, useStateMachineInput } from "@rive-app/react-canvas-lite";
 import toast from "react-hot-toast";
 import {
   WifiOff,
@@ -145,8 +146,9 @@ const LogPage: React.FC = () => {
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const { addToQueue, stopAudio } = useSpeaker();
+  const { addToQueue, stopAudio, isPlaying: isAISpeaking } = useSpeaker();
   const { addToNotificationCount, sendPushNotification } = useNotifications();
+  const { isRecording, toggleRecording, cancelRecording } = useMicrophone();
 
   const { useCurrentUserDataQuery, messagesData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
@@ -183,6 +185,26 @@ const LogPage: React.FC = () => {
   const [showPendingChangesAlert, setShowPendingChangesAlert] = useState(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
+
+  const { rive, RiveComponent } = useRive({
+    src: "/animations/ai_voice_states.riv",
+    stateMachines: "State",
+    autoplay: true,
+  });
+
+  const numberStateTransition = useStateMachineInput(rive, "State", "number", 0);
+
+  useEffect(() => {
+    if (!numberStateTransition) return;
+    
+    if (isRecording) {
+      numberStateTransition.value = 2;
+    } else if (isAISpeaking) {
+      numberStateTransition.value = 1;
+    } else {
+      numberStateTransition.value = 0;
+    }
+  }, [isRecording, isAISpeaking, numberStateTransition]);
 
   useEffect(() => {
     if (posthogFeatureFlagsInitialized) {
@@ -588,27 +610,37 @@ const LogPage: React.FC = () => {
                 initial="hidden"
                 animate="visible"
               >
+                {isVoiceMode && (
+                  <>
+                    <div className="flex flex-col items-center justify-center w-full h-full">
+                      <div className="flex flex-col items-center justify-center w-[200px] h-[200px]">
+                        <RiveComponent />
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 {!isVoiceMode && (
-                <motion.div
-                  variants={itemVariants}
-                  className="relative bg-white min-h-[150px] max-h-[550px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
-                >
-                  <Button
-                    variant="ghost"
-                    className="text-gray-500 underline w-full"
-                    onClick={() => router.push("/message-history")}
+                  <motion.div
+                    variants={itemVariants}
+                    className="relative bg-white min-h-[150px] max-h-[550px] overflow-y-auto m-2 border border-gray-200 rounded-lg shadow-sm"
                   >
-                    <History className="w-4 h-4 mr-2" />
-                    See full history
-                  </Button>
-                  <div className="w-full">
-                    <p className="text-gray-500 text-md leading-[15px] mx-auto text-center">
-                      ...
-                    </p>
-                  </div>
-                  <ChatInterface messages={messages.slice(-2)} />
-                </motion.div>
-                )} 
+                    <Button
+                      variant="ghost"
+                      className="text-gray-500 underline w-full"
+                      onClick={() => router.push("/message-history")}
+                    >
+                      <History className="w-4 h-4 mr-2" />
+                      See full history
+                    </Button>
+                    <div className="w-full">
+                      <p className="text-gray-500 text-md leading-[15px] mx-auto text-center">
+                        ...
+                      </p>
+                    </div>
+                    <ChatInterface messages={messages.slice(-2)} />
+                  </motion.div>
+                )}
 
                 <motion.div className="flex flex-col items-center justify-center">
                   <EmotionBadges
@@ -671,6 +703,9 @@ const LogPage: React.FC = () => {
                           <VoiceModeInput
                             isConnected={isConnected}
                             isLoading={isLoading}
+                            isRecording={isRecording}
+                            toggleRecording={toggleRecording}
+                            cancelRecording={cancelRecording}
                             onVoiceSent={handleVoiceSent}
                             onModeToggle={handleVoiceModeToggle}
                           />
@@ -686,13 +721,13 @@ const LogPage: React.FC = () => {
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  { isConnected && !isVoiceMode &&
+                  {isConnected && !isVoiceMode && (
                     <div className="text-center -mt-1 mb-2">
                       <span className="text-xs text-gray-400">
                         ⚠️ Emotion analysis only available on voice input
                       </span>
                     </div>
-                  }
+                  )}
                 </motion.div>
 
                 <motion.div
