@@ -9,10 +9,29 @@ import {
   PlanFinishingDateSuggestionData,
 } from "@/types/suggestions";
 import { toast } from "react-hot-toast";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+
+const PLAN_CREATION_ASSISTANT_MEMORY_IN_MINUTES = 180; // 3 hours
+
+const areSuggestionsValid = (timestamp: number) => {
+  const now = Date.now();
+  const minutesSinceCache = (now - timestamp) / (1000 * 60);
+  return minutesSinceCache < PLAN_CREATION_ASSISTANT_MEMORY_IN_MINUTES;
+};
 
 // Helper function to format dates
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatDateWithWeekday = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -28,7 +47,12 @@ const PlanGoalSnippet: React.FC<{ goal: string }> = ({ goal }) => (
 );
 
 const PlanActivitiesSnippet: React.FC<{
-  activities: Array<{ activity_name: string; emoji: string; measure: string }>;
+  activities: Array<{
+    id: string;
+    name: string;
+    emoji: string;
+    measure: string;
+  }>;
 }> = ({ activities }) => (
   <div className="border-l-4 border-green-500 pl-3">
     <h3 className="font-medium text-sm text-gray-500">Activities</h3>
@@ -38,7 +62,7 @@ const PlanActivitiesSnippet: React.FC<{
           key={idx}
           className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"
         >
-          {a.emoji} {a.activity_name}
+          {a.emoji} {a.name}
           <span className="text-xs text-gray-500">({a.measure})</span>
         </span>
       ))}
@@ -51,7 +75,6 @@ const PlanTypeSnippet: React.FC<{
 }> = ({ planType }) => {
   const emoji = planType === "specific" ? "📆" : "✅";
 
-  console.log({ planType });
   return (
     <div className="border-l-4 border-purple-500 pl-3">
       <h3 className="font-medium text-sm text-gray-500">Plan Type</h3>
@@ -66,25 +89,43 @@ const PlanSessionsSnippet: React.FC<{
   sessions:
     | Array<{
         date: string;
+        activity_id: string;
         activity_name: string;
         quantity: number;
       }>
     | number;
-}> = ({ sessions }) => (
+  activities: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    measure: string;
+  }>;
+}> = ({ sessions, activities }) => (
   <div className="border-l-4 border-orange-500 pl-3">
     <h3 className="font-medium text-sm text-gray-500">Schedule</h3>
     {typeof sessions === "number" ? (
       <p className="text-gray-900">{sessions} times per week</p>
     ) : (
       <div className="space-y-2">
-        {sessions.map((session, idx) => (
-          <div key={idx} className="text-sm">
-            <span className="text-gray-500">{formatDate(session.date)}</span>
-            <span className="mx-2">-</span>
-            <span>{session.activity_name}</span>
-            <span className="text-gray-500 ml-2">({session.quantity})</span>
-          </div>
-        ))}
+        {sessions.map((session, idx) => {
+          const activity = activities?.find(
+            (a) => a.id === session.activity_id
+          );
+          return (
+            <div key={idx} className="text-sm border-l-2 border-orange-200 pl-2">
+              <span>
+                {activity?.emoji} {session.activity_name}
+              </span>
+              <span className="text-gray-500 ml-2">
+                ({session.quantity} {activity?.measure})
+              </span>
+              <br/>
+              <span className="text-gray-500 text-md">
+                📍 {formatDateWithWeekday(session.date)}
+              </span>
+            </div>
+          );
+        })}
       </div>
     )}
   </div>
@@ -101,9 +142,9 @@ const PlanMilestonesSnippet: React.FC<{
     progress?: number;
   }>;
   activities?: Array<{
-    activity_id: string;
-    activity_name: string;
-    emoji: string;
+    id: string;
+    name: string;
+    emoji?: string;
     measure: string;
   }>;
 }> = ({ milestones, activities }) => (
@@ -125,12 +166,15 @@ const PlanMilestonesSnippet: React.FC<{
               <div className="mt-1 text-sm text-gray-600">
                 <p className="font-medium">Criteria:</p>
                 {milestone.criteria.map((c, i) => {
+                  console.log({ activities });
                   const activity = activities?.find(
-                    (a) => a.activity_id === c.activity_id
+                    (a) => a.id === c.activity_id
                   );
+                  console.log({ c });
+                  console.log({ activity });
                   return (
                     <p key={i} className="ml-2">
-                      • {activity?.activity_name}: {c.quantity}{" "}
+                      • {activity?.name}: {c.quantity}{" "}
                     </p>
                   );
                 })}
@@ -167,8 +211,8 @@ const PlanFinishingDateSnippet: React.FC<{
 export interface CompletePlan {
   goal: string;
   activities: Array<{
-    activity_id: string;
-    activity_name: string;
+    id: string;
+    name: string;
     emoji: string;
     measure: string;
   }>;
@@ -185,12 +229,13 @@ export interface CompletePlan {
     description: string;
     date: string;
     criteria?: Array<{
-      activity_name: string;
+      activity_id: string;
       quantity: number;
     }>;
     progress?: number;
   }>;
   finishing_date?: string;
+  created_at?: string;
 }
 
 interface PlanBuildingContainerProps {
@@ -201,11 +246,48 @@ interface PlanBuildingContainerProps {
 }
 
 export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
-  suggestions,
+  suggestions: incomingSuggestions,
   onPlanAccepted,
   onPlanRejected,
   disabled,
 }) => {
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const { data: currentUser } = useCurrentUserDataQuery();
+  const activities = currentUser?.activities;
+  const [cachedData, setCachedData] = useLocalStorage<{
+    suggestions: SuggestionBase[];
+    timestamp: number;
+  } | null>("plan_building_suggestions", null);
+  
+
+  const suggestions = useMemo(() => {
+    let mergedSuggestions: SuggestionBase[] = [];
+
+    if (cachedData && areSuggestionsValid(cachedData.timestamp)) {
+      mergedSuggestions = [...cachedData.suggestions];
+    }
+
+    if (incomingSuggestions.length > 0) {
+      incomingSuggestions.forEach((incomingSuggestion) => {
+        const index = mergedSuggestions.findIndex(
+          (s) => s.type === incomingSuggestion.type
+        );
+        if (index !== -1) {
+          mergedSuggestions[index] = incomingSuggestion;
+        } else {
+          mergedSuggestions.push(incomingSuggestion);
+        }
+      });
+
+      setCachedData({
+        suggestions: mergedSuggestions,
+        timestamp: Date.now(),
+      });
+    }
+
+    return mergedSuggestions;
+  }, [incomingSuggestions]);
+
   const goalSuggestion = useMemo(
     () =>
       suggestions.filter((s) => s.type === "plan_goal").pop() as
@@ -221,6 +303,30 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
         | undefined,
     [suggestions]
   );
+
+  const allUserActivities: Array<{
+    id: string;
+    name: string;
+    emoji?: string;
+    measure: string;
+  }> = useMemo(() => {
+    const existentActivities = activities?.map((a) => ({
+      id: a.id,
+      name: a.title,
+      emoji: a.emoji,
+      measure: a.measure,
+    })) ?? [];
+
+    const suggestedActivities = activitiesSuggestion?.data.activities.map(
+      (a) => ({
+        id: a.id,
+        name: a.name,
+        emoji: a.emoji,
+        measure: a.measure,
+      })
+    ) ?? [];
+    return [...existentActivities, ...suggestedActivities];
+  }, [activities, activitiesSuggestion]);
 
   const planTypeSuggestion = useMemo(
     () =>
@@ -254,14 +360,15 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
     [suggestions]
   );
 
-  // Only show if we have at least a goal
-  if (!goalSuggestion) return null;
-
   const isPlanComplete = Boolean(
     goalSuggestion &&
       activitiesSuggestion &&
       planTypeSuggestion &&
-      sessionsSuggestion
+      (planTypeSuggestion.data.plan_type === "specific"
+        ? sessionsSuggestion
+        : true) &&
+      milestonesSuggestion &&
+      finishingDateSuggestion
   );
 
   const handleAccept = async () => {
@@ -269,13 +376,25 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
 
     try {
       await onPlanAccepted({
-        goal: goalSuggestion.data.goal,
+        goal: goalSuggestion!.data.goal,
         activities: activitiesSuggestion!.data.activities,
         planType: planTypeSuggestion!.data.plan_type,
         sessions: sessionsSuggestion!.data.sessions,
-        milestones: milestonesSuggestion?.data.milestones,
+        milestones: milestonesSuggestion?.data.milestones.map((m) => ({
+          description: m.description,
+          date: new Date(m.date).toISOString(),
+          progress: m.progress,
+          criteria: m.criteria
+            ?.filter((c) => "activity_id" in c)
+            .map((c) => ({
+              activity_id: (c as any).activity_id,
+              quantity: (c as any).quantity,
+            })),
+        })),
         finishing_date: finishingDateSuggestion?.data.finishing_date,
+        created_at: new Date().toISOString(),
       });
+      setCachedData(null);
       toast.success("Plan created successfully");
     } catch (error) {
       toast.error("Failed to create plan");
@@ -291,15 +410,11 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
     }
   };
 
-  return (
-    <div className="flex flex-col gap-4 bg-white p-4 rounded-lg shadow-sm">
-      <PlanGoalSnippet goal={goalSuggestion.data.goal} />
+  if (!goalSuggestion) return null;
 
-      {activitiesSuggestion && (
-        <PlanActivitiesSnippet
-          activities={activitiesSuggestion.data.activities}
-        />
-      )}
+  return (
+    <div className="max-h-[200px] overflow-y-auto flex flex-col gap-4 bg-white p-4 rounded-lg shadow-sm">
+      {goalSuggestion && <PlanGoalSnippet goal={goalSuggestion.data.goal} />}
 
       {finishingDateSuggestion && (
         <PlanFinishingDateSnippet
@@ -308,18 +423,37 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
         />
       )}
 
+      {activitiesSuggestion && (
+        <PlanActivitiesSnippet
+          activities={activitiesSuggestion.data.activities}
+        />
+      )}
+
+      {milestonesSuggestion && (
+        <PlanMilestonesSnippet
+          milestones={milestonesSuggestion.data.milestones.map((m) => ({
+            description: m.description,
+            date: new Date(m.date).toISOString(),
+            progress: m.progress,
+            criteria: m.criteria
+              ?.filter((c) => "activity_id" in c)
+              .map((c) => ({
+                activity_id: (c as any).activity_id,
+                quantity: (c as any).quantity,
+              })),
+          }))}
+          activities={allUserActivities}
+        />
+      )}
+
       {planTypeSuggestion && (
         <PlanTypeSnippet planType={planTypeSuggestion.data.plan_type} />
       )}
 
       {sessionsSuggestion && (
-        <PlanSessionsSnippet sessions={sessionsSuggestion.data.sessions} />
-      )}
-
-      {milestonesSuggestion && (
-        <PlanMilestonesSnippet
-          milestones={milestonesSuggestion.data.milestones}
-          activities={activitiesSuggestion?.data.activities}
+        <PlanSessionsSnippet
+          sessions={sessionsSuggestion.data.sessions}
+          activities={allUserActivities}
         />
       )}
 

@@ -43,7 +43,7 @@ class Activity(BaseModel):
 
 class ActivityAnalysis(BaseModel):
     activities: List[Activity] = Field(
-        ..., description="List of activities with details"
+        ..., description="List of user mentioned activities with details"
     )
 
 
@@ -58,9 +58,7 @@ class Session(BaseModel):
     activity_name: str = Field(
         ..., description="Activity name associated with the session"
     )
-    activity_id: str = Field(
-        ..., description="Activity id associated with the session"
-    )
+    activity_id: str = Field(..., description="Activity id associated with the session")
     quantity: float = Field(
         ..., description="Quantity for the session based on the activity's measure"
     )
@@ -81,6 +79,15 @@ class TimesPerWeekFrequencyExtraction(BaseModel):
 class MilestoneAnalysis(BaseModel):
     milestones: List[PlanMilestone] = Field(
         ..., description="List of milestones for the plan"
+    )
+
+
+class FinishingDateAnalysis(BaseModel):
+    finishing_date: str = Field(
+        ..., description="The finishing date in YYYY-MM-DD format"
+    )
+    explanation: Optional[str] = Field(
+        None, description="Optional explanation for the chosen date"
     )
 
 
@@ -121,7 +128,8 @@ class PlanActivitiesSuggestion(AssistantSuggestion):
             data={
                 "activities": [
                     {
-                        "activity_name": activity.activity_name,
+                        "id": str(ObjectId()),
+                        "name": activity.activity_name,
                         "emoji": activity.emoji,
                         "measure": activity.measure,
                     }
@@ -164,15 +172,6 @@ class PlanSessionsSuggestion(AssistantSuggestion):
             return cls(data={"sessions": sessions_data.times_per_week_frequency})
 
 
-class FinishingDateAnalysis(BaseModel):
-    finishing_date: str = Field(
-        ..., description="The finishing date in YYYY-MM-DD format"
-    )
-    explanation: Optional[str] = Field(
-        None, description="Optional explanation for the chosen date"
-    )
-
-
 class PlanFinishingDateSuggestion(AssistantSuggestion):
     type: str = "plan_finishing_date"
 
@@ -196,11 +195,13 @@ plan_creation_flowchart = {
             "Based on the conversation history, did the user explicitly express interest in creating a new plan or goal?\n\n"
             "Choose:\n"
             '- "Yes" if the user has clearly indicated they want to create a new plan.\n'
+            '- "Yes_PlanCreationWasJustConcluded" if you have been talking about the plan creation process and the user just accepted it.\n'
             '- "No_GeneralConversation" if the user is just having a general conversation or discussing something else.\n'
             '- "No_UserRejected" if the user has recently rejected your plan suggestion.'
         ),
         connections={
             "Yes": "AnalyzeGoal",
+            "Yes_PlanCreationWasJustConcluded": "Converse",
             "No_GeneralConversation": "Converse",
             "No_UserRejected": "AskWhyRejected",
         },
@@ -225,14 +226,16 @@ plan_creation_flowchart = {
             "Choose:\n"
             "- \"AlreadyExtractedGoal\" if there is a 'System' message that says that the goal was already extracted and the user did not invalidate the extraction. Else, pick one of the following:\n"
             '- "NoGoalSpecified" if no goal was specified.\n'
-            "- \"ValidGoal\" if the goal clear, concise and outcome-driven. (e.g. 'read a book a month' or 'i want to train four times a week')\n"
-            '- "InvalidGoal" if the goal is not clear or if the user has explictly requested to change it. '
+            '- "CompletelyUnclearGoal" if the goal was very confusing and not summarizable in one sentence.\n'
+            "- \"ValidGoal\" if the goal is clear and concise. To be clear a goal just needs to be summarizable in one outcome-driven sentence, like 'read a book a month', 'i want to train four times a week' or 'i want to get in better shape'.\n"
+            '- "RedefineGoal" if the user has explicitly requested to change the goal.'
         ),
         connections={
             "AlreadyExtractedGoal": "AnalyzeFinishingDateHistory",
             "NoGoalSpecified": "AskAboutGoal",
-            "InvalidGoal": "RefineGoal",
+            "CompletelyUnclearGoal": "RefineGoal",
             "ValidGoal": "ExtractGoal",
+            "RedefineGoal": "ExtractGoal",
         },
     ),
     "AskAboutGoal": Node(
@@ -263,14 +266,14 @@ plan_creation_flowchart = {
             '- "NeverDiscussed" if finishing date has never been mentioned\n'
             '- "ValidDate" if a clear finishing date was specified and explicitly agreed or suggested by the user\n'
             '- "ExplicitlyDeclined" if user has explicitly stated they don\'t want to set an end date\n'
-            '- "UnclearDate" if a date was mentioned but needs clarification'
+            '- "RedefineFinishingDate" if the user has explicitly requested to change the finishing date.'
         ),
         connections={
             "AlreadyExtractedFinishingDate": "AnalyzeActivities",
             "NeverDiscussed": "SuggestFinishingDate",
             "ValidDate": "ExtractFinishingDate",
+            "RedefineFinishingDate": "ExtractFinishingDate",
             "ExplicitlyDeclined": "AnalyzeActivities",
-            "UnclearDate": "ClarifyFinishingDate",
         },
     ),
     "SuggestFinishingDate": Node(
@@ -281,13 +284,6 @@ plan_creation_flowchart = {
             "2. Typical timeframes for similar goals\n"
             "3. Any time constraints mentioned by the user\n"
             "Make it clear that setting a finishing date is optional but can help with motivation and planning."
-        ),
-        temperature=1.0,
-    ),
-    "ClarifyFinishingDate": Node(
-        text=(
-            "Ask the user to clarify the finishing date mentioned in the conversation.\n"
-            "Guide them to specify a clear date and explain why that date might be suitable."
         ),
         temperature=1.0,
     ),
@@ -303,13 +299,13 @@ plan_creation_flowchart = {
     ),
     "AnalyzeActivities": Node(
         text=(
-            "Analyze the activities mentioned in the conversation history regarding the new plan and it's state in the conversation history. Choose:\n"
-            "- \"AlreadyExtractedActivitiesAndNotInvalidated\" if there is a 'System' message that says that the activities were already extracted and the user did not invalidate the extraction.\n"
-            "- \"AlreadyExtractedActivitiesAndInvalidated\" if there is a 'System' message that says that the activities were already extracted and the user asked to refine the extraction.\n"
+            "Analyze the activity or activities mentioned in the conversation history regarding the new plan and it's state in the conversation history.\n"
+            "The minimum number of activties for the plan is one.  Choose:"
+            "- \"AlreadyExtractedActivitiesAndNotInvalidated\" if there is a 'System' message that says that the activity or activities were already extracted and the user did not invalidate the extraction.\n"
+            "- \"AlreadyExtractedActivitiesAndInvalidated\" if there is a 'System' message that says that the activity or activities were already extracted and the user asked to refine the extraction.\n"
             '- "NoActivitiesSpecified" if no activities have been mentioned yet\n'
-            '- "IncompleteActivities" if activities were mentioned but the way to measure it or the title were not mentioned at all.'
-            '- "ValidActivities" if we have complete activities with all required details\n'
-            'Note that the plan only needs to have minimum one activity.'
+            '- "IncompleteActivities" if an activity or activities were mentioned but how it would be measured or it\'s title was not mentioned at all.'
+            '- "ValidActivities" if we have complete activity or activities with measure and title specified\n'
         ),
         connections={
             "AlreadyExtractedActivitiesAndNotInvalidated": "AnalyzeMilestonesHistory",
@@ -335,7 +331,8 @@ plan_creation_flowchart = {
     ),
     "ExtractActivities": Node(
         text=(
-            "Extract and format the list of the activities that the user mentioned in the conversation history as part of the new plan.\n"
+            "Analyse the conversation history to extract and format the list of the activities that the user mentioned as part of the new plan.\n"
+            "Note that these activities are not necessarily the ones that the user previously had."
         ),
         output_schema=ActivityAnalysis,
         connections={"default": "AnalyzeMilestonesHistory"},
@@ -367,17 +364,18 @@ plan_creation_flowchart = {
             "1. Be tracked automatically based on activity criteria (e.g. a milestone of reading 500 pages would be automatically tracked by activities 'reading' measured in 'pages')\n"
             "2. Be tracked manually if it can't be measured by activities (e.g. 'Feel more energetic')\n"
             "Suggest both types if appropriate for the goal. If you want to provide examples, provide one at maximum."
+            "Always make a smooth conversation transition if the previous user input was not about milestones."
         ),
         temperature=1.0,
     ),
     "ClarifyMilestones": Node(
         text=(
-            "Ask the user to clarify the milestones mentioned in the conversation.\n"
-            "For each milestone that needs clarification, ask:\n"
-            "1. What's the specific target date?\n"
-            "2. Should progress be tracked automatically through activities or manually?\n"
-            "3. If automatic, which activities contribute and what quantities are needed?\n"
-            "Guide them to specify clear, measurable milestones."
+            "The milestones discussion was unclear. Clarify the milestones mentioned in the conversation.\n"
+            "Milestones can be manual or automatic."
+            "If automatic, they must have criteria defined based on certain activities and quantity"
+            "An example of an automatic milestone for a reading plan could be \"read 'start with why' book\" comprised of the activity 'reading' measured in 'pages' with a total of 256 pages (book length)."
+            "The milestone would then advance as the user logs 'reading' activitiies, which are measured in pages"
+            "Manual ones is just that the user manually set's the percentage progress in the plan dashboard"
         ),
         temperature=1.0,
     ),
@@ -400,17 +398,13 @@ plan_creation_flowchart = {
             "Analyze how the user wants to structure their plan (plan type) and it's state in the conversation history. Choose:\n"
             "- \"AlreadyExtractedPlanTypeAndNotInvalidated\" if there is a 'System' message that says that the plan type was already extracted and the user did not invalidate the extraction.\n"
             "- \"AlreadyExtractedPlanTypeAndInvalidated\" if there is a 'System' message that says that the plan type was already extracted and the user asked to refine the extraction.\n"
-            '- "NoPlanTypeSpecified" if no preference has been mentioned\n'
-            '- "UnclearPreference" if they show mixed signals about specific dates vs weekly goals\n'
-            '- "NeedsContextification" if their preference needs more context (e.g. "regularly")\n'
+            '- "NoPlanTypeSpecified" if no plan type has been mentioned by the user yet\n'
             '- "ValidPlanType" if we have a clear preference for either specific dates or weekly frequency'
         ),
         connections={
             "AlreadyExtractedPlanTypeAndNotInvalidated": "AnalyzeSessions",
             "AlreadyExtractedPlanTypeAndInvalidated": "ExtractPlanType",
             "NoPlanTypeSpecified": "AskAboutPlanType",
-            "UnclearPreference": "ClarifyPlanTypePreference",
-            "NeedsContextification": "ContextifyPlanType",
             "ValidPlanType": "ExtractPlanType",
         },
     ),
@@ -419,6 +413,7 @@ plan_creation_flowchart = {
             "Ask the user how they want to structure their plan, explaining the options:\n"
             "1. Specific dates for each session\n"
             "2. A weekly frequency target"
+            "Always make a smooth conversation transition if the previous user input was not about plan type."
         ),
         temperature=1.0,
     ),
@@ -426,13 +421,6 @@ plan_creation_flowchart = {
         text=(
             "Help the user choose between specific dates and weekly frequency.\n"
             "Point out their mixed signals and guide them to pick one approach."
-        ),
-        temperature=1.0,
-    ),
-    "ContextifyPlanType": Node(
-        text=(
-            "Ask the user to clarify what they mean by their plan structure preference.\n"
-            "Help them understand the difference between specific dates and weekly frequency."
         ),
         temperature=1.0,
     ),
@@ -461,40 +449,22 @@ plan_creation_flowchart = {
     "AnalyzeSessions": Node(
         text=(
             "Analyze the session information provided and it's state in the conversation history. Choose:\n"
-            "- \"AlreadyExtractedSessionsAndNotInvalidated\" if there is a 'System' message that says that the sessions were already extracted and the user did not invalidate the extraction.\n"
-            "- \"AlreadyExtractedSessionsAndInvalidated\" if there is a 'System' message that says that the sessions were already extracted and the user asked to refine the extraction.\n"
-            '- "NoSessionsSpecified" if no schedule information provided\n'
-            '- "PartialSchedule" if some dates/frequencies are mentioned but incomplete\n'
-            '- "UnrealisticSchedule" if the proposed schedule might be too ambitious\n'
-            '- "ValidSessions" if we have a complete, realistic schedule'
+            "- \"AlreadyExtractedSessionsAndNotInvalidated\" if there is a 'System' message that specifically says 'Extracted sessions' (not to be condused with 'Extracted plan_type') and the user did not invalidate the extraction.\n"
+            "- \"AlreadyExtractedSessionsAndInvalidated\" if there is a 'System' message that specifically says 'Extracted sessions' (not to be condused with 'Extracted plan_type') and the user asked to refine the extraction.\n"
+            '- "NoSessionsMentioned" if you haven\'t yet talked about sessions\n'
+            '- "SessionsSpecifiedAndValid" if the user did specift their intended sessions and the date can be inferred.'
         ),
         connections={
-            "AlreadyExtractedSessionsAndNotInvalidated": "AnalyzeTimesPerWeek",
+            "AlreadyExtractedSessionsAndNotInvalidated": "FinalizePlan",
             "AlreadyExtractedSessionsAndInvalidated": "ExtractSessions",
-            "NoSessionsSpecified": "AskAboutSessions",
-            "PartialSchedule": "CompleteScheduleDetails",
-            "UnrealisticSchedule": "ReviseSchedule",
-            "ValidSessions": "ExtractSessions",
+            "NoSessionsMentioned": "AskAboutSessions",
+            "SessionsSpecifiedAndValid": "ExtractSessions",
         },
     ),
     "AskAboutSessions": Node(
         text=(
             "Ask the user to specify their preferred schedule.\n"
             "Guide them to provide specific dates and quantities for each activity."
-        ),
-        temperature=1.0,
-    ),
-    "CompleteScheduleDetails": Node(
-        text=(
-            "Ask the user to fill in the missing schedule details.\n"
-            "Focus on getting complete information for dates and quantities."
-        ),
-        temperature=1.0,
-    ),
-    "ReviseSchedule": Node(
-        text=(
-            "Express concern about the schedule's ambition level.\n"
-            "Help the user create a more realistic schedule that they can maintain."
         ),
         temperature=1.0,
     ),
@@ -542,6 +512,7 @@ plan_creation_flowchart = {
     "FinalizePlan": Node(
         text=(
             "Compile the final plan summary and send it to the user for double-checking."
+            "The order of the summary should follow the order on which they were discussed."
         )
     ),
 }
@@ -610,16 +581,12 @@ class PlanCreationAssistant:
         )
 
         system_prompt = (
-            "You are an AI plan creation assistant helping the user create a new plan. "
-            "You can help define the following aspects of a plan: "
-            "1. The goal of the plan (and the emoji representing it)"
-            "2. The project milestones (if any / optional)"
-            "3. The project finishing date (if known / optional)"
-            "4. The activities involved "
-            "5. The type of plan (specific dates or times per week) "
-            "6. The sessions/frequency "
-            "Analyze the available context (especially the conversation history) to understand how to best continue the conversation given your goal. "
-            "Write in prose and concise messages and be friendly. No matter what you're tasked with, always make smooth transitions between the user last input & your message. Remember, anything that you'd asked to extract must be solely based on the conversation history."
+            "You are an attentive listener AI coach assistant helping the user create a new plan. "
+            "The plan has several ordered stages: goal, activities, milestones, plan type (either specific dates or times per week), sessions / frequency and finishing date, by that order."
+            "You will be tasked with a specific stage of the plan creation process to help in."
+            "Anytime an explicit reasoning is requested, it must always start by analyzing last user's input in the conversation history."
+            "\n"
+            "Be friendly, write in prose and be very concise."
         )
 
         self.framework = FlowchartLLMFramework(plan_creation_flowchart, system_prompt)
@@ -632,7 +599,7 @@ class PlanCreationAssistant:
 
         context = {
             "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "existing_activities": [
+            "previous_existing_activities": [
                 {
                     "title": activity.title,
                     "emoji": activity.emoji,
@@ -640,7 +607,7 @@ class PlanCreationAssistant:
                 }
                 for activity in existing_activities
             ],
-            "existing_plans": [
+            "previous_existing_plans": [
                 self.plan_controller.get_readable_plan(plan) for plan in existing_plans
             ],
             "conversation_history": self.memory.read_all_as_str(
@@ -668,20 +635,19 @@ class PlanCreationAssistant:
                     suggestions.append(PlanGoalSuggestion.from_goal_analysis(value))
                     self.write_system_extraction_message("goal", {"goal": value.goal})
                 elif key.startswith("ExtractActivities_"):
-                    suggestions.append(
-                        PlanActivitiesSuggestion.from_activity_analysis(value)
-                    )
+                    activities_suggestions = PlanActivitiesSuggestion.from_activity_analysis(value)
+                    suggestions.append(activities_suggestions)
                     self.write_system_extraction_message(
                         "activities",
                         {
                             "activities": [
                                 {
-                                    "activity_name": activity.activity_name,
-                                    "activity_id": str(ObjectId()),
-                                    "emoji": activity.emoji,
-                                    "measure": activity.measure,
+                                    "id": activity.get("id"),
+                                    "name": activity.get("name"),
+                                    "emoji": activity.get("emoji"),
+                                    "measure": activity.get("measure"),
                                 }
-                                for activity in value.activities
+                                for activity in activities_suggestions.data.get("activities")
                             ]
                         },
                     )

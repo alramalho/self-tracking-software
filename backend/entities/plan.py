@@ -7,7 +7,7 @@ from bson import ObjectId
 class PlanSession(BaseModel):
     date: str
     activity_id: str
-    descriptive_guide: str = Field(..., description="A note describing the session")
+    descriptive_guide: str = Field(default="", description="A note describing the session")
     quantity: int
 
 

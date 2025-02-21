@@ -135,7 +135,7 @@ class FlowchartLLMFramework:
                         str,
                         Field(
                             ...,
-                            description="Your step by step reasoning analysing how do address the instruction within <instruction>, culminating in a 'decision'. The 'Context' nearby provides an history of your previous thought chain, possibly relevant for instructions that seemingly refer pre-existing content.",
+                            description="Your internal step by step reasoning analysing how do address the instruction within <instruction>, culminating in a 'decision'. The 'Context' nearby provides an history of your previous thought chain, possibly relevant for instructions that seemingly refer pre-existing content.",
                         ),
                     ),
                     "decision": (
@@ -161,17 +161,35 @@ class FlowchartLLMFramework:
                 return None, result.decision, None
             else:
                 if node.output_schema:
+                    # Create a new schema that includes reasoning field and inherits from the output schema
+                    extension_fields = {
+                        "reasoning": (
+                            str,
+                            Field(
+                                ...,
+                                description="Your internal step by step reasoning analysing how do address the instruction within <instruction>, culminating in a 'decision'. The 'Context' nearby provides an history of your previous thought chain, possibly relevant for instructions that seemingly refer pre-existing content.",
+                            ),
+                        ),
+                    }
+                    
+                    ExtendedSchema = create_model(
+                        "ExtendedSchema",
+                        __base__=node.output_schema,
+                        **extension_fields,
+                    )
+                    
                     schema = await ask_schema_async(
                         text=full_prompt,
                         system=self.system_prompt,
-                        pymodel=node.output_schema,
+                        pymodel=ExtendedSchema,
                         model=LLM_MODEL,
                     )
                     self.extracted[node_instance_id] = schema
+                    self.reasoning[node_instance_id] = schema.reasoning
                     return schema, None, None # if output schema is provided, the return is the result of the schema
                 else:
                     class ReasoningSchema(BaseModel):
-                        reasoning: str = Field(..., description="Your step by step reasoning analysing how do address the instruction within <instruction>, culminating in a 'decision'. The 'Context' nearby provides an history of your previous thought chain, possibly relevant for instructions that seemingly refer pre-existing content.")
+                        reasoning: str = Field(..., description="Your internal step by step reasoning analysing how do address the instruction within <instruction>, culminating in a 'decision'. The 'Context' nearby provides an history of your previous thought chain, possibly relevant for instructions that seemingly refer pre-existing content.")
                         message: str = Field(..., description="The actual message to be sent to the user.")
 
                     result = await ask_schema_async(
@@ -181,7 +199,8 @@ class FlowchartLLMFramework:
                         model=LLM_MODEL,
                         temperature=temperature,
                     )
-                    self.extracted[node_instance_id] = result
+                    self.reasoning[node_instance_id] = result.reasoning
+                    self.extracted[node_instance_id] = {"message": result.message}
                     return None, None, result.message # if an end node, the return is the actual output message of the system
         except Exception as e:
             logger.error(f"Error in LLM function: {e}")

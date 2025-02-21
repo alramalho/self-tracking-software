@@ -505,19 +505,14 @@ const LogPage: React.FC = () => {
     }
   }, [messageId, messageText, messagesData.isSuccess, messagesData.data]);
 
-  // Initialize suggestion handlers
   useEffect(() => {
-    // Register all suggestion handlers
     suggestionRegistry.register(activitySuggestionHandler);
 
-    // Cleanup on unmount
     return () => {
-      // Clear all handlers
       suggestionRegistry.clear();
     };
-  }, []); // Empty deps array since we only want to register once
+  }, []);
 
-  // Separate activity and plan suggestions
   const activitySuggestions = useMemo(
     () => suggestions.filter((s) => s.type === "activity"),
     [suggestions]
@@ -532,15 +527,12 @@ const LogPage: React.FC = () => {
     try {
       await authedApi.post("/create-plan", plan);
 
-      // Send system message to maintain AI memory
       await authedApi.post("/ai/send-system-message", {
         message: `User accepted the plan with goal: ${plan.goal}`,
       });
 
-      // Remove all plan suggestions
       setSuggestions((prev) => prev.filter((s) => !s.type.startsWith("plan_")));
 
-      // Send a message to the AI to continue the conversation
       sendMessage("Great, I've accepted the plan!", false);
     } catch (error) {
       toast.error("Failed to create plan");
@@ -550,15 +542,12 @@ const LogPage: React.FC = () => {
 
   const handlePlanRejected = async () => {
     try {
-      // Send system message to maintain AI memory
       await authedApi.post("/ai/send-system-message", {
         message: "User rejected the plan creation",
       });
 
-      // Remove all plan suggestions
       setSuggestions((prev) => prev.filter((s) => !s.type.startsWith("plan_")));
 
-      // Send a message to the AI to continue the conversation
       sendMessage(
         "I don't want to create this plan. Let's try something else.",
         false
@@ -668,7 +657,27 @@ const LogPage: React.FC = () => {
 
                 <motion.div
                   variants={itemVariants}
-                  className="flex-1 flex flex-col items-center justify-center gap-4 p-4"
+                  className="flex flex-col gap-4 px-4 mb-4"
+                >
+                  {activitySuggestions.length > 0 && (
+                    <SuggestionContainer
+                      suggestions={activitySuggestions}
+                      onSuggestionHandled={handleSuggestionHandled}
+                      isConnected={isConnected}
+                    />
+                  )}
+
+                  <PlanBuildingContainer
+                    suggestions={planSuggestions}
+                    onPlanAccepted={handlePlanAccepted}
+                    onPlanRejected={handlePlanRejected}
+                    disabled={!isConnected}
+                  />
+                </motion.div>
+                
+                <motion.div
+                  variants={itemVariants}
+                  className="flex-1 flex flex-col items-center justify-center gap-4 p-4 pb-[5.4rem]"
                 >
                   <AnimatePresence mode="wait">
                     {!isConnected ? (
@@ -747,27 +756,6 @@ const LogPage: React.FC = () => {
                   )}
                 </motion.div>
 
-                <motion.div
-                  variants={itemVariants}
-                  className="flex flex-col gap-4 px-4 mb-4"
-                >
-                  {activitySuggestions.length > 0 && (
-                    <SuggestionContainer
-                      suggestions={activitySuggestions}
-                      onSuggestionHandled={handleSuggestionHandled}
-                      isConnected={isConnected}
-                    />
-                  )}
-
-                  {planSuggestions.length > 0 && (
-                    <PlanBuildingContainer
-                      suggestions={planSuggestions}
-                      onPlanAccepted={handlePlanAccepted}
-                      onPlanRejected={handlePlanRejected}
-                      disabled={!isConnected}
-                    />
-                  )}
-                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>

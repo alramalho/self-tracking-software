@@ -10,7 +10,7 @@ def text_to_speech(text: str, model: str = OPENAI_TTS_MODEL) -> bytes:
         model = model.replace("openai:", "")  # Remove the openai: prefix
         with client.audio.speech.with_streaming_response.create(
             model=model,
-            voice='alloy',
+            voice='echo',
             input=text,
         ) as response:
             byte_stream = BytesIO()
