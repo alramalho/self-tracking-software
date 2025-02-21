@@ -9,7 +9,7 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -61,6 +61,9 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    userSelect: 'none' as const,
+    WebkitUserSelect: 'none' as const,
+    touchAction: 'none' as const,
   };
 
   return (
@@ -90,13 +93,20 @@ const PlansRenderer: React.FC = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [orderedPlans, setOrderedPlans] = useState<ApiPlan[]>([]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(TouchSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 10,
+    },
+  });
+
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250,
+      tolerance: 5,
+    },
+  });
+
+  const sensors = useSensors(mouseSensor, touchSensor);
 
   useEffect(() => {
     if (userData?.plans) {
