@@ -31,8 +31,8 @@ export interface PlanActivitySuggestionData extends SuggestionBase {
   type: "plan_activities";
   data: {
     activities: Array<{
-      activity_id: string;
-      activity_name: string;
+      id: string;
+      name: string;
       emoji: string;
       measure: string;
     }>;
@@ -49,14 +49,13 @@ export interface PlanTypeSuggestionData extends SuggestionBase {
 export interface PlanSessionsSuggestionData extends SuggestionBase {
   type: "plan_sessions";
   data: {
-    sessions:
-      | Array<{
-          date: string;
-          activity_id: string;
-          activity_name: string;
-          quantity: number;
-        }>
-      | number; // number for times_per_week frequency
+    sessions: Array<{
+      date: string;
+      activity_id: string;
+      activity_name: string;
+      quantity: number;
+      created_at?: string;
+    }>;
   };
 }
 

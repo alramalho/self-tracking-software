@@ -7,10 +7,9 @@ from ai.assistant.memory import DatabaseMemory
 from ai.llm import ask_schema, ask_text
 from datetime import datetime
 from ai.assistant.activity_extractor import ActivityExtractorAssistant, ExtractedActivityEntry
-from ai.assistant.week_analyser import WeekAnalyserAssistant, EnrichedPlanSessions, ExtractedTimesPerWeek 
 from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
-from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS, REPLICATE_TTS_MODEL
+from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS, OPENAI_TTS_MODEL
 from ai.assistant.plan_creation_assistant import PlanCreationAssistant
 
 from gateways.activities import ActivitiesGateway
@@ -47,33 +46,22 @@ async def talk_with_assistant(
     try:
         user = users_gateway.get_user_by_id(user_id)
         memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
-        user_activities = activities_gateway.get_all_activities_by_user_id(user_id)
-        user_plans = plan_controller.get_all_user_active_plans(user)
         
-        if datetime.now().weekday() in [5, 6] and posthog.feature_enabled("week-analyser-bot-access", user.id): 
-            assistant = WeekAnalyserAssistant(
-                memory=memory,
-                user=user,
-                user_activities=user_activities,
-                user_plans=user_plans,
-                websocket=websocket,
-            )
-        else:
-            assistant = PlanCreationAssistant(
-                user=user,
-                memory=memory,
-                websocket=websocket,
-            )
-            # assistant = PlanCoachAgent(
-            #     memory=memory,
-            #     user=user,
-            # )
-            # assistant = ActivityExtractorAssistant(
-            #     memory=memory,
-            #     user=user,
-            #     user_activities=user_activities,
-            #     websocket=websocket,
-            # )
+        assistant = PlanCreationAssistant(
+            user=user,
+            memory=memory,
+            websocket=websocket,
+        )
+        # assistant = PlanCoachAgent(
+        #     memory=memory,
+        #     user=user,
+        # )
+        # assistant = ActivityExtractorAssistant(
+        #     memory=memory,
+        #     user=user,
+        #     user_activities=user_activities,
+        #     websocket=websocket,
+        # )
             
         return await assistant.get_response(
             user_input=user_input,
@@ -93,7 +81,7 @@ async def process_message(
     output_mode: str,
     audio_data: str = None,
     audio_format: str = None,
-) -> Tuple[str, Optional[bytes], Union[List[ExtractedActivityEntry], EnrichedPlanSessions, ExtractedTimesPerWeek]]:
+) -> Tuple[str, Optional[bytes], Union[List[ExtractedActivityEntry]]]:
     loop = asyncio.get_event_loop()
     emotions = []
     message_id = str(ObjectId())
@@ -135,7 +123,7 @@ async def process_message(
     audio_response = None
     if output_mode == "voice":
         audio_response = await loop.run_in_executor(
-            executor, tts.text_to_speech, text_response, REPLICATE_TTS_MODEL
+            executor, tts.text_to_speech, text_response, OPENAI_TTS_MODEL
         )
 
     return text_response, audio_response
