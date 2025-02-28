@@ -170,12 +170,12 @@ const Notifications: React.FC<NotificationsProps> = () => {
     <>
       {latestEngagementNotification && (
         <div
-          className={`relative bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-start mb- cursor-pointer`}
+          className={`relative bg-opacity-50 p-2 backdrop-blur-sm rounded-2xl flex items-start mb-2 cursor-pointer`}
           onClick={() =>
             handleNotificationAction(latestEngagementNotification, "respond")
           }
         >
-          <div className="self-end flex-shrink-0 mr-4">
+          <div className="self-end flex-shrink-0 mr-2">
             <div className="rounded-full">
               <ScanFace className={`w-12 h-12 ${variants.text}`} />
             </div>
@@ -193,7 +193,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
               e.stopPropagation();
               handleNotificationAction(latestEngagementNotification, "dismiss");
             }}
-            className="absolute top-3 right-3 p-[3px] rounded-full transition-colors duration-200 flex items-center justify-center bg-gray-500 "
+            className="absolute top-1 right-1 p-[3px] rounded-full transition-colors duration-200 flex items-center justify-center bg-gray-500 "
             aria-label="Dismiss"
           >
             <X size={15} className="text-white" />
