@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  background-color: var(--appBackground, #F4F4F4);
+}
+
 .markdown ul {
   list-style-type: disc;
   list-style-position: inside;
