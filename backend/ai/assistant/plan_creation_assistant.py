@@ -198,7 +198,7 @@ plan_creation_flowchart = {
             '- "Yes_PlanCreationWasJustConcluded" if you have been talking about the plan creation process and the user just accepted it.\n'
             '- "No_GeneralConversation" if the user is just having a general conversation or discussing something else.\n'
             '- "No_UserRejected" if the user has recently rejected your plan suggestion.'
-            '- "No_ConversationJustStarted" if the conversation just started.'
+            '- "No_ConversationJustStarted" if the conversation just started and the conversation history is empty (or with just one user message).'
         ),
         connections={
             "Yes": "AnalyzeGoal",
@@ -579,6 +579,7 @@ class PlanCreationAssistant:
 
         self.memory.write(
             Message.new(
+                id=message_id,
                 text=user_input,
                 sender_name=self.user.name,
                 sender_id=self.user.id,

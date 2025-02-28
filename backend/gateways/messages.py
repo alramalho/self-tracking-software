@@ -36,6 +36,8 @@ class MessagesGateway:
         emotion_scores = {}
         emotion_counts = {}
         emotion_colors = {}  # Add dictionary for colors
+
+        print(f"Averaging emotions: {emotions}")
         
         # Aggregate scores and counts for each emotion
         for emotion in emotions:

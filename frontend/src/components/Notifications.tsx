@@ -11,6 +11,8 @@ import { Remark } from "react-remark";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { formatTimeAgo } from "@/lib/utils";
+import { Badge } from "./ui/badge";
+import AINotification from "./AINotification";
 
 interface NotificationsProps {}
 
@@ -169,36 +171,17 @@ const Notifications: React.FC<NotificationsProps> = () => {
   return (
     <>
       {latestEngagementNotification && (
-        <div
-          className={`relative bg-opacity-50 p-2 backdrop-blur-sm rounded-2xl flex items-start mb-2 cursor-pointer`}
+        <AINotification
+          message={latestEngagementNotification.message}
+          createdAt={latestEngagementNotification.created_at}
+          onDismiss={(e) => {
+            e.stopPropagation();
+            handleNotificationAction(latestEngagementNotification, "dismiss");
+          }}
           onClick={() =>
             handleNotificationAction(latestEngagementNotification, "respond")
           }
-        >
-          <div className="self-end flex-shrink-0 mr-2">
-            <div className="rounded-full">
-              <ScanFace className={`w-12 h-12 ${variants.text}`} />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <div className="p-2 markdown text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
-              <Remark>{latestEngagementNotification.message}</Remark>
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {formatTimeAgo(latestEngagementNotification.created_at)}
-            </div>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleNotificationAction(latestEngagementNotification, "dismiss");
-            }}
-            className="absolute top-1 right-1 p-[3px] rounded-full transition-colors duration-200 flex items-center justify-center bg-gray-500 "
-            aria-label="Dismiss"
-          >
-            <X size={15} className="text-white" />
-          </button>
-        </div>
+        />
       )}
 
       {regularNotifications && regularNotifications.length > 0 && (
