@@ -20,6 +20,7 @@ import {
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import PlanCard from "./PlanCard";
@@ -193,11 +194,12 @@ const PlansRenderer: React.FC = () => {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
+        autoScroll={false}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-6">
           <SortableContext
             items={orderedPlans.map(plan => plan.id!)}
-            strategy={horizontalListSortingStrategy}
+            strategy={verticalListSortingStrategy}
           >
             {orderedPlans.map((plan, index) => (
               <SortablePlan
