@@ -192,6 +192,8 @@ class RecurrentCheckinAssistant:
 
         try:
             message, extracted = await framework.run(context)
+
+            self.memory.write(message)
             
             if isinstance(message, str):
                 return message.strip()

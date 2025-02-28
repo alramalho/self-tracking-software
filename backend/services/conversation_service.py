@@ -6,7 +6,10 @@ from gateways.database.mongodb import MongoDBGateway
 from ai.assistant.memory import DatabaseMemory
 from ai.llm import ask_schema, ask_text
 from datetime import datetime
-from ai.assistant.activity_extractor import ActivityExtractorAssistant, ExtractedActivityEntry
+from ai.assistant.activity_extractor import (
+    ActivityExtractorAssistant,
+    ExtractedActivityEntry,
+)
 from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS, OPENAI_TTS_MODEL
@@ -41,12 +44,16 @@ messages_gateway = MessagesGateway()
 
 
 async def talk_with_assistant(
-    user_id: str, user_input: str, websocket: WebSocket = None, message_id: str = None, emotions: List[Emotion] = []
+    user_id: str,
+    user_input: str,
+    websocket: WebSocket = None,
+    message_id: str = None,
+    emotions: List[Emotion] = [],
 ) -> str:
     try:
         user = users_gateway.get_user_by_id(user_id)
         memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
-        
+
         assistant = PlanCreationAssistant(
             user=user,
             memory=memory,
@@ -55,6 +62,8 @@ async def talk_with_assistant(
         # assistant = PlanCoachAgent(
         #     memory=memory,
         #     user=user,
+        #     websocket=websocket,
+        #     message_id=message_id,
         # )
         # assistant = ActivityExtractorAssistant(
         #     memory=memory,
@@ -62,7 +71,7 @@ async def talk_with_assistant(
         #     user_activities=user_activities,
         #     websocket=websocket,
         # )
-            
+
         return await assistant.get_response(
             user_input=user_input,
             message_id=message_id,
@@ -117,7 +126,15 @@ async def process_message(
     # Run talk_with_assistant in a separate thread
     text_response = await loop.run_in_executor(
         executor,
-        lambda: asyncio.run(talk_with_assistant(user_id, message, websocket, message_id, emotions))
+        lambda: asyncio.run(
+            talk_with_assistant(
+                user_id=user_id,
+                user_input=message,
+                websocket=websocket,
+                message_id=message_id,
+                emotions=emotions,
+            )
+        ),
     )
 
     audio_response = None
@@ -139,8 +156,11 @@ def initiate_recurrent_checkin(user_id: str) -> Notification:
         time_deviation_in_hours=SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS,
     )
 
+
 def get_recent_emotions(user_id: str) -> List[Emotion]:
-    messages = messages_gateway.get_recent_sent_messages(user_id, max_age_in_minutes=60, max_count=3)
+    messages = messages_gateway.get_recent_sent_messages(
+        user_id, max_age_in_minutes=60, max_count=3
+    )
     logger.warning(f"Recent messages: {[str(m) for m in messages]}")
     emotions = []
     for message in messages:

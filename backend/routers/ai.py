@@ -67,7 +67,7 @@ async def websocket_endpoint(websocket: WebSocket):
             async def emotion_polling():
                 while True:
                     await poll_emotions(websocket, user.id)
-                    await asyncio.sleep(20)
+                    await asyncio.sleep(2)
 
             # Start emotion polling as a background task
             emotion_task = asyncio.create_task(emotion_polling())
