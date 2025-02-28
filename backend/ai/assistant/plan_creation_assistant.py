@@ -198,13 +198,21 @@ plan_creation_flowchart = {
             '- "Yes_PlanCreationWasJustConcluded" if you have been talking about the plan creation process and the user just accepted it.\n'
             '- "No_GeneralConversation" if the user is just having a general conversation or discussing something else.\n'
             '- "No_UserRejected" if the user has recently rejected your plan suggestion.'
+            '- "No_ConversationJustStarted" if the conversation just started.'
         ),
         connections={
             "Yes": "AnalyzeGoal",
             "Yes_PlanCreationWasJustConcluded": "Converse",
             "No_GeneralConversation": "Converse",
             "No_UserRejected": "AskWhyRejected",
+            "No_ConversationJustStarted": "IntroduceYourself",
         },
+    ),
+    "IntroduceYourself": Node(
+        text=(
+            "Introduce yourself and how the conversation will proceed."
+        ),
+        temperature=1.0,
     ),
     "Converse": Node(
         text=(
@@ -581,10 +589,11 @@ class PlanCreationAssistant:
         )
 
         system_prompt = (
-            "You are an attentive listener AI coach assistant helping the user create a new plan. "
+            "You are an AI coach assistant helping the user create a new plan. "
             "The plan has several ordered stages: goal, activities, milestones, plan type (either specific dates or times per week), sessions / frequency and finishing date, by that order."
-            "You will be tasked with a specific stage of the plan creation process to help in."
-            "Anytime an explicit reasoning is requested, it must always start by analyzing last user's input in the conversation history."
+            "You will be tasked with a specific stage of the plan creation process to help in, where you will ask the user for input."
+            "Anytime an explicit reasoning is requested, it must always start by analyzing last user's input in the conversation history,"
+            "Always consider last user message when drafting a response, ensuring your response fits the conversation."
             "\n"
             "Be friendly, write in prose and be very concise."
         )

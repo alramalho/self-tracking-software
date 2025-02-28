@@ -101,7 +101,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center">
         <div className="flex flex-row gap-3 items-center text-center">
           <span className="mb-2 text-[40px]">🎯</span>
           <h2 className="text-xl font-bold tracking-tight text-gray-900">

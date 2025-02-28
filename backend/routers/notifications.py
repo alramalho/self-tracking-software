@@ -121,12 +121,17 @@ async def load_notifications(user: User = Depends(is_clerk_user)):
     notifications = [
         n
         for n in notification_manager.get_all_for_user(user.id)
-        if n.status != "concluded"
     ]
     notifications.sort(key=lambda x: x.created_at, reverse=True)
+    latest_engagment = next(n for n in notifications if n.type == "engagement") # filter to only include latest notifiaction of type 'engagament'
+    notifications = [n for n in notifications if n.status != "concluded"]
     for notification in notifications:
         if notification.status == "processed":
             notification_manager.mark_as_opened(notification.id)
+
+    notifications = [n for n in notifications if n.type != "engagement"]
+    if latest_engagment.status != "concluded":
+        notifications.append(latest_engagment)
     return {"notifications": notifications}
 
 
@@ -167,7 +172,7 @@ async def trigger_push_notification(
 
 @router.post("/clear-all-notifications")
 async def clear_all_notifications(user: User = Depends(is_clerk_user)):
-    notifications = notification_manager.get_all_for_user(user.id)
+    notifications = notification_manager.get_all_non_concluded_for_user(user.id)
     
     # Find the latest engagement notification
     latest_engagement = None

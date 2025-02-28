@@ -43,7 +43,7 @@ class NotificationManager:
 
     def create_or_get_notification(self, notification: Notification) -> Notification:
 
-        existing_notifications = self.get_all_for_user(notification.user_id)
+        existing_notifications = self.get_all_non_concluded_for_user(notification.user_id)
 
         # Get the date of the new notification
         notification_date = notification.created_at.date()
@@ -159,8 +159,16 @@ class NotificationManager:
     def get_notification(self, notification_id: str) -> Optional[Notification]:
         data = self.db_gateway.query("id", notification_id)
         return Notification(**data[0]) if data else None
-
+    
     def get_all_for_user(self, user_id: str) -> List[Notification]:
+        notifications = [
+            Notification(**item)
+            for item in self.db_gateway.query("user_id", user_id)
+        ]
+        notifications.sort(key=lambda x: x.created_at)
+        return notifications
+    
+    def get_all_non_concluded_for_user(self, user_id: str) -> List[Notification]:
         notifications = [
             Notification(**item)
             for item in self.db_gateway.query("user_id", user_id)
@@ -172,7 +180,7 @@ class NotificationManager:
     def get_last_notifications_sent_to_user(
         self, user_id: str, limit: int = 10
     ) -> List[Notification]:
-        notifications = [n for n in self.get_all_for_user(user_id) if n.processed_at]
+        notifications = [n for n in self.get_all_non_concluded_for_user(user_id) if n.processed_at]
         ordered_notifications = sorted(
             notifications, key=lambda x: x.processed_at
         )
@@ -291,7 +299,7 @@ class NotificationManager:
             logger.error(traceback.format_exc())
 
     def get_non_concluded_notifications_count(self, user_id: str) -> int:
-        notifications = self.get_all_for_user(user_id)
+        notifications = self.get_all_non_concluded_for_user(user_id)
         return len(
             [
                 notification

@@ -1,9 +1,9 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useUserPlan, Notification } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
-import { Check, X, MessageSquare, Eye } from "lucide-react";
+import { Check, X, MessageSquare, Eye, ScanFace } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import posthog from "posthog-js";
@@ -35,12 +35,11 @@ const Notifications: React.FC<NotificationsProps> = () => {
     let skipToast = false;
     const actionPromise = async () => {
       if (notification.type === "info") {
-        if (action === "dismiss") {
-          await concludeNotification();
-        }
         await concludeNotification();
       } else if (notification.type === "engagement") {
-        if (action === "respond") {
+        if (action === "dismiss") {
+          await concludeNotification();
+        } else if (action === "respond") {
           posthog.capture("engagement-notification-interacted", {
             notification_id: notification.id,
           });
@@ -83,7 +82,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
           .slice(1)} ${action}ed successfully!`,
         error: `Failed to ${action} ${notification.type.replace("_", " ")}`,
       });
+    } else {
+      actionPromise();
     }
+    notificationsData.refetch();
   };
 
   const renderActionButtons = (notification: Notification) => {
@@ -121,25 +123,6 @@ const Notifications: React.FC<NotificationsProps> = () => {
             <Eye size={iconSize} />
           </button>
         );
-      case "engagement":
-        return (
-          <>
-            <button
-              onClick={() => handleNotificationAction(notification, "respond")}
-              className={`${buttonClasses} ${variants.fadedBg} ${variants.text} hover:bg-blue-200`}
-              aria-label="Respond"
-            >
-              <MessageSquare size={iconSize} />
-            </button>
-            <button
-              onClick={() => handleNotificationAction(notification, "dismiss")}
-              className={`${buttonClasses} ${variants.fadedBg} ${variants.text} hover:bg-gray-200 ml-2`}
-              aria-label="Dismiss"
-            >
-              <X size={iconSize} />
-            </button>
-          </>
-        );
       default:
         return (
           <>
@@ -172,81 +155,115 @@ const Notifications: React.FC<NotificationsProps> = () => {
     });
   };
 
+  // Get the latest engagement notification
+  const latestEngagementNotification =
+    notificationsData?.data?.notifications?.find(
+      (n) => n.type === "engagement"
+    );
+
+  // Filter out engagement notifications from the regular notifications
+  const regularNotifications = notificationsData?.data?.notifications?.filter(
+    (n) => n.type !== "engagement"
+  );
+
   return (
     <>
-      {notificationsData &&
-        notificationsData.data &&
-        notificationsData.data.notifications &&
-        notificationsData.data.notifications.length > 0 && (
-          <>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Notifications</h2>
-              <button
-                onClick={handleClearAll}
-                className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
-              >
-                Clear All
-              </button>
+      {latestEngagementNotification && (
+        <div
+          className={`relative bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-start mb- cursor-pointer`}
+          onClick={() =>
+            handleNotificationAction(latestEngagementNotification, "respond")
+          }
+        >
+          <div className="self-end flex-shrink-0 mr-4">
+            <div className="rounded-full">
+              <ScanFace className={`w-12 h-12 ${variants.text}`} />
             </div>
+          </div>
+          <div className="flex-grow">
+            <div className="p-2 markdown text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
+              <Remark>{latestEngagementNotification.message}</Remark>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {formatTimeAgo(latestEngagementNotification.created_at)}
+            </div>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNotificationAction(latestEngagementNotification, "dismiss");
+            }}
+            className="absolute top-3 right-3 p-[3px] rounded-full transition-colors duration-200 flex items-center justify-center bg-gray-500 "
+            aria-label="Dismiss"
+          >
+            <X size={15} className="text-white" />
+          </button>
+        </div>
+      )}
 
-            {notificationsData.data.notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 ${
-                  notification.type === "engagement"
-                    ? `${variants.card.selected.bg} border ${variants.card.selected.border}`
-                    : "bg-white border border-gray-200"
-                }`}
-              >
-                <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-                  {["friend_request", "plan_invitation", "info"].includes(
-                    notification.type
-                  ) &&
-                    hasPictureData(notification) && (
-                      <Link
-                        href={`/profile/${notification.related_data!.username}`}
-                      >
-                        <Avatar>
-                          <AvatarImage
-                            src={notification.related_data!.picture}
-                            alt={notification.related_data!.name || ""}
-                          />
-                          <AvatarFallback>
-                            {(notification.related_data!.name || "U")[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Link>
-                    )}
-                  {["engagement"].includes(notification.type) && (
-                    <p className="text-4xl text-gray-700 font-medium">💭</p>
-                  )}
-                  {hasPictureData(notification) ? (
+      {regularNotifications && regularNotifications.length > 0 && (
+        <>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Notifications</h2>
+            <button
+              onClick={handleClearAll}
+              className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
+            >
+              Clear All
+            </button>
+          </div>
+
+          {regularNotifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
+            >
+              <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+                {["friend_request", "plan_invitation", "info"].includes(
+                  notification.type
+                ) &&
+                  hasPictureData(notification) && (
                     <Link
                       href={`/profile/${notification.related_data!.username}`}
                     >
-                      <div className="markdown text-sm text-gray-700">
-                        <Remark>{notification.message}</Remark>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {formatTimeAgo(notification.created_at)}
-                        </div>
-                      </div>
+                      <Avatar>
+                        <AvatarImage
+                          src={notification.related_data!.picture}
+                          alt={notification.related_data!.name || ""}
+                        />
+                        <AvatarFallback>
+                          {(notification.related_data!.name || "U")[0]}
+                        </AvatarFallback>
+                      </Avatar>
                     </Link>
-                  ) : (
+                  )}
+                {hasPictureData(notification) ? (
+                  <Link
+                    href={`/profile/${notification.related_data!.username}`}
+                  >
                     <div className="markdown text-sm text-gray-700">
                       <Remark>{notification.message}</Remark>
                       <div className="text-xs text-gray-500 mt-1">
                         {formatTimeAgo(notification.created_at)}
                       </div>
                     </div>
-                  )}
-                </div>
-                <div className="flex ml-4">
-                  {renderActionButtons(notification)}
-                </div>
+                  </Link>
+                ) : (
+                  <div className="markdown text-sm text-gray-700">
+                    <Remark>{notification.message}</Remark>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {formatTimeAgo(notification.created_at)}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </>
-        )}
+              <div className="flex ml-4">
+                {renderActionButtons(notification)}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </>
   );
 };

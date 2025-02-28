@@ -339,7 +339,7 @@ def generate_dummy_data():
                 print(f"  Members: {', '.join([member.name for member in plan_group.members])}")
             print(f"  Sessions: {len(plan.sessions)}")
 
-        user_notifications = notification_manager.get_all_for_user(user.id)
+        user_notifications = notification_manager.get_all_non_concluded_for_user(user.id)
         print("Notifications:")
         for notification in user_notifications:
             print(f"- Type: {notification.type}")
