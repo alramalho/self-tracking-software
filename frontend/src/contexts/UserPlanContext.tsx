@@ -357,7 +357,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           const latencySeconds = (endTime - startTime) / 1000;
 
           if (!username) { // Only track for current user
-            const userId = userData.user?.id || 'unknown';
             const properties: Properties = {
               $set: {
                 email: userData.user?.email,
