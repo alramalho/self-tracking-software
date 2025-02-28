@@ -123,7 +123,7 @@ async def load_notifications(user: User = Depends(is_clerk_user)):
         for n in notification_manager.get_all_for_user(user.id)
     ]
     notifications.sort(key=lambda x: x.created_at, reverse=True)
-    engagement_notifications = [n for n in notifications if n.type == "engagement"]
+    engagement_notifications = iter([n for n in notifications if n.type == "engagement"])
     latest_engagment = next(engagement_notifications, None)
     notifications = [n for n in notifications if n.status != "concluded"]
     for notification in notifications:
