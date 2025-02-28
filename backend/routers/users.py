@@ -76,8 +76,6 @@ async def load_users_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 async def _load_single_user_data(user: User, current_user: User):
-    start_time = time.time()
-    
     with concurrent.futures.ThreadPoolExecutor() as executor:
         activities_future = executor.submit(
             activities_gateway.get_all_activities_by_user_id, user.id
@@ -201,50 +199,6 @@ async def _load_single_user_data(user: User, current_user: User):
     if current_user.id == user.id:
         result["sent_friend_requests"] = sent_friend_requests
         result["received_friend_requests"] = received_friend_requests
-
-        try:
-            execution_time = time.time() - start_time
-            posthog.capture(
-                distinct_id=user.id,
-                event="load-user-data",
-                properties={
-                    "$set": {
-                        "email": user.email,
-                        "name": user.name,
-                        "username": user.username,
-                        "plans_count": len(plans),
-                        "plan_groups_count": len(plan_groups),
-                        "referral_count": len(user.referred_user_ids),
-                        "activities_count": len(activities),
-                        "activity_entries_count": len(entries),
-                        "friend_count": len(current_user.friend_ids),
-                    }
-                },
-            )
-            posthog.capture(
-                distinct_id=user.id,
-                event="load-user-data-latency",
-                properties={"latency_seconds": round(execution_time, 3)},
-            )
-
-            upsert_loops_contact(
-                email=user.email,
-                first_name=user.name,
-                user_id=user.id,
-                custom_properties={
-                    "username": user.username,
-                    "plansCount": len(plans),
-                    "planGroupsCount": len(plan_groups),
-                    "activitiesCount": len(activities),
-                    "referralCount": len(user.referred_user_ids),
-                    "activityEntriesCount": len(entries),
-                    "friendCount": len(current_user.friend_ids),
-                },
-            )
-
-        except Exception as e:
-            logger.error(traceback.format_exc())
-            logger.error(f"Failed to capture pageview: {e}")
 
     return result
 
@@ -434,7 +388,6 @@ async def reject_friend_request(
 
 @router.get("/timeline")
 async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
-    start_time = time.time()
     try:
         if len(current_user.friend_ids) == 0:
             return {
@@ -463,15 +416,6 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             for aentry in sorted_users_activities_entries
             if activities_gateway.get_activity_by_id(aentry.activity_id)
         ]
-
-        execution_time = time.time() - start_time
-        posthog.capture(
-            distinct_id=current_user.id,
-            event="timeline-latency",
-            properties={
-                "latency_seconds": round(execution_time, 3),
-            },
-        )
 
         return {
             "recommended_activity_entries": [

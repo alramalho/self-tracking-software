@@ -10,6 +10,7 @@ import { useQuery, UseQueryResult, useQueryClient } from "@tanstack/react-query"
 import { usePostHog } from "posthog-js/react";
 import { logger } from "@/utils/logger";
 import { ThemeColor } from "@/utils/theme";
+import { Properties } from 'posthog-js';
 
 export interface Activity {
   id: string;
@@ -325,7 +326,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
-      return await smallRetryMechanism(
+      const startTime = performance.now();
+      const result = await smallRetryMechanism(
         async () => {
           const response = await api.get('/load-users-data', {
             params: username ? { usernames: username } : undefined
@@ -351,6 +353,36 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             expiresAt: addMinutes(new Date(), 10).toISOString(),
           };
 
+          const endTime = performance.now();
+          const latencySeconds = (endTime - startTime) / 1000;
+
+          if (!username) { // Only track for current user
+            const userId = userData.user?.id || 'unknown';
+            const properties: Properties = {
+              $set: {
+                email: userData.user?.email,
+                name: userData.user?.name,
+                username: userData.user?.username,
+                plans_count: transformedData.plans.length,
+                plan_groups_count: transformedData.planGroups.length,
+                referral_count: userData.user?.referred_user_ids?.length || 0,
+                activities_count: transformedData.activities.length,
+                activity_entries_count: transformedData.activityEntries.length,
+                friend_count: userData.user?.friend_ids?.length || 0,
+              }
+            };
+
+            const latencyProperties: Properties = {
+              latency_seconds: Math.round(latencySeconds * 1000) / 1000
+            };
+
+            // Use direct capture method
+            if (posthog) {
+              posthog.capture('load-user-data', properties);
+              posthog.capture('load-user-data-latency', latencyProperties);
+            }
+          }
+
           return transformedData;
         },
         {
@@ -359,6 +391,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             (err.response?.status === 404 || err.response?.status === 401)
         }
       );
+      
+      return result;
     } catch (err) {
       handleAuthError(err);
       router.push("/");
@@ -371,7 +405,20 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isSignedIn) return null;
 
     try {
+      const startTime = performance.now();
       const response = await api.get('/timeline');
+      const endTime = performance.now();
+      const latencySeconds = (endTime - startTime) / 1000;
+
+      const timelineLatencyProperties: Properties = {
+        latency_seconds: Math.round(latencySeconds * 1000) / 1000
+      };
+
+      // Use direct capture method
+      if (posthog) {
+        posthog.capture('timeline-latency', timelineLatencyProperties);
+      }
+ 
       return {
         recommendedUsers: response.data.recommended_users,
         recommendedActivities: response.data.recommended_activities,
