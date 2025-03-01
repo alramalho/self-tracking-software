@@ -12,15 +12,7 @@ import { ExampleCorrelations } from "@/components/ExampleCorrelations";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
-
-export const defaultMetrics = [
-  { title: "Happiness", emoji: "😊" },
-  { title: "Mood", emoji: "🌟" },
-  { title: "Energy", emoji: "⚡️" },
-  { title: "Productivity", emoji: "📈" },
-  { title: "Gratitude", emoji: "🙏" },
-];
-
+import { defaultMetrics } from "../metrics";
 const MAX_METRICS = 2;
 
 export default function OnboardingPage() {
