@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 import { toast } from "react-hot-toast";
 import { Loader2, Plus } from "lucide-react";
@@ -9,10 +9,17 @@ import { Card } from "@/components/ui/card";
 import ActivitySelector from "@/components/ActivitySelector";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
+import AINotification from "@/components/AINotification";
+import { useApiWithAuth } from "@/api";
+import { useQuery } from "@tanstack/react-query";
 
 interface ActivityLogData {
   date: Date;
   quantity: number;
+}
+
+interface AIMessageResponse {
+  message: string;
 }
 
 const LogPage: React.FC = () => {
@@ -21,11 +28,33 @@ const LogPage: React.FC = () => {
   const { data: userData } = currentUserDataQuery;
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const activities = userData?.activities || [];
-  const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>();
+  const [selectedActivity, setSelectedActivity] = useState<
+    Activity | undefined
+  >();
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const [showInsightsBanner, setShowInsightsBanner] = useState(false);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
-  const [activityLogData, setActivityLogData] = useState<ActivityLogData | null>(null);
+  const [shouldShowNotification, setShouldShowNotification] = useState(false);
+  const [aiMessage, setAiMessage] = useState<string>("");
+  const api = useApiWithAuth()
+  
+  const { data: aiMessageData } = useQuery<AIMessageResponse>({
+    queryKey: ['activity-message'],
+    queryFn: async () => {
+      const response = await api.get("/ai/generate-activity-message");
+      return response.data;
+    },
+  });
+
+  useEffect(() => {
+    if (aiMessageData?.message) {
+      setAiMessage(aiMessageData.message);
+      setShouldShowNotification(true);
+    }
+  }, [aiMessageData]);
+
+  const [activityLogData, setActivityLogData] =
+    useState<ActivityLogData | null>(null);
 
   const handleActivitySelected = (activity: Activity) => {
     setSelectedActivity(activity);
@@ -46,12 +75,16 @@ const LogPage: React.FC = () => {
 
   const metrics = metricsAndEntriesData?.metrics ?? [];
   const hasMetrics = metrics.length > 0;
-  
-  const metricEmojis = metrics.slice(0, 3).map(m => m.emoji).filter(Boolean);
-  const metricTitles = metrics.map(m => m.title);
-  const displayTitle = metricTitles.length > 1 
-    ? `${metricTitles[0]}${metricTitles.length > 1 ? '...' : ''}`
-    : metricTitles[0] ?? "Rate your day";
+
+  const metricEmojis = metrics
+    .slice(0, 3)
+    .map((m) => m.emoji)
+    .filter(Boolean);
+  const metricTitles = metrics.map((m) => m.title);
+  const displayTitle =
+    metricTitles.length > 1
+      ? `${metricTitles[0]}${metricTitles.length > 1 ? "..." : ""}`
+      : metricTitles[0] ?? "Rate your day";
 
   if (currentUserDataQuery.isLoading) {
     return (
@@ -79,9 +112,9 @@ const LogPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <div className="flex">
                   {metricEmojis.map((emoji, index) => (
-                    <span 
-                      key={index} 
-                      className="text-2xl relative -ml-2 first:ml-0" 
+                    <span
+                      key={index}
+                      className="text-2xl relative -ml-2 first:ml-0"
                       style={{ zIndex: metricEmojis.length - index }}
                     >
                       {emoji}
@@ -99,6 +132,15 @@ const LogPage: React.FC = () => {
             onClose={() => setShowInsightsBanner(false)}
           />
         </>
+      )}
+
+      {shouldShowNotification && (
+        <AINotification
+          message={aiMessage}
+          createdAt={new Date().toISOString()}
+          onDismiss={() => setShouldShowNotification(false)}
+          onClick={() => {}}
+        />
       )}
 
       <h1 className="text-2xl font-bold mb-6">Log Activity</h1>

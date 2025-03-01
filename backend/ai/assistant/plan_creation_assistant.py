@@ -12,11 +12,13 @@ from entities.plan import (
 )
 from entities.user import User
 from bson import ObjectId
+from typing import List, Union, Optional, Any
 from fastapi import WebSocket
 from ai.assistant.memory import DatabaseMemory
 from entities.message import Message, Emotion
 from ai.suggestions import AssistantSuggestion
 from loguru import logger
+from ai.assistant.base_assistant import BaseAssistant
 
 # -------------------------------
 # Pydantic Models for Output Schemas
@@ -542,54 +544,15 @@ class PlanInCreation(BaseModel):
     )
 
 
-class PlanCreationAssistant:
-    def __init__(self, user: User, memory: DatabaseMemory, websocket: WebSocket):
-        self.framework = None
-        self.user = user
-        self.memory = memory
-        self.websocket = websocket
-        # Import the ActivitiesGateway from your gateways module
+class PlanCreationAssistant(BaseAssistant):
+    def __init__(self, user: User, memory: DatabaseMemory, websocket: WebSocket = None):
+        super().__init__(user, memory, websocket)
         from gateways.activities import ActivitiesGateway
-
         self.activities_gateway = ActivitiesGateway()
         self.plan_controller = PlanController()
-        self.name = "Jarvis"
 
-    async def send_websocket_message(self, message_type: str, data: dict):
-        if self.websocket:
-            await self.websocket.send_json({"type": message_type, **data})
-
-    def write_system_extraction_message(self, extraction_type: str, data: dict):
-        """Write a system message about an extraction that occurred."""
-        message = f"Extracted {extraction_type}: {str(data)}"
-        self.memory.write(
-            Message.new(
-                text=message,
-                sender_name="System",
-                sender_id="-1",
-                recipient_name=self.user.name,
-                recipient_id=self.user.id,
-                emotions=[],
-            )
-        )
-
-    async def get_response(
-        self, user_input: str, message_id: str, emotions: List[Emotion] = []
-    ) -> Dict:
-
-        self.memory.write(
-            Message.new(
-                id=message_id,
-                text=user_input,
-                sender_name=self.user.name,
-                sender_id=self.user.id,
-                recipient_name=self.name,
-                recipient_id="0",
-                emotions=emotions,
-            )
-        )
-
-        system_prompt = (
+    def get_system_prompt(self) -> str:
+        return (
             "You are an AI coach assistant helping the user create a new plan. "
             "The plan has several ordered stages: goal, activities, milestones, plan type (either specific dates or times per week), sessions / frequency and finishing date, by that order."
             "You will be tasked with a specific stage of the plan creation process to help in, where you will ask the user for input."
@@ -599,16 +562,18 @@ class PlanCreationAssistant:
             "Be friendly, write in prose and be very concise."
         )
 
-        self.framework = FlowchartLLMFramework(plan_creation_flowchart, system_prompt)
+    def get_flowchart(self) -> Dict[str, Any]:
+        return plan_creation_flowchart
 
-        # Retrieve existing activities for context
-        existing_activities = self.activities_gateway.get_all_activities_by_user_id(
-            self.user.id
-        )
+    def get_context(self) -> Dict[str, Any]:
+        # Get base context
+        context = super().get_context()
+        
+        # Add plan-specific context
+        existing_activities = self.activities_gateway.get_all_activities_by_user_id(self.user.id)
         existing_plans = self.plan_controller.get_all_user_active_plans(self.user)
-
-        context = {
-            "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        
+        context.update({
             "previous_existing_activities": [
                 {
                     "title": activity.title,
@@ -620,110 +585,84 @@ class PlanCreationAssistant:
             "previous_existing_plans": [
                 self.plan_controller.get_readable_plan(plan) for plan in existing_plans
             ],
-            "conversation_history": self.memory.read_all_as_str(
-                max_age_in_minutes=3 * 60
-            ),
-        }
+        })
+        
+        return context
 
-        try:
-            plan_result, extracted = await self.framework.run(context)
+    async def handle_suggestions(self, extracted: Dict) -> List[AssistantSuggestion]:
+        suggestions: List[AssistantSuggestion] = []
 
-            self.memory.write(
-                Message.new(
-                    text=plan_result,
-                    sender_name=self.name,
-                    sender_id="0",
-                    recipient_name=self.user.name,
-                    recipient_id=self.user.id,
-                )
-            )
-            suggestions: List[AssistantSuggestion] = []
-
-            # Check each node's output and send corresponding suggestions
-            for key, value in extracted.items():
-                if key.startswith("ExtractGoal_"):
-                    suggestions.append(PlanGoalSuggestion.from_goal_analysis(value))
-                    self.write_system_extraction_message("goal", {"goal": value.goal})
-                elif key.startswith("ExtractActivities_"):
-                    activities_suggestions = PlanActivitiesSuggestion.from_activity_analysis(value)
-                    suggestions.append(activities_suggestions)
-                    self.write_system_extraction_message(
-                        "activities",
-                        {
-                            "activities": [
-                                {
-                                    "id": activity.get("id"),
-                                    "name": activity.get("name"),
-                                    "emoji": activity.get("emoji"),
-                                    "measure": activity.get("measure"),
-                                }
-                                for activity in activities_suggestions.data.get("activities")
-                            ]
-                        },
-                    )
-                elif key.startswith("ExtractMilestones_"):
-                    suggestions.append(
-                        PlanMilestoneSuggestion.from_milestone_analysis(value)
-                    )
-                    self.write_system_extraction_message(
-                        "milestones",
-                        {
-                            "milestones": [
-                                {
-                                    "description": milestone.description,
-                                    "date": milestone.date,
-                                    "criteria": milestone.criteria,
-                                    "progress": milestone.progress,
-                                }
-                                for milestone in value.milestones
-                            ]
-                        },
-                    )
-                elif key.startswith("ExtractPlanType_"):
-                    suggestions.append(PlanTypeSuggestion.from_plan_type(value))
-                    self.write_system_extraction_message(
-                        "plan_type", {"plan_type": value.plan_type}
-                    )
-                elif key.startswith("ExtractSessions_"):
-                    suggestions.append(PlanSessionsSuggestion.from_sessions(value))
-                    if isinstance(value, SessionExtraction):
-                        self.write_system_extraction_message(
-                            "sessions",
+        # Check each node's output and send corresponding suggestions
+        for key, value in extracted.items():
+            if key.startswith("ExtractGoal_"):
+                suggestions.append(PlanGoalSuggestion.from_goal_analysis(value))
+                self.write_system_extraction_message("goal", {"goal": value.goal})
+            elif key.startswith("ExtractActivities_"):
+                activities_suggestions = PlanActivitiesSuggestion.from_activity_analysis(value)
+                suggestions.append(activities_suggestions)
+                self.write_system_extraction_message(
+                    "activities",
+                    {
+                        "activities": [
                             {
-                                "sessions": [
-                                    {
-                                        "date": session.date,
-                                        "activity_name": session.activity_name,
-                                        "activity_id": session.activity_id,
-                                        "quantity": session.quantity,
-                                    }
-                                    for session in value.sessions
-                                ]
-                            },
-                        )
-                    else:
-                        self.write_system_extraction_message(
-                            "times_per_week",
-                            {"frequency": value.times_per_week_frequency},
-                        )
-                elif key.startswith("ExtractFinishingDate_"):
-                    suggestions.append(
-                        PlanFinishingDateSuggestion.from_finishing_date_analysis(value)
-                    )
+                                "id": activity.get("id"),
+                                "name": activity.get("name"),
+                                "emoji": activity.get("emoji"),
+                                "measure": activity.get("measure"),
+                            }
+                            for activity in activities_suggestions.data.get("activities")
+                        ]
+                    },
+                )
+            elif key.startswith("ExtractMilestones_"):
+                suggestions.append(PlanMilestoneSuggestion.from_milestone_analysis(value))
+                self.write_system_extraction_message(
+                    "milestones",
+                    {
+                        "milestones": [
+                            {
+                                "description": milestone.description,
+                                "date": milestone.date,
+                                "criteria": milestone.criteria,
+                                "progress": milestone.progress,
+                            }
+                            for milestone in value.milestones
+                        ]
+                    },
+                )
+            elif key.startswith("ExtractPlanType_"):
+                suggestions.append(PlanTypeSuggestion.from_plan_type(value))
+                self.write_system_extraction_message("plan_type", {"plan_type": value.plan_type})
+            elif key.startswith("ExtractSessions_"):
+                suggestions.append(PlanSessionsSuggestion.from_sessions(value))
+                if isinstance(value, SessionExtraction):
                     self.write_system_extraction_message(
-                        "finishing_date",
+                        "sessions",
                         {
-                            "finishing_date": value.finishing_date,
-                            "explanation": value.explanation,
+                            "sessions": [
+                                {
+                                    "date": session.date,
+                                    "activity_name": session.activity_name,
+                                    "activity_id": session.activity_id,
+                                    "quantity": session.quantity,
+                                }
+                                for session in value.sessions
+                            ]
                         },
                     )
-
-            if suggestions:
-                await self.send_websocket_message(
-                    "suggestions", {"suggestions": [s.dict() for s in suggestions]}
+                else:
+                    self.write_system_extraction_message(
+                        "times_per_week",
+                        {"frequency": value.times_per_week_frequency},
+                    )
+            elif key.startswith("ExtractFinishingDate_"):
+                suggestions.append(PlanFinishingDateSuggestion.from_finishing_date_analysis(value))
+                self.write_system_extraction_message(
+                    "finishing_date",
+                    {
+                        "finishing_date": value.finishing_date,
+                        "explanation": value.explanation,
+                    },
                 )
 
-            return plan_result
-        except Exception as e:
-            logger.error(f"Error generating plan: {str(e)}")
-            raise Exception(f"Error generating plan: {str(e)}")
+        return suggestions

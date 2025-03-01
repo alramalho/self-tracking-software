@@ -133,7 +133,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
               onClick={() => setIsOpen(!isOpen)}
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Feedback</span>
+                <span className="text-sm font-medium">🙏 Feedback</span>
                 <ChevronUp
                   size={16}
                   className={`transform transition-transform duration-200 ${

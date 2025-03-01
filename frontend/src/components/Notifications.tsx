@@ -52,7 +52,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             notification.related_data.message_text
           ) {
             router.push(
-              `/ai?messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`
+              `/ai?assistantType=activity_extraction&messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`
             );
           } else {
             toast.error(

@@ -1,4 +1,4 @@
-from typing import Tuple, List, Dict, Optional, Union
+from typing import Tuple, List, Dict, Optional, Union, Type
 from entities.user import User
 from entities.activity import Activity, ActivityEntry
 from entities.mood_report import MoodReport
@@ -14,6 +14,7 @@ from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS, OPENAI_TTS_MODEL
 from ai.assistant.plan_creation_assistant import PlanCreationAssistant
+from ai.assistant.base_assistant import BaseAssistant
 
 from gateways.activities import ActivitiesGateway
 from gateways.users import UsersGateway
@@ -42,10 +43,16 @@ moods_gateway = MoodsGateway()
 plan_controller = PlanController()
 messages_gateway = MessagesGateway()
 
+# Map of assistant types
+ASSISTANT_TYPES = {
+    "plan_creation": PlanCreationAssistant,
+    "activity_extraction": ActivityExtractorAssistant,
+}
 
 async def talk_with_assistant(
     user_id: str,
     user_input: str,
+    assistant_type: str,
     websocket: WebSocket = None,
     message_id: str = None,
     emotions: List[Emotion] = [],
@@ -54,23 +61,17 @@ async def talk_with_assistant(
         user = users_gateway.get_user_by_id(user_id)
         memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
 
-        assistant = PlanCreationAssistant(
+        # Get the appropriate assistant class
+        AssistantClass = ASSISTANT_TYPES.get(assistant_type)
+        if not AssistantClass:
+            raise ValueError(f"Unknown assistant type: {assistant_type}")
+
+        # Initialize the assistant
+        assistant = AssistantClass(
             user=user,
             memory=memory,
             websocket=websocket,
         )
-        # assistant = PlanCoachAgent(
-        #     memory=memory,
-        #     user=user,
-        #     websocket=websocket,
-        #     message_id=message_id,
-        # )
-        # assistant = ActivityExtractorAssistant(
-        #     memory=memory,
-        #     user=user,
-        #     user_activities=user_activities,
-        #     websocket=websocket,
-        # )
 
         return await assistant.get_response(
             user_input=user_input,
@@ -86,11 +87,12 @@ async def process_message(
     websocket: WebSocket,
     user_id: str,
     message: str,
+    assistant_type: str,
     input_mode: str,
     output_mode: str,
     audio_data: str = None,
     audio_format: str = None,
-) -> Tuple[str, Optional[bytes], Union[List[ExtractedActivityEntry]]]:
+) -> Tuple[str, Optional[bytes]]:
     loop = asyncio.get_event_loop()
     emotions = []
     message_id = str(ObjectId())
@@ -130,6 +132,7 @@ async def process_message(
             talk_with_assistant(
                 user_id=user_id,
                 user_input=message,
+                assistant_type=assistant_type,
                 websocket=websocket,
                 message_id=message_id,
                 emotions=emotions,
