@@ -13,6 +13,7 @@ import AINotification from "@/components/AINotification";
 import { useApiWithAuth } from "@/api";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 
 interface ActivityLogData {
   date: Date;
@@ -36,24 +37,16 @@ const LogPage: React.FC = () => {
   const [showInsightsBanner, setShowInsightsBanner] = useState(false);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const [aiMessage, setAiMessage] = useState<string>("");
   const api = useApiWithAuth()
   const router = useRouter();
   
-  const { data: aiMessageData } = useQuery<AIMessageResponse>({
-    queryKey: ['activity-message'],
-    queryFn: async () => {
-      const response = await api.get("/ai/generate-activity-message");
-      return response.data;
-    },
-  });
+  const { message: aiMessage } = useAIMessageCache('activity');
 
   useEffect(() => {
-    if (aiMessageData?.message) {
-      setAiMessage(aiMessageData.message);
+    if (aiMessage) {
       setShouldShowNotification(true);
     }
-  }, [aiMessageData]);
+  }, [aiMessage]);
 
   const [activityLogData, setActivityLogData] =
     useState<ActivityLogData | null>(null);
