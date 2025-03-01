@@ -154,7 +154,19 @@ class DatabaseMemory(Memory):
             # Format message with emotions if present
             message_text = f"> {m.sender_name} ({time_ago(m.created_at)}): {m.text}"
             if m.emotions:
-                emotion_text = ", ".join([f"{e.name} ({e.score * 100:.0f}%)" for e in m.emotions])
+                emotion_text = ""
+                for emotion in m.emotions:
+                    emotion_percentage_score = round(emotion.score * 100)
+                    if emotion_percentage_score < 10:
+                        continue
+                    elif 10 <= emotion_percentage_score < 20:
+                        emotion_text += f"a faint sense of {emotion.name}, "
+                    elif 20 <= emotion_percentage_score < 40:
+                        emotion_text += f"a moderate sense of {emotion.name}, "
+                    elif 40 <= emotion_percentage_score < 60:
+                        emotion_text += f"a strong sense of {emotion.name}, "
+                    elif 60 <= emotion_percentage_score:
+                        emotion_text += f"a very strong sense of {emotion.name}, "
                 message_text += f" (user expressed {emotion_text} in this message)"
             
             formatted_messages.append(message_text)

@@ -1,27 +1,16 @@
 from pydantic import BaseModel, Field
-from typing import List, Tuple, Dict, Any, Optional, Union
-from ai.assistant.memory import Memory
-from entities.message import Message, Emotion
+from typing import List, Dict, Any
 from entities.user import User
-from entities.activity import Activity, ActivityEntry
-from entities.mood_report import MoodReport
-from gateways.database.mongodb import MongoDBGateway
+from entities.activity import Activity
 from ai.assistant.memory import DatabaseMemory
-from ai.llm import ask_schema, ask_text
 from datetime import datetime
-import re
-from loguru import logger
-from .flowchart_framework import FlowchartLLMFramework
 from gateways.activities import ActivitiesGateway
 from .flowchart_nodes import (
     Node,
-    LoopStartNode,
-    LoopContinueNode,
-    NodeType,
 )
-from bson import ObjectId
 from fastapi import WebSocket
 from ai.suggestions import ActivitySuggestion, AssistantSuggestion
+from ai.assistant.base_assistant import BaseAssistant
 
 activities_gateway = ActivitiesGateway()
 
@@ -89,42 +78,19 @@ every_message_flowchart = {
 }
 
 
-class ActivityExtractorAssistant(object):
+class ActivityExtractorAssistant(BaseAssistant):
     def __init__(
         self,
         user: User,
-        user_activities: List[Activity],
-        memory: Memory,
+        memory: DatabaseMemory,
         websocket: WebSocket = None,
+        user_activities: List[Activity] = None,
     ):
-        self.name = "Jarvis"
-        self.memory = memory
-        self.user = user
-        self.user_activities = user_activities
-        self.websocket = websocket
+        super().__init__(user, memory, websocket)
+        self.user_activities = user_activities or []
 
-    async def send_websocket_message(self, message_type: str, data: dict):
-        if self.websocket:
-            await self.websocket.send_json({"type": message_type, **data})
-
-    async def get_response(
-        self, user_input: str, message_id: str, emotions: List[Emotion] = []
-    ) -> str:
-
-
-        self.memory.write(
-            Message.new(
-                id=message_id,
-                text=user_input,
-                sender_name=self.user.name,
-                sender_id=self.user.id,
-                recipient_name=self.name,
-                recipient_id="0",
-                emotions=emotions,
-            )
-        )
-
-        system_prompt = f"""You are {self.name}, an AI assistant helping the user do and track more of his existing activities. 
+    def get_system_prompt(self) -> str:
+        return f"""You are {self.name}, an AI assistant helping the user do and track more of his existing activities. 
         You are capable of extracting past activities if the user has already previously created them.
         The user must have done something everyday, so ideally you would want that to be logged.
         
@@ -132,52 +98,26 @@ class ActivityExtractorAssistant(object):
         Always consider the entire conversation history when making decisions or responses.
         Respond in the same language as the initial input.
 
+        Be midnful of the user's emotions, if they are strong enough.
+
         Today is {datetime.now().strftime('%b %d, %Y')}. 
         """
 
-        flowchart = every_message_flowchart
+    def get_flowchart(self) -> Dict[str, Any]:
+        return every_message_flowchart
 
-        self.framework = FlowchartLLMFramework(flowchart, system_prompt)
+    def get_context(self) -> Dict[str, Any]:
+        # Get base context
+        context = super().get_context()
         
-
-        activities_str = "\n- ".join([str(a) for a in self.user_activities]) if len(self.user_activities) > 0 else "(User has not started tracking any activities yet)"
-        result_message, extracted = await self.framework.run(
-            f"""
+        context.update({
+            "user_activities": self.user_activities,
+            "recent_logged_activities": activities_gateway.get_readable_recent_activity_entries(self.user.id),
+        })
         
-        Here's the user's existing activities:
-        {activities_str}
+        return context
 
-        Here's user's most recently logged activities:
-        {activities_gateway.get_readable_recent_activity_entries(self.user.id)}
-                               
-        Now here's your actual conversation history with the user:
-        {self.memory.read_all_as_str(max_words=1000, max_age_in_minutes=3*60)}
-
-        {f"<system note>The detected user's emotions on HIS LAST MESSAGE are: {[f'{e.emotion} ({e.score * 100:.2f}%)' for e in emotions]}</system note>" if emotions else ""}
-        
-        Only output message to be sent to the user.
-        """
-        )
-
-        jarvis_prefix = re.match(r"^Jarvis\s*\([^)]*\)\s*:\s*", result_message)
-        if jarvis_prefix:
-            result_message = result_message[len(jarvis_prefix.group(0)) :]
-        elif result_message.startswith(f"{self.name}:"):
-            result_message = result_message[len(f"{self.name}:") :]
-
-        self.memory.write(
-            Message.new(
-                result_message,
-                sender_name=self.name,
-                sender_id="0",
-                recipient_name=self.user.name,
-                recipient_id=self.user.id,
-            )
-        )
-
-        logger.info(f"FRAMEWORK RESULT: {result_message}")
-        logger.info(f"EXTRACTED: {extracted}")
-
+    async def handle_suggestions(self, extracted: Dict) -> List[AssistantSuggestion]:
         suggestions: List[AssistantSuggestion] = []
         
         # Aggregate activities from all ExtractActivity nodes
@@ -201,11 +141,5 @@ class ActivityExtractorAssistant(object):
                 activity = activities_gateway.get_activity_by_id(entry.activity_id)
                 suggestion = ActivitySuggestion.from_activity_entry(entry, activity)
                 suggestions.append(suggestion)
-            
-            if suggestions:
-                await self.send_websocket_message(
-                    "suggestions",
-                    {"suggestions": [s.dict() for s in suggestions]}
-                )
         
-        return result_message
+        return suggestions

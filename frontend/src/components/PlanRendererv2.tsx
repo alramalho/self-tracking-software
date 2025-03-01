@@ -36,6 +36,7 @@ import AppleLikePopover from "./AppleLikePopover";
 import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
 import { usePlanEdit } from "@/hooks/usePlanEdit";
 import { PlanEditModal } from "./PlanEditModal";
+import AINotification from "./AINotification";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -518,6 +519,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </div>
         </div>
       )}
+
 
       <Link href="/add" passHref>
         <Button

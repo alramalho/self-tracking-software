@@ -140,6 +140,8 @@ const connectionStatusVariants = {
   },
 };
 
+type AssistantType = "activity-extraction" | "plan-creation";
+
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
   const authedApi = useApiWithAuth();
@@ -163,6 +165,10 @@ const LogPage: React.FC = () => {
 
   const searchParams = useSearchParams();
   const notificationId = searchParams.get("notification_id");
+  let assistantType: AssistantType = searchParams.get("assistantType") as AssistantType;
+  if (!assistantType) {
+    assistantType = "activity-extraction";
+  }
   const messageId = searchParams.get("messageId");
   const messageText = searchParams.get("messageText");
   const [isInitialMessageAnimating, setIsInitialMessageAnimating] =
@@ -235,7 +241,7 @@ const LogPage: React.FC = () => {
       }
 
       const newSocket = new WebSocket(
-        `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}/ai/connect?token=${token}`
+        `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}/ai/connect-${assistantType}?token=${token}`
       );
 
       newSocket.onopen = () => {
@@ -326,8 +332,14 @@ const LogPage: React.FC = () => {
         setTranscription(data.text);
         addMessage({ role: "user", content: `🎙️ ${data.text}` });
       } else if (data.type === "emotion_analysis") {
-        setCurrentEmotions(data.result);
-        setAreEmotionsLoading(false);
+        const receivedEmotions = data.result;
+        console.log({ receivedEmotions, currentEmotions });
+        console.log(JSON.stringify(receivedEmotions) !== JSON.stringify(currentEmotions));
+        
+        if (JSON.stringify(receivedEmotions) !== JSON.stringify(currentEmotions)) {
+          setCurrentEmotions(receivedEmotions);
+          setAreEmotionsLoading(false);
+        }
         if (emotionLoadingTimeoutRef.current) {
           clearTimeout(emotionLoadingTimeoutRef.current);
         }

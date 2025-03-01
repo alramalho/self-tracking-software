@@ -9,6 +9,7 @@ import base64
 import traceback
 from fastapi import WebSocket, Request, HTTPException, status, Form, UploadFile, File
 from auth.clerk import is_clerk_user_ws
+from bson import ObjectId
 from auth.clerk import is_clerk_user_ws
 from services.notification_manager import NotificationManager
 from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsException
@@ -55,9 +56,9 @@ async def poll_emotions(websocket: WebSocket, user_id: str):
         logger.error(f"Error polling emotions: {e}")
 
 
-@router.websocket("/connect")
-async def websocket_endpoint(websocket: WebSocket):
-    logger.info("Connecting to websocket endpoint.")
+async def handle_websocket_connection(websocket: WebSocket, assistant_type: str):
+    """Common websocket handling logic for all assistant types."""
+    logger.info(f"Connecting to {assistant_type} websocket endpoint.")
     try:
         user = await is_clerk_user_ws(websocket)
         if user:
@@ -67,12 +68,11 @@ async def websocket_endpoint(websocket: WebSocket):
             async def emotion_polling():
                 while True:
                     await poll_emotions(websocket, user.id)
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(3)
 
             # Start emotion polling as a background task
             emotion_task = asyncio.create_task(emotion_polling())
 
-            audio_buffer = bytearray()
             try:
                 while True:
                     data = await websocket.receive_text()
@@ -90,6 +90,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             websocket,
                             user.id,
                             text,
+                            assistant_type,
                             input_mode,
                             output_mode,
                             audio_data,
@@ -112,6 +113,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "input_mode": input_mode,
                                 "output_mode": output_mode,
                                 "model": LLM_MODEL,
+                                "assistant_type": assistant_type,
                             },
                         )
 
@@ -127,13 +129,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
                         await websocket.send_json(response_data)
 
-                        # if extracted_data and isinstance(extracted_data, list) and len(extracted_data) > 0:
-                        #     data_type = "activities" if isinstance(extracted_data[0], ExtractedActivityEntry) else "next week sessions"
-                        #     await websocket.send_json({
-                        #         "type": "data_update",
-                        #         "notification": f"Extracted {len(extracted_data)} new {data_type}. Check your notifications for more details.",
-                        #     })
-
             except Exception as e:
                 traceback.print_exc()
                 logger.error(f"Error: {e}")
@@ -146,6 +141,16 @@ async def websocket_endpoint(websocket: WebSocket):
     except HTTPException as e:
         logger.error(f"Websocket authorization failed: {e.detail}")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+
+
+@router.websocket("/connect-plan-creation")
+async def websocket_plan_creation_endpoint(websocket: WebSocket):
+    await handle_websocket_connection(websocket, "plan_creation")
+
+
+@router.websocket("/connect-activity-extraction")
+async def websocket_activity_extraction_endpoint(websocket: WebSocket):
+    await handle_websocket_connection(websocket, "activity_extraction")
 
 
 class HumeEmotion(BaseModel):
@@ -300,14 +305,16 @@ async def send_system_message(request: Request, user: User = Depends(is_clerk_us
     message = data["message"]
 
     memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
-    memory.write(Message.new(
-        text=message,
-        sender_name="System",
-        sender_id="-1",
-        recipient_name=user.name,
-        recipient_id=user.id,
-        emotions=[],
-    ))
+    memory.write(
+        Message.new(
+            text=message,
+            sender_name="System",
+            sender_id="-1",
+            recipient_name=user.name,
+            recipient_id=user.id,
+            emotions=[],
+        )
+    )
 
     return {"status": "success"}
 
@@ -316,19 +323,42 @@ async def send_system_message(request: Request, user: User = Depends(is_clerk_us
 async def transcribe_audio(
     audio_data: str = Form(...),
     audio_format: str = Form(...),
-    user: User = Depends(is_clerk_user)
+    user: User = Depends(is_clerk_user),
 ):
     try:
         # Decode base64 audio data
         audio_bytes = base64.b64decode(audio_data)
-        
+
         # Run transcription in executor to not block
         text = await asyncio.get_event_loop().run_in_executor(
             executor, stt.speech_to_text, audio_bytes, audio_format
         )
-        
+
         return {"text": text}
     except Exception as e:
         logger.error(f"Error in transcription: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/generate-activity-message")
+async def generate_activity_message(user: User = Depends(is_clerk_user)):
+    from ai.assistant.activity_page_message_generator import ActivityMessageGenerator
+    from ai.assistant.memory import DatabaseMemory
+    from gateways.database.mongodb import MongoDBGateway
+
+    try:
+        # Initialize memory and message generator
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        generator = ActivityMessageGenerator(user=user, memory=memory)
+
+        # Generate the message
+        message = await generator.get_response(
+            user_input="", message_id=str(ObjectId())
+        )
+
+        return {"message": message}
+    except Exception as e:
+        logger.error(f"Error generating activity message: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
