@@ -83,7 +83,7 @@ const ProfilePage: React.FC = () => {
   >(null);
   const posthog = usePostHog();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [timeRange, setTimeRange] = useState<"30 Days" | "180 Days">("30 Days");
+  const [timeRange, setTimeRange] = useState<"60 Days" | "120 Days" | "180 Days">("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
   const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
@@ -221,7 +221,7 @@ const ProfilePage: React.FC = () => {
     );
   }, [profileData?.plans, activities, activityEntries]);
 
-  const handleTimeRangeChange = (value: "30 Days" | "180 Days") => {
+  const handleTimeRangeChange = (value: "60 Days" | "120 Days" | "180 Days") => {
     setTimeRange(value);
     setEndDate(new Date());
   };
@@ -509,7 +509,25 @@ const ProfilePage: React.FC = () => {
           </TabsList>
           <TabsContent value="plans">
             <div className="space-y-4">
-              <Divider className="w-full " text="Plans 👇" />
+              <div className="flex flex-row gap-4 justify-between items-center">
+                <span className="text-sm text-gray-500">Time range</span>
+                <div className="flex self-center">
+                  <select
+                    className="p-2 border rounded-md font-medium text-gray-800"
+                    value={timeRange}
+                    onChange={(e) =>
+                      handleTimeRangeChange(
+                        e.target.value as "60 Days" | "120 Days" | "180 Days"
+                      )
+                    }
+                  >
+                    <option value="60 Days">Since 60 days ago</option>
+                    <option value="120 Days">Since 120 days ago</option>
+                    <option value="180 Days">Since 180 days ago</option>
+                  </select>
+                </div>
+              </div>
+              <Divider className="w-full" text="Plans 👇" />
               {profileData.plans?.map((plan) => (
                 <div key={plan.id} className="p-4 border rounded-lg bg-white">
                   <div className="flex flex-row items-center gap-2 mb-4">
@@ -520,6 +538,7 @@ const ProfilePage: React.FC = () => {
                     plan={convertApiPlanToPlan(plan, activities)}
                     activities={activities}
                     activityEntries={activityEntries}
+                    startDate={subDays(new Date(), timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180)}
                   />
                 </div>
               ))}
@@ -530,23 +549,7 @@ const ProfilePage: React.FC = () => {
               )}
               {activitiesNotInPlans.length > 0 && (
                 <>
-                  <div className="flex flex-row gap-4 justify-between items-center">
-                    <Divider className="w-full " text="Activities 👇" />
-                    <div className="flex self-center">
-                      <select
-                        className="p-2 border rounded-md"
-                        value={timeRange}
-                        onChange={(e) =>
-                          handleTimeRangeChange(
-                            e.target.value as "30 Days" | "180 Days"
-                          )
-                        }
-                      >
-                        <option value="30 Days">Last 30 Days</option>
-                        <option value="180 Days">Last 180 Days</option>
-                      </select>
-                    </div>
-                  </div>
+                  <Divider className="w-full" text="Activities 👇" />
                   <ActivityGridRenderer
                     activities={activitiesNotInPlans}
                     activityEntries={activityEntries.filter((entry) =>

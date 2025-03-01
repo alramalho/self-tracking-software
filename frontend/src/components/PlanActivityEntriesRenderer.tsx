@@ -13,18 +13,17 @@ interface PlanActivityEntriesRendererProps {
   plan: Plan;
   activities: Activity[];
   activityEntries: ActivityEntry[];
+  startDate?: Date;
+  endDate?: Date;
 }
 
 const PlanActivityEntriesRenderer: React.FC<
   PlanActivityEntriesRendererProps
-> = ({ plan, activities, activityEntries }) => {
+> = ({ plan, activities, activityEntries, startDate, endDate }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
 
   const planActivities = useMemo(
-    () =>
-      activities.filter((a) =>
-        plan.activity_ids?.includes(a.id)
-      ),
+    () => activities.filter((a) => plan.activity_ids?.includes(a.id)),
     [activities, plan.activity_ids]
   );
   const planActivityEntries = useMemo(
@@ -45,8 +44,17 @@ const PlanActivityEntriesRenderer: React.FC<
     return beginingOfWeek;
   }, [planActivityEntries]);
 
-  useEffect(() => {
-  }, [beginingOfWeekOfFirstActivityEntry]);
+  useEffect(() => {}, [beginingOfWeekOfFirstActivityEntry]);
+
+  const getDefaultStartDate = () => {
+    if (startDate) return startDate;
+    if (planActivityEntries.length === 0) {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return sevenDaysAgo;
+    }
+    return beginingOfWeekOfFirstActivityEntry;
+  };
 
   const formatEntriesForHeatMap = () => {
     const formattedEntries = planActivityEntries.map((entry) => ({
@@ -63,18 +71,19 @@ const PlanActivityEntriesRenderer: React.FC<
 
     if (entriesOnDate.length === 0) return null;
 
-    const intensities = entriesOnDate.map(entry => {
+    const intensities = entriesOnDate.map((entry) => {
       const activityIndex = planActivities.findIndex(
         (a) => a.id === entry.activity_id
       );
 
       const quantities = planActivityEntries
-        .filter(e => e.activity_id === entry.activity_id)
-        .map(e => e.quantity);
+        .filter((e) => e.activity_id === entry.activity_id)
+        .map((e) => e.quantity);
       const minQuantity = Math.min(...quantities);
       const maxQuantity = Math.max(...quantities);
       const intensityLevels = 5;
-      const intensityStep = (Math.max(maxQuantity - minQuantity, 1) / intensityLevels);
+      const intensityStep =
+        Math.max(maxQuantity - minQuantity, 1) / intensityLevels;
 
       const intensity = Math.min(
         Math.floor((entry.quantity - minQuantity) / intensityStep),
@@ -86,7 +95,6 @@ const PlanActivityEntriesRenderer: React.FC<
 
     return intensities;
   };
-
 
   const renderActivityViewer = () => {
     if (!focusedDate) return null;
@@ -133,7 +141,7 @@ const PlanActivityEntriesRenderer: React.FC<
     <div className="px-4">
       <BaseHeatmapRenderer
         activities={planActivities}
-        startDate={beginingOfWeekOfFirstActivityEntry}
+        startDate={getDefaultStartDate()}
         endDate={plan.finishing_date}
         heatmapData={formatEntriesForHeatMap()}
         onDateClick={setFocusedDate}
