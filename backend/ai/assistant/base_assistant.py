@@ -84,7 +84,7 @@ class BaseAssistant:
         This method can be overridden by child classes to provide additional context.
         """
         return {
-            "current_datetime": datetime.now().strftime("%A, %Y-%m-%d"),
+            "current_datetime": f"Today is {datetime.now().strftime('%A, %Y-%m-%d')}.",
             "conversation_history": self.memory.read_all_as_str(max_age_in_minutes=3 * 60),
         }
 

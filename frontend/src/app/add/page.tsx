@@ -19,10 +19,6 @@ interface ActivityLogData {
   quantity: number;
 }
 
-interface AIMessageResponse {
-  message: string;
-}
-
 const LogPage: React.FC = () => {
   const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
@@ -36,10 +32,14 @@ const LogPage: React.FC = () => {
   const [showInsightsBanner, setShowInsightsBanner] = useState(false);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const api = useApiWithAuth()
+  const api = useApiWithAuth();
   const router = useRouter();
-  
-  const { message: aiMessage, isDismissed, dismiss } = useAIMessageCache('activity');
+
+  const {
+    message: aiMessage,
+    isDismissed,
+    dismiss,
+  } = useAIMessageCache("activity");
 
   useEffect(() => {
     if (aiMessage && !isDismissed) {
@@ -95,6 +95,21 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
+      {shouldShowNotification && (
+        <AINotification
+          message={aiMessage}
+          createdAt={new Date().toISOString()}
+          onDismiss={() => {
+            setShouldShowNotification(false);
+            dismiss();
+          }}
+          onClick={() => {
+            setShouldShowNotification(false);
+            router.push("/ai?assistantType=activity-extractor");
+          }}
+        />
+      )}
+
       {hasMetrics && (
         <>
           <h1 className="text-2xl font-bold mb-6">Log Metrics</h1>
@@ -126,21 +141,6 @@ const LogPage: React.FC = () => {
             onClose={() => setShowInsightsBanner(false)}
           />
         </>
-      )}
-
-      {shouldShowNotification && (
-        <AINotification
-          message={aiMessage}
-          createdAt={new Date().toISOString()}
-          onDismiss={() => {
-            setShouldShowNotification(false);
-            dismiss();
-          }}
-          onClick={() => {
-            setShouldShowNotification(false);
-            router.push("/ai?assistantType=activity-extractor");
-          }}
-        />
       )}
 
       <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
