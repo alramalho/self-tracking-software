@@ -11,7 +11,6 @@ import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
 import AINotification from "@/components/AINotification";
 import { useApiWithAuth } from "@/api";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 
@@ -40,13 +39,13 @@ const LogPage: React.FC = () => {
   const api = useApiWithAuth()
   const router = useRouter();
   
-  const { message: aiMessage } = useAIMessageCache('activity');
+  const { message: aiMessage, isDismissed, dismiss } = useAIMessageCache('activity');
 
   useEffect(() => {
-    if (aiMessage) {
+    if (aiMessage && !isDismissed) {
       setShouldShowNotification(true);
     }
-  }, [aiMessage]);
+  }, [aiMessage, isDismissed]);
 
   const [activityLogData, setActivityLogData] =
     useState<ActivityLogData | null>(null);
@@ -133,7 +132,10 @@ const LogPage: React.FC = () => {
         <AINotification
           message={aiMessage}
           createdAt={new Date().toISOString()}
-          onDismiss={() => setShouldShowNotification(false)}
+          onDismiss={() => {
+            setShouldShowNotification(false);
+            dismiss();
+          }}
           onClick={() => {
             setShouldShowNotification(false);
             router.push("/ai?assistantType=activity-extractor");

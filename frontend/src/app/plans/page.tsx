@@ -26,13 +26,13 @@ const PlansPage: React.FC = () => {
   const api = useApiWithAuth();
   const router = useRouter();
 
-  const { message: aiMessage } = useAIMessageCache('plan');
+  const { message: aiMessage, isDismissed, dismiss } = useAIMessageCache('plan');
 
   useEffect(() => {
-    if (aiMessage) {
+    if (aiMessage && !isDismissed) {
       setShouldShowNotification(true);
     }
-  }, [aiMessage]);
+  }, [aiMessage, isDismissed]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -87,7 +87,10 @@ const PlansPage: React.FC = () => {
         <AINotification
           message={aiMessage}
           createdAt={new Date().toISOString()}
-          onDismiss={() => setShouldShowNotification(false)}
+          onDismiss={() => {
+            setShouldShowNotification(false);
+            dismiss();
+          }}
           onClick={() => {
             setShouldShowNotification(false);
             router.push("/ai?assistantType=plan-creation");

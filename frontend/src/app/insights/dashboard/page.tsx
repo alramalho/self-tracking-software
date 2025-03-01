@@ -72,7 +72,7 @@ export default function InsightsDashboardPage() {
   );
   const api = useApiWithAuth();
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const { message: aiMessage } = useAIMessageCache('metrics');
+  const { message: aiMessage, isDismissed, dismiss } = useAIMessageCache('metrics');
   const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
   const [selectedNewMetric, setSelectedNewMetric] = useState<string | null>(
     null
@@ -88,10 +88,10 @@ export default function InsightsDashboardPage() {
   });
 
   useEffect(() => {
-    if (aiMessage) {
+    if (aiMessage && !isDismissed) {
       setShouldShowNotification(true);
     }
-  }, [aiMessage]);
+  }, [aiMessage, isDismissed]);
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -349,7 +349,10 @@ export default function InsightsDashboardPage() {
         <AINotification
           message={aiMessage}
           createdAt={new Date().toISOString()}
-          onDismiss={() => setShouldShowNotification(false)}
+          onDismiss={() => {
+            setShouldShowNotification(false);
+            dismiss();
+          }}
           onClick={() => {
             setShouldShowNotification(false);
             router.push("/ai?assistantType=metrics-companion");

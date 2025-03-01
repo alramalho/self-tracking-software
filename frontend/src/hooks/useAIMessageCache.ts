@@ -6,9 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 interface CachedMessage {
   message: string;
   timestamp: number;
+  dismissedAt: number | null;
 }
 
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const CACHE_DURATION = 16 * 60 * 60 * 1000; // 16 hours in milliseconds
+const DISMISSAL_DURATION = 16 * 60 * 60 * 1000; // 16 hours in milliseconds
 
 export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
   const [cachedData, setCachedData] = useLocalStorage<CachedMessage | null>(
@@ -26,6 +28,31 @@ export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
     setShouldFetch(shouldFetchNew);
   }, [cachedData]);
 
+  // Check if the message is dismissed
+  const isDismissed = () => {
+    if (!cachedData?.dismissedAt) return false;
+    const now = Date.now();
+    return now - cachedData.dismissedAt < DISMISSAL_DURATION;
+  };
+
+  const dismiss = () => {
+    if (cachedData) {
+      setCachedData({
+        ...cachedData,
+        dismissedAt: Date.now(),
+      });
+    }
+  };
+
+  const reset = () => {
+    if (cachedData) {
+      setCachedData({
+        ...cachedData,
+        dismissedAt: null,
+      });
+    }
+  };
+
   // Query configuration
   const endpoints = {
     metrics: "/ai/generate-metrics-dashboard-message",
@@ -40,6 +67,7 @@ export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
       const newData = {
         message: response.data.message,
         timestamp: Date.now(),
+        dismissedAt: null,
       };
       setCachedData(newData);
       return response.data;
@@ -50,5 +78,8 @@ export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
   return {
     message: cachedData?.message || aiMessageData?.message || "",
     isStale: shouldFetch,
+    isDismissed: isDismissed(),
+    dismiss,
+    reset,
   };
 }
