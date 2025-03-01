@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { HelpCircle, MessageSquarePlus, Bug, X } from "lucide-react";
+import { HelpCircle, MessageSquarePlus, Bug, X, ChevronUp } from "lucide-react";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import FeedbackForm from "./FeedbackForm";
 import { toast } from "react-hot-toast";
@@ -63,9 +63,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
     );
   };
 
-  const buttonContainerClasses = isOpen
-    ? "flex items-center gap-3 group"
-    : "hidden";
+  const buttonContainerClasses = "flex items-center gap-3 group"
   const buttonClasses =
     "w-12 h-12 bg-white rounded-full flex items-center justify-center " +
     "text-gray-600 shadow-md hover:shadow-lg border border-gray-200 " +
@@ -73,73 +71,79 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
   const labelClasses =
     "bg-white py-1 px-3 rounded-full text-sm text-gray-600 " +
     "shadow-md border border-gray-200 absolute right-16 whitespace-nowrap";
-
   const mainButtonClasses =
-    "w-12 h-12 bg-white rounded-full flex items-center justify-center " +
-    "text-gray-600 shadow-md hover:shadow-lg border border-red-200 " +
-    "transition-all duration-200 hover:scale-105";
+    "p-2 bg-white/20 backdrop-blur-sm rounded-lg rounded-br-none rounded-bl-none flex items-center justify-center " +
+    "text-gray-600 shadow-md border border-red-200 " +
+    "transition-all duration-200 whitespace-nowrap";
 
   return (
     <>
-      <div className={`fixed bottom-[5.4rem] right-2 ${className} z-[40]`}>
-        <div
-          className={`flex flex-col-reverse gap-3 items-end transition-all duration-200 mb-3
+      <div className={`fixed bottom-[9rem] right-0 ${className} z-[40] flex`}>
+        <div className="relative flex w-0">
+          <div
+            className={`absolute right-full bottom-[-3.5rem] mb-0 mr-[3rem] transition-all duration-200
             ${
               isOpen
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4 pointer-events-none"
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 translate-x-4 pointer-events-none"
             }`}
-        >
-          <div className={buttonContainerClasses}>
-            <span className={labelClasses}>Get Help</span>
-            <button
-              className={buttonClasses}
-              onClick={() => setShowHelpForm(true)}
-            >
-              <HelpCircle
-                size={24}
-                className="text-gray-600 hover:text-gray-800"
-              />
-            </button>
+          >
+            <div className="flex flex-col gap-3 items-end">
+              <div className={buttonContainerClasses}>
+                <span className={labelClasses}>Get Help</span>
+                <button
+                  className={buttonClasses}
+                  onClick={() => setShowHelpForm(true)}
+                >
+                  <HelpCircle
+                    size={24}
+                    className="text-gray-600 hover:text-gray-800"
+                  />
+                </button>
+              </div>
+
+              <div className={buttonContainerClasses}>
+                <span className={labelClasses}>Report Bug</span>
+                <button
+                  className={buttonClasses}
+                  onClick={() => setShowBugForm(true)}
+                >
+                  <Bug size={24} className="text-gray-600 hover:text-gray-800" />
+                </button>
+              </div>
+
+              <div className={buttonContainerClasses}>
+                <span className={labelClasses}>Suggest Feature</span>
+                <button
+                  className={buttonClasses}
+                  onClick={() => setShowFeatureForm(true)}
+                >
+                  <MessageSquarePlus
+                    size={24}
+                    className="text-gray-600 hover:text-gray-800"
+                  />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className={buttonContainerClasses}>
-            <span className={labelClasses}>Report Bug</span>
+          <div className="transform-gpu origin-bottom-left -rotate-90 translate-y-[calc(100%+1rem)]">
             <button
-              className={buttonClasses}
-              onClick={() => setShowBugForm(true)}
+              className={mainButtonClasses}
+              onClick={() => setIsOpen(!isOpen)}
             >
-              <Bug size={24} className="text-gray-600 hover:text-gray-800" />
-            </button>
-          </div>
-
-          <div className={buttonContainerClasses}>
-            <span className={labelClasses}>Suggest Feature</span>
-            <button
-              className={buttonClasses}
-              onClick={() => setShowFeatureForm(true)}
-            >
-              <MessageSquarePlus
-                size={24}
-                className="text-gray-600 hover:text-gray-800"
-              />
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Feedback</span>
+                <ChevronUp
+                  size={16}
+                  className={`transform transition-transform duration-200 ${
+                    isOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </div>
             </button>
           </div>
         </div>
-
-        {isOpen && <span className={labelClasses}>Close Menu</span>}
-        <button
-          className={`${mainButtonClasses} ${
-            isOpen ? "bg-gray-50" : "bg-white opacity-80"
-          } pointer-events-auto`}
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? (
-            <X size={24} className="text-gray-600 hover:text-gray-800" />
-          ) : (
-            <Bug size={24} className="text-gray-600 hover:text-gray-800" />
-          )}
-        </button>
       </div>
 
       {showBugForm && (
