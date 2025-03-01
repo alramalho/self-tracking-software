@@ -47,7 +47,7 @@ export function WeeklySessionsChecklist({
             return prev + 1;
           }
           clearInterval(timer);
-          if (prev === plan.times_per_week) {
+          if (prev >= (plan.times_per_week || 0)) {
             setIsFullyDone(true);
           }
           return prev;
