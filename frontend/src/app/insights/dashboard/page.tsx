@@ -9,7 +9,7 @@ import {
   Metric,
   MetricEntry,
 } from "@/contexts/UserPlanContext";
-import { Loader2, HelpCircle } from "lucide-react";
+import { Loader2, HelpCircle, Plus } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { CorrelationEntry } from "@/components/CorrelationEntry";
@@ -18,6 +18,8 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { useQuery } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
 import AINotification from "@/components/AINotification";
+import { toast } from "react-hot-toast";
+import { defaultMetrics } from "../onboarding/page";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -43,18 +45,22 @@ export default function InsightsDashboardPage() {
   const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData, isLoading } = metricsAndEntriesQuery;
-  const metrics = metricsAndEntriesData?.metrics || [];
+  const userMetrics = metricsAndEntriesData?.metrics || [];
   const entries = metricsAndEntriesData?.entries || [];
   const activities = userData?.activities || [];
   const activityEntries = userData?.activityEntries || [];
-  const hasMetrics = metrics.length > 0;
+  const hasMetrics = userMetrics.length > 0;
   const router = useRouter();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
+  const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null);
   const api = useApiWithAuth();
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
   const [aiMessage, setAiMessage] = useState<string>("");
+  const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
+  const [selectedNewMetric, setSelectedNewMetric] = useState<string | null>(null);
+  const [isCreatingMetric, setIsCreatingMetric] = useState(false);
 
   const { data: aiMessageData } = useQuery<AIMessageResponse>({
     queryKey: ['metrics-dashboard-message'],
@@ -77,12 +83,18 @@ export default function InsightsDashboardPage() {
     }
   }, [isLoading, hasMetrics]);
 
+  // Set the first metric as selected when metrics load
+  useEffect(() => {
+    if (userMetrics.length > 0 && !selectedMetricId) {
+      setSelectedMetricId(userMetrics[0].id);
+    }
+  }, [userMetrics]);
+
   // Find the metric with the most entries
-  const metricEntryCounts = metrics.map((metric) => ({
+  const metricEntryCounts = userMetrics.map((metric) => ({
     metric,
     count: entries.filter((entry) => entry.metric_id === metric.id).length,
   }));
-  const maxEntries = Math.max(...metricEntryCounts.map((m) => m.count));
 
   const renderProgressUI = (targetEntries: number, specificMetric?: Metric) => {
     const metricsToShow = specificMetric
@@ -135,6 +147,31 @@ export default function InsightsDashboardPage() {
         </div>
       </Card>
     );
+  };
+
+  const handleAddMetric = async () => {
+    if (!selectedNewMetric) return;
+
+    setIsCreatingMetric(true);
+    try {
+      const metricData = defaultMetrics.find(f => f.title === selectedNewMetric);
+      if (!metricData) return;
+
+      await api.post("/metrics", {
+        title: metricData.title,
+        emoji: metricData.emoji,
+      });
+
+      metricsAndEntriesQuery.refetch();
+      setIsAddMetricOpen(false);
+      setSelectedNewMetric(null);
+      toast.success("Metric added successfully");
+    } catch (error) {
+      console.error("Error creating metric:", error);
+      toast.error("Failed to add metric");
+    } finally {
+      setIsCreatingMetric(false);
+    }
   };
 
   if (isLoading) {
@@ -241,8 +278,86 @@ export default function InsightsDashboardPage() {
           onClick={() => {}}
         />
       )}
+
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2 flex-wrap flex-1">
+          {userMetrics.map((metric) => (
+            <Button
+              key={metric.id}
+              variant={selectedMetricId === metric.id ? "default" : "outline"}
+              onClick={() => setSelectedMetricId(metric.id)}
+              className="flex items-center gap-2"
+            >
+              <span>{metric.emoji}</span>
+              <span>{metric.title}</span>
+            </Button>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setIsAddMetricOpen(true)}
+          className="ml-2"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <AppleLikePopover
+        open={isAddMetricOpen}
+        onClose={() => {
+          setIsAddMetricOpen(false);
+          setSelectedNewMetric(null);
+        }}
+        title="Add New Metric"
+      >
+        <div className="pt-8 space-y-8">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-bold">Add a new metric</h1>
+            <p className="text-md text-muted-foreground">
+              Select a metric you&apos;d like to track and correlate with your activities
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {defaultMetrics
+              .filter(m => !metricsAndEntriesData?.metrics.some(existing => existing.title === m.title))
+              .map((metric) => (
+                <Card
+                  key={metric.title}
+                  className={`p-6 transition-all cursor-pointer ${
+                    selectedNewMetric === metric.title ? "ring-2 ring-primary" : ""
+                  }`}
+                  onClick={() => setSelectedNewMetric(metric.title)}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="text-4xl">{metric.emoji}</span>
+                    <div>
+                      <h3 className="font-semibold">{metric.title}</h3>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+          </div>
+
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              size="lg"
+              className="w-full max-w-sm"
+              disabled={!selectedNewMetric || isCreatingMetric}
+              onClick={handleAddMetric}
+              loading={isCreatingMetric}
+            >
+              Add Metric
+            </Button>
+          </div>
+        </div>
+      </AppleLikePopover>
+
       <div className="space-y-4">
-        {metrics.map((metric) => {
+        {userMetrics
+          .filter((metric) => metric.id === selectedMetricId)
+          .map((metric) => {
           const count = entries.filter((e) => e.metric_id === metric.id).length;
           const correlations = count >= 15 ? calculateMetricCorrelations(metric.id) : [];
           const hasCorrelations = correlations.length > 0;

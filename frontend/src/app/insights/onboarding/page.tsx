@@ -9,12 +9,11 @@ import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ExampleCorrelations } from "@/components/ExampleCorrelations";
-import { MetricRater } from "@/components/MetricRater";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
 
-const metrics = [
+export const defaultMetrics = [
   { title: "Happiness", emoji: "😊" },
   { title: "Mood", emoji: "🌟" },
   { title: "Energy", emoji: "⚡️" },
@@ -95,7 +94,7 @@ export default function OnboardingPage() {
       
       // Create all selected metrics in sequence
       for (const metricTitle of selectedMetrics) {
-        const metricData = metrics.find(f => f.title === metricTitle);
+        const metricData = defaultMetrics.find(f => f.title === metricTitle);
         if (!metricData) continue;
 
         const response = await api.post("/metrics", {
@@ -193,7 +192,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {metrics.map((metric) => (
+              {defaultMetrics.map((metric) => (
                 <Card
                   key={metric.title}
                   className={`p-6 transition-all cursor-pointer ${
@@ -230,7 +229,7 @@ export default function OnboardingPage() {
           <div className="space-y-8">
             <div className="space-y-8">
               {selectedMetrics.map((metricTitle, index) => {
-                const metric = metrics.find(m => m.title === metricTitle);
+                const metric = defaultMetrics.find(m => m.title === metricTitle);
                 if (!metric) return null;
                 
                 const metricId = createdMetricIds[index];

@@ -40,7 +40,8 @@ async def create_metric(
         title_lower = metric_data["title"].lower()
         if any(metric.title.lower() == title_lower for metric in existing_metrics):
             raise HTTPException(
-                status_code=400, detail="A metric with this name already exists"
+                status_code=409,
+                detail=f"A metric with this name '{metric_data['title']}' already exists",
             )
 
         new_metric = Metric.new(
