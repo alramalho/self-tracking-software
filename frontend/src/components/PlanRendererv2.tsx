@@ -8,6 +8,7 @@ import {
   subWeeks,
   isAfter,
   isBefore,
+  subDays,
 } from "date-fns";
 import {
   ApiPlan,
@@ -31,12 +32,15 @@ import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
 import { MilestoneOverview } from "./MilestoneOverview";
 import { useApiWithAuth } from "@/api";
-import toast from "react-hot-toast";
-import AppleLikePopover from "./AppleLikePopover";
-import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
 import { usePlanEdit } from "@/hooks/usePlanEdit";
 import { PlanEditModal } from "./PlanEditModal";
-import AINotification from "./AINotification";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -51,6 +55,19 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const { showEditModal, setShowEditModal, handleEditPlan } = usePlanEdit();
   const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
   const api = useApiWithAuth();
+  const [timeRange, setTimeRange] = useState<"recent" | "all">("recent");
+  const [sessionData, setSessionData] = useState<
+    { week: string; [key: string]: number | string }[]
+  >([]);
+  const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
+
+  const getStartDate = useCallback(() => {
+    if (timeRange === "recent") {
+      return subDays(new Date(), 30);
+    }
+    // For "all", find the earliest date between plan start and first activity
+    return undefined;
+  }, [timeRange, selectedPlan.sessions]);
 
   // Get usernames of all plan group members except current user
   const memberUsernames = useMemo(() => {
@@ -72,11 +89,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     if (username === userData?.user?.username) return userData;
     return membersData?.[username];
   };
-
-  const [sessionData, setSessionData] = useState<
-    { week: string; [key: string]: number | string }[]
-  >([]);
-  const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
 
   // Get current user's activities
   const activities = useMemo(() => {
@@ -244,7 +256,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     };
 
     calculateSessionData();
-  }, [selectedPlan, userData, membersData]);
+  }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
 
   const isSessionCompleted = (session: ApiPlan["sessions"][0]) => {
     const sessionDate = parseISO(session.date);
@@ -335,9 +347,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       </div>
       {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
         <div className="mb-8">
-          <MilestoneOverview 
-            milestones={selectedPlan.milestones} 
-            planId={selectedPlan.id} 
+          <MilestoneOverview
+            milestones={selectedPlan.milestones}
+            planId={selectedPlan.id}
             onEdit={() => {
               setOpenedFromMilestone(true);
               setShowEditModal(true);
@@ -345,6 +357,24 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           />
         </div>
       )}
+
+      <div className="flex flex-row justify-between items-center mb-4">
+        <span className="text-sm text-gray-500">Time range</span>
+        <Select
+          value={timeRange}
+          onValueChange={(value: "recent" | "all") => setTimeRange(value)}
+        >
+          <div className="bg-white font-semibold text-gray-800">
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Since 30 days ago</SelectItem>
+              <SelectItem value="all">All time</SelectItem>
+            </SelectContent>
+          </div>
+        </Select>
+      </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex flex-row items-center justify-start gap-2 mb-2">
@@ -426,12 +456,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               activities={activities.filter((a) =>
                 selectedPlan.activity_ids?.includes(a.id)
               )}
+              startDate={getStartDate()}
             />
           ) : (
             <PlanActivityEntriesRenderer
               plan={convertApiPlanToPlan(selectedPlan, activities)}
               activities={activities}
               activityEntries={activityEntries}
+              startDate={getStartDate()}
             />
           )}
         </div>
@@ -519,7 +551,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </div>
         </div>
       )}
-
 
       <Link href="/add" passHref>
         <Button

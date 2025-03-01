@@ -7,13 +7,28 @@ import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 interface PlanSessionsRendererProps {
   plan: Plan;
   activities: Activity[];
+  startDate?: Date;
 }
 
 const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   plan,
   activities,
+  startDate,
 }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
+
+  const getDefaultStartDate = () => {
+    if (startDate) return startDate;
+    if (plan.sessions.length === 0) {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return sevenDaysAgo;
+    }
+    return plan.sessions.reduce((earliest, session) => 
+      session.date < earliest ? session.date : earliest,
+      plan.sessions[0].date
+    );
+  };
 
   const formatSessionsForHeatMap = () => {
     const sessions = plan.sessions.map((session) => ({
@@ -109,7 +124,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
     <div className="px-4">
       <BaseHeatmapRenderer
         activities={activities}
-        startDate={new Date()}
+        startDate={getDefaultStartDate()}
         endDate={plan.finishing_date}
         heatmapData={formatSessionsForHeatMap()}
         onDateClick={setFocusedDate}
