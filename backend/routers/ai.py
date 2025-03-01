@@ -148,6 +148,10 @@ async def websocket_plan_creation_endpoint(websocket: WebSocket):
     await handle_websocket_connection(websocket, "plan_creation")
 
 
+@router.websocket("/connect-metrics-companion")
+async def websocket_metrics_companion_endpoint(websocket: WebSocket):
+    await handle_websocket_connection(websocket, "metrics_companion")
+
 @router.websocket("/connect-activity-extraction")
 async def websocket_activity_extraction_endpoint(websocket: WebSocket):
     await handle_websocket_connection(websocket, "activity_extraction")

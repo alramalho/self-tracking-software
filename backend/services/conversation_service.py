@@ -14,6 +14,7 @@ from entities.plan import Plan
 from services.hume_service import process_audio_with_hume
 from constants import SCHEDULED_NOTIFICATION_TIME_DEVIATION_IN_HOURS, OPENAI_TTS_MODEL
 from ai.assistant.plan_creation_assistant import PlanCreationAssistant
+from ai.assistant.metrics_companion_assistant import MetricsCompanionAssistant
 from ai.assistant.base_assistant import BaseAssistant
 
 from gateways.activities import ActivitiesGateway
@@ -47,6 +48,7 @@ messages_gateway = MessagesGateway()
 ASSISTANT_TYPES = {
     "plan_creation": PlanCreationAssistant,
     "activity_extraction": ActivityExtractorAssistant,
+    "metrics_companion": MetricsCompanionAssistant,
 }
 
 async def talk_with_assistant(

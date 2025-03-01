@@ -98,7 +98,7 @@ class ActivityExtractorAssistant(BaseAssistant):
         Always consider the entire conversation history when making decisions or responses.
         Respond in the same language as the initial input.
 
-        Be midnful of the user's emotions, if they are strong enough.
+        Be mindful of the user's emotions, if they are strong enough.
 
         Today is {datetime.now().strftime('%b %d, %Y')}. 
         """
