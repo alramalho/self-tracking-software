@@ -1,35 +1,30 @@
-from services.conversation_service import process_message, activities_gateway
+from services.conversation_service import process_message
 from shared.executor import executor
 from ai import stt
-from starlette.types import ASGIApp
 import time
 from loguru import logger
 import json
 import base64
 import traceback
-from fastapi import WebSocket, Request, HTTPException, status, Form, UploadFile, File
+from fastapi import WebSocket, Request, HTTPException, status, Form
 from auth.clerk import is_clerk_user_ws
 from bson import ObjectId
 from auth.clerk import is_clerk_user_ws
 from services.notification_manager import NotificationManager
-from gateways.activities import ActivitiesGateway, ActivityEntryAlreadyExistsException
+from gateways.activities import ActivitiesGateway
 from gateways.messages import MessagesGateway
-from entities.activity import ActivityEntry
 from analytics.posthog import posthog
-from ai.assistant.activity_extractor import ExtractedActivityEntry
 from services.hume_service import EMOTION_COLORS, HUME_SCORE_FILTER_THRESHOLD
 from constants import LLM_MODEL
 from entities.message import Emotion
 from gateways.database.mongodb import MongoDBGateway
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from entities.plan import PlanSession
 from auth.clerk import is_clerk_user
 
 from entities.user import User
 from fastapi import APIRouter, Depends
 import services.conversation_service as conversation_service
-from multiprocessing import Process
 import asyncio
 
 router = APIRouter(prefix="/ai")
@@ -355,13 +350,16 @@ async def generate_activity_message(user: User = Depends(is_clerk_user)):
         # Initialize memory and message generator
         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
         generator = ActivityMessageGenerator(user=user, memory=memory)
-
         # Generate the message
         message = await generator.get_response(
             user_input="", message_id=str(ObjectId())
         )
 
-        return {"message": message}
+        response_message_id = messages_gateway.get_latest_ai_message(user.id).id
+        if not response_message_id:
+            raise HTTPException(status_code=500, detail="No response message id found")
+
+        return {"message": message, "message_id": response_message_id}
     except Exception as e:
         logger.error(f"Error generating activity message: {e}")
         logger.error(traceback.format_exc())
@@ -381,13 +379,16 @@ async def generate_metrics_dashboard_message(user: User = Depends(is_clerk_user)
         metrics_gateway = MetricsGateway()
         metrics = metrics_gateway.get_all_metrics_by_user_id(user.id)
         generator = MetricsDashboardMessageGenerator(user=user, memory=memory, user_metrics=metrics)
-
         # Generate the message
         message = await generator.get_response(
             user_input="", message_id=str(ObjectId())
         )
 
-        return {"message": message}
+        response_message_id = messages_gateway.get_latest_ai_message(user.id).id    
+        if not response_message_id:
+            raise HTTPException(status_code=500, detail="No response message id found")
+
+        return {"message": message, "message_id": response_message_id}
     except Exception as e:
         logger.error(f"Error generating metrics dashboard message: {e}")
         logger.error(traceback.format_exc())
@@ -402,13 +403,17 @@ async def generate_plan_message(user: User = Depends(is_clerk_user)):
         # Initialize memory and message generator
         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
         generator = PlanMessageGenerator(user=user, memory=memory)
-
+        
         # Generate the message
         message = await generator.get_response(
             user_input="", message_id=str(ObjectId())
         )
 
-        return {"message": message}
+        response_message_id = messages_gateway.get_latest_ai_message(user.id).id
+        if not response_message_id:
+            raise HTTPException(status_code=500, detail="No response message id found")
+
+        return {"message": message, "message_id": response_message_id}
     except Exception as e:
         logger.error(f"Error generating plan message: {e}")
         logger.error(traceback.format_exc())

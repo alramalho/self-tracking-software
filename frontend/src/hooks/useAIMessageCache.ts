@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 interface CachedMessage {
   message: string;
+  messageId: string;
   timestamp: number;
   dismissedAt: number | null;
 }
@@ -66,6 +67,7 @@ export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
       const response = await api.get(endpoints[type]);
       const newData = {
         message: response.data.message,
+        messageId: response.data.message_id,
         timestamp: Date.now(),
         dismissedAt: null,
       };
@@ -77,6 +79,7 @@ export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
 
   return {
     message: cachedData?.message || aiMessageData?.message || "",
+    messageId: cachedData?.messageId || aiMessageData?.messageId || "",
     isStale: shouldFetch,
     isDismissed: isDismissed(),
     dismiss,

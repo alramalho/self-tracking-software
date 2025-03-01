@@ -11,7 +11,6 @@ import { Remark } from "react-remark";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { formatTimeAgo } from "@/lib/utils";
-import { Badge } from "./ui/badge";
 import AINotification from "./AINotification";
 
 interface NotificationsProps {}
@@ -52,7 +51,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             notification.related_data.message_text
           ) {
             router.push(
-              `/ai?assistantType=activity_extraction&messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`
+              `/ai?assistantType=activity-extraction&messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`
             );
           } else {
             toast.error(

@@ -1,5 +1,4 @@
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel
+from typing import Dict, List, Any
 from entities.user import User
 from entities.message import Message, Emotion
 from ai.assistant.memory import DatabaseMemory

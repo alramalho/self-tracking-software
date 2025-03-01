@@ -197,6 +197,8 @@ const LogPage: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
 
+  const api = useApiWithAuth();
+
   const { rive, RiveComponent } = useRive({
     src: "/animations/ai_voice_states.riv",
     stateMachines: "State",
@@ -209,6 +211,12 @@ const LogPage: React.FC = () => {
     "number",
     0
   );
+
+  useEffect(() => {
+    if (messageId && messageText) {
+      api.post(`/messages/${messageId}/move-up`);
+    }
+  }, []);
 
   useEffect(() => {
     if (!numberStateTransition) return;
@@ -235,7 +243,7 @@ const LogPage: React.FC = () => {
     }
   }, [posthogFeatureFlagsInitialized, isFeatureEnabled]);
 
-  const connectWebSocket = useCallback(async () => {
+  const connectWebSocket = async () => {
     try {
       setIsConnecting(true);
       const token = await getToken();
@@ -269,7 +277,7 @@ const LogPage: React.FC = () => {
       newSocket.onerror = (error) => {
         setIsConnecting(false);
         setIsLoading(false);
-        toast.error("WebSocket error occurred");
+        console.error("WebSocket error occurred", error);
       };
 
       setSocket(newSocket);
@@ -277,11 +285,8 @@ const LogPage: React.FC = () => {
       setIsConnecting(false);
       toast.error("Failed to connect to WebSocket");
     }
-  }, [getToken]);
+  };
 
-  useEffect(() => {
-    console.log({ suggestions });
-  }, [suggestions]);
   useEffect(() => {
     if (isUserWhitelisted) {
       connectWebSocket();
@@ -292,7 +297,7 @@ const LogPage: React.FC = () => {
         socket.close();
       }
     };
-  }, [connectWebSocket]);
+  }, []);
 
   const handleIncomingMessage = useCallback(
     (message: string, audioBase64: string | null) => {

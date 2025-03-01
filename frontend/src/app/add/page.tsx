@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
-import { toast } from "react-hot-toast";
 import { Loader2, Plus } from "lucide-react";
 import { InsightsBanner } from "@/components/InsightsBanner";
 import { Card } from "@/components/ui/card";
@@ -37,6 +36,7 @@ const LogPage: React.FC = () => {
 
   const {
     message: aiMessage,
+    messageId,
     isDismissed,
     dismiss,
   } = useAIMessageCache("activity");
@@ -105,7 +105,9 @@ const LogPage: React.FC = () => {
           }}
           onClick={() => {
             setShouldShowNotification(false);
-            router.push("/ai?assistantType=activity-extractor");
+            router.push(
+              `/ai?assistantType=activity-extraction&messageId=${messageId}&messageText=${aiMessage}`
+            );
           }}
         />
       )}
