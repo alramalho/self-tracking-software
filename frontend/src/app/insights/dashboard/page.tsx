@@ -21,7 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
 import AINotification from "@/components/AINotification";
 import { toast } from "react-hot-toast";
-import { defaultMetrics } from "../onboarding/page";
+import { defaultMetrics } from "../metrics";
 import {
   CartesianGrid,
   Line,
