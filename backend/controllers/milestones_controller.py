@@ -206,4 +206,4 @@ class MilestonesController:
         # Join all criteria with proper conjunctions
         criteria_text = " AND ".join(criteria_descriptions)
         
-        return f"Next milestone '{milestone.description}' is due on {formatted_date}. Current progress: {criteria_text}. Overall completion: {int(milestone.progress)}%." 
+        return f"Next milestone '{milestone.description}' for plan '{plan.goal}' is due on {formatted_date}. Current progress: {criteria_text}. Overall completion: {int(milestone.progress)}%." 

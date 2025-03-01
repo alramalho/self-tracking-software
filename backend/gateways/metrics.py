@@ -136,11 +136,11 @@ class MetricsGateway:
         for i in range(lookback_days):
             target_day = today - timedelta(days=i)
             if i == 0:
-                day_label = "Today"
+                day_label = f"Today, {datetime.now(UTC).strftime('%A, %b %d %Y')}"
             elif i == 1:
-                day_label = "Yesterday"
+                day_label = f"Yesterday, {datetime.now(UTC).strftime('%A, %b %d %Y')}"
             else:
-                day_label = f"{i} days ago"
+                day_label = f"{i} days ago, {datetime.now(UTC).strftime('%A, %b %d %Y')}"
 
             day_entries = []
             for entry in metric_entries:

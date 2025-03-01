@@ -12,6 +12,7 @@ import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
 import AINotification from "@/components/AINotification";
 import { useApiWithAuth } from "@/api";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 interface ActivityLogData {
   date: Date;
@@ -37,6 +38,7 @@ const LogPage: React.FC = () => {
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
   const [aiMessage, setAiMessage] = useState<string>("");
   const api = useApiWithAuth()
+  const router = useRouter();
   
   const { data: aiMessageData } = useQuery<AIMessageResponse>({
     queryKey: ['activity-message'],
@@ -139,7 +141,10 @@ const LogPage: React.FC = () => {
           message={aiMessage}
           createdAt={new Date().toISOString()}
           onDismiss={() => setShouldShowNotification(false)}
-          onClick={() => {}}
+          onClick={() => {
+            setShouldShowNotification(false);
+            router.push("/ai?assistantType=activity-extractor");
+          }}
         />
       )}
 

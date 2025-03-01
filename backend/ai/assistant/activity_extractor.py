@@ -14,6 +14,7 @@ from ai.assistant.base_assistant import BaseAssistant
 
 activities_gateway = ActivitiesGateway()
 
+
 class ExtractedActivityEntry(BaseModel):
     activity_id: str = Field(..., description="The id of the activity that was logged")
     date: str = Field(
@@ -33,6 +34,7 @@ class ExtractedActivityEntryList(BaseModel):
         ..., description="A list of activities that were logged"
     )
 
+
 every_message_flowchart = {
     "ActivityScanner": Node(
         text="Based on the conversation history, did the user specificially asked you to log or register any activities?",
@@ -46,7 +48,10 @@ every_message_flowchart = {
     ),
     "CheckActivityQualifies": Node(
         text="Does the activity exist in the user's activities list?",
-        connections={"Yes": "CheckActivityDetails", "No": "InformTheUserOnlyExistingActivitiesAreSupported"},
+        connections={
+            "Yes": "CheckActivityDetails",
+            "No": "InformTheUserOnlyExistingActivitiesAreSupported",
+        },
         temperature=0.7,
     ),
     "CheckActivityDetails": Node(
@@ -84,7 +89,6 @@ class ActivityExtractorAssistant(BaseAssistant):
         user: User,
         memory: DatabaseMemory,
         websocket: WebSocket = None,
-        user_activities: List[Activity] = None,
     ):
         super().__init__(user, memory, websocket)
         self.user_activities = user_activities or []
@@ -110,36 +114,49 @@ class ActivityExtractorAssistant(BaseAssistant):
         # Get base context
         context = super().get_context()
         
-        context.update({
-            "user_activities": self.user_activities,
-            "recent_logged_activities": activities_gateway.get_readable_recent_activity_entries(self.user.id),
-        })
-        
+        lookback_days = 14
+        context.update(
+            {
+                "user_activities": [
+                    str(activity)
+                    for activity in activities_gateway.get_all_activities_by_user_id(
+                        self.user.id
+                    )
+                ],
+                f"recent_logged_activities_on_{lookback_days}_days": activities_gateway.get_readable_recent_activity_entries(
+                    self.user.id, past_day_limit=lookback_days
+                ),
+            }
+        )
+
         return context
 
     async def handle_suggestions(self, extracted: Dict) -> List[AssistantSuggestion]:
         suggestions: List[AssistantSuggestion] = []
-        
+
         # Aggregate activities from all ExtractActivity nodes
         all_activities = []
         for key in extracted:
             if key.startswith("ExtractActivity_"):
                 all_activities.extend(extracted[key].activities)
-        
+
         # If we have extracted activities, create suggestions
         if all_activities:
-            existing_entries = activities_gateway.get_all_activity_entries_by_user_id(self.user.id)
+            existing_entries = activities_gateway.get_all_activity_entries_by_user_id(
+                self.user.id
+            )
             activity_entries = [
-                ae for ae in all_activities
+                ae
+                for ae in all_activities
                 if not any(
                     existing.activity_id == ae.activity_id and existing.date == ae.date
                     for existing in existing_entries
                 )
             ]
-            
+
             for entry in activity_entries:
                 activity = activities_gateway.get_activity_by_id(entry.activity_id)
                 suggestion = ActivitySuggestion.from_activity_entry(entry, activity)
                 suggestions.append(suggestion)
-        
+
         return suggestions

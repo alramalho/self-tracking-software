@@ -7,6 +7,13 @@ import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import AINotification from "@/components/AINotification";
+import { useApiWithAuth } from "@/api";
+import { useQuery } from "@tanstack/react-query";
+
+interface AIMessageResponse {
+  message: string;
+}
 
 const PlansPage: React.FC = () => {
   
@@ -14,6 +21,25 @@ const PlansPage: React.FC = () => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const [showServerMessage, setShowServerMessage] = useState(false);
   const { data: userData } = useCurrentUserDataQuery();
+  const [aiMessage, setAiMessage] = useState<string>("");
+  const [shouldShowNotification, setShouldShowNotification] = useState(false);
+  const api = useApiWithAuth();
+  const router = useRouter();
+
+  const { data: aiMessageData } = useQuery<AIMessageResponse>({
+    queryKey: ['plan-message'],
+    queryFn: async () => {
+      const response = await api.get("/ai/generate-plan-message");
+      return response.data;
+    },
+  });
+
+  useEffect(() => {
+    if (aiMessageData?.message) {
+      setAiMessage(aiMessageData.message);
+      setShouldShowNotification(true);
+    }
+  }, [aiMessageData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -63,6 +89,18 @@ const PlansPage: React.FC = () => {
         Welcome
         {userData.user?.name ? `, ${userData.user.name}` : ""}. Here are your active plans:
       </h1>
+
+      {shouldShowNotification && (
+        <AINotification
+          message={aiMessage}
+          createdAt={new Date().toISOString()}
+          onDismiss={() => setShouldShowNotification(false)}
+          onClick={() => {
+            setShouldShowNotification(false);
+            router.push("/ai?assistantType=plan-creation");
+          }}
+        />
+      )}
 
       <PlansRenderer />
     </div>

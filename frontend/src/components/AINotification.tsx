@@ -76,7 +76,10 @@ const AINotification: React.FC<AINotificationProps> = ({
           <div className="text-xs text-gray-500 mt-1">
             {formatTimeAgo(createdAt)}
           </div>
-          <div className="flex flex-row items-center gap-1 underline text-gray-500">
+          <div className="flex flex-row items-center gap-1 underline text-gray-500" onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}>
             <Reply size={15} />
             <span className="text-xs">Reply</span>
           </div>
