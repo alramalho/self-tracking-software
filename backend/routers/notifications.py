@@ -123,16 +123,24 @@ async def load_notifications(user: User = Depends(is_clerk_user)):
         for n in notification_manager.get_all_for_user(user.id)
     ]
     notifications.sort(key=lambda x: x.created_at, reverse=True)
-    engagement_notifications = iter([n for n in notifications if n.type == "engagement"])
-    latest_engagment = next(engagement_notifications, None)
+    
+    # Get engagement notifications as a list first
+    engagement_notifications = [n for n in notifications if n.type == "engagement"]
+    latest_engagement = engagement_notifications[0] if engagement_notifications else None
+    
+    # Filter out concluded notifications
     notifications = [n for n in notifications if n.status != "concluded"]
+    
+    # Mark processed notifications as opened
     for notification in notifications:
         if notification.status == "processed":
             notification_manager.mark_as_opened(notification.id)
 
+    # Filter out engagement notifications and add back latest if not concluded
     notifications = [n for n in notifications if n.type != "engagement"]
-    if latest_engagment and latest_engagment.status != "concluded":
-        notifications.append(latest_engagment)
+    if latest_engagement and latest_engagement.status != "concluded":
+        notifications.append(latest_engagement)
+        
     return {"notifications": notifications}
 
 
