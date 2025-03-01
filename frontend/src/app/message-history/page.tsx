@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 
 export default function MessageHistoryPage() {
   const { messagesData } = useUserPlan();
-  const messages = messagesData.data?.messages || [];
+  const messages = (messagesData.data?.messages || []).filter(message => message.text.trim() !== '');
   const router = useRouter();
 
   if (messagesData.isLoading) {
