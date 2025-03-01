@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowRight, Reply, ScanFace, X } from "lucide-react";
 import { Remark } from "react-remark";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, delay } from "framer-motion";
 import { Badge } from "./ui/badge";
 import { formatTimeAgo } from "@/lib/utils";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -28,6 +28,7 @@ const AINotification: React.FC<AINotificationProps> = ({
     wave: {
       rotate: [0, 25, -15, 25, -15, 0],
       transition: {
+        delay: 1,
         duration: 1.5,
         times: [0, 0.2, 0.4, 0.6, 0.8, 1],
         ease: "easeInOut",

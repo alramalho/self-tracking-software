@@ -15,6 +15,9 @@ import { getThemeVariants } from "@/utils/theme";
 import { CorrelationEntry } from "@/components/CorrelationEntry";
 import { Button } from "@/components/ui/button";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { useQuery } from "@tanstack/react-query";
+import { useApiWithAuth } from "@/api";
+import AINotification from "@/components/AINotification";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -26,6 +29,10 @@ const ratingColors = {
   4: "text-lime-500",
   5: "text-green-500",
 } as const;
+
+interface AIMessageResponse {
+  message: string;
+}
 
 export default function InsightsDashboardPage() {
   const {
@@ -45,6 +52,24 @@ export default function InsightsDashboardPage() {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
+  const api = useApiWithAuth();
+  const [shouldShowNotification, setShouldShowNotification] = useState(false);
+  const [aiMessage, setAiMessage] = useState<string>("");
+
+  const { data: aiMessageData } = useQuery<AIMessageResponse>({
+    queryKey: ['metrics-dashboard-message'],
+    queryFn: async () => {
+      const response = await api.get("/ai/generate-metrics-dashboard-message");
+      return response.data;
+    },
+  });
+
+  useEffect(() => {
+    if (aiMessageData?.message) {
+      setAiMessage(aiMessageData.message);
+      setShouldShowNotification(true);
+    }
+  }, [aiMessageData]);
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -208,6 +233,14 @@ export default function InsightsDashboardPage() {
   // Render insights when we have enough data
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
+      {shouldShowNotification && (
+        <AINotification
+          message={aiMessage}
+          createdAt={new Date().toISOString()}
+          onDismiss={() => setShouldShowNotification(false)}
+          onClick={() => {}}
+        />
+      )}
       <div className="space-y-4">
         {metrics.map((metric) => {
           const count = entries.filter((e) => e.metric_id === metric.id).length;
