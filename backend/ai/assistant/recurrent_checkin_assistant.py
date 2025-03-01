@@ -1,8 +1,9 @@
 from typing import Dict
+import traceback
 from datetime import datetime, timedelta
 import pytz
 from pydantic import BaseModel, Field
-from typing import List, Literal
+from entities.message import Message
 from loguru import logger
 
 from gateways.activities import ActivitiesGateway
@@ -194,7 +195,15 @@ class RecurrentCheckinAssistant:
         try:
             message, extracted = await framework.run(context)
 
-            self.memory.write(message)
+            self.memory.write(
+                Message.new(
+                    text=message,
+                    sender_name="Jarvis",
+                    sender_id="0",
+                    recipient_name=self.user.name,
+                    recipient_id=self.user.id,
+                )
+            )
             
             if isinstance(message, str):
                 return message.strip()
@@ -205,5 +214,6 @@ class RecurrentCheckinAssistant:
                 return None
                 
         except Exception as e:
+            logger.error(traceback.format_exc())
             logger.error(f"Error generating message: {e}")
             return None 
