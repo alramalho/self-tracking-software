@@ -31,6 +31,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -71,7 +72,7 @@ export default function InsightsDashboardPage() {
   );
   const api = useApiWithAuth();
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const [aiMessage, setAiMessage] = useState<string>("");
+  const { message: aiMessage } = useAIMessageCache('metrics');
   const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
   const [selectedNewMetric, setSelectedNewMetric] = useState<string | null>(
     null
@@ -87,11 +88,10 @@ export default function InsightsDashboardPage() {
   });
 
   useEffect(() => {
-    if (aiMessageData?.message) {
-      setAiMessage(aiMessageData.message);
+    if (aiMessage) {
       setShouldShowNotification(true);
     }
-  }, [aiMessageData]);
+  }, [aiMessage]);
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {

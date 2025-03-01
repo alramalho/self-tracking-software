@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import AINotification from "@/components/AINotification";
 import { useApiWithAuth } from "@/api";
 import { useQuery } from "@tanstack/react-query";
+import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 
 interface AIMessageResponse {
   message: string;
@@ -21,25 +22,17 @@ const PlansPage: React.FC = () => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const [showServerMessage, setShowServerMessage] = useState(false);
   const { data: userData } = useCurrentUserDataQuery();
-  const [aiMessage, setAiMessage] = useState<string>("");
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
   const api = useApiWithAuth();
   const router = useRouter();
 
-  const { data: aiMessageData } = useQuery<AIMessageResponse>({
-    queryKey: ['plan-message'],
-    queryFn: async () => {
-      const response = await api.get("/ai/generate-plan-message");
-      return response.data;
-    },
-  });
+  const { message: aiMessage } = useAIMessageCache('plan');
 
   useEffect(() => {
-    if (aiMessageData?.message) {
-      setAiMessage(aiMessageData.message);
+    if (aiMessage) {
       setShouldShowNotification(true);
     }
-  }, [aiMessageData]);
+  }, [aiMessage]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
