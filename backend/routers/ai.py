@@ -362,3 +362,29 @@ async def generate_activity_message(user: User = Depends(is_clerk_user)):
         logger.error(f"Error generating activity message: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/generate-metrics-dashboard-message")
+async def generate_metrics_dashboard_message(user: User = Depends(is_clerk_user)):
+    from ai.assistant.metrics_dashboard_message_generator import MetricsDashboardMessageGenerator
+    from ai.assistant.memory import DatabaseMemory
+    from gateways.database.mongodb import MongoDBGateway
+    from gateways.metrics import MetricsGateway
+
+    try:
+        # Initialize memory and message generator
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        metrics_gateway = MetricsGateway()
+        metrics = metrics_gateway.get_all_metrics_by_user_id(user.id)
+        generator = MetricsDashboardMessageGenerator(user=user, memory=memory, user_metrics=metrics)
+
+        # Generate the message
+        message = await generator.get_response(
+            user_input="", message_id=str(ObjectId())
+        )
+
+        return {"message": message}
+    except Exception as e:
+        logger.error(f"Error generating metrics dashboard message: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
