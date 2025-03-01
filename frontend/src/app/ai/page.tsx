@@ -140,7 +140,10 @@ const connectionStatusVariants = {
   },
 };
 
-type AssistantType = "activity-extraction" | "plan-creation";
+type AssistantType =
+  | "activity-extraction"
+  | "plan-creation"
+  | "metrics-companion";
 
 const LogPage: React.FC = () => {
   const { getToken } = useAuth();
@@ -165,7 +168,9 @@ const LogPage: React.FC = () => {
 
   const searchParams = useSearchParams();
   const notificationId = searchParams.get("notification_id");
-  let assistantType: AssistantType = searchParams.get("assistantType") as AssistantType;
+  let assistantType: AssistantType = searchParams.get(
+    "assistantType"
+  ) as AssistantType;
   if (!assistantType) {
     assistantType = "activity-extraction";
   }
@@ -241,7 +246,8 @@ const LogPage: React.FC = () => {
       }
 
       const newSocket = new WebSocket(
-        `${process.env.NEXT_PUBLIC_BACKEND_WS_URL!}/ai/connect-${assistantType}?token=${token}`
+        `${process.env
+          .NEXT_PUBLIC_BACKEND_WS_URL!}/ai/connect-${assistantType}?token=${token}`
       );
 
       newSocket.onopen = () => {
@@ -334,9 +340,13 @@ const LogPage: React.FC = () => {
       } else if (data.type === "emotion_analysis") {
         const receivedEmotions = data.result;
         console.log({ receivedEmotions, currentEmotions });
-        console.log(JSON.stringify(receivedEmotions) !== JSON.stringify(currentEmotions));
-        
-        if (JSON.stringify(receivedEmotions) !== JSON.stringify(currentEmotions)) {
+        console.log(
+          JSON.stringify(receivedEmotions) !== JSON.stringify(currentEmotions)
+        );
+
+        if (
+          JSON.stringify(receivedEmotions) !== JSON.stringify(currentEmotions)
+        ) {
           setCurrentEmotions(receivedEmotions);
           setAreEmotionsLoading(false);
         }
@@ -471,16 +481,6 @@ const LogPage: React.FC = () => {
       toast.error("Failed to share referral link. Maybe you cancelled it?");
     }
   };
-
-  function toReadableDate(date: string) {
-    return new Date(date)
-      .toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-      .replace(",", "");
-  }
 
   const handleSuggestionHandled = (handled: SuggestionBase) => {
     setSuggestions((prev) => prev.filter((s) => s.id !== handled.id));
@@ -622,6 +622,19 @@ const LogPage: React.FC = () => {
                 initial="hidden"
                 animate="visible"
               >
+                {/* Assistant type title */}
+                <div className="text-center py-2">
+                  <h2 className="text-lg font-medium text-gray-700">
+                    Talking to{" "}
+                    {assistantType
+                      .split("-")
+                      .map(
+                        (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                      )
+                      .join(" ")}{" "}
+                    ⭐️
+                  </h2>
+                </div>
                 {isVoiceMode && (
                   <>
                     <div className="flex flex-col items-center justify-center w-full h-full">
@@ -686,7 +699,7 @@ const LogPage: React.FC = () => {
                     disabled={!isConnected}
                   />
                 </motion.div>
-                
+
                 <motion.div
                   variants={itemVariants}
                   className="flex-1 flex flex-col items-center justify-center gap-4 p-4 pb-[5.4rem]"
@@ -767,7 +780,6 @@ const LogPage: React.FC = () => {
                     </div>
                   )}
                 </motion.div>
-
               </motion.div>
             )}
           </AnimatePresence>
