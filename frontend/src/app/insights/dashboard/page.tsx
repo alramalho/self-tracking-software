@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUserPlan, Metric, MetricEntry } from "@/contexts/UserPlanContext";
+import { useUserPlan, Metric, MetricEntry, Activity } from "@/contexts/UserPlanContext";
 import {
   Loader2,
   HelpCircle,
@@ -32,6 +32,13 @@ import {
   Tooltip,
 } from "recharts";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
+import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
+import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
+import { MetricSelector } from "@/components/metrics/MetricSelector";
+import { AddMetricPopover } from "@/components/metrics/AddMetricPopover";
+import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
+import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
+import { MetricsAINotification } from "@/components/metrics/MetricsAINotification";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -46,6 +53,11 @@ const ratingColors = {
 
 interface AIMessageResponse {
   message: string;
+}
+
+interface Correlation {
+  activity: Activity;
+  correlation: number;
 }
 
 export default function InsightsDashboardPage() {
@@ -70,28 +82,12 @@ export default function InsightsDashboardPage() {
   const [trendHelpMetricId, setTrendHelpMetricId] = useState<string | null>(
     null
   );
-  const api = useApiWithAuth();
-  const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const { message: aiMessage, isDismissed, dismiss } = useAIMessageCache('metrics');
   const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
   const [selectedNewMetric, setSelectedNewMetric] = useState<string | null>(
     null
   );
   const [isCreatingMetric, setIsCreatingMetric] = useState(false);
-
-  const { data: aiMessageData } = useQuery<AIMessageResponse>({
-    queryKey: ["metrics-dashboard-message"],
-    queryFn: async () => {
-      const response = await api.get("/ai/generate-metrics-dashboard-message");
-      return response.data;
-    },
-  });
-
-  useEffect(() => {
-    if (aiMessage && !isDismissed) {
-      setShouldShowNotification(true);
-    }
-  }, [aiMessage, isDismissed]);
+  const api = useApiWithAuth();
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -345,103 +341,28 @@ export default function InsightsDashboardPage() {
   // Render insights when we have enough data
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
-      {shouldShowNotification && (
-        <AINotification
-          message={aiMessage}
-          createdAt={new Date().toISOString()}
-          onDismiss={() => {
-            setShouldShowNotification(false);
-            dismiss();
-          }}
-          onClick={() => {
-            setShouldShowNotification(false);
-            router.push("/ai?assistantType=metrics-companion");
-          }}
-        />
-      )}
+      <MetricsAINotification />
 
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2 flex-wrap flex-1">
-          {userMetrics.map((metric) => (
-            <Button
-              key={metric.id}
-              variant={selectedMetricId === metric.id ? "default" : "outline"}
-              onClick={() => setSelectedMetricId(metric.id)}
-              className="flex items-center gap-2"
-            >
-              <span>{metric.emoji}</span>
-              <span>{metric.title}</span>
-            </Button>
-          ))}
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsAddMetricOpen(true)}
-          className="ml-2"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
+      <MetricSelector
+        metrics={userMetrics}
+        selectedMetricId={selectedMetricId}
+        onMetricSelect={setSelectedMetricId}
+        onAddMetricClick={() => setIsAddMetricOpen(true)}
+      />
 
-      <AppleLikePopover
-        open={isAddMetricOpen}
+      <AddMetricPopover
+        isOpen={isAddMetricOpen}
         onClose={() => {
           setIsAddMetricOpen(false);
           setSelectedNewMetric(null);
         }}
-        title="Add New Metric"
-      >
-        <div className="pt-8 space-y-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold">Add a new metric</h1>
-            <p className="text-md text-muted-foreground">
-              Select a metric you&apos;d like to track and correlate with your
-              activities
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {defaultMetrics
-              .filter(
-                (m) =>
-                  !metricsAndEntriesData?.metrics.some(
-                    (existing) => existing.title === m.title
-                  )
-              )
-              .map((metric) => (
-                <Card
-                  key={metric.title}
-                  className={`p-6 transition-all cursor-pointer ${
-                    selectedNewMetric === metric.title
-                      ? "ring-2 ring-primary"
-                      : ""
-                  }`}
-                  onClick={() => setSelectedNewMetric(metric.title)}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-4xl">{metric.emoji}</span>
-                    <div>
-                      <h3 className="font-semibold text-lg">{metric.title}</h3>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-          </div>
-
-          <div className="flex flex-col items-center gap-4">
-            <Button
-              size="lg"
-              className="w-full max-w-sm"
-              disabled={!selectedNewMetric || isCreatingMetric}
-              onClick={handleAddMetric}
-              loading={isCreatingMetric}
-            >
-              Add Metric
-            </Button>
-          </div>
-        </div>
-      </AppleLikePopover>
+        defaultMetrics={defaultMetrics}
+        existingMetrics={metricsAndEntriesData?.metrics || []}
+        selectedMetric={selectedNewMetric}
+        onMetricSelect={setSelectedNewMetric}
+        onAddMetric={handleAddMetric}
+        isCreating={isCreatingMetric}
+      />
 
       <div className="space-y-4">
         {userMetrics
@@ -451,14 +372,19 @@ export default function InsightsDashboardPage() {
               (e) => e.metric_id === metric.id
             ).length;
             const correlations =
-              count >= 15 ? calculateMetricCorrelations(metric.id) : [];
+              count >= 15
+                ? calculateMetricCorrelations(metric.id)
+                    .filter((c): c is { activity: Activity; correlation: number } => c !== null)
+                    .map(c => ({
+                      activity: c.activity,
+                      correlation: c.correlation
+                    }))
+                : [];
             const hasCorrelations = correlations.length > 0;
             const chartData = prepareChartData(metric.id);
             const trend = calculateMetricTrend(
               entries.filter((e) => e.metric_id === metric.id)
             );
-            const TrendIcon = trend >= 0 ? TrendingUp : TrendingDown;
-            const trendColor = trend >= 0 ? "text-green-500" : "text-red-500";
 
             // Calculate weekly averages for display
             const twoWeeksAgo = new Date();
@@ -503,487 +429,34 @@ export default function InsightsDashboardPage() {
 
             return (
               <div key={metric.id} className="space-y-4">
-                {/* Metric Trend Card */}
-                <Card className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex flex-row justify-between items-center gap-2 w-full">
-                      <span className="text-4xl">{metric.emoji}</span>
-                      <div className="flex flex-col items-start justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-2xl font-bold text-left">
-                            <span className="text-lg">
-                              {metric.title} Trend
-                            </span>{" "}
-                          </h2>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex flex-row justify-between items-center gap-2 w-full">
-                            <div
-                              className={`flex items-center gap-1 text-sm ${trendColor}`}
-                            >
-                              <TrendIcon className="h-4 w-4" />
-                              {Math.abs(trend).toFixed(1)}%
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Last 14 days
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-gray-400 hover:text-gray-600"
-                        onClick={() => setTrendHelpMetricId(metric.id)}
-                      >
-                        <HelpCircle className="h-5 w-5" />
-                      </Button>
-                    </div>
-                    <ul className="text-sm text-muted-foreground list-disc list-inside">
-                      <li>
-                        This week&apos;s avg:{" "}
-                        <span className="font-bold font-mono">
-                          {thisWeekEntries.length > 0
-                            ? thisWeekAvg.toFixed(2)
-                            : "No data"}
-                        </span>
-                      </li>
-                      <li>
-                        Last week&apos;s avg:{" "}
-                        <span className="font-bold font-mono">
-                          {lastWeekEntries.length > 0
-                            ? lastWeekAvg.toFixed(2)
-                            : "No data"}
-                        </span>
-                      </li>
-                    </ul>
-                    <div className="h-[200px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={chartData}
-                          margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                        >
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            vertical={false}
-                          />
-                          <XAxis
-                            dataKey="date"
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                            fontSize={12}
-                            stroke="#888888"
-                          />
-                          <YAxis
-                            domain={[1, 5]}
-                            ticks={[1, 2, 3, 4, 5]}
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                            fontSize={12}
-                            stroke="#888888"
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              background: "white",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                            }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="rating"
-                            stroke="#22c55e"
-                            strokeWidth={2}
-                            dot={{
-                              fill: "#22c55e",
-                              r: 4,
-                            }}
-                            activeDot={{
-                              r: 6,
-                              fill: "#22c55e",
-                            }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                <MetricTrendCard
+                  metric={metric}
+                  trend={trend}
+                  chartData={chartData}
+                  thisWeekAvg={thisWeekAvg}
+                  lastWeekAvg={lastWeekAvg}
+                  thisWeekEntries={thisWeekEntries}
+                  lastWeekEntries={lastWeekEntries}
+                  onHelpClick={() => setTrendHelpMetricId(metric.id)}
+                />
 
-                  <AppleLikePopover
-                    open={trendHelpMetricId === metric.id}
-                    onClose={() => setTrendHelpMetricId(null)}
-                    title="Understanding Trends"
-                  >
-                    <div className="pt-8 space-y-4 mb-4">
-                      <h3 className="text-lg font-semibold">
-                        Understanding Your {metric.title} Trend
-                      </h3>
+                <MetricInsightsCard
+                  metric={metric}
+                  correlations={correlations}
+                  onHelpClick={() => setHelpMetricId(metric.id)}
+                />
 
-                      <p className="text-sm text-gray-600">
-                        The trend compares your average{" "}
-                        {metric.title.toLowerCase()} from this week against last
-                        week, showing how things are changing.
-                      </p>
+                <TrendHelpPopover
+                  isOpen={trendHelpMetricId === metric.id}
+                  onClose={() => setTrendHelpMetricId(null)}
+                  metricTitle={metric.title}
+                />
 
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-sm font-medium mb-2">
-                          Real Example:
-                        </p>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Let&apos;s look at someone&apos;s{" "}
-                          {metric.title.toLowerCase()} ratings over two weeks:
-                        </p>
-                        <div className="space-y-6">
-                          {/* Last Week */}
-                          <div>
-                            <p className="text-sm font-medium mb-2">
-                              Last Week:
-                            </p>
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full text-sm">
-                                <tbody>
-                                  <tr className="border-b">
-                                    <th className="text-left pb-2 pr-4">Day</th>
-                                    <td className="px-3">Mon</td>
-                                    <td className="px-3">Tue</td>
-                                    <td className="px-3">Wed</td>
-                                    <td className="px-3">Thu</td>
-                                    <td className="px-3">Fri</td>
-                                    <td className="px-3">Sat</td>
-                                    <td className="px-3">Sun</td>
-                                  </tr>
-                                  <tr>
-                                    <th className="text-left py-2 pr-4">
-                                      Rating
-                                    </th>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[2]}`}
-                                    >
-                                      2
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[3]}`}
-                                    >
-                                      3
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[2]}`}
-                                    >
-                                      2
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[3]}`}
-                                    >
-                                      3
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[3]}`}
-                                    >
-                                      3
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[2]}`}
-                                    >
-                                      2
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[3]}`}
-                                    >
-                                      3
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                              <p className="text-sm mt-2">
-                                Last week&apos;s average:{" "}
-                                <span className="font-medium">2.57</span>
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* This Week */}
-                          <div>
-                            <p className="text-sm font-medium mb-2">
-                              This Week:
-                            </p>
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full text-sm">
-                                <tbody>
-                                  <tr className="border-b">
-                                    <th className="text-left pb-2 pr-4">Day</th>
-                                    <td className="px-3">Mon</td>
-                                    <td className="px-3">Tue</td>
-                                    <td className="px-3">Wed</td>
-                                    <td className="px-3">Thu</td>
-                                    <td className="px-3">Fri</td>
-                                    <td className="px-3">Sat</td>
-                                    <td className="px-3">Sun</td>
-                                  </tr>
-                                  <tr>
-                                    <th className="text-left py-2 pr-4">
-                                      Rating
-                                    </th>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[3]}`}
-                                    >
-                                      3
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[4]}`}
-                                    >
-                                      4
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[4]}`}
-                                    >
-                                      4
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[5]}`}
-                                    >
-                                      5
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[4]}`}
-                                    >
-                                      4
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[4]}`}
-                                    >
-                                      4
-                                    </td>
-                                    <td
-                                      className={`px-3 font-medium ${ratingColors[4]}`}
-                                    >
-                                      4
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                              <p className="text-sm mt-2">
-                                This week&apos;s average:{" "}
-                                <span className="font-medium">4.00</span>
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Calculation */}
-                          <div className="mt-6 p-3 bg-white rounded border">
-                            <p className="text-sm font-medium mb-2">
-                              Trend Calculation:
-                            </p>
-                            <div className="space-y-2 text-sm">
-                              <p>1. This week&apos;s average: 4.00</p>
-                              <p>2. Last week&apos;s average: 2.57</p>
-                              <p>
-                                3. Calculation: ((4.00 - 2.57) / 2.57) × 100
-                              </p>
-                              <p className="font-medium text-green-500">
-                                Result: +55.6% increase
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4">
-                          <p className="text-sm font-medium mb-2">
-                            Understanding the Trend %:
-                          </p>
-                          <ul className="text-sm space-y-1 ml-4 list-disc">
-                            <li className="text-green-500">
-                              Positive % (↗️): This week&apos;s average is
-                              higher than last week
-                            </li>
-                            <li className="text-red-500">
-                              Negative % (↘️): This week&apos;s average is lower
-                              than last week
-                            </li>
-                            <li className="text-gray-600">
-                              The percentage shows how much better or worse this
-                              week is compared to last week
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-gray-500 mt-4">
-                        Tip: Click on any dot to see the exact rating for that
-                        day.
-                      </div>
-                    </div>
-                  </AppleLikePopover>
-                </Card>
-
-                {/* Insights Card */}
-                <Card className="p-6">
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-2">
-                        <div className="flex flex-row items-center gap-2">
-                          <span className="text-4xl">{metric.emoji}</span>
-                          <h2 className="text-lg font-bold">
-                            {metric.title} Insights
-                          </h2>
-                        </div>
-                        <p className="text-muted-foreground">
-                          Here&apos;s how your activities correlate with{" "}
-                          {metric.title.toLowerCase()}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-gray-400 hover:text-gray-600"
-                        onClick={() => setHelpMetricId(metric.id)}
-                      >
-                        <HelpCircle className="h-5 w-5" />
-                      </Button>
-                    </div>
-
-                    <div className="space-y-4">
-                      {correlations.map((correlation) => (
-                        <CorrelationEntry
-                          key={correlation!.activity.id}
-                          title={`${correlation!.activity.emoji} ${
-                            correlation!.activity.title
-                          }`}
-                          pearsonValue={correlation!.correlation}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <AppleLikePopover
-                    open={helpMetricId === metric.id}
-                    onClose={() => setHelpMetricId(null)}
-                    title="Understanding Correlation"
-                  >
-                    <div className="pt-8 space-y-4 mb-4">
-                      <h3 className="text-lg font-semibold">
-                        Understanding Pearson Correlation
-                      </h3>
-
-                      <p className="text-sm text-gray-600">
-                        Pearson correlation measures how well two things move
-                        together, from -100% (perfect opposite) to +100%
-                        (perfect match).
-                      </p>
-
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-sm font-medium mb-2">
-                          Real Example:
-                        </p>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Let&apos;s look at running activity and productivity
-                          over 7 days:
-                        </p>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full text-sm">
-                            <tbody>
-                              <tr className="border-b">
-                                <th className="text-left pb-2 pr-4">Day</th>
-                                <td className="px-3">1</td>
-                                <td className="px-3">2</td>
-                                <td className="px-3">3</td>
-                                <td className="px-3">4</td>
-                                <td className="px-3">5</td>
-                                <td className="px-3">6</td>
-                                <td className="px-3">7</td>
-                              </tr>
-                              <tr>
-                                <th className="text-left py-2 pr-4">Running</th>
-                                <td className="px-3">✅</td>
-                                <td className="px-3">❌</td>
-                                <td className="px-3">✅</td>
-                                <td className="px-3">✅</td>
-                                <td className="px-3">❌</td>
-                                <td className="px-3">✅</td>
-                                <td className="px-3">❌</td>
-                              </tr>
-                              <tr>
-                                <th className="text-left py-2 pr-4">
-                                  Productivity
-                                </th>
-                                <td
-                                  className={`px-3 font-medium ${ratingColors[4]}`}
-                                >
-                                  4
-                                </td>
-                                <td
-                                  className={`px-3 font-medium ${ratingColors[2]}`}
-                                >
-                                  2
-                                </td>
-                                <td
-                                  className={`px-3 font-medium ${ratingColors[5]}`}
-                                >
-                                  5
-                                </td>
-                                <td
-                                  className={`px-3 font-medium ${ratingColors[2]}`}
-                                >
-                                  2
-                                </td>
-                                <td
-                                  className={`px-3 font-medium ${ratingColors[2]}`}
-                                >
-                                  2
-                                </td>
-                                <td
-                                  className={`px-3 font-medium ${ratingColors[4]}`}
-                                >
-                                  4
-                                </td>
-                                <td
-                                  className={`px-3 font-medium ${ratingColors[4]}`}
-                                >
-                                  4
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <p className="mt-4 text-sm">
-                          A correlation of +60% means that about 60% of the
-                          time, when one value goes up, the other goes up too.
-                          Looking at the pattern above:
-                        </p>
-                        <ul className="mt-2 text-sm space-y-1 ml-4 list-disc">
-                          <li>
-                            Running days usually mean higher productivity (
-                            <span className={ratingColors[4]}>4</span>-
-                            <span className={ratingColors[5]}>5</span>), but not
-                            always
-                          </li>
-                          <li>
-                            Non-running days usually mean lower productivity (
-                            <span className={ratingColors[2]}>2</span>), but not
-                            always
-                          </li>
-                          <li>
-                            The pattern matches about 60% of the time (4 out of
-                            7 days follow the expected pattern)
-                          </li>
-                        </ul>
-                        <p className="mt-3 text-sm text-gray-600">
-                          Think of it like this: if you see someone went
-                          running, you&apos;d have a 60% chance of correctly
-                          guessing they had higher productivity that day -
-                          better than random chance, but not a guarantee.
-                        </p>
-                      </div>
-
-                      <div className="text-xs text-gray-500 mt-4">
-                        Note: Correlations below 10% are shown in gray as they
-                        would only let you make correct predictions 10% of the
-                        time - barely better than random chance.
-                      </div>
-                    </div>
-                  </AppleLikePopover>
-                </Card>
+                <CorrelationHelpPopover
+                  isOpen={helpMetricId === metric.id}
+                  onClose={() => setHelpMetricId(null)}
+                  metricTitle={metric.title}
+                />
               </div>
             );
           })}
