@@ -16,7 +16,7 @@ every_message_flowchart = {
     "GenerateMessage": Node(
         text=(
             "Generate a message asking if he needs help logging activities." +
-            ((should_mention_activities and "Mention activites that are non logged for a while. ") or "") +
+            ((should_mention_activities and "Mention activites that are non logged for a while. Mention them in terms of relative time (e.g. '3 days ago', 'last week', instead of '2025-02-25' or 'March 25th').") or "") +
             "Make it simple, start the message with 'hey', don't repeat yourself over messages, so analyze conversation history."
         ),
         temperature=1.1,
@@ -47,7 +47,7 @@ class ActivityMessageGenerator(BaseAssistant):
 
         context.update(
             {
-                "user_activities": self.user_activities,
+                "user_activities": [str(activity) for activity in self.user_activities],
                 "recent_logged_activities": activities_gateway.get_readable_recent_activity_entries(
                     limit=10,
                     past_day_limit=10,
