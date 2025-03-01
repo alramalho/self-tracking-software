@@ -39,27 +39,25 @@ export const EmotionBadges = ({
 
   return (
     <div className="flex flex-col gap-2 py-4">
-      <div className="flex items-center max-w-full gap-2 overflow-x-auto no-scrollbarjustify-center">
-        <div className="flex gap-2">
-          {emotions.map((emotion, index) => (
-            <div
-              key={index}
-              style={{
-                color: isBrightColor(emotion.color)
-                  ? darkenColor(emotion.color)
-                  : emotion.color,
-                backgroundColor: `${emotion.color}15`,
-                borderColor: emotion.color,
-              }}
-              className="flex items-center gap-1 px-2 py-1 rounded-full border"
-            >
-              <span className="font-medium">{emotion.name}</span>
-              <span className="text-xs opacity-75">
-                {Math.round(emotion.score * 100)}%
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="flex items-center max-w-full gap-2 justify-center flex-wrap">
+        {emotions.map((emotion, index) => (
+          <div
+            key={index}
+            style={{
+              color: isBrightColor(emotion.color)
+                ? darkenColor(emotion.color)
+                : emotion.color,
+              backgroundColor: `${emotion.color}15`,
+              borderColor: emotion.color,
+            }}
+            className="flex items-center gap-1 px-2 py-1 rounded-full border"
+          >
+            <span className="font-medium">{emotion.name}</span>
+            <span className="text-xs opacity-75">
+              {Math.round(emotion.score * 100)}%
+            </span>
+          </div>
+        ))}
       </div>
       {loading && (
         <div className="flex justify-center items-center gap-1 px-2 py-1">

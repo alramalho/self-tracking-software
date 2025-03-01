@@ -392,3 +392,25 @@ async def generate_metrics_dashboard_message(user: User = Depends(is_clerk_user)
         logger.error(f"Error generating metrics dashboard message: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/generate-plan-message")
+async def generate_plan_message(user: User = Depends(is_clerk_user)):
+    from ai.assistant.plan_page_message_generator import PlanMessageGenerator
+    from ai.assistant.memory import DatabaseMemory
+    from gateways.database.mongodb import MongoDBGateway
+    try:
+        # Initialize memory and message generator
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        generator = PlanMessageGenerator(user=user, memory=memory)
+
+        # Generate the message
+        message = await generator.get_response(
+            user_input="", message_id=str(ObjectId())
+        )
+
+        return {"message": message}
+    except Exception as e:
+        logger.error(f"Error generating plan message: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+

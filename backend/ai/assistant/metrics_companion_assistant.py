@@ -7,18 +7,20 @@ from ai.assistant.memory import DatabaseMemory
 from gateways.metrics import MetricsGateway
 from .flowchart_nodes import Node
 from ai.assistant.base_assistant import BaseAssistant
+from gateways.activities import ActivitiesGateway
 
 metrics_gateway = MetricsGateway()
-
+activities_gateway = ActivitiesGateway()
 every_message_flowchart = {
     "TalkToUser": Node(
         text=(
-            "Converse with the user in a friendly manner, letting him lead the conversation. " +
-            "Be very concise in your messages, and don't repeat yourself. "
+            "Converse with the user in a friendly manner."
+            + "Be very concise in your messages, and don't repeat yourself. "
         ),
         temperature=1.1,
     ),
 }
+
 
 class MetricsCompanionAssistant(BaseAssistant):
     def __init__(
@@ -46,12 +48,21 @@ class MetricsCompanionAssistant(BaseAssistant):
         # Get base context
         context = super().get_context()
 
-        context.update({
-            "user_metrics": self.user_metrics,
-            "metrics_history": metrics_gateway.get_readable_metrics_and_entries(
-                user_id=self.user.id,
-                lookback_days=30
-            ),
-        })
+        lookback_days = 21
 
-        return context 
+        context.update(
+            {
+                "user_metrics": self.user_metrics,
+                "metrics_history": metrics_gateway.get_readable_metrics_and_entries(
+                    user_id=self.user.id, lookback_days=lookback_days
+                ),
+                "user_activities": [str(activity) for activity in activities_gateway.get_all_activities_by_user_id(
+                    self.user.id
+                )],
+                "recent_logged_activities": activities_gateway.get_readable_recent_activity_entries(
+                    self.user.id, past_day_limit=21
+                ),
+            }
+        )
+
+        return context
