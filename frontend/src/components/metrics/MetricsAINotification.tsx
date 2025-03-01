@@ -5,14 +5,10 @@ import { useApiWithAuth } from "@/api";
 import AINotification from "@/components/AINotification";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 
-interface AIMessageResponse {
-  message: string;
-}
-
 export function MetricsAINotification() {
   const router = useRouter();
   const api = useApiWithAuth();
-  const { message: aiMessage, isDismissed, dismiss } = useAIMessageCache('metrics');
+  const { message: aiMessage, messageId, isDismissed, dismiss } = useAIMessageCache('metrics');
   const [shouldShowNotification, setShouldShowNotification] = React.useState(false);
 
   React.useEffect(() => {
@@ -35,7 +31,9 @@ export function MetricsAINotification() {
       }}
       onClick={() => {
         setShouldShowNotification(false);
-        router.push("/ai?assistantType=metrics-companion");
+        router.push(
+          `/ai?assistantType=metrics-companion&messageId=${messageId}&messageText=${aiMessage}`
+        );
       }}
     />
   );

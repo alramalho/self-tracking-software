@@ -8,13 +8,8 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import AINotification from "@/components/AINotification";
-import { useApiWithAuth } from "@/api";
-import { useQuery } from "@tanstack/react-query";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 
-interface AIMessageResponse {
-  message: string;
-}
 
 const PlansPage: React.FC = () => {
   
@@ -23,10 +18,9 @@ const PlansPage: React.FC = () => {
   const [showServerMessage, setShowServerMessage] = useState(false);
   const { data: userData } = useCurrentUserDataQuery();
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const api = useApiWithAuth();
   const router = useRouter();
 
-  const { message: aiMessage, isDismissed, dismiss } = useAIMessageCache('plan');
+  const { message: aiMessage, messageId, isDismissed, dismiss } = useAIMessageCache('plan');
 
   useEffect(() => {
     if (aiMessage && !isDismissed) {
@@ -93,7 +87,9 @@ const PlansPage: React.FC = () => {
           }}
           onClick={() => {
             setShouldShowNotification(false);
-            router.push("/ai?assistantType=plan-creation");
+            router.push(
+              `/ai?assistantType=plan-creation&messageId=${messageId}&messageText=${aiMessage}`
+            );
           }}
         />
       )}

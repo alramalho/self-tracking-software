@@ -18,6 +18,12 @@ class MessagesGateway:
     def update_message(self, message: Message):
         self.db_gateway.write(message.dict())
         return message
+    
+    def get_latest_ai_message(self, user_id: str) -> Optional[Message]:
+        msgs = self.db_gateway.query("recipient_id", user_id)
+        msgs = [Message(**msg) for msg in msgs]
+        msgs.sort(key=lambda x: x.created_at, reverse=True)
+        return msgs[0] if msgs else None
 
     def get_recent_sent_messages(self, user_id: str, max_age_in_minutes: int, max_count: int) -> List[Message]:
         current_time = datetime.now(UTC)
