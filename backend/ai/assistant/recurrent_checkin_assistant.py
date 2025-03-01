@@ -37,7 +37,8 @@ weekday_checkin_flowchart = {
         - "Are you ghosting me? lol"
         - "I'm an AI and me too get ghosted, jeez"
         - "well i feel ignored"
-        Keep it short, and humorous, one emoji MAX.""",
+
+        Keep it short, and humorous, no emojis.""",
         temperature=1.0
     ),
 
