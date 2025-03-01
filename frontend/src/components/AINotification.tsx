@@ -89,7 +89,10 @@ const AINotification: React.FC<AINotificationProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 1.2 }}
-        onClick={onDismiss}
+        onClick={e => {
+          e.stopPropagation();
+          onDismiss(e);
+        }}
         className="absolute top-1 right-1 p-[3px] rounded-full bg-gray-500"
         aria-label="Dismiss"
       >
