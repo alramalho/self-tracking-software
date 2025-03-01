@@ -78,7 +78,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
 
   return (
     <>
-      <div className={`fixed bottom-[9rem] right-0 ${className} z-[40] flex`}>
+      <div className={`fixed bottom-[9.5rem] right-0 ${className} z-[40] flex`}>
         <div className="relative flex w-0">
           <div
             className={`absolute right-full bottom-[-3.5rem] mb-0 mr-[3rem] transition-all duration-200
