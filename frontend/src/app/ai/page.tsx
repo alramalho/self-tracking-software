@@ -281,12 +281,6 @@ const LogPage: React.FC = () => {
         setIsConnecting(false);
         setIsLoading(false);
         console.error("WebSocket error occurred", error);
-
-        // Log WebSocket error
-        authedApi.post("/admin/log-websocket-error", {
-          error_message: "WebSocket error occurred",
-          assistant_type: assistantType,
-        }).catch(console.error);
       };
 
       setSocket(newSocket);
