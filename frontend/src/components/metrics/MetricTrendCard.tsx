@@ -76,13 +76,13 @@ export function MetricTrendCard({
         </div>
         <ul className="text-sm text-muted-foreground list-disc list-inside">
           <li>
-            This week's avg:{" "}
+            This week&apos;s avg:{" "}
             <span className="font-bold font-mono">
               {thisWeekEntries.length > 0 ? thisWeekAvg.toFixed(2) : "No data"}
             </span>
           </li>
           <li>
-            Last week's avg:{" "}
+            Last week&apos;s avg:{" "}
             <span className="font-bold font-mono">
               {lastWeekEntries.length > 0 ? lastWeekAvg.toFixed(2) : "No data"}
             </span>
