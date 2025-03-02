@@ -397,16 +397,6 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     return result
 
 
-class GlobalErrorLog(BaseModel):
-    error_message: str
-    user_clerk_id: Optional[str] = None
-    error_digest: Optional[str] = None
-    url: str
-    referrer: str
-    user_agent: Optional[str] = None
-    timestamp: str
-
-
 # WebSocket close codes as defined in RFC 6455
 WS_CLOSE_CODES = {
     1000: "Normal Closure",
@@ -427,12 +417,14 @@ WS_CLOSE_CODES = {
     1015: "TLS Handshake"
 }
 
-
-class WebSocketErrorLog(BaseModel):
+class GlobalErrorLog(BaseModel):
     error_message: str
-    error_code: Optional[int] = None
-    assistant_type: Optional[str] = None
-    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+    user_clerk_id: Optional[str] = None
+    error_digest: Optional[str] = None
+    url: str
+    referrer: str
+    user_agent: Optional[str] = None
+    timestamp: str
 
 
 @router.post("/admin/public/log-error", tags=["public"])
@@ -534,55 +526,4 @@ async def log_error(error: GlobalErrorLog, request: Request):
         return {"status": "success"}
     except Exception as e:
         logger.exception("Failed to log client error")
-        raise HTTPException(status_code=500, detail="Failed to log error")
-
-
-@router.post("/admin/log-websocket-error")
-async def log_websocket_error(
-    error: WebSocketErrorLog,
-    request: Request,
-    user: User = Depends(is_clerk_user)
-):
-    """Protected endpoint to log WebSocket errors"""
-    try:
-        # Get error code description if available
-        error_code_description = WS_CLOSE_CODES.get(error.error_code, "Unknown Code") if error.error_code else None
-
-        # Add request context to the log
-        context = {
-            "user_clerk_id": user.clerk_id,
-            "user_username": user.username,
-            "error_message": error.error_message,
-            "error_code": error.error_code,
-            "assistant_type": error.assistant_type,
-            "timestamp": error.timestamp,
-            "ip": request.client.host,
-            "environment": ENVIRONMENT,
-        }
-
-        # Log to your regular logging system
-        logger.error("WebSocket Error", extra=context)
-
-        # Track in PostHog
-        posthog.capture(
-            distinct_id=user.id,
-            event="websocket_error",
-            properties=context
-        )
-
-        telegram = TelegramService()
-        # Send error notification to Telegram with code description
-        error_detail = f"Code {error.error_code} ({error_code_description})" if error.error_code else "unknown"
-        
-        telegram.send_websocket_error_notification(
-            error_message=f"WebSocket error: {error.error_message} - {error_detail}",
-            user_username=user.username,
-            user_id=user.clerk_id,
-            path=request.url.path,
-        )
-
-        return {"status": "success"}
-    except Exception as e:
-        logger.error(traceback.format_exc())
-        logger.exception("Failed to log WebSocket error")
         raise HTTPException(status_code=500, detail="Failed to log error")
