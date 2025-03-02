@@ -3,6 +3,18 @@ import { useEffect, useState } from "react";
 
 export type PaidPlanType = "plus" | "supporter" | "free";
 
+const PLAN_LIMITS = {
+  free: {
+    maxMetrics: 1,
+  },
+  plus: {
+    maxMetrics: 5,
+  },
+  supporter: {
+    maxMetrics: 20,
+  },
+} as const;
+
 export function usePaidPlan() {
   const isUserPlusFF = useFeatureFlagEnabled("plus-users");
   const isUserSupporterFF = useFeatureFlagEnabled("supporter-users");
@@ -21,5 +33,6 @@ export function usePaidPlan() {
   return {
     userPaidPlanType,
     posthogFeatureFlagsInitialized,
+    maxMetrics: PLAN_LIMITS[userPaidPlanType].maxMetrics,
   };
 }

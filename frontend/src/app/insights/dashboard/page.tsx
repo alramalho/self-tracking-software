@@ -21,6 +21,8 @@ import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
 import { MetricsAINotification } from "@/components/metrics/MetricsAINotification";
 import { UpgradePopover } from "@/components/UpgradePopover";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -53,6 +55,8 @@ export default function InsightsDashboardPage() {
   );
   const [isCreatingMetric, setIsCreatingMetric] = useState(false);
   const api = useApiWithAuth();
+  const { userPaidPlanType, maxMetrics } = usePaidPlan();
+  const { setShowUpgradePopover } = useUpgrade();
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -127,8 +131,21 @@ export default function InsightsDashboardPage() {
     );
   };
 
+  const handleAddMetricClick = () => {
+    if (userMetrics.length >= maxMetrics) {
+      setShowUpgradePopover(true);
+      return;
+    }
+    setIsAddMetricOpen(true);
+  };
+
   const handleAddMetric = async () => {
     if (!selectedNewMetric) return;
+
+    if (userMetrics.length >= maxMetrics) {
+      setShowUpgradePopover(true);
+      return;
+    }
 
     setIsCreatingMetric(true);
     try {
@@ -313,7 +330,7 @@ export default function InsightsDashboardPage() {
         metrics={userMetrics}
         selectedMetricId={selectedMetricId}
         onMetricSelect={setSelectedMetricId}
-        onAddMetricClick={() => setIsAddMetricOpen(true)}
+        onAddMetricClick={handleAddMetricClick}
       />
 
       <AddMetricPopover

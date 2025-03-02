@@ -41,7 +41,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   const [isYearly, setIsYearly] = useState(false);
 
   const slackPlanFeatures: FeatureItem[] = [
-    { emoji: "✔️", title: <span>5 metrics</span> },
+    { emoji: "✔️", title: <span>5 metrics and insights</span> },
     { emoji: "✔️", title: <span>habit and lifestyle streak badges</span> },
     { emoji: "✔️", title: <span>theme customization</span> },
   ];
@@ -52,13 +52,13 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
       emoji: "✔️",
       title: (
         <span>
-          AI personal coach & insights{" "}
+          AI personal coach{" "}
           <Badge className="bg-purple-500 text-white">BETA</Badge>
         </span>
       ),
     },
     { emoji: "✔️", title: <span>access to BETA features and voting</span> },
-    { emoji: "✔️", title: <span>custom and unlimited metrics</span> },
+    { emoji: "✔️", title: <span>custom and unlimited metrics / insights</span> },
     { emoji: "🔥", title: <span>exclusive open source supporter badge</span> },
   ];
 
