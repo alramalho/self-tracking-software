@@ -3,17 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Card } from "@/components/ui/card";
-import { Check, Divide } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Brain, PlusSquare, Bell } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { FAQ } from "./FAQ";
 import Divider from "./Divider";
+import Link from "next/link";
 
 interface FeatureItem {
   emoji: string;
@@ -154,9 +147,18 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 </div>
               ))}
             </div>
-            <Button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 rounded-xl">
-              Try Free
-            </Button>
+            <Link
+              href={
+                isYearly
+                  ? "https://buy.stripe.com/eVaeXS8Fn1gtepGbIL"
+                  : "https://buy.stripe.com/cN2g1W9Jr7ERdlC8ww"
+              }
+              target="_blank"
+            >
+              <Button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 rounded-xl">
+                Try Free
+              </Button>
+            </Link>
           </Card>
 
           <div className="text-center space-y-2 mt-6">
@@ -227,9 +229,18 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 </div>
               ))}
             </div>
-            <Button className="w-full mt-6 bg-indigo-500 hover:bg-indigo-600 rounded-xl">
-              Try Free
-            </Button>
+            <Link
+              href={
+                isYearly
+                  ? "https://buy.stripe.com/28o6rmbRz5wJftK6oq"
+                  : "https://buy.stripe.com/5kA1721cVe3fftK145"
+              }
+              target="_blank"
+            >
+              <Button className="w-full mt-6 bg-indigo-500 hover:bg-indigo-600 rounded-xl">
+                Try Free
+              </Button>
+            </Link>
           </Card>
         </div>
 
@@ -250,8 +261,8 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
           </div>
           <h2 className="text-xl font-bold">
             we&apos;re just launching... <br /> so here&apos;s a{" "}
-            <span className="text-green-500">{MAX_DISCOUNT}%</span> discount
-            for our early supporters
+            <span className="text-green-500">{MAX_DISCOUNT}%</span> discount for
+            our early supporters
           </h2>
           <span className="text-sm text-gray-500 mt-1">
             and maybe some day we can go full time :)
