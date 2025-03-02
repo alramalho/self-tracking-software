@@ -25,8 +25,21 @@ interface UpgradePopoverProps {
   onClose: () => void;
 }
 
-const YEARLY_DISCOUNT = 0.51;
-const YEARLY_DISCOUNT_PERCENT = Math.round((1 - YEARLY_DISCOUNT) * 100);
+const PLUS_MONTHLY = 5.99;
+const PLUS_YEARLY = 34.99;
+const SUPPORTER_MONTHLY = 12.98;
+const SUPPORTER_YEARLY = 74.99;
+
+const PLUS_DISCOUNT_PERCENT = Math.round(
+  ((PLUS_MONTHLY * 12 - PLUS_YEARLY) / (PLUS_MONTHLY * 12)) * 100
+);
+const SUPPORTER_DISCOUNT_PERCENT = Math.round(
+  ((SUPPORTER_MONTHLY * 12 - SUPPORTER_YEARLY) / (SUPPORTER_MONTHLY * 12)) * 100
+);
+const MAX_DISCOUNT = Math.max(
+  PLUS_DISCOUNT_PERCENT,
+  SUPPORTER_DISCOUNT_PERCENT
+);
 
 export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   open,
@@ -53,26 +66,19 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
     },
     { emoji: "✔️", title: <span>access to BETA features and voting</span> },
     { emoji: "✔️", title: <span>custom and unlimited metrics</span> },
-    { emoji: "🔥", title: <span>exclusive open soruce supporter badge</span> },
+    { emoji: "🔥", title: <span>exclusive open source supporter badge</span> },
   ];
 
-  const formatPrice = (basePrice: number, cents: number) => {
-    if (isYearly) {
-      const yearlyBase = Math.floor(basePrice * 12 * YEARLY_DISCOUNT);
-      return `$${yearlyBase}.${cents}`;
-    }
-    return `$${Math.floor(basePrice)}.${cents}`;
+  const formatPrice = (monthlyPrice: number, yearlyPrice: number) => {
+    return isYearly ? `$${yearlyPrice}` : `$${monthlyPrice}`;
   };
 
-  const getMonthlyDisplay = (basePrice: number, cents: number) => {
+  const getMonthlyDisplay = (monthlyPrice: number, yearlyPrice: number) => {
     if (isYearly) {
-      const yearlyTotal = Number(
-        `${Math.floor(basePrice * 12 * YEARLY_DISCOUNT)}.${cents}`
-      );
-      const monthlyEquivalent = yearlyTotal / 12;
+      const monthlyEquivalent = yearlyPrice / 12;
       return `$${monthlyEquivalent.toFixed(2)} a month`;
     }
-    return `$${basePrice}.${cents} a month`;
+    return `$${monthlyPrice} a month`;
   };
 
   const getPeriod = () => (isYearly ? "yearly" : "monthly");
@@ -119,14 +125,21 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                   Plus
                 </span>{" "}
                 Plan
+                {isYearly && (
+                  <Badge className="ml-2 bg-green-500 text-white">
+                    Save {PLUS_DISCOUNT_PERCENT}%
+                  </Badge>
+                )}
               </h3>
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold">{formatPrice(5, 99)}</span>
+                <span className="text-3xl font-bold">
+                  {formatPrice(PLUS_MONTHLY, PLUS_YEARLY)}
+                </span>
                 <span className="text-gray-500">/ {getPeriod()}</span>
               </div>
               {isYearly && (
                 <p className="text-sm text-gray-500">
-                  {getMonthlyDisplay(5, 99)}
+                  {getMonthlyDisplay(PLUS_MONTHLY, PLUS_YEARLY)}
                 </p>
               )}
             </div>
@@ -185,16 +198,21 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                   Supporter
                 </span>{" "}
                 Plan
+                {isYearly && (
+                  <Badge className="ml-2 bg-green-500 text-white">
+                    Save {SUPPORTER_DISCOUNT_PERCENT}%
+                  </Badge>
+                )}
               </h3>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold">
-                  {formatPrice(12, 98)}
+                  {formatPrice(SUPPORTER_MONTHLY, SUPPORTER_YEARLY)}
                 </span>
                 <span className="text-gray-500">/ {getPeriod()}</span>
               </div>
               {isYearly && (
                 <p className="text-sm text-gray-500">
-                  {getMonthlyDisplay(12, 98)}
+                  {getMonthlyDisplay(SUPPORTER_MONTHLY, SUPPORTER_YEARLY)}
                 </p>
               )}
             </div>
@@ -216,11 +234,28 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
         </div>
 
         <div className="text-center space-y-2 pt-6">
+          <div className="flex items-center justify-center">
+            <picture>
+              <source
+                srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.webp"
+                type="image/webp"
+              />
+              <img
+                src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.gif"
+                alt="🚀"
+                width="72"
+                height="72"
+              />
+            </picture>
+          </div>
           <h2 className="text-xl font-bold">
-            did we tell you about the{" "}
-            <span className="text-green-500">{YEARLY_DISCOUNT_PERCENT}%</span>{" "}
-            discount?
+            we&apos;re just launching... <br /> so here&apos;s a{" "}
+            <span className="text-green-500">{MAX_DISCOUNT}%</span> discount
+            for our early supporters
           </h2>
+          <span className="text-sm text-gray-500 mt-1">
+            and maybe some day we can go full time :)
+          </span>
         </div>
         <div className="flex items-center justify-center gap-2">
           <span className="text-md text-gray-500">Monthly</span>

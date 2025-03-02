@@ -316,6 +316,11 @@ export default function InsightsDashboardPage() {
         onAddMetricClick={() => setIsAddMetricOpen(true)}
       />
 
+      <UpgradePopover
+        open={true}
+        onClose={() => {}}
+      />
+
       <AddMetricPopover
         isOpen={isAddMetricOpen}
         onClose={() => {
