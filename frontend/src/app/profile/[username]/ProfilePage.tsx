@@ -45,7 +45,7 @@ import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import { Input } from "@/components/ui/input";
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
-import { usePostHog } from "posthog-js/react";
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Divider from "@/components/Divider";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
@@ -54,7 +54,9 @@ import { DemoEmotionViewer } from "@/components/DemoEmotionViewer";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
 import { ThemeColor, getThemeVariants } from "@/utils/theme";
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from "@/contexts/ThemeContext";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 const ProfilePage: React.FC = () => {
   const { clearProfileNotifications } = useNotifications();
@@ -62,13 +64,21 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const { useCurrentUserDataQuery, useUserDataQuery, refetchUserData, messagesData, updateTheme, currentTheme } = useUserPlan();
+  const {
+    useCurrentUserDataQuery,
+    useUserDataQuery,
+    refetchUserData,
+    messagesData,
+    updateTheme,
+    currentTheme,
+  } = useUserPlan();
   const { randomTimeLeft } = useTheme();
   const currentUserQuery = useCurrentUserDataQuery();
   const params = useParams();
   const username = params.username as string;
   const currentUser = currentUserQuery.data?.user;
-  const currentUserSentFriendRequests = currentUserQuery.data?.sentFriendRequests;
+  const currentUserSentFriendRequests =
+    currentUserQuery.data?.sentFriendRequests;
   const currentUserReceivedFriendRequests =
     currentUserQuery.data?.receivedFriendRequests;
   const profileDataQuery = useUserDataQuery(username);
@@ -83,28 +93,29 @@ const ProfilePage: React.FC = () => {
   >(null);
   const posthog = usePostHog();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [timeRange, setTimeRange] = useState<"60 Days" | "120 Days" | "180 Days">("60 Days");
+  const [timeRange, setTimeRange] = useState<
+    "60 Days" | "120 Days" | "180 Days"
+  >("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
   const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
   const { share, isSupported: isShareSupported } = useShare();
   const [copied, copyToClipboard] = useClipboard();
-  const isOnesOwnProfile =
-    currentUser?.id === profileData?.user?.id;
+  const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
   const [showColorPalette, setShowColorPalette] = useState(false);
-  
+
+  const { userPaidPlanType } = usePaidPlan();
+
+  const { setShowUpgradePopover } = useUpgrade();
+
   const colorPalettes = [
     {
-      name: "Random",
-      color: "random" as ThemeColor,
+      name: "Blue",
+      color: "blue" as ThemeColor,
     },
     {
       name: "Slate",
       color: "slate" as ThemeColor,
-    },
-    {
-      name: "Blue",
-      color: "blue" as ThemeColor,
     },
     {
       name: "Violet",
@@ -122,21 +133,24 @@ const ProfilePage: React.FC = () => {
       name: "Amber",
       color: "amber" as ThemeColor,
     },
+    {
+      name: "Random",
+      color: "random" as ThemeColor,
+      description: "Changes every 3 days"
+    },
   ];
 
   useEffect(() => {
     if (currentUser?.username && !username) {
-      window.history.replaceState(
-        null,
-        "",
-        `/profile/${currentUser.username}`
-      );
+      window.history.replaceState(null, "", `/profile/${currentUser.username}`);
     }
   }, [currentUser?.username, username]);
 
   useEffect(() => {
     if (!profileData) {
-      isOnesOwnProfile ? currentUserQuery.refetch() : profileDataQuery.refetch();
+      isOnesOwnProfile
+        ? currentUserQuery.refetch()
+        : profileDataQuery.refetch();
     }
   }, [username, currentUserQuery, isOnesOwnProfile, profileDataQuery]);
 
@@ -221,7 +235,9 @@ const ProfilePage: React.FC = () => {
     );
   }, [profileData?.plans, activities, activityEntries]);
 
-  const handleTimeRangeChange = (value: "60 Days" | "120 Days" | "180 Days") => {
+  const handleTimeRangeChange = (
+    value: "60 Days" | "120 Days" | "180 Days"
+  ) => {
     setTimeRange(value);
     setEndDate(new Date());
   };
@@ -240,8 +256,8 @@ const ProfilePage: React.FC = () => {
       toast.success(`Theme updated to ${color}`);
       setShowColorPalette(false);
     } catch (error) {
-      console.error('Failed to update theme:', error);
-      toast.error('Failed to update theme');
+      console.error("Failed to update theme:", error);
+      toast.error("Failed to update theme");
     }
   };
 
@@ -420,40 +436,80 @@ const ProfilePage: React.FC = () => {
                 <div className="grid gap-4">
                   {colorPalettes.map((palette) => {
                     const isSelected = currentTheme === palette.color;
-                    const isLocked = palette.color !== 'random';
+                    const isLocked = userPaidPlanType === "free" && 
+                      (palette.color === "random" || palette.color !== "blue");
                     return (
                       <div
                         key={palette.name}
                         className={`flex items-center gap-4 p-3 border rounded-lg ${
-                          isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'
+                          isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50 cursor-pointer"
                         } ${
-                          isSelected ? `ring-2 ring-offset-2 ${palette.color === 'random' ? 'ring-gray-500' : `ring-${palette.color}-500`}` : ''
+                          isSelected ? `ring-2 ring-offset-2 ${palette.color === "random" ? "ring-gray-500" : `ring-${palette.color}-500`}` : ""
                         }`}
                         onClick={() => !isLocked && handleThemeChange(palette.color)}
                       >
                         <div className="flex items-center gap-2">
-                          {isSelected && <Check className={`w-4 h-4 ${palette.color === 'random' ? 'text-gray-500' : `text-${palette.color}-500`}`} />}
+                          {isSelected && (
+                            <Check
+                              className={`w-4 h-4 ${
+                                palette.color === "random"
+                                  ? "text-gray-500"
+                                  : `text-${palette.color}-500`
+                              }`}
+                            />
+                          )}
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{palette.name}</span>
-                              {isLocked && <span className="text-xs text-gray-500">🔒 Coming soon</span>}
+                              {isLocked && (
+                                <span className="text-xs text-gray-500">
+                                  🔒
+                                </span>
+                              )}
                             </div>
-                            {palette.color === 'random' && isSelected && (
-                              <span className="text-xs text-gray-500">{randomTimeLeft}</span>
+                            {palette.description && (
+                              <span className="text-xs text-gray-500">
+                                {palette.description}
+                              </span>
                             )}
                           </div>
                         </div>
-                        {palette.color !== 'random' && (
+                        {palette.color !== "random" ? (
                           <div className="flex gap-2 ml-auto">
-                            <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).primary}`}></div>
-                            <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).secondary}`}></div>
-                            <div className={`w-6 h-6 rounded-full ${getThemeVariants(palette.color).accent}`}></div>
+                            <div
+                              className={`w-6 h-6 rounded-full ${
+                                getThemeVariants(palette.color).primary
+                              }`}
+                            ></div>
+                            <div
+                              className={`w-6 h-6 rounded-full ${
+                                getThemeVariants(palette.color).secondary
+                              }`}
+                            ></div>
+                            <div
+                              className={`w-6 h-6 rounded-full ${
+                                getThemeVariants(palette.color).accent
+                              }`}
+                            ></div>
                           </div>
+                        ) : (
+                          <div className="ml-auto text-2xl">🎲</div>
                         )}
                       </div>
                     );
                   })}
                 </div>
+                {userPaidPlanType === "free" && (
+                  <Button 
+                    className="w-full mt-6" 
+                    onClick={() => {
+                      setShowColorPalette(false);
+                      setShowUpgradePopover(true);
+                    }}
+                  >
+                    Upgrade to unlock all themes
+                  </Button>
+                )}
               </div>
             </AppleLikePopover>
 
@@ -475,7 +531,8 @@ const ProfilePage: React.FC = () => {
                 }
               }}
             >
-              <UserPlus className="w-4 h-4 mr-2" />Invite friends
+              <UserPlus className="w-4 h-4 mr-2" />
+              Invite friends
             </Button>
           </>
         )}
@@ -483,7 +540,9 @@ const ProfilePage: React.FC = () => {
         <Tabs defaultValue="plans" className="w-full">
           <TabsList
             className={`grid w-full h-13 bg-gray-50/50 ${
-              isOnesOwnProfile && userHasAccessToAi ? "grid-cols-3" : "grid-cols-2"
+              isOnesOwnProfile && userHasAccessToAi
+                ? "grid-cols-3"
+                : "grid-cols-2"
             }`}
           >
             <TabsTrigger value="plans">
@@ -538,7 +597,14 @@ const ProfilePage: React.FC = () => {
                     plan={convertApiPlanToPlan(plan, activities)}
                     activities={activities}
                     activityEntries={activityEntries}
-                    startDate={subDays(new Date(), timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180)}
+                    startDate={subDays(
+                      new Date(),
+                      timeRange === "60 Days"
+                        ? 60
+                        : timeRange === "120 Days"
+                        ? 120
+                        : 180
+                    )}
                   />
                 </div>
               ))}
