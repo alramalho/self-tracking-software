@@ -90,7 +90,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
           >
             <div className="flex flex-col gap-3 items-end">
               <div className={buttonContainerClasses}>
-                <span className={labelClasses}>Get Help</span>
+                <span className={labelClasses}>Have a question?</span>
                 <button
                   className={buttonClasses}
                   onClick={() => setShowHelpForm(true)}
@@ -158,9 +158,9 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
 
       {showHelpForm && (
         <FeedbackForm
-          title="💬 Get Help"
+          title="💬 Have a question?"
           email={email}
-          placeholder="What do you need help with?"
+          placeholder="What do you want to know?"
           onSubmit={getHelp}
           onClose={() => setShowHelpForm(false)}
         />
