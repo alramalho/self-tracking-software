@@ -74,7 +74,6 @@ async def handle_websocket_connection(websocket: WebSocket, assistant_type: str)
                     message = json.loads(data)
 
                     if message["action"] == "send_message":
-                        start_time = time.time()
                         text = message.get("text", "")
                         input_mode = message.get("input_mode", "text")
                         output_mode = message.get("output_mode", "text")
@@ -90,26 +89,6 @@ async def handle_websocket_connection(websocket: WebSocket, assistant_type: str)
                             output_mode,
                             audio_data,
                             audio_format,
-                        )
-
-                        # Calculate execution time
-                        execution_time = time.time() - start_time
-
-                        # Track latency based on input/output mode combination
-                        event_name = (
-                            f"ai-conversation-{input_mode}-to-{output_mode}-latency"
-                        )
-
-                        posthog.capture(
-                            distinct_id=user.id,
-                            event=event_name,
-                            properties={
-                                "latency_seconds": round(execution_time, 3),
-                                "input_mode": input_mode,
-                                "output_mode": output_mode,
-                                "model": LLM_MODEL,
-                                "assistant_type": assistant_type,
-                            },
                         )
 
                         response_data = {
