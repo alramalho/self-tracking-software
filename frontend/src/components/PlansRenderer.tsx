@@ -64,7 +64,7 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
     transition,
     userSelect: 'none' as const,
     WebkitUserSelect: 'none' as const,
-    touchAction: 'none' as const,
+    touchAction: isDragging ? 'none' as const : 'pan-y' as const,
   };
 
   return (
