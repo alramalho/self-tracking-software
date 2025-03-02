@@ -39,6 +39,7 @@ import { AddMetricPopover } from "@/components/metrics/AddMetricPopover";
 import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
 import { MetricsAINotification } from "@/components/metrics/MetricsAINotification";
+import { UpgradePopover } from "@/components/UpgradePopover";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation

@@ -7,11 +7,6 @@ import json
 router = APIRouter(prefix="/messages")
 messages_gateway = MessagesGateway()
 
-@router.get("/{message_id}")
-async def get_message(message_id: str):
-    message = messages_gateway.get_message_by_id(message_id)
-    return message
-
 @router.post("/{message_id}/move-up")
 async def move_up_message(message_id: str):
     # we should get message, change it's created at to now, and rewrite
