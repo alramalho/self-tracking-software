@@ -4,6 +4,8 @@ from loguru import logger
 from constants import ENVIRONMENT, TELEGRAM_CHAT_ID, TELEGRAM_BOT_TOKEN
 from typing import Optional
 import traceback
+
+
 class TelegramService:
     _instance = None
 
@@ -30,11 +32,7 @@ class TelegramService:
         try:
             response = requests.post(
                 f"{self.base_url}/sendMessage",
-                json={
-                    "chat_id": self.chat_id,
-                    "text": message,
-                    "parse_mode": "HTML"
-                }
+                json={"chat_id": self.chat_id, "text": message, "parse_mode": "HTML"},
             )
             if not response.ok:
                 logger.error(f"Telegram API error: Status {response.status_code}")
@@ -46,7 +44,15 @@ class TelegramService:
             logger.error(f"Failed to send Telegram message: {str(e)}")
             return None
 
-    def send_error_notification(self, error_message: str, user_username: str, user_id: str, path: str, method: str, status_code: str) -> None:
+    def send_error_notification(
+        self,
+        error_message: str,
+        user_username: str,
+        user_id: str,
+        path: str,
+        method: str,
+        status_code: str,
+    ) -> None:
         """Send a formatted error notification to Telegram."""
 
         message = (
@@ -60,7 +66,21 @@ class TelegramService:
         )
         self.send_message(message)
 
-    def send_bug_report_feedback(self, reporter_username: str, reporter_id: str, message: str, email: str) -> None:
+    def send_websocket_error_notification(
+        self, error_message: str, user_username: str, user_id: str, path: str
+    ) -> None:
+        """Send a notification when a WebSocket error is detected."""
+        message = (
+            f"🔌🤖 <b>WebSocket Error Detected on user {user_username}</b>\n\n"
+            f"<b>Environment:</b> {ENVIRONMENT}\n"
+            f"<b>User ID:</b> {user_id}\n"
+            f"<b>Path:</b> {path}\n"
+            f"<b>Error:</b>\n<pre>{error_message[:1000]}</pre>"  # Limit error message length
+        )
+        self.send_message(message)
+    def send_bug_report_feedback(
+        self, reporter_username: str, reporter_id: str, message: str, email: str
+    ) -> None:
         """Send a notification when a bug report feedback is received."""
         message = (
             f"📝🐞 <b>New Bug Report from <pre>{reporter_username}</pre></b>\n\n"
@@ -69,4 +89,4 @@ class TelegramService:
             f"<b>Reporter ID:</b> <pre>{reporter_id}</pre>\n"
             f"<b>Message:</b>\n<pre>{message[:500]}</pre>"  # Limit feedback length
         )
-        self.send_message(message) 
+        self.send_message(message)

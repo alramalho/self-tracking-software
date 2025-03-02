@@ -43,6 +43,7 @@ import { EmotionBadges } from "@/components/chat/EmotionBadges";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { AccessRestrictionPopover } from "@/components/chat/AccessRestrictionPopover";
 import { useFeatureFlagEnabled } from "posthog-js/react";
+import posthog from "posthog-js";
 import { motion, AnimatePresence } from "framer-motion";
 import { SuggestionContainer } from "@/components/SuggestionContainer";
 import { SuggestionBase } from "@/types/suggestions";
@@ -151,6 +152,7 @@ const LogPage: React.FC = () => {
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const { addToQueue, stopAudio, isPlaying: isAISpeaking } = useSpeaker();
   const { addToNotificationCount, sendPushNotification } = useNotifications();
   const { isRecording, toggleRecording, cancelRecording } = useMicrophone();
@@ -272,12 +274,19 @@ const LogPage: React.FC = () => {
         } else {
           toast.error("WebSocket disconnected");
         }
+
       };
 
       newSocket.onerror = (error) => {
         setIsConnecting(false);
         setIsLoading(false);
         console.error("WebSocket error occurred", error);
+
+        // Log WebSocket error
+        authedApi.post("/admin/log-websocket-error", {
+          error_message: "WebSocket error occurred",
+          assistant_type: assistantType,
+        }).catch(console.error);
       };
 
       setSocket(newSocket);
@@ -331,6 +340,27 @@ const LogPage: React.FC = () => {
       const data = JSON.parse(event.data);
 
       if (data.type === "message") {
+        // Calculate latency if we have a start time
+        if (startTime !== null) {
+          const endTime = performance.now();
+          const latencySeconds = (endTime - startTime) / 1000;
+          
+          // Track latency in PostHog
+          const inputMode = isVoiceMode ? 'voice' : 'text';
+          const eventName = `ai-conversation-${inputMode}-to-${outputMode}-latency`;
+          
+          posthog?.capture(
+            eventName,
+            {
+              latency_seconds: Math.round(latencySeconds * 1000) / 1000,
+              input_mode: inputMode,
+              output_mode: outputMode,
+              assistant_type: assistantType,
+            }
+          );
+          setStartTime(null);
+        }
+
         handleIncomingMessage(data.text, data.audio);
       } else if (data.type === "data_update") {
         addToNotificationCount(1);
@@ -362,7 +392,7 @@ const LogPage: React.FC = () => {
         setSuggestions((prev) => [...prev, ...data.suggestions]);
       }
     };
-  }, [socket, handleIncomingMessage]);
+  }, [socket, startTime, handleIncomingMessage, isVoiceMode, outputMode, assistantType]);
 
   const handleReconnect = () => {
     if (socket) {
@@ -408,11 +438,14 @@ const LogPage: React.FC = () => {
 
   function sendMessage(message: string, visible: boolean = true) {
     setIsLoading(true);
+    // Set start time for latency tracking
+    setStartTime(performance.now());
+    
     socket?.send(
       JSON.stringify({
         action: "send_message",
         text: message,
-        input_mode: "text",
+        input_mode: isVoiceMode ? "voice" : "text",
         output_mode: outputMode,
       })
     );
