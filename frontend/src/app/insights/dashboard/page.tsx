@@ -7,31 +7,12 @@ import { useRouter } from "next/navigation";
 import { useUserPlan, Metric, MetricEntry, Activity } from "@/contexts/UserPlanContext";
 import {
   Loader2,
-  HelpCircle,
-  Plus,
-  TrendingUp,
-  TrendingDown,
 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { CorrelationEntry } from "@/components/CorrelationEntry";
-import { Button } from "@/components/ui/button";
-import AppleLikePopover from "@/components/AppleLikePopover";
-import { useQuery } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
-import AINotification from "@/components/AINotification";
 import { toast } from "react-hot-toast";
 import { defaultMetrics } from "../metrics";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
-import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
 import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
 import { MetricSelector } from "@/components/metrics/MetricSelector";
@@ -44,28 +25,11 @@ import { UpgradePopover } from "@/components/UpgradePopover";
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 
-const ratingColors = {
-  1: "text-red-500",
-  2: "text-orange-500",
-  3: "text-yellow-500",
-  4: "text-lime-500",
-  5: "text-green-500",
-} as const;
-
-interface AIMessageResponse {
-  message: string;
-}
-
-interface Correlation {
-  activity: Activity;
-  correlation: number;
-}
 
 export default function InsightsDashboardPage() {
   const {
     useCurrentUserDataQuery,
     useMetricsAndEntriesQuery,
-    useHasMetricsToLogToday,
   } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
@@ -131,6 +95,7 @@ export default function InsightsDashboardPage() {
                 : "We've analyzed your data but haven't found meaningful correlations with your activities yet. This could mean your activities and metrics don't overlap enough, or we need more data to find reliable patterns. Keep logging!"}
             </p>
           </div>
+
 
           <div className="space-y-6">
             {metricsToShow.map(({ metric, count }) => {
@@ -349,6 +314,11 @@ export default function InsightsDashboardPage() {
         selectedMetricId={selectedMetricId}
         onMetricSelect={setSelectedMetricId}
         onAddMetricClick={() => setIsAddMetricOpen(true)}
+      />
+
+      <UpgradePopover
+        open={true}
+        onClose={() => {}}
       />
 
       <AddMetricPopover
