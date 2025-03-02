@@ -42,8 +42,8 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 
   const slackPlanFeatures: FeatureItem[] = [
     { emoji: "✔️", title: <span>5 metrics</span> },
-    { emoji: "✔️", title: <span>habit and lifestyle badges</span> },
-    { emoji: "✔️", title: <span>account customization</span> },
+    { emoji: "✔️", title: <span>habit and lifestyle streak badges</span> },
+    { emoji: "✔️", title: <span>theme customization</span> },
   ];
 
   const peoplePlanFeatures: FeatureItem[] = [
