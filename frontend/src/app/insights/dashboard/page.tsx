@@ -20,7 +20,6 @@ import { AddMetricPopover } from "@/components/metrics/AddMetricPopover";
 import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
 import { MetricsAINotification } from "@/components/metrics/MetricsAINotification";
-import { UpgradePopover } from "@/components/UpgradePopover";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 
