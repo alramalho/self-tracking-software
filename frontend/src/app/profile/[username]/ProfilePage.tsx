@@ -39,6 +39,7 @@ import {
   endOfWeek,
   isAfter,
   isBefore,
+  addWeeks,
 } from "date-fns";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -301,31 +302,47 @@ const ProfilePage: React.FC = () => {
       );
       
       // Start from the range start date or the earliest activity date, whichever is later
-      const earliestActivityDate = new Date(Math.min(
-        ...planActivityEntries.map(entry => new Date(entry.date).getTime())
-      ));
-      const startDate = isAfter(rangeStartDate, earliestActivityDate) ? rangeStartDate : earliestActivityDate;
-      let weekStart = startOfWeek(startDate, { weekStartsOn: 0 });
+      let weekStart = startOfWeek(rangeStartDate, { weekStartsOn: 0 });
+      
+      if (planActivityEntries.length > 0) {
+        const earliestActivityDate = new Date(Math.min(
+          ...planActivityEntries.map(entry => new Date(entry.date).getTime())
+        ));
+        
+        if (isAfter(earliestActivityDate, weekStart)) {
+          weekStart = startOfWeek(earliestActivityDate, { weekStartsOn: 0 });
+        }
+      }
       
       // Initialize plan score
       let planScore = 0;
+      let weekCount = 0;
+      let incompleteWeeks = 0;
       
-      while (weekStart < currentWeekStart) { // Only check completed weeks
+      while (isBefore(weekStart, currentWeekStart)) { // Only check completed weeks
+        weekCount++;
         const convertedPlan = convertApiPlanToPlan(plan, planActivities);
         
         // Only check weeks that fall within our time range
         if (isAfter(weekStart, rangeStartDate) || format(weekStart, 'yyyy-MM-dd') === format(rangeStartDate, 'yyyy-MM-dd')) {
           const wasCompleted = isWeekCompleted(weekStart, convertedPlan, planActivityEntries);
           
-          // Increment score for completed weeks, decrement for incomplete weeks
           if (wasCompleted) {
             planScore += 1;
+            incompleteWeeks = 0;
           } else {
-            planScore = Math.max(0, planScore - 1); // Don't let score go below 0
+            incompleteWeeks += 1;
+            if (incompleteWeeks > 1) {
+              planScore = Math.max(0, planScore - 1);
+            }
           }
         }
         
-        weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+        // Move to next week using date-fns addWeeks to handle DST correctly
+        weekStart = addWeeks(weekStart, 1);
+        if (format(weekStart, 'yyyy-MM-dd') === format(currentWeekStart, 'yyyy-MM-dd')) {
+          break; // Stop if we've reached the current week
+        }
       }
       
       streaks.push({
@@ -634,7 +651,7 @@ const ProfilePage: React.FC = () => {
             onClick={() => setShowStreakDetails(true)}
           >
             {calculateWeekStreaks().map((streak, index) => (
-              <p key={index} className="relative text-2xl font-bold flex items-center gap-1">
+              <div key={index} className="relative text-2xl font-bold flex items-center gap-1">
                 <div className={streak.score === 0 ? "opacity-40 grayscale" : ""}>
                   <picture>
                     <source
@@ -652,7 +669,7 @@ const ProfilePage: React.FC = () => {
                     x{streak.score} {streak.emoji}
                   </Badge>
                 </div>
-              </p>
+              </div>
             ))}
           </div>
           
@@ -662,7 +679,7 @@ const ProfilePage: React.FC = () => {
             title="Streak Details"
           >
             <div className="p-4 space-y-6">
-              <h3 className="text-xl font-semibold mb-4">Your Streak Breakdown</h3>
+              <h3 className="text-xl font-semibold mb-4">🔥 Streak Breakdown</h3>
               
               <div className="space-y-4">
                 {profileData.plans?.map(plan => {
@@ -692,9 +709,14 @@ const ProfilePage: React.FC = () => {
                     if (wasCompleted) {
                       planScore += 1;
                       completedWeeks += 1;
+                      // Reset buffer when a week is completed
+                      incompleteWeeks = 0;
                     } else {
-                      planScore = Math.max(0, planScore - 1);
                       incompleteWeeks += 1;
+                      // Only decrease score if we've missed more than one week (buffer week)
+                      if (incompleteWeeks > 1) {
+                        planScore = Math.max(0, planScore - 1);
+                      }
                     }
                     
                     weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -724,10 +746,16 @@ const ProfilePage: React.FC = () => {
                 <h4 className="font-medium mb-2">How streaks are calculated:</h4>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li>• Each completed week adds +1 to your streak</li>
-                  <li>• Each incomplete week subtracts -1 from your streak</li>
+                  <li>• You have a 1-week buffer when you miss a week.</li>
+                  <li>• After the buffer week, each additional incomplete week subtracts -1 from your streak</li>
                   <li>• Streak score cannot go below 0</li>
                   <li>• Current week is not counted (as it is still in progress)</li>
                 </ul>
+                <br/><br/>
+                <p className="text-sm text-gray-600">
+                  The goal of the streaks is to motivate you to keep consistent! Without over-stressing or demotivating when you fail.
+                  <br/>That's why you have a 1-week buffer when you miss a week :) We all have off weeks!
+                </p>
               </div>
             </div>
           </AppleLikePopover>
