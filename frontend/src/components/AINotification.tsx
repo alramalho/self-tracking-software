@@ -1,5 +1,13 @@
 import React from "react";
-import { ArrowRight, Key, Lock, LockKeyhole, Reply, ScanFace, X } from "lucide-react";
+import {
+  ArrowRight,
+  Key,
+  Lock,
+  LockKeyhole,
+  Reply,
+  ScanFace,
+  X,
+} from "lucide-react";
 import { Remark } from "react-remark";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "./ui/badge";
@@ -75,14 +83,7 @@ const AINotification: React.FC<AINotificationProps> = ({
         transition={{ duration: 0.5, delay: 0.8 }}
       >
         <div className="p-2 markdown text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
-          {preview ? (
-            <div className="flex items-center gap-2">
-              <span>{displayMessage}</span>
-              <Lock className="w-10 h-10 text-gray-400" />
-            </div>
-          ) : (
-            <Remark>{displayMessage}</Remark>
-          )}
+          <Remark>{displayMessage}</Remark>
         </div>
         <div className="flex flex-row justify-between">
           <div className="text-xs text-gray-500 mt-1">
