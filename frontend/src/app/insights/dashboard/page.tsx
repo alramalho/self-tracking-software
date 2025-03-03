@@ -22,6 +22,7 @@ import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopo
 import { MetricsAINotification } from "@/components/metrics/MetricsAINotification";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -56,6 +57,7 @@ export default function InsightsDashboardPage() {
   const api = useApiWithAuth();
   const { userPaidPlanType, maxMetrics } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
+  const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -323,7 +325,7 @@ export default function InsightsDashboardPage() {
   // Render insights when we have enough data
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
-      <MetricsAINotification />
+      {!isAIEnabled ? null : <MetricsAINotification />}
 
       <MetricSelector
         metrics={userMetrics}

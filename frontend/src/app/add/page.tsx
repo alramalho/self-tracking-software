@@ -12,6 +12,7 @@ import AINotification from "@/components/AINotification";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
+import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 
 interface ActivityLogData {
   date: Date;
@@ -34,6 +35,7 @@ const LogPage: React.FC = () => {
   const api = useApiWithAuth();
   const router = useRouter();
 
+  const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
   const {
     message: aiMessage,
     messageId,
@@ -42,10 +44,10 @@ const LogPage: React.FC = () => {
   } = useAIMessageCache("activity");
 
   useEffect(() => {
-    if (aiMessage && !isDismissed) {
+    if (aiMessage && !isDismissed && isAIEnabled) {
       setShouldShowNotification(true);
     }
-  }, [aiMessage, isDismissed]);
+  }, [aiMessage, isDismissed, isAIEnabled]);
 
   const [activityLogData, setActivityLogData] =
     useState<ActivityLogData | null>(null);
@@ -95,7 +97,7 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
-      {shouldShowNotification && (
+      {shouldShowNotification && isAIEnabled && (
         <AINotification
           message={aiMessage}
           createdAt={new Date().toISOString()}

@@ -168,6 +168,7 @@ const LogPage: React.FC = () => {
   const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
   const [areEmotionsLoading, setAreEmotionsLoading] = useState<boolean>(false);
 
+
   const searchParams = useSearchParams();
   const notificationId = searchParams.get("notification_id");
   let assistantType: AssistantType = searchParams.get(
