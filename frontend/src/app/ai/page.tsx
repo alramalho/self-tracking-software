@@ -54,6 +54,7 @@ import {
   CompletePlan,
 } from "@/components/PlanBuildingContainer";
 import { VoiceModeInput } from "@/components/chat/VoiceModeInput";
+import { UpgradePopover } from "@/components/UpgradePopover";
 
 const REFERRAL_COUNT = 2;
 
@@ -619,13 +620,9 @@ const LogPage: React.FC = () => {
   return (
     <>
       {!isUserWhitelisted && (
-        <AccessRestrictionPopover
-          isOpen={true}
+        <UpgradePopover
+          open={true}
           onClose={() => router.back()}
-          referredUsers={referredUsers}
-          requiredReferrals={REFERRAL_COUNT}
-          onShareReferral={handleShareReferralLink}
-          onRequestAccess={() => router.back()}
         />
       )}
       {isUserWhitelisted && (
