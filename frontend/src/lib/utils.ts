@@ -47,3 +47,11 @@ export function formatTimeAgo(date: string | Date) {
   const diffInYears = Math.floor(diffInDays / 365);
   return `${diffInYears}y ago`;
 }
+
+export function getMessagePreview(message: string): string {
+  const firstLine = message.split("\n")[0].trim();
+  if (firstLine.length > 50) {
+    return firstLine.substring(0, 50) + " ...";
+  }
+  return firstLine;
+}

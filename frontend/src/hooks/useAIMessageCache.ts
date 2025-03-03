@@ -74,7 +74,7 @@ export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
       setCachedData(newData);
       return response.data;
     },
-    enabled: shouldFetch, // Only run query if we need new data
+    enabled: shouldFetch,
   });
 
   return {

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import AINotification from "@/components/AINotification";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
+import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 
 
 const PlansPage: React.FC = () => {
@@ -20,6 +21,7 @@ const PlansPage: React.FC = () => {
   const [shouldShowNotification, setShouldShowNotification] = useState(false);
   const router = useRouter();
 
+  const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
   const { message: aiMessage, messageId, isDismissed, dismiss } = useAIMessageCache('plan');
 
   useEffect(() => {
@@ -91,6 +93,7 @@ const PlansPage: React.FC = () => {
               `/ai?assistantType=plan-creation&messageId=${messageId}&messageText=${aiMessage}`
             );
           }}
+          preview={!isAIEnabled}
         />
       )}
 
