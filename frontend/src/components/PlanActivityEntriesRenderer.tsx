@@ -23,7 +23,9 @@ export const isWeekCompleted = (
       entriesThisWeek.map((entry) => format(new Date(entry.date), "yyyy-MM-dd"))
     );
 
-    return uniqueDaysWithActivities.size >= (plan.times_per_week || 0);
+    const isCompleted = uniqueDaysWithActivities.size >= (plan.times_per_week || 0);
+
+    return isCompleted;
   } else {
     // For specific plans, check if all planned sessions for the week are completed
     const plannedSessionsThisWeek = plan.sessions.filter((session) => {
