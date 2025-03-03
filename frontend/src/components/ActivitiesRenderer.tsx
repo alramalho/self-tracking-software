@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import HeatMap from "@uiw/react-heat-map";
 import toast from "react-hot-toast";
-import { Activity, ActivityEntry } from "@/contexts/UserPlanContext";
+import { Activity, ActivityEntry, Plan } from "@/contexts/UserPlanContext";
 
 interface ActivitiesRendererProps {
   activities: Activity[];
