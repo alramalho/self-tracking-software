@@ -35,6 +35,10 @@ import {
   endOfMonth,
   endOfYear,
   subDays,
+  startOfWeek,
+  endOfWeek,
+  isAfter,
+  isBefore,
 } from "date-fns";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -57,6 +61,12 @@ import { ThemeColor, getThemeVariants } from "@/utils/theme";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
+
+interface PlanStreak {
+  emoji: string;
+  score: number;
+}
 
 const ProfilePage: React.FC = () => {
   const { clearProfileNotifications } = useNotifications();
@@ -103,6 +113,7 @@ const ProfilePage: React.FC = () => {
   const [copied, copyToClipboard] = useClipboard();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
   const [showColorPalette, setShowColorPalette] = useState(false);
+  const [showStreakDetails, setShowStreakDetails] = useState(false);
 
   const { userPaidPlanType } = usePaidPlan();
 
@@ -136,7 +147,7 @@ const ProfilePage: React.FC = () => {
     {
       name: "Random",
       color: "random" as ThemeColor,
-      description: "Changes every 3 days"
+      description: "Changes every 3 days",
     },
   ];
 
@@ -240,6 +251,12 @@ const ProfilePage: React.FC = () => {
   ) => {
     setTimeRange(value);
     setEndDate(new Date());
+    // Force a recalculation by closing and reopening the streak details if it's open
+    if (showStreakDetails) {
+      setShowStreakDetails(false);
+      // Small delay to ensure the popover closes before reopening
+      setTimeout(() => setShowStreakDetails(true), 100);
+    }
   };
 
   useEffect(() => {
@@ -259,6 +276,67 @@ const ProfilePage: React.FC = () => {
       console.error("Failed to update theme:", error);
       toast.error("Failed to update theme");
     }
+  };
+
+  const calculateWeekStreaks = (): PlanStreak[] => {
+    if (!profileData?.plans) {
+      return [];
+    }
+    
+    const streaks: PlanStreak[] = [];
+    
+    // Calculate date range based on selected timeRange
+    const now = new Date();
+    const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 });
+    const daysToSubtract = timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180;
+    const rangeStartDate = subDays(now, daysToSubtract);
+    
+    profileData.plans.forEach(plan => {
+      // Filter activities and entries for this plan
+      const planActivities = activities.filter(
+        (activity) => plan.activity_ids?.includes(activity.id) ?? false
+      );
+      const planActivityEntries = activityEntries.filter(
+        (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
+      );
+      
+      // Start from the range start date or the earliest activity date, whichever is later
+      const earliestActivityDate = new Date(Math.min(
+        ...planActivityEntries.map(entry => new Date(entry.date).getTime())
+      ));
+      const startDate = isAfter(rangeStartDate, earliestActivityDate) ? rangeStartDate : earliestActivityDate;
+      let weekStart = startOfWeek(startDate, { weekStartsOn: 0 });
+      
+      // Initialize plan score
+      let planScore = 0;
+      
+      while (weekStart < currentWeekStart) { // Only check completed weeks
+        const convertedPlan = convertApiPlanToPlan(plan, planActivities);
+        
+        // Only check weeks that fall within our time range
+        if (isAfter(weekStart, rangeStartDate) || format(weekStart, 'yyyy-MM-dd') === format(rangeStartDate, 'yyyy-MM-dd')) {
+          const wasCompleted = isWeekCompleted(weekStart, convertedPlan, planActivityEntries);
+          
+          // Increment score for completed weeks, decrement for incomplete weeks
+          if (wasCompleted) {
+            planScore += 1;
+          } else {
+            planScore = Math.max(0, planScore - 1); // Don't let score go below 0
+          }
+        }
+        
+        weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }
+      
+      if (planScore > 0) {
+        streaks.push({
+          emoji: plan.emoji || '💪',
+          score: planScore
+        });
+      }
+    });
+    
+    return streaks;
   };
 
   if (currentUserQuery.isLoading || profileDataQuery.isLoading) {
@@ -328,14 +406,16 @@ const ProfilePage: React.FC = () => {
             </Avatar>
           </div>
           <div className="flex flex-col items-center gap-4">
-            <Link href={`/friends/${getUsername(user)}`}>
-              <div className="text-center">
-                <p className="text-2xl font-bold">
-                  {user?.friend_ids?.length || 0}
-                </p>
-                <p className="text-sm text-gray-500">Friends</p>
-              </div>
-            </Link>
+            <div className="flex gap-6">
+              <Link href={`/friends/${getUsername(user)}`}>
+                <div className="text-center">
+                  <p className="text-2xl font-bold">
+                    {user?.friend_ids?.length || 0}
+                  </p>
+                  <p className="text-sm text-gray-500">Friends</p>
+                </div>
+              </Link>
+            </div>
             {!isOnesOwnProfile && !isFriend() && (
               <>
                 {hasPendingReceivedFriendRequest() ? (
@@ -436,17 +516,28 @@ const ProfilePage: React.FC = () => {
                 <div className="grid gap-4">
                   {colorPalettes.map((palette) => {
                     const isSelected = currentTheme === palette.color;
-                    const isLocked = userPaidPlanType === "free" && 
+                    const isLocked =
+                      userPaidPlanType === "free" &&
                       (palette.color === "random" || palette.color !== "blue");
                     return (
                       <div
                         key={palette.name}
                         className={`flex items-center gap-4 p-3 border rounded-lg ${
-                          isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50 cursor-pointer"
+                          isLocked
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-gray-50 cursor-pointer"
                         } ${
-                          isSelected ? `ring-2 ring-offset-2 ${palette.color === "random" ? "ring-gray-500" : `ring-${palette.color}-500`}` : ""
+                          isSelected
+                            ? `ring-2 ring-offset-2 ${
+                                palette.color === "random"
+                                  ? "ring-gray-500"
+                                  : `ring-${palette.color}-500`
+                              }`
+                            : ""
                         }`}
-                        onClick={() => !isLocked && handleThemeChange(palette.color)}
+                        onClick={() =>
+                          !isLocked && handleThemeChange(palette.color)
+                        }
                       >
                         <div className="flex items-center gap-2">
                           {isSelected && (
@@ -460,7 +551,9 @@ const ProfilePage: React.FC = () => {
                           )}
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{palette.name}</span>
+                              <span className="font-medium">
+                                {palette.name}
+                              </span>
                               {isLocked && (
                                 <span className="text-xs text-gray-500">
                                   🔒
@@ -500,8 +593,8 @@ const ProfilePage: React.FC = () => {
                   })}
                 </div>
                 {userPaidPlanType === "free" && (
-                  <Button 
-                    className="w-full mt-6" 
+                  <Button
+                    className="w-full mt-6"
                     onClick={() => {
                       setShowColorPalette(false);
                       setShowUpgradePopover(true);
@@ -537,6 +630,108 @@ const ProfilePage: React.FC = () => {
           </>
         )}
 
+        <div className="relative w-fit mb-4">
+          <div 
+            className="flex flex-wrap gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => setShowStreakDetails(true)}
+          >
+            {calculateWeekStreaks().map((streak, index) => (
+              <p key={index} className="relative text-2xl font-bold flex items-center gap-1">
+                <picture>
+                  <source
+                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
+                    alt="🔥"
+                    width="64"
+                    height="64"
+                  />
+                </picture>
+                <Badge className="absolute bottom-0 right-[-10px]">
+                  x{streak.score} {streak.emoji}
+                </Badge>
+              </p>
+            ))}
+          </div>
+          
+          <AppleLikePopover
+            open={showStreakDetails}
+            onClose={() => setShowStreakDetails(false)}
+            title="Streak Details"
+          >
+            <div className="p-4 space-y-6">
+              <h3 className="text-xl font-semibold mb-4">Your Streak Breakdown</h3>
+              
+              <div className="space-y-4">
+                {profileData.plans?.map(plan => {
+                  // Filter activities and entries for this plan
+                  const planActivities = activities.filter(
+                    (activity) => plan.activity_ids?.includes(activity.id) ?? false
+                  );
+                  const planActivityEntries = activityEntries.filter(
+                    (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
+                  );
+                  
+                  // Calculate score for this plan
+                  const now = new Date();
+                  const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 });
+                  const daysToSubtract = timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180;
+                  const rangeStartDate = subDays(now, daysToSubtract);
+                  
+                  let weekStart = startOfWeek(rangeStartDate, { weekStartsOn: 0 });
+                  let planScore = 0;
+                  let completedWeeks = 0;
+                  let incompleteWeeks = 0;
+                  
+                  while (weekStart < currentWeekStart) {
+                    const convertedPlan = convertApiPlanToPlan(plan, planActivities);
+                    const wasCompleted = isWeekCompleted(weekStart, convertedPlan, planActivityEntries);
+                    
+                    if (wasCompleted) {
+                      planScore += 1;
+                      completedWeeks += 1;
+                    } else {
+                      planScore = Math.max(0, planScore - 1);
+                      incompleteWeeks += 1;
+                    }
+                    
+                    weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+                  }
+                  
+                  if (planScore === 0 && completedWeeks === 0 && incompleteWeeks === 0) {
+                    return null;
+                  }
+                  
+                  return (
+                    <div key={plan.id} className="p-4 border rounded-lg bg-white/50">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">{plan.emoji}</span>
+                        <h4 className="font-medium">{plan.goal}</h4>
+                      </div>
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <p>• Completed weeks: {completedWeeks}</p>
+                        <p>• Incomplete weeks: {incompleteWeeks}</p>
+                        <p>• Current streak score: {planScore}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium mb-2">How streaks are calculated:</h4>
+                <ul className="text-sm text-gray-600 space-y-2">
+                  <li>• Each completed week adds +1 to your streak</li>
+                  <li>• Each incomplete week subtracts -1 from your streak</li>
+                  <li>• Streak score cannot go below 0</li>
+                  <li>• Current week is not counted (as it is still in progress)</li>
+                </ul>
+              </div>
+            </div>
+          </AppleLikePopover>
+        </div>
         <Tabs defaultValue="plans" className="w-full">
           <TabsList
             className={`grid w-full h-13 bg-gray-50/50 ${
@@ -736,3 +931,4 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
+
