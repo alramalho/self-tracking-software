@@ -9,7 +9,7 @@ export function WeeklyCompletionCard({ username, planName, small }: { username?:
         </div>
         <div>
           <h3 className={`font-semibold text-green-700 ${small ? "text-lg" : "text-xl"}`}>
-            🎉 Fantastic work this week!
+            🔥 Fantastic work this week!
           </h3>
           <p className={`text-green-600 ${small ? "text-sm" : ""}`}>
             {`${username ? `${username} has` : "You've"} completed all ${username ? "their" : "your"} planned activities for this week ${planName ? ` for plan '${planName}'` : ""}.`}

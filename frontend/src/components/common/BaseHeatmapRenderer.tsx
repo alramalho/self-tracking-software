@@ -18,6 +18,7 @@ export interface BaseHeatmapRendererProps {
     date: string
   ) => { activityIndex: number; intensity: number }[] | null;
   noActivityLegend?: boolean;
+  getWeekCompletionStatus?: (weekStartDate: Date) => boolean;
 }
 
 export const getActivityColorMatrix = () => {
@@ -50,7 +51,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   heatmapData,
   onDateClick,
   getIntensityForDate,
-  noActivityLegend = false
+  noActivityLegend = false,
+  getWeekCompletionStatus
 }) => {
   // Convert dates to UTC
   const utcStartDate = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
@@ -113,7 +115,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             startDate={utcStartDate}
             endDate={utcEndDate}
             width={45 + 26 * numberOfWeeks}
-            height={215}
+            height={235}
             rectSize={20}
             legendRender={() => <React.Fragment key={crypto.randomUUID()} />}
             rectProps={{
@@ -132,6 +134,17 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               const today = new Date();
               const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
               const isCurrentDay = dateObj.getTime() === todayUTC.getTime();
+
+              // Check if this is the last day of the week (Saturday)
+              const isLastDayOfWeek = dateObj.getUTCDay() === 6;
+              
+              // If it's Saturday and we have the completion check function, check if the week is completed
+              // We need to get the start of this week (Sunday) to check completion
+              const isWeekCompleted = isLastDayOfWeek && getWeekCompletionStatus && (() => {
+                const weekStart = new Date(dateObj);
+                weekStart.setUTCDate(weekStart.getUTCDate() - 6); // Go back 6 days to get to Sunday
+                return getWeekCompletionStatus(weekStart);
+              })();
               
               const renderRects = () => {
                 if (!intensities || intensities.length === 0) {
@@ -302,6 +315,16 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   }}
                 >
                   {renderRects()}
+                  {isLastDayOfWeek && isWeekCompleted && (
+                    <text
+                      x={Number(props.x) + 10}
+                      y={Number(props.y) + 40}
+                      className="select-none text-xl"
+                      textAnchor="middle"
+                    >
+                      🔥
+                    </text>
+                  )}
                 </g>
               );
             }}

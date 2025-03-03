@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { format, startOfWeek } from "date-fns";
+import { format, startOfWeek, endOfWeek, isBefore, isAfter } from "date-fns";
 import {
   Activity,
   Plan,
@@ -96,6 +96,92 @@ const PlanActivityEntriesRenderer: React.FC<
     return intensities;
   };
 
+  const isWeekCompleted = (weekStartDate: Date) => {
+    const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 }); // 0 = Sunday
+    const weekStart = startOfWeek(weekStartDate, { weekStartsOn: 0 }); // 0 = Sunday
+    
+    console.log("Checking week completion:", {
+      weekStartDate: format(weekStart, "yyyy-MM-dd"),
+      weekEndDate: format(weekEndDate, "yyyy-MM-dd"),
+      planType: plan.outline_type,
+      originalDate: format(weekStartDate, "yyyy-MM-dd")
+    });
+    
+    if (plan.outline_type === "times_per_week") {
+      // For times_per_week plans, count unique days with activities
+      const entriesThisWeek = planActivityEntries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        return isAfter(entryDate, weekStart) && isBefore(entryDate, weekEndDate);
+      });
+
+      // Get unique days by formatting dates and using Set
+      const uniqueDaysWithActivities = new Set(
+        entriesThisWeek.map(entry => format(new Date(entry.date), "yyyy-MM-dd"))
+      );
+      
+      console.log("Times per week plan:", {
+        targetTimes: plan.times_per_week,
+        uniqueDaysCount: uniqueDaysWithActivities.size,
+        uniqueDays: Array.from(uniqueDaysWithActivities),
+        totalEntries: entriesThisWeek.length,
+        allEntries: entriesThisWeek.map(e => format(new Date(e.date), "yyyy-MM-dd"))
+      });
+      
+      return uniqueDaysWithActivities.size >= (plan.times_per_week || 0);
+    } else {
+      // For specific plans, check if all planned sessions for the week are completed
+      const plannedSessionsThisWeek = plan.sessions.filter(session => {
+        const sessionDate = new Date(session.date);
+        return isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEndDate);
+      });
+
+      console.log("Specific plan - planned sessions:", {
+        totalPlanned: plannedSessionsThisWeek.length,
+        sessions: plannedSessionsThisWeek.map(s => ({
+          date: format(new Date(s.date), "yyyy-MM-dd"),
+          activityId: s.activity_id
+        }))
+      });
+
+      // If no sessions planned this week, return false
+      if (plannedSessionsThisWeek.length === 0) {
+        console.log("No sessions planned this week");
+        return false;
+      }
+
+      // Check if all planned sessions have corresponding entries
+      const allSessionsCompleted = plannedSessionsThisWeek.every(session => {
+        const sessionDate = new Date(session.date);
+        const weekStart = startOfWeek(sessionDate, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(sessionDate, { weekStartsOn: 0 });
+        
+        const completedSessionsThisWeek = planActivityEntries.filter(entry => 
+          entry.activity_id === session.activity_id &&
+          isAfter(new Date(entry.date), weekStart) &&
+          isBefore(new Date(entry.date), weekEnd)
+        );
+
+        console.log("Checking session completion:", {
+          sessionDate: format(sessionDate, "yyyy-MM-dd"),
+          weekStart: format(weekStart, "yyyy-MM-dd"),
+          weekEnd: format(weekEnd, "yyyy-MM-dd"),
+          activityId: session.activity_id,
+          completedSessions: completedSessionsThisWeek.map(e => format(new Date(e.date), "yyyy-MM-dd")),
+          isCompleted: completedSessionsThisWeek.length > 0
+        });
+
+        return completedSessionsThisWeek.length > 0;
+      });
+
+      console.log("Week completion result:", {
+        weekStart: format(weekStart, "yyyy-MM-dd"),
+        isCompleted: allSessionsCompleted
+      });
+
+      return allSessionsCompleted;
+    }
+  };
+
   const renderActivityViewer = () => {
     if (!focusedDate) return null;
 
@@ -146,6 +232,7 @@ const PlanActivityEntriesRenderer: React.FC<
         heatmapData={formatEntriesForHeatMap()}
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}
+        getWeekCompletionStatus={isWeekCompleted}
       />
       <div className="flex justify-center mt-4">{renderActivityViewer()}</div>
     </div>
