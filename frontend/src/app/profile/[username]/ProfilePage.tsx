@@ -328,12 +328,10 @@ const ProfilePage: React.FC = () => {
         weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
       }
       
-      if (planScore > 0) {
-        streaks.push({
-          emoji: plan.emoji || '💪',
-          score: planScore
-        });
-      }
+      streaks.push({
+        emoji: plan.emoji || '💪',
+        score: planScore
+      });
     });
     
     return streaks;
@@ -637,21 +635,23 @@ const ProfilePage: React.FC = () => {
           >
             {calculateWeekStreaks().map((streak, index) => (
               <p key={index} className="relative text-2xl font-bold flex items-center gap-1">
-                <picture>
-                  <source
-                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
-                    type="image/webp"
-                  />
-                  <img
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
-                    alt="🔥"
-                    width="64"
-                    height="64"
-                  />
-                </picture>
-                <Badge className="absolute bottom-0 right-[-10px]">
-                  x{streak.score} {streak.emoji}
-                </Badge>
+                <div className={streak.score === 0 ? "opacity-40 grayscale" : ""}>
+                  <picture>
+                    <source
+                      srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
+                      type="image/webp"
+                    />
+                    <img
+                      src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
+                      alt="🔥"
+                      width="58"
+                      height="58"
+                    />
+                  </picture>
+                  <Badge className="absolute bottom-0 right-[-10px]">
+                    x{streak.score} {streak.emoji}
+                  </Badge>
+                </div>
               </p>
             ))}
           </div>
