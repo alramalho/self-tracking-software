@@ -4,9 +4,13 @@
 
 # Welcome to your<br/>**tracking.so*ftware***
 
-An app that helps you achieve your activity goals, together.
-
 [Open App](https://app.tracking.so)
+
+[👋 Join the community!](https://discord.gg/DaH7pqax)
+
+<a href="https://ko-fi.com/alexramalho">
+  <img src="https://img.shields.io/badge/Support-❤️-black?style=for-the-badge" alt="Support open source" />
+</a>
 
 <div class="flex flex-col items-center gap-4">
 
@@ -26,11 +30,7 @@ An app that helps you achieve your activity goals, together.
     border: 1px solid hsl(0 0% 9%);
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   ">
-    👋 Join the community!
-  </a>
-
-  <a href="https://ko-fi.com/alexramalho">
-    <img src="https://img.shields.io/badge/Support-❤️-black?style=for-the-badge" alt="Support open source" />
+    
   </a>
 
   <img src="assets/img1.PNG" width="400px" alt="iPhone screenshot" />
