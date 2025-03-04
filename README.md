@@ -8,11 +8,33 @@ An app that helps you achieve your activity goals, together.
 
 [Open App](https://app.tracking.so)
 
-<a href="https://ko-fi.com/alexramalho">
-  <img src="https://img.shields.io/badge/Support-❤️-black?style=for-the-badge" alt="Support open source" />
-</a>
+<div class="flex flex-col items-center gap-4">
 
-<img src="assets/img1.PNG" width="400px" alt="iPhone screenshot" />
+  <a href="https://discord.gg/DaH7pqax" style="
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background-color: hsl(0 0% 9%);
+    color: white;
+    text-decoration: none;
+    transition: background-color 150ms;
+    cursor: pointer;
+    border: 1px solid hsl(0 0% 9%);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  ">
+    👋 Join the community!
+  </a>
+
+  <a href="https://ko-fi.com/alexramalho">
+    <img src="https://img.shields.io/badge/Support-❤️-black?style=for-the-badge" alt="Support open source" />
+  </a>
+
+  <img src="assets/img1.PNG" width="400px" alt="iPhone screenshot" />
+</div>
 </div>
 
 <br/>
