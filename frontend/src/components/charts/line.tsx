@@ -69,7 +69,7 @@ export function LineChart({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="h-[480px]">
+      <CardContent className="h-[440px]">
         <ChartContainer config={chartConfig}>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">

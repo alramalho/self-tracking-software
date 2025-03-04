@@ -157,7 +157,16 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         });
       }
 
-      return completedEntries;
+      // Group entries by date and take only one per day
+      const entriesByDate = completedEntries.reduce((acc, entry) => {
+        const dateKey = format(parseISO(entry.date), 'yyyy-MM-dd');
+        if (!acc[dateKey]) {
+          acc[dateKey] = entry;
+        }
+        return acc;
+      }, {} as { [key: string]: typeof completedEntries[0] });
+
+      return Object.values(entriesByDate);
     },
     [userData, planGroupMembers, membersData]
   );
@@ -197,7 +206,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       }
 
       // Calculate weekly data
-      const startDate = subWeeks(startOfWeek(allDates[0]), 1);
+      const startDate = timeRange === "recent" 
+        ? subDays(new Date(), 30) 
+        : subWeeks(startOfWeek(allDates[0]), 1);
       const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
       const weeklyData: {
         [key: string]: { [username: string]: number; planned: number };
@@ -207,6 +218,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       while (currentWeek <= endDate) {
         const weekKey = format(currentWeek, "yyyy-MM-dd");
         const weekEnd = endOfWeek(currentWeek);
+
+        // Skip weeks before startDate for "recent" view
+        if (timeRange === "recent" && isBefore(weekEnd, startDate)) {
+          currentWeek = addWeeks(currentWeek, 1);
+          continue;
+        }
 
         weeklyData[weekKey] = { planned: 0 };
 
