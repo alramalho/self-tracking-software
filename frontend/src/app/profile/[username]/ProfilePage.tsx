@@ -15,6 +15,8 @@ import {
   Star,
   SquareActivity,
   Paintbrush,
+  ChevronDown,
+  SquareArrowUp,
 } from "lucide-react";
 import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +25,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   convertApiPlanToPlan,
   User,
@@ -63,6 +71,9 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
+import { twMerge } from "tailwind-merge";
+import { capitalize } from "lodash";
+import { PlanBadge } from "@/components/PlanBadge";
 
 interface PlanStreak {
   emoji: string;
@@ -117,6 +128,10 @@ const ProfilePage: React.FC = () => {
   const [showStreakDetails, setShowStreakDetails] = useState(false);
 
   const { userPaidPlanType } = usePaidPlan();
+
+  useEffect(() => {
+    console.log(userPaidPlanType);
+  }, [userPaidPlanType]);
 
   const { setShowUpgradePopover } = useUpgrade();
 
@@ -432,10 +447,24 @@ const ProfilePage: React.FC = () => {
       <div className="w-full max-w-3xl">
         <div className="flex justify-around gap-3 items-center mb-2">
           <div className="flex flex-col items-center">
-            <Avatar className="w-20 h-20">
-              <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
-              <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar 
+                className={twMerge(
+                  "w-20 h-20",
+                  userPaidPlanType !== "free" && "ring-2 ring-offset-2 ring-offset-white",
+                  userPaidPlanType === "supporter" && "ring-indigo-500",
+                  userPaidPlanType === "plus" && "ring-blue-500"
+                )}
+              >
+                <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
+                <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
+              </Avatar>
+              {userPaidPlanType && userPaidPlanType !== "free" && (
+                <div className="absolute -bottom-1 -right-1">
+                  <PlanBadge planType={userPaidPlanType} size={28} />
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex flex-col items-center gap-4">
             <div className="flex gap-6">
@@ -547,16 +576,48 @@ const ProfilePage: React.FC = () => {
               open={showUserProfile}
               onClose={() => setShowUserProfile(false)}
             >
-              <div className="max-h-[80vh] overflow-y-auto">
+              <div className="max-h-[80vh] overflow-y-auto mt-12">
+                <div className="flex items-center justify-between mb-4">
+                  <h1 className="text-2xl font-bold">Settings</h1>
+                  <span
+                    className={twMerge(
+                      "text-xl font-cursive flex items-center gap-2",
+                      userPaidPlanType === "free"
+                        ? "text-gray-500"
+                        : userPaidPlanType === "plus"
+                          ? "text-blue-500"
+                          : "text-indigo-500"
+                    )} 
+                  >
+                    On {capitalize(userPaidPlanType || "free")} Plan
+                    {userPaidPlanType !== "supporter" && (
+                      <SquareArrowUp onClick={() => setShowUpgradePopover(true)} size={20} className="text-gray-800" />
+                    )}
+                  </span>
+                </div>
                 <Button
                   variant="ghost"
-                  onClick={handleLogout}
-                  className="w-full mb-4 flex items-center justify-center gap-2"
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full mb-4 flex items-center justify-between px-0"
                 >
-                  <LogOut size={20} />
-                  <span>Logout</span>
+                  <div className="flex items-center gap-2">
+                    <LogOut size={20} />
+                    <span>Logout</span>
+                  </div>
                 </Button>
-                <UserProfile routing={"hash"} />
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="user-settings" className="border-none">
+                    <AccordionTrigger className="py-2 hover:no-underline">
+                      <div className="flex items-center gap-2">
+                        <Settings size={20} />
+                        <span>User Settings</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <UserProfile routing={"hash"} />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             </AppleLikePopover>
 
