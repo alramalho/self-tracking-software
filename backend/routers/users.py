@@ -641,3 +641,10 @@ async def update_theme(body: ThemeUpdate, user: User = Depends(is_clerk_user)):
         logger.error(f"Failed to update theme: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{username}/get-user-plan-type")
+async def get_user_plan_type(username: str):
+    user = users_gateway.get_user_by_safely("username", username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"plan_type": user.plan_type}
