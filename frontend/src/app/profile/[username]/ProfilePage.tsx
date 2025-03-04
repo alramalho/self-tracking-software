@@ -283,16 +283,17 @@ const ProfilePage: React.FC = () => {
     if (!profileData?.plans) {
       return [];
     }
-    
+
     const streaks: PlanStreak[] = [];
-    
+
     // Calculate date range based on selected timeRange
     const now = new Date();
     const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 });
-    const daysToSubtract = timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180;
+    const daysToSubtract =
+      timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180;
     const rangeStartDate = subDays(now, daysToSubtract);
-    
-    profileData.plans.forEach(plan => {
+
+    profileData.plans.forEach((plan) => {
       // Filter activities and entries for this plan
       const planActivities = activities.filter(
         (activity) => plan.activity_ids?.includes(activity.id) ?? false
@@ -300,33 +301,46 @@ const ProfilePage: React.FC = () => {
       const planActivityEntries = activityEntries.filter(
         (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
       );
-      
+
       // Start from the range start date or the earliest activity date, whichever is later
       let weekStart = startOfWeek(rangeStartDate, { weekStartsOn: 0 });
-      
+
       if (planActivityEntries.length > 0) {
-        const earliestActivityDate = new Date(Math.min(
-          ...planActivityEntries.map(entry => new Date(entry.date).getTime())
-        ));
-        
+        const earliestActivityDate = new Date(
+          Math.min(
+            ...planActivityEntries.map((entry) =>
+              new Date(entry.date).getTime()
+            )
+          )
+        );
+
         if (isAfter(earliestActivityDate, weekStart)) {
           weekStart = startOfWeek(earliestActivityDate, { weekStartsOn: 0 });
         }
       }
-      
+
       // Initialize plan score
       let planScore = 0;
       let weekCount = 0;
       let incompleteWeeks = 0;
-      
-      while (isBefore(weekStart, currentWeekStart)) { // Only check completed weeks
+
+      while (isBefore(weekStart, currentWeekStart)) {
+        // Only check completed weeks
         weekCount++;
         const convertedPlan = convertApiPlanToPlan(plan, planActivities);
-        
+
         // Only check weeks that fall within our time range
-        if (isAfter(weekStart, rangeStartDate) || format(weekStart, 'yyyy-MM-dd') === format(rangeStartDate, 'yyyy-MM-dd')) {
-          const wasCompleted = isWeekCompleted(weekStart, convertedPlan, planActivityEntries);
-          
+        if (
+          isAfter(weekStart, rangeStartDate) ||
+          format(weekStart, "yyyy-MM-dd") ===
+            format(rangeStartDate, "yyyy-MM-dd")
+        ) {
+          const wasCompleted = isWeekCompleted(
+            weekStart,
+            convertedPlan,
+            planActivityEntries
+          );
+
           if (wasCompleted) {
             planScore += 1;
             incompleteWeeks = 0;
@@ -337,20 +351,23 @@ const ProfilePage: React.FC = () => {
             }
           }
         }
-        
+
         // Move to next week using date-fns addWeeks to handle DST correctly
         weekStart = addWeeks(weekStart, 1);
-        if (format(weekStart, 'yyyy-MM-dd') === format(currentWeekStart, 'yyyy-MM-dd')) {
+        if (
+          format(weekStart, "yyyy-MM-dd") ===
+          format(currentWeekStart, "yyyy-MM-dd")
+        ) {
           break; // Stop if we've reached the current week
         }
       }
-      
+
       streaks.push({
-        emoji: plan.emoji || '💪',
-        score: planScore
+        emoji: plan.emoji || "💪",
+        score: planScore,
       });
     });
-    
+
     return streaks;
   };
 
@@ -413,7 +430,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
-        <div className="flex justify-around gap-4 items-center mb-4">
+        <div className="flex justify-around gap-3 items-center mb-2">
           <div className="flex flex-col items-center">
             <Avatar className="w-20 h-20">
               <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
@@ -481,8 +498,29 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
           {isOnesOwnProfile && (
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-none"
+                onClick={async () => {
+                  try {
+                    const link = `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`;
+                    if (isShareSupported) {
+                      const success = await share(link);
+                      if (!success) throw new Error("Failed to share");
+                    } else {
+                      const success = await copyToClipboard(link);
+                      if (!success) throw new Error("Failed to copy");
+                    }
+                  } catch (error) {
+                    console.error("Failed to copy link to clipboard");
+                  }
+                }}
+              >
+                <UserPlus size={24} />
+              </Button>
+              <div className="flex items-center space-x-1">
                 <Bell size={20} />
                 <Switch
                   checked={isPushGranted}
@@ -620,39 +658,22 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
             </AppleLikePopover>
-
-            <Button
-              variant="outline"
-              className="w-full mb-3 bg-white"
-              onClick={async () => {
-                try {
-                  const link = `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`;
-                  if (isShareSupported) {
-                    const success = await share(link);
-                    if (!success) throw new Error("Failed to share");
-                  } else {
-                    const success = await copyToClipboard(link);
-                    if (!success) throw new Error("Failed to copy");
-                  }
-                } catch (error) {
-                  console.error("Failed to copy link to clipboard");
-                }
-              }}
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Invite friends
-            </Button>
           </>
         )}
 
         <div className="relative w-fit mb-4">
-          <div 
+          <div
             className="flex flex-wrap gap-2 cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => setShowStreakDetails(true)}
           >
             {calculateWeekStreaks().map((streak, index) => (
-              <div key={index} className="relative text-2xl font-bold flex items-center gap-1">
-                <div className={streak.score === 0 ? "opacity-40 grayscale" : ""}>
+              <div
+                key={index}
+                className="relative text-2xl font-bold flex items-center gap-1"
+              >
+                <div
+                  className={streak.score === 0 ? "opacity-40 grayscale" : ""}
+                >
                   <picture>
                     <source
                       srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
@@ -661,8 +682,8 @@ const ProfilePage: React.FC = () => {
                     <img
                       src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
                       alt="🔥"
-                      width="58"
-                      height="58"
+                      width="50"
+                      height="50"
                     />
                   </picture>
                   <Badge className="absolute bottom-0 right-[-10px]">
@@ -672,40 +693,60 @@ const ProfilePage: React.FC = () => {
               </div>
             ))}
           </div>
-          
+
           <AppleLikePopover
             open={showStreakDetails}
             onClose={() => setShowStreakDetails(false)}
             title="Streak Details"
           >
             <div className="p-4 space-y-6">
-              <h3 className="text-xl font-semibold mb-4">🔥 Streak Breakdown</h3>
-              
+              <h3 className="text-xl font-semibold mb-4">
+                🔥 Streak Breakdown
+              </h3>
+
               <div className="space-y-4">
-                {profileData.plans?.map(plan => {
+                {profileData.plans?.map((plan) => {
                   // Filter activities and entries for this plan
                   const planActivities = activities.filter(
-                    (activity) => plan.activity_ids?.includes(activity.id) ?? false
+                    (activity) =>
+                      plan.activity_ids?.includes(activity.id) ?? false
                   );
                   const planActivityEntries = activityEntries.filter(
-                    (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
+                    (entry) =>
+                      plan.activity_ids?.includes(entry.activity_id) ?? false
                   );
-                  
+
                   // Calculate score for this plan
                   const now = new Date();
-                  const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 });
-                  const daysToSubtract = timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180;
+                  const currentWeekStart = startOfWeek(now, {
+                    weekStartsOn: 0,
+                  });
+                  const daysToSubtract =
+                    timeRange === "60 Days"
+                      ? 60
+                      : timeRange === "120 Days"
+                      ? 120
+                      : 180;
                   const rangeStartDate = subDays(now, daysToSubtract);
-                  
-                  let weekStart = startOfWeek(rangeStartDate, { weekStartsOn: 0 });
+
+                  let weekStart = startOfWeek(rangeStartDate, {
+                    weekStartsOn: 0,
+                  });
                   let planScore = 0;
                   let completedWeeks = 0;
                   let incompleteWeeks = 0;
-                  
+
                   while (weekStart < currentWeekStart) {
-                    const convertedPlan = convertApiPlanToPlan(plan, planActivities);
-                    const wasCompleted = isWeekCompleted(weekStart, convertedPlan, planActivityEntries);
-                    
+                    const convertedPlan = convertApiPlanToPlan(
+                      plan,
+                      planActivities
+                    );
+                    const wasCompleted = isWeekCompleted(
+                      weekStart,
+                      convertedPlan,
+                      planActivityEntries
+                    );
+
                     if (wasCompleted) {
                       planScore += 1;
                       completedWeeks += 1;
@@ -718,16 +759,25 @@ const ProfilePage: React.FC = () => {
                         planScore = Math.max(0, planScore - 1);
                       }
                     }
-                    
-                    weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+                    weekStart = new Date(
+                      weekStart.getTime() + 7 * 24 * 60 * 60 * 1000
+                    );
                   }
-                  
-                  if (planScore === 0 && completedWeeks === 0 && incompleteWeeks === 0) {
+
+                  if (
+                    planScore === 0 &&
+                    completedWeeks === 0 &&
+                    incompleteWeeks === 0
+                  ) {
                     return null;
                   }
-                  
+
                   return (
-                    <div key={plan.id} className="p-4 border rounded-lg bg-white/50">
+                    <div
+                      key={plan.id}
+                      className="p-4 border rounded-lg bg-white/50"
+                    >
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-2xl">{plan.emoji}</span>
                         <h4 className="font-medium">{plan.goal}</h4>
@@ -741,56 +791,67 @@ const ProfilePage: React.FC = () => {
                   );
                 })}
               </div>
-              
+
               <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium mb-2">How streaks are calculated:</h4>
+                <h4 className="font-medium mb-2">
+                  How streaks are calculated:
+                </h4>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li>• Each completed week adds +1 to your streak</li>
                   <li>• You have a 1-week buffer when you miss a week.</li>
-                  <li>• After the buffer week, each additional incomplete week subtracts -1 from your streak</li>
+                  <li>
+                    • After the buffer week, each additional incomplete week
+                    subtracts -1 from your streak
+                  </li>
                   <li>• Streak score cannot go below 0</li>
-                  <li>• Current week is not counted (as it is still in progress)</li>
+                  <li>
+                    • Current week is not counted (as it is still in progress)
+                  </li>
                 </ul>
-                <br/><br/>
+                <br />
+                <br />
                 <p className="text-sm text-gray-600">
-                  The goal of the streaks is to motivate you to keep consistent! Without over-stressing or demotivating when you fail.
-                  <br/>That's why you have a 1-week buffer when you miss a week :) We all have off weeks!
+                  The goal of the streaks is to motivate you to keep consistent!
+                  Without over-stressing or demotivating when you fail.
+                  <br />
+                  That's why you have a 1-week buffer when you miss a week :) We
+                  all have off weeks!
                 </p>
               </div>
             </div>
           </AppleLikePopover>
         </div>
-        <Tabs defaultValue="plans" className="w-full">
+        <Tabs defaultValue="plans" className="w-full mb-2">
           <TabsList
-            className={`grid w-full h-13 bg-gray-50/50 ${
+            className={`grid w-full h-13 bg-gray-100 ${
               isOnesOwnProfile && userHasAccessToAi
                 ? "grid-cols-3"
                 : "grid-cols-2"
             }`}
           >
             <TabsTrigger value="plans">
-              <div className="flex flex-col items-center">
+              <div className="flex flex-row gap-2 py-[2px] items-center">
                 <ChartArea size={22} />
                 <span>Plans</span>
               </div>
             </TabsTrigger>
             <TabsTrigger value="history">
-              <div className="flex flex-col items-center">
+              <div className="flex flex-row gap-2 py-[2px] items-center">
                 <History size={22} />
                 <span>History</span>
               </div>
             </TabsTrigger>
-            {userHasAccessToAi && isOnesOwnProfile && (
+            {/* {userHasAccessToAi && isOnesOwnProfile && (
               <TabsTrigger value="mood">
                 <div className="flex flex-col items-center">
                   <SquareActivity size={22} />
                   <span>Mood</span>
                 </div>
               </TabsTrigger>
-            )}
+            )} */}
           </TabsList>
           <TabsContent value="plans">
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               <div className="flex flex-row gap-4 justify-between items-center">
                 <span className="text-sm text-gray-500">Time range</span>
                 <div className="flex self-center">
@@ -959,4 +1020,3 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
-
