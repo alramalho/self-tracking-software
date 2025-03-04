@@ -93,7 +93,7 @@ export function BarChart({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="h-[480px] overflow-x-auto">
+      <CardContent className="h-[440px] overflow-x-auto">
         <ChartContainer config={chartConfig}>
           <div className="h-[350px]" style={{ minWidth: `${minWidth}px` }}>
             <ResponsiveContainer width="100%" height="100%">
