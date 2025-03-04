@@ -814,8 +814,8 @@ const ProfilePage: React.FC = () => {
                   The goal of the streaks is to motivate you to keep consistent!
                   Without over-stressing or demotivating when you fail.
                   <br />
-                  That's why you have a 1-week buffer when you miss a week :) We
-                  all have off weeks!
+                  That&apos;s why you have a 1-week buffer when you miss a week
+                  :) We all have off weeks!
                 </p>
               </div>
             </div>
