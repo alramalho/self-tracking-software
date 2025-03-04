@@ -6,7 +6,7 @@
 
 [Open App](https://app.tracking.so)
 
-[👋 Join the community!](https://discord.gg/DaH7pqax)
+[👋 Join the community of builders & lifestyle enthusiasts](https://discord.gg/DaH7pqax)
 
 <a href="https://ko-fi.com/alexramalho">
   <img src="https://img.shields.io/badge/Support-❤️-black?style=for-the-badge" alt="Support open source" />
