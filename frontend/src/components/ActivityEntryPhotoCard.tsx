@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Smile } from "lucide-react";
+import { Edit, Smile, BadgeCheck } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import toast from "react-hot-toast";
@@ -9,6 +9,8 @@ import { parseISO, format, isToday, isYesterday, differenceInCalendarDays } from
 import { twMerge } from "tailwind-merge";
 import { getThemeVariants } from "@/utils/theme";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { PlanBadge } from "./PlanBadge";
 
 const getFormattedDate = (date: string) => {
   const parsedDate = parseISO(date);
@@ -102,6 +104,36 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
+
+  const { useUserPlanType } = usePaidPlan();
+  const { data: userPlanType } = useUserPlanType(userUsername || "");
+
+  useEffect(() => {
+    console.log(`${userUsername} has plan type ${userPlanType}`);
+  }, [userPlanType]);
+  
+  const getPlanStyles = () => {
+    if (userPlanType === "supporter") {
+      return {
+        ringColor: "ring-indigo-500",
+        fillColor: "#6366f1",
+        textColor: "text-indigo-500",
+      };
+    } else if (userPlanType === "plus") {
+      return {
+        ringColor: "ring-blue-500",
+        fillColor: "#3b82f6",
+        textColor: "text-blue-500",
+      };
+    }
+    return {
+      ringColor: "",
+      fillColor: "",
+      textColor: "",
+    };
+  };
+
+  const { ringColor, fillColor, textColor } = getPlanStyles();
 
   useEffect(() => {
     if (textRef.current) {
@@ -298,10 +330,24 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       <div className="p-4 flex flex-col flex-nowrap items-start justify-between">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Avatar className="w-8 h-8" onClick={onAvatarClick}>
-              <AvatarImage src={userPicture} alt={userName || ""} />
-              <AvatarFallback>{(userName || "U")[0]}</AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar 
+                className={twMerge(
+                  "w-8 h-8",
+                  userPlanType !== "free" && "ring-2 ring-offset-2 ring-offset-white",
+                  userPlanType !== "free" && ringColor
+                )} 
+                onClick={onAvatarClick}
+              >
+                <AvatarImage src={userPicture} alt={userName || ""} />
+                <AvatarFallback>{(userName || "U")[0]}</AvatarFallback>
+              </Avatar>
+              {userPlanType && userPlanType !== "free" && (
+                <div className="absolute -bottom-[6px] -right-[6px]">
+                  <PlanBadge planType={userPlanType} size={18} />
+                </div>
+              )}
+            </div>
             <span className="text-5xl h-full text-gray-400">
               {activityEmoji}
             </span>

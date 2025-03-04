@@ -1,5 +1,7 @@
-import { useFeatureFlagEnabled } from "posthog-js/react";
-import { useEffect, useState } from "react";
+import { useApiWithAuth } from "@/api";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 export type PaidPlanType = "plus" | "supporter" | "free";
 
@@ -16,23 +18,25 @@ const PLAN_LIMITS = {
 } as const;
 
 export function usePaidPlan() {
-  const isUserPlusFF = useFeatureFlagEnabled("plus-users");
-  const isUserSupporterFF = useFeatureFlagEnabled("supporter-users");
-  const posthogFeatureFlagsInitialized = typeof isUserPlusFF !== "undefined";
-  const [userPaidPlanType, setUserPaidPlanType] =
-    useState<PaidPlanType>("free");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
+  const api = useApiWithAuth();
 
-  useEffect(() => {
-    if (posthogFeatureFlagsInitialized) {
-      setUserPaidPlanType(
-        isUserPlusFF ? "plus" : isUserSupporterFF ? "supporter" : "free"
-      );
-    }
-  }, [posthogFeatureFlagsInitialized, isUserPlusFF, isUserSupporterFF]);
+  const useUserPlanType = (username: string) =>
+    useQuery({
+      queryKey: ["userPlanType", username],
+      queryFn: async () => {
+        const { data } = await api.get<{ plan_type: PaidPlanType }>(
+          `/${username}/get-user-plan-type`
+        );
+        return data.plan_type;
+      },
+      enabled: !!username,
+    });
 
   return {
-    userPaidPlanType,
-    posthogFeatureFlagsInitialized,
-    maxMetrics: PLAN_LIMITS[userPaidPlanType].maxMetrics,
+    useUserPlanType,
+    userPaidPlanType: userData?.user?.plan_type,
+    maxMetrics: PLAN_LIMITS[userData?.user?.plan_type || "free"].maxMetrics,
   };
 }

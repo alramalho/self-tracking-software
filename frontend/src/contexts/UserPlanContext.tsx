@@ -64,6 +64,7 @@ export interface MetricEntry {
 export interface User {
   id: string;
   name?: string;
+  plan_type: "free" | "plus" | "supporter";
   picture?: string;
   username?: string;
   email: string;
