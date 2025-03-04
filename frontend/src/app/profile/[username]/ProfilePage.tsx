@@ -127,11 +127,9 @@ const ProfilePage: React.FC = () => {
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showStreakDetails, setShowStreakDetails] = useState(false);
 
-  const { userPaidPlanType } = usePaidPlan();
+  const { useUserPlanType } = usePaidPlan();
+  const { data: profileUserPlanType } = useUserPlanType(username);
 
-  useEffect(() => {
-    console.log(userPaidPlanType);
-  }, [userPaidPlanType]);
 
   const { setShowUpgradePopover } = useUpgrade();
 
@@ -451,17 +449,17 @@ const ProfilePage: React.FC = () => {
               <Avatar 
                 className={twMerge(
                   "w-20 h-20",
-                  userPaidPlanType !== "free" && "ring-2 ring-offset-2 ring-offset-white",
-                  userPaidPlanType === "supporter" && "ring-indigo-500",
-                  userPaidPlanType === "plus" && "ring-blue-500"
+                  profileUserPlanType !== "free" && "ring-2 ring-offset-2 ring-offset-white",
+                  profileUserPlanType === "supporter" && "ring-indigo-500",
+                  profileUserPlanType === "plus" && "ring-blue-500"
                 )}
               >
                 <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
                 <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
               </Avatar>
-              {userPaidPlanType && userPaidPlanType !== "free" && (
+              {profileUserPlanType && profileUserPlanType !== "free" && (
                 <div className="absolute -bottom-1 -right-1">
-                  <PlanBadge planType={userPaidPlanType} size={28} />
+                  <PlanBadge planType={profileUserPlanType} size={28} />
                 </div>
               )}
             </div>
@@ -582,15 +580,15 @@ const ProfilePage: React.FC = () => {
                   <span
                     className={twMerge(
                       "text-xl font-cursive flex items-center gap-2",
-                      userPaidPlanType === "free"
+                      profileUserPlanType === "free"
                         ? "text-gray-500"
-                        : userPaidPlanType === "plus"
+                        : profileUserPlanType === "plus"
                           ? "text-blue-500"
                           : "text-indigo-500"
                     )} 
                   >
-                    On {capitalize(userPaidPlanType || "free")} Plan
-                    {userPaidPlanType !== "supporter" && (
+                    On {capitalize(profileUserPlanType || "free")} Plan
+                    {profileUserPlanType !== "supporter" && (
                       <SquareArrowUp onClick={() => setShowUpgradePopover(true)} size={20} className="text-gray-800" />
                     )}
                   </span>
@@ -631,7 +629,7 @@ const ProfilePage: React.FC = () => {
                   {colorPalettes.map((palette) => {
                     const isSelected = currentTheme === palette.color;
                     const isLocked =
-                      userPaidPlanType === "free" &&
+                      profileUserPlanType === "free" &&
                       (palette.color === "random" || palette.color !== "blue");
                     return (
                       <div
@@ -706,7 +704,7 @@ const ProfilePage: React.FC = () => {
                     );
                   })}
                 </div>
-                {userPaidPlanType === "free" && (
+                {profileUserPlanType === "free" && (
                   <Button
                     className="w-full mt-6"
                     onClick={() => {
