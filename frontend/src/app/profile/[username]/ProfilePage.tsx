@@ -464,6 +464,30 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
           </div>
+          {profileUserPlanType == "supporter" && !isOnesOwnProfile && (
+            <>
+              <div
+                onClick={() => setShowUpgradePopover(true)}
+                className="relative text-2xl font-bold flex items-center gap-1 ml-2"
+              >
+                <picture>
+                  <source
+                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.gif"
+                    alt="🌱"
+                    width="54"
+                    height="54"
+                  />
+                </picture>
+                <span className="absolute bottom-0 right-[50%] translate-x-[50%] text-lg font-cursive">
+                  supporter
+                </span>
+              </div>
+            </>
+          )}
           <div className="flex flex-col items-center gap-4">
             <div className="flex gap-6">
               <Link href={`/friends/${getUsername(user)}`}>
@@ -725,13 +749,13 @@ const ProfilePage: React.FC = () => {
         )}
 
         <div className="relative w-full mb-4">
-          <div
-            className="flex flex-wrap w-full justify-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
-            
-          >
-            {profileUserPlanType == "supporter" && (
+          <div className="flex flex-wrap w-full justify-center gap-2 cursor-pointer hover:opacity-90 transition-opacity">
+            {isOnesOwnProfile && profileUserPlanType == "supporter" && (
               <>
-                <div onClick={() => setShowUpgradePopover(true)} className="relative text-2xl font-bold flex items-center gap-1 ml-2">
+                <div
+                  onClick={() => setShowUpgradePopover(true)}
+                  className="relative text-2xl font-bold flex items-center gap-1 ml-2"
+                >
                   <picture>
                     <source
                       srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.webp"
@@ -750,6 +774,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               </>
             )}
+
             {isOnesOwnProfile &&
               calculateWeekStreaks().map((streak, index) => (
                 <div
@@ -933,25 +958,6 @@ const ProfilePage: React.FC = () => {
           </TabsList>
           <TabsContent value="plans">
             <div className="space-y-4 mt-4">
-              <div className="flex flex-row gap-4 justify-between items-center">
-                <span className="text-sm text-gray-500">Time range</span>
-                <div className="flex self-center">
-                  <select
-                    className="p-2 border rounded-md font-medium text-gray-800"
-                    value={timeRange}
-                    onChange={(e) =>
-                      handleTimeRangeChange(
-                        e.target.value as "60 Days" | "120 Days" | "180 Days"
-                      )
-                    }
-                  >
-                    <option value="60 Days">Since 60 days ago</option>
-                    <option value="120 Days">Since 120 days ago</option>
-                    <option value="180 Days">Since 180 days ago</option>
-                  </select>
-                </div>
-              </div>
-              <Divider className="w-full" text="Plans 👇" />
               {profileData.plans?.map((plan) => (
                 <div key={plan.id} className="p-4 border rounded-lg bg-white">
                   <div className="flex flex-row items-center gap-2 mb-4">
@@ -973,6 +979,26 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
               ))}
+              {profileData.plans && profileData.plans.length > 0 && (
+                <div className="flex flex-row gap-4 justify-between items-center">
+                  <span className="text-sm text-gray-500">Time range</span>
+                  <div className="flex self-center">
+                  <select
+                    className="p-2 border rounded-md font-medium text-gray-800"
+                    value={timeRange}
+                    onChange={(e) =>
+                      handleTimeRangeChange(
+                        e.target.value as "60 Days" | "120 Days" | "180 Days"
+                      )
+                    }
+                  >
+                    <option value="60 Days">Since 60 days ago</option>
+                    <option value="120 Days">Since 120 days ago</option>
+                    <option value="180 Days">Since 180 days ago</option>
+                  </select>
+                </div>
+              </div>
+              )}
               {(!profileData.plans || profileData.plans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
                   You haven&apos;t created any plans yet.
