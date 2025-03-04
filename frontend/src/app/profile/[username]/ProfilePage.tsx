@@ -822,13 +822,7 @@ const ProfilePage: React.FC = () => {
           </AppleLikePopover>
         </div>
         <Tabs defaultValue="plans" className="w-full mb-2">
-          <TabsList
-            className={`grid w-full h-13 bg-gray-100 ${
-              isOnesOwnProfile && userHasAccessToAi
-                ? "grid-cols-3"
-                : "grid-cols-2"
-            }`}
-          >
+          <TabsList className={`grid w-full h-13 bg-gray-100 grid-cols-2`}>
             <TabsTrigger value="plans">
               <div className="flex flex-row gap-2 py-[2px] items-center">
                 <ChartArea size={22} />
