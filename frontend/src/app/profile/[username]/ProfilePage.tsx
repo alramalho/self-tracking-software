@@ -130,7 +130,6 @@ const ProfilePage: React.FC = () => {
   const { useUserPlanType } = usePaidPlan();
   const { data: profileUserPlanType } = useUserPlanType(username);
 
-
   const { setShowUpgradePopover } = useUpgrade();
 
   const colorPalettes = [
@@ -443,13 +442,14 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
-        <div className="flex justify-around gap-3 items-center mb-2">
+        <div className="flex justify-around gap-3 items-center mb-3">
           <div className="flex flex-col items-center">
             <div className="relative">
-              <Avatar 
+              <Avatar
                 className={twMerge(
                   "w-20 h-20",
-                  profileUserPlanType !== "free" && "ring-2 ring-offset-2 ring-offset-white",
+                  profileUserPlanType !== "free" &&
+                    "ring-2 ring-offset-2 ring-offset-white",
                   profileUserPlanType === "supporter" && "ring-indigo-500",
                   profileUserPlanType === "plus" && "ring-blue-500"
                 )}
@@ -583,13 +583,17 @@ const ProfilePage: React.FC = () => {
                       profileUserPlanType === "free"
                         ? "text-gray-500"
                         : profileUserPlanType === "plus"
-                          ? "text-blue-500"
-                          : "text-indigo-500"
-                    )} 
+                        ? "text-blue-500"
+                        : "text-indigo-500"
+                    )}
                   >
                     On {capitalize(profileUserPlanType || "free")} Plan
                     {profileUserPlanType !== "supporter" && (
-                      <SquareArrowUp onClick={() => setShowUpgradePopover(true)} size={20} className="text-gray-800" />
+                      <SquareArrowUp
+                        onClick={() => setShowUpgradePopover(true)}
+                        size={20}
+                        className="text-gray-800"
+                      />
                     )}
                   </span>
                 </div>
@@ -720,37 +724,60 @@ const ProfilePage: React.FC = () => {
           </>
         )}
 
-        <div className="relative w-fit mb-4">
+        <div className="relative w-full mb-4">
           <div
-            className="flex flex-wrap gap-2 cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => setShowStreakDetails(true)}
+            className="flex flex-wrap w-full justify-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+            
           >
-            {calculateWeekStreaks().map((streak, index) => (
-              <div
-                key={index}
-                className="relative text-2xl font-bold flex items-center gap-1"
-              >
-                <div
-                  className={streak.score === 0 ? "opacity-40 grayscale" : ""}
-                >
+            {profileUserPlanType == "supporter" && (
+              <>
+                <div onClick={() => setShowUpgradePopover(true)} className="relative text-2xl font-bold flex items-center gap-1 ml-2">
                   <picture>
                     <source
-                      srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
+                      srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.webp"
                       type="image/webp"
                     />
                     <img
-                      src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
-                      alt="🔥"
-                      width="50"
-                      height="50"
+                      src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.gif"
+                      alt="🌱"
+                      width="54"
+                      height="54"
                     />
                   </picture>
-                  <Badge className="absolute bottom-0 right-[-10px]">
-                    x{streak.score} {streak.emoji}
-                  </Badge>
+                  <span className="absolute bottom-0 right-[50%] translate-x-[50%] text-lg font-cursive">
+                    supporter
+                  </span>
                 </div>
-              </div>
-            ))}
+              </>
+            )}
+            {isOnesOwnProfile &&
+              calculateWeekStreaks().map((streak, index) => (
+                <div
+                  key={index}
+                  className="relative text-2xl font-bold flex items-center gap-1"
+                  onClick={() => setShowStreakDetails(true)}
+                >
+                  <div
+                    className={streak.score === 0 ? "opacity-40 grayscale" : ""}
+                  >
+                    <picture>
+                      <source
+                        srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
+                        type="image/webp"
+                      />
+                      <img
+                        src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
+                        alt="🔥"
+                        width="50"
+                        height="50"
+                      />
+                    </picture>
+                    <Badge className="absolute bottom-0 right-[-10px]">
+                      x{streak.score} {streak.emoji}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
           </div>
 
           <AppleLikePopover
@@ -880,6 +907,7 @@ const ProfilePage: React.FC = () => {
             </div>
           </AppleLikePopover>
         </div>
+
         <Tabs defaultValue="plans" className="w-full mb-2">
           <TabsList className={`grid w-full h-13 bg-gray-100 grid-cols-2`}>
             <TabsTrigger value="plans">
