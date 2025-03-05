@@ -10,15 +10,15 @@ import { EntryCard } from "./EntryCard";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
-  Activity,
   ActivityEntry,
   MetricEntry,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
 import { Checkbox } from "./ui/checkbox";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, } from "react";
 import { Button } from "./ui/button";
 import { formatDate } from "date-fns";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 // Animation variants
 const containerVariants = {
@@ -55,7 +55,7 @@ const checkboxVariants = {
     transition: { duration: 0.2 },
   },
   checked: {
-    scale: [1, 1.1, 1],
+    scale: [1, 1.05, 1],
     opacity: 1,
     transition: {
       duration: 0.4,
@@ -76,12 +76,8 @@ export const getRelativeDate = (date: Date) => {
   return formatDate(date, "MMM d, yyyy");
 };
 
-interface DailyCheckinBannerProps {
-  open: boolean;
-  onClose: () => void;
-}
 
-export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
+export function DailyCheckinBanner() {
   const now = new Date();
   const hours = now.getHours();
   const isAfter4PM = hours >= 16;
@@ -105,6 +101,17 @@ export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
     []
   );
 
+  const [lastCheckinDatetime, setLastCheckinDatetime] = useLocalStorage<
+    string | null
+  >("lastCheckinDatetime", null);
+
+  const [open, setIsOpen] = useState(() => {
+    if (!lastCheckinDatetime) return true;
+    const lastCheckin = new Date(lastCheckinDatetime);
+    const today = new Date();
+    return lastCheckin.toDateString() !== today.toDateString();
+  });
+
   const questionsChecks = {
     ...metrics?.reduce(
       (acc, m) => ({
@@ -126,6 +133,12 @@ export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
   const checkboxesRef = useRef<HTMLDivElement>(null);
   const extractedDataRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (lastCheckinDatetime) {
+      setIsOpen(false);
+    }
+  }, [lastCheckinDatetime]);
 
   // Smooth scroll function
   const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
@@ -239,14 +252,32 @@ export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
       metricsAndEntriesQuery.refetch();
       currentUserQuery.refetch();
 
-      hotToast.success("Successfully processed your daily checkin!");
-      onClose();
+      hotToast.success("Daily checkin done! Come back tomorrow!");
     } catch (error) {
       hotToast.error("Failed to process your daily checkin");
       console.error("Error processing daily checkin:", error);
     } finally {
       setIsSubmitting(false);
+      setLastCheckinDatetime(new Date().toISOString());
     }
+  };
+
+  const handleRejection = () => {
+    hotToast.promise(
+      api.post("/ai/reject-daily-checkin", {
+        message: text,
+        activity_entries: activitiesEntries,
+        metric_entries: metricsEntries,
+        rejection_feedback: rejectionFeedback,
+      }),
+      {
+        loading: 'Submitting feedback...',
+        success: 'Thank you for your input. We\'ll do better next time!',
+        error: 'Failed to submit feedback'
+      }
+    );
+    setRejectionFeedbackOpen(false);
+    setLastCheckinDatetime(new Date().toISOString());
   };
 
   const handleTextChange = (value: string) => {
@@ -255,7 +286,9 @@ export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
 
   return (
     <>
-      <AppleLikePopover open={open} onClose={onClose}>
+      <AppleLikePopover open={open} onClose={() => {
+        setLastCheckinDatetime(new Date().toISOString());
+      }}>
         <motion.div
           ref={containerRef}
           className="space-y-4 max-h-[80vh] overflow-y-auto"
@@ -485,7 +518,7 @@ export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
 
       <AppleLikePopover
         open={rejectionFeedbackOpen}
-        onClose={() => setRejectionFeedbackOpen(false)}
+        onClose={handleRejection}
       >
         <motion.div
           className="space-y-4"
@@ -499,7 +532,7 @@ export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
             transition={{ delay: 0.2 }}
             className="text-sm text-gray-500 m-4 mt-6 text-center"
           >
-            Would you care to tell us why you&apos;re rejecting these?
+            Why not?
           </motion.h2>
 
           <motion.div
@@ -523,10 +556,7 @@ export function DailyCheckinBanner({ open, onClose }: DailyCheckinBannerProps) {
           >
             <Button
               className="w-full"
-              onClick={() => {
-                // Handle rejection submission
-                setRejectionFeedbackOpen(false);
-              }}
+              onClick={handleRejection}
               disabled={isSubmitting}
               loading={isSubmitting}
             >

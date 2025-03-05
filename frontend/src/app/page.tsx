@@ -27,32 +27,13 @@ const HomePage: React.FC = () => {
     useCurrentUserDataQuery,
     hasLoadedUserData,
     refetchAllData,
-    useHasMetricsToLogToday,
-    useMetricsAndEntriesQuery,
   } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData, isFetched: metricsAndEntriesFetched } =
-    metricsAndEntriesQuery;
-  const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
-  const hasMetricsToLogToday = useHasMetricsToLogToday();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [insightsBannerOpen, setInsightsBannerOpen] = useState(false);
-  const [insightsBannerMuteUntil, setInsightsBannerMuteUntil] = useLocalStorage<
-    string | null
-  >("insightsBannerMuteUntil", null);
   const { isSupported: isShareSupported, share } = useShare();
   const [copied, copyToClipboard] = useClipboard();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const canDailyCheckin =
-    process.env.NEXT_PUBLIC_ENVIRONMENT === "development" ? true : hours >= 16;
-
-  const [showDailyCheckin, setShowDailyCheckin] = useState(canDailyCheckin);
 
   useEffect(() => {
     if (
@@ -62,29 +43,10 @@ const HomePage: React.FC = () => {
       userData?.activities?.length === 0
     ) {
       router.push("/onboarding");
-    } else if (
-      metricsAndEntriesFetched &&
-      (!hasMetrics || hasMetricsToLogToday)
-    ) {
-      const muteUntilDate = insightsBannerMuteUntil
-        ? new Date(insightsBannerMuteUntil)
-        : null;
-      const now = new Date();
-      if (!muteUntilDate || now > muteUntilDate) {
-        if (hasMetrics && hasMetricsToLogToday && now.getHours() <= 16) {
-          setInsightsBannerOpen(false);
-        } else {
-          setInsightsBannerOpen(true);
-          console.log("what");
-        }
-      }
-    }
+    } 
   }, [
     userData,
     isSignedIn,
-    hasLoadedUserData,
-    insightsBannerMuteUntil,
-    metricsAndEntriesFetched,
   ]);
 
   if (!isSignedIn) {
@@ -101,11 +63,11 @@ const HomePage: React.FC = () => {
   };
 
   const handleBannerClose = () => {
-    setInsightsBannerOpen(false);
+    setShowDailyCheckin(false);
     // Set mute until 1 hour from now
     const muteUntil = new Date();
     muteUntil.setHours(muteUntil.getHours() + 1);
-    setInsightsBannerMuteUntil(muteUntil.toISOString());
+    setShowDailyCheckinMuteUntil(muteUntil.toISOString());
   };
 
   return (
@@ -203,8 +165,7 @@ const HomePage: React.FC = () => {
         </div>
       </AppleLikePopover>
 
-      <DailyCheckinBanner open={showDailyCheckin} onClose={() => setShowDailyCheckin(false)} />
-      {/* <InsightsBanner open={insightsBannerOpen} onClose={handleBannerClose} /> */}
+      <DailyCheckinBanner/>
     </div>
   );
 };
