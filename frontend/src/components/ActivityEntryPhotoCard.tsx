@@ -108,10 +108,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { useUserPlanType } = usePaidPlan();
   const { data: userPlanType } = useUserPlanType(userUsername || "");
 
-  useEffect(() => {
-    console.log(`${userUsername} has plan type ${userPlanType}`);
-  }, [userPlanType]);
-  
   const getPlanStyles = () => {
     if (userPlanType === "supporter") {
       return {

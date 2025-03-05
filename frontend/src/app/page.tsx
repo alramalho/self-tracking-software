@@ -18,6 +18,7 @@ import { useClipboard } from "@/hooks/useClipboard";
 import { toast } from "react-hot-toast";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
+import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -44,6 +45,14 @@ const HomePage: React.FC = () => {
   const [copied, copyToClipboard] = useClipboard();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const canDailyCheckin =
+    process.env.NEXT_PUBLIC_ENVIRONMENT === "development" ? true : hours >= 16;
+
+  const [showDailyCheckin, setShowDailyCheckin] = useState(canDailyCheckin);
 
   useEffect(() => {
     if (
@@ -194,7 +203,8 @@ const HomePage: React.FC = () => {
         </div>
       </AppleLikePopover>
 
-      <InsightsBanner open={insightsBannerOpen} onClose={handleBannerClose} />
+      <DailyCheckinBanner open={showDailyCheckin} onClose={() => setShowDailyCheckin(false)} />
+      {/* <InsightsBanner open={insightsBannerOpen} onClose={handleBannerClose} /> */}
     </div>
   );
 };

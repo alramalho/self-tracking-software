@@ -21,6 +21,10 @@ class Metric(BaseModel):
             created_at=now,
             updated_at=now,
         )
+    
+    def __str__(self):
+        return f"{self.title} {self.emoji} (id '{self.id}')"
+
 
 class MetricEntry(BaseModel):
     id: str
@@ -33,10 +37,10 @@ class MetricEntry(BaseModel):
     description: Optional[str] = None
 
     @classmethod
-    def new(cls, user_id: str, metric_id: str, rating: int, date: str = None, description: Optional[str] = None):
+    def new(cls, user_id: str, metric_id: str, rating: int, date: str = None, description: Optional[str] = None, id: Optional[str] = None):
         now = datetime.now().isoformat()
         return cls(
-            id=str(ObjectId()),
+            id=id or str(ObjectId()),
             user_id=user_id,
             metric_id=metric_id,
             rating=rating,

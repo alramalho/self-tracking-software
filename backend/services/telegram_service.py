@@ -2,8 +2,12 @@ import os
 import requests
 from loguru import logger
 from constants import ENVIRONMENT, TELEGRAM_CHAT_ID, TELEGRAM_BOT_TOKEN
-from typing import Optional
+from entities.activity import Activity, ActivityEntry
+from entities.metric import Metric, MetricEntry
+from typing import Optional, List
 import traceback
+from gateways.activities import ActivitiesGateway
+from gateways.metrics import MetricsGateway
 
 
 class TelegramService:
@@ -70,6 +74,7 @@ class TelegramService:
         self, error_message: str, user_username: str, user_id: str, path: str
     ) -> None:
         """Send a notification when a WebSocket error is detected."""
+
         message = (
             f"🔌🤖 <b>WebSocket Error Detected on user {user_username}</b>\n\n"
             f"<b>Environment:</b> {ENVIRONMENT}\n"
@@ -78,6 +83,7 @@ class TelegramService:
             f"<b>Error:</b>\n<pre>{error_message[:1000]}</pre>"  # Limit error message length
         )
         self.send_message(message)
+
     def send_bug_report_feedback(
         self, reporter_username: str, reporter_id: str, message: str, email: str
     ) -> None:
@@ -88,5 +94,50 @@ class TelegramService:
             f"<b>Email:</b> <pre>{email}</pre>\n"
             f"<b>Reporter ID:</b> <pre>{reporter_id}</pre>\n"
             f"<b>Message:</b>\n<pre>{message[:500]}</pre>"  # Limit feedback length
+        )
+        self.send_message(message)
+
+    def send_daily_checkin_rejection_notification(
+        self,
+        user_username: str,
+        user_id: str,
+        message: str,
+        activity_entries: Optional[List[ActivityEntry]],
+        metric_entries: Optional[List[MetricEntry]],
+        rejection_feedback: str,
+    ) -> None:
+        """Send a notification when a daily checkin is rejected."""
+
+        metrics_gateway = MetricsGateway()
+        activities_gateway = ActivitiesGateway()
+
+        message = (
+            f"🚫 <b>Daily Checkin Rejected on user {user_username}</b>\n\n"
+            f"<b>User ID:</b> {user_id}\n"
+            f"<b>Message:</b> {message}\n"
+            f"<b>Activity Entries:</b> {"\n".join([f"– {activities_gateway.get_readable_activity_entry(a)}" for a in activity_entries])}\n"
+            f"<b>Metric Entries:</b> {"\n".join([f"– {metrics_gateway.get_readable_metric_entry(m)}" for m in metric_entries])}\n"
+            f"<b>Rejection Feedback:</b> {rejection_feedback}\n"
+        )
+        self.send_message(message)
+
+    def send_daily_checkin_acceptance_notification(
+        self,
+        user_username: str,
+        user_id: str,
+        message: str,
+        activity_entries: Optional[List[ActivityEntry]],
+        metric_entries: Optional[List[MetricEntry]],
+    ) -> None:
+        """Send a notification when a daily checkin is rejected."""
+        metrics_gateway = MetricsGateway()
+        activities_gateway = ActivitiesGateway()
+
+        message = (
+            f"✅ <b>Daily Checkin Accepted on user {user_username}</b>\n\n"
+            f"<b>User ID:</b> {user_id}\n"
+            f"<b>Message:</b> {message}\n"
+            f"<b>Activity Entries:</b> {"\n".join([f"– {activities_gateway.get_readable_activity_entry(a)}" for a in activity_entries])}\n"
+            f"<b>Metric Entries:</b> {"\n".join([f"– {metrics_gateway.get_readable_metric_entry(m)}" for m in metric_entries])}\n"
         )
         self.send_message(message)
