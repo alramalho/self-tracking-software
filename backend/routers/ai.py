@@ -21,6 +21,10 @@ WS_CLOSE_CODES = {
 from services.conversation_service import process_message
 from shared.executor import executor
 from ai import stt
+from controllers.plan_controller import PlanController
+from pydantic import BaseModel, Field
+from entities.activity import ActivityEntry
+from entities.metric import MetricEntry
 import time
 from loguru import logger
 import json
@@ -48,6 +52,7 @@ from entities.user import User
 from fastapi import APIRouter, Depends
 import services.conversation_service as conversation_service
 import asyncio
+from ai.suggestions import ActivitySuggestion, MetricSuggestion
 
 router = APIRouter(prefix="/ai")
 
@@ -102,7 +107,9 @@ async def log_websocket_error(
 
         # Track in PostHog
         posthog.capture(
-            distinct_id=user.id if user else "unknown", event="websocket_error", properties=context
+            distinct_id=user.id if user else "unknown",
+            event="websocket_error",
+            properties=context,
         )
 
         # Send error notification to Telegram
@@ -166,7 +173,7 @@ async def handle_websocket_connection(websocket: WebSocket, assistant_type: str)
 
     # Start emotion polling as a background task
     emotion_task = asyncio.create_task(emotion_polling(websocket, user, assistant_type))
-    
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -501,3 +508,135 @@ async def generate_plan_message(user: User = Depends(is_clerk_user)):
         logger.error(f"Error generating plan message: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/get-daily-checkin-extractions")
+async def get_daily_checkin_extractions(
+    request: Request, user: User = Depends(is_clerk_user)
+):
+    from ai.assistant.activity_extractor_simple import ActivityExtractorAssistant
+    from ai.assistant.metrics_companion_assistant_simple import MetricsCompanionAssistant
+
+    from ai.assistant.memory import DatabaseMemory
+    from gateways.database.mongodb import MongoDBGateway
+
+    try:
+        body = await request.json()
+        message = body["message"]
+        question_checks = body["question_checks"]
+
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        extractor = ActivityExtractorAssistant(user=user, memory=memory)
+        metrics_companion = MetricsCompanionAssistant(user=user, memory=memory)
+
+        # Create tasks for parallel execution
+        activities_task = extractor.get_response(
+            user_input=message, message_id=str(ObjectId())
+        )
+        metrics_task = metrics_companion.get_response(
+            user_input=message, message_id=str(ObjectId())
+        )
+
+        class ResponseSchema(BaseModel):
+            reasoning: str = Field(
+                ...,
+                description="Your question by question extensive step by step reasoning.",
+            )
+            decisions: List[bool] = Field(
+                ...,
+                description="A list of boolean values, indicating whether the user message contains information to the question (should have same order as the questions)",
+            )
+
+        from ai.llm import ask_schema_async, ask_text_async
+
+        schema_task = ask_schema_async(
+            text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
+            system="",
+            pymodel=ResponseSchema,
+            model=LLM_MODEL,
+        )
+
+        plan_controller = PlanController()
+        all_plans = plan_controller.get_all_user_active_plans(user)
+        user_profile = None
+        if len(all_plans) > 0:
+            user_profile = f"User has a the goal of {all_plans[0].goal}"
+        else:
+            user_profile = "User has the desire to be happy."
+
+        text_task = ask_text_async(
+            text=f"Based on the user profile {user_profile} and the message '{message}', generate a motivational short message. Avoid overly optimistic tone.",
+            system="",
+            model=LLM_MODEL,
+        )
+
+        # Wait for all tasks to complete
+        activities_result, metrics_result, schema_response, motivational_message = (
+            await asyncio.gather(activities_task, metrics_task, schema_task, text_task)
+        )
+
+        # Unpack the results
+        _, extracted_activities_entries = activities_result
+        _, extracted_metrics_entries = metrics_result
+
+        question_checks_keys = list(question_checks.keys())
+
+        return {
+            "question_checks": {
+                question_checks_keys[i]: schema_response.decisions[i]
+                for i in range(len(question_checks_keys))
+            },
+            "message": motivational_message,
+            "metric_entries": [
+                m.data["entry"] for m in extracted_metrics_entries if "entry" in m.data
+            ],
+            "activity_entries": [
+                a.data["entry"]
+                for a in extracted_activities_entries
+                if "entry" in a.data
+            ],
+            "response": schema_response.reasoning,
+        }
+    except Exception as e:
+        logger.error(f"Error getting daily checkin extractions: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/reject-daily-checkin")
+async def reject_daily_checkin(request: Request, user: User = Depends(is_clerk_user)):
+    body = await request.json()
+    message = body["message"]
+    activity_entries = body["activity_entries"]
+    metric_entries = body["metric_entries"]
+    rejection_feedback = body["rejection_feedback"]
+
+    telegram = TelegramService()
+    telegram.send_daily_checkin_rejection_notification(
+        user_username=user.username,
+        user_id=user.id,
+        message=message,
+        activity_entries=[
+            ActivityEntry.new(
+                id=a["id"],
+                activity_id=a["activity_id"],
+                user_id=user.id,
+                quantity=a["quantity"],
+                date=a["date"],
+            )
+            for a in activity_entries
+        ],
+        metric_entries=[
+            MetricEntry.new(
+                id=m["id"],
+                user_id=user.id,
+                metric_id=m["metric_id"],
+                rating=m["rating"],
+                date=m["date"],
+            )
+            for m in metric_entries
+        ],
+        rejection_feedback=rejection_feedback,
+    )
+
+    return {"status": "success"}

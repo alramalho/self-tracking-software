@@ -37,38 +37,18 @@ class ExtractedActivityEntryList(BaseModel):
 
 every_message_flowchart = {
     "ActivityScanner": Node(
-        text="Based on the conversation history, did the user specificially asked you to log or register any activities?",
-        connections={"Yes": "CheckActivityAlreadyConcluded", "No": "Converse"},
+        text="Based on the conversation history, did the user mentioned any of their pre-existing activities?",
+        connections={"Yes": "ExtractActivity", "No": "Converse"},
         temperature=0.7,
-    ),
-    "CheckActivityAlreadyConcluded": Node(
-        text="Have you already concluded the activity requested by the user? By concluded is meant that you have already extarcted and user has already accepted or rejected the activity.",
-        connections={"No": "CheckActivityQualifies", "Yes": "Converse"},
-        temperature=0.7,
-    ),
-    "CheckActivityQualifies": Node(
-        text="Does the activity exist in the user's activities list?",
-        connections={
-            "Yes": "CheckActivityDetails",
-            "No": "InformTheUserOnlyExistingActivitiesAreSupported",
-        },
-        temperature=0.7,
-    ),
-    "CheckActivityDetails": Node(
-        text="Are the mentioned activity details (date and quantity) inferrable from last user's messages?",
-        connections={
-            "No": "AskForMoreInformation",
-            "Yes": "ExtractActivity",
-        },
-    ),
-    "AskForMoreInformation": Node(
-        text="Ask the user for the missing information about the activity (either date and / or quantity, whatever is missing)",
     ),
     "ExtractActivity": Node(
-        text=f"Extract new activities recently mentioned in the user's message. New activites are activites that are not on the recent logged activities list. You can only extract activities that the user is currently tracking, not create new ones.",
+        text=(
+            "Extract new activities recently mentioned in the user's message." +
+            "New activites are activites that are not on the recent logged activities list. " +
+            "You can only extract activities that the user is currently tracking, not create new ones." 
+        ),
         output_schema=ExtractedActivityEntryList,
         connections={"default": "InformTheUserAboutTheActivity"},
-        needs=["CheckActivityDetails"],
     ),
     "InformTheUserAboutTheActivity": Node(
         text="Inform the user that you've extracted the activity, which he needs to accept or reject.",

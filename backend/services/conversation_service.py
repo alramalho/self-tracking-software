@@ -75,11 +75,13 @@ async def talk_with_assistant(
             websocket=websocket,
         )
 
-        return await assistant.get_response(
+        result, _ = await assistant.get_response(
             user_input=user_input,
             message_id=message_id,
             emotions=emotions,
         )
+
+        return result
     except Exception as e:
         logger.error(f"Error in talk_with_assistant: {e}")
         raise

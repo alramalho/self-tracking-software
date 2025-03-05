@@ -20,6 +20,23 @@ export interface ActivitySuggestionData extends SuggestionBase {
   };
 }
 
+export interface MetricSuggestionData extends SuggestionBase {
+  type: "metric";
+  data: {
+    metric: {
+      id: string;
+      title: string;
+      emoji: string;
+    };
+    entry: {
+      id: string;
+      metric_id: string;
+      date: string;
+      rating: number;
+    };
+  };
+}
+
 export interface PlanGoalSuggestionData extends SuggestionBase {
   type: "plan_goal";
   data: {

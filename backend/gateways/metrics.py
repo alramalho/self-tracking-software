@@ -4,6 +4,7 @@ from gateways.database.mongodb import MongoDBGateway
 from datetime import datetime, timedelta, date, UTC
 from loguru import logger
 from pymongo.errors import DuplicateKeyError
+from shared.utils import days_ago
 from typing import Tuple
 
 class MetricDoesNotExistException(Exception):
@@ -112,6 +113,17 @@ class MetricsGateway:
         entry.deleted_at = datetime.now(UTC).isoformat()
         self.metric_entries_db_gateway.write(entry.dict())
         logger.info(f"MetricEntry {entry_id} marked as deleted")
+
+    def get_readable_metric_entry(self, metric_entry: MetricEntry, metric: Optional[Metric] = None) -> str:
+        if metric is None:
+            metric = self.get_metric_by_id(metric_entry.metric_id)
+            
+        formatted_date = datetime.fromisoformat(metric_entry.date).strftime("%A, %b %d %Y")
+        metric_title = metric.title
+        metric_rating = metric_entry.rating
+        
+        return f"{formatted_date} ({days_ago(metric_entry.date)}) - {metric_title} ({metric_rating}/5)"
+
 
     def get_readable_metrics_and_entries(self, user_id: str, lookback_days: int = 7) -> str:
         metrics_list = self.get_all_metrics_by_user_id(user_id)

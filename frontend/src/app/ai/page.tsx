@@ -48,6 +48,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SuggestionContainer } from "@/components/SuggestionContainer";
 import { SuggestionBase } from "@/types/suggestions";
 import { activitySuggestionHandler } from "@/suggestions/activitySuggestion";
+import { metricSuggestionHandler } from "@/suggestions/metricSuggestion";
 import { suggestionRegistry } from "@/lib/suggestionRegistry";
 import {
   PlanBuildingContainer,
@@ -55,6 +56,7 @@ import {
 } from "@/components/PlanBuildingContainer";
 import { VoiceModeInput } from "@/components/chat/VoiceModeInput";
 import { UpgradePopover } from "@/components/UpgradePopover";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 const REFERRAL_COUNT = 2;
 
@@ -161,11 +163,9 @@ const LogPage: React.FC = () => {
   const { useCurrentUserDataQuery, messagesData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
+  const { userPaidPlanType } = usePaidPlan();
 
-  const isFeatureEnabled = useFeatureFlagEnabled("ai-bot-access");
-  const posthogFeatureFlagsInitialized =
-    typeof isFeatureEnabled !== "undefined";
-  const [isUserWhitelisted, setIsUserWhitelisted] = useState<boolean>(false);
+  const isUserWhitelisted = userPaidPlanType === "supporter"
   const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
   const [areEmotionsLoading, setAreEmotionsLoading] = useState<boolean>(false);
 
@@ -240,12 +240,6 @@ const LogPage: React.FC = () => {
     stopAudio();
     toggleRecording(onFinished);
   };
-
-  useEffect(() => {
-    if (posthogFeatureFlagsInitialized) {
-      setIsUserWhitelisted(isFeatureEnabled);
-    }
-  }, [posthogFeatureFlagsInitialized, isFeatureEnabled]);
 
   const connectWebSocket = async () => {
     try {
@@ -553,6 +547,7 @@ const LogPage: React.FC = () => {
 
   useEffect(() => {
     suggestionRegistry.register(activitySuggestionHandler);
+    suggestionRegistry.register(metricSuggestionHandler);
 
     return () => {
       suggestionRegistry.clear();
@@ -561,6 +556,11 @@ const LogPage: React.FC = () => {
 
   const activitySuggestions = useMemo(
     () => suggestions.filter((s) => s.type === "activity"),
+    [suggestions]
+  );
+
+  const metricSuggestions = useMemo(
+    () => suggestions.filter((s) => s.type === "metric"),
     [suggestions]
   );
 
@@ -717,6 +717,14 @@ const LogPage: React.FC = () => {
                   {activitySuggestions.length > 0 && (
                     <SuggestionContainer
                       suggestions={activitySuggestions}
+                      onSuggestionHandled={handleSuggestionHandled}
+                      isConnected={isConnected}
+                    />
+                  )}
+
+                  {metricSuggestions.length > 0 && (
+                    <SuggestionContainer
+                      suggestions={metricSuggestions}
                       onSuggestionHandled={handleSuggestionHandled}
                       isConnected={isConnected}
                     />

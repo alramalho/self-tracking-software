@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from bson import ObjectId
 from entities.activity import Activity, ActivityEntry
+from entities.metric import Metric, MetricEntry
 
 class AssistantSuggestion(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
@@ -32,3 +33,19 @@ class ActivitySuggestion(AssistantSuggestion):
                 }
             }
         ) 
+    
+
+class MetricSuggestion(AssistantSuggestion):
+    type: str = "metric"
+    
+    @classmethod
+    def from_metric_entry(cls, metric_entry: MetricEntry, metric: Metric):
+        return cls(
+            data={
+                "metric": metric.dict(),
+                "entry": {
+                    "id": str(ObjectId()),
+                    **metric_entry.dict()
+                }
+            }
+        )

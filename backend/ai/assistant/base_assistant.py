@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 from entities.user import User
 from entities.message import Message, Emotion
 from ai.assistant.memory import DatabaseMemory
@@ -87,7 +87,7 @@ class BaseAssistant:
             "conversation_history": self.memory.read_all_as_str(max_age_in_minutes=3 * 60),
         }
 
-    async def get_response(self, user_input: str, message_id: str, emotions: List[Emotion] = []) -> str:
+    async def get_response(self, user_input: str, message_id: str, emotions: List[Emotion] = []) -> Tuple[str, Dict]    :
         """Process user input and return a response."""
         # Write user message to memory
         self.write_user_message(user_input, message_id, emotions)
@@ -106,12 +106,12 @@ class BaseAssistant:
 
             # Handle any suggestions from the extracted data
             suggestions = await self.handle_suggestions(extracted)
-            if suggestions:
+            if self.websocket:
                 await self.send_websocket_message(
                     "suggestions", {"suggestions": [s.dict() for s in suggestions]}
                 )
 
-            return result
+            return result, suggestions
 
         except Exception as e:
             logger.error(f"Error in get_response: {e}")

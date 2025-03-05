@@ -57,7 +57,6 @@ export default function InsightsDashboardPage() {
   const api = useApiWithAuth();
   const { userPaidPlanType, maxMetrics } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
-  const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -325,7 +324,7 @@ export default function InsightsDashboardPage() {
   // Render insights when we have enough data
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
-      {!isAIEnabled ? null : <MetricsAINotification />}
+      {userPaidPlanType == "supporter" && <MetricsAINotification />}
 
       <MetricSelector
         metrics={userMetrics}

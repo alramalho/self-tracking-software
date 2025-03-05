@@ -8,18 +8,16 @@ import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 
 export function MetricsAINotification() {
   const router = useRouter();
-  const api = useApiWithAuth();
   const { message: aiMessage, messageId, isDismissed, dismiss } = useAIMessageCache('metrics');
   const [shouldShowNotification, setShouldShowNotification] = React.useState(false);
-  const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
 
   React.useEffect(() => {
-    if (aiMessage && !isDismissed && isAIEnabled) {
+    if (aiMessage && !isDismissed) {
       setShouldShowNotification(true);
     }
-  }, [aiMessage, isDismissed, isAIEnabled]);
+  }, [aiMessage, isDismissed]);
 
-  if (!shouldShowNotification || !isAIEnabled) {
+  if (!shouldShowNotification) {
     return null;
   }
 
