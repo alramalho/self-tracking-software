@@ -24,6 +24,11 @@ from ai import stt
 from controllers.plan_controller import PlanController
 from pydantic import BaseModel, Field
 from entities.activity import ActivityEntry
+from ai.assistant.activity_extractor_simple import ActivityExtractorAssistant
+from ai.assistant.metrics_companion_assistant_simple import MetricsCompanionAssistant
+from ai.llm import ask_schema_async, ask_text_async
+from ai.assistant.memory import DatabaseMemory
+from gateways.database.mongodb import MongoDBGateway
 from entities.metric import MetricEntry
 import time
 from loguru import logger
@@ -52,14 +57,14 @@ from entities.user import User
 from fastapi import APIRouter, Depends
 import services.conversation_service as conversation_service
 import asyncio
-from ai.suggestions import ActivitySuggestion, MetricSuggestion
+from gateways.users import UsersGateway
 
 router = APIRouter(prefix="/ai")
 
 activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
 messages_gateway = MessagesGateway()
-
+users_gateway = UsersGateway()      
 
 async def poll_emotions(websocket: WebSocket, user_id: str):
     try:
@@ -514,11 +519,6 @@ async def generate_plan_message(user: User = Depends(is_clerk_user)):
 async def get_daily_checkin_extractions(
     request: Request, user: User = Depends(is_clerk_user)
 ):
-    from ai.assistant.activity_extractor_simple import ActivityExtractorAssistant
-    from ai.assistant.metrics_companion_assistant_simple import MetricsCompanionAssistant
-
-    from ai.assistant.memory import DatabaseMemory
-    from gateways.database.mongodb import MongoDBGateway
 
     try:
         body = await request.json()
@@ -547,7 +547,6 @@ async def get_daily_checkin_extractions(
                 description="A list of boolean values, indicating whether the user message contains information to the question (should have same order as the questions)",
             )
 
-        from ai.llm import ask_schema_async, ask_text_async
 
         schema_task = ask_schema_async(
             text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
@@ -640,3 +639,64 @@ async def reject_daily_checkin(request: Request, user: User = Depends(is_clerk_u
     )
 
     return {"status": "success"}
+
+
+@router.post("/update-user-profile-from-questions")
+async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
+    try:
+        body = await request.json()
+        question_checks = body["question_checks"]
+        message = body["message"]
+        question_checks_keys = list(question_checks.keys())
+
+        class ResponseSchema(BaseModel):
+            reasoning: str = Field(
+                ...,
+                description="Your step by step reasoning on each of the questions.",
+            )
+            user_profile: str = Field(
+                ...,
+                description="The highly condensed highly clear depiction of the user profile based on the input questions.",
+            )
+
+        response = await ask_schema_async(
+            text=f"Please generate an user profile based on a message that he sent to answer the following questions: {list(question_checks.values())}. Message: {message}",
+            pymodel=ResponseSchema,
+        )
+
+        updated_user = users_gateway.update_fields(
+            user.id, {"profile": response.user_profile}
+        )
+
+        class ResponseSchema(BaseModel):
+            reasoning: str = Field(
+                ...,
+                description="Your question by question extensive step by step reasoning.",
+            )
+            decisions: List[bool] = Field(
+                ...,
+                description="A list of boolean values, indicating whether the user message contains information to the question (should have same order as the questions)",
+            )
+            message: str = Field(
+                ...,
+                description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
+            )
+
+        response = await ask_schema_async(
+            text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
+            system="Youa are a friendly AI assitant.",
+            pymodel=ResponseSchema,
+        )
+
+        return {
+            "message": response.message,
+            "user": updated_user,
+            "question_checks": {
+                question_checks_keys[i]: response.decisions[i]
+                for i in range(len(question_checks_keys))
+            },
+        }
+    except Exception as e:
+        logger.error(traceback.format_exc())
+        logger.error(f"Failed to update profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
