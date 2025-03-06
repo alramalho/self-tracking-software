@@ -7,7 +7,6 @@ import { useApiWithAuth } from "@/api";
 import { Toaster, toast } from "sonner";
 import { toast as hotToast } from "react-hot-toast";
 import { EntryCard } from "./EntryCard";
-import { motion, AnimatePresence } from "framer-motion";
 
 import {
   ActivityEntry,
@@ -19,51 +18,6 @@ import { useState, useRef, useEffect, } from "react";
 import { Button } from "./ui/button";
 import { formatDate } from "date-fns";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-
-// Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.3,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
-
-const checkboxContainerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.15,
-      delayChildren: 0.2,
-    },
-  },
-};
-
-const checkboxVariants = {
-  unchecked: {
-    scale: 1,
-    opacity: 1,
-    transition: { duration: 0.2 },
-  },
-  checked: {
-    scale: [1, 1.05, 1],
-    opacity: 1,
-    transition: {
-      duration: 0.4,
-      times: [0, 0.5, 1],
-      ease: "easeInOut",
-    },
-  },
-};
 
 export const getRelativeDate = (date: Date) => {
   const today = new Date();
@@ -109,6 +63,10 @@ export function DailyCheckinBanner() {
     if (!lastCheckinDatetime) return true;
     const lastCheckin = new Date(lastCheckinDatetime);
     const today = new Date();
+
+    console.log({ lastCheckin, today });
+    console.log(lastCheckin.toDateString(), today.toDateString());
+    console.log(lastCheckin.toDateString() !== today.toDateString());
     return lastCheckin.toDateString() !== today.toDateString();
   });
 
@@ -134,11 +92,6 @@ export function DailyCheckinBanner() {
   const extractedDataRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (lastCheckinDatetime) {
-      setIsOpen(false);
-    }
-  }, [lastCheckinDatetime]);
 
   // Smooth scroll function
   const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
@@ -289,34 +242,29 @@ export function DailyCheckinBanner() {
       <AppleLikePopover open={open} onClose={() => {
         setLastCheckinDatetime(new Date().toISOString());
       }}>
-        <motion.div
+        <div
           ref={containerRef}
           className="space-y-4 max-h-[80vh] overflow-y-auto"
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
         >
           <Toaster position="top-center" closeButton duration={12000} />
 
-          <motion.h2
-            variants={itemVariants}
+          <h2
             className="text-sm text-gray-500 m-4 mt-6 text-center"
           >
             Daily checkin time! 😊
-          </motion.h2>
+          </h2>
 
-          <motion.div variants={itemVariants}>
+          <div>
             <ScanFace size={100} className="mx-auto" />
-          </motion.div>
+          </div>
 
-          <motion.p
-            variants={itemVariants}
+          <p
             className="text-center text-lg font-semibold"
           >
             {isAfter4PM ? "How was your day?" : "How are you feeling today?"}
-          </motion.p>
+          </p>
 
-          <motion.div variants={itemVariants} className="w-full px-4">
+          <div className="w-full px-4">
             <TextAreaWithVoice
               value={text}
               onChange={handleTextChange}
@@ -326,9 +274,9 @@ export function DailyCheckinBanner() {
                   : "tell us how are you feeling today"
               }
             />
-          </motion.div>
+          </div>
 
-          <motion.div variants={itemVariants} className="px-4">
+          <div className="px-4">
             <Button
               className="w-full"
               onClick={() => submitMutation.mutateAsync(text)}
@@ -337,208 +285,162 @@ export function DailyCheckinBanner() {
             >
               Submit
             </Button>
-          </motion.div>
+          </div>
 
-          <motion.div
+          <div
             ref={checkboxesRef}
             className="space-y-3 mt-12 px-4"
-            variants={checkboxContainerVariants}
           >
-            <motion.p variants={itemVariants} className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500">
               Be sure to mention:
-            </motion.p>
+            </p>
             {Object.keys(questionsChecks).map((key) => (
-              <motion.div
+              <div
                 key={key}
                 className="flex items-center space-x-2"
-                initial="unchecked"
-                animate={checkedItems[key] ? "checked" : "unchecked"}
-                variants={checkboxVariants}
               >
                 <Checkbox checked={checkedItems[key] || false} disabled />
                 <label className="text-sm text-gray-700">{key}</label>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
 
-          <AnimatePresence>
-            {(metricsEntries.length > 0 || activitiesEntries.length > 0) && (
-              <motion.div
-                ref={extractedDataRef}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.5 }}
+          {(metricsEntries.length > 0 || activitiesEntries.length > 0) && (
+            <div
+              ref={extractedDataRef}
+              className="opacity-100"
+            >
+              <p
+                className="text-sm text-gray-500 text-left w-full px-4 mt-4"
               >
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-sm text-gray-500 text-left w-full px-4 mt-4"
-                >
-                  <div className="text-sm text-gray-500 mt-8 text-left w-full mt-4">
-                    <p className="flex flex-row gap-2">
-                      <ScanFace size={24} />
-                      I&apos;ve extracted the following data from your message
-                    </p>
-                  </div>
-                </motion.p>
-                <motion.div
-                  className="flex flex-row no-wrap justify-around mt-4"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="show"
-                >
-                  <motion.div
-                    className="flex flex-col gap-2"
-                    variants={itemVariants}
-                  >
-                    {metricsEntries.length > 0 && (
-                      <motion.h2
-                        variants={itemVariants}
-                        className="text-md font-semibold text-left"
-                      >
-                        Metrics
-                      </motion.h2>
-                    )}
-                    <motion.div
-                      className="flex flex-col gap-2"
-                      variants={containerVariants}
-                    >
-                      {metricsEntries?.map((m, index) => {
-                        const respectiveMetric = metrics?.find(
-                          (metric) => metric.id === m.metric_id
-                        );
-                        return (
-                          <motion.div
-                            key={m.id}
-                            variants={itemVariants}
-                            custom={index}
-                            initial="hidden"
-                            animate="show"
-                            transition={{ delay: index * 0.1 }}
-                          >
-                            <EntryCard
-                              emoji={respectiveMetric?.emoji || ""}
-                              title={respectiveMetric?.title || ""}
-                              description={`${m.rating} / 5`}
-                              date={new Date(m.date)}
-                            />
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  </motion.div>
-                  <motion.div
-                    className="flex flex-col gap-2"
-                    variants={itemVariants}
-                  >
-                    {activitiesEntries.length > 0 && (
-                      <motion.h2
-                        variants={itemVariants}
-                        className="text-md font-semibold text-left"
-                      >
-                        Activities
-                      </motion.h2>
-                    )}
-                    <motion.div
-                      className="flex flex-col gap-2"
-                      variants={containerVariants}
-                    >
-                      {activitiesEntries?.map((a, index) => {
-                        const respectiveActivity = activities?.find(
-                          (activity) => activity.id === a.activity_id
-                        );
-                        return (
-                          <motion.div
-                            key={a.id}
-                            variants={itemVariants}
-                            custom={index}
-                            initial="hidden"
-                            animate="show"
-                            transition={{ delay: index * 0.1 }}
-                          >
-                            <EntryCard
-                              emoji={respectiveActivity?.emoji || ""}
-                              title={respectiveActivity?.title || ""}
-                              description={`${a.quantity} ${respectiveActivity?.measure}`}
-                              date={new Date(a.date)}
-                            />
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  </motion.div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {(metricsEntries.length > 0 || activitiesEntries.length > 0) && (
-              <motion.div
-                ref={actionsRef}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ delay: 0.5 }}
-              >
-                <div className="text-sm text-gray-500 mt-8 text-left w-full px-4 mt-4">
+                <div className="text-sm text-gray-500 mt-8 text-left w-full mt-4">
                   <p className="flex flex-row gap-2">
                     <ScanFace size={24} />
-                    Do you want me to log them for you?
+                    I&apos;ve extracted the following data from your message
                   </p>
                 </div>
-                <div className="flex flex-row gap-2 justify-center mt-4">
-                  <Button
-                    variant="outline"
-                    className="w-full flex items-center gap-2 text-red-600"
-                    onClick={() => setRejectionFeedbackOpen(true)}
-                    disabled={isSubmitting}
+              </p>
+              <div
+                className="flex flex-row no-wrap justify-around mt-4"
+              >
+                <div
+                  className="flex flex-col gap-2"
+                >
+                  {metricsEntries.length > 0 && (
+                    <h2
+                      className="text-md font-semibold text-left"
+                    >
+                      Metrics
+                    </h2>
+                  )}
+                  <div
+                    className="flex flex-col gap-2"
                   >
-                    <X className="w-6 h-6" />
-                    Reject
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full flex items-center gap-2 text-green-600"
-                    onClick={handleAccept}
-                    disabled={isSubmitting}
-                    loading={isSubmitting}
-                  >
-                    <Check className="w-6 h-6" />
-                    Accept
-                  </Button>
+                    {metricsEntries?.map((m, index) => {
+                      const respectiveMetric = metrics?.find(
+                        (metric) => metric.id === m.metric_id
+                      );
+                      return (
+                        <div
+                          key={m.id}
+                        >
+                          <EntryCard
+                            emoji={respectiveMetric?.emoji || ""}
+                            title={respectiveMetric?.title || ""}
+                            description={`${m.rating} / 5`}
+                            date={new Date(m.date)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+                <div
+                  className="flex flex-col gap-2"
+                >
+                  {activitiesEntries.length > 0 && (
+                    <h2
+                      className="text-md font-semibold text-left"
+                    >
+                      Activities
+                    </h2>
+                  )}
+                  <div
+                    className="flex flex-col gap-2"
+                  >
+                    {activitiesEntries?.map((a, index) => {
+                      const respectiveActivity = activities?.find(
+                        (activity) => activity.id === a.activity_id
+                      );
+                      return (
+                        <div
+                          key={a.id}
+                        >
+                          <EntryCard
+                            emoji={respectiveActivity?.emoji || ""}
+                            title={respectiveActivity?.title || ""}
+                            description={`${a.quantity} ${respectiveActivity?.measure}`}
+                            date={new Date(a.date)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(metricsEntries.length > 0 || activitiesEntries.length > 0) && (
+            <div
+              ref={actionsRef}
+            >
+              <div className="text-sm text-gray-500 mt-8 text-left w-full px-4 mt-4">
+                <p className="flex flex-row gap-2">
+                  <ScanFace size={24} />
+                  Do you want me to log them for you?
+                </p>
+              </div>
+              <div className="flex flex-row gap-2 justify-center mt-4">
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center gap-2 text-red-600"
+                  onClick={() => setRejectionFeedbackOpen(true)}
+                  disabled={isSubmitting}
+                >
+                  <X className="w-6 h-6" />
+                  Reject
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center gap-2 text-green-600"
+                  onClick={handleAccept}
+                  disabled={isSubmitting}
+                  loading={isSubmitting}
+                >
+                  <Check className="w-6 h-6" />
+                  Accept
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </AppleLikePopover>
 
       <AppleLikePopover
         open={rejectionFeedbackOpen}
         onClose={handleRejection}
       >
-        <motion.div
+        <div
           className="space-y-4"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
         >
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+          <h2
             className="text-sm text-gray-500 m-4 mt-6 text-center"
           >
             Why not?
-          </motion.h2>
+          </h2>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+          <div
             className="px-4 w-full"
           >
             <TextAreaWithVoice
@@ -546,12 +448,9 @@ export function DailyCheckinBanner() {
               onChange={(value) => setRejectionFeedback(value)}
               placeholder="Tell us what we got wrong..."
             />
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+          <div
             className="px-4"
           >
             <Button
@@ -562,8 +461,8 @@ export function DailyCheckinBanner() {
             >
               Submit Feedback
             </Button>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </AppleLikePopover>
     </>
   );
