@@ -13,7 +13,9 @@ from entities.notification import Notification
 from services.notification_manager import NotificationManager
 from services.telegram_service import TelegramService
 from constants import MAX_TIMELINE_ENTRIES
+from pydantic import Field
 import re
+from ai.llm import ask_schema_async
 import concurrent.futures
 from urllib import parse
 import traceback
@@ -53,19 +55,19 @@ async def load_users_data(
 ):
     try:
         results = {}
-        
+
         # If no usernames provided, return current user data
         if not usernames:
             user_data = await _load_single_user_data(current_user, current_user)
             return {"current": user_data}
-            
+
         # Otherwise load data for specified usernames
         usernames_list = usernames.split(",")
         for username in usernames_list:
             user = users_gateway.get_user_by_safely("username", username.lower())
             if not user:
                 continue
-            
+
             user_data = await _load_single_user_data(user, current_user)
             results[username] = user_data
 
@@ -74,6 +76,7 @@ async def load_users_data(
         logger.error(traceback.format_exc())
         logger.error(f"Failed to load multiple users data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 async def _load_single_user_data(user: User, current_user: User):
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -86,9 +89,7 @@ async def _load_single_user_data(user: User, current_user: User):
         mood_reports_future = executor.submit(
             moods_gateway.get_all_mood_reports_by_user_id, user.id
         )
-        plans_future = executor.submit(
-            plan_controller.get_all_user_active_plans, user
-        )
+        plans_future = executor.submit(plan_controller.get_all_user_active_plans, user)
         plan_groups_future = executor.submit(
             plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
         )
@@ -106,16 +107,11 @@ async def _load_single_user_data(user: User, current_user: User):
             for activity in activities_future.result()
         ]
         entries = [entry.dict() for entry in entries_future.result()]
-        mood_reports = [
-            report.dict() for report in mood_reports_future.result()
-        ]
+        mood_reports = [report.dict() for report in mood_reports_future.result()]
         plans = [
-            exclude_embedding_fields(plan.dict())
-            for plan in plans_future.result()
+            exclude_embedding_fields(plan.dict()) for plan in plans_future.result()
         ]
-        plan_groups = [
-            plan_group.dict() for plan_group in plan_groups_future.result()
-        ]
+        plan_groups = [plan_group.dict() for plan_group in plan_groups_future.result()]
         sent_friend_requests = [
             request.dict() for request in friend_requests_sent_future.result()
         ]
@@ -157,17 +153,13 @@ async def _load_single_user_data(user: User, current_user: User):
             bio_parts.append("Tracking " + " • ".join(activity_summary))
 
     # Combine bio parts
-    generated_bio = (
-        " | ".join(bio_parts) if bio_parts else "Just joined tracking.so!"
-    )
+    generated_bio = " | ".join(bio_parts) if bio_parts else "Just joined tracking.so!"
 
     # Process plans to include activities
     activity_map = {activity["id"]: activity for activity in activities}
 
     for plan in plans:
-        plan_activity_ids = set(
-            session["activity_id"] for session in plan["sessions"]
-        )
+        plan_activity_ids = set(session["activity_id"] for session in plan["sessions"])
         plan["activities"] = [
             activity_map[activity_id]
             for activity_id in plan_activity_ids
@@ -515,7 +507,12 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
         )
 
         if type_ == "bug_report":
-            TelegramService().send_bug_report_feedback(reporter_username=user.username, reporter_id=user.id, email=email, message=text)
+            TelegramService().send_bug_report_feedback(
+                reporter_username=user.username,
+                reporter_id=user.id,
+                email=email,
+                message=text,
+            )
 
         return {"status": "success"}
     except Exception as e:
@@ -603,9 +600,7 @@ async def handle_referral(
 async def load_messages(current_user: User = Depends(is_clerk_user)):
     try:
         messages = messages_gateway.get_all_messages_by_user(current_user.id)
-        return {
-            "messages": messages
-        }
+        return {"messages": messages}
     except Exception as e:
         logger.error(f"Failed to load messages: {e}")
         logger.error(f"Traceback: \n{traceback.format_exc()}")
@@ -615,12 +610,16 @@ async def load_messages(current_user: User = Depends(is_clerk_user)):
 class TimezoneUpdate(BaseModel):
     timezone: str
 
+
 @router.post("/update-timezone")
 async def update_timezone(body: TimezoneUpdate, user: User = Depends(is_clerk_user)):
     try:
         if body.timezone not in all_timezones:
-            raise HTTPException(status_code=400, detail=f"Invalid timezone: {body.timezone}. Must be a valid pytz timezone.")
-            
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid timezone: {body.timezone}. Must be a valid pytz timezone.",
+            )
+
         updated_user = users_gateway.update_fields(user.id, {"timezone": body.timezone})
         return {"message": "Timezone updated successfully", "user": updated_user}
     except Exception as e:
@@ -630,17 +629,23 @@ async def update_timezone(body: TimezoneUpdate, user: User = Depends(is_clerk_us
 
 
 class ThemeUpdate(BaseModel):
-    theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"]
+    theme_base_color: Literal[
+        "random", "slate", "blue", "violet", "amber", "emerald", "rose"
+    ]
+
 
 @router.post("/update-theme")
 async def update_theme(body: ThemeUpdate, user: User = Depends(is_clerk_user)):
     try:
-        updated_user = users_gateway.update_fields(user.id, {"theme_base_color": body.theme_base_color})
+        updated_user = users_gateway.update_fields(
+            user.id, {"theme_base_color": body.theme_base_color}
+        )
         return {"message": "Theme updated successfully", "user": updated_user}
     except Exception as e:
         logger.error(f"Failed to update theme: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{username}/get-user-plan-type")
 async def get_user_plan_type(username: str):

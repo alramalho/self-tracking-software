@@ -111,8 +111,8 @@ async def ask_text_async(
 
 async def ask_schema_async(
     text: str,
-    system: str,
     pymodel: Type[T],
+    system: str = "",
     model: str = LLM_MODEL,
     temperature: float = 0,
 ) -> T:
