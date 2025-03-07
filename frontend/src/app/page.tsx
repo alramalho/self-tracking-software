@@ -5,19 +5,17 @@ import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { useRouter } from "next/navigation";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { Search, RefreshCw, UserPlus } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { InsightsBanner } from "@/components/InsightsBanner";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
 import { toast } from "react-hot-toast";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants, ThemeColor } from "@/utils/theme";
+import { getThemeVariants } from "@/utils/theme";
 import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
 
 const HomePage: React.FC = () => {
@@ -60,14 +58,6 @@ const HomePage: React.FC = () => {
 
   const handleRefresh = async () => {
     await refetchAllData();
-  };
-
-  const handleBannerClose = () => {
-    setShowDailyCheckin(false);
-    // Set mute until 1 hour from now
-    const muteUntil = new Date();
-    muteUntil.setHours(muteUntil.getHours() + 1);
-    setShowDailyCheckinMuteUntil(muteUntil.toISOString());
   };
 
   return (
