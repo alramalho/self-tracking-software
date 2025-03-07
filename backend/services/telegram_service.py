@@ -97,6 +97,19 @@ class TelegramService:
         )
         self.send_message(message)
 
+    def send_suggestion_rejection_notification(
+        self,
+        user_username: str,
+        user_id: str,
+        details: str,
+    ) -> None:
+        """Send a notification when a suggestion is rejected."""
+        message = (
+            f"🚫 <b>Suggestion Rejected on user {user_username}</b>\n\n"
+            f"<b>User ID:</b> {user_id}\n"
+            f"<b>Details:</b> \n\n{details}\n"
+        )
+        self.send_message(message)
     def send_daily_checkin_rejection_notification(
         self,
         user_username: str,

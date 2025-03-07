@@ -411,7 +411,6 @@ class PlanController:
                 activity = self.activities_gateway.get_activity_by_id(
                     associated_activity_id
                 )
-                activity.invitee_ids.append(recipient.id)
                 self.activities_gateway.update_activity(activity)
 
         return recipients_plan

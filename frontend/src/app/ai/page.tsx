@@ -57,6 +57,7 @@ import {
 import { VoiceModeInput } from "@/components/chat/VoiceModeInput";
 import { UpgradePopover } from "@/components/UpgradePopover";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { PlanCreatorDynamicUI } from "@/components/PlanCreatorDynamicUI";
 
 const REFERRAL_COUNT = 2;
 
@@ -493,22 +494,6 @@ const LogPage: React.FC = () => {
     markNotificationOpened();
   }, [notificationId, authedApi]);
 
-  const handleShareReferralLink = async () => {
-    const link = `https://app.tracking.so/join/${userData?.user?.username}`;
-
-    try {
-      if (isShareSupported) {
-        const success = await share(link);
-        if (!success) throw new Error("Failed to share");
-      } else {
-        const success = await copyToClipboard(link);
-        if (!success) throw new Error("Failed to copy");
-      }
-    } catch (error) {
-      console.error("Error sharing referral link:", error);
-      toast.error("Failed to share referral link. Maybe you cancelled it?");
-    }
-  };
 
   const handleSuggestionHandled = (handled: SuggestionBase) => {
     setSuggestions((prev) => prev.filter((s) => s.id !== handled.id));
@@ -730,12 +715,17 @@ const LogPage: React.FC = () => {
                     />
                   )}
 
-                  <PlanBuildingContainer
-                    suggestions={planSuggestions}
-                    onPlanAccepted={handlePlanAccepted}
-                    onPlanRejected={handlePlanRejected}
-                    disabled={!isConnected}
-                  />
+                  {/* Only show the dynamic UI when AI type is plan-creation */}
+                  {assistantType === "plan-creation" ? (
+                    <PlanCreatorDynamicUI />
+                  ) : (
+                    <PlanBuildingContainer
+                      suggestions={planSuggestions}
+                      onPlanAccepted={handlePlanAccepted}
+                      onPlanRejected={handlePlanRejected}
+                      disabled={!isConnected}
+                    />
+                  )}
                 </motion.div>
 
                 <motion.div

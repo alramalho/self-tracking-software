@@ -521,12 +521,14 @@ async def report_feedback(request: Request, user: User = Depends(is_clerk_user))
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/get-user-profile/{username}")
-async def get_user_profile(username: str):
+@router.get("/get-user-profile/{username_or_id}")
+async def get_user_profile(username_or_id: str):
     try:
-        user = users_gateway.get_user_by_safely("username", username)
+        user = users_gateway.get_user_by_safely("username", username_or_id)
         if not user:
-            raise HTTPException(status_code=404, detail=f"User '{username}' not found")
+            user = users_gateway.get_user_by_safely("id", username_or_id)
+            if not user:
+                raise HTTPException(status_code=404, detail=f"User '{username_or_id}' not found")
 
         user_data = {
             "user": user.dict(
@@ -554,6 +556,8 @@ async def get_user_profile(username: str):
     except Exception as e:
         logger.error(f"Failed to fetch user profile: {e}")
         logger.error(f"Traceback: \n{traceback.format_exc()}")
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 

@@ -501,7 +501,7 @@ const ProfilePage: React.FC = () => {
             </div>
             {!isOnesOwnProfile && !isFriend() && (
               <>
-                {hasPendingReceivedFriendRequest() ? (
+              {hasPendingReceivedFriendRequest() ? (
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-sm text-muted-foreground">
                       has sent you a friend request
