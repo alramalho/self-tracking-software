@@ -31,24 +31,22 @@ const LogPage: React.FC = () => {
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const [showInsightsBanner, setShowInsightsBanner] = useState(false);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
-  const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const api = useApiWithAuth();
-  const router = useRouter();
+  // const [shouldShowNotification, setShouldShowNotification] = useState(false);
 
   const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
-  const {
-    message: aiMessage,
-    messageId,
-    isDismissed,
-    dismiss,
-    timestamp,
-  } = useAIMessageCache("activity");
+  // const {
+  //   message: aiMessage,
+  //   messageId,
+  //   isDismissed,
+  //   dismiss,
+  //   timestamp,
+  // } = useAIMessageCache("activity");
 
-  useEffect(() => {
-    if (aiMessage && !isDismissed && isAIEnabled) {
-      setShouldShowNotification(true);
-    }
-  }, [aiMessage, isDismissed, isAIEnabled]);
+  // useEffect(() => {
+  //   if (aiMessage && !isDismissed && isAIEnabled) {
+  //     setShouldShowNotification(true);
+  //   }
+  // }, [aiMessage, isDismissed, isAIEnabled]);
 
   const [activityLogData, setActivityLogData] =
     useState<ActivityLogData | null>(null);
