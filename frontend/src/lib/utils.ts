@@ -49,6 +49,7 @@ export function formatTimeAgo(date: string | Date) {
 }
 
 export function getMessagePreview(message: string): string {
+  console.log({ message });
   const firstLine = message.split("\n")[0].trim();
   if (firstLine.length > 50) {
     return firstLine.substring(0, 50) + " ...";

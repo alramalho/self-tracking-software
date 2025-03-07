@@ -40,7 +40,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   onReject,
   creationMessage = "Do you want me to process this for you?",
   placeholder = "You can also record a voice message if you prefer",
-  title = "AI Suggester",
+  title,
 }: DynamicUISuggesterProps<T>) {
   const [text, setText] = useState("");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
@@ -176,14 +176,18 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         >
           <Toaster position="top-center" closeButton duration={12000} />
 
-          <h2
-            className="text-sm text-gray-500 m-4 mt-6 text-center"
-          >
-            {title}
-          </h2>
+          {title && (
+            <>
+              <h2
+                className="text-sm text-gray-500 m-4 mt-6 text-center"
+              >
+                {title}
+              </h2>
+            </>
+          )}
 
           <div>
-            <ScanFace size={100} className="mx-auto" />
+            <ScanFace size={100} className="mx-auto text-blue-500" />
           </div>
 
           <p

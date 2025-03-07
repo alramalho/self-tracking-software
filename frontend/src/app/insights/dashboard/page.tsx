@@ -55,7 +55,7 @@ export default function InsightsDashboardPage() {
   );
   const [isCreatingMetric, setIsCreatingMetric] = useState(false);
   const api = useApiWithAuth();
-  const { userPaidPlanType, maxMetrics } = usePaidPlan();
+  const { maxMetrics } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
   useEffect(() => {
@@ -324,7 +324,7 @@ export default function InsightsDashboardPage() {
   // Render insights when we have enough data
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
-      {userPaidPlanType == "supporter" && <MetricsAINotification />}
+      {/* {userPaidPlanType == "supporter" && <MetricsAINotification />} */}
 
       <MetricSelector
         metrics={userMetrics}

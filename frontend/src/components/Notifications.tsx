@@ -169,7 +169,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
   return (
     <>
-      {latestEngagementNotification && (
+      {/* {latestEngagementNotification && (
         <AINotification
           message={latestEngagementNotification.message}
           createdAt={latestEngagementNotification.created_at}
@@ -181,7 +181,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             handleNotificationAction(latestEngagementNotification, "respond")
           }
         />
-      )}
+      )} */}
 
       {regularNotifications && regularNotifications.length > 0 && (
         <>

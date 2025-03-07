@@ -8,7 +8,7 @@ import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 
 export function MetricsAINotification() {
   const router = useRouter();
-  const { message: aiMessage, messageId, isDismissed, dismiss } = useAIMessageCache('metrics');
+  const { message: aiMessage, messageId, isDismissed, dismiss, timestamp } = useAIMessageCache('metrics');
   const [shouldShowNotification, setShouldShowNotification] = React.useState(false);
 
   React.useEffect(() => {
@@ -24,7 +24,7 @@ export function MetricsAINotification() {
   return (
     <AINotification
       message={aiMessage}
-      createdAt={new Date().toISOString()}
+      createdAt={new Date(timestamp).toISOString()}
       onDismiss={() => {
         setShouldShowNotification(false);
         dismiss();
