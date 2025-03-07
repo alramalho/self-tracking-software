@@ -21,9 +21,11 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   initialMessage: string;
   questionsChecks: QuestionsChecks;
   onSubmit: (text: string) => Promise<T>;
+  shouldRenderChildren?: boolean;
   renderChildren?: (data: T) => React.ReactNode;
   onAccept?: (data: T) => Promise<void>;
   onReject?: (feedback: string, data: T) => Promise<void>;
+  creationMessage?: string;
   placeholder?: string;
   title?: string;
 };
@@ -33,8 +35,10 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   questionsChecks,
   onSubmit,
   renderChildren,
+  shouldRenderChildren = true,
   onAccept,
   onReject,
+  creationMessage = "Do you want me to process this for you?",
   placeholder = "You can also record a voice message if you prefer",
   title = "AI Suggester",
 }: DynamicUISuggesterProps<T>) {
@@ -150,9 +154,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     setIsSubmitting(true);
     try {
       await onReject(rejectionFeedback, extractedData);
-      toast.success("Feedback submitted successfully!");
     } catch (error) {
-      toast.error("Failed to submit feedback");
       console.error("Error submitting feedback:", error);
     } finally {
       setIsSubmitting(false);
@@ -163,6 +165,8 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   const handleTextChange = (value: string) => {
     setText(value);
   };
+
+  const renderedChildren = renderChildren && extractedData && renderChildren(extractedData);
 
   return (
     <>
@@ -230,18 +234,18 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               ref={extractedDataRef}
               className="opacity-100"
             >              
-              {renderChildren && renderChildren(extractedData)}
+              {renderChildren && shouldRenderChildren && renderedChildren}
             </div>
           )}
 
-          {extractedData && (onAccept || onReject) && (
+          {extractedData && shouldRenderChildren && (onAccept || onReject) && (
             <div
               ref={actionsRef}
             >
               <div className="text-sm text-gray-500 mt-8 text-left w-full px-4 mt-4">
                 <p className="flex flex-row gap-2">
                   <ScanFace size={24} />
-                  Do you want me to process this for you?
+                  {creationMessage ?? "Do you want me to process this for you?"}
                 </p>
               </div>
               <div className="flex flex-row gap-2 justify-center mt-4">

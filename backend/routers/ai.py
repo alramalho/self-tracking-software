@@ -26,6 +26,10 @@ from pydantic import BaseModel, Field
 from entities.activity import ActivityEntry
 from ai.assistant.activity_extractor_simple import ActivityExtractorAssistant
 from ai.assistant.metrics_companion_assistant_simple import MetricsCompanionAssistant
+from ai.assistant.plan_creation_assistant import PlanCreationAssistant
+from ai.assistant.plan_creation_assistant_simple import (
+    PlanCreationAssistant as PlanCreationAssistantSimple,
+)
 from ai.llm import ask_schema_async, ask_text_async
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
@@ -47,7 +51,7 @@ from services.hume_service import EMOTION_COLORS, HUME_SCORE_FILTER_THRESHOLD
 from constants import LLM_MODEL, ENVIRONMENT
 from entities.message import Emotion
 from gateways.database.mongodb import MongoDBGateway
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from services.telegram_service import TelegramService
@@ -64,7 +68,8 @@ router = APIRouter(prefix="/ai")
 activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
 messages_gateway = MessagesGateway()
-users_gateway = UsersGateway()      
+users_gateway = UsersGateway()
+
 
 async def poll_emotions(websocket: WebSocket, user_id: str):
     try:
@@ -547,7 +552,6 @@ async def get_daily_checkin_extractions(
                 description="A list of boolean values, indicating whether the user message contains information to the question (should have same order as the questions)",
             )
 
-
         schema_task = ask_schema_async(
             text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
             system="",
@@ -699,4 +703,114 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
     except Exception as e:
         logger.error(traceback.format_exc())
         logger.error(f"Failed to update profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/reject-plan")
+async def reject_plan(request: Request, user: User = Depends(is_clerk_user)):
+    """
+    Endpoint to handle plan rejection feedback.
+    Just sends a Telegram message with the feedback.
+    """
+    try:
+        body = await request.json()
+        feedback = body["feedback"]
+        plan = body["plan"]
+        user_message = body["user_message"]
+        ai_message = body["ai_message"]
+
+        # Create a message for Telegram
+        feedback_message = f"🔄 Plan Rejected\n\nFeedback: {feedback}\n\nUser message: {user_message}\n\nAI message: {ai_message}\n\nPlan: {plan}"
+
+        telegram = TelegramService()
+        telegram.send_suggestion_rejection_notification(
+            user_username=user.username,
+            user_id=user.id,
+            details=feedback_message,
+        )
+
+        return {"status": "success", "message": "Feedback received"}
+    except Exception as e:
+        logger.error(f"Error handling plan rejection: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/get-plan-extractions")
+async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_user)):
+    """
+    Endpoint to extract plan details from user message.
+    Similar to the daily checkin extractions but focused on plans.
+    """
+    try:
+        body = await request.json()
+        message = body["message"]
+        question_checks = body["question_checks"]
+
+        # Initialize memory and assistant
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        plan_creator = PlanCreationAssistantSimple(user=user, memory=memory)
+
+        # Log the extraction request
+        logger.info(
+            f"Extracting plan for user {user.id} from message: {message[:50]}..."
+        )
+
+        class ResponseSchema(BaseModel):
+            reasoning: str = Field(
+                ...,
+                description="Your question by question extensive step by step reasoning.",
+            )
+            decisions: List[bool] = Field(
+                ...,
+                description="A list of boolean values, indicating whether the user message contains information to the question (should have same order as the questions)",
+            )
+            message: str = Field(
+                ...,
+                description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
+            )
+
+        response = await ask_schema_async(
+            text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
+            system="Youa are a friendly AI assitant.",
+            pymodel=ResponseSchema,
+        )
+
+        question_checks_keys = list(question_checks.keys())
+
+        all_questions_answered = all(response.decisions)
+
+        if not all_questions_answered:
+            return {
+                "message": response.message,
+                "question_checks": {
+                    question_checks_keys[i]: response.decisions[i]
+                    for i in range(len(question_checks_keys))
+                },
+            }
+        
+
+        # Process the message and get suggestions
+        response_text, suggestions = await plan_creator.get_response(
+            user_input=message, message_id=str(ObjectId())
+        )
+
+        # Return the extracted plan data
+        result = {
+            "question_checks": {
+                question_checks_keys[i]: response.decisions[i]
+                for i in range(len(question_checks))
+            },
+            "message": response_text,
+        }
+
+        if len(suggestions) > 0:
+            result["plan"] = suggestions[0].data["plan"]
+            result["activities"] = suggestions[0].data["activities"]
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error extracting plan: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
