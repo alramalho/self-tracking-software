@@ -91,7 +91,7 @@ function IntroStep({ onNext }: { onNext: () => void }) {
           some effort from you.
         </p>
         <p className="text-gray-600 font-medium mb-6">
-          Here's what we'll need to do in order to get you started:
+          Here&apos;s what we&apos;ll need to do in order to get you started:
         </p>
       </div>
 
