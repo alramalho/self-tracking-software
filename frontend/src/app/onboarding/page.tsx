@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Link,
   Badge,
@@ -11,6 +11,7 @@ import {
   Inbox,
   Send,
   Loader2,
+  Check,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DynamicUISuggester } from "@/components/DynamicUISuggester";
@@ -18,7 +19,7 @@ import { useApiWithAuth } from "@/api";
 import { PlanCreatorDynamicUI } from "@/components/PlanCreatorDynamicUI";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import {toast as hotToast} from "react-hot-toast";
+import { toast as hotToast } from "react-hot-toast";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
@@ -27,8 +28,11 @@ import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import UserSearch, { UserSearchResult } from "@/components/UserSearch";
+import AppleLikePopover from "@/components/AppleLikePopover";
 
-type SenderProfile = {
+type OtherProfile = {
   user: {
     id: string;
     name: string;
@@ -53,17 +57,41 @@ function IntroStep({ onNext }: { onNext: () => void }) {
       onNext();
     }
   };
+  const waveVariants = {
+    initial: { rotate: 0 },
+    wave: {
+      rotate: [0, 25, -15, 25, -15, 0],
+      transition: {
+        delay: 2,
+        duration: 1.5,
+        times: [0, 0.2, 0.4, 0.6, 0.8, 1],
+        ease: "easeInOut",
+      },
+    },
+  };
 
   return (
     <div className="space-y-6 w-full max-w-md mx-auto">
       <div className="text-center">
-        <ScanFace size={100} className="mx-auto mb-4" />
-        <h2 className="text-xl font-bold mb-4">
-          Our goal is helping you be more consistent. <br /> We&apos;re serious
-          about that, now are you?
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Here&apos;s what we&apos;ll help you go through now
+        <div className="relative w-fit mx-auto">
+          <ScanFace size={100} className="mx-auto mb-4 text-blue-500" />
+          <motion.span
+            className="absolute bottom-[9px] left-[-40px] text-5xl"
+            initial="initial"
+            animate="wave"
+            variants={waveVariants}
+            style={{ transformOrigin: "90% 90%" }}
+          >
+            👋
+          </motion.span>
+        </div>
+        <p className="text-xl font-bold mb-4">Welcome to tracking.so!</p>
+        <p className="text-lg font-medium mb-4">
+          Our app is designed to help you be more consistent, but that will take
+          some effort from you.
+        </p>
+        <p className="text-gray-600 font-medium mb-6">
+          Here's what we'll need to do in order to get you started:
         </p>
       </div>
 
@@ -77,10 +105,12 @@ function IntroStep({ onNext }: { onNext: () => void }) {
             />
             <label
               htmlFor="profile"
-              className="text-sm leading-tight cursor-pointer"
+              className="text-md leading-tight cursor-pointer"
             >
-              Create a user profile with vision and anti-vision (25% increased
-              chances of success)
+              Create a user profile with vision and anti-vision. <br></br>
+              <span className="text-gray-500 text-sm">
+                (this increases your chances of success by 25%)
+              </span>
             </label>
           </div>
           {attempted && !profile && (
@@ -97,9 +127,12 @@ function IntroStep({ onNext }: { onNext: () => void }) {
             />
             <label
               htmlFor="plan"
-              className="text-sm leading-tight cursor-pointer"
+              className="text-md leading-tight cursor-pointer"
             >
-              Create your own actionable plan (55% chance increase)
+              Create your own actionable plan. <br></br>
+              <span className="text-gray-500 text-sm">
+                (this increases your chances of success by 55%)
+              </span>
             </label>
           </div>
           {attempted && !plan && (
@@ -116,9 +149,12 @@ function IntroStep({ onNext }: { onNext: () => void }) {
             />
             <label
               htmlFor="partner"
-              className="text-sm leading-tight cursor-pointer"
+              className="text-md leading-tight cursor-pointer"
             >
-              Get you an accountability partner (95% chance increase)
+              Get you an accountability partner. <br></br>
+              <span className="text-gray-500 text-sm">
+                (this increases your chances of success by 95%)
+              </span>
             </label>
           </div>
           {attempted && !partner && (
@@ -197,11 +233,15 @@ function FourthStepCard({
   buttonText,
   onClick,
   color = "blue",
+  secondaryText,
+  secondaryOnClick,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
   buttonText: string;
+  secondaryText?: string;
+  secondaryOnClick?: () => void;
   onClick: () => void;
   color?: string;
 }) {
@@ -210,19 +250,22 @@ function FourthStepCard({
       className={`p-6 relative overflow-hidden ring-2 ring-${color}-500/20 rounded-2xl`}
     >
       <div className="flex flex-row no-wrap gap-2 items-center">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`text-white rounded-full text-${color}-500 mr-2`}
-        >
-          {icon}
-        </Button>
+        <div className={`rounded-full text-${color}-500 mr-2`}>{icon}</div>
         <h3 className="text-xl font-semibold">{title}</h3>
       </div>
       <div className="mt-6 space-y-3">{description}</div>
+      {secondaryOnClick && (
+        <Button
+          variant="outline"
+          onClick={secondaryOnClick}
+          className={`w-full mt-6 text-${color}-500 hover:text-${color}-600 rounded-xl`}
+        >
+          {secondaryText}
+        </Button>
+      )}
       <Button
         onClick={onClick}
-        className={`w-full mt-6 bg-${color}-500 hover:bg-${color}-600 rounded-xl`}
+        className={`w-full mt-2 bg-${color}-500 hover:bg-${color}-600 rounded-xl`}
       >
         {buttonText}
       </Button>
@@ -236,23 +279,47 @@ function FourthStep({ onNext }: { onNext: () => void }) {
   const queryClient = useQueryClient();
   const currentUserReceivedFriendRequests =
     currentUserQuery.data?.receivedFriendRequests;
+  const currentUserSentFriendRequests =
+    currentUserQuery.data?.sentFriendRequests;
 
-  const pendingFriendRequests = currentUserReceivedFriendRequests?.filter(
-    (request) => request.status == "pending"
-  ) || [];
+  const pendingSentFriendRequests =
+    currentUserSentFriendRequests?.filter(
+      (request) => request.status == "pending"
+    ) || [];
 
-  const { data: senderProfiles } = useQuery<SenderProfile[]>({
-    queryKey: ['senderProfiles', pendingFriendRequests],
+  const pendingReceivedFriendRequests =
+    currentUserReceivedFriendRequests?.filter(
+      (request) => request.status == "pending"
+    ) || [];
+
+
+  const { data: userData } = useCurrentUserDataQuery();
+  const currentUser = userData?.user;
+  const { isSupported: isShareSupported, share } = useShare();
+  const api = useApiWithAuth();
+  const [copied, copyToClipboard] = useClipboard();
+  const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [usersInQueue, setUsersInQueue] = useState<UserSearchResult[]>([]);
+
+  const { data: otherProfiles } = useQuery<OtherProfile[]>({
+    queryKey: ["otherProfiles", pendingSentFriendRequests, pendingReceivedFriendRequests],
     queryFn: async () => {
-      if (!pendingFriendRequests.length) return [];
+      const profileIdsToCheck = [
+        ...(pendingSentFriendRequests?.map((request) => request.recipient_id) || []),
+        ...(pendingReceivedFriendRequests?.map((request) => request.sender_id) || []),
+      ];
+      if (!profileIdsToCheck.length) return [];
+
       const profiles = await Promise.all(
-        pendingFriendRequests.map(request =>
-          api.get(`/get-user-profile/${request.sender_id}`).then(res => res.data)
+        profileIdsToCheck.map((id) =>
+          api
+            .get(`/get-user-profile/${id}`)
+            .then((res) => res.data)
         )
       );
       return profiles;
     },
-    enabled: pendingFriendRequests.length > 0,
   });
 
   const acceptFriendRequestMutation = useMutation({
@@ -261,8 +328,8 @@ function FourthStep({ onNext }: { onNext: () => void }) {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserData'] });
-      queryClient.invalidateQueries({ queryKey: ['senderProfiles'] });
+      queryClient.invalidateQueries({ queryKey: ["currentUserData"] });
+      queryClient.invalidateQueries({ queryKey: ["otherProfiles"] });
     },
   });
 
@@ -272,8 +339,8 @@ function FourthStep({ onNext }: { onNext: () => void }) {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserData'] });
-      queryClient.invalidateQueries({ queryKey: ['senderProfiles'] });
+      queryClient.invalidateQueries({ queryKey: ["currentUserData"] });
+      queryClient.invalidateQueries({ queryKey: ["otherProfiles"] });
     },
   });
 
@@ -297,12 +364,6 @@ function FourthStep({ onNext }: { onNext: () => void }) {
     }
   };
 
-  const { data: userData } = useCurrentUserDataQuery();
-  const currentUser = userData?.user;
-  const { isSupported: isShareSupported, share } = useShare();
-  const api = useApiWithAuth();
-  const [copied, copyToClipboard] = useClipboard();
-  const [open, setOpen] = useState(false);
   const handleShareReferralLink = async () => {
     const link = `https://app.tracking.so/join/${userData?.user?.username}`;
 
@@ -320,16 +381,24 @@ function FourthStep({ onNext }: { onNext: () => void }) {
     }
   };
 
+  const toggleUserInQueue = (user: UserSearchResult) => {
+    setUsersInQueue((prev) =>
+      prev.includes(user)
+        ? prev.filter((u) => u.user_id !== user.user_id)
+        : [...prev, user]
+    );
+  };
+
   return (
     <div className="space-y-6 w-full max-w-md mx-auto">
       <div className="text-center">
-        <ScanFace size={100} className="mx-auto mb-4" />
+        <ScanFace size={100} className="mx-auto mb-4 text-blue-500" />
         <h2 className="text-xl font-bold mb-4">
           Great success! As a last step you need to get an accountability
           partner.
         </h2>
         <p className="text-gray-600 mb-6">
-          Here&apos;s what we&apos;ll help you go through now
+          You have several options to get an accountability partner:
         </p>
       </div>
 
@@ -340,6 +409,8 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           description="Share your invite link and both join the app free of cost."
           buttonText="Share Invite"
           onClick={handleShareReferralLink}
+          secondaryText="Search for a friend"
+          secondaryOnClick={() => setSearchOpen(true)}
           color="blue"
         />
         <FourthStepCard
@@ -389,23 +460,37 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           <Inbox size={16} />
           Friend requests
         </div>
-        {!pendingFriendRequests.length && (
+        {!pendingReceivedFriendRequests.length && !pendingSentFriendRequests.length && (
           <span className="text-gray-400">
-            Your friend requests will appear here, <a onClick={handleShareReferralLink} className="underline cursor-pointer">share them!</a>
+            Your friend requests will appear here,{" "}
+            <a
+              onClick={handleShareReferralLink}
+              className="underline cursor-pointer"
+            >
+              share them!
+            </a>
           </span>
         )}
 
-        {pendingFriendRequests.length > 0 && senderProfiles && (
+        {pendingReceivedFriendRequests.length > 0 && otherProfiles && (
           <div className="flex flex-col gap-2 w-full">
-            {pendingFriendRequests.map((request, index) => {
-              const sender = senderProfiles[index];
+            {pendingReceivedFriendRequests.map((request, index) => {
+              const sender = otherProfiles.find(
+                (profile) => profile.user?.id === request.sender_id
+              );
               if (!sender) return null;
 
               return (
-                <div key={request.id} className="flex items-center justify-between w-full p-2 bg-gray-50 rounded-lg">
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between w-full p-2 bg-gray-50 rounded-lg"
+                >
                   <div className="flex items-center gap-2">
                     <Avatar className="w-8 h-8">
-                      <AvatarImage src={sender.user?.picture} alt={sender.user?.name} />
+                      <AvatarImage
+                        src={sender.user?.picture}
+                        alt={sender.user?.name}
+                      />
                       <AvatarFallback>{sender.user?.name?.[0]}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium">{sender.user?.name}</span>
@@ -416,7 +501,10 @@ function FourthStep({ onNext }: { onNext: () => void }) {
                       variant="outline"
                       className="bg-white text-green-600 hover:bg-green-600 hover:text-white"
                       onClick={() => handleAcceptRequest(request.id)}
-                      disabled={acceptFriendRequestMutation.isPending || rejectFriendRequestMutation.isPending}
+                      disabled={
+                        acceptFriendRequestMutation.isPending ||
+                        rejectFriendRequestMutation.isPending
+                      }
                     >
                       {acceptFriendRequestMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -429,7 +517,10 @@ function FourthStep({ onNext }: { onNext: () => void }) {
                       variant="ghost"
                       className="bg-white text-red-600 hover:bg-red-600 hover:text-white"
                       onClick={() => handleRejectRequest(request.id)}
-                      disabled={acceptFriendRequestMutation.isPending || rejectFriendRequestMutation.isPending}
+                      disabled={
+                        acceptFriendRequestMutation.isPending ||
+                        rejectFriendRequestMutation.isPending
+                      }
                     >
                       {rejectFriendRequestMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -443,6 +534,38 @@ function FourthStep({ onNext }: { onNext: () => void }) {
             })}
           </div>
         )}
+
+        {pendingSentFriendRequests &&
+          pendingSentFriendRequests.length > 0 && (
+            <div className="flex flex-col gap-2 w-full">
+              {pendingSentFriendRequests.map((request) => {
+                const recipient = otherProfiles?.find(
+                  (sender) => sender.user?.id === request.recipient_id
+                );
+                if (!recipient) return null;
+
+                return (
+                  <div
+                    key={request.id}
+                    className="flex items-center justify-between w-full p-2 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={recipient.user?.picture} />
+                        <AvatarFallback>
+                          {recipient.user?.name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">
+                        {recipient.user?.name}
+                      </span>
+                    </div>
+                    <span className="text-gray-400">Sent</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
       </div>
 
       <Button
@@ -453,14 +576,54 @@ function FourthStep({ onNext }: { onNext: () => void }) {
         Finish
       </Button>
 
+      <AppleLikePopover open={searchOpen} onClose={() => setSearchOpen(false)}>
+        <div className="w-full flex flex-row gap-2">
+          {usersInQueue.map((user) => (
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={user.picture} />
+              <AvatarFallback>{user.name?.[0]}</AvatarFallback>
+            </Avatar>
+          ))}
+        </div>
+
+        {usersInQueue.length > 0 && (
+          <Button
+            variant="outline"
+            className="w-full mt-6"
+            onClick={() => {
+              usersInQueue.forEach((user) => {
+                api.post(`/send-friend-request/${user.user_id}`);
+              });
+              setUsersInQueue([]);
+              setSearchOpen(false);
+              currentUserQuery.refetch();
+            }}
+          >
+            <Send size={16} className="mr-2" />
+            <span className="text-sm uppercase">Send friend requests</span>
+          </Button>
+        )}
+        <UserSearch onUserClick={(user) => toggleUserInQueue(user)} />
+      </AppleLikePopover>
       <UpgradePopover open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(0);
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserQuery = useCurrentUserDataQuery();
+  const currentUser = currentUserQuery.data?.user;
+  const [step, setStep] = useState(1);
   const router = useRouter();
+
+  const hasPlans = currentUser?.plan_ids && currentUser?.plan_ids?.length > 0;
+
+  useEffect(() => {
+    if (hasPlans) {
+      setStep(4);
+    }
+  }, [hasPlans, router]);
 
   const renderStep = () => {
     switch (step) {
@@ -471,10 +634,16 @@ export default function OnboardingPage() {
       case 3:
         return <ThirdStep onNext={() => setStep(4)} />;
       default:
-        return <FourthStep onNext={() => {
-          hotToast.success("You're all set! You can now start using the app.");
-          router.push("/");
-        }} />;
+        return (
+          <FourthStep
+            onNext={() => {
+              hotToast.success(
+                "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner."
+              );
+              router.push("/");
+            }}
+          />
+        );
     }
   };
 

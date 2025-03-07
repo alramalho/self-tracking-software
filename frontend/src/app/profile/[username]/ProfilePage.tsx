@@ -1076,7 +1076,7 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
           </TabsContent>
-          {userHasAccessToAi && isOnesOwnProfile && (
+          {/* {userHasAccessToAi && isOnesOwnProfile && (
             <TabsContent value="mood">
               <div className="space-y-4">
                 <div className="p-4 border rounded-lg bg-white">
@@ -1097,7 +1097,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
             </TabsContent>
-          )}
+          )} */}
         </Tabs>
       </div>
       {showEditActivityEntry && isOnesOwnProfile && (

@@ -41,6 +41,7 @@ const LogPage: React.FC = () => {
     messageId,
     isDismissed,
     dismiss,
+    timestamp,
   } = useAIMessageCache("activity");
 
   useEffect(() => {
@@ -97,10 +98,10 @@ const LogPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
-      {shouldShowNotification && isAIEnabled && (
+      {/* {shouldShowNotification && isAIEnabled && (
         <AINotification
           message={aiMessage}
-          createdAt={new Date().toISOString()}
+          createdAt={new Date(timestamp).toISOString()}
           onDismiss={() => {
             setShouldShowNotification(false);
             dismiss();
@@ -112,7 +113,7 @@ const LogPage: React.FC = () => {
             );
           }}
         />
-      )}
+      )} */}
 
       {hasMetrics && (
         <>

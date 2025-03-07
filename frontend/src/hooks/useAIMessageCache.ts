@@ -82,6 +82,7 @@ export function useAIMessageCache(type: "metrics" | "activity" | "plan") {
     messageId: cachedData?.messageId || aiMessageData?.messageId || "",
     isStale: shouldFetch,
     isDismissed: isDismissed(),
+    timestamp: cachedData?.timestamp || aiMessageData?.timestamp || 0,
     dismiss,
     reset,
   };

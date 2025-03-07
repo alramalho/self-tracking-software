@@ -22,7 +22,7 @@ const PlansPage: React.FC = () => {
   const router = useRouter();
 
   const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
-  const { message: aiMessage, messageId, isDismissed, dismiss } = useAIMessageCache('plan');
+  const { message: aiMessage, messageId, isDismissed, dismiss, timestamp } = useAIMessageCache('plan');
 
   useEffect(() => {
     if (aiMessage && !isDismissed) {
@@ -79,10 +79,10 @@ const PlansPage: React.FC = () => {
         {userData.user?.name ? `, ${userData.user.name}` : ""}. Here are your active plans:
       </h1>
 
-      {shouldShowNotification && (
+      {/* {shouldShowNotification && (
         <AINotification
           message={aiMessage}
-          createdAt={new Date().toISOString()}
+          createdAt={new Date(timestamp).toISOString()}
           onDismiss={() => {
             setShouldShowNotification(false);
             dismiss();
@@ -95,7 +95,7 @@ const PlansPage: React.FC = () => {
           }}
           preview={!isAIEnabled}
         />
-      )}
+      )} */}
 
       <PlansRenderer />
     </div>
