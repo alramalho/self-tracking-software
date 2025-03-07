@@ -578,8 +578,8 @@ function FourthStep({ onNext }: { onNext: () => void }) {
 
       <AppleLikePopover open={searchOpen} onClose={() => setSearchOpen(false)}>
         <div className="w-full flex flex-row gap-2">
-          {usersInQueue.map((user) => (
-            <Avatar className="w-10 h-10">
+          {usersInQueue.map((user, index) => (
+            <Avatar className="w-10 h-10" key={index}>
               <AvatarImage src={user.picture} />
               <AvatarFallback>{user.name?.[0]}</AvatarFallback>
             </Avatar>
