@@ -306,7 +306,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const posthog = usePostHog();
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    console.log("[UserPlanProvider] Auth state changed:", {
+      isSignedIn,
+      isLoaded
+    });
+  }, [isSignedIn, isLoaded]);
+
   const handleAuthError = (err: unknown) => {
+    console.error("[UserPlanProvider] Auth error:", err);
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       router.push("/signin");
       toast.error("You are not authorized to access this page. Please log in again.", {
@@ -322,7 +330,10 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const fetchUserData = async ({username}: {username?: string} = {}): Promise<UserDataEntry> => {
+    console.log("[UserPlanProvider] Fetching user data:", { username, isSignedIn });
+    
     if (!isSignedIn) {
+      console.error("[UserPlanProvider] Attempted to fetch data while not signed in");
       throw new Error("User not signed in");
     }
 
@@ -330,6 +341,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const startTime = performance.now();
       const result = await smallRetryMechanism(
         async () => {
+          console.log("[UserPlanProvider] Making API request for user data");
           const response = await api.get('/load-users-data', {
             params: username ? { usernames: username } : undefined
           });
@@ -337,9 +349,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           const userData = username ? response.data[username] : response.data.current;
           
           if (!userData) {
-            console.error('No user data found in response:', response.data);
+            console.error('[UserPlanProvider] No user data found in response:', response.data);
             throw new Error('No user data found in response');
           }
+
+          console.log("[UserPlanProvider] Successfully fetched user data");
 
           const transformedData: UserDataEntry = {
             user: userData.user || null,
@@ -376,6 +390,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
               latency_seconds: Math.round(latencySeconds * 1000) / 1000
             };
 
+            console.log("[UserPlanProvider] Data fetch metrics:", {
+              latencySeconds,
+              dataSize: {
+                plans: transformedData.plans.length,
+                activities: transformedData.activities.length,
+                entries: transformedData.activityEntries.length
+              }
+            });
+
             // Use direct capture method
             if (posthog) {
               posthog.capture('load-user-data', properties);
@@ -394,6 +417,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       
       return result;
     } catch (err) {
+      console.error("[UserPlanProvider] Error fetching user data:", err);
       handleAuthError(err);
       router.push("/");
       toast.error("Failed to fetch user data. Please try again.");
@@ -433,21 +457,21 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const useCurrentUserDataQuery = () => {
-    const { isSignedIn, isLoaded } = useSession();
-    
     const query = useQuery({
-      queryKey: ['currentUserData'],
+      queryKey: ['userData', 'current'],
       queryFn: () => fetchUserData(),
       enabled: isLoaded && isSignedIn,
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
-    // When current user data is successfully fetched, also cache it under the username key
     useEffect(() => {
-      if (query.data?.user?.username) {
-        queryClient.setQueryData(['userData', query.data.user.username], query.data);
-      }
-    }, [query.data?.user?.username]);
+      console.log("[UserPlanProvider] Current user data query state:", {
+        isLoading: query.isLoading,
+        isError: query.isError,
+        error: query.error,
+        dataExists: !!query.data
+      });
+    }, [query.isLoading, query.isError, query.error, query.data]);
 
     return query;
   };

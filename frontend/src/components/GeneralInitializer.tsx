@@ -25,13 +25,59 @@ export default function GeneralInitializer({
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRan, setHasRan] = useState(false);
   const [isAppInstallModalClosed, setIsAppInstallModalClosed] = useState(false);
-
   const [showServerMessage, setShowServerMessage] = useState(false);
   const [showBugMessage, setShowBugMessage] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
-  const api = useApiWithAuth();
 
   const email = userData?.user?.email || "";
+
+  useEffect(() => {
+    console.log("[GeneralInitializer] Component mounted with state:", {
+      isSignedIn,
+      isLoaded,
+      hasLoadedUserData,
+      userData: !!userData,
+      isAppInstalled,
+      isPushGranted
+    });
+  }, [isSignedIn, isLoaded, hasLoadedUserData, userData, isAppInstalled, isPushGranted]);
+
+  useEffect(() => {
+    console.log("[GeneralInitializer] Auth state changed:", { isSignedIn });
+  }, [isSignedIn]);
+
+  useEffect(() => {
+    if (isSignedIn && hasLoadedUserData && userData?.user && !hasRan) {
+      console.log("[GeneralInitializer] Identifying user in PostHog:", {
+        userId: userData.user.id,
+        email: userData.user.email
+      });
+      
+      posthog.identify(userData?.user.id, {
+        email: userData?.user.email,
+        name: userData?.user.name,
+        username: userData?.user.username,
+        is_app_installed: isAppInstalled,
+        is_push_granted: isPushGranted,
+      });
+
+      setHasRan(true);
+    }
+  }, [isSignedIn, hasLoadedUserData, userData, hasRan]);
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => {
+      setShowServerMessage(true);
+    }, 4000);
+    const timer2 = setTimeout(() => {
+      setShowBugMessage(true);
+    }, 16000);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
 
   const reportBug = async (text: string, email: string) => {
     await toast.promise(
@@ -50,34 +96,6 @@ export default function GeneralInitializer({
     );
   };
 
-  useEffect(() => {
-    const timer1 = setTimeout(() => {
-      setShowServerMessage(true);
-    }, 4000);
-    const timer2 = setTimeout(() => {
-      setShowBugMessage(true);
-    }, 16000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && userData?.user && !hasRan) {
-      posthog.identify(userData?.user.id, {
-        email: userData?.user.email,
-        name: userData?.user.name,
-        username: userData?.user.username,
-        is_app_installed: isAppInstalled,
-        is_push_granted: isPushGranted,
-      });
-
-      setHasRan(true);
-    }
-  }, [isSignedIn, hasLoadedUserData, userData, hasRan]);
-
   if (
     !isAppInstalled &&
     isSignedIn &&
@@ -91,6 +109,11 @@ export default function GeneralInitializer({
   }
 
   if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
+    console.log("[GeneralInitializer] Showing loading state:", {
+      isLoaded,
+      isSignedIn,
+      hasLoadedUserData
+    });
     return (
       <>
         {showBugDialog && (
