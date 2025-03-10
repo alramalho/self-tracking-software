@@ -12,6 +12,7 @@ import Link from "next/link";
 import FeedbackForm from "./FeedbackForm";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
+import { usePathname } from "next/navigation";
 
 export default function GeneralInitializer({
   children,
@@ -96,12 +97,29 @@ export default function GeneralInitializer({
     );
   };
 
+  const pathname = usePathname();
+
+  function isPathNameWhitelisted() {
+    const excludedRoutes = [
+      "/signin",
+      "/signup",
+      "/join-plan",
+      "/onboarding",
+      "/create-new-plan",
+      "/join",
+      "/add",
+    ];
+  
+    return excludedRoutes.some((route) => pathname.startsWith(route));
+  }
+
   if (
     !isAppInstalled &&
     isSignedIn &&
     !isAppInstallModalClosed &&
     process.env.NEXT_PUBLIC_ENVIRONMENT !== "development" &&
-    userData?.user?.email !== process.env.NEXT_PUBLIC_APP_TEST_USER_EMAIL
+    userData?.user?.email !== process.env.NEXT_PUBLIC_APP_TEST_USER_EMAIL &&
+    !isPathNameWhitelisted()
   ) {
     console.log("[GeneralInitializer] Showing app not installed modal");
     return (

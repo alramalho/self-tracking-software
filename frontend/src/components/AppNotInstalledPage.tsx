@@ -13,20 +13,6 @@ import { usePathname } from "next/navigation";
 import InstallPWATabs from "./InstallPWATabs";
 
 const AppNotInstalledPage: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const pathname = usePathname();
-  const excludedRoutes = [
-    "/signin",
-    "/signup",
-    "/join-plan",
-    "/onboarding",
-    "/create-new-plan",
-    "/join",
-    "/add",
-  ];
-
-  if (excludedRoutes.some((route) => pathname.startsWith(route))) {
-    return null;
-  }
 
   return (
     <>
