@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import {
   User,
@@ -15,11 +15,9 @@ import { Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useSession } from "@clerk/clerk-react";
 
-export default function ClientPage({
-  params,
-}: {
-  params: { username: string };
-}) {
+export default function ClientPage() {
+
+  const params = useParams();
   console.log("[ClientPage] Rendering with params:", params);
 
   const router = useRouter();

@@ -1,5 +1,6 @@
 import { Metadata, ResolvingMetadata } from "next";
 import ClientPage from "./ClientPage";
+
 type Props = {
   params: { username: string }
 }
@@ -66,8 +67,7 @@ export async function generateMetadata(
   }
 }
 
-export default function Page({ params }: Props) {
-  console.log("[JoinPage] Rendering with params:", params);
+export default function Page() {
   
   try {
     // Redirect to signup with referral info if not signed in
@@ -75,7 +75,7 @@ export default function Page({ params }: Props) {
     // searchParams.append("redirect_url", `/join/${params.username}`);
     // searchParams.append("referrer", params.username);
     
-    return <ClientPage params={params} />;
+    return <ClientPage />;
   } catch (error) {
     console.error("[JoinPage] Error rendering page:", error);
     return <div>Error loading page. Please try again.</div>;
