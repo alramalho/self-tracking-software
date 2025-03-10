@@ -99,15 +99,13 @@ export default function GeneralInitializer({
 
   const pathname = usePathname();
 
-  function isPathNameWhitelisted() {
+  function isPathNameDesktopWhitelisted() {
     const excludedRoutes = [
       "/signin",
       "/signup",
       "/join-plan",
       "/onboarding",
-      "/create-new-plan",
       "/join",
-      "/add",
     ];
   
     return excludedRoutes.some((route) => pathname.startsWith(route));
@@ -119,7 +117,7 @@ export default function GeneralInitializer({
     !isAppInstallModalClosed &&
     process.env.NEXT_PUBLIC_ENVIRONMENT !== "development" &&
     userData?.user?.email !== process.env.NEXT_PUBLIC_APP_TEST_USER_EMAIL &&
-    !isPathNameWhitelisted()
+    !isPathNameDesktopWhitelisted()
   ) {
     console.log("[GeneralInitializer] Showing app not installed modal");
     return (
