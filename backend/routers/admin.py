@@ -507,7 +507,7 @@ async def log_error(error: GlobalErrorLog, request: Request):
         # Send error notification to Telegram
         
         telegram.send_error_notification(
-            error_message=f"500 page client error: {error.error_message}",
+            error_message=f"500 page client error: {error.error_message}\nContext: {context}",
             user_username=user.username if user else "unknown",
             user_id=error.user_clerk_id,
             path=request.url.path,
