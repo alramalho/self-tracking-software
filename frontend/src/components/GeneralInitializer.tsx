@@ -33,27 +33,7 @@ export default function GeneralInitializer({
   const email = userData?.user?.email || "";
 
   useEffect(() => {
-    console.log("[GeneralInitializer] Component mounted with state:", {
-      isSignedIn,
-      isLoaded,
-      hasLoadedUserData,
-      userData: !!userData,
-      isAppInstalled,
-      isPushGranted
-    });
-  }, [isSignedIn, isLoaded, hasLoadedUserData, userData, isAppInstalled, isPushGranted]);
-
-  useEffect(() => {
-    console.log("[GeneralInitializer] Auth state changed:", { isSignedIn });
-  }, [isSignedIn]);
-
-  useEffect(() => {
     if (isSignedIn && hasLoadedUserData && userData?.user && !hasRan) {
-      console.log("[GeneralInitializer] Identifying user in PostHog:", {
-        userId: userData.user.id,
-        email: userData.user.email
-      });
-      
       posthog.identify(userData?.user.id, {
         email: userData?.user.email,
         name: userData?.user.name,
@@ -119,18 +99,12 @@ export default function GeneralInitializer({
     userData?.user?.email !== process.env.NEXT_PUBLIC_APP_TEST_USER_EMAIL &&
     !isPathNameDesktopWhitelisted()
   ) {
-    console.log("[GeneralInitializer] Showing app not installed modal");
     return (
       <AppNotInstalledPage onClose={() => setIsAppInstallModalClosed(true)} />
     );
   }
 
   if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
-    console.log("[GeneralInitializer] Showing loading state:", {
-      isLoaded,
-      isSignedIn,
-      hasLoadedUserData
-    });
     return (
       <>
         {showBugDialog && (

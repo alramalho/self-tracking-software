@@ -25,20 +25,6 @@ export default function ClientLayout({
 }) {
   const { isSignedIn, isLoaded } = useSession();
 
-  useEffect(() => {
-    console.log("[ClientLayout] Component mounted with state:", {
-      isSignedIn,
-      isLoaded,
-    });
-  }, []);
-
-  useEffect(() => {
-    console.log("[ClientLayout] Auth state changed:", {
-      isSignedIn,
-      isLoaded,
-    });
-  }, [isSignedIn, isLoaded]);
-
   return (
     <QueryClientProvider client={queryClient}>
       <LoggerProvider>

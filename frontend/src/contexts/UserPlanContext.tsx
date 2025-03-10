@@ -306,13 +306,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const posthog = usePostHog();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    console.log("[UserPlanProvider] Auth state changed:", {
-      isSignedIn,
-      isLoaded
-    });
-  }, [isSignedIn, isLoaded]);
-
   const handleAuthError = (err: unknown) => {
     console.error("[UserPlanProvider] Auth error:", err);
     if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -330,10 +323,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const fetchUserData = async ({username}: {username?: string} = {}): Promise<UserDataEntry> => {
-    console.log("[UserPlanProvider] Fetching user data:", { username, isSignedIn });
     
     if (!isSignedIn) {
-      console.error("[UserPlanProvider] Attempted to fetch data while not signed in");
       throw new Error("User not signed in");
     }
 
@@ -341,7 +332,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const startTime = performance.now();
       const result = await smallRetryMechanism(
         async () => {
-          console.log("[UserPlanProvider] Making API request for user data");
           const response = await api.get('/load-users-data', {
             params: username ? { usernames: username } : undefined
           });
@@ -353,7 +343,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             throw new Error('No user data found in response');
           }
 
-          console.log("[UserPlanProvider] Successfully fetched user data");
 
           const transformedData: UserDataEntry = {
             user: userData.user || null,
@@ -390,14 +379,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
               latency_seconds: Math.round(latencySeconds * 1000) / 1000
             };
 
-            console.log("[UserPlanProvider] Data fetch metrics:", {
-              latencySeconds,
-              dataSize: {
-                plans: transformedData.plans.length,
-                activities: transformedData.activities.length,
-                entries: transformedData.activityEntries.length
-              }
-            });
 
             // Use direct capture method
             if (posthog) {
@@ -463,15 +444,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       enabled: isLoaded && isSignedIn,
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
-
-    useEffect(() => {
-      console.log("[UserPlanProvider] Current user data query state:", {
-        isLoading: query.isLoading,
-        isError: query.isError,
-        error: query.error,
-        dataExists: !!query.data
-      });
-    }, [query.isLoading, query.isError, query.error, query.data]);
 
     return query;
   };
