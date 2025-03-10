@@ -37,6 +37,17 @@ export default function ClientPage({
   const searchParams = useSearchParams();
   const referrer = searchParams.get("referrer");
 
+  // Add initial mount logging
+  useEffect(() => {
+    console.log("[ClientPage] Component mounted with initial state:", {
+      isSignedIn,
+      hasLoadedUserData,
+      currentUser: !!currentUser,
+      params,
+      referrer
+    });
+  }, []);
+
   console.log("[ClientPage] Current state:", {
     isSignedIn,
     hasLoadedUserData,
@@ -58,9 +69,13 @@ export default function ClientPage({
       try {
         const response = await api.get(`/get-user-profile/${params.username}`);
         console.log("[ClientPage] Successfully fetched user data:", response.data);
+        if (!response.data) {
+          throw new Error("No data received from API");
+        }
         setInviterData(response.data);
       } catch (error) {
         console.error("[ClientPage] Error fetching user data:", error);
+        toast.error("Failed to load user profile. Please try again.");
         setInviterData(null);
       } finally {
         console.log("[ClientPage] Finished loading user data");
@@ -68,7 +83,12 @@ export default function ClientPage({
       }
     };
 
-    fetchUserData();
+    if (params.username) {
+      fetchUserData();
+    } else {
+      console.error("[ClientPage] No username provided in params");
+      setIsLoadingInviterData(false);
+    }
   }, [params.username]);
 
   if (isLoadingInviterData || (isSignedIn && !hasLoadedUserData)) {
@@ -107,7 +127,12 @@ export default function ClientPage({
   };
 
   const handleAction = async () => {
-    console.log("[ClientPage] handleAction triggered:", { isSignedIn, referrer });
+    console.log("[ClientPage] handleAction triggered:", { 
+      isSignedIn, 
+      referrer,
+      currentUser: !!currentUser,
+      inviterData: !!inviterData 
+    });
     
     if (!isSignedIn) {
       const redirectUrl = `/signup?redirect_url=/join/${params.username}&referrer=${params.username}`;

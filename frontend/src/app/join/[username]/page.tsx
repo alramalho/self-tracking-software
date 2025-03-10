@@ -71,10 +71,17 @@ export async function generateMetadata(
 }
 
 export default function Page({ params }: Props) {
-  // Redirect to signup with referral info if not signed in
-  const searchParams = new URLSearchParams();
-  searchParams.append("redirect_url", `/join/${params.username}`);
-  searchParams.append("referrer", params.username);
+  console.log("[JoinPage] Rendering with params:", params);
   
-  return <ClientPage params={params} />;
+  try {
+    // Redirect to signup with referral info if not signed in
+    const searchParams = new URLSearchParams();
+    searchParams.append("redirect_url", `/join/${params.username}`);
+    searchParams.append("referrer", params.username);
+    
+    return <ClientPage params={params} />;
+  } catch (error) {
+    console.error("[JoinPage] Error rendering page:", error);
+    return <div>Error loading page. Please try again.</div>;
+  }
 } 
