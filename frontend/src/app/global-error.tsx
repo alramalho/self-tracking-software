@@ -12,8 +12,6 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const { userId } = useAuth();
-
   useEffect(() => {
     const logError = async () => {
       try {
@@ -35,7 +33,7 @@ export default function GlobalError({
             referrer: document.referrer || 'direct',
             user_agent: window.navigator.userAgent,
             timestamp: new Date().toISOString(),
-            user_clerk_id: userId || null,
+            user_clerk_id: null,
           }),
         });
       } catch (e) {
@@ -46,7 +44,7 @@ export default function GlobalError({
 
     console.error("Global Error: ", error);
     logError();
-  }, [error, userId]);
+  }, [error]);
 
   return (
     <html>
