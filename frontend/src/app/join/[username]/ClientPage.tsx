@@ -17,8 +17,6 @@ import { useUser } from "@clerk/nextjs";
 
 export default function ClientPage() {
   const params = useParams();
-  console.log("[ClientPage] Rendering with params:", params);
-
   const router = useRouter();
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery, hasLoadedUserData } = useUserPlan();
@@ -34,44 +32,14 @@ export default function ClientPage() {
   const searchParams = useSearchParams();
   const referrer = searchParams.get("referrer");
 
-  // Add initial mount logging
-  useEffect(() => {
-    console.log("[ClientPage] Component mounted with initial state:", {
-      isSignedIn,
-      hasLoadedUserData,
-      currentUser: !!currentUser,
-      params,
-      referrer,
-    });
-  }, []);
-
-  console.log("[ClientPage] Current state:", {
-    isSignedIn,
-    hasLoadedUserData,
-    currentUser,
-    isLoadingInviterData,
-    isSendingRequest,
-    referrer,
-  });
-
   const areFriends = currentUser?.user?.friend_ids?.includes(
     inviterData?.user?.id || ""
   );
 
   useEffect(() => {
-    console.log("[ClientPage] useEffect triggered for fetching user data");
-
     const fetchUserData = async () => {
-      console.log(
-        "[ClientPage] Fetching user data for username:",
-        params.username
-      );
       try {
         const response = await api.get(`/get-user-profile/${params.username}`);
-        console.log(
-          "[ClientPage] Successfully fetched user data:",
-          response.data
-        );
         if (!response.data) {
           throw new Error("No data received from API");
         }
@@ -81,7 +49,6 @@ export default function ClientPage() {
         toast.error("Failed to load user profile. Please try again.");
         setInviterData(null);
       } finally {
-        console.log("[ClientPage] Finished loading user data");
         setIsLoadingInviterData(false);
       }
     };
@@ -95,11 +62,6 @@ export default function ClientPage() {
   }, [params.username]);
 
   if (isLoadingInviterData || (isSignedIn && !hasLoadedUserData)) {
-    console.log("[ClientPage] Showing loading state:", {
-      isLoadingInviterData,
-      isSignedIn,
-      hasLoadedUserData,
-    });
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -114,14 +76,9 @@ export default function ClientPage() {
   }
 
   const handleSendFriendRequest = async () => {
-    console.log(
-      "[ClientPage] Attempting to send friend request to:",
-      inviterData.user?.id
-    );
     try {
       setIsSendingRequest(true);
       await api.post(`/send-friend-request/${inviterData.user?.id}`);
-      console.log("[ClientPage] Friend request sent successfully");
       toast.success("Friend request sent successfully!");
       router.push(`/`);
     } catch (error) {
@@ -133,26 +90,13 @@ export default function ClientPage() {
   };
 
   const handleAction = async () => {
-    console.log("[ClientPage] handleAction triggered:", {
-      isSignedIn,
-      referrer,
-      currentUser: !!currentUser,
-      inviterData: !!inviterData,
-    });
-
     if (!isSignedIn) {
       const redirectUrl = `/signup?redirect_url=/join/${params.username}&referrer=${params.username}`;
-      console.log(
-        "[ClientPage] User not signed in, redirecting to:",
-        redirectUrl
-      );
       router.push(redirectUrl);
       return;
     } else if (referrer) {
-      console.log("[ClientPage] Handling referral for:", referrer);
       try {
         await api.post(`/handle-referral/${referrer}`);
-        console.log("[ClientPage] Referral handled successfully");
       } catch (error) {
         console.error("[ClientPage] Error handling referral:", error);
       }
