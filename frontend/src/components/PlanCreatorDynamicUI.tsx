@@ -50,6 +50,9 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
   // Handle plan acceptance - uses the plans.py /create-plan endpoint
   const handleAccept = async (data: PlanExtractionsResponse): Promise<void> => {
     try {
+      for (const activity of data.activities ?? []) {
+        await api.post("/upsert-activity", activity);
+      }
       await api.post("/create-plan", data.plan);
       onNext();
       toast.success("Plan created successfully!");
@@ -133,6 +136,11 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
               ? "Specific Dates"
               : "Times Per Week"}
             </p>
+            {data.plan?.outline_type === "times_per_week" && (
+              <p className="text-gray-900">
+                {data.plan?.times_per_week} times per week
+              </p>
+            )}
           </div>
         )}
 
