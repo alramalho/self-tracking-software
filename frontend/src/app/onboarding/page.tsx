@@ -302,6 +302,11 @@ function FourthStep({ onNext }: { onNext: () => void }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [usersInQueue, setUsersInQueue] = useState<UserSearchResult[]>([]);
 
+
+  useEffect(() => {
+    currentUserQuery.refetch()
+  }, []);
+
   const { data: otherProfiles } = useQuery<OtherProfile[]>({
     queryKey: ["otherProfiles", pendingSentFriendRequests, pendingReceivedFriendRequests],
     queryFn: async () => {
