@@ -27,7 +27,7 @@ export default function ClientLayout({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LoggerProvider>
+      {/* <LoggerProvider> */}
         <UserPlanProviderWrapper>
           <ThemeProvider>
             <UpgradeProvider>
@@ -53,7 +53,7 @@ export default function ClientLayout({
             </UpgradeProvider>
           </ThemeProvider>
         </UserPlanProviderWrapper>
-      </LoggerProvider>
+      {/* </LoggerProvider> */}
     </QueryClientProvider>
   );
 }
