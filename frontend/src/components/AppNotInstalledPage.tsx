@@ -30,7 +30,7 @@ const AppNotInstalledPage: React.FC<{ onClose: () => void }> = ({ onClose }) => 
 
   return (
     <>
-      <div className="h-screen w-screen fixed flex z-[60] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto">
+      <div className="h-screen w-screen fixed flex z-[80] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto">
         <button
           data-testid="close-app-install-modal"
             onClick={onClose}
