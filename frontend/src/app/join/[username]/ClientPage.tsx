@@ -20,6 +20,8 @@ export default function ClientPage({
 }: {
   params: { username: string };
 }) {
+  console.log("[ClientPage] Rendering with params:", params);
+
   const router = useRouter();
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery, hasLoadedUserData } = useUserPlan();
@@ -35,19 +37,33 @@ export default function ClientPage({
   const searchParams = useSearchParams();
   const referrer = searchParams.get("referrer");
 
+  console.log("[ClientPage] Current state:", {
+    isSignedIn,
+    hasLoadedUserData,
+    currentUser,
+    isLoadingInviterData,
+    isSendingRequest,
+    referrer
+  });
+
   const areFriends = currentUser?.user?.friend_ids?.includes(
     inviterData?.user?.id || ""
   );
 
   useEffect(() => {
+    console.log("[ClientPage] useEffect triggered for fetching user data");
+    
     const fetchUserData = async () => {
+      console.log("[ClientPage] Fetching user data for username:", params.username);
       try {
         const response = await api.get(`/get-user-profile/${params.username}`);
+        console.log("[ClientPage] Successfully fetched user data:", response.data);
         setInviterData(response.data);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("[ClientPage] Error fetching user data:", error);
         setInviterData(null);
       } finally {
+        console.log("[ClientPage] Finished loading user data");
         setIsLoadingInviterData(false);
       }
     };
@@ -56,6 +72,11 @@ export default function ClientPage({
   }, [params.username]);
 
   if (isLoadingInviterData || (isSignedIn && !hasLoadedUserData)) {
+    console.log("[ClientPage] Showing loading state:", {
+      isLoadingInviterData,
+      isSignedIn,
+      hasLoadedUserData
+    });
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -65,17 +86,20 @@ export default function ClientPage({
   }
 
   if (!inviterData) {
+    console.error("[ClientPage] No inviter data found");
     return <div>Error: User profile not found</div>;
   }
 
   const handleSendFriendRequest = async () => {
+    console.log("[ClientPage] Attempting to send friend request to:", inviterData.user?.id);
     try {
       setIsSendingRequest(true);
       await api.post(`/send-friend-request/${inviterData.user?.id}`);
+      console.log("[ClientPage] Friend request sent successfully");
       toast.success("Friend request sent successfully!");
       router.push(`/`);
     } catch (error) {
-      console.error("Error sending friend request:", error);
+      console.error("[ClientPage] Error sending friend request:", error);
       toast.error("Failed to send friend request. Please try again.");
     } finally {
       setIsSendingRequest(false);
@@ -83,16 +107,20 @@ export default function ClientPage({
   };
 
   const handleAction = async () => {
+    console.log("[ClientPage] handleAction triggered:", { isSignedIn, referrer });
+    
     if (!isSignedIn) {
-      router.push(
-        `/signup?redirect_url=/join/${params.username}&referrer=${params.username}`
-      );
+      const redirectUrl = `/signup?redirect_url=/join/${params.username}&referrer=${params.username}`;
+      console.log("[ClientPage] User not signed in, redirecting to:", redirectUrl);
+      router.push(redirectUrl);
       return;
     } else if (referrer) {
+      console.log("[ClientPage] Handling referral for:", referrer);
       try {
         await api.post(`/handle-referral/${referrer}`);
+        console.log("[ClientPage] Referral handled successfully");
       } catch (error) {
-        console.error("Error handling referral:", error);
+        console.error("[ClientPage] Error handling referral:", error);
       }
     }
     handleSendFriendRequest();
