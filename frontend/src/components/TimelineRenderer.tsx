@@ -7,13 +7,10 @@ import {
   TaggedActivityEntry,
 } from "@/contexts/UserPlanContext";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
-import { format, differenceInDays, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import { differenceInDays, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
-import { useShare } from "@/hooks/useShare";
-import { useClipboard } from "@/hooks/useClipboard";
-import { toast } from "react-hot-toast";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -23,10 +20,10 @@ function isInCurrentWeek(date: string) {
 
 const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
   const { timelineData, hasLoadedTimelineData } = useUserPlan();
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
+  // const { data: userData } = useCurrentUserDataQuery();
   const router = useRouter();
+  // const { isSupported: isShareSupported, share } = useShare();
+  // const [copied, copyToClipboard] = useClipboard();
 
   useEffect(() => {
     timelineData.refetch();
@@ -41,10 +38,66 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
     );
   }
 
+  // if (!userData?.user?.friend_ids?.length) {
+  //   return (
+  //     <div className="text-left text-gray-500">
+  //       You haven&apos;t added any friends yet 🙁
+  //       <br />
+  //       <span className="text-sm text-gray-500">
+  //         Studies show that having accountability partners{" "}
+  //         <span className="font-bold">increases your chances of achieving goals by up to 95%!</span>
+  //         <br />
+  //         <br />
+  //         Add friends to boost your success.
+  //       </span>
+  //       <span className="text-sm text-gray-500">
+  //         <br />
+  //         <br />
+  //         <span
+  //           className="underline cursor-pointer"
+  //           onClick={onOpenSearch}
+  //         >
+  //           Search
+  //         </span>{" "}
+  //         for friends already using tracking.so, or invite new ones by{" "}
+  //         <span
+  //           className="underline cursor-pointer"
+  //           onClick={async () => {
+  //             try {
+  //               const link = `https://app.tracking.so/join/${userData?.user?.username}`;
+  //               if (isShareSupported) {
+  //                 const success = await share(link);
+  //                 if (!success) throw new Error("Failed to share");
+  //               } else {
+  //                 const success = await copyToClipboard(link);
+  //                 if (!success) throw new Error("Failed to copy");
+  //                 toast.success("Copied to clipboard");
+  //               }
+  //             } catch (error) {
+  //               console.error("Failed to copy link to clipboard");
+  //             }
+  //           }}
+  //         >
+  //           sharing your profile link.
+  //         </span>
+  //       </span>
+  //     </div>
+  //   );
+  // }
 
   const sortedEntries = [...(timelineData.data?.recommendedActivityEntries || [])].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
+
+  if (sortedEntries.length === 0) {
+    return (
+      <div className="text-start text-gray-500 pt-2">
+        Your friends have not yet logged anything..
+        <br />
+        Maybe you could help them get motivated?
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
