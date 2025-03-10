@@ -1,12 +1,11 @@
 import { Metadata, ResolvingMetadata } from "next";
-import ClientPage from "./ClientPage";
-import { redirect } from "next/navigation";
+import dynamic from "next/dynamic";
 
 type Props = {
   params: { username: string }
 }
 
-export const dynamic = 'force-dynamic'
+const ClientPage = dynamic(() => import("./ClientPage"), { ssr: false });
 
 export async function generateMetadata(
   { params }: Props,
