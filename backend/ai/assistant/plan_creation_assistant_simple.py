@@ -45,6 +45,10 @@ class ExtractedPlanDetails(BaseModel):
         ...,
         description="Either 'specific' for specific dates or 'times_per_week' for frequency-based plans",
     )
+    times_per_week: Optional[int] = Field(
+        ...,
+        description="The number of times per week the plan should be done. Only include this if the plan_type is 'times_per_week'",
+    )
     sessions: Optional[List[PlanSession]] = Field(
         ...,
         description="Either a list of specific sessions or number of times per week",
@@ -185,6 +189,7 @@ Today is {datetime.now().strftime('%b %d, %Y')}.
                             goal=plan_data.goal,
                             emoji=plan_data.emoji,
                             outline_type=plan_data.plan_type,
+                            times_per_week=plan_data.times_per_week,
                             activity_ids=[activity.id for activity in activities],
                         ),
                         activities=activities,

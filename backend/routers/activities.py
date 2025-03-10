@@ -143,19 +143,23 @@ async def get_recent_activities(user: User = Depends(is_clerk_user)):
 async def upsert_activity(
     activity: dict = Body(...), user: User = Depends(is_clerk_user)
 ):
-    activity_id = activity.get("id")
+    activity_id = activity.get("id", None)
     if activity_id:
-        updated_activity = activities_gateway.update_activity(Activity(**activity))
-        return updated_activity
-    else:
-        new_activity = Activity.new(
-            user_id=user.id,
-            title=activity["title"],
-            measure=activity["measure"],
-            emoji=activity["emoji"],
-        )
-        created_activity = activities_gateway.create_activity(new_activity)
-        return created_activity
+        try:
+            updated_activity = activities_gateway.update_activity(Activity(**activity))
+            return updated_activity
+        except ActivityDoesNotExistException:
+            pass
+    
+    new_activity = Activity.new(
+        id=activity_id,
+        user_id=user.id,
+        title=activity["title"],
+        measure=activity["measure"],
+        emoji=activity["emoji"],
+    )
+    created_activity = activities_gateway.create_activity(new_activity)
+    return created_activity
 
 
 @router.put("/activity-entries/{activity_entry_id}")
