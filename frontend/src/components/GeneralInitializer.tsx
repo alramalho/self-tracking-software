@@ -103,6 +103,7 @@ export default function GeneralInitializer({
     process.env.NEXT_PUBLIC_ENVIRONMENT !== "development" &&
     userData?.user?.email !== process.env.NEXT_PUBLIC_APP_TEST_USER_EMAIL
   ) {
+    console.log("[GeneralInitializer] Showing app not installed modal");
     return (
       <AppNotInstalledPage onClose={() => setIsAppInstallModalClosed(true)} />
     );
