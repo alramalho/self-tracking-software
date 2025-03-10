@@ -75,9 +75,9 @@ export default function Page({ params }: Props) {
   
   try {
     // Redirect to signup with referral info if not signed in
-    const searchParams = new URLSearchParams();
-    searchParams.append("redirect_url", `/join/${params.username}`);
-    searchParams.append("referrer", params.username);
+    // const searchParams = new URLSearchParams();
+    // searchParams.append("redirect_url", `/join/${params.username}`);
+    // searchParams.append("referrer", params.username);
     
     return <ClientPage params={params} />;
   } catch (error) {
