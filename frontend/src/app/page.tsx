@@ -47,9 +47,6 @@ const HomePage: React.FC = () => {
     isSignedIn,
   ]);
 
-  if (!isSignedIn) {
-    router.push("/signin");
-  }
 
   const handleUserClick = (user: UserSearchResult) => {
     router.push(`/profile/${user.username}`);
