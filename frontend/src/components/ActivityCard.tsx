@@ -31,7 +31,7 @@ export const ActivityCard = ({
         )}
       >
         {activity.emoji && (
-          <span className="text-4xl mb-2">{activity.emoji}</span>
+          <span className="text-4xl mb-2 text-left">{activity.emoji}</span>
         )}
         <span className="text-xl font-medium text-left">
           {activity.title}
