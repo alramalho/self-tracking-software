@@ -58,7 +58,7 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
             className="flex flex-col items-left justify-center p-6 rounded-lg border-2 border-dashed border-gray-300 aspect-square hover:bg-gray-50"
           >
             <Plus className="h-8 w-8 text-gray-400 mb-2" />
-            <span className="text-xl font-medium text-center text-gray-500">
+            <span className="text-xl font-medium text-left text-gray-500">
               Add New
             </span>
           </button>
