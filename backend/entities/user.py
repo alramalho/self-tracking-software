@@ -3,6 +3,9 @@ from datetime import datetime, UTC
 from typing import Optional, Dict, Any, List, Literal
 from bson import ObjectId
 
+class DailyCheckinSettings(BaseModel):
+    days: List[Literal["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]] = Field(default_factory=list)
+    time: Optional[Literal["MORNING", "AFTERNOON", "EVENING"]] = None
 
 class User(BaseModel):
     id: str
@@ -14,6 +17,7 @@ class User(BaseModel):
     clerk_id: Optional[str] = None
     language: Optional[str] = "English"
     plan_type: Optional[Literal["free", "plus", "supporter"]] = "free"
+    daily_checkin_settings: Optional[DailyCheckinSettings] = None
     email: str
     created_at: str
     deleted: bool = False

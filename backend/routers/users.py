@@ -657,3 +657,20 @@ async def get_user_plan_type(username: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"plan_type": user.plan_type}
+
+
+@router.post("/user/daily-checkin-settings")
+async def update_daily_checkin_settings(request: Request, user: User = Depends(is_clerk_user)):
+    try:
+        body = await request.json()
+        days = body["days"]
+        time = body["time"]
+        updated_user = users_gateway.update_fields(
+            user.id, {"daily_checkin_settings": {"days": days, "time": time}}
+        )
+        return {"message": "Daily checkin settings updated successfully", "user": updated_user}
+    except Exception as e:
+        logger.error(f"Failed to update daily checkin settings: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+

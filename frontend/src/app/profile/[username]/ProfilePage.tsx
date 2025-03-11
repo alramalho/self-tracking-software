@@ -17,6 +17,7 @@ import {
   Paintbrush,
   ChevronDown,
   SquareArrowUp,
+  Brain,
 } from "lucide-react";
 import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
@@ -74,6 +75,7 @@ import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
 import { twMerge } from "tailwind-merge";
 import { capitalize } from "lodash";
 import { PlanBadge } from "@/components/PlanBadge";
+import AISettings from "@/components/AISettings";
 
 interface PlanStreak {
   emoji: string;
@@ -120,16 +122,14 @@ const ProfilePage: React.FC = () => {
   >("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
-  const userHasAccessToAi = posthog.isFeatureEnabled("ai-bot-access");
   const { share, isSupported: isShareSupported } = useShare();
   const [copied, copyToClipboard] = useClipboard();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showStreakDetails, setShowStreakDetails] = useState(false);
 
-  const { useUserPlanType } = usePaidPlan();
-  const { data: profileUserPlanType } = useUserPlanType(username);
-
+  const { userPaidPlanType } = usePaidPlan();
+  const userHasAccessToAi = userPaidPlanType === "supporter";
   const { setShowUpgradePopover } = useUpgrade();
 
   const colorPalettes = [
@@ -448,23 +448,23 @@ const ProfilePage: React.FC = () => {
               <Avatar
                 className={twMerge(
                   "w-20 h-20",
-                  profileUserPlanType !== "free" &&
+                  userPaidPlanType !== "free" &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  profileUserPlanType === "supporter" && "ring-indigo-500",
-                  profileUserPlanType === "plus" && "ring-blue-500"
+                  userPaidPlanType === "supporter" && "ring-indigo-500",
+                  userPaidPlanType === "plus" && "ring-blue-500"
                 )}
               >
                 <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
                 <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
               </Avatar>
-              {profileUserPlanType && profileUserPlanType !== "free" && (
+              {userPaidPlanType && userPaidPlanType !== "free" && (
                 <div className="absolute -bottom-1 -right-1">
-                  <PlanBadge planType={profileUserPlanType} size={28} />
+                  <PlanBadge planType={userPaidPlanType} size={28} />
                 </div>
               )}
             </div>
           </div>
-          {profileUserPlanType == "supporter" && !isOnesOwnProfile && (
+          {userPaidPlanType == "supporter" && !isOnesOwnProfile && (
             <>
               <div
                 onClick={() => setShowUpgradePopover(true)}
@@ -598,27 +598,25 @@ const ProfilePage: React.FC = () => {
               open={showUserProfile}
               onClose={() => setShowUserProfile(false)}
             >
-              <div className="max-h-[80vh] overflow-y-auto mt-12">
+              <div className="max-h-[80vh] overflow-y-auto mt-12 mb-12">
                 <div className="flex items-center justify-between mb-4">
                   <h1 className="text-2xl font-bold">Settings</h1>
                   <span
                     className={twMerge(
                       "text-xl font-cursive flex items-center gap-2",
-                      profileUserPlanType === "free"
+                      userPaidPlanType === "free"
                         ? "text-gray-500"
-                        : profileUserPlanType === "plus"
+                        : userPaidPlanType === "plus"
                         ? "text-blue-500"
                         : "text-indigo-500"
                     )}
                   >
-                    On {capitalize(profileUserPlanType || "free")} Plan
-                    {profileUserPlanType !== "supporter" && (
-                      <SquareArrowUp
-                        onClick={() => setShowUpgradePopover(true)}
-                        size={20}
-                        className="text-gray-800"
-                      />
-                    )}
+                    On {capitalize(userPaidPlanType || "free")} Plan
+                    <SquareArrowUp
+                      onClick={() => setShowUpgradePopover(true)}
+                      size={20}
+                      className="text-gray-800"
+                    />
                   </span>
                 </div>
                 <Button
@@ -643,6 +641,21 @@ const ProfilePage: React.FC = () => {
                       <UserProfile routing={"hash"} />
                     </AccordionContent>
                   </AccordionItem>
+
+                  {userHasAccessToAi && (
+                    <AccordionItem value="ai-settings" className="border-none">
+                      <AccordionTrigger className="py-2 hover:no-underline">
+                        <div className="flex items-center gap-2">
+                        <Brain size={20} />
+                        <span>AI Settings</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <AISettings/>
+                    </AccordionContent>
+                  </AccordionItem>
+                  )}
+
                 </Accordion>
               </div>
             </AppleLikePopover>
@@ -657,7 +670,7 @@ const ProfilePage: React.FC = () => {
                   {colorPalettes.map((palette) => {
                     const isSelected = currentTheme === palette.color;
                     const isLocked =
-                      profileUserPlanType === "free" &&
+                      userPaidPlanType === "free" &&
                       (palette.color === "random" || palette.color !== "blue");
                     return (
                       <div
@@ -732,7 +745,7 @@ const ProfilePage: React.FC = () => {
                     );
                   })}
                 </div>
-                {profileUserPlanType === "free" && (
+                {userPaidPlanType === "free" && (
                   <Button
                     className="w-full mt-6"
                     onClick={() => {
@@ -750,7 +763,7 @@ const ProfilePage: React.FC = () => {
 
         <div className="relative w-full mb-4">
           <div className="flex flex-wrap w-full justify-center gap-2 cursor-pointer hover:opacity-90 transition-opacity">
-            {isOnesOwnProfile && profileUserPlanType == "supporter" && (
+            {isOnesOwnProfile && userPaidPlanType == "supporter" && (
               <>
                 <div
                   onClick={() => setShowUpgradePopover(true)}

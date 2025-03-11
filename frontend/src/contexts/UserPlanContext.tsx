@@ -65,6 +65,10 @@ export interface User {
   id: string;
   name?: string;
   plan_type: "free" | "plus" | "supporter";
+  daily_checkin_settings?: {
+    days: ("MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN" | "EVERYDAY")[];
+    time: "MORNING" | "AFTERNOON" | "EVENING";
+  };
   picture?: string;
   username?: string;
   email: string;
