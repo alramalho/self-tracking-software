@@ -143,7 +143,7 @@ const BottomNav = () => {
             }}
           >
             {isLoadingInsights ? <Loader2 size={24} className="animate-spin" /> : <ScanFace size={24} strokeWidth={2.5} />}
-            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/insights') ? 'Insights' : ''}</span>
+            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/insights') ? 'AI Insights' : ''}</span>
           </Link>
 
           <Link

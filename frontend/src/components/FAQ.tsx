@@ -1,5 +1,5 @@
 import React from "react";
-import { Brain, PlusSquare, Bell } from "lucide-react";
+import { Brain, PlusSquare, Bell, TrendingUpDown } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -47,12 +47,11 @@ export const FAQ: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <PlusSquare className="w-12 h-12 text-blue-300 shrink-0" />
+                <TrendingUpDown className="w-12 h-12 text-blue-300 shrink-0" />
                 <div>
-                  <h3 className="font-medium">Intelligent Data Management</h3>
+                  <h3 className="font-medium">Insight Correlation</h3>
                   <p className="text-sm text-gray-600">
-                    Ask the AI to help you log your activities or metrics, and
-                    adjust your plans based on your recent progress.
+                    Automatic Mood, Energy, and Productivity tracking with correlation with logged activities.
                   </p>
                 </div>
               </div>

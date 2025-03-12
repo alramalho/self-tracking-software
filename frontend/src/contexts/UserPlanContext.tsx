@@ -64,7 +64,7 @@ export interface MetricEntry {
 export interface User {
   id: string;
   name?: string;
-  plan_type: "free" | "plus" | "supporter";
+  plan_type: "free" | "plus";
   daily_checkin_settings?: {
     days: ("MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN" | "EVERYDAY")[];
     time: "MORNING" | "AFTERNOON" | "EVENING";
@@ -233,6 +233,7 @@ export interface UserPlanContextType {
   useIsMetricLoggedToday: (metricId: string) => boolean;
   hasLoadedUserData: boolean; 
   hasLoadedTimelineData: boolean;
+  hasLoadedMetricsAndEntries: boolean;  
   timelineData: UseQueryResult<TimelineData | null>;
   messagesData: UseQueryResult<{ messages: Message[] }>;
   notificationsData: UseQueryResult<{ notifications: Notification[] }>;
