@@ -7,27 +7,17 @@ import {
   ChartArea,
   Check,
   History,
-  LogOut,
   Settings,
   UserPlus,
   X,
-  Paintbrush,
   SquareArrowUp,
-  Brain,
 } from "lucide-react";
-import { UserProfile } from "@clerk/nextjs";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import {
   convertApiPlanToPlan,
   User,
@@ -61,10 +51,27 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
 import { twMerge } from "tailwind-merge";
-import { capitalize } from "lodash";
 import { PlanBadge } from "@/components/PlanBadge";
-import AISettings from "@/components/AISettings";
 import ColorPalettePickerPopup from "@/components/profile/ColorPalettePickerPopup";
+import StreakDetailsPopover from "@/components/profile/StreakDetailsPopover";
+import ProfileSettingsPopover from "@/components/profile/ProfileSettingsPopover";
+import UserSettingsPopover from "@/components/profile/UserSettingsPopover";
+
+export type TimeRange = "60 Days" | "120 Days" | "180 Days";
+
+// Utility function to convert TimeRange to number of days
+export const getTimeRangeDays = (timeRange: TimeRange): number => {
+  switch (timeRange) {
+    case "60 Days":
+      return 60;
+    case "120 Days":
+      return 120;
+    case "180 Days":
+      return 180;
+    default:
+      return 60;
+  }
+};
 
 interface PlanStreak {
   emoji: string;
@@ -73,14 +80,10 @@ interface PlanStreak {
 
 const ProfilePage: React.FC = () => {
   const { clearProfileNotifications } = useNotifications();
-  const { signOut } = useClerk();
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const {
-    useCurrentUserDataQuery,
-    useUserDataQuery,
-  } = useUserPlan();
+  const { useCurrentUserDataQuery, useUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const params = useParams();
   const username = params.username as string;
@@ -99,21 +102,15 @@ const ProfilePage: React.FC = () => {
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
     string | null
   >(null);
-  const posthog = usePostHog();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [timeRange, setTimeRange] = useState<
-    "60 Days" | "120 Days" | "180 Days"
-  >("60 Days");
+  
+  const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
   const { share, isSupported: isShareSupported } = useShare();
   const [copied, copyToClipboard] = useClipboard();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
-  const [showColorPalette, setShowColorPalette] = useState(false);
   const [showStreakDetails, setShowStreakDetails] = useState(false);
-
   const { userPaidPlanType } = usePaidPlan();
-  const userHasAccessToAi = userPaidPlanType === "supporter";
   const { setShowUpgradePopover } = useUpgrade();
 
   useEffect(() => {
@@ -193,11 +190,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    signOut();
-    posthog.reset();
-  };
-
   const activitiesNotInPlans = useMemo(() => {
     const planActivityIds = new Set(
       profileData?.plans?.flatMap((plan) => plan.activity_ids) || []
@@ -211,9 +203,7 @@ const ProfilePage: React.FC = () => {
     );
   }, [profileData?.plans, activities, activityEntries]);
 
-  const handleTimeRangeChange = (
-    value: "60 Days" | "120 Days" | "180 Days"
-  ) => {
+  const handleTimeRangeChange = (value: TimeRange) => {
     setTimeRange(value);
     setEndDate(new Date());
     // Force a recalculation by closing and reopening the streak details if it's open
@@ -232,8 +222,6 @@ const ProfilePage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-
-
   const calculateWeekStreaks = (): PlanStreak[] => {
     if (!profileData?.plans) {
       return [];
@@ -244,8 +232,7 @@ const ProfilePage: React.FC = () => {
     // Calculate date range based on selected timeRange
     const now = new Date();
     const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 });
-    const daysToSubtract =
-      timeRange === "60 Days" ? 60 : timeRange === "120 Days" ? 120 : 180;
+    const daysToSubtract = getTimeRangeDays(timeRange);
     const rangeStartDate = subDays(now, daysToSubtract);
 
     profileData.plans.forEach((plan) => {
@@ -418,7 +405,7 @@ const ProfilePage: React.FC = () => {
             </div>
             {!isOnesOwnProfile && !isFriend() && (
               <>
-              {hasPendingReceivedFriendRequest() ? (
+                {hasPendingReceivedFriendRequest() ? (
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-sm text-muted-foreground">
                       has sent you a friend request
@@ -500,86 +487,15 @@ const ProfilePage: React.FC = () => {
                 className="cursor-pointer"
                 onClick={() => setShowUserProfile(true)}
               />
-              <Paintbrush
-                size={24}
-                className="cursor-pointer"
-                onClick={() => setShowColorPalette(true)}
-              />
             </div>
           )}
         </div>
 
         {isOnesOwnProfile && (
           <>
-            <AppleLikePopover
+            <ProfileSettingsPopover
               open={showUserProfile}
               onClose={() => setShowUserProfile(false)}
-            >
-              <div className="max-h-[80vh] overflow-y-auto mt-12 mb-12">
-                <div className="flex items-center justify-between mb-4">
-                  <h1 className="text-2xl font-bold">Settings</h1>
-                  <span
-                    className={twMerge(
-                      "text-xl font-cursive flex items-center gap-2",
-                      userPaidPlanType === "free"
-                        ? "text-gray-500"
-                        : userPaidPlanType === "plus"
-                        ? "text-blue-500"
-                        : "text-indigo-500"
-                    )}
-                  >
-                    On {capitalize(userPaidPlanType || "free")} Plan
-                    <SquareArrowUp
-                      onClick={() => setShowUpgradePopover(true)}
-                      size={20}
-                      className="text-gray-800"
-                    />
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="w-full mb-4 flex items-center justify-between px-0"
-                >
-                  <div className="flex items-center gap-2">
-                    <LogOut size={20} />
-                    <span>Logout</span>
-                  </div>
-                </Button>
-                <Accordion type="single" collapsible>
-                  <AccordionItem value="user-settings" className="border-none">
-                    <AccordionTrigger className="py-2 hover:no-underline">
-                      <div className="flex items-center gap-2">
-                        <Settings size={20} />
-                        <span>User Settings</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <UserProfile routing={"hash"} />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  {userHasAccessToAi && (
-                    <AccordionItem value="ai-settings" className="border-none">
-                      <AccordionTrigger className="py-2 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                        <Brain size={20} />
-                        <span>AI Settings</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <AISettings/>
-                    </AccordionContent>
-                  </AccordionItem>
-                  )}
-
-                </Accordion>
-              </div>
-            </AppleLikePopover>
-
-            <ColorPalettePickerPopup
-              open={showColorPalette}
-              onClose={() => setShowColorPalette(false)}
             />
           </>
         )}
@@ -641,132 +557,12 @@ const ProfilePage: React.FC = () => {
               ))}
           </div>
 
-          <AppleLikePopover
+          <StreakDetailsPopover
             open={showStreakDetails}
             onClose={() => setShowStreakDetails(false)}
-            title="Streak Details"
-          >
-            <div className="p-4 space-y-6">
-              <h3 className="text-xl font-semibold mb-4">
-                🔥 Streak Breakdown
-              </h3>
-
-              <div className="space-y-4">
-                {profileData.plans?.map((plan) => {
-                  // Filter activities and entries for this plan
-                  const planActivities = activities.filter(
-                    (activity) =>
-                      plan.activity_ids?.includes(activity.id) ?? false
-                  );
-                  const planActivityEntries = activityEntries.filter(
-                    (entry) =>
-                      plan.activity_ids?.includes(entry.activity_id) ?? false
-                  );
-
-                  // Calculate score for this plan
-                  const now = new Date();
-                  const currentWeekStart = startOfWeek(now, {
-                    weekStartsOn: 0,
-                  });
-                  const daysToSubtract =
-                    timeRange === "60 Days"
-                      ? 60
-                      : timeRange === "120 Days"
-                      ? 120
-                      : 180;
-                  const rangeStartDate = subDays(now, daysToSubtract);
-
-                  let weekStart = startOfWeek(rangeStartDate, {
-                    weekStartsOn: 0,
-                  });
-                  let planScore = 0;
-                  let completedWeeks = 0;
-                  let incompleteWeeks = 0;
-
-                  while (weekStart < currentWeekStart) {
-                    const convertedPlan = convertApiPlanToPlan(
-                      plan,
-                      planActivities
-                    );
-                    const wasCompleted = isWeekCompleted(
-                      weekStart,
-                      convertedPlan,
-                      planActivityEntries
-                    );
-
-                    if (wasCompleted) {
-                      planScore += 1;
-                      completedWeeks += 1;
-                      // Reset buffer when a week is completed
-                      incompleteWeeks = 0;
-                    } else {
-                      incompleteWeeks += 1;
-                      // Only decrease score if we've missed more than one week (buffer week)
-                      if (incompleteWeeks > 1) {
-                        planScore = Math.max(0, planScore - 1);
-                      }
-                    }
-
-                    weekStart = new Date(
-                      weekStart.getTime() + 7 * 24 * 60 * 60 * 1000
-                    );
-                  }
-
-                  if (
-                    planScore === 0 &&
-                    completedWeeks === 0 &&
-                    incompleteWeeks === 0
-                  ) {
-                    return null;
-                  }
-
-                  return (
-                    <div
-                      key={plan.id}
-                      className="p-4 border rounded-lg bg-white/50"
-                    >
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-2xl">{plan.emoji}</span>
-                        <h4 className="font-medium">{plan.goal}</h4>
-                      </div>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <p>• Completed weeks: {completedWeeks}</p>
-                        <p>• Incomplete weeks: {incompleteWeeks}</p>
-                        <p>• Current streak score: {planScore}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium mb-2">
-                  How streaks are calculated:
-                </h4>
-                <ul className="text-sm text-gray-600 space-y-2">
-                  <li>• Each completed week adds +1 to your streak</li>
-                  <li>• You have a 1-week buffer when you miss a week.</li>
-                  <li>
-                    • After the buffer week, each additional incomplete week
-                    subtracts -1 from your streak
-                  </li>
-                  <li>• Streak score cannot go below 0</li>
-                  <li>
-                    • Current week is not counted (as it is still in progress)
-                  </li>
-                </ul>
-                <br />
-                <br />
-                <p className="text-sm text-gray-600">
-                  The goal of the streaks is to motivate you to keep consistent!
-                  Without over-stressing or demotivating when you fail.
-                  <br />
-                  That&apos;s why you have a 1-week buffer when you miss a week
-                  :) We all have off weeks!
-                </p>
-              </div>
-            </div>
-          </AppleLikePopover>
+            timeRange={timeRange}
+            onTimeRangeChange={handleTimeRangeChange}
+          />
         </div>
 
         <Tabs defaultValue="plans" className="w-full mb-2">
@@ -804,14 +600,7 @@ const ProfilePage: React.FC = () => {
                     plan={convertApiPlanToPlan(plan, activities)}
                     activities={activities}
                     activityEntries={activityEntries}
-                    startDate={subDays(
-                      new Date(),
-                      timeRange === "60 Days"
-                        ? 60
-                        : timeRange === "120 Days"
-                        ? 120
-                        : 180
-                    )}
+                    startDate={subDays(new Date(), getTimeRangeDays(timeRange))}
                   />
                 </div>
               ))}
@@ -819,21 +608,21 @@ const ProfilePage: React.FC = () => {
                 <div className="flex flex-row gap-4 justify-between items-center">
                   <span className="text-sm text-gray-500">Time range</span>
                   <div className="flex self-center">
-                  <select
-                    className="p-2 border rounded-md font-medium text-gray-800"
-                    value={timeRange}
-                    onChange={(e) =>
-                      handleTimeRangeChange(
-                        e.target.value as "60 Days" | "120 Days" | "180 Days"
-                      )
-                    }
-                  >
-                    <option value="60 Days">Since 60 days ago</option>
-                    <option value="120 Days">Since 120 days ago</option>
-                    <option value="180 Days">Since 180 days ago</option>
-                  </select>
+                    <select
+                      className="p-2 border rounded-md font-medium text-gray-800"
+                      value={timeRange}
+                      onChange={(e) =>
+                        handleTimeRangeChange(
+                          e.target.value as "60 Days" | "120 Days" | "180 Days"
+                        )
+                      }
+                    >
+                      <option value="60 Days">Since 60 days ago</option>
+                      <option value="120 Days">Since 120 days ago</option>
+                      <option value="180 Days">Since 180 days ago</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
               )}
               {(!profileData.plans || profileData.plans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
@@ -948,16 +737,6 @@ const ProfilePage: React.FC = () => {
           onClose={() => setShowEditActivityEntry(null)}
         />
       )}
-      <ConfirmDialog
-        isOpen={showLogoutConfirm}
-        onClose={() => setShowLogoutConfirm(false)}
-        onConfirm={handleLogout}
-        title="Confirm Logout"
-        description="Are you sure you want to log out?"
-        confirmText="Logout"
-        cancelText="Cancel"
-        variant="destructive"
-      />
     </div>
   );
 };
