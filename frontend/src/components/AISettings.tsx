@@ -37,7 +37,7 @@ const CheckinButton = ({
 }) => {
   return (
     <button
-      className={`bg-gray-50 gap-2 rounded-lg text-left flex flex-col w-full aspect-square items-start p-4 justify-center border-2 border-dashed border-gray-300 text-gray-500`}
+      className={`bg-gray-50 gap-2 rounded-lg text-left flex flex-col w-full items-start p-4 justify-center border-2 border-dashed border-gray-300 text-gray-500`}
       onClick={onClick}
     >
       <span className="text-lg text-gray-400">{title}</span>
@@ -62,7 +62,7 @@ const Card = ({
 
   return (
     <button
-      className={`relative gap-2 rounded-lg text-left flex flex-col w-full aspect-square items-start p-4 justify-center border-2 ${variants.card.selected.border} ${variants.card.selected.bg} text-gray-500`}
+      className={`relative gap-2 rounded-lg text-left flex flex-col w-full items-start p-4 justify-center border-2 ${variants.card.selected.border} ${variants.card.selected.bg} text-gray-500`}
       onClick={onClick}
     >
       <span className="text-2xl">{emoji}</span>
@@ -90,40 +90,43 @@ export default function AISettings() {
   };
 
   return (
-    <div className="flex flex-row flex-nowrap gap-4">
-      {user?.daily_checkin_settings != undefined ? (
-        <Card
-          emoji="☀️"
-          title="Recurrent Checkin"
-          content={
-            <>
-              <ul className="list-disc list-inside">
-                <li>{formatList(user.daily_checkin_settings.days)}</li>
-                <li>In the {capitalize(user.daily_checkin_settings.time)}</li>
-              </ul>
-            </>
-          }
-          onClick={() => setIsRecurrentCheckinOpen(true)}
-        />
-      ) : (
+    <>
+      <h1 className="text-2xl font-bold my-4">AI Settings</h1>
+      <div className="flex flex-col flex-nowrap gap-4">
+        {user?.daily_checkin_settings != undefined ? (
+          <Card
+            emoji="☀️"
+            title="Recurrent Checkin"
+            content={
+              <>
+                <ul className="list-disc list-inside">
+                  <li>{formatList(user.daily_checkin_settings.days)}</li>
+                  <li>In the {capitalize(user.daily_checkin_settings.time)}</li>
+                </ul>
+              </>
+            }
+            onClick={() => setIsRecurrentCheckinOpen(true)}
+          />
+        ) : (
+          <CheckinButton
+            title="Recurrent Checkin"
+            onClick={() => setIsRecurrentCheckinOpen(true)}
+          />
+        )}
         <CheckinButton
-          title="Recurrent Checkin"
-          onClick={() => setIsRecurrentCheckinOpen(true)}
+          title="Long term Checkin"
+          onClick={() => setIsLongTermCheckinOpen(true)}
         />
-      )}
-      <CheckinButton
-        title="Long term Checkin"
-        onClick={() => setIsLongTermCheckinOpen(true)}
-      />
 
-      <RecurrentCheckinPopover
-        open={isRecurrentCheckinOpen}
-        onClose={() => setIsRecurrentCheckinOpen(false)}
-      />
-      <LongTermCheckinPopover
-        open={isLongTermCheckinOpen}
-        onClose={() => setIsLongTermCheckinOpen(false)}
-      />
-    </div>
+        <RecurrentCheckinPopover
+          open={isRecurrentCheckinOpen}
+          onClose={() => setIsRecurrentCheckinOpen(false)}
+        />
+        <LongTermCheckinPopover
+          open={isLongTermCheckinOpen}
+          onClose={() => setIsLongTermCheckinOpen(false)}
+        />
+      </div>
+    </>
   );
 }
