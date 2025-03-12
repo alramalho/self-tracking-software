@@ -8,6 +8,20 @@ import { Checkbox } from "./ui/checkbox";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { motion } from "framer-motion";
+
+const waveVariants = {
+  initial: { rotate: 0 },
+  wave: {
+    rotate: [0, 25, -15, 25, -15, 0],
+    transition: {
+      delay: 1,
+      duration: 1.5,
+      times: [0, 0.2, 0.4, 0.6, 0.8, 1],
+      ease: "easeInOut",
+    },
+  },
+};
 
 type QuestionsChecks = Record<string, string>;
 
@@ -19,6 +33,7 @@ export interface BaseExtractionResponse {
 
 export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   initialMessage: string;
+  questionPrefix?: string;
   questionsChecks: QuestionsChecks;
   onSubmit: (text: string) => Promise<T>;
   shouldRenderChildren?: boolean;
@@ -28,10 +43,12 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   creationMessage?: string;
   placeholder?: string;
   title?: string;
+  wave?: boolean;
 };
 
 export function DynamicUISuggester<T extends BaseExtractionResponse>({
   initialMessage,
+  questionPrefix = "Be sure to mention:",
   questionsChecks,
   onSubmit,
   renderChildren,
@@ -41,6 +58,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   creationMessage = "Do you want me to process this for you?",
   placeholder = "You can also record a voice message if you prefer",
   title,
+  wave = false,
 }: DynamicUISuggesterProps<T>) {
   const [text, setText] = useState("");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
@@ -76,7 +94,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     onSuccess: (data) => {
       // Store the extracted data
       setExtractedData(data);
-      
+
       // First checkbox animation - using optional chaining for safety
       if (data.question_checks) {
         Object.keys(data.question_checks).forEach((key, index) => {
@@ -99,7 +117,9 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
       // Then show extracted data after checkboxes
       const totalCheckboxDelay =
-        (data.question_checks ? Object.keys(data.question_checks).length : 0) * 150 + 300;
+        (data.question_checks ? Object.keys(data.question_checks).length : 0) *
+          150 +
+        300;
 
       setTimeout(() => {
         setIsLoading(false);
@@ -133,7 +153,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
   const handleAccept = async () => {
     if (!extractedData || !onAccept) return;
-    
+
     setIsSubmitting(true);
     try {
       await onAccept(extractedData);
@@ -150,7 +170,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     if (!extractedData || !onReject) {
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       await onReject(rejectionFeedback, extractedData);
@@ -166,137 +186,121 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     setText(value);
   };
 
-  const renderedChildren = renderChildren && extractedData && renderChildren(extractedData);
+  const renderedChildren =
+    renderChildren && extractedData && renderChildren(extractedData);
 
   return (
     <>
+      <div className="space-y-4 overflow-y-auto">
+        <Toaster position="top-center" closeButton duration={12000} />
 
-        <div
-          className="space-y-4 overflow-y-auto"
-        >
-          <Toaster position="top-center" closeButton duration={12000} />
+        {title && (
+          <>
+            <h2 className="text-lg font-semibold text-gray-700 m-4 mt-6 text-center">
+              {title}
+            </h2>
+          </>
+        )}
 
-          {title && (
-            <>
-              <h2
-                className="text-sm text-gray-500 m-4 mt-6 text-center"
-              >
-                {title}
-              </h2>
-            </>
-          )}
-
-          <div>
-            <ScanFace size={100} className="mx-auto text-blue-500" />
-          </div>
-
-          <p
-            className="text-center text-lg font-semibold"
-          >
-            {initialMessage}
-          </p>
-
-          <div className="w-full px-4">
-            <TextAreaWithVoice
-              value={text}
-              onChange={handleTextChange}
-              placeholder={placeholder}
-            />
-          </div>
-
-          <div className="px-4">
-            <Button
-              className="w-full"
-              onClick={() => submitMutation.mutateAsync(text)}
-              disabled={isLoading}
-              loading={isLoading}
+        <div className="relative w-fit mx-auto">
+          <ScanFace size={100} className="mx-auto text-blue-500" />
+          {wave && (
+            <motion.span
+              className="absolute bottom-[9px] left-[-40px] text-5xl"
+              initial="initial"
+              animate="wave"
+              variants={waveVariants}
+              style={{ transformOrigin: "90% 90%" }}
             >
-              Submit
-            </Button>
-          </div>
-
-          <div
-            ref={checkboxesRef}
-            className="space-y-3 mt-12 px-4"
-          >
-            <p className="text-sm text-gray-500">
-              Be sure to mention:
-            </p>
-            {Object.keys(questionsChecks).map((key) => (
-              <div
-                key={key}
-                className="flex items-center space-x-2"
-              >
-                <Checkbox checked={checkedItems[key] || false} disabled />
-                <label className="text-sm text-gray-700">{key}</label>
-              </div>
-            ))}
-          </div>
-
-          {extractedData && (
-            <div
-              ref={extractedDataRef}
-              className="opacity-100"
-            >              
-              {renderChildren && shouldRenderChildren && renderedChildren}
-            </div>
-          )}
-
-          {extractedData && shouldRenderChildren && (onAccept || onReject) && (
-            <div
-              ref={actionsRef}
-            >
-              <div className="text-sm text-gray-500 mt-8 text-left w-full px-4 mt-4">
-                <p className="flex flex-row gap-2">
-                  <ScanFace size={24} />
-                  {creationMessage ?? "Do you want me to process this for you?"}
-                </p>
-              </div>
-              <div className="flex flex-row gap-2 justify-center mt-4">
-                {onReject && (
-                  <Button
-                    variant="outline"
-                    className="w-full flex items-center gap-2 text-red-600"
-                    onClick={() => setRejectionFeedbackOpen(true)}
-                    disabled={isSubmitting}
-                  >
-                    <X className="w-6 h-6" />
-                    Reject
-                  </Button>
-                )}
-                {onAccept && (
-                  <Button
-                    variant="outline"
-                    className="w-full flex items-center gap-2 text-green-600"
-                    onClick={handleAccept}
-                    disabled={isSubmitting}
-                    loading={isSubmitting}
-                  >
-                    <Check className="w-6 h-6" />
-                    Accept
-                  </Button>
-                )}
-              </div>
-            </div>
+              👋
+            </motion.span>
           )}
         </div>
+
+        <p className="text-center text-lg font-semibold">{initialMessage}</p>
+
+        <div ref={checkboxesRef} className="space-y-3 mt-12 px-4">
+          <p className="text-sm text-gray-500">{questionPrefix}</p>
+          {Object.keys(questionsChecks).map((key) => (
+            <div key={key} className="flex items-center space-x-2">
+              <Checkbox checked={checkedItems[key] || false} disabled />
+              <label className="text-sm text-gray-700">{key}</label>
+            </div>
+          ))}
+        </div>
+
+        <div className="w-full px-4">
+          <TextAreaWithVoice
+            value={text}
+            onChange={handleTextChange}
+            placeholder={placeholder}
+          />
+        </div>
+
+        <div className="px-4">
+          <Button
+            className="w-full"
+            onClick={() => submitMutation.mutateAsync(text)}
+            disabled={isLoading}
+            loading={isLoading}
+          >
+            Submit
+          </Button>
+        </div>
+
+        {extractedData && (
+          <div ref={extractedDataRef} className="opacity-100">
+            {renderChildren && shouldRenderChildren && renderedChildren}
+          </div>
+        )}
+
+        {extractedData && shouldRenderChildren && (onAccept || onReject) && (
+          <div ref={actionsRef}>
+            <div className="text-sm text-gray-500 mt-8 text-left w-full px-4 mt-4">
+              <p className="flex flex-row gap-2">
+                <ScanFace size={24} />
+                {creationMessage ?? "Do you want me to process this for you?"}
+              </p>
+            </div>
+            <div className="flex flex-row gap-2 justify-center mt-4">
+              {onReject && (
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center gap-2 text-red-600"
+                  onClick={() => setRejectionFeedbackOpen(true)}
+                  disabled={isSubmitting}
+                >
+                  <X className="w-6 h-6" />
+                  Reject
+                </Button>
+              )}
+              {onAccept && (
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center gap-2 text-green-600"
+                  onClick={handleAccept}
+                  disabled={isSubmitting}
+                  loading={isSubmitting}
+                >
+                  <Check className="w-6 h-6" />
+                  Accept
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       <AppleLikePopover
         open={rejectionFeedbackOpen}
         onClose={() => setRejectionFeedbackOpen(false)}
       >
-        <div
-          className="space-y-4"
-        >
-          <h2
-            className="text-sm text-gray-500 m-4 mt-6 text-center"
-          >
+        <div className="space-y-4">
+          <h2 className="text-sm text-gray-500 m-4 mt-6 text-center">
             Why not?
           </h2>
 
-          <div
-            className="px-4 w-full"
-          >
+          <div className="px-4 w-full">
             <TextAreaWithVoice
               value={rejectionFeedback}
               onChange={(value) => setRejectionFeedback(value)}
@@ -304,9 +308,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             />
           </div>
 
-          <div
-            className="px-4"
-          >
+          <div className="px-4">
             <Button
               className="w-full"
               onClick={handleRejection}
@@ -320,4 +322,4 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       </AppleLikePopover>
     </>
   );
-} 
+}

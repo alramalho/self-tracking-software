@@ -179,7 +179,8 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
 
   return (
     <DynamicUISuggester<PlanExtractionsResponse>
-      initialMessage="Great! Let's create a plan for you. What do you want to achieve?"
+      title="Great, now let's create a plan for you."
+      initialMessage="What do you want to achieve?"
       questionsChecks={questionChecks}
       onSubmit={handleSubmit}
       onAccept={handleAccept}
@@ -188,7 +189,6 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
       renderChildren={renderExtractedData}
       creationMessage="Do you want me to create this plan for you? (You can edit it later)"
       placeholder="e.g. I want to read 12 books this year"
-      title="Create Your Plan"
     />
   );
 }
