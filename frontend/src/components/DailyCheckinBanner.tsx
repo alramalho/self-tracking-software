@@ -15,8 +15,8 @@ import {
   DynamicUISuggester,
   BaseExtractionResponse,
 } from "./DynamicUISuggester";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import AppleLikePopover from "./AppleLikePopover";
+import { useDailyCheckin } from "@/hooks/useDailyCheckin";
 
 export const getRelativeDate = (date: Date) => {
   const today = new Date();
@@ -37,41 +37,61 @@ interface DailyCheckinExtractionsResponse extends BaseExtractionResponse {
   message: string;
 }
 
-export function DailyCheckinBanner() {
+export function DailyCheckinBanner({
+  open,
+  onClose,
+  initialMessage,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialMessage?: string;
+}) {
   const now = new Date();
   const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const timeString = `${hours % 12 || 12}:${minutes
+    .toString()
+    .padStart(2, "0")}${hours >= 12 ? "pm" : "am"}`;
   const isAfter4PM = hours >= 16;
 
   const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserQuery;
+  const user = userData?.user;
   const activities = userData?.activities || [];
   const api = useApiWithAuth();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics;
 
-  const [lastInteractionDatetime, setLastInteractionDatetime] = useLocalStorage<
-    string | null
-  >("lastCheckinDatetime", null);
+  const { markAsSubmitted } = useDailyCheckin();
 
-  const [open, setIsOpen] = useState(() => {
-    if (!lastInteractionDatetime) return true;
-    const lastInteraction = new Date(lastInteractionDatetime);
-    const today = new Date();
-    return lastInteraction.toDateString() !== today.toDateString();
-  });
+  function toAdjective(title: string) {
+    switch (title) {
+      case "Productivity":
+        return "productive";
+      case "Energy":
+        return "energetic";
+      case "Mood":
+        return "happy";
+      case "Happiness":
+        return "happy";
+      default:
+        return "well";
+    }
+  }
 
   const questionsChecks = {
+    "what did you do today":
+      "what has the user done today",
     ...metrics?.reduce(
-      (acc, m) => ({
+      (acc, m, i, arr) => ({
         ...acc,
-        [`Your ${m.title} today on a scale of 1-5`]: `the user mentioned their ${m.title} metric`,
+        [`How ${arr.map(m => toAdjective(m.title)).join(" / ")} did you feel today (out of 5), and why`]: 
+          `wether the user mentioned their ${arr.map(m => m.title).join(" / ")} metrics (out of 5)`,
       }),
       {}
     ),
-    "what have you done today (and for how long)":
-      "what has the user done today",
   };
 
   const logMetricMutation = useMutation({
@@ -129,6 +149,7 @@ export function DailyCheckinBanner() {
     currentUserQuery.refetch();
 
     hotToast.success("Daily checkin done! Come back tomorrow!");
+    markAsSubmitted();
   };
 
   // Handle rejection action
@@ -144,8 +165,8 @@ export function DailyCheckinBanner() {
     });
 
     hotToast.success("Thank you for your input. We'll do better next time!");
-    setLastInteractionDatetime(new Date().toISOString());
-    setIsOpen(false);
+    markAsSubmitted();
+    onClose();
   };
 
   // Render the extracted data
@@ -214,20 +235,21 @@ export function DailyCheckinBanner() {
     <AppleLikePopover
       open={open}
       onClose={() => {
-        setLastInteractionDatetime(new Date().toISOString());
-        setIsOpen(false);
+        onClose();
       }}
     >
       <DynamicUISuggester<DailyCheckinExtractionsResponse>
+        title={`Hey ${user?.username}! It's ${timeString}!`}
         initialMessage={
-          isAfter4PM ? "How was your day?" : "How are you feeling today?"
+          initialMessage || (isAfter4PM ? "How was your day?" : "How are you feeling today?")
         }
+        questionPrefix="I'd like to know:"
         questionsChecks={questionsChecks}
         onSubmit={handleSubmit}
         renderChildren={renderExtractedData}
         onAccept={handleAccept}
         onReject={handleRejection}
-        title="Daily checkin time! 😊"
+        wave={true}
       />
     </AppleLikePopover>
   );

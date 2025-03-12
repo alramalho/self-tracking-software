@@ -104,7 +104,7 @@ const HomePage: React.FC = () => {
         </div>
       </AppleLikePopover>
 
-      <DailyCheckinBanner/>
+      {/* <DailyCheckinBanner/> */}
     </div>
   );
 };
