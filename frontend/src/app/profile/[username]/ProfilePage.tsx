@@ -354,7 +354,6 @@ const ProfilePage: React.FC = () => {
                   "w-20 h-20",
                   userPaidPlanType !== "free" &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  userPaidPlanType === "supporter" && "ring-indigo-500",
                   userPaidPlanType === "plus" && "ring-blue-500"
                 )}
               >
@@ -368,7 +367,7 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
           </div>
-          {userPaidPlanType == "supporter" && !isOnesOwnProfile && (
+          {userPaidPlanType == "plus" && !isOnesOwnProfile && (
             <>
               <div
                 onClick={() => setShowUpgradePopover(true)}
@@ -502,7 +501,7 @@ const ProfilePage: React.FC = () => {
 
         <div className="relative w-full mb-4">
           <div className="flex flex-wrap w-full justify-center gap-2 cursor-pointer hover:opacity-90 transition-opacity">
-            {isOnesOwnProfile && userPaidPlanType == "supporter" && (
+            {isOnesOwnProfile && userPaidPlanType == "plus" && (
               <>
                 <div
                   onClick={() => setShowUpgradePopover(true)}

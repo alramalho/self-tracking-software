@@ -13,14 +13,12 @@ interface MetricSelectorProps {
   metrics: Metric[];
   selectedMetricId: string | null;
   onMetricSelect: (metricId: string) => void;
-  onAddMetricClick: () => void;
 }
 
 export function MetricSelector({
   metrics,
   selectedMetricId,
   onMetricSelect,
-  onAddMetricClick,
 }: MetricSelectorProps) {
   return (
     <div className="flex items-center justify-between">
@@ -37,14 +35,6 @@ export function MetricSelector({
           </Button>
         ))}
       </div>
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={onAddMetricClick}
-        className="ml-2"
-      >
-        <Plus className="h-4 w-4" />
-      </Button>
     </div>
   );
 } 

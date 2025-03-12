@@ -31,6 +31,7 @@ import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { useUpgrade } from "@/contexts/UpgradeContext";
 
 type OtherProfile = {
   user: {
@@ -243,14 +244,26 @@ function FourthStepCard({
   secondaryText?: string;
   secondaryOnClick?: () => void;
   onClick: () => void;
-  color?: string;
+  color?: "blue" | "gradient";
 }) {
+  const buttonClasses = color === "gradient" 
+    ? "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+    : "bg-blue-500 hover:bg-blue-600";
+
+  const textClasses = color === "gradient"
+    ? "text-purple-500"
+    : "text-blue-500";
+
+  const ringClasses = color === "gradient"
+    ? "ring-2 ring-purple-500/20" 
+    : "ring-2 ring-blue-500/20";
+
   return (
     <Card
-      className={`p-6 relative overflow-hidden ring-2 ring-${color}-500/20 rounded-2xl`}
+      className={`p-6 relative overflow-hidden ${ringClasses} rounded-2xl`}
     >
       <div className="flex flex-row no-wrap gap-2 items-center">
-        <div className={`rounded-full text-${color}-500 mr-2`}>{icon}</div>
+        <div className={`rounded-full ${textClasses} mr-2`}>{icon}</div>
         <h3 className="text-xl font-semibold">{title}</h3>
       </div>
       <div className="mt-6 space-y-3">{description}</div>
@@ -258,14 +271,14 @@ function FourthStepCard({
         <Button
           variant="outline"
           onClick={secondaryOnClick}
-          className={`w-full mt-6 text-${color}-500 hover:text-${color}-600 rounded-xl`}
+          className={`w-full mt-6 ${textClasses} hover:opacity-80 rounded-xl`}
         >
           {secondaryText}
         </Button>
       )}
       <Button
         onClick={onClick}
-        className={`w-full mt-2 bg-${color}-500 hover:bg-${color}-600 rounded-xl`}
+        className={`w-full mt-2 ${buttonClasses} text-white rounded-xl`}
       >
         {buttonText}
       </Button>
@@ -298,7 +311,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
   const { isSupported: isShareSupported, share } = useShare();
   const api = useApiWithAuth();
   const [copied, copyToClipboard] = useClipboard();
-  const [open, setOpen] = useState(false);
+  const {setShowUpgradePopover} = useUpgrade();
   const [searchOpen, setSearchOpen] = useState(false);
   const [usersInQueue, setUsersInQueue] = useState<UserSearchResult[]>([]);
 
@@ -434,20 +447,9 @@ function FourthStep({ onNext }: { onNext: () => void }) {
             title="Use our AI coach"
             description="Get personalized suggestions and support from our AI coach"
             buttonText="Try for free"
-            onClick={() => {
-              window.open(
-                "https://buy.stripe.com/5kA1721cVe3fftK145",
-                "_blank"
-              );
-            }}
-            color="indigo"
+            onClick={() => setShowUpgradePopover(true)}
+            color="gradient"
           />
-          <p
-            className="text-sm text-gray-500 mx-auto w-full text-center mt-2 underline italic cursor-pointer"
-            onClick={() => setOpen(true)}
-          >
-            Learn more about our plans
-          </p>
         </div>
       </div>
 
@@ -610,7 +612,6 @@ function FourthStep({ onNext }: { onNext: () => void }) {
         )}
         <UserSearch onUserClick={(user) => toggleUserInQueue(user)} />
       </AppleLikePopover>
-      <UpgradePopover open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }

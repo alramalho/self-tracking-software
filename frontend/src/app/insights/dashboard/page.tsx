@@ -57,6 +57,65 @@ export default function InsightsDashboardPage() {
   const api = useApiWithAuth();
   const { maxMetrics } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
+  const hasLoadedMetricsAndEntries = metricsAndEntriesQuery.isSuccess && !!metricsAndEntriesData;
+  const { userPaidPlanType } = usePaidPlan();
+
+  const addMetric = async ({title, emoji}: {title: string, emoji: string}) => {
+    try {
+
+      await api.post("/metrics", {
+        title,
+        emoji,
+      });
+
+      metricsAndEntriesQuery.refetch();
+      setIsAddMetricOpen(false);
+      setSelectedNewMetric(null);
+      toast.success("Metric added successfully");
+    } catch (error) {
+      console.error("Error creating metric:", error);
+      toast.error("Failed to add metric");
+    } finally {
+      setIsCreatingMetric(false);
+    }
+  };
+
+  const addDefaultMetrics = async () => {
+    const hasProductivity = userMetrics.find((m) => m.title === "Productivity");
+    const hasEnergy = userMetrics.find((m) => m.title === "Energy"); 
+    const hasHappiness = userMetrics.find((m) => m.title === "Happiness");
+
+    if (!hasProductivity) {
+      const productivityMetric = defaultMetrics.find((m) => m.title === "Productivity");
+      if (productivityMetric) {
+        await addMetric(productivityMetric);
+      }
+    }
+    if (!hasEnergy) {
+      const energyMetric = defaultMetrics.find((m) => m.title === "Energy");
+      if (energyMetric) {
+        await addMetric(energyMetric);
+      }
+    }
+    if (!hasHappiness) {
+      const happinessMetric = defaultMetrics.find((m) => m.title === "Happiness");
+      if (happinessMetric) {
+        await addMetric(happinessMetric);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (userPaidPlanType == "free") {
+      setShowUpgradePopover(true);
+    }
+  }, [userPaidPlanType]);
+
+  useEffect(() => {
+    if (hasLoadedMetricsAndEntries) {
+      addDefaultMetrics();
+    }
+  }, [hasLoadedMetricsAndEntries]);
 
   useEffect(() => {
     if (!isLoading && !hasMetrics) {
@@ -129,46 +188,6 @@ export default function InsightsDashboardPage() {
         </div>
       </Card>
     );
-  };
-
-  const handleAddMetricClick = () => {
-    if (userMetrics.length >= maxMetrics) {
-      setShowUpgradePopover(true);
-      return;
-    }
-    setIsAddMetricOpen(true);
-  };
-
-  const handleAddMetric = async () => {
-    if (!selectedNewMetric) return;
-
-    if (userMetrics.length >= maxMetrics) {
-      setShowUpgradePopover(true);
-      return;
-    }
-
-    setIsCreatingMetric(true);
-    try {
-      const metricData = defaultMetrics.find(
-        (f) => f.title === selectedNewMetric
-      );
-      if (!metricData) return;
-
-      await api.post("/metrics", {
-        title: metricData.title,
-        emoji: metricData.emoji,
-      });
-
-      metricsAndEntriesQuery.refetch();
-      setIsAddMetricOpen(false);
-      setSelectedNewMetric(null);
-      toast.success("Metric added successfully");
-    } catch (error) {
-      console.error("Error creating metric:", error);
-      toast.error("Failed to add metric");
-    } finally {
-      setIsCreatingMetric(false);
-    }
   };
 
   if (isLoading) {
@@ -330,10 +349,9 @@ export default function InsightsDashboardPage() {
         metrics={userMetrics}
         selectedMetricId={selectedMetricId}
         onMetricSelect={setSelectedMetricId}
-        onAddMetricClick={handleAddMetricClick}
       />
 
-      <AddMetricPopover
+      {/* <AddMetricPopover
         isOpen={isAddMetricOpen}
         onClose={() => {
           setIsAddMetricOpen(false);
@@ -345,7 +363,7 @@ export default function InsightsDashboardPage() {
         onMetricSelect={setSelectedNewMetric}
         onAddMetric={handleAddMetric}
         isCreating={isCreatingMetric}
-      />
+      /> */}
 
       <div className="space-y-4">
         {userMetrics

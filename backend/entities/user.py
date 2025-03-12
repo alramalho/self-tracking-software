@@ -16,7 +16,7 @@ class User(BaseModel):
     timezone: Optional[str] = None
     clerk_id: Optional[str] = None
     language: Optional[str] = "English"
-    plan_type: Optional[Literal["free", "plus", "supporter"]] = "free"
+    plan_type: Optional[Literal["free", "plus"]] = "free"
     daily_checkin_settings: Optional[DailyCheckinSettings] = None
     email: str
     created_at: str

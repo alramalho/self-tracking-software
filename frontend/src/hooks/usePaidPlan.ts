@@ -1,19 +1,15 @@
 import { useApiWithAuth } from "@/api";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 
-export type PaidPlanType = "plus" | "supporter" | "free";
+export type PaidPlanType = "plus" | "free";
 
 const PLAN_LIMITS = {
   free: {
-    maxMetrics: 1,
+    maxMetrics: 0,
   },
   plus: {
     maxMetrics: 5,
-  },
-  supporter: {
-    maxMetrics: 20,
   },
 } as const;
 
