@@ -79,12 +79,21 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
           <div className="flex flex-col gap-3">
             <Button
               variant="ghost"
-              onClick={() => setShowLogoutConfirm(true)}
               className="w-full flex items-center justify-start px-0 gap-2"
+              onClick={() => setShowUserSettings(true)}
             >
-              <LogOut size={28} />
-              <span>Logout</span>
+              <User size={28} />
+              <span>User Settings</span>
             </Button>
+            
+            {/* <Button
+              variant="ghost"
+              className="w-full flex items-center justify-start px-0 gap-2"
+              onClick={() => setShowAISettings(true)}
+            >
+              <Brain size={28} />
+              <span>AI Settings</span>
+            </Button> */}
             <Button
               variant="ghost"
               className="w-full flex items-center justify-start px-0 gap-2"
@@ -95,19 +104,11 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
             </Button>
             <Button
               variant="ghost"
+              onClick={() => setShowLogoutConfirm(true)}
               className="w-full flex items-center justify-start px-0 gap-2"
-              onClick={() => setShowUserSettings(true)}
             >
-              <User size={28} />
-              <span>User Settings</span>
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full flex items-center justify-start px-0 gap-2"
-              onClick={() => setShowAISettings(true)}
-            >
-              <Brain size={28} />
-              <span>AI Settings</span>
+              <LogOut size={28} />
+              <span>Logout</span>
             </Button>
           </div>
         </div>
