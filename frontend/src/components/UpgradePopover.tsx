@@ -220,15 +220,15 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   // ];
 
   const formatPrice = (monthlyPrice: number, yearlyPrice: number) => {
-    return isYearly ? `$${yearlyPrice}` : `$${monthlyPrice}`;
+    return isYearly ? `€${yearlyPrice}` : `€${monthlyPrice}`;
   };
 
   const getMonthlyDisplay = (monthlyPrice: number, yearlyPrice: number) => {
     if (isYearly) {
       const monthlyEquivalent = yearlyPrice / 12;
-      return `$${monthlyEquivalent.toFixed(2)} a month`;
+      return `€${monthlyEquivalent.toFixed(2)} a month`;
     }
-    return `$${monthlyPrice} a month`;
+    return `€${monthlyPrice} a month`;
   };
 
   const getPeriod = () => (isYearly ? "yearly" : "monthly");
