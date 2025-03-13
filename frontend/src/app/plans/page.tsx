@@ -18,17 +18,14 @@ const PlansPage: React.FC = () => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const [showServerMessage, setShowServerMessage] = useState(false);
   const { data: userData } = useCurrentUserDataQuery();
-  const [shouldShowNotification, setShouldShowNotification] = useState(false);
-  const router = useRouter();
 
-  const { isEnabled: isAIEnabled } = useFeatureFlag("ai-bot-access");
-  const { message: aiMessage, messageId, isDismissed, dismiss, timestamp } = useAIMessageCache('plan');
+  // const { message: aiMessage, messageId, isDismissed, dismiss, timestamp } = useAIMessageCache('plan');
 
-  useEffect(() => {
-    if (aiMessage && !isDismissed) {
-      setShouldShowNotification(true);
-    }
-  }, [aiMessage, isDismissed]);
+  // useEffect(() => {
+  //   if (aiMessage && !isDismissed) {
+  //     setShouldShowNotification(true);
+  //   }
+  // }, [aiMessage, isDismissed]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
