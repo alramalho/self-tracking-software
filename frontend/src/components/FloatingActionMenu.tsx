@@ -94,7 +94,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
                 <button
                   className={buttonClasses}
                   onClick={() =>
-                    window.open("https://discord.gg/M93WtuqKyr", "_blank")
+                    window.open("https://discord.gg/xMVb7YmQMQ", "_blank")
                   }
                 >
                   <svg
