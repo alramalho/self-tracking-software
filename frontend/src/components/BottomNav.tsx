@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChartArea, Home, Loader2, PlusSquare, ScanFace, User } from "lucide-react";
+import {
+  ChartArea,
+  Home,
+  Loader2,
+  PlusSquare,
+  ScanFace,
+  User,
+} from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
@@ -11,6 +18,8 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { BaseThemeColor } from "@/utils/theme";
 import { useTheme } from "@/contexts/ThemeContext";
+import { Badge } from "./ui/badge";
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 
 // This forces Tailwind to include these classes in the build
 const themeTextClasses: Record<BaseThemeColor, string> = {
@@ -36,9 +45,10 @@ const BottomNav = () => {
   const pathname = usePathname();
   const themeColors = useThemeColors();
   const { effectiveTheme } = useTheme();
+  const { shouldShowNotification: hasCheckinNotification } = useDailyCheckin();
 
   const isActiveRoute = (route: string) => {
-    if (route === '/') return pathname === '/';
+    if (route === "/") return pathname === "/";
     return pathname.startsWith(route);
   };
 
@@ -66,7 +76,7 @@ const BottomNav = () => {
             data-testid="nav-home"
             className={cn(
               "flex flex-col justify-center items-center p-2 transition-all duration-200 relative",
-              isActiveRoute('/') 
+              isActiveRoute("/")
                 ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
                 : "text-gray-500 hover:text-gray-700"
             )}
@@ -76,13 +86,19 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingFeed ? <Loader2 size={24} className="animate-spin" /> : <Home size={24} strokeWidth={2.5} />}
+            {isLoadingFeed ? (
+              <Loader2 size={24} className="animate-spin" />
+            ) : (
+              <Home size={24} strokeWidth={2.5} />
+            )}
             {notificationCount > 0 && (
               <div className="absolute top-0 right-0 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
-                {notificationCount > 99 ? '99+' : notificationCount}
+                {notificationCount > 99 ? "99+" : notificationCount}
               </div>
             )}
-            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/') ? 'Home' : ''}</span>
+            <span className="text-[10px] mt-1 font-medium">
+              {isActiveRoute("/") ? "Home" : ""}
+            </span>
           </Link>
 
           <Link
@@ -90,7 +106,7 @@ const BottomNav = () => {
             data-testid="nav-plans"
             className={cn(
               "flex flex-col justify-center items-center p-2 transition-all duration-200",
-              isActiveRoute('/plans') 
+              isActiveRoute("/plans")
                 ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
                 : "text-gray-500 hover:text-gray-700"
             )}
@@ -100,16 +116,22 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingPlans ? <Loader2 size={24} className="animate-spin" /> : <ChartArea size={24} strokeWidth={2.5} />}
-            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/plans') ? 'Plans' : ''}</span>
+            {isLoadingPlans ? (
+              <Loader2 size={24} className="animate-spin" />
+            ) : (
+              <ChartArea size={24} strokeWidth={2.5} />
+            )}
+            <span className="text-[10px] mt-1 font-medium">
+              {isActiveRoute("/plans") ? "Plans" : ""}
+            </span>
           </Link>
 
           <Link
             href="/add"
             data-testid="nav-add"
             className={cn(
-              "flex flex-col justify-center items-center p-2 transition-all duration-200",
-              isActiveRoute('/add') 
+              "flex flex-col justify-center items-center p-2 transition-all duration-200 relative",
+              isActiveRoute("/add")
                 ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
                 : "text-gray-500 hover:text-gray-700"
             )}
@@ -119,20 +141,28 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingLog ? <Loader2 size={30} className="animate-spin" /> : 
+            {isLoadingLog ? (
+              <Loader2 size={30} className="animate-spin" />
+            ) : (
               <div className={`${themeColors.primary} rounded-full p-2`}>
-                <PlusSquare size={24} strokeWidth={2.5} className="text-white" />
+                <PlusSquare
+                  size={24}
+                  strokeWidth={2.5}
+                  className="text-white"
+                />
               </div>
-            }
-            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/add') ? 'Add' : ''}</span>
+            )}
+            <span className="text-[10px] mt-1 font-medium">
+              {isActiveRoute("/add") ? "Add" : ""}
+            </span>
           </Link>
 
           <Link
             href="/insights/dashboard"
             data-testid="nav-insights"
             className={cn(
-              "flex flex-col justify-center items-center p-2 transition-all duration-200",
-              isActiveRoute('/insights') 
+              "relative flex flex-col justify-center items-center p-2 transition-all duration-200",
+              isActiveRoute("/insights")
                 ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
                 : "text-gray-500 hover:text-gray-700"
             )}
@@ -142,8 +172,24 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingInsights ? <Loader2 size={24} className="animate-spin" /> : <ScanFace size={24} strokeWidth={2.5} />}
-            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/insights') ? 'AI Insights' : ''}</span>
+              {isLoadingInsights ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <ScanFace size={24} strokeWidth={2.5} />
+              )}
+              <span className="text-[10px] mt-1 font-medium">
+                {isActiveRoute("/insights") ? "AI Insights" : ""}
+              </span>
+              {hasCheckinNotification && (
+                <div className="absolute top-0 right-0 z-10">
+                  <Badge
+                    variant="destructive"
+                    className="h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    1
+                  </Badge>
+                </div>
+              )}
           </Link>
 
           <Link
@@ -151,7 +197,7 @@ const BottomNav = () => {
             data-testid="nav-profile"
             className={cn(
               "relative flex flex-col justify-center items-center p-2 transition-all duration-200",
-              isActiveRoute('/profile') 
+              isActiveRoute("/profile")
                 ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
                 : "text-gray-500 hover:text-gray-700"
             )}
@@ -161,13 +207,21 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingProfile ? <Loader2 size={24} className="animate-spin" /> : <User size={24} strokeWidth={2.5} />}
+            {isLoadingProfile ? (
+              <Loader2 size={24} className="animate-spin" />
+            ) : (
+              <User size={24} strokeWidth={2.5} />
+            )}
             {profileNotificationCount > 0 && (
-              <div className="absolute top-0 right-0 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
-                {profileNotificationCount > 99 ? '99+' : profileNotificationCount}
+              <div className="absolute bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
+                {profileNotificationCount > 99
+                  ? "99+"
+                  : profileNotificationCount}
               </div>
             )}
-            <span className="text-[10px] mt-1 font-medium">{isActiveRoute('/profile') ? 'Profile' : ''}</span>
+            <span className="text-[10px] mt-1 font-medium">
+              {isActiveRoute("/profile") ? "Profile" : ""}
+            </span>
           </Link>
         </div>
       </nav>

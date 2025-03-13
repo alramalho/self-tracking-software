@@ -64,8 +64,6 @@ const LogPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative">
 
-      <DailyCheckinCard />
-
       <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
       <ActivitySelector
         activities={activities}

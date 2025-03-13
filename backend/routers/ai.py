@@ -30,6 +30,7 @@ from ai.assistant.plan_creation_assistant import PlanCreationAssistant
 from ai.assistant.plan_creation_assistant_simple import (
     PlanCreationAssistant as PlanCreationAssistantSimple,
 )
+from entities.message import Message
 from ai.llm import ask_schema_async, ask_text_async
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
@@ -527,12 +528,16 @@ async def get_daily_checkin_extractions(
 
     try:
         body = await request.json()
+        ai_message = body["ai_message"]
         message = body["message"]
         question_checks = body["question_checks"]
 
         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+
         extractor = ActivityExtractorAssistant(user=user, memory=memory)
         metrics_companion = MetricsCompanionAssistant(user=user, memory=memory)
+
+        extractor.write_assistant_message(ai_message) # We just need to do this once, as they have shared memory!
 
         # Create tasks for parallel execution
         activities_task = extractor.get_response(
@@ -788,7 +793,6 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
                     for i in range(len(question_checks_keys))
                 },
             }
-        
 
         # Process the message and get suggestions
         response_text, suggestions = await plan_creator.get_response(

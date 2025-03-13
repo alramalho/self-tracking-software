@@ -16,7 +16,7 @@ import {
   BaseExtractionResponse,
 } from "./DynamicUISuggester";
 import AppleLikePopover from "./AppleLikePopover";
-import { useDailyCheckin } from "@/hooks/useDailyCheckin";
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 
 export const getRelativeDate = (date: Date) => {
   const today = new Date();
@@ -63,6 +63,9 @@ export function DailyCheckinBanner({
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics;
+  const aiMessage =
+    initialMessage ||
+    (isAfter4PM ? "How was your day?" : "How are you feeling today?");
 
   const { markAsSubmitted } = useDailyCheckin();
 
@@ -82,13 +85,17 @@ export function DailyCheckinBanner({
   }
 
   const questionsChecks = {
-    "what did you do today":
-      "what has the user done today",
+    "what did you do": "what has the user done",
     ...metrics?.reduce(
       (acc, m, i, arr) => ({
         ...acc,
-        [`How ${arr.map(m => toAdjective(m.title)).join(" / ")} did you feel today (out of 5), and why`]: 
-          `wether the user mentioned their ${arr.map(m => m.title).join(" / ")} metrics (out of 5)`,
+        [`How ${arr
+          .map((m) => toAdjective(m.title))
+          .join(
+            " / "
+          )} did you feel (out of 5), and why`]: `wether the user mentioned their ${arr
+          .map((m) => m.title)
+          .join(" / ")} metrics (out of 5)`,
       }),
       {}
     ),
@@ -122,6 +129,7 @@ export function DailyCheckinBanner({
     text: string
   ): Promise<DailyCheckinExtractionsResponse> => {
     const response = await api.post(`/ai/get-daily-checkin-extractions`, {
+      ai_message: aiMessage,
       message: text,
       question_checks: questionsChecks,
     });
@@ -182,50 +190,51 @@ export function DailyCheckinBanner({
           </div>
         </p>
         <div className="flex flex-row no-wrap justify-around mt-4">
-          <div className="flex flex-col gap-2">
-            {data.metric_entries.length > 0 && (
+          {data.metric_entries.length > 0 && (
+            <div className="flex flex-col gap-2 w-full">
               <h2 className="text-md font-semibold text-left">Metrics</h2>
-            )}
-            <div className="flex flex-col gap-2">
-              {data.metric_entries?.map((m) => {
-                const respectiveMetric = metrics?.find(
-                  (metric) => metric.id === m.metric_id
-                );
-                return (
-                  <div key={m.id}>
-                    <EntryCard
-                      emoji={respectiveMetric?.emoji || ""}
-                      title={respectiveMetric?.title || ""}
-                      description={`${m.rating} / 5`}
-                      date={new Date(m.date)}
-                    />
-                  </div>
-                );
-              })}
+              <div className="flex flex-col gap-2">
+                {data.metric_entries?.map((m) => {
+                  const respectiveMetric = metrics?.find(
+                    (metric) => metric.id === m.metric_id
+                  );
+                  return (
+                    <div key={m.id}>
+                      <EntryCard
+                        emoji={respectiveMetric?.emoji || ""}
+                        title={respectiveMetric?.title || ""}
+                        description={`${m.rating} / 5`}
+                        date={new Date(m.date)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            {data.activity_entries.length > 0 && (
+          )}
+
+          {data.activity_entries.length > 0 && (
+            <div className="flex flex-col gap-2 w-full">
               <h2 className="text-md font-semibold text-left">Activities</h2>
-            )}
-            <div className="flex flex-col gap-2">
-              {data.activity_entries?.map((a) => {
-                const respectiveActivity = activities?.find(
-                  (activity) => activity.id === a.activity_id
-                );
-                return (
-                  <div key={a.id}>
-                    <EntryCard
-                      emoji={respectiveActivity?.emoji || ""}
-                      title={respectiveActivity?.title || ""}
-                      description={`${a.quantity} ${respectiveActivity?.measure}`}
-                      date={new Date(a.date)}
-                    />
-                  </div>
-                );
-              })}
+              <div className="flex flex-col gap-2">
+                {data.activity_entries?.map((a) => {
+                  const respectiveActivity = activities?.find(
+                    (activity) => activity.id === a.activity_id
+                  );
+                  return (
+                    <div key={a.id}>
+                      <EntryCard
+                        emoji={respectiveActivity?.emoji || ""}
+                        title={respectiveActivity?.title || ""}
+                        description={`${a.quantity} ${respectiveActivity?.measure}`}
+                        date={new Date(a.date)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </>
     );
@@ -240,9 +249,7 @@ export function DailyCheckinBanner({
     >
       <DynamicUISuggester<DailyCheckinExtractionsResponse>
         title={`Hey ${user?.username}! It's ${timeString}!`}
-        initialMessage={
-          initialMessage || (isAfter4PM ? "How was your day?" : "How are you feeling today?")
-        }
+        initialMessage={aiMessage}
         questionPrefix="I'd like to know:"
         questionsChecks={questionsChecks}
         onSubmit={handleSubmit}
