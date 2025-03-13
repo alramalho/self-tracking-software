@@ -20,7 +20,7 @@ interface AINotificationProps {
   message: string;
   createdAt: string;
   onDismiss?: (e: React.MouseEvent) => void;
-  onClick: () => void;
+  onClick?: () => void;
   preview?: boolean;
   hasNotification?: boolean;
 }

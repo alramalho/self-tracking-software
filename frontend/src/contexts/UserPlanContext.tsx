@@ -233,7 +233,6 @@ export interface UserPlanContextType {
   useIsMetricLoggedToday: (metricId: string) => boolean;
   hasLoadedUserData: boolean; 
   hasLoadedTimelineData: boolean;
-  hasLoadedMetricsAndEntries: boolean;  
   timelineData: UseQueryResult<TimelineData | null>;
   messagesData: UseQueryResult<{ messages: Message[] }>;
   notificationsData: UseQueryResult<{ notifications: Notification[] }>;
