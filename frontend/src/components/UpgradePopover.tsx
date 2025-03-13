@@ -251,16 +251,13 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
         </div>
 
         <div className="grid gap-4">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-md text-gray-500">Monthly</span>
-            <Switch checked={isYearly} onCheckedChange={setIsYearly} />
-            <span className="text-md text-gray-500">Yearly</span>
-            <span className="text-sm text-green-500 ml-1">
-              extra {PLUS_YEARLY_DISCOUNT_PERCENT}% off
-            </span>
-          </div>
 
-          <Card className="p-6 relative overflow-hidden ring-2 ring-blue-500/20 rounded-2xl">
+          <Rocket
+            isDiscountApplied={isDiscountApplied}
+            onDiscountApplied={() => setIsDiscountApplied(true)}
+          />
+
+          <Card className="p-6 relative overflow-hidden ring-2 ring-blue-500/50 rounded-2xl bg-gradient-to-br from-white to-blue-100">
             <div className="space-y-2">
               <div className="flex flex-row items-center justify-between gap-2">
                 <h3 className="text-xl font-semibold">
@@ -320,15 +317,20 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 
             <Link href={paymentLink} target="_blank">
               <Button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 rounded-xl">
-                Yes! Try Free
+                Try Free
               </Button>
             </Link>
           </Card>
 
-          <Rocket
-            isDiscountApplied={isDiscountApplied}
-            onDiscountApplied={() => setIsDiscountApplied(true)}
-          />
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-md text-gray-500">Monthly</span>
+            <Switch checked={isYearly} onCheckedChange={setIsYearly} />
+            <span className="text-md text-gray-500">Yearly</span>
+            <span className="text-sm text-green-500 ml-1">
+              extra {PLUS_YEARLY_DISCOUNT_PERCENT}% off
+            </span>
+          </div>
+
         </div>
 
         <Divider className="my-6 mt-24" />
