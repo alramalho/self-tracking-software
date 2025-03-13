@@ -16,13 +16,10 @@ import { defaultMetrics } from "../metrics";
 import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
 import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
 import { MetricSelector } from "@/components/metrics/MetricSelector";
-import { AddMetricPopover } from "@/components/metrics/AddMetricPopover";
 import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
-import { MetricsAINotification } from "@/components/metrics/MetricsAINotification";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 
 // Configuration constants

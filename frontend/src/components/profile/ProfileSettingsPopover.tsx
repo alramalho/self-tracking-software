@@ -42,7 +42,6 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const [showAISettings, setShowAISettings] = useState(false);
 
   const { userPaidPlanType } = usePaidPlan();
-  const userHasAccessToAi = userPaidPlanType === "supporter";
   const { signOut } = useClerk();
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
