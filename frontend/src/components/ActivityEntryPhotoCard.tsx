@@ -109,13 +109,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { data: userPlanType } = useUserPlanType(userUsername || "");
 
   const getPlanStyles = () => {
-    if (userPlanType === "supporter") {
-      return {
-        ringColor: "ring-indigo-500",
-        fillColor: "#6366f1",
-        textColor: "text-indigo-500",
-      };
-    } else if (userPlanType === "plus") {
+    if (userPlanType === "plus") {
       return {
         ringColor: "ring-blue-500",
         fillColor: "#3b82f6",
