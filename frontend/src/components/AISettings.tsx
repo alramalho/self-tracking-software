@@ -1,32 +1,12 @@
 "use client";
 
-import { Plus, PlusSquare, Check, SquarePlus, Pencil } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import * as React from "react";
-import { Button } from "./ui/button";
-import AppleLikePopover from "./AppleLikePopover";
-import FeedbackForm from "./FeedbackForm";
-import { User, useUserPlan } from "@/contexts/UserPlanContext";
-import toast from "react-hot-toast";
-import { useApiWithAuth } from "@/api";
-import Link from "next/link";
+import {  useUserPlan } from "@/contexts/UserPlanContext";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import RecurrentCheckinPopover from "./RecurrentCheckinPopover";
 import { capitalize } from "lodash";
-
-const LongTermCheckinPopover = ({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) => {
-  return (
-    <AppleLikePopover open={open} onClose={onClose}>
-      <div>World</div>
-    </AppleLikePopover>
-  );
-};
 
 const CheckinButton = ({
   title,
@@ -90,7 +70,7 @@ export default function AISettings() {
   };
 
   return (
-    <>
+    <div className="flex flex-col gap-4 mb-12">
       <h1 className="text-2xl font-bold my-4">AI Settings</h1>
       <div className="flex flex-col flex-nowrap gap-4">
         {user?.daily_checkin_settings != undefined ? (
@@ -113,20 +93,12 @@ export default function AISettings() {
             onClick={() => setIsRecurrentCheckinOpen(true)}
           />
         )}
-        <CheckinButton
-          title="Long term Checkin"
-          onClick={() => setIsLongTermCheckinOpen(true)}
-        />
 
         <RecurrentCheckinPopover
           open={isRecurrentCheckinOpen}
           onClose={() => setIsRecurrentCheckinOpen(false)}
         />
-        <LongTermCheckinPopover
-          open={isLongTermCheckinOpen}
-          onClose={() => setIsLongTermCheckinOpen(false)}
-        />
       </div>
-    </>
+    </div>
   );
 }
