@@ -17,7 +17,7 @@ metrics_gateway = MetricsGateway()
 
 class ExtractedMetricEntry(BaseModel):
     metric_id: str = Field(..., description="The id of the metric that was logged")
-    date: str = Field(..., description="The date of when the metric was rated. YYYY-MM-DD")
+    date: str = Field(..., description="The date of which the metric refers to. YYYY-MM-DD")
     rating: int = Field(..., description="The rating given to the metric (1 to 5)")
 
 

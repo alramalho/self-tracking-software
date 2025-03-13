@@ -23,6 +23,7 @@ import { MetricsAINotification } from "@/components/metrics/MetricsAINotificatio
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useFeatureFlag } from "@/hooks/useFeatureFlags";
+import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -343,7 +344,7 @@ export default function InsightsDashboardPage() {
   // Render insights when we have enough data
   return (
     <div className="container mx-auto py-10 max-w-3xl space-y-8">
-      {/* {userPaidPlanType == "supporter" && <MetricsAINotification />} */}
+      <DailyCheckinCard />
 
       <MetricSelector
         metrics={userMetrics}

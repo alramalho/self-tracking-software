@@ -7,9 +7,9 @@ import { Toaster, toast } from "sonner";
 import { Checkbox } from "./ui/checkbox";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { motion } from "framer-motion";
-
+import { getThemeVariants } from "@/utils/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 const waveVariants = {
   initial: { rotate: 0 },
   wave: {
@@ -67,6 +67,9 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>(
     Object.fromEntries(Object.keys(questionsChecks).map((key) => [key, false]))
@@ -203,7 +206,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         )}
 
         <div className="relative w-fit mx-auto">
-          <ScanFace size={100} className="mx-auto text-blue-500" />
+          <ScanFace size={100} className={`mx-auto ${variants.text}`} />
           {wave && (
             <motion.span
               className="absolute bottom-[9px] left-[-40px] text-5xl"

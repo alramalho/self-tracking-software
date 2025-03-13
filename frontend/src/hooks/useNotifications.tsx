@@ -14,10 +14,12 @@ import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import type { Notification } from "@/contexts/UserPlanContext";
 import { useSession } from "@clerk/nextjs";
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 
 interface NotificationsContextType {
   notificationCount: number;
   profileNotificationCount: number;
+  dailyCheckinNotification: boolean;
   addToNotificationCount: (count: number, type?: 'profile' | 'general') => void;
   clearGeneralNotifications: () => void;
   clearProfileNotifications: () => void;
@@ -52,6 +54,8 @@ export const NotificationsProvider = ({
   const { isSignedIn } = useSession();
   const [notificationCount, setNotificationCount] = useState(0);
   const [profileNotificationCount, setProfileNotificationCount] = useState(0);
+  const { shouldShowNotification } = useDailyCheckin();
+  const [dailyCheckinNotification, setDailyCheckinNotification] = useState(false);
 
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(
@@ -70,9 +74,15 @@ export const NotificationsProvider = ({
       const nonConcludedNotificationsCount = notificationsData.data.notifications?.filter(
         (notification: Notification) => notification.status !== "concluded"
       ).length || 0;
-      navigator.setAppBadge && navigator.setAppBadge(nonConcludedNotificationsCount);
+      
+      // Add 1 to the badge count if there's a daily check-in notification
+      const totalBadgeCount = nonConcludedNotificationsCount + (dailyCheckinNotification ? 1 : 0);
+      
+      if (navigator.setAppBadge) {
+        navigator.setAppBadge(totalBadgeCount);
+      }
     }
-  }, [notificationsData.data]);
+  }, [notificationsData.data, dailyCheckinNotification]);
 
   useEffect(() => {
     subscription
@@ -140,6 +150,10 @@ export const NotificationsProvider = ({
       );
     }
   }, []);
+
+  useEffect(() => {
+    setDailyCheckinNotification(shouldShowNotification);
+  }, [shouldShowNotification]);
 
   const addToNotificationCount = (count: number, type: 'profile' | 'general' = 'general') => {
     if (type === 'profile') {
@@ -329,6 +343,7 @@ export const NotificationsProvider = ({
       value={{
         notificationCount,
         profileNotificationCount,
+        dailyCheckinNotification,
         addToNotificationCount,
         clearGeneralNotifications,
         clearProfileNotifications,

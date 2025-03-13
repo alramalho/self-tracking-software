@@ -19,9 +19,10 @@ import { getMessagePreview } from "@/lib/utils";
 interface AINotificationProps {
   message: string;
   createdAt: string;
-  onDismiss: (e: React.MouseEvent) => void;
+  onDismiss?: (e: React.MouseEvent) => void;
   onClick: () => void;
   preview?: boolean;
+  hasNotification?: boolean;
 }
 
 const AINotification: React.FC<AINotificationProps> = ({
@@ -29,6 +30,7 @@ const AINotification: React.FC<AINotificationProps> = ({
   createdAt,
   onDismiss,
   onClick,
+  hasNotification,
   preview = false,
 }) => {
   const themeColors = useThemeColors();
@@ -57,7 +59,7 @@ const AINotification: React.FC<AINotificationProps> = ({
       className={`relative bg-opacity-50 p-2 backdrop-blur-sm rounded-2xl flex items-start mb-2 cursor-pointer`}
       onClick={onClick}
     >
-      <div className="self-end flex-shrink-0 mr-2 relative">
+      <div className="relative self-end flex-shrink-0 mr-2">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -82,17 +84,31 @@ const AINotification: React.FC<AINotificationProps> = ({
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.8 }}
       >
-        <div className="p-2 markdown text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
+        <div className="relative p-2 markdown text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: hasNotification ? 1 : 0 }}
+            transition={{ duration: 0.3, delay: 1.2 }}
+            className="absolute -top-2 -left-2 z-10"
+          >
+            <Badge
+              variant="destructive"
+              className="h-5 w-5 flex text-md items-center justify-center p-0"
+            >
+              1
+            </Badge>
+          </motion.div>
           <Remark>{displayMessage}</Remark>
         </div>
         <div className="flex flex-row justify-between">
           <div className="text-xs text-gray-500 mt-1">
             {formatTimeAgo(createdAt)}
           </div>
-          <div
-            className="flex flex-row items-center gap-1 underline text-gray-500"
-            onClick={(e) => {
-              e.stopPropagation();
+          {onClick && (
+            <div
+              className="flex flex-row items-center gap-1 underline text-gray-500"
+              onClick={(e) => {
+                e.stopPropagation();
               onClick();
             }}
           >
@@ -106,23 +122,26 @@ const AINotification: React.FC<AINotificationProps> = ({
                 <Reply size={15} />
                 <span className="text-xs">Reply</span>
               </>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </motion.div>
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3, delay: 1.2 }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onDismiss(e);
-        }}
-        className="absolute top-1 right-1 p-[3px] rounded-full bg-gray-500"
-        aria-label="Dismiss"
-      >
-        <X size={15} className="text-white" />
-      </motion.button>
+      {onDismiss && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 1.2 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss(e);
+          }}
+          className="absolute top-1 right-1 p-[3px] rounded-full bg-gray-500"
+          aria-label="Dismiss"
+        >
+          <X size={15} className="text-white" />
+        </motion.button>
+      )}
     </motion.div>
   );
 };
