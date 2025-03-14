@@ -116,11 +116,11 @@ export default function InsightsDashboardPage() {
     }
   }, [hasLoadedMetricsAndEntries]);
 
-  useEffect(() => {
-    if (!isLoading && !hasMetrics) {
-      router.push("/insights/onboarding");
-    }
-  }, [isLoading, hasMetrics]);
+  // useEffect(() => {
+  //   if (!isLoading && !hasMetrics) {
+  //     router.push("/insights/onboarding");
+  //   }
+  // }, [isLoading, hasMetrics]);
 
   // Set the first metric as selected when metrics load
   useEffect(() => {
