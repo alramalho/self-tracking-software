@@ -437,7 +437,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           description="Find someone who will help you stay on track"
           buttonText="Open discord"
           onClick={() => {
-            window.open("https://discord.gg/zUJNxdw32X", "_blank");
+            window.open("https://discord.gg/xMVb7YmQMQ", "_blank");
           }}
           color="blue"
         />
