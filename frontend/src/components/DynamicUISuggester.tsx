@@ -244,7 +244,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <Button
             className="w-full"
             onClick={() => submitMutation.mutateAsync(text)}
-            disabled={isLoading}
+            disabled={isLoading || !text}
             loading={isLoading}
           >
             Submit
