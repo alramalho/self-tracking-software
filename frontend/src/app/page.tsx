@@ -31,13 +31,13 @@ const HomePage: React.FC = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
-  const hasNoFriendsOrPlans =  userData?.plans?.length === 0 || userData?.user?.friend_ids?.length === 0;
+  const hasNoFriends =  userData?.user?.friend_ids?.length === 0;
 
   useEffect(() => {
     if (
       isSignedIn &&
       hasLoadedUserData &&
-      hasNoFriendsOrPlans
+      hasNoFriends
     ) {
       router.push("/onboarding");
     } 
