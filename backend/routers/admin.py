@@ -316,32 +316,32 @@ def json_serial(obj):
 async def run_daily_metrics_notification(
     request: Request, verified: User = Depends(admin_auth)
 ):
+    print("metrics notification disabled, for now")
+    # body = await request.json()
+    # filter_usernames = body.get("filter_usernames", [])
+    # send_report = body.get("send_report", False)
+    # dry_run = body.get("dry_run", True)
 
-    body = await request.json()
-    filter_usernames = body.get("filter_usernames", [])
-    send_report = body.get("send_report", False)
-    dry_run = body.get("dry_run", True)
+    # users = users_gateway.get_all_users()
+    # if len(filter_usernames) > 0:
+    #     users = [user for user in users if user.username in filter_usernames]
 
-    users = users_gateway.get_all_users()
-    if len(filter_usernames) > 0:
-        users = [user for user in users if user.username in filter_usernames]
+    # metrics_notification_result = await _process_metrics_notification(users, dry_run)
 
-    metrics_notification_result = await _process_metrics_notification(users, dry_run)
+    # result = {
+    #     "dry_run": dry_run,
+    #     "metrics_notification_result": metrics_notification_result,
+    # }
 
-    result = {
-        "dry_run": dry_run,
-        "metrics_notification_result": metrics_notification_result,
-    }
+    # if send_report and len(metrics_notification_result.get("notifications_processed", [])) > 0:
+    #     current_time = datetime.now(UTC).strftime("%Y-%m-%d")
+    #     ses_gateway.send_email(
+    #         to="alexandre.ramalho.1998@gmail.com",
+    #         subject=f"Daily Metrics Notification for Tracking.so [{ENVIRONMENT}] [{current_time}]",
+    #         html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(result, indent=2, default=json_serial)}</pre>",
+    #     )
 
-    if send_report and len(metrics_notification_result.get("notifications_processed", [])) > 0:
-        current_time = datetime.now(UTC).strftime("%Y-%m-%d")
-        ses_gateway.send_email(
-            to="alexandre.ramalho.1998@gmail.com",
-            subject=f"Daily Metrics Notification for Tracking.so [{ENVIRONMENT}] [{current_time}]",
-            html_body=f"<strong>in {ENVIRONMENT} environment</strong><br><br><pre>{json.dumps(result, indent=2, default=json_serial)}</pre>",
-        )
-
-    return result
+    # return result
 
 
 @router.post("/run-daily-job")
