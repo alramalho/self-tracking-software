@@ -110,6 +110,7 @@ const ProfilePage: React.FC = () => {
   const [copied, copyToClipboard] = useClipboard();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
   const [showStreakDetails, setShowStreakDetails] = useState(false);
+  const profilePaidPlanType = profileData?.user?.plan_type;
   const { userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
@@ -352,22 +353,22 @@ const ProfilePage: React.FC = () => {
               <Avatar
                 className={twMerge(
                   "w-20 h-20",
-                  userPaidPlanType !== "free" &&
+                  profilePaidPlanType !== "free" &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  userPaidPlanType === "plus" && "ring-blue-500"
+                  profilePaidPlanType === "plus" && "ring-blue-500"
                 )}
               >
                 <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
                 <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
               </Avatar>
-              {userPaidPlanType && userPaidPlanType !== "free" && (
+              {profilePaidPlanType && profilePaidPlanType !== "free" && (
                 <div className="absolute -bottom-1 -right-1">
-                  <PlanBadge planType={userPaidPlanType} size={28} />
+                  <PlanBadge planType={profilePaidPlanType} size={28} />
                 </div>
               )}
             </div>
           </div>
-          {userPaidPlanType == "plus" && !isOnesOwnProfile && (
+          {profilePaidPlanType == "plus" && !isOnesOwnProfile && (
             <>
               <div
                 onClick={() => setShowUpgradePopover(true)}
