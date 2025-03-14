@@ -105,6 +105,7 @@ export default function InsightsDashboardPage() {
 
   useEffect(() => {
     if (userPaidPlanType == "free") {
+      router.push("/");
       setShowUpgradePopover(true);
     }
   }, [userPaidPlanType]);
