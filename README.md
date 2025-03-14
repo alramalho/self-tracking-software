@@ -6,7 +6,7 @@
 
 [Open App](https://app.tracking.so)
 
-[👋 Join the community](https://discord.gg/DaH7pqax)  of builders & lifestyle enthusiasts
+[👋 Join the community](https://discord.gg/xMVb7YmQMQ)  of builders & lifestyle enthusiasts
 
 <a href="https://ko-fi.com/alexramalho">
   <img src="https://img.shields.io/badge/Support-❤️-black?style=for-the-badge" alt="Support open source" />
@@ -14,7 +14,7 @@
 
 <div class="flex flex-col items-center gap-4">
 
-  <a href="https://discord.gg/DaH7pqax" style="
+  <a href="https://discord.gg/xMVb7YmQMQ" style="
     display: inline-flex;
     align-items: center;
     justify-content: center;
