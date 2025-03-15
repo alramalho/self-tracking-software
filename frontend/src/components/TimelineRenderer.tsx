@@ -128,6 +128,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
                 activityEmoji={activity.emoji || ""}
                 activityEntryQuantity={entry.quantity}
                 activityEntryReactions={entry.reactions || {}}
+                activityEntryTimezone={entry.timezone}
                 activityMeasure={activity.measure}
                 isoDate={entry.date}
                 description={entry.description}

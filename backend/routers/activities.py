@@ -53,6 +53,7 @@ async def log_activity(
     photo: UploadFile = None,
     isPublic: bool = Form(False),
     description: str = Form(None),
+    timezone: str = Form(...),
     user: User = Depends(is_clerk_user),
 ):
     try:
@@ -62,6 +63,7 @@ async def log_activity(
             quantity=quantity,
             date=iso_date_string,
             description=description,
+            timezone=timezone,
         )
 
         entry = None

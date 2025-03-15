@@ -102,7 +102,7 @@ const ProfilePage: React.FC = () => {
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
     string | null
   >(null);
-  
+
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const [showServerMessage, setShowServerMessage] = useState(false);
@@ -667,6 +667,7 @@ const ProfilePage: React.FC = () => {
                         activityEmoji={activity?.emoji || ""}
                         activityEntryQuantity={entry.quantity}
                         activityEntryReactions={entry.reactions || {}}
+                        activityEntryTimezone={entry.timezone}
                         activityMeasure={activity?.measure || ""}
                         isoDate={entry.date}
                         description={entry.description}

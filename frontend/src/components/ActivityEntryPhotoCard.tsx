@@ -38,6 +38,7 @@ interface ActivityEntryPhotoCardProps {
   activityEntryQuantity: number;
   activityMeasure: string;
   activityEmoji: string;
+  activityEntryTimezone?: string;
   activityEntryReactions: Record<string, string[]>;
   isoDate: string;
   daysUntilExpiration: number;
@@ -74,6 +75,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityMeasure,
   activityEmoji,
   activityEntryReactions,
+  activityEntryTimezone,
   isoDate,
   daysUntilExpiration,
   hasImageExpired,
@@ -352,7 +354,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>
               <span className="text-xs text-gray-500">
-                {getFormattedDate(isoDate)}
+                {getFormattedDate(isoDate)} – 📍 {activityEntryTimezone}
               </span>
             </div>
           </div>

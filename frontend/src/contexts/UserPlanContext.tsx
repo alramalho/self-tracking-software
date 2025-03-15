@@ -36,6 +36,7 @@ export interface ActivityEntry {
   image?: ImageInfo;
   reactions?: Record<string, string[]>;
   description?: string;
+  timezone?: string;
 }
 
 export interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}
