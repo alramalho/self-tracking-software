@@ -17,35 +17,31 @@ import { toast } from "react-hot-toast";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const {
-    useCurrentUserDataQuery,
-    hasLoadedUserData,
-    refetchAllData,
-  } = useUserPlan();
+  const { useCurrentUserDataQuery, hasLoadedUserData, refetchAllData } =
+    useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const { userPaidPlanType } = usePaidPlan();
 
-  const hasNoFriends =  userData?.user?.friend_ids?.length === 0;
+  const hasNoFriends = userData?.user?.friend_ids?.length === 0;
 
   useEffect(() => {
     if (
       isSignedIn &&
       hasLoadedUserData &&
-      hasNoFriends
+      hasNoFriends &&
+      userPaidPlanType === "free"
     ) {
       router.push("/onboarding");
-    } 
-  }, [
-    userData,
-    isSignedIn,
-  ]);
-
+    }
+  }, [userData, isSignedIn]);
 
   const handleUserClick = (user: UserSearchResult) => {
     router.push(`/profile/${user.username}`);
