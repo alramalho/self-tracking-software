@@ -56,23 +56,34 @@ export function ActivityLoggerPopover({
     <AppleLikePopover open={open} onClose={onClose}>
       <div className="space-y-6 p-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Log {selectedActivity.title}</h2>
+          <h2 className="text-2xl font-bold mb-2">
+            Log {selectedActivity.title}
+          </h2>
           <div className="text-4xl mb-4">{selectedActivity.emoji}</div>
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-center">Select Date</h3>
+          <h3 className="text-lg font-semibold mb-2 text-center">
+            Select Date
+          </h3>
           <Calendar
             mode="single"
             selected={selectedDate}
-            onSelect={(date) => date && setSelectedDate(date)}
+            onSelect={(date) => {
+              if (date) {
+                date.setHours(12, 0, 0, 0);
+                setSelectedDate(date);
+              }
+            }}
             className="rounded-md border mx-auto"
             disableFutureDates={true}
           />
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-center">how many <i>{selectedActivity.measure}</i>?</h3>
+          <h3 className="text-lg font-semibold mb-4 text-center">
+            how many <i>{selectedActivity.measure}</i>?
+          </h3>
           <div className="flex items-center justify-center space-x-4">
             <Button
               onClick={() => handleQuantityChange(-1)}
@@ -117,4 +128,4 @@ export function ActivityLoggerPopover({
       </div>
     </AppleLikePopover>
   );
-} 
+}
