@@ -213,7 +213,7 @@ const BottomNav = () => {
               <User size={24} strokeWidth={2.5} />
             )}
             {profileNotificationCount > 0 && (
-              <div className="absolute bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
+              <div className="absolute top-0 right-0 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
                 {profileNotificationCount > 99
                   ? "99+"
                   : profileNotificationCount}
