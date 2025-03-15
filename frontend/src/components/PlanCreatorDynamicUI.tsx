@@ -22,8 +22,8 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
   // Track which plan steps we've identified in the text
   const questionChecks = {
     "Your goal": "Does the message mention a specific goal or objective?",
-    "The activities you want to inlcude (their name, and how to measure them, like kilometres, minutes, sessions, etc.)":
-      "Does the message mention specific activities to be done, and how to measure them?",
+    "The activities you want to inlcude (their name, and how to measure each individual one, for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers')":
+      "Does the message mention specific activities to be done, and how to measure them (measuring should be referent to the single logged activity, for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers')?",
     "How many times per week you want to do these activities or if you want me to generate a specific schedule for you":
       "Does the message indicate if the plan is on a specific schedule or a times per week basis?",
   };
