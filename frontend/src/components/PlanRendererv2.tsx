@@ -214,14 +214,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         [key: string]: { [username: string]: number; planned: number };
       } = {};
 
-      let currentWeek = startDate;
-      while (currentWeek <= endDate) {
-        const weekKey = format(currentWeek, "yyyy-MM-dd");
-        const weekEnd = endOfWeek(currentWeek);
+      let currentWeekStart = startOfWeek(startDate);
+      while (currentWeekStart <= endDate) {
+        const weekKey = format(currentWeekStart, "yyyy-MM-dd");
+        const weekEnd = endOfWeek(currentWeekStart);
 
         // Skip weeks before startDate for "recent" view
         if (timeRange === "recent" && isBefore(weekEnd, startDate)) {
-          currentWeek = addWeeks(currentWeek, 1);
+          currentWeekStart = addWeeks(currentWeekStart, 1);
           continue;
         }
 
@@ -233,7 +233,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         } else {
           const plannedThisWeek = selectedPlan.sessions.filter((session) => {
             const sessionDate = parseISO(session.date);
-            return sessionDate >= currentWeek && sessionDate <= weekEnd;
+            return sessionDate >= currentWeekStart && sessionDate <= weekEnd;
           }).length;
           weeklyData[weekKey].planned += plannedThisWeek;
         }
@@ -248,13 +248,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           // Count completed sessions this week
           const completedThisWeek = getCompletedSessionsForPlan(
             plan,
-            currentWeek,
+            currentWeekStart,
             weekEnd
           ).length;
           weeklyData[weekKey][member.username] = completedThisWeek;
         });
 
-        currentWeek = addWeeks(currentWeek, 1);
+        currentWeekStart = addWeeks(currentWeekStart, 1);
       }
 
       // Format data for chart
