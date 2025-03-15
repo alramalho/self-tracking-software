@@ -33,7 +33,7 @@ import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePostHog } from "posthog-js/react";
-
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 type OtherProfile = {
   user: {
     id: string;
@@ -309,6 +309,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
   const queryClient = useQueryClient();
   const currentUserReceivedFriendRequests =
     currentUserQuery.data?.receivedFriendRequests;
+  const { userPaidPlanType } = usePaidPlan();
   const currentUserSentFriendRequests =
     currentUserQuery.data?.sentFriendRequests;
 
@@ -597,7 +598,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
       </div>
 
       <Button
-        disabled={!currentUser?.friend_ids?.length}
+        disabled={!currentUser?.friend_ids?.length && userPaidPlanType == "free"}
         className="w-full mt-6"
         onClick={() => {
           posthog?.capture('onboarding-complete');
