@@ -56,7 +56,7 @@ const AINotification: React.FC<AINotificationProps> = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`relative bg-opacity-50 p-2 backdrop-blur-sm rounded-2xl flex items-start mb-2 cursor-pointer`}
+      className={`relative bg-opacity-50 p-2 backdrop-blur-sm rounded-2xl flex items-start cursor-pointer`}
       onClick={onClick}
     >
       <div className="relative self-end flex-shrink-0 mr-2">

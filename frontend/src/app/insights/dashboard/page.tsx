@@ -4,10 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUserPlan, Metric, MetricEntry, Activity } from "@/contexts/UserPlanContext";
 import {
-  Loader2,
-} from "lucide-react";
+  useUserPlan,
+  Metric,
+  MetricEntry,
+  Activity,
+} from "@/contexts/UserPlanContext";
+import { Loader2 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useApiWithAuth } from "@/api";
@@ -21,16 +24,13 @@ import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopo
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { DailyCheckinCard } from "@/components/DailyCheckinCard";
+import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 
-
 export default function InsightsDashboardPage() {
-  const {
-    useCurrentUserDataQuery,
-    useMetricsAndEntriesQuery,
-  } = useUserPlan();
+  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData, isLoading } = metricsAndEntriesQuery;
@@ -38,37 +38,41 @@ export default function InsightsDashboardPage() {
   const entries = metricsAndEntriesData?.entries || [];
   const activities = userData?.activities || [];
   const activityEntries = userData?.activityEntries || [];
-  const hasMetrics = userMetrics.length > 0;
   const router = useRouter();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
-  const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null);
+  // const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null);
   const [trendHelpMetricId, setTrendHelpMetricId] = useState<string | null>(
     null
   );
-  const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
-  const [selectedNewMetric, setSelectedNewMetric] = useState<string | null>(
-    null
-  );
+  // const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
+  // const [selectedNewMetric, setSelectedNewMetric] = useState<string | null>(
+  // null
+  // );
   const [isCreatingMetric, setIsCreatingMetric] = useState(false);
   const api = useApiWithAuth();
-  const { maxMetrics } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
-  const hasLoadedMetricsAndEntries = metricsAndEntriesQuery.isSuccess && !!metricsAndEntriesData;
+  const hasLoadedMetricsAndEntries =
+    metricsAndEntriesQuery.isSuccess && !!metricsAndEntriesData;
   const { userPaidPlanType } = usePaidPlan();
 
-  const addMetric = async ({title, emoji}: {title: string, emoji: string}) => {
+  const addMetric = async ({
+    title,
+    emoji,
+  }: {
+    title: string;
+    emoji: string;
+  }) => {
     try {
-
       await api.post("/metrics", {
         title,
         emoji,
       });
 
       metricsAndEntriesQuery.refetch();
-      setIsAddMetricOpen(false);
-      setSelectedNewMetric(null);
+      // setIsAddMetricOpen(false);
+      // setSelectedNewMetric(null);
       toast.success("Metric added successfully");
     } catch (error) {
       console.error("Error creating metric:", error);
@@ -80,11 +84,13 @@ export default function InsightsDashboardPage() {
 
   const addDefaultMetrics = async () => {
     const hasProductivity = userMetrics.find((m) => m.title === "Productivity");
-    const hasEnergy = userMetrics.find((m) => m.title === "Energy"); 
+    const hasEnergy = userMetrics.find((m) => m.title === "Energy");
     const hasHappiness = userMetrics.find((m) => m.title === "Happiness");
 
     if (!hasProductivity) {
-      const productivityMetric = defaultMetrics.find((m) => m.title === "Productivity");
+      const productivityMetric = defaultMetrics.find(
+        (m) => m.title === "Productivity"
+      );
       if (productivityMetric) {
         await addMetric(productivityMetric);
       }
@@ -96,7 +102,9 @@ export default function InsightsDashboardPage() {
       }
     }
     if (!hasHappiness) {
-      const happinessMetric = defaultMetrics.find((m) => m.title === "Happiness");
+      const happinessMetric = defaultMetrics.find(
+        (m) => m.title === "Happiness"
+      );
       if (happinessMetric) {
         await addMetric(happinessMetric);
       }
@@ -123,11 +131,11 @@ export default function InsightsDashboardPage() {
   // }, [isLoading, hasMetrics]);
 
   // Set the first metric as selected when metrics load
-  useEffect(() => {
-    if (userMetrics.length > 0 && !selectedMetricId) {
-      setSelectedMetricId(userMetrics[0].id);
-    }
-  }, [userMetrics]);
+  // useEffect(() => {
+  //   if (userMetrics.length > 0 && !selectedMetricId) {
+  //     setSelectedMetricId(userMetrics[0].id);
+  //   }
+  // }, [userMetrics]);
 
   // Find the metric with the most entries
   const metricEntryCounts = userMetrics.map((metric) => ({
@@ -150,14 +158,15 @@ export default function InsightsDashboardPage() {
       <Card className="p-8">
         <div className="space-y-6">
           <div className="space-y-2 text-center">
-            <h2 className="text-2xl font-bold">⚡️ Building your insights</h2>
+            <h2 className="text-2xl font-bold">
+              {specificMetric?.emoji} {specificMetric?.title}
+            </h2>
             <p className="text-muted-foreground">
               {targetEntries === 15
                 ? "We need more data to generate meaningful insights. Keep logging your metrics daily!"
                 : "We've analyzed your data but haven't found meaningful correlations with your activities yet. This could mean your activities and metrics don't overlap enough, or we need more data to find reliable patterns. Keep logging!"}
             </p>
           </div>
-
 
           <div className="space-y-6">
             {metricsToShow.map(({ metric, count }) => {
@@ -341,16 +350,24 @@ export default function InsightsDashboardPage() {
 
   // Render insights when we have enough data
   return (
-    <div className="container mx-auto py-10 max-w-3xl space-y-8">
-      <DailyCheckinCard />
+    <div className="mx-auto p-6 max-w-3xl space-y-8">
+      <div>
+        <h3 className="text-lg font-semibold my-4">Check-ins</h3>
+        <DailyCheckinViewer entries={entries} />
+        <div className="mt-4">
+          <DailyCheckinCard />
+        </div>
+      </div>
 
-      <MetricSelector
+      <div>
+        <h3 className="text-lg font-semibold my-4">Metrics</h3>
+        {/* <MetricSelector
         metrics={userMetrics}
         selectedMetricId={selectedMetricId}
         onMetricSelect={setSelectedMetricId}
-      />
+      /> */}
 
-      {/* <AddMetricPopover
+        {/* <AddMetricPopover
         isOpen={isAddMetricOpen}
         onClose={() => {
           setIsAddMetricOpen(false);
@@ -364,20 +381,21 @@ export default function InsightsDashboardPage() {
         isCreating={isCreatingMetric}
       /> */}
 
-      <div className="space-y-4">
-        {userMetrics
-          .filter((metric) => metric.id === selectedMetricId)
-          .map((metric) => {
+        <div className="space-y-4">
+          {userMetrics.map((metric) => {
             const count = entries.filter(
               (e) => e.metric_id === metric.id
             ).length;
             const correlations =
               count >= 15
                 ? calculateMetricCorrelations(metric.id)
-                    .filter((c): c is { activity: Activity; correlation: number } => c !== null)
-                    .map(c => ({
+                    .filter(
+                      (c): c is { activity: Activity; correlation: number } =>
+                        c !== null
+                    )
+                    .map((c) => ({
                       activity: c.activity,
-                      correlation: c.correlation
+                      correlation: c.correlation,
                     }))
                 : [];
             const hasCorrelations = correlations.length > 0;
@@ -460,6 +478,7 @@ export default function InsightsDashboardPage() {
               </div>
             );
           })}
+        </div>
       </div>
     </div>
   );
