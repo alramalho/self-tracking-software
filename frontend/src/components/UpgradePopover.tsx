@@ -18,8 +18,8 @@ interface UpgradePopoverProps {
   onClose: () => void;
 }
 
-const PLUS_MONTHLY = 8.99;
-const PLUS_YEARLY = 89.99;
+const PLUS_MONTHLY = 4.99;
+const PLUS_YEARLY = 49.99;
 
 const PLUS_YEARLY_DISCOUNT_PERCENT = Math.round(
   (Math.abs(PLUS_YEARLY - 12 * PLUS_MONTHLY) / (12 * PLUS_MONTHLY)) * 100
@@ -235,8 +235,8 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 
   const paymentLink =
     (isYearly
-      ? "https://buy.stripe.com/6oEeXSbRz9MZ2GY3ch"
-      : "https://buy.stripe.com/eVa6rmdZHcZb5Ta004") +
+      ? "https://buy.stripe.com/fZe4je08RaR3gxO28f"
+      : "https://buy.stripe.com/cN24jef3LgbnchyaEK") +
     (isDiscountApplied ? "?prefilled_promo_code=EARLYSUPPORTER" : "");
 
   return (
