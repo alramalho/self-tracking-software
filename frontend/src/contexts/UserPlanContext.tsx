@@ -441,6 +441,53 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const fetchMetricsData = async () => {
+    if (!isSignedIn) {
+      throw new Error("User not signed in");
+    }
+
+    try {
+      const startTime = performance.now();
+      const result = await smallRetryMechanism(
+        async () => {
+          const [metricsResponse, entriesResponse] = await Promise.all([
+            api.get('/metrics'),
+            api.get('/metric-entries')
+          ]);
+
+          const endTime = performance.now();
+          const latencySeconds = (endTime - startTime) / 1000;
+
+          const latencyProperties: Properties = {
+            latency_seconds: Math.round(latencySeconds * 1000) / 1000
+          };
+
+          // Use direct capture method
+          if (posthog) {
+            posthog.capture('load-metrics-data-latency', latencyProperties);
+          }
+
+          return {
+            metrics: metricsResponse.data as Metric[],
+            entries: entriesResponse.data as MetricEntry[]
+          };
+        },
+        {
+          shouldRetry: (err) => 
+            axios.isAxiosError(err) && 
+            (err.response?.status === 404 || err.response?.status === 401)
+        }
+      );
+      
+      return result;
+    } catch (err) {
+      console.error("[UserPlanProvider] Error fetching metrics data:", err);
+      handleAuthError(err);
+      toast.error("Failed to fetch metrics data. Please try again.");
+      throw err;
+    }
+  };
+
   const useCurrentUserDataQuery = () => {
     const query = useQuery({
       queryKey: ['userData', 'current'],
@@ -593,21 +640,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const useMetricsAndEntriesQuery = () => useQuery({
     queryKey: ['metricsAndEntries'],
-    queryFn: async () => {
-      try {
-        const [metricsResponse, entriesResponse] = await Promise.all([
-          api.get('/metrics'),
-          api.get('/metric-entries')
-        ]);
-        return {
-          metrics: metricsResponse.data as Metric[],
-          entries: entriesResponse.data as MetricEntry[]
-        };
-      } catch (err) {
-        handleAuthError(err);
-        throw err;
-      }
-    },
+    queryFn: fetchMetricsData,
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
