@@ -225,7 +225,16 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         <div ref={checkboxesRef} className="space-y-3 mt-12 px-4">
           <p className="text-sm text-gray-500">{questionPrefix}</p>
           {Object.keys(questionsChecks).map((key) => (
-            <div key={key} className="flex items-center space-x-2">
+            <div
+              key={key}
+              className="flex items-center space-x-2"
+              onClick={() =>
+                toast(
+                  "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below",
+                  { icon: "ℹ️" }
+                )
+              }
+            >
               <Checkbox checked={checkedItems[key] || false} disabled />
               <label className="text-sm text-gray-700">{key}</label>
             </div>
@@ -310,6 +319,9 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               placeholder="Tell us what we got wrong..."
             />
           </div>
+          <span className="text-sm text-gray-500 m-4 mt-6 text-center">
+            the message gets
+          </span>
 
           <div className="px-4">
             <Button
