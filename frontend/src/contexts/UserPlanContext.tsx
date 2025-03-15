@@ -678,6 +678,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await api.post('/update-timezone', { timezone });
       currentUserDataQuery.refetch()
+      console.log("timezone updated to", timezone);
       return response.data;
     } catch (err) {
       handleAuthError(err);
@@ -693,7 +694,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Add updateTimezone to the effect that runs when the user signs in
   useEffect(() => {
-    if (isSignedIn && currentUserDataQuery.data?.user && !currentUserDataQuery.data.user.timezone) {
+    const currenttimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (isSignedIn && currentUserDataQuery.data?.user && (currentUserDataQuery.data.user.timezone !== currenttimezone)) {
       updateTimezone().catch(err => {
         logger.error("Failed to update timezone on initial load:", err);
       });
