@@ -95,6 +95,11 @@ export default function ClientPage() {
       router.push(redirectUrl);
       return;
     } else if (referrer) {
+      if (currentUser?.user?.username === referrer) {
+        toast("You can't refer yourself", {icon: "😅"});
+        router.push(`/`);
+        return;
+      }
       try {
         await api.post(`/handle-referral/${referrer}`);
       } catch (error) {
