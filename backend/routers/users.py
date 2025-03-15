@@ -13,16 +13,12 @@ from entities.notification import Notification
 from services.notification_manager import NotificationManager
 from services.telegram_service import TelegramService
 from constants import MAX_TIMELINE_ENTRIES
-from pydantic import Field
 import re
-from ai.llm import ask_schema_async
 import concurrent.futures
 from urllib import parse
 import traceback
 from gateways.aws.ses import SESGateway, get_email_template_string
 from analytics.posthog import posthog
-import time
-from emails.loops import upsert_loops_contact
 from gateways.messages import MessagesGateway
 from pytz import all_timezones
 from pydantic import BaseModel

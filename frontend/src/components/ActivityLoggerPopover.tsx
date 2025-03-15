@@ -21,6 +21,7 @@ export function ActivityLoggerPopover({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [quantity, setQuantity] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const handleQuantityChange = (amount: number) => {
     setQuantity(Math.max(0, quantity + amount));
@@ -60,6 +61,9 @@ export function ActivityLoggerPopover({
             Log {selectedActivity.title}
           </h2>
           <div className="text-4xl mb-4">{selectedActivity.emoji}</div>
+          <p className="text-xs font-normal text-center my-4">
+            <span className="italic">📍 {currentTimezone}</span>
+          </p>
         </div>
 
         <div>

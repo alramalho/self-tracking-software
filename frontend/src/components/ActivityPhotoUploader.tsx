@@ -182,6 +182,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       formData.append("quantity", activityData.quantity.toString());
       formData.append("isPublic", isPublic.toString());
       formData.append("description", description);
+      formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
 
       if (selectedFile) {
         formData.append("photo", selectedFile);
