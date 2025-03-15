@@ -32,6 +32,7 @@ import { motion } from "framer-motion";
 import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { useUpgrade } from "@/contexts/UpgradeContext";
+import { usePostHog } from "posthog-js/react";
 
 type OtherProfile = {
   user: {
@@ -46,6 +47,11 @@ function IntroStep({ onNext }: { onNext: () => void }) {
   const [plan, setPlan] = useState(false);
   const [partner, setPartner] = useState(false);
   const [attempted, setAttempted] = useState(false);
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.capture('onboarding-intro-view');
+  }, [posthog]);
 
   const handleCheckedChange =
     (setter: (value: boolean) => void) => (checked: boolean) => {
@@ -180,6 +186,11 @@ function SecondStep({ onNext }: { onNext: () => void }) {
   };
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
   const api = useApiWithAuth();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.capture('onboarding-profile-setup-view');
+  }, [posthog]);
 
   const renderChildrenContent = useCallback(
     (data: { question_checks: Record<string, boolean>; message: string }) => (
@@ -224,6 +235,12 @@ function SecondStep({ onNext }: { onNext: () => void }) {
 }
 
 function ThirdStep({ onNext }: { onNext: () => void }) {
+  const posthog = usePostHog();
+  
+  useEffect(() => {
+    posthog?.capture('onboarding-plan-creation-view');
+  }, [posthog]);
+
   return <PlanCreatorDynamicUI onNext={onNext} />;
 }
 
@@ -314,7 +331,11 @@ function FourthStep({ onNext }: { onNext: () => void }) {
   const {setShowUpgradePopover} = useUpgrade();
   const [searchOpen, setSearchOpen] = useState(false);
   const [usersInQueue, setUsersInQueue] = useState<UserSearchResult[]>([]);
+  const posthog = usePostHog();
 
+  useEffect(() => {
+    posthog?.capture('onboarding-partner-setup-view');
+  }, [posthog]);
 
   useEffect(() => {
     currentUserQuery.refetch()
@@ -578,7 +599,10 @@ function FourthStep({ onNext }: { onNext: () => void }) {
       <Button
         disabled={!currentUser?.friend_ids?.length}
         className="w-full mt-6"
-        onClick={onNext}
+        onClick={() => {
+          posthog?.capture('onboarding-complete');
+          onNext();
+        }}
       >
         Finish
       </Button>
