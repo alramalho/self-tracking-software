@@ -52,7 +52,7 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 bg-white">
       {label && (
         <label className="text-sm font-medium text-gray-700">
           <span>{label}</span>
@@ -75,11 +75,11 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
             disabled={disabled || isTranscribing}
           >
             {isTranscribing ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin" />
             ) : isRecording ? (
-              <Mic className="h-5 w-5 text-red-400" />
+              <Mic className="h-6 w-6 text-red-400" />
             ) : (
-              <Mic className="h-5 w-5 text-gray-500" />
+              <Mic className="h-6 w-6 text-gray-700" />
             )}
           </Button>
         </div>
