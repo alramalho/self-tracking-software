@@ -20,6 +20,7 @@ WS_CLOSE_CODES = {
 
 from services.conversation_service import process_message
 from shared.executor import executor
+from typing import Tuple
 from ai import stt
 from controllers.plan_controller import PlanController
 from pydantic import BaseModel, Field
@@ -537,7 +538,9 @@ async def get_daily_checkin_extractions(
         extractor = ActivityExtractorAssistant(user=user, memory=memory)
         metrics_companion = MetricsCompanionAssistant(user=user, memory=memory)
 
-        extractor.write_assistant_message(ai_message) # We just need to do this once, as they have shared memory!
+        extractor.write_assistant_message(
+            ai_message
+        )  # We just need to do this once, as they have shared memory!
 
         # Create tasks for parallel execution
         activities_task = extractor.get_response(
@@ -677,31 +680,71 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
             user.id, {"profile": response.user_profile}
         )
 
-        class ResponseSchema(BaseModel):
+
+
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+
+        memory.write(
+            Message.new(
+                text=message,
+                sender_name=user.name,
+                sender_id=user.id,
+                recipient_name="Jarvis",
+                recipient_id="0",
+                emotions=[],
+            )
+        )
+
+        conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+
+        class QuestionAnalysisSchema(BaseModel):
+            question: str = Field(
+                ...,
+                description="The question that the user should answer.",
+            )
             reasoning: str = Field(
                 ...,
-                description="Your question by question extensive step by step reasoning.",
+                description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
             )
-            decisions: List[bool] = Field(
-                ...,
-                description="A list of boolean values, indicating whether the user message contains information to the question (should have same order as the questions)",
+            decision: bool = Field(
+                ..., description="The boolean representing the deicions (true if there is sufficient information, false otherwise).",
+            )
+
+        class ResponseSchema(BaseModel):
+            analysis: List[QuestionAnalysisSchema] = Field(
+                description="The analysis of each question and user message.",
             )
             message: str = Field(
                 ...,
                 description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
             )
 
+        print(f"Conversation history: {conversation_history}")
         response = await ask_schema_async(
-            text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
+            text=f"Analyse the interaction {conversation_history} and whether it contains information to answer all the questions: {list(question_checks.values())}\n. Then, write a message to continue the conversation (referecing any missing information to the questions).",
             system="Youa are a friendly AI assitant.",
             pymodel=ResponseSchema,
+        )
+
+        print(f"Response: {response}")
+        print(f"Analysis: {response.analysis}")
+        print(f"Message: {response.message}")
+
+        memory.write(
+            Message.new(
+                text=response.message,
+                sender_name="Jarvis",
+                sender_id="0",
+                recipient_name=user.name,
+                recipient_id=user.id,
+            )
         )
 
         return {
             "message": response.message,
             "user": updated_user,
             "question_checks": {
-                question_checks_keys[i]: response.decisions[i]
+                question_checks_keys[i]: response.analysis[i].decision
                 for i in range(len(question_checks_keys))
             },
         }
