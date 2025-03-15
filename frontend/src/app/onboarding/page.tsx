@@ -176,7 +176,7 @@ function SecondStep({ onNext }: { onNext: () => void }) {
     "What do you do": "What does the user do",
     "Your vision for yourself (who do you want to become)":
       "The user ideal vision for himself",
-    "Your anti-vision": "The user ideal anti-vision for himself",
+    "Your anti-vision": "The user anti-vision for himself. Don't be too picky, the goal is just having the user to be able to identify the things that are not aligned with who he wants to become.",
   };
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
   const api = useApiWithAuth();
