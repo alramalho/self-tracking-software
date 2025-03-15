@@ -26,6 +26,7 @@ import { usePostHog } from "posthog-js/react";
 import ConfirmDialog from "../ConfirmDialog";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import UserSettingsPopover from "./UserSettingsPopover";
+import { currentUser } from "@clerk/nextjs/server";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -68,11 +69,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
               )}
             >
               On {capitalize(userPaidPlanType || "free")} Plan
-              <SquareArrowUp
-                onClick={() => setShowUpgradePopover(true)}
-                size={20}
-                className="text-gray-800"
-              />
+              {userPaidPlanType === "free" && (
+                <SquareArrowUp
+                  onClick={() => setShowUpgradePopover(true)}
+                  size={20}
+                  className="text-gray-800"
+                />
+              )}
             </span>
           </div>
           <div className="flex flex-col gap-3">
@@ -84,7 +87,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
               <User size={28} />
               <span>User Settings</span>
             </Button>
-            
+
             {/* <Button
               variant="ghost"
               className="w-full flex items-center justify-start px-0 gap-2"
