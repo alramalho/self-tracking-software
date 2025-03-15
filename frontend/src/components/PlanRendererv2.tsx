@@ -450,7 +450,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             </div>
           </>
         )}
-        <div className="mt-8">
+        <div className="mt-4">
           {selectedPlan.outline_type === "specific" && (
             <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
               <span className="text-xs text-gray-500">Completed</span>
@@ -487,13 +487,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center mt-8">
+        <div className="flex items-center justify-center mt-4">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading session data...</span>
         </div>
       ) : (
         sessionData.length > 0 && (
-          <div className="mt-8 max-w-4xl">
+          <div className="mt-4">
             <BarChart
               data={sessionData}
               xAxisKey="week"
@@ -541,7 +541,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       )}
 
       {planGroupMembers && planGroupMembers.length >= 2 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mt-8">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
           <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
           <div className="flex flex-row flex-wrap gap-6">
             {planGroupMembers.map((member) => (
@@ -572,7 +572,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       <Link href="/add" passHref>
         <Button
           variant="outline"
-          className="bg-gray-50 mt-2 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+          className="bg-gray-50 mt-4 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
         >
           <PlusSquare className="h-8 w-8 mb-2 text-gray-400" />
           <span>Log Activity</span>

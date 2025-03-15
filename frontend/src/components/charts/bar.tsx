@@ -85,7 +85,9 @@ export function BarChart({
     return weekDate > currentDate;
   };
 
-  const minWidth = 100 + 30 * data.length;
+  const dataLength = data.length;
+  const linesLength = lines.length;
+  const minWidth = 100 + dataLength * linesLength * 20;
 
   return (
     <Card>
@@ -93,20 +95,20 @@ export function BarChart({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="h-[440px] overflow-x-auto">
+      <CardContent className="h-[440px] overflow-x-auto p-0">
         <ChartContainer config={chartConfig}>
           <div className="h-[350px]" style={{ minWidth: `${minWidth}px` }}>
             <ResponsiveContainer width="100%" height="100%">
               <RechartsBarChart
                 data={data}
-                margin={{
-                  top: 20,
-                  right: 10,
-                  left: -10,
-                  bottom: 10,
-                }}
-                barGap={0}
-                barCategoryGap={20}
+                // margin={{
+                //   top: 20,
+                //   right: 10,
+                //   left: -10,
+                //   bottom: 10,
+                // }}
+                // barGap={0}
+                // barCategoryGap={20}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -144,32 +146,32 @@ export function BarChart({
                     dataKey={line.dataKey}
                     name={line.name}
                     fill={line.color}
-                    radius={[4, 4, 0, 0]}
+                    radius={[4, 4, 4, 4]}
                     activeIndex={currentWeekIndex}
-                    shape={(props: any) => {
-                      const opacity = isFutureWeek(props.week.toString())
-                        ? 0.4
-                        : 1;
-                      return (
-                        <Rectangle
-                          {...props}
-                          x={props.x - 10}
-                          width={20}
-                          fillOpacity={opacity}
-                        />
-                      );
-                    }}
-                    activeBar={({ ...props }) => (
-                      <Rectangle
-                        {...props}
-                        x={props.x - 10}
-                        fillOpacity={0.8}
-                        width={20}
-                        stroke={line.color}
-                        strokeDasharray={4}
-                        strokeDashoffset={4}
-                      />
-                    )}
+                    // shape={(props: any) => {
+                    //   const opacity = isFutureWeek(props.week.toString())
+                    //     ? 0.4
+                    //     : 1;
+                    //   return (
+                    //     <Rectangle
+                    //       {...props}
+                    //       x={props.x - 10}
+                    //       width={20}
+                    //       fillOpacity={opacity}
+                    //     />
+                    //   );
+                    // }}
+                    // activeBar={({ ...props }) => (
+                    //   <Rectangle
+                    //     {...props}
+                    //     x={props.x - 10}
+                    //     fillOpacity={0.8}
+                    //     width={20}
+                    //     stroke={line.color}
+                    //     strokeDasharray={4}
+                    //     strokeDashoffset={4}
+                    //   />
+                    // )}
                   />
                 ))}
                 <Legend
