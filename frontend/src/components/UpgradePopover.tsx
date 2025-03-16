@@ -18,20 +18,27 @@ interface UpgradePopoverProps {
   onClose: () => void;
 }
 
-const PLUS_MONTHLY = 4.99;
-const PLUS_YEARLY = 49.99;
+const PLUS_MONTHLY = 7.99;
+const PLUS_YEARLY = 71.99;
+const PLUS_DISCOUNTED_MONTHLY = 4.99;
+const PLUS_DISCOUNTED_YEARLY = 44.99;
 
-const PLUS_YEARLY_DISCOUNT_PERCENT = Math.round(
-  (Math.abs(PLUS_YEARLY - 12 * PLUS_MONTHLY) / (12 * PLUS_MONTHLY)) * 100
+const YEARLY_DISCOUNT_PERCENT = Math.round(
+  (Math.abs(PLUS_DISCOUNTED_YEARLY - 12 * PLUS_DISCOUNTED_MONTHLY) /
+    (12 * PLUS_DISCOUNTED_MONTHLY)) *
+    100
 );
-const PLUS_DISCOUNT_PERCENT = 33;
 
-const PLUS_DISCOUNTED_MONTHLY = Number(
-  (PLUS_MONTHLY * (1 - PLUS_DISCOUNT_PERCENT / 100)).toFixed(2)
+const FIXED_DISCOUNT_PERCENT = Math.round(
+  (Math.abs(PLUS_MONTHLY - PLUS_DISCOUNTED_MONTHLY) / PLUS_MONTHLY) * 100
 );
-const PLUS_DISCOUNTED_YEARLY = Number(
-  (PLUS_YEARLY * (1 - PLUS_DISCOUNT_PERCENT / 100)).toFixed(2)
-);
+
+// const PLUS_DISCOUNTED_MONTHLY = Number(
+//   (PLUS_DISCOUNTED_MONTHLY * (1 - PLUS_DISCOUNT_PERCENT / 100)).toFixed(2)
+// );
+// const PLUS_DISCOUNTED_YEARLY = Number(
+//   (PLUS_DISCOUNTED_YEARLY * (1 - PLUS_DISCOUNT_PERCENT / 100)).toFixed(2)
+// );
 
 const Coffee = () => {
   return (
@@ -136,13 +143,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
   );
 };
 
-const Rocket = ({
-  isDiscountApplied,
-  onDiscountApplied,
-}: {
-  isDiscountApplied: boolean;
-  onDiscountApplied: () => void;
-}) => {
+const Rocket = () => {
   const launchDate = "2025-04-11T00:00:00";
 
   if (launchDate < new Date().toISOString()) {
@@ -168,18 +169,11 @@ const Rocket = ({
       <h2 className="text-xl font-bold">
         we&apos;re just launching... <br /> so here&apos;s a{" "}
         <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
-          {PLUS_DISCOUNT_PERCENT}%
+          {FIXED_DISCOUNT_PERCENT}%
         </span>{" "}
         discount for your early support
       </h2>
       <CountdownTimer targetDate={launchDate} />
-      <Button
-        onClick={onDiscountApplied}
-        disabled={isDiscountApplied}
-        className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-300"
-      >
-        {isDiscountApplied ? "✅ Discount Applied" : "Apply discount"}
-      </Button>
       <span className="text-sm text-gray-500 mt-1">
         and maybe some day we can go full time :)
       </span>
@@ -192,7 +186,6 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   onClose,
 }) => {
   const [isYearly, setIsYearly] = useState(false);
-  const [isDiscountApplied, setIsDiscountApplied] = useState(false);
 
   const planFeatures: FeatureItem[] = [
     { emoji: "✔️", title: <span>Metrics and insights</span> },
@@ -219,25 +212,11 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   //   { emoji: "🔥", title: <span>exclusive open source supporter badge</span> },
   // ];
 
-  const formatPrice = (monthlyPrice: number, yearlyPrice: number) => {
-    return isYearly ? `€${yearlyPrice}` : `€${monthlyPrice}`;
-  };
-
-  const getMonthlyDisplay = (monthlyPrice: number, yearlyPrice: number) => {
-    if (isYearly) {
-      const monthlyEquivalent = yearlyPrice / 12;
-      return `€${monthlyEquivalent.toFixed(2)} a month`;
-    }
-    return `€${monthlyPrice} a month`;
-  };
-
   const getPeriod = () => (isYearly ? "yearly" : "monthly");
 
-  const paymentLink =
-    (isYearly
-      ? "https://buy.stripe.com/fZe4je08RaR3gxO28f"
-      : "https://buy.stripe.com/cN24jef3LgbnchyaEK") +
-    (isDiscountApplied ? "?prefilled_promo_code=EARLYSUPPORTER" : "");
+  const paymentLink = isYearly
+    ? "https://buy.stripe.com/00g1722gZ8IV5Ta7sA"
+    : "https://buy.stripe.com/cN24jef3LgbnchyaEK";
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
@@ -251,11 +230,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
         </div>
 
         <div className="grid gap-4">
-
-          <Rocket
-            isDiscountApplied={isDiscountApplied}
-            onDiscountApplied={() => setIsDiscountApplied(true)}
-          />
+          <Rocket />
 
           <Card className="p-6 relative overflow-hidden ring-2 ring-blue-500/50 rounded-2xl bg-gradient-to-br from-white to-blue-100">
             <div className="space-y-2">
@@ -267,38 +242,32 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                   Plan
                 </h3>
                 <div>
-                  {isYearly && (
+                  {/* {isYearly && (
                     <Badge className="ml-2 bg-green-500 text-white">
-                      Save {PLUS_YEARLY_DISCOUNT_PERCENT}%
+                      Save {YEARLY_DISCOUNT_PERCENT}%
                     </Badge>
-                  )}
-                  {isDiscountApplied && (
-                    <Badge className="ml-2 bg-purple-500 text-white">
-                      Save {PLUS_DISCOUNT_PERCENT}%
-                    </Badge>
-                  )}
+                  )} */}
+                  <Badge className="ml-2 bg-purple-500 text-white">
+                    Save {FIXED_DISCOUNT_PERCENT}%
+                  </Badge>
                 </div>
               </div>
               <div className="flex items-baseline gap-1">
-                {isDiscountApplied && (
-                  <span className="text-2xl font-medium text-gray-500 line-through">
-                    {formatPrice(PLUS_MONTHLY, PLUS_YEARLY)}
-                  </span>
-                )}
+                <span className="text-xl font-medium text-gray-500 line-through">
+                  {isYearly ? `€${PLUS_YEARLY}` : `€${PLUS_MONTHLY}`}
+                </span>
                 <span className="text-3xl font-bold">
-                  {formatPrice(
-                    isDiscountApplied ? PLUS_DISCOUNTED_MONTHLY : PLUS_MONTHLY,
-                    isDiscountApplied ? PLUS_DISCOUNTED_YEARLY : PLUS_YEARLY
-                  )}
+                  {isYearly
+                    ? `€${PLUS_DISCOUNTED_YEARLY}`
+                    : `€${PLUS_DISCOUNTED_MONTHLY}`}
                 </span>
                 <span className="text-gray-500">/ {getPeriod()}</span>
               </div>
               {isYearly && (
                 <p className="text-sm text-gray-500">
-                  {getMonthlyDisplay(
-                    isDiscountApplied ? PLUS_DISCOUNTED_MONTHLY : PLUS_MONTHLY,
-                    isDiscountApplied ? PLUS_DISCOUNTED_YEARLY : PLUS_YEARLY
-                  )}
+                  {isYearly
+                    ? <span>€{(PLUS_DISCOUNTED_YEARLY / 12).toFixed(2)} a month <span className="text-green-500">{YEARLY_DISCOUNT_PERCENT}% off!</span></span>
+                    : `€${PLUS_DISCOUNTED_MONTHLY} a month `}
                 </p>
               )}
             </div>
@@ -327,10 +296,10 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
             <Switch checked={isYearly} onCheckedChange={setIsYearly} />
             <span className="text-md text-gray-500">Yearly</span>
             <span className="text-sm text-green-500 ml-1">
-              extra {PLUS_YEARLY_DISCOUNT_PERCENT}% off
+              get {Math.round(12 * (1 - PLUS_YEARLY / (12 * PLUS_MONTHLY)))}{" "}
+              months free
             </span>
           </div>
-
         </div>
 
         <Divider className="my-6 mt-24" />
