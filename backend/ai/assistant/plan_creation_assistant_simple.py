@@ -8,6 +8,8 @@ from controllers.plan_controller import PlanController
 from entities.user import User
 from entities.activity import Activity
 from ai.suggestions import PlanDetailsSuggestion
+from loguru import logger   
+from bson import errors as bson_errors
 from entities.plan import (
     Plan,
     PlanMilestone,
@@ -173,7 +175,7 @@ Today is {datetime.now().strftime('%b %d, %Y')}.
 
                 activities = [
                     self.activities_gateway.get_activity_by_id(activity.id)
-                    if activity.id
+                    if activity.id and ObjectId.is_valid(activity.id)
                     else Activity.new(
                         user_id=self.user.id,
                         title=activity.title,
