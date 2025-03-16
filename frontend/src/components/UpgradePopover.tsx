@@ -286,7 +286,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 
             <Link href={paymentLink} target="_blank">
               <Button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 rounded-xl">
-                Buy
+                Try free
               </Button>
             </Link>
           </Card>
