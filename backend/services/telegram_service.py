@@ -6,6 +6,7 @@ from entities.activity import Activity, ActivityEntry
 from entities.metric import Metric, MetricEntry
 from typing import Optional, List
 import traceback
+from datetime import UTC, datetime
 from gateways.activities import ActivitiesGateway
 from gateways.metrics import MetricsGateway
 
@@ -61,12 +62,14 @@ class TelegramService:
 
         message = (
             f"🚨 <b>Error Detected on user {user_username}</b>\n\n"
+            f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>Environment:</b> {ENVIRONMENT}\n"
             f"<b>User ID:</b> {user_id}\n"
             f"<b>Path:</b> {path}\n"
             f"<b>Status Code:</b> {status_code}\n"
             f"<b>Method:</b> {method}\n"
-            f"<b>Error:</b>\n<pre>{error_message[:1000]}</pre>"  # Limit error message length
+            f"<b>Error:</b>\n<pre>{error_message[:1000]}</pre>"
+              # Limit error message length
         )
         self.send_message(message)
 
@@ -77,6 +80,7 @@ class TelegramService:
 
         message = (
             f"🔌🤖 <b>WebSocket Error Detected on user {user_username}</b>\n\n"
+            f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>Environment:</b> {ENVIRONMENT}\n"
             f"<b>User ID:</b> {user_id}\n"
             f"<b>Path:</b> {path}\n"
@@ -90,6 +94,7 @@ class TelegramService:
         """Send a notification when a bug report feedback is received."""
         message = (
             f"📝🐞 <b>New Bug Report from <pre>{reporter_username}</pre></b>\n\n"
+            f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>Environment:</b> {ENVIRONMENT}\n"
             f"<b>Email:</b> <pre>{email}</pre>\n"
             f"<b>Reporter ID:</b> <pre>{reporter_id}</pre>\n"
@@ -106,6 +111,7 @@ class TelegramService:
         """Send a notification when a suggestion is rejected."""
         message = (
             f"🚫 <b>Suggestion Rejected on user {user_username}</b>\n\n"
+            f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>User ID:</b> {user_id}\n"
             f"<b>Details:</b> \n\n{details}\n"
         )
@@ -126,6 +132,7 @@ class TelegramService:
 
         message = (
             f"🚫 <b>Daily Checkin Rejected on user {user_username}</b>\n\n"
+            f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>User ID:</b> {user_id}\n"
             f"<b>Message:</b> {message}\n"
             f"<b>Activity Entries:</b> {"\n".join([f"– {activities_gateway.get_readable_activity_entry(a)}" for a in activity_entries])}\n"
@@ -148,6 +155,7 @@ class TelegramService:
 
         message = (
             f"✅ <b>Daily Checkin Accepted on user {user_username}</b>\n\n"
+            f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>User ID:</b> {user_id}\n"
             f"<b>Message:</b> {message}\n"
             f"<b>Activity Entries:</b> {"\n".join([f"– {activities_gateway.get_readable_activity_entry(a)}" for a in activity_entries])}\n"
