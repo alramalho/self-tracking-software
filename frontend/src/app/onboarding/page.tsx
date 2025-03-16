@@ -665,8 +665,8 @@ function FourthStep({ onNext }: { onNext: () => void }) {
             light accountability partner.
           </p>
           <p>
-            That way you can get a broader picture of the app&apos;s benefits,
-            and if it does not suit you, you can cancel anytime, free of charge.
+            During this time you can always invite a friend to the app to fully unlock the free tier,
+            or cancel if it doesn&apos;t suit your needs.
           </p>
           <p>
             How does that sound?
