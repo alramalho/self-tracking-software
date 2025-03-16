@@ -28,7 +28,7 @@ import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
-
+const MINIMUM_ENTRIES = 7;
 export default function InsightsDashboardPage() {
   const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
@@ -162,7 +162,7 @@ export default function InsightsDashboardPage() {
               {specificMetric?.emoji} {specificMetric?.title}
             </h2>
             <p className="text-muted-foreground">
-              {targetEntries === 15
+              {targetEntries === MINIMUM_ENTRIES
                 ? "We need more data to generate meaningful insights. Keep logging your metrics daily!"
                 : "We've analyzed your data but haven't found meaningful correlations with your activities yet. This could mean your activities and metrics don't overlap enough, or we need more data to find reliable patterns. Keep logging!"}
             </p>
@@ -285,7 +285,7 @@ export default function InsightsDashboardPage() {
 
   // Calculate next milestone based on current entries
   const getNextMilestone = (entries: number) => {
-    const milestones = [15, 30, 45, 60, 90, 120];
+    const milestones = [MINIMUM_ENTRIES, 10, 15, 30, 45, 60, 90, 120];
     return (
       milestones.find((m) => entries < m) || milestones[milestones.length - 1]
     );
@@ -387,7 +387,7 @@ export default function InsightsDashboardPage() {
               (e) => e.metric_id === metric.id
             ).length;
             const correlations =
-              count >= 15
+              count >= MINIMUM_ENTRIES
                 ? calculateMetricCorrelations(metric.id)
                     .filter(
                       (c): c is { activity: Activity; correlation: number } =>
