@@ -7,6 +7,11 @@ class DailyCheckinSettings(BaseModel):
     days: List[Literal["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]] = Field(default_factory=list)
     time: Optional[Literal["MORNING", "AFTERNOON", "EVENING"]] = None
 
+class StripeSettings(BaseModel):
+    customer_id: Optional[str] = None
+    subscription_id: Optional[str] = None
+    subscription_status: Optional[str] = None
+
 class User(BaseModel):
     id: str
     name: Optional[str] = None
@@ -32,7 +37,8 @@ class User(BaseModel):
     plan_invitations: List[str] = Field(default_factory=list)
     referred_user_ids: List[str] = Field(default_factory=list)
     unactivated_email_sent_at: Optional[datetime] = None
-    theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"] = "random"
+    theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"] = "blue"
+    stripe_settings: Optional[StripeSettings] = None
 
     @classmethod
     def new(

@@ -46,6 +46,9 @@ jobs:
           AXIOM_BATCH_SIZE: "5"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          STRIPE_PLUS_PRODUCT_ID: ${{ secrets.STRIPE_PLUS_PRODUCT_ID }}
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+          STRIPE_ENDPOINT_SECRET: ${{ secrets.STRIPE_ENDPOINT_SECRET }}
           
         run: |
           cd aws-infrastructure
