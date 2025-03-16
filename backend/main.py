@@ -9,9 +9,11 @@ if __name__ == "__main__":
     port = 8000
     public_url = ngrok.connect(port).public_url
     logger.info(
-        "Webhook link to use (NGROK tunnel):\n"
+        "\033[94mWebhook link to use (NGROK tunnel):\n"
         + public_url
-        + "/clerk/webhook",
+        + "/clerk/webhook\n"
+        + public_url
+        + "/stripe/webhook\033[0m"
     )
 
     os.environ["API_URL"] = public_url

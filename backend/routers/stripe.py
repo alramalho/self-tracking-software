@@ -28,8 +28,13 @@ def get_user_plan(product_id: str, event: Any):
         plan = "plus"
     else:
         logger.error(f"Unknown product id {product_id}")
+        logger.error(f"Full event: {event}")
         telegram_service.send_message(
-            f"<h1>❌💳 Something went terribly wrong at checkout</h1><p>Someone tried to buy an inexistent product '{product_id}'. Full Event: {event}</p>",
+            (
+                f"🚨 <b>Unknown product id {product_id}</b>\n\n"
+                f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
+                f"<b>Check logs for full event</b>\n"
+            )
         )
         plan = "free"
     return plan
@@ -49,7 +54,6 @@ async def stripe_webhook(request: Request):
 
         # Handle the event
         users_gateway = UsersGateway()
-        global user
 
         if event["type"] in [
             "customer.subscription.deleted",
@@ -86,7 +90,7 @@ async def stripe_webhook(request: Request):
         plan_type = get_user_plan(product_id=product_id, event=event)
 
         if user:
-            users_gateway.update_fields(
+            user = users_gateway.update_fields(
                 user.id,
                 {
                     "stripe_settings": {
@@ -98,18 +102,25 @@ async def stripe_webhook(request: Request):
                 },
             )
         else:
+            logger.error(f"UNEXISTENT USER somehow bought a product '{product_id}'. Full Event: {event}")
             telegram_service.send_message(
-                f"<h1>❌💳 Something went terribly wrong at checkout</h1><p>Someo UNEXISTENT USER somehow bought a product '{product_id}'. Full Event: {event}</p>",
+                (
+                    f"🚨 <b>UNEXISTENT USER somehow bought a product '{product_id}'</b>\n\n"
+                    f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
+                    f"<b>Check logs for full event</b>\n"
+                )
             )
+            return {"success": False}
 
         if event["type"] == "customer.subscription.created":
             logger.info(f"Sending welcome emails to {user.email}")
             loops.send_loops_event(user.email, "plus_upgrade", user_id=user.id)
 
         logger.info(f"Event {event['type']} handled successfully")
-        logger.info(f"Telegram username: {user.telegram_username}")
         logger.info(f"Email: {user.email}")
-        logger.info(f"Subscription status: {user.stripe_subscription_status}")
+        logger.info(f"Subscription status: {user.stripe_settings.subscription_status}")
+
+        return {"success": True}
 
     except ValueError as e:
         logger.error(str(e))
@@ -120,6 +131,11 @@ async def stripe_webhook(request: Request):
     except Exception as e:
         logger.error(traceback.format_exc())
         telegram_service.send_message(
-            f"<h1>❌💳 Something went terribly wrong at checkout (larger catch)</h1><p>Event: <br><br>{event}</p><br><br><p>Traceback</p><code>{traceback.format_exc()}</code>",
+            (
+                f"🚨 <b>Something went terribly wrong at checkout</b>\n\n"
+                f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
+                f"<b>Check logs for traceback</b>"
+            )
         )
-    return {"success": True}
+    
+    return {"success": False}

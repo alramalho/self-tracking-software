@@ -23,6 +23,7 @@ from routers.admin import router as admin_router
 from routers.notifications import router as notifications_router
 from routers.messages import router as messages_router
 from routers.tally import router as tally_router
+from routers.stripe import router as stripe_router  
 from routers.ai import router as ai_router
 from routers.metrics import router as metrics_router
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -157,6 +158,7 @@ app.include_router(admin_router)
 app.include_router(tally_router)
 app.include_router(metrics_router)
 app.include_router(messages_router)
+app.include_router(stripe_router)
 
 app.add_middleware(
     CORSMiddleware,
