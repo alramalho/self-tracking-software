@@ -83,6 +83,7 @@ async def stripe_webhook(request: Request):
             )
 
         user_email = subscription.customer.email
+        logger.info(f"User email from stripe: {user_email}")
 
         user = users_gateway.get_user_by_safely("email", user_email)
 
@@ -102,10 +103,10 @@ async def stripe_webhook(request: Request):
                 },
             )
         else:
-            logger.error(f"UNEXISTENT USER somehow bought a product '{product_id}'. Full Event: {event}")
+            logger.error(f"UNEXISTENT USER triggered {event['type']} on product '{product_id}'. Full Event: {event}")
             telegram_service.send_message(
                 (
-                    f"🚨 <b>UNEXISTENT USER somehow bought a product '{product_id}'</b>\n\n"
+                    f"🚨 <b>UNEXISTENT USER triggered {event['type']} on product '{product_id}'</b>\n\n"
                     f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
                     f"<b>Check logs for full event</b>\n"
                 )
