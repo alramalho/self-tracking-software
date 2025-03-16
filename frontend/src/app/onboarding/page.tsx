@@ -468,7 +468,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
             icon={<ScanFace size={30} />}
             title="Use our AI coach"
             description="Get personalized suggestions and support from our AI coach"
-            buttonText="Try for free"
+            buttonText="Buy"
             onClick={() => setShowUpgradePopover(true)}
             color="gradient"
           />
