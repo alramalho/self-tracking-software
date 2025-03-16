@@ -181,8 +181,8 @@ function SecondStep({ onNext }: { onNext: () => void }) {
   const questionsChecks = {
     "What do you do": "What does the user do",
     "Your vision for yourself (who do you want to become)":
-      "The user ideal vision of himself. Do not be pedantic or picky.",
-    "Your anti-vision": "The user anti-vision for himself. Don't be too picky or pedantic, the goal is just having the user to be able to identify the things that are not aligned with who he wants to become.",
+      "Does the user share any thoughts about their future self or aspirations?",
+    "Your anti-vision": "Does the user shre any thoughts around outcomes or behaviors they want to avoid?",
   };
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
   const api = useApiWithAuth();
