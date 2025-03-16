@@ -40,7 +40,7 @@ const FIXED_DISCOUNT_PERCENT = Math.round(
 //   (PLUS_DISCOUNTED_YEARLY * (1 - PLUS_DISCOUNT_PERCENT / 100)).toFixed(2)
 // );
 
-const Coffee = () => {
+export const Coffee = () => {
   return (
     <div className="flex flex-row gap-2 items-center justify-center">
       <span className="text-2xl font-bold text-gray-700 font-cursive">

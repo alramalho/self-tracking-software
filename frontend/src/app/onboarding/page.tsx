@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { useState, useCallback, useEffect } from "react";
 import {
-  Link,
   Badge,
   ScanFace,
   UserPlus,
@@ -23,7 +22,7 @@ import { toast as hotToast } from "react-hot-toast";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
-import { UpgradePopover } from "@/components/UpgradePopover";
+import { Coffee, UpgradePopover } from "@/components/UpgradePopover";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -34,6 +33,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePostHog } from "posthog-js/react";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import Link from "next/link";
 type OtherProfile = {
   user: {
     id: string;
@@ -50,7 +50,7 @@ function IntroStep({ onNext }: { onNext: () => void }) {
   const posthog = usePostHog();
 
   useEffect(() => {
-    posthog?.capture('onboarding-intro-view');
+    posthog?.capture("onboarding-intro-view");
   }, [posthog]);
 
   const handleCheckedChange =
@@ -182,14 +182,15 @@ function SecondStep({ onNext }: { onNext: () => void }) {
     "What do you do": "What does the user do",
     "Your vision for yourself (who do you want to become)":
       "Does the user share any thoughts about their future self or aspirations?",
-    "Your anti-vision": "Does the user shre any thoughts around outcomes or behaviors they want to avoid?",
+    "Your anti-vision":
+      "Does the user shre any thoughts around outcomes or behaviors they want to avoid?",
   };
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
   const api = useApiWithAuth();
   const posthog = usePostHog();
 
   useEffect(() => {
-    posthog?.capture('onboarding-profile-setup-view');
+    posthog?.capture("onboarding-profile-setup-view");
   }, [posthog]);
 
   const renderChildrenContent = useCallback(
@@ -236,9 +237,9 @@ function SecondStep({ onNext }: { onNext: () => void }) {
 
 function ThirdStep({ onNext }: { onNext: () => void }) {
   const posthog = usePostHog();
-  
+
   useEffect(() => {
-    posthog?.capture('onboarding-plan-creation-view');
+    posthog?.capture("onboarding-plan-creation-view");
   }, [posthog]);
 
   return <PlanCreatorDynamicUI onNext={onNext} />;
@@ -263,22 +264,21 @@ function FourthStepCard({
   onClick: () => void;
   color?: "blue" | "gradient";
 }) {
-  const buttonClasses = color === "gradient" 
-    ? "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-    : "bg-blue-500 hover:bg-blue-600";
+  const buttonClasses =
+    color === "gradient"
+      ? "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+      : "bg-blue-500 hover:bg-blue-600";
 
-  const textClasses = color === "gradient"
-    ? "text-purple-500"
-    : "text-blue-500";
+  const textClasses =
+    color === "gradient" ? "text-purple-500" : "text-blue-500";
 
-  const ringClasses = color === "gradient"
-    ? "ring-2 ring-purple-500/20" 
-    : "ring-2 ring-blue-500/20";
+  const ringClasses =
+    color === "gradient"
+      ? "ring-2 ring-purple-500/20"
+      : "ring-2 ring-blue-500/20";
 
   return (
-    <Card
-      className={`p-6 relative overflow-hidden ${ringClasses} rounded-2xl`}
-    >
+    <Card className={`p-6 relative overflow-hidden ${ringClasses} rounded-2xl`}>
       <div className="flex flex-row no-wrap gap-2 items-center">
         <div className={`rounded-full ${textClasses} mr-2`}>{icon}</div>
         <h3 className="text-xl font-semibold">{title}</h3>
@@ -323,39 +323,45 @@ function FourthStep({ onNext }: { onNext: () => void }) {
       (request) => request.status == "pending"
     ) || [];
 
-
   const { data: userData } = useCurrentUserDataQuery();
   const currentUser = userData?.user;
   const { isSupported: isShareSupported, share } = useShare();
   const api = useApiWithAuth();
   const [copied, copyToClipboard] = useClipboard();
-  const {setShowUpgradePopover} = useUpgrade();
+  const { setShowUpgradePopover } = useUpgrade();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [accountabilityPopoverOpen, setAccountabilityPopoverOpen] =
+    useState(false);
   const [usersInQueue, setUsersInQueue] = useState<UserSearchResult[]>([]);
   const posthog = usePostHog();
 
   useEffect(() => {
-    posthog?.capture('onboarding-partner-setup-view');
+    posthog?.capture("onboarding-partner-setup-view");
   }, [posthog]);
 
   useEffect(() => {
-    currentUserQuery.refetch()
+    currentUserQuery.refetch();
   }, []);
 
   const { data: otherProfiles } = useQuery<OtherProfile[]>({
-    queryKey: ["otherProfiles", pendingSentFriendRequests, pendingReceivedFriendRequests],
+    queryKey: [
+      "otherProfiles",
+      pendingSentFriendRequests,
+      pendingReceivedFriendRequests,
+    ],
     queryFn: async () => {
       const profileIdsToCheck = [
-        ...(pendingSentFriendRequests?.map((request) => request.recipient_id) || []),
-        ...(pendingReceivedFriendRequests?.map((request) => request.sender_id) || []),
+        ...(pendingSentFriendRequests?.map((request) => request.recipient_id) ||
+          []),
+        ...(pendingReceivedFriendRequests?.map(
+          (request) => request.sender_id
+        ) || []),
       ];
       if (!profileIdsToCheck.length) return [];
 
       const profiles = await Promise.all(
         profileIdsToCheck.map((id) =>
-          api
-            .get(`/get-user-profile/${id}`)
-            .then((res) => res.data)
+          api.get(`/get-user-profile/${id}`).then((res) => res.data)
         )
       );
       return profiles;
@@ -429,6 +435,16 @@ function FourthStep({ onNext }: { onNext: () => void }) {
     );
   };
 
+  const handleFinishClick = () => {
+    // Show accountability popover if user has no friends and is on free plan
+    if (!currentUser?.friend_ids?.length && userPaidPlanType === "free") {
+      setAccountabilityPopoverOpen(true);
+    } else {
+      posthog?.capture("onboarding-complete");
+      onNext();
+    }
+  };
+
   return (
     <div className="space-y-6 w-full max-w-md mx-auto">
       <div className="text-center">
@@ -489,17 +505,18 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           <Inbox size={16} />
           Friend requests
         </div>
-        {!pendingReceivedFriendRequests.length && !pendingSentFriendRequests.length && (
-          <span className="text-gray-400">
-            Your friend requests will appear here,{" "}
-            <a
-              onClick={handleShareReferralLink}
-              className="underline cursor-pointer"
-            >
-              share them!
-            </a>
-          </span>
-        )}
+        {!pendingReceivedFriendRequests.length &&
+          !pendingSentFriendRequests.length && (
+            <span className="text-gray-400">
+              Your friend requests will appear here,{" "}
+              <a
+                onClick={handleShareReferralLink}
+                className="underline cursor-pointer"
+              >
+                share them!
+              </a>
+            </span>
+          )}
 
         {pendingReceivedFriendRequests.length > 0 && otherProfiles && (
           <div className="flex flex-col gap-2 w-full">
@@ -564,47 +581,37 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           </div>
         )}
 
-        {pendingSentFriendRequests &&
-          pendingSentFriendRequests.length > 0 && (
-            <div className="flex flex-col gap-2 w-full">
-              {pendingSentFriendRequests.map((request) => {
-                const recipient = otherProfiles?.find(
-                  (sender) => sender.user?.id === request.recipient_id
-                );
-                if (!recipient) return null;
+        {pendingSentFriendRequests && pendingSentFriendRequests.length > 0 && (
+          <div className="flex flex-col gap-2 w-full">
+            {pendingSentFriendRequests.map((request) => {
+              const recipient = otherProfiles?.find(
+                (sender) => sender.user?.id === request.recipient_id
+              );
+              if (!recipient) return null;
 
-                return (
-                  <div
-                    key={request.id}
-                    className="flex items-center justify-between w-full p-2 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={recipient.user?.picture} />
-                        <AvatarFallback>
-                          {recipient.user?.name?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">
-                        {recipient.user?.name}
-                      </span>
-                    </div>
-                    <span className="text-gray-400">Sent</span>
+              return (
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between w-full p-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={recipient.user?.picture} />
+                      <AvatarFallback>
+                        {recipient.user?.name?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{recipient.user?.name}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <span className="text-gray-400">Sent</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      <Button
-        disabled={!currentUser?.friend_ids?.length && userPaidPlanType == "free"}
-        className="w-full mt-6"
-        onClick={() => {
-          posthog?.capture('onboarding-complete');
-          onNext();
-        }}
-      >
+      <Button className="w-full mt-6" onClick={handleFinishClick}>
         Finish
       </Button>
 
@@ -636,6 +643,46 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           </Button>
         )}
         <UserSearch onUserClick={(user) => toggleUserInQueue(user)} />
+      </AppleLikePopover>
+
+      <AppleLikePopover
+        open={accountabilityPopoverOpen}
+        onClose={() => setAccountabilityPopoverOpen(false)}
+      >
+        <div className="p-4 space-y-4 text-md text-gray-600">
+          <h3 className="text-xl font-bold text-gray-800">👋 Hey there!</h3>
+          <p>
+            It seems you&apos;re not interested in having anyone else in this
+            journey with you.
+          </p>
+          <p>
+            That&apos;s a pity, because it means you will likely be dropping
+            out soon 😬
+          </p>
+          <p>
+            We&apos;re serious about your success though, so we&apos;d like to offer
+            you an extended trial of our private AI coach. Think of it as a
+            light accountability partner.
+          </p>
+          <p>
+            That way you can get a broader picture of the app&apos;s benefits,
+            and if it does not suit you, you can cancel anytime, free of charge.
+          </p>
+          <p>
+            How does that sound?
+          </p>
+          <Coffee/>
+          <Link
+            href={"https://buy.stripe.com/cN24jef3LgbnchyaEK"}
+            target="_blank"
+          >
+            <div className="flex gap-3 mt-4">
+              <Button className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 w-full rounded-xl">
+                Yes, let&apos; do it
+              </Button>
+            </div>
+          </Link>
+        </div>
       </AppleLikePopover>
     </div>
   );
