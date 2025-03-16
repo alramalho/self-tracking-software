@@ -92,7 +92,7 @@ class UsersGateway:
             setattr(user, field_name, new_value)
         self.db_gateway.write(user.dict())
         logger.info(f"User {user.id} ({user.name}) fields {fields} updated")
-        return user
+        return User(**user.dict())
 
     def _propagate_relevant_fields(self, user: User, fields: dict):
         if any(field in fields.keys() for field in ("username", "name", "picture")):

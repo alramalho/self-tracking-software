@@ -29,3 +29,4 @@ axiom-py
 pydantic-ai
 pytest-mock
 replicate
+stripe
