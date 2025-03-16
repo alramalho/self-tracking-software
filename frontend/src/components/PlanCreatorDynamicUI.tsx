@@ -24,7 +24,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
     "Your goal": "Does the message mention a specific goal or objective?",
     "The activities you want to inlcude (their name, and their unit of measurement, for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers')":
       "Does the message mention specific activities to be done, and their unit of measurement? (for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers'). You may suggest the unit of measurement to the user, given the relevant context you have available.",
-    "How many times per week you want to do these activities or if you want me to generate a specific schedule for you":
+    "Either do you want the plan to be on a times per week basis or if you want me to generate a specific schedule for you":
       "Does the message indicate if the plan is on a specific schedule or a times per week basis?",
   };
 
