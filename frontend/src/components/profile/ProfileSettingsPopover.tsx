@@ -8,6 +8,7 @@ import {
   SquareArrowUp,
   Brain,
   User,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { twMerge } from "tailwind-merge";
@@ -79,6 +80,18 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
             </span>
           </div>
           <div className="flex flex-col gap-3">
+            
+            {userPaidPlanType !== "free" && <Button
+              variant="ghost"
+              className="w-full flex items-center justify-start px-0 gap-2"
+              onClick={() => {
+                window.open("https://billing.stripe.com/p/login/eVa03Q46z6Ivchi8ww", "_blank");
+              }}
+            >
+              <CreditCard size={28} />
+              <span>Manage my subscription</span>
+            </Button>
+}
             <Button
               variant="ghost"
               className="w-full flex items-center justify-start px-0 gap-2"
