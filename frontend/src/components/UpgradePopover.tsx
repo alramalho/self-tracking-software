@@ -188,9 +188,10 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   const [isYearly, setIsYearly] = useState(false);
 
   const planFeatures: FeatureItem[] = [
-    { emoji: "✔️", title: <span>Metrics and insights</span> },
     { emoji: "✔️", title: <span>Personalized AI coaching</span> },
-    { emoji: "✔️", title: <span>Full style customization</span> },
+    { emoji: "✔️", title: <span>Metrics and insights</span> },
+    { emoji: "✔️", title: <span>Unlimited plans</span> },
+    { emoji: "✔️", title: <span>Full app customization</span> },
   ];
 
   // const peoplePlanFeatures: FeatureItem[] = [
