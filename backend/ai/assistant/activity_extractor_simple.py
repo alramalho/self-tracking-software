@@ -30,8 +30,11 @@ class ExtractedActivityEntry(BaseModel):
 
 
 class ExtractedActivityEntryList(BaseModel):
+    reasoning: str = Field(
+        ..., description="Your step by step reasoning analyzing conversation history and how does that map to extracted activities."
+    )
     activities: List[ExtractedActivityEntry] = Field(
-        ..., description="A list of activities that were logged"
+        ..., description="A list of the new activities to be logged"
     )
 
 
@@ -43,7 +46,7 @@ every_message_flowchart = {
     ),
     "ExtractActivity": Node(
         text=(
-            "Extract new activities recently mentioned in the user's message." +
+            "After carefully analyse converstaion history and your goals, extract new activities recently mentioned in the user's message." +
             "New activites are activites that are not on the recent logged activities list. " +
             "You can only extract activities that the user is currently tracking, not create new ones." 
         ),
@@ -74,14 +77,9 @@ class ActivityExtractorAssistant(BaseAssistant):
 
     def get_system_prompt(self) -> str:
         return f"""You are {self.name}, an AI assistant helping the user do and track more of his existing activities. 
-        You are capable of extracting past activities if the user has already previously created them.
-        The user must have done something everyday, so ideally you would want that to be logged.
-        
-        If the user requests anything beyond that, such as planning, reminders, etc, you should point the user to open a feature request by clicking the '?' icon on bottom right of the screen.
-        Always consider the entire conversation history when making decisions or responses.
-        Respond in the same language as the initial input.
-
-        Be mindful of the user's emotions, if they are strong enough.
+        You should analyze what the user tells you and extract the relevant activities in the conversation history, but not re-extract previously logged activities.
+        You should not bundle them up, respecting the dates when they are mentioned.
+        You can be more flexible regarding quantity.
 
         Today is {datetime.now().strftime('%b %d, %Y')}. 
         """

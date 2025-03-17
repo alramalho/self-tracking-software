@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface TextAreaWithVoiceProps {
   value: string;
   onChange: (value: string) => void;
+  onVoiceTranscripted?: (transcript: string) => void;
   placeholder?: string;
   label?: string;
   disabled?: boolean;
@@ -19,6 +20,7 @@ interface TextAreaWithVoiceProps {
 export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
   value,
   onChange,
+  onVoiceTranscripted,
   placeholder,
   label,
   disabled,
@@ -61,6 +63,7 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
 
       const response = await api.post("/ai/transcribe", formData);
       const transcribedText = response.data.text;
+      onVoiceTranscripted?.(transcribedText);
 
       // Append transcribed text to existing value
       const separator = value ? " " : "";
