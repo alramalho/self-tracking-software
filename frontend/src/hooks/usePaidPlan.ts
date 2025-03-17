@@ -6,9 +6,11 @@ export type PaidPlanType = "plus" | "free";
 
 const PLAN_LIMITS = {
   free: {
+    maxPlans: 1,
     maxMetrics: 0,
   },
   plus: {
+    maxPlans: 100,
     maxMetrics: 5,
   },
 } as const;
@@ -34,5 +36,6 @@ export function usePaidPlan() {
     useUserPlanType,
     userPaidPlanType: userData?.user?.plan_type,
     maxMetrics: PLAN_LIMITS[userData?.user?.plan_type || "free"].maxMetrics,
+    maxPlans: PLAN_LIMITS[userData?.user?.plan_type || "free"].maxPlans,
   };
 }
