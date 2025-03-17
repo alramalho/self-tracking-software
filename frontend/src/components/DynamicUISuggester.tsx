@@ -33,12 +33,13 @@ export interface BaseExtractionResponse {
 }
 
 export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
-  id: string
+  id: string;
   initialMessage: string;
   questionPrefix?: string;
   questionsChecks: QuestionsChecks;
   onSubmit: (text: string) => Promise<T>;
   shouldRenderChildren?: boolean;
+  renderIntermediateComponents?: () => React.ReactNode;
   renderChildren?: (data: T) => React.ReactNode;
   onAccept?: (data: T) => Promise<void>;
   onReject?: (feedback: string, data: T) => Promise<void>;
@@ -46,6 +47,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   placeholder?: string;
   title?: string;
   wave?: boolean;
+  onSkip?: () => void;
 };
 
 export function DynamicUISuggester<T extends BaseExtractionResponse>({
@@ -55,6 +57,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   questionsChecks,
   onSubmit,
   renderChildren,
+  renderIntermediateComponents,
   shouldRenderChildren = true,
   onAccept,
   onReject,
@@ -62,13 +65,15 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   placeholder = "You can also record a voice message for extended detail",
   title,
   wave = false,
-}: DynamicUISuggesterProps<T>) {
+  onSkip,
+  }: DynamicUISuggesterProps<T>) {
   const [text, setText] = useState("");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
   const [rejectionFeedback, setRejectionFeedback] = useState("");
   const [extractedData, setExtractedData] = useState<T | null>(null);
   const [attempts, setAttempts] = useState(0);
-  const [alreadyLoggedAttemptError, setAlreadyLoggedAttemptError] = useState(false);  
+  const [alreadyLoggedAttemptError, setAlreadyLoggedAttemptError] =
+    useState(false);
   const api = useApiWithAuth();
 
   const posthog = usePostHog();
@@ -105,20 +110,26 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     onSuccess: (data) => {
       // Store the extracted data
       setExtractedData(data);
-      setAttempts(prev => prev + 1);
+      const thisAttempt = attempts + 1;
+      setAttempts(thisAttempt);
 
       // First checkbox animation - using optional chaining for safety
       if (data.question_checks) {
-        const allChecksTrue = Object.values(data.question_checks).every(check => check);
+        const allChecksTrue = Object.values(data.question_checks).every(
+          (check) => check
+        );
         if (allChecksTrue) {
-          posthog?.capture(`dynamic-ui-${id}-attempts`, { value: attempts + 1 });
-          
+          posthog?.capture(`dynamic-ui-${id}-attempts`, {
+            value: thisAttempt,
+          });
         }
 
-        if (attempts >= 3 && !allChecksTrue) {
+        if (thisAttempt >= 3) {
           api.post("/ai/log-dynamic-ui-attempt-error", {
+            id: id,
+            extracted_data: data,
             question_checks: data.question_checks,
-            attempts: attempts,
+            attempts: thisAttempt,
           });
           setAlreadyLoggedAttemptError(true);
         }
@@ -208,6 +219,16 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     }
   };
 
+  const handleSkip = () => {
+    api.post("/ai/log-dynamic-ui-skip", {
+      id: id,
+      extracted_data: extractedData,
+      question_checks: questionsChecks,
+      attempts: attempts,
+    });
+    onSkip?.();
+  };
+
   const handleTextChange = (value: string) => {
     setText(value);
   };
@@ -245,6 +266,10 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
         <p className="text-center text-lg font-semibold">{initialMessage}</p>
 
+        {renderIntermediateComponents && (
+          <div className="px-4">{renderIntermediateComponents()}</div>
+        )}
+
         <div ref={checkboxesRef} className="space-y-3 mt-12 px-4">
           <p className="text-sm text-gray-500">{questionPrefix}</p>
           {Object.keys(questionsChecks).map((key) => (
@@ -269,6 +294,10 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             value={text}
             onChange={handleTextChange}
             placeholder={placeholder}
+            onVoiceTranscripted={async (transcript) => {
+              setText(transcript);
+              await submitMutation.mutateAsync(transcript);
+            }}
           />
         </div>
 
@@ -283,8 +312,20 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           </Button>
         </div>
 
+        {alreadyLoggedAttemptError && onSkip && (
+          <div className="px-4">
+            <Button
+              variant="outline"
+              className="w-full bg-white italic"
+              onClick={handleSkip}
+            >
+              Seems like you're struggling. Skip for now
+            </Button>
+          </div>
+        )}
+
         {extractedData && (
-          <div ref={extractedDataRef} className="opacity-100">
+          <div ref={extractedDataRef} className="opacity-100 px-4">
             {renderChildren && shouldRenderChildren && renderedChildren}
           </div>
         )}

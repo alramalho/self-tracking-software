@@ -4,7 +4,7 @@ interface EntryCardProps {
   emoji: string;
   title: string;
   description: string;
-  date: Date;
+  date?: Date;
 }
 
 export function EntryCard({ emoji, title, description, date }: EntryCardProps) {
@@ -15,7 +15,7 @@ export function EntryCard({ emoji, title, description, date }: EntryCardProps) {
         <div className="flex flex-col">
           <span className="text-sm font-semibold">{title}</span>
           <span className="text-xs font-normal">{description}</span>
-          <span className="text-xs text-gray-400">{getRelativeDate(date)}</span>
+          {date && <span className="text-xs text-gray-400">{getRelativeDate(date)}</span>}
         </div>
       </div>
     </div>

@@ -34,6 +34,7 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePostHog } from "posthog-js/react";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import Link from "next/link";
+import { PastWeekLoggingDynamicUI } from "@/components/PastWeekLoggingDynamicUI";
 type OtherProfile = {
   user: {
     id: string;
@@ -42,7 +43,7 @@ type OtherProfile = {
   };
 };
 
-function IntroStep({ onNext }: { onNext: () => void }) {
+function WelcomeStep({ onNext }: { onNext: () => void }) {
   const [profile, setProfile] = useState(false);
   const [plan, setPlan] = useState(false);
   const [partner, setPartner] = useState(false);
@@ -177,7 +178,7 @@ function IntroStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-function SecondStep({ onNext }: { onNext: () => void }) {
+function ProfileSetupStep({ onNext }: { onNext: () => void }) {
   const questionsChecks = {
     "Who you are (your age, occupation, etc.)": "What does the user do",
     "What do you want to achieve (your vision)":
@@ -238,7 +239,7 @@ function SecondStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-function ThirdStep({ onNext }: { onNext: () => void }) {
+function PlanCreationStep({ onNext }: { onNext: () => void }) {
   const posthog = usePostHog();
 
   useEffect(() => {
@@ -248,7 +249,17 @@ function ThirdStep({ onNext }: { onNext: () => void }) {
   return <PlanCreatorDynamicUI onNext={onNext} />;
 }
 
-function FourthStepCard({
+function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.capture("onboarding-past-week-logging-view");
+  }, [posthog]);
+
+  return <PastWeekLoggingDynamicUI onNext={onNext} />;
+}
+
+function AccountabilityStepCard({
   icon,
   title,
   description,
@@ -306,7 +317,7 @@ function FourthStepCard({
   );
 }
 
-function FourthStep({ onNext }: { onNext: () => void }) {
+function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const queryClient = useQueryClient();
@@ -462,7 +473,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
       </div>
 
       <div className="space-y-4">
-        <FourthStepCard
+        <AccountabilityStepCard
           icon={<UserPlus size={30} />}
           title="Invite a friend to the app"
           description="Share your invite link and both join the app free of cost."
@@ -472,7 +483,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           secondaryOnClick={() => setSearchOpen(true)}
           color="blue"
         />
-        <FourthStepCard
+        <AccountabilityStepCard
           icon={<Search size={30} />}
           title="Find someone in our community"
           description="Find someone who will help you stay on track"
@@ -483,7 +494,7 @@ function FourthStep({ onNext }: { onNext: () => void }) {
           color="blue"
         />
         <div>
-          <FourthStepCard
+          <AccountabilityStepCard
             icon={<ScanFace size={30} />}
             title="Use our AI coach"
             description="Get personalized suggestions and support from our AI coach"
@@ -709,14 +720,16 @@ export default function OnboardingPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <IntroStep onNext={() => setStep(2)} />;
+        return <WelcomeStep onNext={() => setStep(2)} />;
       case 2:
-        return <SecondStep onNext={() => setStep(3)} />;
+        return <ProfileSetupStep onNext={() => setStep(3)} />;
       case 3:
-        return <ThirdStep onNext={() => setStep(4)} />;
+        return <PlanCreationStep onNext={() => setStep(4)} />;
+      case 4:
+        return <PastWeekLoggingStep onNext={() => setStep(5)} />;
       default:
         return (
-          <FourthStep
+          <AccountabilityPartnerStep
             onNext={() => {
               hotToast.success(
                 "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner."
@@ -729,7 +742,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-white z-[51] overflow-y-auto">
+    <div className="fixed inset-0 bg-gray-50 z-[51] overflow-y-auto">
       <div className="h-full w-full" id="onboarding-page">
         <div className="min-h-full flex flex-col items-center p-4 max-w-4xl mx-auto">
           {renderStep()}

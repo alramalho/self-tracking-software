@@ -522,6 +522,127 @@ async def transcribe_audio(
 #         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/get-past-week-logging-extractions")
+async def get_past_week_logging_extractions(
+    request: Request, user: User = Depends(is_clerk_user)
+):
+
+    try:
+        body = await request.json()
+        ai_message = body["ai_message"]
+        message = body["message"]
+        question_checks = body["question_checks"]
+
+        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+
+        memory.write(
+            Message.new(
+                text=ai_message,
+                sender_name="Jarvis",
+                sender_id="0",
+                recipient_name=user.name,
+                recipient_id=user.id,
+            )
+        )
+
+        memory.write(
+            Message.new(
+                text=message,
+                sender_name=user.name,
+                sender_id=user.id,
+                recipient_name="Jarvis",
+                recipient_id="0",
+                emotions=[],
+            )
+        )
+
+        extractor = ActivityExtractorAssistant(user=user, memory=memory)
+
+        extractor.write_assistant_message(
+            ai_message
+        )  # We just need to do this once, as they have shared memory!
+
+        # Create tasks for parallel execution
+        activities_task = extractor.get_response(
+            user_input=message, message_id=str(ObjectId()), manual_memory_management=True
+        )
+
+        class QuestionAnalysisSchema(BaseModel):
+            question: str = Field(
+                ...,
+                description="The question that the user should answer.",
+            )
+            reasoning: str = Field(
+                ...,
+                description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
+            )
+            decision: bool = Field(
+                ..., description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
+            )
+
+        class QuestionChecksSchema(BaseModel):
+            analysis: List[QuestionAnalysisSchema] = Field(
+                description="The analysis of each question and user message.",
+            )
+
+        conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+
+        question_checks_task = ask_schema_async(
+            text=f"Analyse the interaction {conversation_history} and determine whether it contains information to answer all the questions: {list(question_checks.values())}",
+            system="You are a friendly AI assistant.",
+            pymodel=QuestionChecksSchema,
+        )
+
+
+        # Wait for all tasks to complete
+        activities_result, questions_checks_result = (
+            await asyncio.gather(activities_task, question_checks_task)
+        )
+
+        question_checks_keys = list(question_checks.keys())
+        question_results = {
+            question_checks_keys[i]: questions_checks_result.analysis[i].decision
+            for i in range(len(question_checks_keys))
+        }
+        unanswered_questions = [q for q, answered in question_results.items() if not answered]
+        
+        message = await ask_text_async(
+            text=f"""Based on the conversation history: {conversation_history}
+                    And the question check results where:
+                    - Answered questions: {[q for q, answered in question_results.items() if answered]}
+                    - Unanswered questions: {unanswered_questions}
+                    
+                    Generate an appropriate short message to the user.
+                    If there are unanswered questions, kindly ask for those specific pieces of information.
+                    If there are questions are answered, thank the user. 
+                    If it is a mix, acknowledge the given information and ask for the missing information.""",
+            system="You are a friendly AI assistant.",
+        )
+
+        # Unpack the results
+        _, extracted_activities_entries = activities_result
+        extracted_question_analysis = questions_checks_result
+        activity_entries = [a.data["entry"] for a in extracted_activities_entries if "entry" in a.data]
+
+        
+        result = {
+            "message": message,
+            "question_checks": {
+                question_checks_keys[i]: extracted_question_analysis.analysis[i].decision
+                for i in range(len(question_checks_keys))
+            },
+        }
+
+        if len(activity_entries) > 0:
+            result["activity_entries"] = activity_entries
+
+        return result
+    except Exception as e:
+        logger.error(f"Error getting daily checkin extractions: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
 @router.post("/get-daily-checkin-extractions")
 async def get_daily_checkin_extractions(
     request: Request, user: User = Depends(is_clerk_user)
@@ -772,6 +893,34 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/reject-past-week-logging")
+async def reject_past_week_logging(request: Request, user: User = Depends(is_clerk_user)):
+    """
+    Endpoint to handle past week logging rejection feedback.
+    Just sends a Telegram message with the feedback.
+    """
+    try:
+        body = await request.json()
+        feedback = body["feedback"]
+        user_message = body["user_message"]
+        ai_message = body["ai_message"]
+
+        # Create a message for Telegram
+        feedback_message = f"🔄 Past Week Logging Rejected\n\nFeedback: {feedback}\n\nUser message: {user_message}\n\nAI message: {ai_message}"
+
+        telegram = TelegramService()
+        telegram.send_suggestion_rejection_notification(
+            user_username=user.username,
+            user_id=user.id,
+            details=feedback_message,
+        )
+
+        return {"status": "success", "message": "Feedback received"}
+    except Exception as e:
+        logger.error(f"Error handling plan rejection: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/reject-plan")
 async def reject_plan(request: Request, user: User = Depends(is_clerk_user)):
     """
@@ -886,6 +1035,8 @@ async def log_dynamic_ui_attempt_error(request: Request, user: User = Depends(is
     body = await request.json()
     question_checks = body["question_checks"]
     attempts = body["attempts"]
+    id = body["id"]
+    extracted_data = body["extracted_data"]
     memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
     conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
 
@@ -896,4 +1047,25 @@ async def log_dynamic_ui_attempt_error(request: Request, user: User = Depends(is
         conversation_history=conversation_history,
         question_checks=question_checks,
         attempts=attempts,
+        extracted_data=extracted_data,
+        id=id,
+    )
+
+@router.post("/log-dynamic-ui-skip")
+async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_user)):
+    body = await request.json()
+    question_checks = body["question_checks"]
+    attempts = body["attempts"]
+    extracted_data = body["extracted_data"]
+    memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+    conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+
+    telegram = TelegramService()
+    telegram.send_dynamic_ui_skip_notification(
+        user_username=user.username,
+        user_id=user.id,
+        conversation_history=conversation_history,
+        question_checks=question_checks,
+        attempts=attempts,
+        extracted_data=extracted_data,
     )

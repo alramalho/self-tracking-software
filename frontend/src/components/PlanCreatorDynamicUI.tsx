@@ -83,10 +83,6 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
     }
   };
 
-  useEffect(() => {
-    console.log("shouldRenderChildren", shouldRenderChildren);
-  }, [shouldRenderChildren]);
-
   // Render the extracted plan data, inspired by PlanBuildingContainer
   const renderExtractedData = (data: PlanExtractionsResponse) => {
     if (!data.plan) {

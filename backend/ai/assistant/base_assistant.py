@@ -87,10 +87,11 @@ class BaseAssistant:
             "conversation_history": self.memory.read_all_as_str(max_age_in_minutes=3 * 60),
         }
 
-    async def get_response(self, user_input: str, message_id: str, emotions: List[Emotion] = []) -> Tuple[str, Dict]    :
+    async def get_response(self, user_input: str, message_id: str, emotions: List[Emotion] = [], manual_memory_management: bool = False) -> Tuple[str, Dict]    :
         """Process user input and return a response."""
         # Write user message to memory
-        self.write_user_message(user_input, message_id, emotions)
+        if not manual_memory_management:
+            self.write_user_message(user_input, message_id, emotions)
 
         # Initialize framework if not already done
         if not self.framework:
@@ -102,7 +103,8 @@ class BaseAssistant:
             result, extracted = await self.framework.run(context)
 
             # Write assistant's response to memory
-            self.write_assistant_message(result)
+            if not manual_memory_management:
+                self.write_assistant_message(result)
 
             # Handle any suggestions from the extracted data
             suggestions = await self.handle_suggestions(extracted)
