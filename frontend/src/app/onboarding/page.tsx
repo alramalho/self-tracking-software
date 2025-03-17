@@ -179,11 +179,11 @@ function IntroStep({ onNext }: { onNext: () => void }) {
 
 function SecondStep({ onNext }: { onNext: () => void }) {
   const questionsChecks = {
-    "What do you do": "What does the user do",
-    "Your vision for yourself (who do you want to become)":
-      "Does the user share any thoughts about their future self or aspirations?",
-    "Your anti-vision":
-      "Does the user shre any thoughts around outcomes or behaviors they want to avoid?",
+    "Who you are (your age, occupation, etc.)": "What does the user do",
+    "What do you want to achieve (your vision)":
+      "Does the user share any thoughts about their aspirations?",
+    "What do you want to avoid (your anti-vision)":
+      "Does the user share any thoughts around outcomes or behaviors they want to avoid?",
   };
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
   const api = useApiWithAuth();
@@ -214,7 +214,9 @@ function SecondStep({ onNext }: { onNext: () => void }) {
       message: string;
     }>
       id="profile-setup"
-      initialMessage="Great! Now, tell us a bit about yourself."
+      questionPrefix="I'd like to know"
+      initialMessage="Great! Now, tell me a bit about yourself."
+      placeholder="Voice messages are better suited for this step"
       questionsChecks={questionsChecks}
       onSubmit={async (text) => {
         const response = await api.post(

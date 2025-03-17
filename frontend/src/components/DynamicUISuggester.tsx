@@ -59,7 +59,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   onAccept,
   onReject,
   creationMessage = "Do you want me to process this for you?",
-  placeholder = "You can also record a voice message if you prefer",
+  placeholder = "You can also record a voice message for extended detail",
   title,
   wave = false,
 }: DynamicUISuggesterProps<T>) {
@@ -279,7 +279,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             disabled={isLoading || !text}
             loading={isLoading}
           >
-            Submit
+            Send
           </Button>
         </div>
 
