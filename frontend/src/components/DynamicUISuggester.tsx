@@ -68,6 +68,8 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   const [rejectionFeedback, setRejectionFeedback] = useState("");
   const [extractedData, setExtractedData] = useState<T | null>(null);
   const [attempts, setAttempts] = useState(0);
+  const [alreadyLoggedAttemptError, setAlreadyLoggedAttemptError] = useState(false);  
+  const api = useApiWithAuth();
 
   const posthog = usePostHog();
 
@@ -110,6 +112,15 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         const allChecksTrue = Object.values(data.question_checks).every(check => check);
         if (allChecksTrue) {
           posthog?.capture(`dynamic-ui-${id}-attempts`, { value: attempts + 1 });
+          
+        }
+
+        if (attempts >= 3 && !allChecksTrue) {
+          api.post("/ai/log-dynamic-ui-attempt-error", {
+            question_checks: data.question_checks,
+            attempts: attempts,
+          });
+          setAlreadyLoggedAttemptError(true);
         }
 
         Object.keys(data.question_checks).forEach((key, index) => {
