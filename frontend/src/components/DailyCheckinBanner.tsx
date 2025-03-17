@@ -248,6 +248,7 @@ export function DailyCheckinBanner({
       }}
     >
       <DynamicUISuggester<DailyCheckinExtractionsResponse>
+        id="daily-checkin"
         title={`Hey ${user?.username}! It's ${timeString}!`}
         initialMessage={aiMessage}
         questionPrefix="I'd like to know:"

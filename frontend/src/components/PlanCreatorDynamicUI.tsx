@@ -179,6 +179,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
 
   return (
     <DynamicUISuggester<PlanExtractionsResponse>
+      id="plan-creator"
       title="Great, now let's create a plan for you."
       initialMessage="What do you want to achieve?"
       questionsChecks={questionChecks}

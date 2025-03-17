@@ -213,6 +213,7 @@ function SecondStep({ onNext }: { onNext: () => void }) {
       question_checks: Record<string, boolean>;
       message: string;
     }>
+      id="profile-setup"
       initialMessage="Great! Now, tell us a bit about yourself."
       questionsChecks={questionsChecks}
       onSubmit={async (text) => {

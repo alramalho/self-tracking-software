@@ -10,6 +10,7 @@ import { Button } from "./ui/button";
 import { motion } from "framer-motion";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { usePostHog } from "posthog-js/react";
 const waveVariants = {
   initial: { rotate: 0 },
   wave: {
@@ -32,6 +33,7 @@ export interface BaseExtractionResponse {
 }
 
 export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
+  id: string
   initialMessage: string;
   questionPrefix?: string;
   questionsChecks: QuestionsChecks;
@@ -47,6 +49,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
 };
 
 export function DynamicUISuggester<T extends BaseExtractionResponse>({
+  id,
   initialMessage,
   questionPrefix = "Be sure to mention:",
   questionsChecks,
@@ -64,6 +67,9 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
   const [rejectionFeedback, setRejectionFeedback] = useState("");
   const [extractedData, setExtractedData] = useState<T | null>(null);
+  const [attempts, setAttempts] = useState(0);
+
+  const posthog = usePostHog();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,9 +103,15 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     onSuccess: (data) => {
       // Store the extracted data
       setExtractedData(data);
+      setAttempts(prev => prev + 1);
 
       // First checkbox animation - using optional chaining for safety
       if (data.question_checks) {
+        const allChecksTrue = Object.values(data.question_checks).every(check => check);
+        if (allChecksTrue) {
+          posthog?.capture(`dynamic-ui-${id}-attempts`, { value: attempts + 1 });
+        }
+
         Object.keys(data.question_checks).forEach((key, index) => {
           setTimeout(() => {
             setCheckedItems((prev) => ({
