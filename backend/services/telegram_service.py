@@ -162,3 +162,23 @@ class TelegramService:
             f"<b>Metric Entries:</b> {"\n".join([f"– {metrics_gateway.get_readable_metric_entry(m)}" for m in metric_entries])}\n"
         )
         self.send_message(message)
+
+    def send_dynamic_ui_attempt_error_notification(
+        self,
+        user_username: str,
+        user_id: str,
+        conversation_history: str,
+        question_checks: dict,
+        attempts: int,
+    ) -> None:
+        """Send a notification when a dynamic UI attempt error is detected."""
+        conversation_history = conversation_history.replace(">", "<b><i>>").replace(":", ":</i></b>")
+        message = (
+            f"⚠️🤖 <b>Dynamic UI Attempt Error on user {user_username}</b>\n\n"
+            f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
+            f"<b>User ID:</b> {user_id}\n"
+            f"<b>Question Checks:</b> {question_checks}\n"
+            f"<b>Attempts:</b> {attempts}\n"
+            f"<b>Conversation History:</b> {conversation_history}\n"
+        )
+        self.send_message(message)

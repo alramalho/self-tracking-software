@@ -700,7 +700,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (hasPlans) {
-      setStep(4);
+      setStep(2);
     }
   }, [hasPlans, router]);
 

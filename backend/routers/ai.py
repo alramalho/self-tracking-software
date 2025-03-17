@@ -861,3 +861,21 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
         logger.error(f"Error extracting plan: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/log-dynamic-ui-attempt-error")
+async def log_dynamic_ui_attempt_error(request: Request, user: User = Depends(is_clerk_user)):
+    body = await request.json()
+    question_checks = body["question_checks"]
+    attempts = body["attempts"]
+    memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+    conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+
+    telegram = TelegramService()
+    telegram.send_dynamic_ui_attempt_error_notification(
+        user_username=user.username,
+        user_id=user.id,
+        conversation_history=conversation_history,
+        question_checks=question_checks,
+        attempts=attempts,
+    )
