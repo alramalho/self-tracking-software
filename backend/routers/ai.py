@@ -661,7 +661,7 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         message = body["message"]
         question_checks_keys = list(question_checks.keys())
 
-        class ResponseSchema(BaseModel):
+        class UserProfileSchema(BaseModel):
             reasoning: str = Field(
                 ...,
                 description="Your step by step reasoning on each of the questions.",
@@ -671,16 +671,29 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 description="The highly condensed highly clear depiction of the user profile based on the input questions.",
             )
 
-        response = await ask_schema_async(
-            text=f"Please generate an user profile based on a message that he sent to answer the following questions: {list(question_checks.values())}. Message: {message}",
-            pymodel=ResponseSchema,
-        )
+        class QuestionAnalysisSchema(BaseModel):
+            question: str = Field(
+                ...,
+                description="The question that the user should answer.",
+            )
+            reasoning: str = Field(
+                ...,
+                description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
+            )
+            decision: bool = Field(
+                ..., description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
+            )
 
-        updated_user = users_gateway.update_fields(
-            user.id, {"profile": response.user_profile}
-        )
+        class QuestionChecksSchema(BaseModel):
+            analysis: List[QuestionAnalysisSchema] = Field(
+                description="The analysis of each question and user message.",
+            )
 
-
+        class MessageGenerationSchema(BaseModel):
+            message: str = Field(
+                ...,
+                description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
+            )
 
         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
 
@@ -697,42 +710,50 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
 
         conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
 
-        class QuestionAnalysisSchema(BaseModel):
-            question: str = Field(
-                ...,
-                description="The question that the user should answer.",
-            )
-            reasoning: str = Field(
-                ...,
-                description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
-            )
-            decision: bool = Field(
-                ..., description="The boolean representing the deicions (true if there is sufficient information, false otherwise).",
-            )
-
-        class ResponseSchema(BaseModel):
-            analysis: List[QuestionAnalysisSchema] = Field(
-                description="The analysis of each question and user message.",
-            )
-            message: str = Field(
-                ...,
-                description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
-            )
-
-        print(f"Conversation history: {conversation_history}")
-        response = await ask_schema_async(
-            text=f"Analyse the interaction {conversation_history} and whether it contains information to answer all the questions: {list(question_checks.values())}\n. Then, write a message to continue the conversation (referecing any missing information to the questions).",
-            system="Youa are a friendly AI assitant.",
-            pymodel=ResponseSchema,
+        # Create parallel tasks for profile generation and question checks
+        profile_task = ask_schema_async(
+            text=f"Please generate an user profile based on a message that he sent to answer the following questions: {list(question_checks.values())}. Message: {message}",
+            pymodel=UserProfileSchema,
         )
 
-        print(f"Response: {response}")
-        print(f"Analysis: {response.analysis}")
-        print(f"Message: {response.message}")
+        question_checks_task = ask_schema_async(
+            text=f"Analyse the interaction {conversation_history} and determine whether it contains information to answer all the questions: {list(question_checks.values())}",
+            system="You are a friendly AI assistant.",
+            pymodel=QuestionChecksSchema,
+        )
 
+        # Wait for both parallel tasks to complete
+        profile_response, question_checks_response = await asyncio.gather(profile_task, question_checks_task)
+
+        # Generate appropriate message based on question check results
+        question_results = {
+            question_checks_keys[i]: question_checks_response.analysis[i].decision
+            for i in range(len(question_checks_keys))
+        }
+        unanswered_questions = [q for q, answered in question_results.items() if not answered]
+        
+        message_response = await ask_schema_async(
+            text=f"""Based on the conversation history: {conversation_history}
+                    And the question check results where:
+                    - Answered questions: {[q for q, answered in question_results.items() if answered]}
+                    - Unanswered questions: {unanswered_questions}
+                    
+                    Generate an appropriate short message to the user.
+                    If there are unanswered questions, kindly ask for those specific pieces of information.
+                    If all questions are answered, thank the user.""",
+            system="You are a friendly AI assistant.",
+            pymodel=MessageGenerationSchema,
+        )
+
+        # Update user profile
+        updated_user = users_gateway.update_fields(
+            user.id, {"profile": profile_response.user_profile}
+        )
+
+        # Write AI response to memory
         memory.write(
             Message.new(
-                text=response.message,
+                text=message_response.message,
                 sender_name="Jarvis",
                 sender_id="0",
                 recipient_name=user.name,
@@ -741,12 +762,9 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         )
 
         return {
-            "message": response.message,
+            "message": message_response.message,
             "user": updated_user,
-            "question_checks": {
-                question_checks_keys[i]: response.analysis[i].decision
-                for i in range(len(question_checks_keys))
-            },
+            "question_checks": question_results,
         }
     except Exception as e:
         logger.error(traceback.format_exc())
@@ -833,7 +851,7 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
                 "message": response.message,
                 "question_checks": {
                     question_checks_keys[i]: response.decisions[i]
-                    for i in range(len(question_checks_keys))
+                    for i in range(len(question_checks))
                 },
             }
 

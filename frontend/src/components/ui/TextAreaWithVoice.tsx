@@ -1,10 +1,11 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, Loader2 } from "lucide-react";
+import { Mic, Loader2, ArrowLeft } from "lucide-react";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface TextAreaWithVoiceProps {
   value: string;
@@ -24,8 +25,29 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
   className,
 }) => {
   const [isTranscribing, setIsTranscribing] = React.useState(false);
+  const [showPointer, setShowPointer] = React.useState(true);
   const { isRecording, toggleRecording } = useMicrophone();
   const api = useApiWithAuth();
+
+  const pointerAnimation = {
+    initial: { x: 5, opacity: 0 },
+    animate: {
+      x: [5, -10, 5],
+      opacity: [0.9, 1, 0.9],
+      transition: {
+        duration: 1.5,
+        repeat: 2,
+        ease: "easeInOut",
+        onComplete: () => setShowPointer(false),
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        duration: 0.5,
+      },
+    },
+  };
 
   const handleVoiceRecording = async (
     audioData: string,
@@ -60,13 +82,27 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
       )}
       <div className="relative">
         <Textarea
-          placeholder={placeholder}
+          placeholder={placeholder || "You can also record a voice message for extended detail"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full min-h-[80px] pr-12 ${className}`}
+          className={`w-full min-h-[80px] max-h-[200px] pr-12 ${className}`}
           disabled={disabled || isTranscribing}
+          rows={5}
         />
         <div className="absolute right-2 bottom-2">
+          <AnimatePresence>
+            {showPointer && (
+              <motion.div
+                className="absolute right-full mr-2 top-0 -translate-y-1/2 flex flex-row items-center gap-2"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={pointerAnimation}
+              >
+                <span className="text-2xl">👉</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <Button
             variant="ghost"
             size="icon"
