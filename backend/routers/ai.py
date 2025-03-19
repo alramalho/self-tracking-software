@@ -1057,6 +1057,7 @@ async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_us
     question_checks = body["question_checks"]
     attempts = body["attempts"]
     extracted_data = body["extracted_data"]
+    id = body["id"]
     memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
     conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
 
@@ -1068,4 +1069,5 @@ async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_us
         question_checks=question_checks,
         attempts=attempts,
         extracted_data=extracted_data,
+        id=id,
     )
