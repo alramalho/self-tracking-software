@@ -42,6 +42,10 @@ class TelegramService:
             if not response.ok:
                 logger.error(f"Telegram API error: Status {response.status_code}")
                 logger.error(f"Response content: {response.text}")
+
+            if response.status_code == 400:
+                logger.error(f"Tried to sent telegram message but got a 400. Message: {message}")
+                self.send_message("❌ Tried to send a telegram error message but got a 400! Check the logs")
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -163,6 +167,9 @@ class TelegramService:
         )
         self.send_message(message)
 
+    def _escape_markdown(self, text: str) -> str:
+        return text.replace(">", "<b><i>>").replace(":", ":</i></b>")
+
     def send_dynamic_ui_attempt_error_notification(
         self,
         id: str,
@@ -174,7 +181,7 @@ class TelegramService:
         extracted_data: dict,
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
-        conversation_history = conversation_history.replace(">", "<b><i>>").replace(":", ":</i></b>")
+        conversation_history = self._escape_markdown(conversation_history.replace(">", "<b><i>>").replace(":", ":</i></b>")[:1000])
         message = (
             f"⚠️🤖 <b>Dynamic UI Attempt Error on user {user_username} on {id}</b>\n\n"
             f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
@@ -197,7 +204,7 @@ class TelegramService:
         extracted_data: dict,
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
-        conversation_history = conversation_history.replace(">", "<b><i>>").replace(":", ":</i></b>")
+        conversation_history = self._escape_markdown(conversation_history.replace(">", "<b><i>>").replace(":", ":</i></b>")[:1000])
         message = (
             f"⚠️🤖 <b>Dynamic UI Skip ⏭️ on user {user_username} on {id}</b>\n\n"
             f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
