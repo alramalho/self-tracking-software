@@ -270,7 +270,7 @@ async def _process_unactivated_emails(users: list[User], dry_run: bool = True) -
 
         if (
             datetime.fromisoformat(user.created_at)
-            < (datetime.now(UTC) - timedelta(days=2))
+            < (datetime.now(UTC) - timedelta(days=7))
             and len(activity_days) <= 1  # Activities on 1 or fewer days
         ):
             unactivated_users.append(user)
@@ -369,9 +369,9 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
         filtered_users = all_users
 
     # Process notifications and emails
-    notification_result = await _process_checkin_notifications(
-        filtered_users, notifications_dry_run
-    )
+    # notification_result = await _process_checkin_notifications(
+    #     filtered_users, notifications_dry_run
+    # )
     unactivated_emails_result = await _process_unactivated_emails(
         filtered_users, unactivated_emails_dry_run
     )
@@ -379,10 +379,10 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     result = {
         "dry_run": {
             "unactivated_emails": unactivated_emails_dry_run,
-            "notifications": notifications_dry_run,
+            # "notifications": notifications_dry_run,
         },
         "users_checked": len(filtered_users),
-        "notification_result": notification_result,
+        # "notification_result": notification_result,
         "unactivated_emails_result": unactivated_emails_result,
     }
 
