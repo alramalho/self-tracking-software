@@ -27,7 +27,8 @@ class UsersGateway:
         self.activities_gateway = ActivitiesGateway()
 
     def get_all_users(self) -> list[User]:
-        return [User(**data) for data in self.db_gateway.scan()]
+        users = [User(**data) for data in self.db_gateway.scan()]
+        return [user for user in users if not user.deleted]
 
     def get_user_by_id(self, id: str) -> User:
         return self.get_user_by("id", id)
