@@ -154,7 +154,7 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
 
         <div className="flex flex-col gap-2">
           {userData?.activities?.map((a) => (
-            <EntryCard emoji={a.emoji || ""} title={a.title} description={a.measure} />
+            <EntryCard key={a.id} emoji={a.emoji || ""} title={a.title} description={a.measure} />
           ))}
         </div>
       </div>

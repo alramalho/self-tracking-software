@@ -319,7 +319,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               className="w-full bg-white italic"
               onClick={handleSkip}
             >
-              Seems like you're struggling. Skip for now
+              Seems like you&apos;re struggling. Skip for now
             </Button>
           </div>
         )}

@@ -1,9 +1,9 @@
 "use client";
 
 import { SignIn } from "@clerk/clerk-react";
-import { useSearchParams } from "next/dist/client/components/navigation";
 import React from "react";
 import AuthLayout from "@/components/AuthLayout";
+import { useSearchParams } from "next/navigation";
 
 const SignInPage: React.FC = () => {
   const searchParams = useSearchParams();
