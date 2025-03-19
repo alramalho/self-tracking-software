@@ -31,7 +31,12 @@ class ExtractedActivity(BaseModel):
     )
     title: str = Field(..., description="The title of the activity")
     emoji: str = Field(..., description="The emoji of the activity")
-    measure: str = Field(..., description="The way to measure the activity")
+    measure: str = Field(..., description=(
+        "The unit of measurement to measure the activity. For example, for 'reading' the measure could be 'pages',"
+        "for 'running' the measure could be 'kilometers' or 'gym' could 'minutes' or 'sessions'."
+        "note that for example 'sessions per week' would not be valid, as it is not a unit of single activity measurement,"
+        "but rather a frequency of the activity."
+    ))
 
 
 class ExtractedPlanDetails(BaseModel):
@@ -184,6 +189,24 @@ Today is {datetime.now().strftime('%b %d, %Y')}.
                     )
                     for activity in plan_data.activities
                 ]
+
+                # Format activities list as string
+                activities_str = "\n".join(
+                    f"- {activity.emoji} {activity.title} ({activity.measure})"
+                    for activity in plan_data.activities
+                )
+
+                # Create human-readable message
+                extraction_message = (
+                    f"📋 Extracted Plan Details:\n"
+                    f"Goal: {plan_data.emoji} {plan_data.goal}\n"
+                    f"\nActivities:\n{activities_str}\n"
+                    f"\nSchedule: {plan_data.times_per_week} times per week"
+                )
+
+                # Log or send the message (depending on your implementation)
+                self.write_system_extraction_message("plan", extraction_message)
+
                 suggestions.append(
                     PlanDetailsSuggestion.from_plan_and_activities_data(
                         Plan.new(
@@ -198,8 +221,4 @@ Today is {datetime.now().strftime('%b %d, %Y')}.
                     )
                 )
 
-                self.write_system_extraction_message(
-                    "plan",
-                    plan_data,
-                )
         return suggestions
