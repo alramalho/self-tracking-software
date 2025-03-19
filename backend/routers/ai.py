@@ -1,4 +1,7 @@
 # WebSocket close codes as defined in RFC 6455
+from shared.logger import create_logger
+create_logger()
+
 WS_CLOSE_CODES = {
     1000: "Normal Closure",
     1001: "Going Away",
@@ -656,19 +659,21 @@ async def get_daily_checkin_extractions(
 
         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
 
-        extractor = ActivityExtractorAssistant(user=user, memory=memory)
+        extractor = ActivityExtractorAssistant(user=user, memory=memor)
         metrics_companion = MetricsCompanionAssistant(user=user, memory=memory)
 
         extractor.write_assistant_message(
             ai_message
         )  # We just need to do this once, as they have shared memory!
-
+        extractor.write_user_message(
+            message
+        )
         # Create tasks for parallel execution
         activities_task = extractor.get_response(
-            user_input=message, message_id=str(ObjectId())
+            user_input=message, message_id=str(ObjectId()), manual_memory_management=True
         )
         metrics_task = metrics_companion.get_response(
-            user_input=message, message_id=str(ObjectId())
+            user_input=message, message_id=str(ObjectId()), manual_memory_management=True
         )
 
         class ResponseSchema(BaseModel):
@@ -709,7 +714,7 @@ async def get_daily_checkin_extractions(
 
         # Unpack the results
         _, extracted_activities_entries = activities_result
-        _, extracted_metrics_entries = metrics_result
+        _, extracted_metrics_entries = metrics_resultx
 
         question_checks_keys = list(question_checks.keys())
 
@@ -982,7 +987,7 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
             )
             message: str = Field(
                 ...,
-                description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
+                description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions. The message should be short and not markdown formatted.",
             )
 
         response = await ask_schema_async(
@@ -1071,3 +1076,20 @@ async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_us
         extracted_data=extracted_data,
         id=id,
     )
+
+
+if __name__ == "__main__":
+    user_id = "67db3b7c1a1f74601b0d025f"
+    memory = DatabaseMemory(MongoDBGateway("messages"), user_id)
+    history = memory.read_all_as_str(max_age_in_minutes=30)
+    telegram = TelegramService()
+    telegram.send_dynamic_ui_attempt_error_notification(
+        user_username="alexandreramalho1998",
+        user_id=user_id,
+        conversation_history=history,
+        question_checks={},
+        attempts=0,
+        extracted_data={},
+        id="",
+    )
+    print("sent")
