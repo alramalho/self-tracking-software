@@ -245,7 +245,7 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
             }
             for u in all_users
             if u.id != user.id
-        ][:3]
+        ][:5]
 
     return results
 
