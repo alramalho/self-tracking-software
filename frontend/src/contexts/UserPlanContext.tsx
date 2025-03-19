@@ -315,7 +315,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     console.error("[UserPlanProvider] Auth error:", err);
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       router.push("/signin");
-      toast.error("You are not authorized to access this page. Please log in again.", {
+      toast.error("You are not authorized to access this page. Please login again.", {
         icon: '🔒',
         duration: 5000,
       });
