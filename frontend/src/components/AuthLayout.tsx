@@ -20,7 +20,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
             Track your journey with friends
           </p>
         </div>
-        {children}
+        <div className="mx-auto w-fit">{children}</div>
       </div>
     </div>
   );
