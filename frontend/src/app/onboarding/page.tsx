@@ -725,8 +725,8 @@ export default function OnboardingPage() {
         return <ProfileSetupStep onNext={() => setStep(3)} />;
       case 3:
         return <PlanCreationStep onNext={() => setStep(4)} />;
-      case 4:
-        return <PastWeekLoggingStep onNext={() => setStep(5)} />;
+      // case 4:
+      //   return <PastWeekLoggingStep onNext={() => setStep(5)} />;
       default:
         return (
           <AccountabilityPartnerStep
