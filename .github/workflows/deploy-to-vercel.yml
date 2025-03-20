@@ -15,7 +15,7 @@ env:
 jobs:
   deploy-to-vercel:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Trigger Deployment and Track Status
         run: |
@@ -29,7 +29,9 @@ jobs:
 
           # Function to check deployment status
           check_status() {
-            DEPLOYMENT=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&limit=1&filter=production" | jq '.deployments[0]')
+            DEPLOYMENT=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+                         "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&limit=1&filter=production" | 
+                         jq '.deployments[0]')
             echo $DEPLOYMENT
           }
 
