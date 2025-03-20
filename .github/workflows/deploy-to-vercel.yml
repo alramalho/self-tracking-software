@@ -29,9 +29,7 @@ jobs:
 
           # Function to check deployment status
           check_status() {
-            DEPLOYMENT=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
-                         "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&limit=1&filter=production" | 
-                         jq '.deployments[0]')
+            DEPLOYMENT=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&limit=1&filter=production" | jq '.deployments[0]')
             echo $DEPLOYMENT
           }
 
