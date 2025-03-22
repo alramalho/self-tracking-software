@@ -85,10 +85,6 @@ export class ApiStack extends cdk.Stack {
 
     const alias = new lambda.Alias(this, "BackendLambdaAlias", aliasOptions);
 
-    version.addAlias("current", {
-      description: "Current version alias",
-    });
-
     const lambdaUrl = alias.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
     });
