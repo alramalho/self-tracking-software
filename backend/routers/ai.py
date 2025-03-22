@@ -659,7 +659,7 @@ async def get_daily_checkin_extractions(
 
         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
 
-        extractor = ActivityExtractorAssistant(user=user, memory=memor)
+        extractor = ActivityExtractorAssistant(user=user, memory=memory)
         metrics_companion = MetricsCompanionAssistant(user=user, memory=memory)
 
         extractor.write_assistant_message(
