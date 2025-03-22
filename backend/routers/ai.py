@@ -666,7 +666,8 @@ async def get_daily_checkin_extractions(
             ai_message
         )  # We just need to do this once, as they have shared memory!
         extractor.write_user_message(
-            message
+            message,
+            message_id=str(ObjectId())
         )
         # Create tasks for parallel execution
         activities_task = extractor.get_response(
