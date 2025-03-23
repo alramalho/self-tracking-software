@@ -6,11 +6,15 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import axios from "axios";
-import { useQuery, UseQueryResult, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  UseQueryResult,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { usePostHog } from "posthog-js/react";
 import { logger } from "@/utils/logger";
 import { ThemeColor } from "@/utils/theme";
-import { Properties } from 'posthog-js';
+import { Properties } from "posthog-js";
 
 export interface Activity {
   id: string;
@@ -67,7 +71,16 @@ export interface User {
   name?: string;
   plan_type: "free" | "plus";
   daily_checkin_settings?: {
-    days: ("MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN" | "EVERYDAY")[];
+    days: (
+      | "MON"
+      | "TUE"
+      | "WED"
+      | "THU"
+      | "FRI"
+      | "SAT"
+      | "SUN"
+      | "EVERYDAY"
+    )[];
     time: "MORNING" | "AFTERNOON" | "EVENING";
   };
   picture?: string;
@@ -196,7 +209,7 @@ export interface Message {
 
 export interface UserDataEntry {
   user: User | null;
-  user_friends?: {picture: string, name: string, username: string}[];
+  user_friends?: { picture: string; name: string; username: string }[];
   plans: ApiPlan[];
   planGroups: PlanGroup[];
   activities: Activity[];
@@ -211,7 +224,6 @@ export interface UserDataEntry {
 export interface TaggedActivityEntry extends ActivityEntry {
   is_week_finisher: boolean;
   plan_finished_name?: string;
-  
 }
 
 export interface TimelineData {
@@ -228,16 +240,24 @@ export interface UserData {
 export interface UserPlanContextType {
   useCurrentUserDataQuery: () => UseQueryResult<UserDataEntry>;
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
-  useMultipleUsersDataQuery: (usernames: string[]) => UseQueryResult<Record<string, UserDataEntry>>;
-  useMetricsAndEntriesQuery: () => UseQueryResult<{metrics: Metric[], entries: MetricEntry[]}>;
+  useMultipleUsersDataQuery: (
+    usernames: string[]
+  ) => UseQueryResult<Record<string, UserDataEntry>>;
+  useMetricsAndEntriesQuery: () => UseQueryResult<{
+    metrics: Metric[];
+    entries: MetricEntry[];
+  }>;
   useHasMetricsToLogToday: () => boolean;
   useIsMetricLoggedToday: (metricId: string) => boolean;
-  hasLoadedUserData: boolean; 
+  hasLoadedUserData: boolean;
   hasLoadedTimelineData: boolean;
   timelineData: UseQueryResult<TimelineData | null>;
   messagesData: UseQueryResult<{ messages: Message[] }>;
   notificationsData: UseQueryResult<{ notifications: Notification[] }>;
-  fetchUserData: (options?: {username?: string, forceUpdate?: boolean}) => Promise<UserDataEntry>;
+  fetchUserData: (options?: {
+    username?: string;
+    forceUpdate?: boolean;
+  }) => Promise<UserDataEntry>;
   refetchUserData: () => Promise<UserDataEntry>;
   refetchAllData: () => Promise<UserDataEntry>;
   updateTimezone: () => Promise<void>;
@@ -247,7 +267,9 @@ export interface UserPlanContextType {
   isDarkMode: boolean;
 }
 
-const UserPlanContext = createContext<UserPlanContextType | undefined>(undefined);
+const UserPlanContext = createContext<UserPlanContextType | undefined>(
+  undefined
+);
 
 const smallRetryMechanism = async <T,>(
   callback: () => Promise<T>,
@@ -264,13 +286,13 @@ const smallRetryMechanism = async <T,>(
       return await callback();
     } catch (err) {
       console.error(`Error in attempt ${attempt + 1}:`, err);
-      
+
       const shouldRetry = options?.shouldRetry?.(err) ?? true;
       if (attempt === retryDelays.length - 1 || !shouldRetry) {
         throw err;
       }
 
-      await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+      await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
       attempt++;
     }
   }
@@ -278,14 +300,20 @@ const smallRetryMechanism = async <T,>(
   throw new Error("Failed after all retries");
 };
 
-export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]): Plan {
+export function convertApiPlanToPlan(
+  plan: ApiPlan,
+  planActivities: Activity[]
+): Plan {
   return {
     ...plan,
-    finishing_date: plan.finishing_date ? parseISO(plan.finishing_date) : undefined,
+    finishing_date: plan.finishing_date
+      ? parseISO(plan.finishing_date)
+      : undefined,
     sessions: plan.sessions.map((session) => ({
       ...session,
       date: parseISO(session.date),
-      activity_name: planActivities.find(a => a.id === session.activity_id)?.title,
+      activity_name: planActivities.find((a) => a.id === session.activity_id)
+        ?.title,
     })),
   } as Plan;
 }
@@ -293,7 +321,9 @@ export function convertApiPlanToPlan(plan: ApiPlan, planActivities: Activity[]):
 export function convertPlanToApiPlan(plan: Plan): ApiPlan {
   return {
     ...plan,
-    finishing_date: plan.finishing_date ? format(plan.finishing_date, "yyyy-MM-dd") : undefined,
+    finishing_date: plan.finishing_date
+      ? format(plan.finishing_date, "yyyy-MM-dd")
+      : undefined,
     sessions: plan.sessions.map((session) => ({
       ...session,
       date: format(session.date, "yyyy-MM-dd"),
@@ -315,20 +345,24 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     console.error("[UserPlanProvider] Auth error:", err);
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       router.push("/signin");
-      toast.error("You are not authorized to access this page. Please login again.", {
-        icon: '🔒',
-        duration: 5000,
-      });
+      toast.error(
+        "You are not authorized to access this page. Please login again.",
+        {
+          icon: "🔒",
+          duration: 5000,
+        }
+      );
       queryClient.clear();
       signOut({ redirectUrl: window.location.pathname });
-      posthog.reset()
+      posthog.reset();
       throw err;
     }
     throw err;
   };
 
-  const fetchUserData = async ({username}: {username?: string} = {}): Promise<UserDataEntry> => {
-    
+  const fetchUserData = async ({
+    username,
+  }: { username?: string } = {}): Promise<UserDataEntry> => {
     if (!isSignedIn) {
       throw new Error("User not signed in");
     }
@@ -337,17 +371,21 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const startTime = performance.now();
       const result = await smallRetryMechanism(
         async () => {
-          const response = await api.get('/load-users-data', {
-            params: username ? { usernames: username } : undefined
+          const response = await api.get("/load-users-data", {
+            params: username ? { usernames: username } : undefined,
           });
-          
-          const userData = username ? response.data[username] : response.data.current;
-          
-          if (!userData) {
-            console.error('[UserPlanProvider] No user data found in response:', response.data);
-            throw new Error('No user data found in response');
-          }
 
+          const userData = username
+            ? response.data[username]
+            : response.data.current;
+
+          if (!userData) {
+            console.error(
+              "[UserPlanProvider] No user data found in response:",
+              response.data
+            );
+            throw new Error("No user data found in response");
+          }
 
           const transformedData: UserDataEntry = {
             user: userData.user || null,
@@ -365,9 +403,16 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           const endTime = performance.now();
           const latencySeconds = (endTime - startTime) / 1000;
 
-          if (!username) { // Only track for current user
-            const properties: Properties = {
-              $set: {
+          if (!username) {
+            // Only track for current user
+
+            const latencyProperties: Properties = {
+              latency_seconds: Math.round(latencySeconds * 1000) / 1000,
+            };
+
+            // Use direct capture method
+            if (posthog) {
+              posthog.capture("load-user-data", {
                 email: userData.user?.email,
                 name: userData.user?.name,
                 username: userData.user?.username,
@@ -378,30 +423,20 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
                 activity_entries_count: transformedData.activityEntries.length,
                 friend_count: userData.user?.friend_ids?.length || 0,
                 plan_type: userData.user?.plan_type,
-              }
-            };
-
-            const latencyProperties: Properties = {
-              latency_seconds: Math.round(latencySeconds * 1000) / 1000
-            };
-
-
-            // Use direct capture method
-            if (posthog) {
-              posthog.capture('load-user-data', properties);
-              posthog.capture('load-user-data-latency', latencyProperties);
+              });
+              posthog.capture("load-user-data-latency", latencyProperties);
             }
           }
 
           return transformedData;
         },
         {
-          shouldRetry: (err) => 
-            axios.isAxiosError(err) && 
-            (err.response?.status === 404 || err.response?.status === 401)
+          shouldRetry: (err) =>
+            axios.isAxiosError(err) &&
+            (err.response?.status === 404 || err.response?.status === 401),
         }
       );
-      
+
       return result;
     } catch (err) {
       console.error("[UserPlanProvider] Error fetching user data:", err);
@@ -417,19 +452,19 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       const startTime = performance.now();
-      const response = await api.get('/timeline');
+      const response = await api.get("/timeline");
       const endTime = performance.now();
       const latencySeconds = (endTime - startTime) / 1000;
 
       const timelineLatencyProperties: Properties = {
-        latency_seconds: Math.round(latencySeconds * 1000) / 1000
+        latency_seconds: Math.round(latencySeconds * 1000) / 1000,
       };
 
       // Use direct capture method
       if (posthog) {
-        posthog.capture('timeline-latency', timelineLatencyProperties);
+        posthog.capture("timeline-latency", timelineLatencyProperties);
       }
- 
+
       return {
         recommendedUsers: response.data.recommended_users,
         recommendedActivities: response.data.recommended_activities,
@@ -453,34 +488,34 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const result = await smallRetryMechanism(
         async () => {
           const [metricsResponse, entriesResponse] = await Promise.all([
-            api.get('/metrics'),
-            api.get('/metric-entries')
+            api.get("/metrics"),
+            api.get("/metric-entries"),
           ]);
 
           const endTime = performance.now();
           const latencySeconds = (endTime - startTime) / 1000;
 
           const latencyProperties: Properties = {
-            latency_seconds: Math.round(latencySeconds * 1000) / 1000
+            latency_seconds: Math.round(latencySeconds * 1000) / 1000,
           };
 
           // Use direct capture method
           if (posthog) {
-            posthog.capture('load-metrics-data-latency', latencyProperties);
+            posthog.capture("load-metrics-data-latency", latencyProperties);
           }
 
           return {
             metrics: metricsResponse.data as Metric[],
-            entries: entriesResponse.data as MetricEntry[]
+            entries: entriesResponse.data as MetricEntry[],
           };
         },
         {
-          shouldRetry: (err) => 
-            axios.isAxiosError(err) && 
-            (err.response?.status === 404 || err.response?.status === 401)
+          shouldRetry: (err) =>
+            axios.isAxiosError(err) &&
+            (err.response?.status === 404 || err.response?.status === 401),
         }
       );
-      
+
       return result;
     } catch (err) {
       console.error("[UserPlanProvider] Error fetching metrics data:", err);
@@ -492,7 +527,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const useCurrentUserDataQuery = () => {
     const query = useQuery({
-      queryKey: ['userData', 'current'],
+      queryKey: ["userData", "current"],
       queryFn: () => fetchUserData(),
       enabled: isLoaded && isSignedIn,
       staleTime: 1000 * 60 * 5, // 5 minutes
@@ -504,78 +539,82 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const useUserDataQuery = (username: string) => {
     const { isSignedIn, isLoaded } = useSession();
     const currentUserQuery = useCurrentUserDataQuery();
-    
+
     return useQuery({
-      queryKey: ['userData', username],
+      queryKey: ["userData", username],
       queryFn: () => fetchUserData({ username }),
       enabled: isLoaded && isSignedIn && !!username,
       staleTime: 1000 * 60 * 5, // 5 minutes,
       // If the requested username matches current user's username, use that data instead
       initialData: () => {
-        if (currentUserQuery.data?.user?.username?.toLowerCase() === username.toLowerCase()) {
+        if (
+          currentUserQuery.data?.user?.username?.toLowerCase() ===
+          username.toLowerCase()
+        ) {
           return currentUserQuery.data;
         }
         return undefined;
-      }
+      },
     });
   };
 
   const timelineData = useQuery({
-    queryKey: ['timelineData'],
+    queryKey: ["timelineData"],
     queryFn: fetchTimelineDataFn,
     enabled: isSignedIn && isLoaded,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const useMultipleUsersDataQuery = (usernames: string[]) => useQuery({
-    queryKey: ['multipleUsersData', usernames.sort().join(',')],
-    queryFn: async () => {
-      try {
-        const response = await api.get('/load-users-data', {
-          params: { usernames: usernames.join(',') }
-        });
-        const transformedData: Record<string, UserDataEntry> = {};
-        for (const [key, value] of Object.entries(response.data)) {
-          const typedValue = value as {
-            user: any;
-            activities: any[];
-            activity_entries: any[];
-            mood_reports: any[];
-            plans: any[];
-            plan_groups: any[];
-            sent_friend_requests?: any[];
-            received_friend_requests?: any[];
-            messages: any[];
-          };
+  const useMultipleUsersDataQuery = (usernames: string[]) =>
+    useQuery({
+      queryKey: ["multipleUsersData", usernames.sort().join(",")],
+      queryFn: async () => {
+        try {
+          const response = await api.get("/load-users-data", {
+            params: { usernames: usernames.join(",") },
+          });
+          const transformedData: Record<string, UserDataEntry> = {};
+          for (const [key, value] of Object.entries(response.data)) {
+            const typedValue = value as {
+              user: any;
+              activities: any[];
+              activity_entries: any[];
+              mood_reports: any[];
+              plans: any[];
+              plan_groups: any[];
+              sent_friend_requests?: any[];
+              received_friend_requests?: any[];
+              messages: any[];
+            };
 
-          transformedData[key] = {
-            user: typedValue.user,
-            activities: typedValue.activities,
-            activityEntries: typedValue.activity_entries,
-            moodReports: typedValue.mood_reports,
-            plans: typedValue.plans,
-            planGroups: typedValue.plan_groups,
-            sentFriendRequests: typedValue.sent_friend_requests || [],
-            receivedFriendRequests: typedValue.received_friend_requests || [],
-            notifications: [],
-            expiresAt: addMinutes(new Date(), 10).toISOString(),
-          };
+            transformedData[key] = {
+              user: typedValue.user,
+              activities: typedValue.activities,
+              activityEntries: typedValue.activity_entries,
+              moodReports: typedValue.mood_reports,
+              plans: typedValue.plans,
+              planGroups: typedValue.plan_groups,
+              sentFriendRequests: typedValue.sent_friend_requests || [],
+              receivedFriendRequests: typedValue.received_friend_requests || [],
+              notifications: [],
+              expiresAt: addMinutes(new Date(), 10).toISOString(),
+            };
+          }
+          return transformedData;
+        } catch (err) {
+          handleAuthError(err);
+          throw err;
         }
-        return transformedData;
-      } catch (err) {
-        handleAuthError(err);
-        throw err;
-      }
-    },
-    enabled: isSignedIn && usernames.length > 0,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+      },
+      enabled: isSignedIn && usernames.length > 0,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    });
 
   const messagesData = useQuery({
-    queryKey: ['messagesData'],
+    queryKey: ["messagesData"],
     queryFn: async () => {
       try {
-        const response = await api.get('/load-messages');
+        const response = await api.get("/load-messages");
         return response.data;
       } catch (err) {
         handleAuthError(err);
@@ -588,10 +627,10 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const notificationsData = useQuery({
-    queryKey: ['notificationsData'],
+    queryKey: ["notificationsData"],
     queryFn: async () => {
       try {
-        const response = await api.get('/load-notifications');
+        const response = await api.get("/load-notifications");
         return response.data;
       } catch (err) {
         handleAuthError(err);
@@ -607,15 +646,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refetchUserData = async () => {
     return toast.promise(
-      currentUserDataQuery.refetch().then(result => {
+      currentUserDataQuery.refetch().then((result) => {
         if (result.error) throw result.error;
         if (!result.data) throw new Error("User data is undefined");
         return result.data;
       }),
       {
-        loading: 'Updating...',
-        success: 'Updated successfully',
-        error: 'Failed to update'
+        loading: "Updating...",
+        success: "Updated successfully",
+        error: "Failed to update",
       }
     );
   };
@@ -626,35 +665,36 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         currentUserDataQuery.refetch(),
         timelineData.refetch(),
         notificationsData.refetch(),
-        messagesData.refetch()
+        messagesData.refetch(),
       ]).then(([userData]) => {
         if (userData.error) throw userData.error;
         if (!userData.data) throw new Error("User data is undefined");
         return userData.data;
       }),
       {
-        loading: 'Refreshing all data...',
-        success: 'All data refreshed successfully',
-        error: 'Failed to refresh data'
+        loading: "Refreshing all data...",
+        success: "All data refreshed successfully",
+        error: "Failed to refresh data",
       }
     );
   };
 
-  const useMetricsAndEntriesQuery = () => useQuery({
-    queryKey: ['metricsAndEntries'],
-    queryFn: fetchMetricsData,
-    enabled: isLoaded && isSignedIn,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const useMetricsAndEntriesQuery = () =>
+    useQuery({
+      queryKey: ["metricsAndEntries"],
+      queryFn: fetchMetricsData,
+      enabled: isLoaded && isSignedIn,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    });
 
   const useIsMetricLoggedToday = (metricId: string) => {
     const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
     const entries = metricsAndEntriesData?.entries || [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
-    return entries.some(entry => 
-      entry.metric_id === metricId && 
-      entry.date.split('T')[0] === today
+    return entries.some(
+      (entry) =>
+        entry.metric_id === metricId && entry.date.split("T")[0] === today
     );
   };
 
@@ -662,14 +702,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
     const metrics = metricsAndEntriesData?.metrics || [];
     const entries = metricsAndEntriesData?.entries || [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     // Check if there are any metrics that haven't been logged today
-    return metrics.some(metric => 
-      !entries.some(entry => 
-        entry.metric_id === metric.id && 
-        entry.date.split('T')[0] === today
-      )
+    return metrics.some(
+      (metric) =>
+        !entries.some(
+          (entry) =>
+            entry.metric_id === metric.id && entry.date.split("T")[0] === today
+        )
     );
   };
 
@@ -678,8 +719,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const response = await api.post('/update-timezone', { timezone });
-      currentUserDataQuery.refetch()
+      const response = await api.post("/update-timezone", { timezone });
+      currentUserDataQuery.refetch();
       console.log("timezone updated to", timezone);
       return response.data;
     } catch (err) {
@@ -697,8 +738,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   // Add updateTimezone to the effect that runs when the user signs in
   useEffect(() => {
     const currenttimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (isSignedIn && currentUserDataQuery.data?.user && (currentUserDataQuery.data.user.timezone !== currenttimezone)) {
-      updateTimezone().catch(err => {
+    if (
+      isSignedIn &&
+      currentUserDataQuery.data?.user &&
+      currentUserDataQuery.data.user.timezone !== currenttimezone
+    ) {
+      updateTimezone().catch((err) => {
         logger.error("Failed to update timezone on initial load:", err);
       });
     }
@@ -714,7 +759,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isSignedIn) return;
 
     try {
-      await api.post('/update-theme', { theme_base_color: color });
+      await api.post("/update-theme", { theme_base_color: color });
       await currentUserDataQuery.refetch();
     } catch (err) {
       handleAuthError(err);
@@ -735,7 +780,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const currentTheme = currentUserDataQuery.data?.user?.theme_base_color || 'blue';
+  const currentTheme =
+    currentUserDataQuery.data?.user?.theme_base_color || "blue";
   const isDarkMode = currentUserDataQuery.data?.user?.is_dark_mode || false;
 
   const context = {
@@ -745,7 +791,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     useMetricsAndEntriesQuery,
     useIsMetricLoggedToday,
     useHasMetricsToLogToday,
-    hasLoadedUserData: currentUserDataQuery.isSuccess && !!currentUserDataQuery.data,
+    hasLoadedUserData:
+      currentUserDataQuery.isSuccess && !!currentUserDataQuery.data,
     hasLoadedTimelineData: timelineData.isSuccess && !!timelineData.data,
     timelineData,
     messagesData,
