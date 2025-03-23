@@ -377,6 +377,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
                 activities_count: transformedData.activities.length,
                 activity_entries_count: transformedData.activityEntries.length,
                 friend_count: userData.user?.friend_ids?.length || 0,
+                plan_type: userData.user?.plan_type,
               }
             };
 
