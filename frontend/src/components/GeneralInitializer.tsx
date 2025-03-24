@@ -5,7 +5,6 @@ import posthog from "posthog-js";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useSession } from "@clerk/nextjs";
 import { useNotifications } from "@/hooks/useNotifications";
-import AppNotInstalledPage from "./AppNotInstalledPage";
 import BottomNav from "./BottomNav";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -25,7 +24,6 @@ export default function GeneralInitializer({
   const { data: userData } = currentUserDataQuery;
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRan, setHasRan] = useState(false);
-  const [isAppInstallModalClosed, setIsAppInstallModalClosed] = useState(false);
   const [showServerMessage, setShowServerMessage] = useState(false);
   const [showBugMessage, setShowBugMessage] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
@@ -76,33 +74,6 @@ export default function GeneralInitializer({
       }
     );
   };
-
-  const pathname = usePathname();
-
-  function isPathNameDesktopWhitelisted() {
-    const excludedRoutes = [
-      "/signin",
-      "/signup",
-      "/join-plan",
-      "/onboarding",
-      "/join",
-    ];
-  
-    return excludedRoutes.some((route) => pathname.startsWith(route));
-  }
-
-  if (
-    !isAppInstalled &&
-    isSignedIn &&
-    !isAppInstallModalClosed &&
-    process.env.NEXT_PUBLIC_ENVIRONMENT !== "development" &&
-    userData?.user?.email !== process.env.NEXT_PUBLIC_APP_TEST_USER_EMAIL &&
-    !isPathNameDesktopWhitelisted()
-  ) {
-    return (
-      <AppNotInstalledPage onClose={() => setIsAppInstallModalClosed(true)} />
-    );
-  }
 
   if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
     return (

@@ -24,24 +24,24 @@ export const FAQ: React.FC = () => {
               with your goals and habits, it does so by:
             </p>
 
-            <div className="flex items-center gap-3">
-              <Bell className="w-12 h-12 text-blue-300 shrink-0" />
-              <div>
-                <h3 className="font-medium">Proactive Reachout</h3>
-                <p className="text-sm text-gray-600">
-                  Fully customizable, context-aware notification system that
-                  knows about your plan and progress.
-                </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Bell className="w-12 h-12 text-blue-300 shrink-0" />
+                <div>
+                  <h3 className="font-medium">Proactive Reachout</h3>
+                  <p className="text-sm text-gray-600">
+                    Fully customizable, context-aware notification system that
+                    knows about your plan and progress.
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
               <div className="flex items-center gap-3">
                 <Brain className="w-12 h-12 text-blue-300 shrink-0" />
                 <div>
                   <h3 className="font-medium">Emotion Analysis</h3>
                   <p className="text-sm text-gray-600">
-                    Understands and tracks your emotional
-                    patterns through conversations
+                    Understands and tracks your emotional patterns through
+                    conversations
                   </p>
                 </div>
               </div>
@@ -51,12 +51,12 @@ export const FAQ: React.FC = () => {
                 <div>
                   <h3 className="font-medium">Insight Correlation</h3>
                   <p className="text-sm text-gray-600">
-                    Automatic Mood, Energy, and Productivity tracking with correlation with logged activities.
+                    Automatic Mood, Energy, and Productivity tracking with
+                    correlation with logged activities.
                   </p>
                 </div>
               </div>
             </div>
-
           </AccordionContent>
         </AccordionItem>
       </Accordion>

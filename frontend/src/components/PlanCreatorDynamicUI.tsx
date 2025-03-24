@@ -185,7 +185,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
       shouldRenderChildren={shouldRenderChildren}
       renderChildren={renderExtractedData}
       creationMessage="Do you want me to create this plan for you? (You can edit it later)"
-      placeholder="e.g. I want to read 12 books this year"
+      placeholder="This is much easier to do via voice. Click the microphone icon to record a voice message"
     />
   );
 }

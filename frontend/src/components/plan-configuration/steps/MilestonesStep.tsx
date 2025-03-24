@@ -264,7 +264,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
 
       <div className="space-y-4">
         {milestones.map((milestone, milestoneIndex) => (
-          <div key={milestoneIndex} className="space-y-4">
+          <div key={milestoneIndex} className="space-y-4 max-w-md">
             <div className={cn(
               "flex flex-col gap-4 p-4 border rounded-lg",
               validationErrors[milestoneIndex]?.title && "border-red-500"
