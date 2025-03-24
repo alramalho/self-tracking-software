@@ -66,7 +66,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   title,
   wave = false,
   onSkip,
-  }: DynamicUISuggesterProps<T>) {
+}: DynamicUISuggesterProps<T>) {
   const [text, setText] = useState("");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
   const [rejectionFeedback, setRejectionFeedback] = useState("");
@@ -241,14 +241,6 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       <div className="space-y-4 overflow-y-auto">
         <Toaster position="top-center" closeButton duration={12000} />
 
-        {title && (
-          <>
-            <h2 className="text-lg font-semibold text-gray-700 m-4 mt-6 text-center">
-              {title}
-            </h2>
-          </>
-        )}
-
         <div className="relative w-fit mx-auto">
           <ScanFace size={100} className={`mx-auto ${variants.text}`} />
           {wave && (
@@ -264,8 +256,19 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           )}
         </div>
 
-        <p className="text-center text-lg font-semibold">{initialMessage}</p>
+        <div>
+          {title && (
+            <>
+              <h2 className="text-lg font-medium text-center">
+                {title}
+              </h2>
+            </>
+          )}
 
+          <p className="text-center text-2xl font-semibold mt-0">
+            {initialMessage}
+          </p>
+        </div>
         {renderIntermediateComponents && (
           <div className="px-4">{renderIntermediateComponents()}</div>
         )}

@@ -85,7 +85,7 @@ export function DailyCheckinBanner({
   }
 
   const questionsChecks = {
-    "what did you do": "what has the user done",
+    "what activities did you do": "what activities has the user done",
     ...metrics?.reduce(
       (acc, m, i, arr) => ({
         ...acc,

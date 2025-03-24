@@ -29,14 +29,21 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
   const [shouldRenderChildren, setShouldRenderChildren] = useState(false);
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
+  const activities = userData?.activities ?? [];
 
-  const initialAIMessage ="Tell me about any activities that you would like to track and did in the past week or two!"
+  useEffect(() => {
+    if (activities.length === 0) {
+      onNext();
+    }
+  }, [activities, onNext]);
+
+  const initialAIMessage ="What did you do recently?"
   
   // Track which plan steps we've identified in the text
   const questionChecks = {
-    "Which of them did you complete this past few weeks?": "Does the user mentions which activities did they do this past few weeks?",
+    "Which of them did you complete recently": "Does the user mentions which activities did they do recently?",
     "In which days did you do them": "For every mentioned activity, does the user mention the date or day of the week that the activity was done? (If there are no activities then consider this to be irrelvant, and just return true to validate)",
-    "How much of those activties did you do (eg. read 100 pages of a book on monday, ran 10 km on tuesday, etc)": "For every mentioned activity, does the user mention the quantity (pages / km / etc) of the activity they did? (If there are no activities then consider this to be irrelvant, and just return true to validate)", 
+    "Their quantity (eg. read 100 pages of a book on monday, ran 10 km on tuesday, etc)": "For every mentioned activity, does the user mention the quantity (pages / km / etc) of the activity they did? (If there are no activities then consider this to be irrelvant, and just return true to validate)", 
   };
 
   // Submit text to AI for plan extraction
@@ -152,8 +159,8 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
           Your existing activities
         </h2>
 
-        <div className="flex flex-col gap-2">
-          {userData?.activities?.map((a) => (
+        <div className="flex flex-row flex-wrap gap-2">
+          {activities.map((a) => (
             <EntryCard key={a.id} emoji={a.emoji || ""} title={a.title} description={a.measure} />
           ))}
         </div>
@@ -164,10 +171,10 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
   return (
     <DynamicUISuggester<PastWeekLoggingResponse>
       id="past-week-logging"
-      title="Let's create some activities and entries to fill up your dashboard"
+      title="Let's create you a fancy dashboard by logging activities"
       initialMessage={initialAIMessage}
-      placeholder="A voice message is better suited for this step"
-      questionPrefix="Of the activities you've created, please mention:"
+      placeholder="It is highly recommended to use voice messages for this step"
+      questionPrefix="In order for me to properly log them for you, I need to know:"
       creationMessage="Do you want me to create these activities and entries for you? (You can edit them later)"
       questionsChecks={questionChecks}
       onSubmit={handleSubmit}

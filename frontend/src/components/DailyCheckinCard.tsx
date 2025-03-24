@@ -8,9 +8,11 @@ import { ScanFace } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 
-interface DailyCheckinCardProps {}
+interface DailyCheckinCardProps {
+  aiMessage: string | null;
+}
 
-export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({}) => {
+export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({ aiMessage }) => {
   const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
@@ -87,7 +89,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({}) => {
   if (!hasMissingCheckin)
     return (
     <AINotification
-        message={"Thanks for submitting your daily checkin!"}
+        message={aiMessage ?? "Thanks for submitting your daily checkin!"}
         hasNotification={shouldShowNotification}
         createdAt={new Date().toISOString()}
       />
@@ -102,7 +104,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({}) => {
 
   return (
     <AINotification
-      message={message}
+      message={aiMessage ?? message}
       hasNotification={shouldShowNotification}
       createdAt={new Date().toISOString()}
       onDismiss={() => {

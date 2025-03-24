@@ -25,6 +25,8 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
+import AINotification from "@/components/AINotification";
+import { Button } from "@/components/ui/button";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -46,10 +48,7 @@ export default function InsightsDashboardPage() {
   const [trendHelpMetricId, setTrendHelpMetricId] = useState<string | null>(
     null
   );
-  // const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
-  // const [selectedNewMetric, setSelectedNewMetric] = useState<string | null>(
-  // null
-  // );
+  const [aiMessage, setAIMessage] = useState<string | null>(null);
   const [isCreatingMetric, setIsCreatingMetric] = useState(false);
   const api = useApiWithAuth();
   const { setShowUpgradePopover } = useUpgrade();
@@ -111,31 +110,26 @@ export default function InsightsDashboardPage() {
     }
   };
 
-  useEffect(() => {
-    if (userPaidPlanType == "free") {
-      router.push("/");
-      setShowUpgradePopover(true);
-    }
-  }, [userPaidPlanType]);
-
-  useEffect(() => {
-    if (hasLoadedMetricsAndEntries) {
-      addDefaultMetrics();
-    }
-  }, [hasLoadedMetricsAndEntries]);
-
-  // useEffect(() => {
-  //   if (!isLoading && !hasMetrics) {
-  //     router.push("/insights/onboarding");
-  //   }
-  // }, [isLoading, hasMetrics]);
-
-  // Set the first metric as selected when metrics load
-  // useEffect(() => {
-  //   if (userMetrics.length > 0 && !selectedMetricId) {
-  //     setSelectedMetricId(userMetrics[0].id);
-  //   }
-  // }, [userMetrics]);
+  if (userMetrics.length === 0) {
+    return (
+      <div className="mx-auto p-6 max-w-md space-y-8">
+        <AINotification
+          message={`Hey ${userData?.user?.username ?? "there"}! Here you will be able to see how do your activities correlate with important metrics like happiness, energy, and productivity.`}
+          createdAt={new Date().toISOString()}
+        />
+        <Button
+          className="w-full"
+          onClick={() => {
+            setAIMessage(
+              "Great! Let's get started with a checkin. Just tell me how your day went!"
+            );
+            addDefaultMetrics();
+          }}
+        >
+          Start</Button>
+      </div>
+    );
+  }
 
   // Find the metric with the most entries
   const metricEntryCounts = userMetrics.map((metric) => ({
@@ -355,7 +349,7 @@ export default function InsightsDashboardPage() {
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
         <DailyCheckinViewer entries={entries} />
         <div className="mt-4">
-          <DailyCheckinCard />
+          <DailyCheckinCard aiMessage={aiMessage} />
         </div>
       </div>
 

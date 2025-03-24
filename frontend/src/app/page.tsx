@@ -11,13 +11,11 @@ import { Button } from "@/components/ui/button";
 
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { useShare } from "@/hooks/useShare";
-import { useClipboard } from "@/hooks/useClipboard";
-import { toast } from "react-hot-toast";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useNotifications } from "@/hooks/useNotifications";
+import Link from "next/link";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -28,17 +26,16 @@ const HomePage: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { userPaidPlanType } = usePaidPlan();
+  const { isAppInstalled } = useNotifications();
+  const [onboardingCompleted] = useLocalStorage<boolean>(
+    "onboarding-completed",
+    false
+  );
 
   const hasNoFriends = userData?.user?.friend_ids?.length === 0;
 
   useEffect(() => {
-    if (
-      isSignedIn &&
-      hasLoadedUserData &&
-      hasNoFriends &&
-      userPaidPlanType === "free"
-    ) {
+    if (isSignedIn && hasLoadedUserData && !onboardingCompleted) {
       router.push("/onboarding");
     }
   }, [userData, isSignedIn]);
@@ -55,14 +52,20 @@ const HomePage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center">
-        <div className="flex flex-row gap-3 items-center text-center">
-          <span className="mb-2 text-[40px]">🎯</span>
-          <h2 className="text-xl font-bold tracking-tight text-gray-900">
-            <span className={`${variants.text} break-normal text-nowrap`}>
-              tracking.<span className={`${variants.fadedText}`}>so</span>
-            </span>
-          </h2>
-        </div>
+        {false ? (
+          <div className="flex flex-row gap-3 items-center text-center">
+            <span className="mb-2 text-[40px]">🎯</span>
+            <h2 className="text-xl font-bold tracking-tight text-gray-900">
+              <span className={`${variants.text} break-normal text-nowrap`}>
+                tracking.<span className={`${variants.fadedText}`}>so</span>
+              </span>
+            </h2>
+          </div>
+        ) : (
+          <Link href="/download">
+            <Button className="mb-2">Download App</Button>
+          </Link>
+        )}
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

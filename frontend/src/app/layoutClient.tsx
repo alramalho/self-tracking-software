@@ -34,7 +34,7 @@ export default function ClientLayout({
             <UpgradeProvider>
               <DailyCheckinPopoverProvider>
                 <NotificationsProvider>
-                  <main className="relative h-[100dvh]">
+                  <main className="relative h-[100dvh] max-w-5xl mx-auto">
                     <div
                       className={cn(
                         "absolute inset-0 overflow-auto",
