@@ -1,5 +1,4 @@
 import React from "react";
-import AppNotInstalledPage from "@/components/AppNotInstalledPage";
 import InstallPWATabs from "@/components/InstallPWATabs";
 import { Smartphone, X } from "lucide-react";
 
