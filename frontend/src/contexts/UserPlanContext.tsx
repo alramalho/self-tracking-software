@@ -413,16 +413,18 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             // Use direct capture method
             if (posthog) {
               posthog.capture("load-user-data", {
-                email: userData.user?.email,
-                name: userData.user?.name,
-                username: userData.user?.username,
-                plans_count: transformedData.plans.length,
-                plan_groups_count: transformedData.planGroups.length,
-                referral_count: userData.user?.referred_user_ids?.length || 0,
-                activities_count: transformedData.activities.length,
-                activity_entries_count: transformedData.activityEntries.length,
-                friend_count: userData.user?.friend_ids?.length || 0,
-                plan_type: userData.user?.plan_type,
+                $set: {
+                  email: userData.user?.email,
+                  name: userData.user?.name,
+                  username: userData.user?.username,
+                  plans_count: transformedData.plans.length,
+                  plan_groups_count: transformedData.planGroups.length,
+                  referral_count: userData.user?.referred_user_ids?.length || 0,
+                  activities_count: transformedData.activities.length,
+                  activity_entries_count: transformedData.activityEntries.length,
+                  friend_count: userData.user?.friend_ids?.length || 0,
+                  plan_type: userData.user?.plan_type,
+                }
               });
               posthog.capture("load-user-data-latency", latencyProperties);
             }
