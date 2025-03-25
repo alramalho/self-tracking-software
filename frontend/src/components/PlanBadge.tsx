@@ -8,9 +8,10 @@ interface PlanBadgeProps {
 }
 
 export const PlanBadge: React.FC<PlanBadgeProps> = ({ planType, size = 16 }) => {
-  if (planType === "free") return null;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  
+  if (planType === "free") return null;
 
   return (
     <svg 
