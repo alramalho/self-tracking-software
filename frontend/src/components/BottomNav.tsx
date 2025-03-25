@@ -47,6 +47,7 @@ const BottomNav = () => {
   const themeColors = useThemeColors();
   const { effectiveTheme } = useTheme();
   const { shouldShowNotification: hasCheckinNotification } = useDailyCheckin();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const isActiveRoute = (route: string) => {
     if (route === "/") return pathname === "/";
@@ -66,7 +67,6 @@ const BottomNav = () => {
   }
 
   const activeThemeClass = themeTextClasses[effectiveTheme];
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   return (
     <>
