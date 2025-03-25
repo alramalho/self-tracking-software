@@ -49,7 +49,7 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
         </p>
         <div
           data-testid="existing-activities"
-          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4"
+          className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4"
         >
           {userData?.activities?.map((activity) => (
             <ActivityItem
