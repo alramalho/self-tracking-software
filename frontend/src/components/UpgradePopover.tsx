@@ -224,9 +224,9 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
       <div className="space-y-8 pt-6 pb-12">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold">
-            <span className="italic">support open source</span>
+            thank you for considering supporting{" "}
+            <span className="italic">open source</span>
           </h1>
-          <h2 className="text-2xl font-bold">and unlock this</h2>
           {/* <p className="text-gray-500 font-cursive text-2xl font-extralight">Become an open source supporter 🔥</p> */}
         </div>
 
