@@ -16,6 +16,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useNotifications } from "@/hooks/useNotifications";
 import Link from "next/link";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -52,7 +53,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center">
-        {false ? (
+        {isAppInstalled ? (
           <div className="flex flex-row gap-3 items-center text-center">
             <span className="mb-2 text-[40px]">🎯</span>
             <h2 className="text-xl font-bold tracking-tight text-gray-900">
