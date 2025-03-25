@@ -94,15 +94,16 @@ export default function GeneralInitializer({
             <p className="text-left">Loading your data...</p>
             {showServerMessage && (
               <span className="text-gray-500 text-sm text-left">
-                we run on cheap servers...
+                we run on cheap servers... please consider
                 <br />
                 <Link
                   target="_blank"
                   href="https://ko-fi.com/alexramalho"
                   className="underline"
                 >
-                  donate?
-                </Link>
+                  donating
+                </Link>{" "}
+                or upgrading to support us
               </span>
             )}
             {showBugMessage && (
