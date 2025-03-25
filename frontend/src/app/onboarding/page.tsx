@@ -67,8 +67,8 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
     };
 
   const handleContinue = () => {
-    console.log("handleContinue");
     setAttempted(true);
+    posthog?.capture("onboarding-intro-complete", {skipped: false});
     // if (profile && plan && partner) {
     onNext();
     // }
