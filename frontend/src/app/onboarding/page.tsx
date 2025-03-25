@@ -226,7 +226,7 @@ function ProfileSetupStep({ onNext }: { onNext: () => void }) {
   );
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="w-lg max-w-full mx-auto">
       <ProgressDots current={2} max={5} />
       <DynamicUISuggester<{
         question_checks: Record<string, boolean>;
@@ -234,7 +234,7 @@ function ProfileSetupStep({ onNext }: { onNext: () => void }) {
       }>
         id="profile-setup"
         questionPrefix="I'd like to know"
-        initialMessage="Great! Now, tell me a bit about yourself."
+        initialMessage="Tell me a bit about yourself."
         placeholder="Voice messages are better suited for this step"
         questionsChecks={questionsChecks}
         onSubmit={async (text) => {
@@ -278,7 +278,7 @@ function PlanCreationStep({ onNext }: { onNext: () => void }) {
   }, [posthog]);
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="w-lg max-w-full mx-auto">
       <ProgressDots current={3} max={5} />
       <PlanCreatorDynamicUI
         onNext={() => {
@@ -312,7 +312,7 @@ function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
   }, [posthog]);
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="w-lg max-w-full mx-auto">
       <ProgressDots current={4} max={5} />
       <PastWeekLoggingDynamicUI
         onNext={() => {
