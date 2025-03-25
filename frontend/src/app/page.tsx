@@ -88,9 +88,6 @@ const HomePage: React.FC = () => {
       <Notifications />
 
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-4">
-          Friend&apos;s last activities
-        </h2>
         <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)} />
       </div>
 

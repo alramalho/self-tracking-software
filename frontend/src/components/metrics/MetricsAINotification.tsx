@@ -23,7 +23,7 @@ export function MetricsAINotification() {
 
   return (
     <AINotification
-      message={aiMessage}
+      messages={[aiMessage]}
       createdAt={new Date(timestamp).toISOString()}
       onDismiss={() => {
         setShouldShowNotification(false);

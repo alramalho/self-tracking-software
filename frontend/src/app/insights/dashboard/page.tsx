@@ -114,7 +114,10 @@ export default function InsightsDashboardPage() {
     return (
       <div className="mx-auto p-6 max-w-md space-y-8">
         <AINotification
-          message={`Hey ${userData?.user?.username ?? "there"}! Here you will be able to see how do your activities correlate with important metrics like happiness, energy, and productivity.`}
+          messages={[
+            `Hey ${userData?.user?.username ?? "there"}! Here you will be able to see how do your activities correlate with important metrics like happiness, energy, and productivity.`,
+            "Let's get started with a checkin. Just tell me how your day went!",
+          ]}
           createdAt={new Date().toISOString()}
         />
         <Button
