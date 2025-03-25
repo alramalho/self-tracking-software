@@ -28,7 +28,8 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
   const [text, setText] = useState("");
   const [shouldRenderChildren, setShouldRenderChildren] = useState(false);
   const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const activities = userData?.activities ?? [];
 
   useEffect(() => {
@@ -84,6 +85,8 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
       for (const activity_entry of data.activity_entries ?? []) {
         await logActivityMutation.mutateAsync(activity_entry);
       }
+
+      currentUserDataQuery.refetch();
       onNext();
       toast.success("Activity entries logged successfully!");
     } catch (error) {
