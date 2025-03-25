@@ -310,7 +310,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   }, [scrollToMilestones, isEdit]);
 
   return (
-    <div data-testid="plan-configuration-form" className="space-y-6">
+    <div data-testid="plan-configuration-form" className="space-y-6 max-w-3xl mx-auto">
       <div className="space-y-6 relative">
         <Step stepNumber={1} isVisible={shouldShowStep(1)} ref={stepRefs.step1}>
           <DurationStep
