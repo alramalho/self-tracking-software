@@ -33,10 +33,10 @@ const HomePage: React.FC = () => {
     false
   );
 
-  const hasNoFriends = userData?.user?.friend_ids?.length === 0;
+  const hasFriends = userData?.user?.friend_ids?.length && userData?.user?.friend_ids?.length > 0
 
   useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && !onboardingCompleted) {
+    if (isSignedIn && hasLoadedUserData && (!onboardingCompleted && !hasFriends)) {
       router.push("/onboarding");
     }
   }, [userData, isSignedIn]);
