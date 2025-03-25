@@ -5,7 +5,7 @@ import {
 } from "./DynamicUISuggester";
 import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
-import { Activity, ApiPlan, PlanMilestone } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan, PlanMilestone, useUserPlan } from "@/contexts/UserPlanContext";
 
 // Interface for plan extraction response
 interface PlanExtractionsResponse extends BaseExtractionResponse {
@@ -19,6 +19,8 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
   const api = useApiWithAuth();
   const [text, setText] = useState("");
   const [shouldRenderChildren, setShouldRenderChildren] = useState(false);
+  const {useCurrentUserDataQuery}=  useUserPlan()
+  const currentUserDataQuery = useCurrentUserDataQuery();
   // Track which plan steps we've identified in the text
   const questionChecks = {
     "Your goal": "Does the message mention a specific goal or objective?",
@@ -55,6 +57,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
       }
       await api.post("/create-plan", data.plan);
       onNext();
+      currentUserDataQuery.refetch();
       toast.success("Plan created successfully!");
     } catch (error) {
       console.error("Error creating plan:", error);
