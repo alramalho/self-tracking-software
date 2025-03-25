@@ -184,7 +184,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
       )} */}
 
       {regularNotifications && regularNotifications.length > 0 && (
-        <>
+        <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Notifications</h2>
             <button
@@ -244,7 +244,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
               </div>
             </div>
           ))}
-        </>
+        </div>
       )}
     </>
   );

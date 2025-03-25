@@ -114,8 +114,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   return (
     <>
-      <AppleLikePopover open={open} className="z-[70]" onClose={onClose}>
-        <div data-testid="activity-editor">
+      <AppleLikePopover open={open} onClose={onClose}>
+        <div data-testid="activity-editor" className="h-fit">
           <h2 className="text-2xl font-bold mb-4">
             {activity ? "Edit Activity" : "Add New Activity"}
           </h2>

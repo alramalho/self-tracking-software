@@ -12,10 +12,12 @@ export type ThemeColor = BaseThemeColor | "random";
 export interface ThemeVariants {
   // Basic colors
   raw: ThemeColor; // Raw color name
+  hex: string;
   bg: string;
   fadedBg: string;
   darkText: string;
   text: string;
+  ring: string;
   border: string;
   fadedText: string;
   veryFadedText: string;
@@ -24,9 +26,6 @@ export interface ThemeVariants {
   accent: string;
   hover: string;
   background: string;
-  cssVars: {
-    appBackground: string;
-  };
 
   // Component specific
   card: {
@@ -52,9 +51,11 @@ export interface ThemeVariants {
 export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   slate: {
     raw: "slate",
+    hex: "#64748b",
     bg: "bg-slate-500",
     fadedBg: "bg-slate-200/50",
     text: "text-slate-500",
+    ring: "ring-gray-500",
     darkText: "text-slate-800",
     fadedText: "text-slate-300",
     veryFadedText: "text-slate-200",
@@ -64,9 +65,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     accent: "bg-slate-300",
     hover: "hover:bg-slate-100",
     background: "bg-slate-50",
-    cssVars: {
-      appBackground: "bg-gray-50",
-    },
     card: {
       selected: {
         border: "border-slate-400",
@@ -87,9 +85,11 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   },
   blue: {
     raw: "blue",
+    hex: "#3b82f6",
     bg: "bg-blue-500",
     fadedBg: "bg-blue-200/50",
     text: "text-blue-500",
+    ring: "ring-blue-500",
     darkText: "text-blue-800",
     fadedText: "text-blue-300",
     veryFadedText: "text-blue-200",
@@ -99,9 +99,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     accent: "bg-blue-300",
     hover: "hover:bg-blue-100",
     background: "bg-blue-50",
-    cssVars: {
-      appBackground: "bg-gray-50",
-    },
     card: {
       selected: {
         border: "border-blue-400",
@@ -122,9 +119,11 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   },
   violet: {
     raw: "violet",
+    hex: "#818cf8",
     bg: "bg-violet-500",
     fadedBg: "bg-violet-100",
     text: "text-violet-500",
+    ring: "ring-violet-500",
     darkText: "text-violet-800",
     fadedText: "text-violet-300",
     veryFadedText: "text-violet-200",
@@ -134,9 +133,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     accent: "bg-violet-300",
     hover: "hover:bg-violet-100",
     background: "bg-violet-50",
-    cssVars: {
-      appBackground: "bg-gray-50",
-    },
     card: {
       selected: {
         border: "border-violet-500",
@@ -157,9 +153,11 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   },
   amber: {
     raw: "amber",
+    hex: "#f59e0b",
     bg: "bg-amber-500",
     fadedBg: "bg-amber-100",
     text: "text-amber-500",
+    ring: "ring-amber-500",
     darkText: "text-amber-700",
     fadedText: "text-amber-300",
     veryFadedText: "text-amber-200",
@@ -169,9 +167,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     accent: "bg-amber-300",
     hover: "hover:bg-amber-100",
     background: "bg-amber-50",
-    cssVars: {
-      appBackground: "bg-gray-50",
-    },
     card: {
       selected: {
         border: "border-amber-400",
@@ -192,9 +187,11 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   },
   emerald: {
     raw: "emerald",
+    hex: "#10b981",
     bg: "bg-emerald-500",
     fadedBg: "bg-emerald-100",
     text: "text-emerald-500",
+    ring: "ring-emerald-500",
     darkText: "text-emerald-800",
     fadedText: "text-emerald-300",
     veryFadedText: "text-emerald-200",
@@ -204,9 +201,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     accent: "bg-emerald-300",
     hover: "hover:bg-emerald-100",
     background: "bg-emerald-50",
-    cssVars: {
-      appBackground: "bg-gray-50",
-    },
     card: {
       selected: {
         border: "border-emerald-400",
@@ -227,9 +221,11 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   },
   rose: {
     raw: "rose",
+    hex: "#f43f5e",
     bg: "bg-rose-500",
     fadedBg: "bg-rose-100",
     text: "text-rose-500",
+    ring: "ring-rose-500",
     darkText: "text-rose-800",
     fadedText: "text-rose-300",
     veryFadedText: "text-rose-200",
@@ -239,9 +235,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     accent: "bg-rose-300",
     hover: "hover:bg-rose-100",
     background: "bg-rose-50",
-    cssVars: {
-      appBackground: "bg-gray-50",
-    },
     card: {
       selected: {
         border: "border-rose-400",

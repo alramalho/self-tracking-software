@@ -62,7 +62,7 @@ const LogPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 mb-16 relative">
+    <div className="container mx-auto px-4 py-8 mb-16 relative max-w-2xl ">
 
       <h1 className="text-2xl font-bold mb-6">Log Activity</h1>
       <ActivitySelector

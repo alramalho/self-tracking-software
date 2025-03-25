@@ -49,14 +49,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const themeVariants = getThemeVariants(effectiveTheme);
 
-  useEffect(() => {
-    // Set CSS variables
-    const root = document.documentElement;
-    Object.entries(themeVariants.cssVars).forEach(([key, className]) => {
-      const computedColor = getComputedColor(className);
-      root.style.setProperty(`--${key}`, computedColor);
-    });
-  }, [effectiveTheme, themeVariants]);
+  // useEffect(() => {
+  //   // Set CSS variables
+  //   const root = document.documentElement;
+  //   Object.entries(themeVariants.cssVars).forEach(([key, className]) => {
+  //     const computedColor = getComputedColor(className);
+  //     root.style.setProperty(`--${key}`, computedColor);
+  //   });
+  // }, [effectiveTheme, themeVariants]);
 
   const getThemeClass = (type: 'primary' | 'secondary' | 'accent' | 'hover' | 'border' | 'background') => {
     return themeVariants[type];

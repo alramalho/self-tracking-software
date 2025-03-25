@@ -327,7 +327,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 className={twMerge(
                   "w-8 h-8",
                   userPlanType !== "free" && "ring-2 ring-offset-2 ring-offset-white",
-                  userPlanType !== "free" && ringColor
+                  userPlanType !== "free" && variants.ring
                 )} 
                 onClick={onAvatarClick}
               >

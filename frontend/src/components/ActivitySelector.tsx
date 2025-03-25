@@ -20,10 +20,10 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
   canAddNewActivity = true,
 }) => {
   const [showEditor, setShowEditor] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [editingActivity, setEditingActivity] = useState<Activity | undefined>(undefined);
 
   const handleAddActivity = () => {
-    setEditingActivity(null);
+    setEditingActivity(undefined);
     setShowEditor(true);
   };
 
@@ -37,12 +37,12 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
       onSaveActivity(savedActivity);
     }
     setShowEditor(false);
-    setEditingActivity(null);
+    setEditingActivity(undefined);
   };
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3  gap-4 mb-6">
         {activities.map((activity) => (
           <ActivityCard
             key={activity.id}
@@ -55,7 +55,7 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
         {canAddNewActivity && (
           <button
             onClick={handleAddActivity}
-            className="flex flex-col items-left justify-center p-6 rounded-lg border-2 border-dashed border-gray-300 aspect-square hover:bg-gray-50"
+            className="flex flex-col items-left bg-gray-50 justify-center p-6 rounded-lg border-2 border-dashed border-gray-300 aspect-square hover:bg-gray-100"
           >
             <Plus className="h-8 w-8 text-gray-400 mb-2" />
             <span className="text-xl font-medium text-left text-gray-500">
@@ -68,10 +68,10 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
         open={showEditor}
         onClose={() => {
           setShowEditor(false);
-          setEditingActivity(null);
+          setEditingActivity(undefined);
         }}
         onSave={handleSaveActivity}
-        activity={editingActivity || undefined}
+        activity={editingActivity}
       />
     </>
   );

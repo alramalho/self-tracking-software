@@ -212,7 +212,9 @@ function ProfileSetupStep({ onNext }: { onNext: () => void }) {
           disabled={!allQuestionsAnswered}
           className="w-full"
           onClick={() => {
-            posthog?.capture("onboarding-profile-setup-complete", {skipped: false});
+            posthog?.capture("onboarding-profile-setup-complete", {
+              skipped: false,
+            });
             onNext();
           }}
         >
@@ -256,7 +258,9 @@ function ProfileSetupStep({ onNext }: { onNext: () => void }) {
         variant="ghost"
         className="w-full mt-6"
         onClick={() => {
-          posthog?.capture("onboarding-profile-setup-complete", {skipped: true});
+          posthog?.capture("onboarding-profile-setup-complete", {
+            skipped: true,
+          });
           onNext();
         }}
       >
@@ -278,7 +282,9 @@ function PlanCreationStep({ onNext }: { onNext: () => void }) {
       <ProgressDots current={3} max={5} />
       <PlanCreatorDynamicUI
         onNext={() => {
-          posthog?.capture("onboarding-plan-creation-complete", {skipped: false});
+          posthog?.capture("onboarding-plan-creation-complete", {
+            skipped: false,
+          });
           onNext();
         }}
       />
@@ -286,7 +292,9 @@ function PlanCreationStep({ onNext }: { onNext: () => void }) {
         variant="ghost"
         className="w-full mt-6"
         onClick={() => {
-          posthog?.capture("onboarding-plan-creation-complete", {skipped: true});
+          posthog?.capture("onboarding-plan-creation-complete", {
+            skipped: true,
+          });
           onNext();
         }}
       >
@@ -308,7 +316,9 @@ function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
       <ProgressDots current={4} max={5} />
       <PastWeekLoggingDynamicUI
         onNext={() => {
-          posthog?.capture("onboarding-past-week-logging-complete", {skipped: false});
+          posthog?.capture("onboarding-past-week-logging-complete", {
+            skipped: false,
+          });
           onNext();
         }}
       />
@@ -316,7 +326,9 @@ function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
         variant="ghost"
         className="w-full mt-6"
         onClick={() => {
-          posthog?.capture("onboarding-past-week-logging-complete", {skipped: true});
+          posthog?.capture("onboarding-past-week-logging-complete", {
+            skipped: true,
+          });
           onNext();
         }}
       >
@@ -474,7 +486,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
   const handleAcceptRequest = async (requestId: string) => {
     try {
       await acceptFriendRequestMutation.mutateAsync(requestId);
-      currentUserQuery.refetch()
+      currentUserQuery.refetch();
       toast.success("Friend request accepted!");
     } catch (error) {
       console.error("Error accepting friend request:", error);
@@ -517,7 +529,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
     );
   };
   useEffect(() => {
-    console.log("rendered")
+    console.log("rendered");
   }, []);
 
   const handleFinishClick = () => {
@@ -525,7 +537,9 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
     if (!currentUser?.friend_ids?.length && userPaidPlanType === "free") {
       setAccountabilityPopoverOpen(true);
     } else {
-      posthog?.capture("onboarding-accountability-partner-complete", {skipped: false});
+      posthog?.capture("onboarding-accountability-partner-complete", {
+        skipped: false,
+      });
       onNext();
     }
   };
@@ -536,9 +550,11 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
       <div className="text-center">
         <ScanFace size={100} className="mx-auto mb-4 text-blue-500" />
         <h2 className="text-xl font-bold mb-4">
-          As a last step you need to get an accountability
-          partner.<br/>
-          {userData?.plans && userData?.plans?.length > 0 ? "Thank you for making it this far!" : "This one you cannot skip"}
+          As a last step you need to get an accountability partner.
+          <br />
+          {userData?.plans && userData?.plans?.length > 0
+            ? "Thank you for making it this far!"
+            : "This one you cannot skip"}
         </h2>
         <p className="text-gray-600 mb-6">
           You have several options to get an accountability partner:
@@ -739,7 +755,8 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
         <div className="p-4 space-y-4 text-md text-gray-600">
           <h3 className="text-xl font-bold text-gray-800">👋 Hey there!</h3>
           <p>
-            It seems you&apos;re not interested in having anyone else in this tracking journey with you.
+            It seems you&apos;re not interested in having anyone else in this
+            tracking journey with you.
           </p>
           <p>
             That&apos;s a pity, because it means you will likely be dropping out
@@ -791,15 +808,17 @@ export default function OnboardingPage() {
       case 4:
         return <PastWeekLoggingStep onNext={() => setStep(5)} />;
       default:
-        return <AccountabilityPartnerStep
-          onNext={() => {
-            setOnboardingCompleted(true);
-            router.push("/");
-            hotToast.success(
-              "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner."
-            );
-          }}
-        />;
+        return (
+          <AccountabilityPartnerStep
+            onNext={() => {
+              setOnboardingCompleted(true);
+              router.push("/");
+              hotToast.success(
+                "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner."
+              );
+            }}
+          />
+        );
     }
   };
 

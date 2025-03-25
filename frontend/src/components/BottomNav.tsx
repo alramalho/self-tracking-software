@@ -20,6 +20,7 @@ import { BaseThemeColor } from "@/utils/theme";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "./ui/badge";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // This forces Tailwind to include these classes in the build
 const themeTextClasses: Record<BaseThemeColor, string> = {
@@ -65,11 +66,12 @@ const BottomNav = () => {
   }
 
   const activeThemeClass = themeTextClasses[effectiveTheme];
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   return (
     <>
       <FloatingActionMenu />
-      <nav className="fixed bottom-0 left-0 right-0 bg-transparent backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-[50] pb-1">
+      <nav className={`box-border fixed bottom-0 left-0 right-0 bg-transparent backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-[50] pb-1 ${isDesktop ? "max-w-2xl rounded-t-xl mx-auto" : ""}`}>
         <div className="flex justify-around items-center py-2 px-4 max-w-screen-xl mx-auto">
           <Link
             href="/"
