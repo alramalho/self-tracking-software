@@ -89,7 +89,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({ aiMessage })
   if (!hasMissingCheckin)
     return (
     <AINotification
-        message={aiMessage ?? "Thanks for submitting your daily checkin!"}
+        messages={[aiMessage ?? "Thanks for submitting your daily checkin!"]}
         hasNotification={shouldShowNotification}
         createdAt={new Date().toISOString()}
       />
@@ -104,7 +104,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({ aiMessage })
 
   return (
     <AINotification
-      message={aiMessage ?? message}
+      messages={[aiMessage ?? message]}
       hasNotification={shouldShowNotification}
       createdAt={new Date().toISOString()}
       onDismiss={() => {
