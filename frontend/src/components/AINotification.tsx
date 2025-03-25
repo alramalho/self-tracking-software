@@ -87,7 +87,7 @@ const AINotification: React.FC<AINotificationProps> = ({
         transition={{ duration: 0.5, delay: 0.8 }}
       >
         {displayMessages.map((message, index) => (
-          <div className="relative p-2 markdown mt-2 text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
+          <div key={index} className="relative p-2 markdown mt-2 text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: hasNotification ? 1 : 0 }}
