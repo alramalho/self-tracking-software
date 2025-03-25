@@ -26,8 +26,8 @@ import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
 import { usePostHog } from "posthog-js/react";
 import ConfirmDialog from "../ConfirmDialog";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import UserSettingsPopover from "./UserSettingsPopover";
-import { currentUser } from "@clerk/nextjs/server";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -47,6 +47,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const { signOut } = useClerk();
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
   const handleLogout = () => {
     signOut();
@@ -64,9 +66,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                 "text-xl font-cursive flex items-center gap-2",
                 userPaidPlanType === "free"
                   ? "text-gray-500"
-                  : userPaidPlanType === "plus"
-                  ? "text-blue-500"
-                  : "text-indigo-500"
+                  : variants.text
               )}
             >
               On {capitalize(userPaidPlanType || "free")} Plan

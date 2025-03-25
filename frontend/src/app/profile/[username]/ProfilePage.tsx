@@ -56,6 +56,8 @@ import ColorPalettePickerPopup from "@/components/profile/ColorPalettePickerPopu
 import StreakDetailsPopover from "@/components/profile/StreakDetailsPopover";
 import ProfileSettingsPopover from "@/components/profile/ProfileSettingsPopover";
 import UserSettingsPopover from "@/components/profile/UserSettingsPopover";
+import { getThemeVariants } from "@/utils/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
@@ -113,6 +115,8 @@ const ProfilePage: React.FC = () => {
   const profilePaidPlanType = profileData?.user?.plan_type;
   const { userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
   useEffect(() => {
     if (currentUser?.username && !username) {
@@ -347,15 +351,17 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
       <div className="w-full max-w-3xl">
-        <div className="flex justify-around gap-3 items-center mb-3">
-          <div className="flex flex-col items-center">
+        <div
+          className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-lg bg-white/60 backdrop-blur-sm`}
+        >
+          <div className="flex flex-col items-center gap-2">
             <div className="relative">
               <Avatar
                 className={twMerge(
                   "w-20 h-20",
                   profilePaidPlanType !== "free" &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  profilePaidPlanType === "plus" && "ring-blue-500"
+                  profilePaidPlanType === "plus" && variants.ring
                 )}
               >
                 <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
@@ -367,42 +373,16 @@ const ProfilePage: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
-          {profilePaidPlanType == "plus" && !isOnesOwnProfile && (
-            <>
-              <div
-                onClick={() => setShowUpgradePopover(true)}
-                className="relative text-2xl font-bold flex items-center gap-1 ml-2"
-              >
-                <picture>
-                  <source
-                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.webp"
-                    type="image/webp"
-                  />
-                  <img
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.gif"
-                    alt="🌱"
-                    width="54"
-                    height="54"
-                  />
-                </picture>
-                <span className="absolute bottom-0 right-[50%] translate-x-[50%] text-lg font-cursive">
-                  supporter
-                </span>
-              </div>
-            </>
-          )}
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex gap-6">
-              <Link href={`/friends/${getUsername(user)}`}>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {user?.friend_ids?.length || 0}
-                  </p>
-                  <p className="text-sm text-gray-500">Friends</p>
-                </div>
-              </Link>
+            <div className="flex flex-col items-center">
+              <span className="text-sm text-gray-600 mx-auto">
+                {profileData.user?.name}
+              </span>
+              <span className="text-xs text-gray-400 mx-auto">
+                @{profileData?.user?.username}
+              </span>
             </div>
+          </div>
+          <div className="flex flex-col items-center gap-4">
             {!isOnesOwnProfile && !isFriend() && (
               <>
                 {hasPendingReceivedFriendRequest() ? (
@@ -452,43 +432,123 @@ const ProfilePage: React.FC = () => {
               </>
             )}
           </div>
-          {isOnesOwnProfile && (
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                size="icon"
-                className="border-none"
-                onClick={async () => {
-                  try {
-                    const link = `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`;
-                    if (isShareSupported) {
-                      const success = await share(link);
-                      if (!success) throw new Error("Failed to share");
-                    } else {
-                      const success = await copyToClipboard(link);
-                      if (!success) throw new Error("Failed to copy");
-                    }
-                  } catch (error) {
-                    console.error("Failed to copy link to clipboard");
-                  }
-                }}
-              >
-                <UserPlus size={24} />
-              </Button>
-              <div className="flex items-center space-x-1">
-                <Bell size={20} />
-                <Switch
-                  checked={isPushGranted}
-                  onCheckedChange={handleNotificationChange}
-                />
+          <div className="flex flex-col items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Link href={`/friends/${getUsername(user)}`}>
+                <div className="text-center">
+                  <p className="text-2xl font-bold">
+                    {user?.friend_ids?.length || 0}
+                  </p>
+                  <p className="text-sm text-gray-500">Friends</p>
+                </div>
+              </Link>
+
+              {isOnesOwnProfile && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="border-none"
+                    onClick={async () => {
+                      try {
+                        const link = `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`;
+                        if (isShareSupported) {
+                          const success = await share(link);
+                          if (!success) throw new Error("Failed to share");
+                        } else {
+                          const success = await copyToClipboard(link);
+                          if (!success) throw new Error("Failed to copy");
+                        }
+                      } catch (error) {
+                        console.error("Failed to copy link to clipboard");
+                      }
+                    }}
+                  >
+                    <UserPlus size={24} />
+                  </Button>
+                  <div className="flex items-center space-x-1">
+                    <Bell size={20} />
+                    <Switch
+                      checked={isPushGranted}
+                      onCheckedChange={handleNotificationChange}
+                    />
+                  </div>
+                  <Settings
+                    size={24}
+                    className="cursor-pointer"
+                    onClick={() => setShowUserProfile(true)}
+                  />
+                </>
+              )}
+            </div>
+
+            <div className="relative overflow-x-scroll w-full h-fit">
+              <div className="flex justify-start gap-2 cursor-pointer hover:opacity-90 transition-opacity">
+                {isOnesOwnProfile && userPaidPlanType == "plus" && (
+                  <>
+                    <div
+                      onClick={() => setShowUpgradePopover(true)}
+                      className="relative text-2xl font-bold flex items-center gap-1 ml-2 min-w-fit min-h-fit"
+                    >
+                      <picture>
+                        <source
+                          srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.webp"
+                          type="image/webp"
+                        />
+                        <img
+                          src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.gif"
+                          alt="🌱"
+                          width="54"
+                          height="54"
+                        />
+                      </picture>
+                      <span className="absolute bottom-0 right-[50%] translate-x-[50%] text-lg font-cursive">
+                        supporter
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {isOnesOwnProfile &&
+                  calculateWeekStreaks().map((streak, index) => (
+                    <div
+                      key={index}
+                      className="relative text-2xl font-bold flex items-center gap-1 min-w-fit min-h-fit"
+                      onClick={() => setShowStreakDetails(true)}
+                    >
+                      <div
+                        className={
+                          streak.score === 0 ? "opacity-40 grayscale" : ""
+                        }
+                      >
+                        <picture>
+                          <source
+                            srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
+                            type="image/webp"
+                          />
+                          <img
+                            src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
+                            alt="🔥"
+                            width="50"
+                            height="50"
+                          />
+                        </picture>
+                        <Badge className="absolute bottom-0 right-[-10px]">
+                          x{streak.score} {streak.emoji}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
               </div>
-              <Settings
-                size={24}
-                className="cursor-pointer"
-                onClick={() => setShowUserProfile(true)}
+
+              <StreakDetailsPopover
+                open={showStreakDetails}
+                onClose={() => setShowStreakDetails(false)}
+                timeRange={timeRange}
+                onTimeRangeChange={handleTimeRangeChange}
               />
             </div>
-          )}
+          </div>
         </div>
 
         {isOnesOwnProfile && (
@@ -499,71 +559,6 @@ const ProfilePage: React.FC = () => {
             />
           </>
         )}
-
-        <div className="relative w-full mb-4">
-          <div className="flex flex-wrap w-full justify-center gap-2 cursor-pointer hover:opacity-90 transition-opacity">
-            {isOnesOwnProfile && userPaidPlanType == "plus" && (
-              <>
-                <div
-                  onClick={() => setShowUpgradePopover(true)}
-                  className="relative text-2xl font-bold flex items-center gap-1 ml-2"
-                >
-                  <picture>
-                    <source
-                      srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.webp"
-                      type="image/webp"
-                    />
-                    <img
-                      src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.gif"
-                      alt="🌱"
-                      width="54"
-                      height="54"
-                    />
-                  </picture>
-                  <span className="absolute bottom-0 right-[50%] translate-x-[50%] text-lg font-cursive">
-                    supporter
-                  </span>
-                </div>
-              </>
-            )}
-
-            {isOnesOwnProfile &&
-              calculateWeekStreaks().map((streak, index) => (
-                <div
-                  key={index}
-                  className="relative text-2xl font-bold flex items-center gap-1"
-                  onClick={() => setShowStreakDetails(true)}
-                >
-                  <div
-                    className={streak.score === 0 ? "opacity-40 grayscale" : ""}
-                  >
-                    <picture>
-                      <source
-                        srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
-                        type="image/webp"
-                      />
-                      <img
-                        src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
-                        alt="🔥"
-                        width="50"
-                        height="50"
-                      />
-                    </picture>
-                    <Badge className="absolute bottom-0 right-[-10px]">
-                      x{streak.score} {streak.emoji}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-          </div>
-
-          <StreakDetailsPopover
-            open={showStreakDetails}
-            onClose={() => setShowStreakDetails(false)}
-            timeRange={timeRange}
-            onTimeRangeChange={handleTimeRangeChange}
-          />
-        </div>
 
         <Tabs defaultValue="plans" className="w-full mb-2">
           <TabsList className={`grid w-full h-13 bg-gray-100 grid-cols-2`}>

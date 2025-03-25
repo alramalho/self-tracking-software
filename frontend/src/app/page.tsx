@@ -51,8 +51,8 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto px-4 py-8 max-w-2xl space-y-4">
+      <div className={`flex justify-between items-center ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4`}>
         {isAppInstalled ? (
           <div className="flex flex-row gap-3 items-center text-center">
             <span className="mb-2 text-[40px]">🎯</span>
@@ -64,7 +64,7 @@ const HomePage: React.FC = () => {
           </div>
         ) : (
           <Link href="/download">
-            <Button className="mb-2">Download App</Button>
+            <Button>Download App</Button>
           </Link>
         )}
         <div className="flex items-center gap-2">

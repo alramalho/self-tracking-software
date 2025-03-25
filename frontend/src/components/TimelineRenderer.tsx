@@ -7,26 +7,42 @@ import {
   TaggedActivityEntry,
 } from "@/contexts/UserPlanContext";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
-import { differenceInDays, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import {
+  differenceInDays,
+  startOfWeek,
+  endOfWeek,
+  isWithinInterval,
+} from "date-fns";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
 import { toast } from "react-hot-toast";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Button } from "./ui/button";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
   const today = new Date();
-  return isWithinInterval(entryDate, { start: startOfWeek(today), end: endOfWeek(today) });
+  return isWithinInterval(entryDate, {
+    start: startOfWeek(today),
+    end: endOfWeek(today),
+  });
 }
 
-const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch }) => {
-  const { timelineData, hasLoadedTimelineData, useCurrentUserDataQuery } = useUserPlan();
+const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
+  onOpenSearch,
+}) => {
+  const { timelineData, hasLoadedTimelineData, useCurrentUserDataQuery } =
+    useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const router = useRouter();
   const { isSupported: isShareSupported, share } = useShare();
   const [copied, copyToClipboard] = useClipboard();
+  const { isAppInstalled, isPushGranted, requestPermission } = useNotifications();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
     timelineData.refetch();
@@ -48,13 +64,12 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
         <br />
         <span className="text-sm text-gray-500">
           By doing so, you&apos;ll{" "}
-          <span className="font-bold">increase your chances of success by up to 95%</span>
+          <span className="font-bold">
+            increase your chances of success by up to 95%
+          </span>
         </span>
         <p className="text-sm text-gray-500 mt-4">
-          <span
-            className="underline cursor-pointer"
-            onClick={onOpenSearch}
-          >
+          <span className="underline cursor-pointer" onClick={onOpenSearch}>
             Search
           </span>{" "}
           for friends already using the app, or invite new ones by{" "}
@@ -83,38 +98,65 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({ onOpenSearch
     );
   }
 
-  const sortedEntries = [...(timelineData.data?.recommendedActivityEntries || [])].sort((a, b) => {
+  const sortedEntries = [
+    ...(timelineData.data?.recommendedActivityEntries || []),
+  ].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
   if (sortedEntries.length === 0) {
     return (
       <div className="text-start text-gray-500 pt-2">
-        Your friends have not yet logged anything..
+        Your friends have not logged anything yet...
         <br />
-        Maybe you could help them get motivated?
+        {isPushGranted ? (
+          <span className="text-sm text-gray-400">
+            Maybe you could go ahead and poke them?
+          </span>
+        ) : (
+          <div className="flex flex-col items-start">
+            <span className="text-sm text-gray-400">
+              Turn on notifications to know when they do
+            </span>
+            <Button className="mt-3" onClick={() => {
+              if (isDesktop || !isAppInstalled) {
+                router.push("/download")
+              } else {
+                requestPermission()
+              }
+            }}>
+              <Bell className="w-4 h-4 mr-2" /> Turn on notifications
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {timelineData.isFetched && timelineData.data?.recommendedActivities &&
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {timelineData.isFetched &&
+        timelineData.data?.recommendedActivities &&
         timelineData.data?.recommendedUsers &&
         sortedEntries.map((entry: TaggedActivityEntry) => {
-          const activity: Activity | undefined = timelineData.data!.recommendedActivities!.find(
-            (a: Activity) => a.id === entry.activity_id
-          );
-          const user: User | undefined = timelineData.data!.recommendedUsers!.find(
-            (u: User) => u.id === activity?.user_id
-          );
+          const activity: Activity | undefined =
+            timelineData.data!.recommendedActivities!.find(
+              (a: Activity) => a.id === entry.activity_id
+            );
+          const user: User | undefined =
+            timelineData.data!.recommendedUsers!.find(
+              (u: User) => u.id === activity?.user_id
+            );
           if (!activity) return null;
 
           const daysUntilExpiration =
             entry.image && entry.image.expires_at
               ? differenceInDays(new Date(entry.image.expires_at), new Date())
               : 0;
-          const hasImageExpired = !entry.image || !entry.image.expires_at || new Date(entry.image.expires_at) < new Date();
+          const hasImageExpired =
+            !entry.image ||
+            !entry.image.expires_at ||
+            new Date(entry.image.expires_at) < new Date();
 
           return (
             <React.Fragment key={entry.id}>

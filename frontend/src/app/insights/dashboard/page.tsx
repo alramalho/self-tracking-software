@@ -344,7 +344,7 @@ export default function InsightsDashboardPage() {
 
   // Render insights when we have enough data
   return (
-    <div className="mx-auto p-6 max-w-3xl space-y-8">
+    <div className="mx-auto p-6 max-w-2xl space-y-8">
       <div>
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
         <DailyCheckinViewer entries={entries} />

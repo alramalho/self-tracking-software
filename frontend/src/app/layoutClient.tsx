@@ -34,7 +34,10 @@ export default function ClientLayout({
             <UpgradeProvider>
               <DailyCheckinPopoverProvider>
                 <NotificationsProvider>
-                  <main className="relative h-[100dvh] max-w-5xl mx-auto">
+                  <main className="relative h-[100dvh]
+                            [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f8f8f8_1px)] 
+                            [background-size:20px_20px] flex flex-col items-center justify-center p-4"
+                  >
                     <div
                       className={cn(
                         "absolute inset-0 overflow-auto",
