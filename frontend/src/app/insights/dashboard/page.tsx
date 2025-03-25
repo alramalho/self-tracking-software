@@ -10,7 +10,7 @@ import {
   MetricEntry,
   Activity,
 } from "@/contexts/UserPlanContext";
-import { Loader2 } from "lucide-react";
+import { ArrowDown, Loader2 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useApiWithAuth } from "@/api";
@@ -27,6 +27,7 @@ import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 import AINotification from "@/components/AINotification";
 import { Button } from "@/components/ui/button";
+import { subDays } from "date-fns";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -112,24 +113,168 @@ export default function InsightsDashboardPage() {
 
   if (userMetrics.length === 0) {
     return (
-      <div className="mx-auto p-6 max-w-md space-y-8">
-        <AINotification
-          messages={[
-            `Hey ${userData?.user?.username ?? "there"}! Here you will be able to see how do your activities correlate with important metrics like happiness, energy, and productivity.`,
-            "Let's get started with a checkin. Just tell me how your day went!",
-          ]}
-          createdAt={new Date().toISOString()}
-        />
-        <Button
-          className="w-full"
-          onClick={() => {
-            setAIMessage(
-              "Great! Let's get started with a checkin. Just tell me how your day went!"
-            );
-            addDefaultMetrics();
-          }}
-        >
-          Start</Button>
+      <div className="mx-auto p-2 max-w-md space-y-8">
+        <div className="p-2">
+          <AINotification
+            messages={[
+              `Hey ${
+                userData?.user?.username ?? "there"
+              }! Welcome to your insights page.`,
+              "Here you can track how your activities affect metrics like happiness, energy and productivity.",
+              "You can easily log your day by sending me a voice message about how you felt!",
+            ]}
+            createdAt={new Date().toISOString()}
+          />
+        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          <ArrowDown className="w-4 h-4 inline-block mr-2" />
+          Preview of what your metrics would look like
+        </p>
+
+        <div className="pointer-events-none p-4 space-y-2 rounded-lg bg-white/70 border border-gray-200 rounded-lg">
+          {/* Add Demo Daily Check-ins */}
+          <div>
+            <h3 className="text-lg font-semibold my-4">Check-ins</h3>
+            <DailyCheckinViewer
+              entries={[
+                { date: subDays(new Date(), 1).toISOString() },
+                { date: subDays(new Date(), 2).toISOString() },
+                { date: subDays(new Date(), 5).toISOString() },
+              ]}
+            />
+            <div className="mt-4">
+              <DailyCheckinCard aiMessage={null} />
+            </div>
+          </div>
+
+          {/* Demo Metrics Preview */}
+          <div className="space-y-4">
+            <MetricTrendCard
+              metric={{ id: "demo", title: "Happiness", emoji: "😊" }}
+              trend={15}
+              chartData={[
+                { date: "Feb 25", rating: 2 },
+                { date: "Feb 26", rating: 4 },
+                { date: "Feb 27", rating: 4 },
+                { date: "Feb 28", rating: 4 },
+                { date: "Mar 1", rating: 3 },
+                { date: "Mar 2", rating: 3 },
+                { date: "Mar 3", rating: 5 },
+                { date: "Mar 4", rating: 4 },
+                { date: "Mar 5", rating: 4 },
+                { date: "Mar 6", rating: 3 },
+                { date: "Mar 9", rating: 5 },
+              ]}
+              thisWeekAvg={7.5}
+              lastWeekAvg={6.5}
+              thisWeekEntries={[
+                {
+                  id: "demo1",
+                  metric_id: "demo",
+                  rating: 8,
+                  date: "2024-03-09",
+                  created_at: "2024-03-09T00:00:00Z",
+                },
+                {
+                  id: "demo2",
+                  metric_id: "demo",
+                  rating: 7,
+                  date: "2024-03-07",
+                  created_at: "2024-03-07T00:00:00Z",
+                },
+              ]}
+              lastWeekEntries={[
+                {
+                  id: "demo3",
+                  metric_id: "demo",
+                  rating: 6,
+                  date: "2024-03-03",
+                  created_at: "2024-03-03T00:00:00Z",
+                },
+                {
+                  id: "demo4",
+                  metric_id: "demo",
+                  rating: 7,
+                  date: "2024-03-01",
+                  created_at: "2024-03-01T00:00:00Z",
+                },
+              ]}
+              onHelpClick={() => setTrendHelpMetricId("demo")}
+            />
+
+            <MetricInsightsCard
+              metric={{ id: "demo", title: "Happiness", emoji: "😊" }}
+              correlations={[
+                {
+                  activity: {
+                    id: "exercise",
+                    title: "Exercise",
+                    emoji: "🏃‍♂️",
+                  },
+                  correlation: 0.75,
+                },
+                {
+                  activity: {
+                    id: "meditation",
+                    title: "Meditation",
+                    emoji: "🧘‍♂️",
+                  },
+                  correlation: 0.65,
+                },
+                {
+                  activity: {
+                    id: "gym",
+                    title: "Gym",
+                    emoji: "🏋️‍♂️",
+                  },
+                  correlation: -0.35,
+                },
+                {
+                  activity: {
+                    id: "reading",
+                    title: "Reading",
+                    emoji: "📚",
+                  },
+                  correlation: -0.05,
+                },
+              ]}
+              onHelpClick={() => setHelpMetricId("demo")}
+            />
+
+            <TrendHelpPopover
+              isOpen={trendHelpMetricId === "demo"}
+              onClose={() => setTrendHelpMetricId(null)}
+              metricTitle="Happiness"
+            />
+
+            <CorrelationHelpPopover
+              isOpen={helpMetricId === "demo"}
+              onClose={() => setHelpMetricId(null)}
+              metricTitle="Happiness"
+            />
+          </div>
+        </div>
+        <div className="px-4 pb-10">
+          <Button
+            className={`w-full ${
+              userPaidPlanType === "free"
+                ? "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                : ""
+            }`}
+            onClick={() => {
+              setAIMessage(
+                "Great! Let's get started with a checkin. Just tell me how your day went!"
+              );
+              if (userPaidPlanType === "free") {
+                setShowUpgradePopover(true);
+              } else {
+                addDefaultMetrics();
+              }
+            }}
+          >
+            {userPaidPlanType === "free" ? "Try the coaching freely" : "Start"}
+          </Button>
+        </div>
       </div>
     );
   }

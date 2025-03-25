@@ -721,6 +721,18 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
       <Button className="w-full mt-6" onClick={handleFinishClick}>
         Finish
       </Button>
+      <Button
+        variant="ghost"
+        className="w-full mt-6"
+        onClick={() => {
+          posthog?.capture("onboarding-accountability-partner-complete", {
+            skipped: true,
+          });
+          onNext();
+        }}
+      >
+        Skip for now (up to 95% less chances of success)
+      </Button>
 
       <AppleLikePopover open={searchOpen} onClose={() => setSearchOpen(false)}>
         <div className="w-full flex flex-row gap-2">
@@ -818,7 +830,8 @@ export default function OnboardingPage() {
               setOnboardingCompleted(true);
               router.push("/");
               hotToast.success(
-                "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner."
+                "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner.",
+                { duration: 8000 }
               );
             }}
           />
