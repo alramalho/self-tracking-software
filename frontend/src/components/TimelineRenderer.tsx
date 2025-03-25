@@ -23,10 +23,10 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "./ui/button";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import AINotification from "./AINotification";
-import { AccountabilityStepCard } from "@/app/onboarding/page";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import AppleLikePopover from "./AppleLikePopover";
 import { Avatar, AvatarFallback } from "./ui/avatar";
+import { AccountabilityStepCard } from "./AccountabilityStepCard";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
