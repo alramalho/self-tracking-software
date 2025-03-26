@@ -50,7 +50,7 @@ export default function GeneralInitializer({
     }, 4000);
     const timer2 = setTimeout(() => {
       setShowBugMessage(true);
-    }, 16000);
+    }, 30000);
 
     return () => {
       clearTimeout(timer1);
