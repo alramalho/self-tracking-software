@@ -495,13 +495,9 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
         <ScanFace size={100} className="mx-auto mb-4 text-blue-500" />
         <h2 className="text-xl font-bold mb-4">
           As a last step you need to get an accountability partner.
-          <br />
-          {userData?.plans && userData?.plans?.length > 0
-            ? "Thank you for making it this far!"
-            : "This one you cannot skip"}
         </h2>
         <p className="text-gray-600 mb-6">
-          You have several options to get an accountability partner:
+          You have several options to get started:
         </p>
       </div>
 
