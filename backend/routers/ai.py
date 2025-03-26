@@ -1044,7 +1044,7 @@ async def log_dynamic_ui_attempt_error(request: Request, user: User = Depends(is
     id = body["id"]
     extracted_data = body["extracted_data"]
     memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
-    conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+    conversation_history = memory.read_all_as_str(max_messages=4, max_age_in_minutes=30)
 
     telegram = TelegramService()
     telegram.send_dynamic_ui_attempt_error_notification(
@@ -1065,7 +1065,7 @@ async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_us
     extracted_data = body["extracted_data"]
     id = body["id"]
     memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
-    conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+    conversation_history = memory.read_all_as_str(max_messages=4, max_age_in_minutes=30)
 
     telegram = TelegramService()
     telegram.send_dynamic_ui_skip_notification(
