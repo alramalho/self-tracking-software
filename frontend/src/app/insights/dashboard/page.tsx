@@ -111,7 +111,7 @@ export default function InsightsDashboardPage() {
     }
   };
 
-  if (userMetrics.length === 0) {
+  if (hasLoadedMetricsAndEntries && userMetrics.length === 0) {
     return (
       <div className="mx-auto p-2 max-w-md space-y-8">
         <div className="p-2">
