@@ -988,7 +988,7 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
             )
             message: str = Field(
                 ...,
-                description="A short and prose message to be sent to the user where you should either thank him, or ask him to address the missing questions. The message must NOT be in markdown format, just prose text.",
+                description="A short and prose message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
             )
 
         response = await ask_schema_async(

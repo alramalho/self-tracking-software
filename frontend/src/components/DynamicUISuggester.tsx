@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePostHog } from "posthog-js/react";
+import { Remark } from "react-remark";
 const waveVariants = {
   initial: { rotate: 0 },
   wave: {
@@ -148,7 +149,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       }
 
       if (data.message) {
-        toast(`💬 ${data.message}`);
+        toast(<Remark>{data.message}</Remark>);
       }
 
       // Then show extracted data after checkboxes
