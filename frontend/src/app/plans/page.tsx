@@ -10,15 +10,14 @@ import { Loader2 } from "lucide-react";
 import AINotification from "@/components/AINotification";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 import { useFeatureFlag } from "@/hooks/useFeatureFlags";
-
+import { useUpgrade } from "@/contexts/UpgradeContext";
 
 const PlansPage: React.FC = () => {
-  
   const { isSignedIn } = useSession();
   const { useCurrentUserDataQuery } = useUserPlan();
   const [showServerMessage, setShowServerMessage] = useState(false);
   const { data: userData } = useCurrentUserDataQuery();
-
+  const { setShowUpgradePopover } = useUpgrade();
   // const { message: aiMessage, messageId, isDismissed, dismiss, timestamp } = useAIMessageCache('plan');
 
   // useEffect(() => {
@@ -52,7 +51,6 @@ const PlansPage: React.FC = () => {
   }
 
   if (!userData) {
-
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
@@ -60,8 +58,23 @@ const PlansPage: React.FC = () => {
           <p className="text-left">Loading your data...</p>
           {showServerMessage && (
             <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers...<br/>
-              <Link target="_blank" href="https://ko-fi.com/alexramalho" className="underline">donate?</Link>
+              we run on cheap servers... consider
+              <br />
+              <Link
+                target="_blank"
+                href="https://ko-fi.com/alexramalho"
+                className="underline"
+              >
+                donating
+              </Link>{" "}
+              or{" "}
+              <span
+                className="underline cursor-pointer"
+                onClick={() => setShowUpgradePopover(true)}
+              >
+                upgrading
+              </span>{" "}
+              to support server upgrades
             </span>
           )}
         </div>
@@ -73,7 +86,8 @@ const PlansPage: React.FC = () => {
     <div className="container mx-auto p-4 max-w-2xl">
       <h1 className="text-2xl font-bold mb-4">
         Welcome
-        {userData.user?.name ? `, ${userData.user.name}` : ""}. Here are your active plans:
+        {userData.user?.name ? `, ${userData.user.name}` : ""}. Here are your
+        active plans:
       </h1>
 
       {/* {shouldShowNotification && (

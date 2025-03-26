@@ -12,6 +12,7 @@ import FeedbackForm from "./FeedbackForm";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import { usePathname } from "next/navigation";
+import { useUpgrade } from "@/contexts/UpgradeContext";
 
 export default function GeneralInitializer({
   children,
@@ -27,6 +28,7 @@ export default function GeneralInitializer({
   const [showServerMessage, setShowServerMessage] = useState(false);
   const [showBugMessage, setShowBugMessage] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
+  const { setShowUpgradePopover } = useUpgrade();
 
   const email = userData?.user?.email || "";
 
@@ -94,7 +96,7 @@ export default function GeneralInitializer({
             <p className="text-left">Loading your data...</p>
             {showServerMessage && (
               <span className="text-gray-500 text-sm text-left">
-                we run on cheap servers... please consider
+                we run on cheap servers... consider
                 <br />
                 <Link
                   target="_blank"
@@ -103,7 +105,7 @@ export default function GeneralInitializer({
                 >
                   donating
                 </Link>{" "}
-                or upgrading to support us
+                or <span className="underline cursor-pointer" onClick={() => setShowUpgradePopover(true)}>upgrading</span> to support server upgrades
               </span>
             )}
             {showBugMessage && (
