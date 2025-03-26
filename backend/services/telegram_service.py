@@ -9,6 +9,7 @@ import traceback
 from datetime import UTC, datetime
 from gateways.activities import ActivitiesGateway
 from gateways.metrics import MetricsGateway
+from shared.utils import _dict_to_markdown
 
 
 class TelegramService:
@@ -182,13 +183,15 @@ class TelegramService:
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
         conversation_history = self._escape_markdown(conversation_history.replace(">", "><b><i>").replace(":", ":</i></b>")[:1000])
+        formatted_data = _dict_to_markdown(extracted_data)
+        formatted_question_checks = _dict_to_markdown(question_checks)
         message = (
             f"⚠️🤖 <b>Dynamic UI Attempt Error on user {user_username} on {id}</b>\n\n"
             f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>User ID:</b> {user_id}\n"
-            f"<b>Question Checks:</b> {question_checks}\n"
+            f"<b>Question Checks:</b>\n{formatted_question_checks}\n"
             f"<b>Attempts:</b> {attempts}\n"
-            f"<b>Extracted Data:</b> <pre>{extracted_data}</pre>\n"
+            f"<b>Extracted Data:</b> \n{formatted_data}\n"
             f"<b>Conversation History:</b> {conversation_history}\n"
         )
         self.send_message(message)
@@ -205,13 +208,37 @@ class TelegramService:
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
         conversation_history = self._escape_markdown(conversation_history.replace(">", "><b><i>").replace(":", ":</i></b>")[:1000])
+        formatted_data = _dict_to_markdown(extracted_data)
+        formatted_question_checks = _dict_to_markdown(question_checks)
         message = (
             f"⚠️🤖 <b>Dynamic UI Skip ⏭️ on user {user_username} on {id}</b>\n\n"
             f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
             f"<b>User ID:</b> {user_id}\n"
-            f"<b>Question Checks:</b> {question_checks}\n"
+            f"<b>Question Checks:</b>\n{formatted_question_checks}\n"
             f"<b>Attempts:</b> {attempts}\n"
-            f"<b>Extracted Data:</b> <pre>{extracted_data}</pre>\n"
+            f"<b>Extracted Data:</b> \n{formatted_data}\n"
             f"<b>Conversation History:</b> {conversation_history}\n"
         )
         self.send_message(message)
+
+
+if __name__ == "__main__":
+    telegram_service = TelegramService()
+    telegram_service.send_dynamic_ui_attempt_error_notification(
+        id="123",
+        user_username="test",
+        user_id="123",
+        extracted_data={
+            "question_checks": {
+                "question_1": True,
+                "question_2": False,
+            },
+            
+        },
+        conversation_history="test",
+        question_checks={
+            "question_1": True,
+            "question_2": False,
+        },
+        attempts=1
+    )
