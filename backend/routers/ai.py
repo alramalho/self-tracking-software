@@ -715,7 +715,7 @@ async def get_daily_checkin_extractions(
 
         # Unpack the results
         _, extracted_activities_entries = activities_result
-        _, extracted_metrics_entries = metrics_resultx
+        _, extracted_metrics_entries = metrics_result
 
         question_checks_keys = list(question_checks.keys())
 
