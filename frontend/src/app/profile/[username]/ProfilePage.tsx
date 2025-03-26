@@ -95,7 +95,7 @@ const ProfilePage: React.FC = () => {
   const currentUserReceivedFriendRequests =
     currentUserQuery.data?.receivedFriendRequests;
   const profileDataQuery = useUserDataQuery(username);
-  const profileData = profileDataQuery.data;
+  const { isFetched: isProfileDataFetched, data: profileData } = profileDataQuery;
   const { activityEntries, activities } = profileData || {
     activityEntries: [],
     activities: [],
@@ -318,11 +318,11 @@ const ProfilePage: React.FC = () => {
     return streaks;
   };
 
-  if (!profileData) {
+  if (isProfileDataFetched && !profileData) {
     return <div>No profile data available.</div>;
   }
 
-  const user = profileData.user;
+  const user = profileData?.user;
 
   const getUsername = (user: User | null) => {
     return user?.username;
@@ -331,7 +331,7 @@ const ProfilePage: React.FC = () => {
   const hasPendingReceivedFriendRequest = () => {
     return currentUserReceivedFriendRequests?.some(
       (request) =>
-        request.sender_id === profileData.user?.id &&
+        request.sender_id === profileData?.user?.id &&
         request.status === "pending"
     );
   };
@@ -339,13 +339,13 @@ const ProfilePage: React.FC = () => {
   const hasPendingSentFriendRequest = () => {
     return currentUserSentFriendRequests?.some(
       (request) =>
-        request.recipient_id === profileData.user?.id &&
+        request.recipient_id === profileData?.user?.id &&
         request.status === "pending"
     );
   };
 
   const isFriend = () => {
-    return currentUser?.friend_ids?.includes(profileData.user?.id || "");
+    return currentUser?.friend_ids?.includes(profileData?.user?.id || "");
   };
 
   return (
@@ -375,7 +375,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <div className="flex flex-col items-center">
               <span className="text-sm text-gray-600 mx-auto">
-                {profileData.user?.name}
+                {profileData?.user?.name}
               </span>
               <span className="text-xs text-gray-400 mx-auto">
                 @{profileData?.user?.username}
@@ -434,7 +434,7 @@ const ProfilePage: React.FC = () => {
           </div>
           <div className="flex flex-col items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Link href={`/friends/${getUsername(user)}`}>
+              <Link href={`/friends/${getUsername(user ?? null)}`}>
                 <div className="text-center">
                   <p className="text-2xl font-bold">
                     {user?.friend_ids?.length || 0}
@@ -585,7 +585,7 @@ const ProfilePage: React.FC = () => {
           </TabsList>
           <TabsContent value="plans">
             <div className="space-y-4 mt-4">
-              {profileData.plans?.map((plan) => (
+              {profileData?.plans?.map((plan) => (
                 <div key={plan.id} className="p-4 border rounded-lg bg-white">
                   <div className="flex flex-row items-center gap-2 mb-4">
                     <span className="text-4xl">{plan.emoji}</span>
@@ -599,7 +599,7 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
               ))}
-              {profileData.plans && profileData.plans.length > 0 && (
+              {profileData?.plans && profileData?.plans.length > 0 && (
                 <div className="flex flex-row gap-4 justify-between items-center">
                   <span className="text-sm text-gray-500">Time range</span>
                   <div className="flex self-center">
@@ -619,7 +619,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
               )}
-              {(!profileData.plans || profileData.plans.length === 0) && (
+              {(!profileData?.plans || profileData?.plans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
                   You haven&apos;t created any plans yet.
                 </div>
