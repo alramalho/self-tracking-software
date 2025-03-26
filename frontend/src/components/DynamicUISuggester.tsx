@@ -118,11 +118,10 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         const allChecksTrue = Object.values(data.question_checks).every(
           (check) => check
         );
-        if (allChecksTrue) {
-          posthog?.capture(`dynamic-ui-${id}-attempts`, {
-            value: thisAttempt,
-          });
-        }
+        posthog?.capture(`dynamic-ui-${id}-attempt-${thisAttempt}`, {
+          value: thisAttempt,
+          all_checks_true: allChecksTrue,
+        });
 
         if (thisAttempt >= 3) {
           api.post("/ai/log-dynamic-ui-attempt-error", {
@@ -259,9 +258,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         <div>
           {title && (
             <>
-              <h2 className="text-lg font-medium text-center">
-                {title}
-              </h2>
+              <h2 className="text-lg font-medium text-center">{title}</h2>
             </>
           )}
 
