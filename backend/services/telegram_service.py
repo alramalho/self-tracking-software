@@ -181,7 +181,7 @@ class TelegramService:
         extracted_data: dict,
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
-        conversation_history = self._escape_markdown(conversation_history.replace(">", "<b><i>>").replace(":", ":</i></b>")[:1000])
+        conversation_history = self._escape_markdown(conversation_history.replace(">", "><b><i>").replace(":", ":</i></b>")[:1000])
         message = (
             f"⚠️🤖 <b>Dynamic UI Attempt Error on user {user_username} on {id}</b>\n\n"
             f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
@@ -204,7 +204,7 @@ class TelegramService:
         extracted_data: dict,
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
-        conversation_history = self._escape_markdown(conversation_history.replace(">", "<b><i>>").replace(":", ":</i></b>")[:1000])
+        conversation_history = self._escape_markdown(conversation_history.replace(">", "><b><i>").replace(":", ":</i></b>")[:1000])
         message = (
             f"⚠️🤖 <b>Dynamic UI Skip ⏭️ on user {user_username} on {id}</b>\n\n"
             f"<b>UTC Time:</b> {datetime.now(UTC).strftime('%H:%M, %A %B %d, %Y')}\n"
