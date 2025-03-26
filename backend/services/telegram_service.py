@@ -182,7 +182,7 @@ class TelegramService:
         extracted_data: dict,
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
-        conversation_history = self._escape_markdown(conversation_history.replace(">", "><b><i>").replace(":", ":</i></b>")[:1000])
+        conversation_history = self._escape_markdown(conversation_history[-1000:].replace(">", "><b><i>").replace(":", ":</i></b>"))
         formatted_data = _dict_to_markdown(extracted_data)
         formatted_question_checks = _dict_to_markdown(question_checks)
         message = (
@@ -207,7 +207,7 @@ class TelegramService:
         extracted_data: dict,
     ) -> None:
         """Send a notification when a dynamic UI attempt error is detected."""
-        conversation_history = self._escape_markdown(conversation_history.replace(">", "><b><i>").replace(":", ":</i></b>")[:1000])
+        conversation_history = self._escape_markdown(conversation_history[-1000:].replace(">", "><b><i>").replace(":", ":</i></b>"))
         formatted_data = _dict_to_markdown(extracted_data)
         formatted_question_checks = _dict_to_markdown(question_checks)
         message = (
