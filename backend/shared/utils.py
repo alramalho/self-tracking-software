@@ -1,5 +1,19 @@
 from datetime import UTC, datetime, timedelta, timezone
 
+
+def _dict_to_markdown(data: dict, indent: int = 0) -> str:
+    """Convert a dictionary to a readable markdown format."""
+    result = []
+    for key, value in data.items():
+        prefix = "  " * indent
+        if isinstance(value, dict):
+            result.append(f"{prefix}{key}:")
+            result.append(_dict_to_markdown(value, indent + 1))
+        else:
+            result.append(f"{prefix}{key}: {value}")
+    return "\n".join(result)
+
+
 def count_weeks_between_dates(start_date: datetime, end_date: datetime) -> int:
     return (end_date - start_date).days // 7
 
