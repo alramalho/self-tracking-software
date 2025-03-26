@@ -194,7 +194,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 
 function ProfileSetupStep({ onNext }: { onNext: () => void }) {
   const questionsChecks = {
-    "Who you are (your age, occupation, etc.)": "What does the user do",
+    "Who you are (your age, occupation, etc.)": "What does the user do or likes to do.",
     "What do you want to achieve (your vision)":
       "Does the user share any thoughts about their aspirations?",
   };
