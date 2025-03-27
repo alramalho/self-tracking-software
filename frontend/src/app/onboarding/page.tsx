@@ -258,7 +258,7 @@ function ProfileSetupStep({ onNext }: { onNext: () => void }) {
       />
       <Button
         variant="ghost"
-        className="w-full mt-6"
+        className="w-full mt-6 underline"
         onClick={() => {
           posthog?.capture("onboarding-profile-setup-complete", {
             skipped: true,
@@ -292,7 +292,7 @@ function PlanCreationStep({ onNext }: { onNext: () => void }) {
       />
       <Button
         variant="ghost"
-        className="w-full mt-6"
+        className="w-full mt-6 underline"
         onClick={() => {
           posthog?.capture("onboarding-plan-creation-complete", {
             skipped: true,
@@ -326,7 +326,7 @@ function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
       />
       <Button
         variant="ghost"
-        className="w-full mt-6"
+        className="w-full mt-6 underline"
         onClick={() => {
           posthog?.capture("onboarding-past-week-logging-complete", {
             skipped: true,
@@ -659,7 +659,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
       </Button>
       <Button
         variant="ghost"
-        className="w-full mt-6"
+        className="w-full mt-6 underline"
         onClick={() => {
           posthog?.capture("onboarding-accountability-partner-complete", {
             skipped: true,
