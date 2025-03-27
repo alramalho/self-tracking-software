@@ -194,7 +194,8 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 
 function ProfileSetupStep({ onNext }: { onNext: () => void }) {
   const questionsChecks = {
-    "Who you are (your age, occupation, etc.)": "What does the user do or likes to do.",
+    "Who you are (your age, occupation, etc.)":
+      "What does the user do or likes to do.",
     "What do you want to achieve (your vision)":
       "Does the user share any thoughts about their aspirations?",
   };
@@ -338,7 +339,6 @@ function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
     </div>
   );
 }
-
 
 function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
   const { useCurrentUserDataQuery } = useUserPlan();
@@ -742,12 +742,23 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
 }
 
 export default function OnboardingPage() {
-  const { useCurrentUserDataQuery } = useUserPlan();
+  const { useCurrentUserDataQuery, hasLoadedUserData } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserQuery;
   const [onboardingCompleted, setOnboardingCompleted] =
     useLocalStorage<boolean>("onboarding-completed", false);
   const [step, setStep] = useState(1);
   const router = useRouter();
+
+  useEffect(() => {
+    if (hasLoadedUserData && userData?.plans && userData?.plans.length > 0) {
+      if (userData?.activities && userData?.activities.length > 0) {
+        setStep(5);
+      } else {
+        setStep(4);
+      }
+    }
+  }, [hasLoadedUserData]);
 
   const renderStep = () => {
     switch (step) {
