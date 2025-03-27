@@ -266,7 +266,7 @@ function ProfileSetupStep({ onNext }: { onNext: () => void }) {
           onNext();
         }}
       >
-        Skip for now (you won&apos; be able to use our AI coach)
+        Skip for now (you won&apos;t be able to use our AI coach)
       </Button>
     </div>
   );
