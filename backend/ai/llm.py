@@ -8,26 +8,31 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.mistral import MistralModel
-from constants import LLM_MODEL, DEEPSEEK_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, MISTRAL_API_KEY, FIREWORKS_API_KEY
+from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.providers.deepseek import DeepSeekProvider
+from pydantic_ai.providers.google_vertex import GoogleVertexProvider
+from pydantic_ai.providers.mistral import MistralProvider
+from constants import LLM_MODEL, DEEPSEEK_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, FIREWORKS_API_KEY, MISTRAL_API_KEY
 
 T = TypeVar("T", bound=BaseModel)
 
 class TextResponse(BaseModel):
     text: str
 
+
 def get_model(model: str = LLM_MODEL):
     if 'lmstudio' in model:
-        return OpenAIModel(model.replace('lmstudio:', ''), base_url="http://172.0.0.1:1234/v1", api_key="lmstudio")
+        return OpenAIModel(model_name=model.replace('lmstudio:', ''), provider=OpenAIProvider(base_url="http://172.0.0.1:1234/v1", api_key="lmstudio"))
     elif 'fireworks' in model:
-        return OpenAIModel(model.replace('fireworks:', ''), base_url="https://api.fireworks.ai/inference/v1", api_key=FIREWORKS_API_KEY)
-    elif 'deepseek' in model:
-        return OpenAIModel(model, base_url='https://api.deepseek.com', api_key=DEEPSEEK_API_KEY)
-    elif 'gpt' in model:
-        return OpenAIModel(model, api_key=OPENAI_API_KEY)
+        return OpenAIModel(model_name=model.replace('fireworks:', ''), provider=OpenAIProvider(base_url="https://api.fireworks.ai/inference/v1", api_key=FIREWORKS_API_KEY))
     elif 'gemini' in model:
-        return GeminiModel(model, api_key=GEMINI_API_KEY)
+        return GeminiModel(model_name=model, provider=GoogleVertexProvider(api_key=GEMINI_API_KEY))
+    elif 'gpt' in model:
+        return OpenAIModel(model_name=model, provider=OpenAIProvider(api_key=OPENAI_API_KEY))
+    elif 'deepseek' in model:
+        return OpenAIModel(model_name=model, provider=DeepSeekProvider(api_key=DEEPSEEK_API_KEY))
     elif 'mistral' in model:
-        return MistralModel(model, api_key=MISTRAL_API_KEY)
+        return MistralModel(model_name=model, provider=MistralProvider(api_key=MISTRAL_API_KEY))
     else:
         raise ValueError(f"Invalid model: {model}")
 
