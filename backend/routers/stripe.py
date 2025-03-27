@@ -10,11 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from services.telegram_service import TelegramService
 from loguru import logger
 import emails.loops as loops
-from constants import (
-    STRIPE_PLUS_PRODUCT_ID,
-    STRIPE_API_KEY,
-    STRIPE_ENDPOINT_SECRET
-)
+from constants import STRIPE_PLUS_PRODUCT_ID, STRIPE_API_KEY, STRIPE_ENDPOINT_SECRET
 
 router = APIRouter(prefix="/stripe")
 
@@ -103,7 +99,9 @@ async def stripe_webhook(request: Request):
                 },
             )
         else:
-            logger.error(f"UNEXISTENT USER triggered {event['type']} on product '{product_id}'. Full Event: {event}")
+            logger.error(
+                f"UNEXISTENT USER triggered {event['type']} on product '{product_id}'. Full Event: {event}"
+            )
             telegram_service.send_message(
                 (
                     f"🚨 <b>UNEXISTENT USER triggered {event['type']} on product '{product_id}'</b>\n\n"
@@ -138,5 +136,5 @@ async def stripe_webhook(request: Request):
                 f"<b>Check logs for traceback</b>"
             )
         )
-    
+
     return {"success": False}
