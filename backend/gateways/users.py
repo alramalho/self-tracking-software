@@ -36,22 +36,32 @@ class UsersGateway:
     def get_user_by_safely(self, keyname: str, keyvalue: str) -> User:
         data = self.db_gateway.query(keyname, keyvalue)
         if len(data) > 0:
-            return User(**data[0])
+            user = User(**data[0])
+            if not user.deleted:
+                return user
+            else:
+                raise UserDoesNotExistException()
         else:
-            return None
+            raise UserDoesNotExistException()
 
     def get_all_users_by_safely(self, keyname: str, keyvalue: str) -> List[User]:
         data = self.db_gateway.query(keyname, keyvalue)
-        return [User(**d) for d in data]
-
+        users = [User(**d) for d in data]
+        return [user for user in users if not user.deleted]
+    
     def get_all_users_by_regex(self, keyname: str, pattern: str) -> List[User]:
         data = self.db_gateway.regex_query(keyname, pattern)
-        return [User(**d) for d in data]
+        users = [User(**d) for d in data]
+        return [user for user in users if not user.deleted]
 
     def get_user_by(self, keyname: str, keyvalue: str) -> User:
         data = self.db_gateway.query(keyname, keyvalue)
         if len(data) > 0:
-            return User(**data[0])
+            user = User(**data[0])
+            if not user.deleted:
+                return user
+            else:
+                raise UserDoesNotExistException()
         else:
             raise UserDoesNotExistException()
 
