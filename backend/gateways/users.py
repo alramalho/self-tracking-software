@@ -39,10 +39,6 @@ class UsersGateway:
             user = User(**data[0])
             if not user.deleted:
                 return user
-            else:
-                raise UserDoesNotExistException()
-        else:
-            raise UserDoesNotExistException()
 
     def get_all_users_by_safely(self, keyname: str, keyvalue: str) -> List[User]:
         data = self.db_gateway.query(keyname, keyvalue)
