@@ -1,4 +1,4 @@
-openai==1.55.3 
+openai
 fastapi
 uvicorn
 websockets
@@ -26,7 +26,7 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-requests
 opentelemetry-exporter-otlp
 axiom-py
-pydantic-ai
+pydantic-ai>=0.0.46
 pytest-mock
 replicate
 stripe
