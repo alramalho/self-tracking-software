@@ -35,6 +35,9 @@ from entities.user import User
 from typing import Optional
 from telemetry import init_telemetry
 from services.telegram_service import TelegramService
+from starlette.formparsers import MultiPartParser
+
+MultiPartParser.max_part_size = 1024 * 1024 * 20 # 20MB
 
 app = FastAPI()
 
