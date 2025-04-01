@@ -149,7 +149,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       }
 
       if (data.message) {
-        toast(<Remark>{data.message}</Remark>);
+        toast(<Remark>{data.message}</Remark>, { duration: 12000 });
       }
 
       // Then show extracted data after checkboxes
