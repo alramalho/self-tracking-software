@@ -58,7 +58,7 @@ const PlansPage: React.FC = () => {
           <p className="text-left">Loading your data...</p>
           {showServerMessage && (
             <span className="text-gray-500 text-sm text-left">
-              we run on cheap servers... consider
+              we run on cheap servers...<br/> consider
               <br />
               <Link
                 target="_blank"
@@ -72,8 +72,8 @@ const PlansPage: React.FC = () => {
                 className="underline cursor-pointer"
                 onClick={() => setShowUpgradePopover(true)}
               >
-                upgrading
-              </span>{" "}
+                upgrading{" "}
+              </span><br/>
               to support server upgrades
             </span>
           )}

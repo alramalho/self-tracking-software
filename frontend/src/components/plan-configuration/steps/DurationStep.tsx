@@ -2,6 +2,8 @@ import React from "react";
 import Number from "../Number";
 import DurationOption from "../DurationOption";
 import { DatePicker } from "@/components/ui/date-picker";
+import { XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface DurationStepProps {
   planDuration: {
@@ -9,7 +11,10 @@ interface DurationStepProps {
     date?: string;
   };
   currentFinishingDate?: string;
-  setPlanDuration: (duration: { type: "custom" | "habit" | "lifestyle" | undefined; date?: string }) => void;
+  setPlanDuration: (duration: {
+    type: "custom" | "habit" | "lifestyle" | undefined;
+    date?: string;
+  }) => void;
   setCurrentFinishingDate: (date?: string) => void;
   setPlanNotes: (notes: string) => void;
 }
@@ -50,7 +55,10 @@ const DurationStep: React.FC<DurationStepProps> = ({
             title="Lifestyle Improvement"
             isSelected={planDuration.type === "lifestyle"}
             onSelect={() => {
-              setPlanDuration({ type: "lifestyle", date: currentFinishingDate });
+              setPlanDuration({
+                type: "lifestyle",
+                date: currentFinishingDate,
+              });
               setPlanNotes(
                 "This plan is a lifestyle improvement plan. In order to consider the lifestyle improved, at least 90% of the weeks must be completed."
               );
@@ -79,7 +87,7 @@ const DurationStep: React.FC<DurationStepProps> = ({
           <Number>2</Number>
           When do you want to finish? (Optional)
         </label>
-        
+
         <div>
           <label
             className="text-sm font-medium mb-2 block"
@@ -90,9 +98,7 @@ const DurationStep: React.FC<DurationStepProps> = ({
           <DatePicker
             id="date-picker-trigger"
             selected={
-              currentFinishingDate
-                ? new Date(currentFinishingDate)
-                : undefined
+              currentFinishingDate ? new Date(currentFinishingDate) : undefined
             }
             onSelect={(date: Date | undefined) => {
               const newDate = date?.toISOString();
@@ -101,10 +107,16 @@ const DurationStep: React.FC<DurationStepProps> = ({
             }}
             disablePastDates={true}
           />
+          <Button variant="ghost" size="icon" onClick={() => {
+            setCurrentFinishingDate(undefined);
+            setPlanDuration({ ...planDuration, date: undefined });
+          }}>
+            <XCircle className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>
   );
 };
 
-export default DurationStep; 
+export default DurationStep;
