@@ -122,13 +122,15 @@ class ActivityExtractorAssistant(BaseAssistant):
             existing_entries = activities_gateway.get_all_activity_entries_by_user_id(
                 self.user.id
             )
+            existing_activities = activities_gateway.get_all_activities_by_user_id(self.user.id)
+            existing_activity_ids = [a.id for a in existing_activities]
             activity_entries = [
                 ae
                 for ae in all_activities
                 if not any(
                     existing.activity_id == ae.activity_id and existing.date == ae.date
                     for existing in existing_entries
-                )
+                ) and ae.activity_id in existing_activity_ids
             ]
 
             for entry in activity_entries:

@@ -44,7 +44,7 @@ from loguru import logger
 import json
 import base64
 import traceback
-from fastapi import WebSocket, Request, HTTPException, status, Form
+from fastapi import WebSocket, Request, HTTPException, status, Form, UploadFile, File
 from auth.clerk import is_clerk_user_ws
 from bson import ObjectId
 from auth.clerk import is_clerk_user_ws
@@ -419,13 +419,12 @@ users_gateway = UsersGateway()
 
 @router.post("/transcribe")
 async def transcribe_audio(
-    audio_data: str = Form(...),
+    audio_file: UploadFile = File(...),
     audio_format: str = Form(...),
-    user: User = Depends(is_clerk_user),
 ):
     try:
-        # Decode base64 audio data
-        audio_bytes = base64.b64decode(audio_data)
+        # Read the audio file content
+        audio_bytes = await audio_file.read()
 
         # Run transcription in executor to not block
         text = await asyncio.get_event_loop().run_in_executor(
