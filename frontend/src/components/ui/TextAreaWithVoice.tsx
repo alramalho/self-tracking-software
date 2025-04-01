@@ -58,7 +58,23 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
     try {
       setIsTranscribing(true);
       const formData = new FormData();
-      formData.append("audio_data", audioData);
+      
+      // Convert base64 to blob and create a file
+      const byteCharacters = atob(audioData);
+      const byteArrays = [];
+      for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+        const slice = byteCharacters.slice(offset, offset + 1024);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+      const blob = new Blob(byteArrays, { type: `audio/${audioFormat}` });
+      const file = new File([blob], `audio.${audioFormat}`, { type: `audio/${audioFormat}` });
+      
+      formData.append("audio_file", file);
       formData.append("audio_format", audioFormat);
 
       const response = await api.post("/ai/transcribe", formData);

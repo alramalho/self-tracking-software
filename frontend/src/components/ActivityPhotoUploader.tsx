@@ -147,32 +147,6 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     }
   };
 
-  const handleVoiceRecording = async (
-    audioData: string,
-    audioFormat: string
-  ) => {
-    try {
-      setIsTranscribing(true);
-      const formData = new FormData();
-      formData.append("audio_data", audioData);
-      formData.append("audio_format", audioFormat);
-
-      const response = await api.post("/ai/transcribe", formData);
-      const transcribedText = response.data.text;
-
-      // Append transcribed text to existing description
-      setDescription((prev) => {
-        const separator = prev ? " " : "";
-        return prev + separator + transcribedText;
-      });
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-      toast.error("Failed to transcribe audio. Please try again.");
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
-
   const logActivity = async () => {
     setIsUploading(true);
     try {

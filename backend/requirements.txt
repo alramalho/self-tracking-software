@@ -5,6 +5,7 @@ websockets
 python-dotenv
 loguru
 python-dateutil
+python-multipart
 pymongo
 passlib
 python-jose
