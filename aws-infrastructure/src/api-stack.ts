@@ -64,6 +64,8 @@ export class ApiStack extends cdk.Stack {
           STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
           STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
           STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
+
+          DEPLOYMENT_TIMESTAMP: Date.now().toString(), // force image redeploying
         },
       }
     );
