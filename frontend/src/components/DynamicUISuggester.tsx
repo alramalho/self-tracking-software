@@ -239,7 +239,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   return (
     <>
       <div className="space-y-4 overflow-y-auto">
-        <Toaster position="top-center" closeButton duration={12000} className="z-100" />
+        <Toaster position="top-center" closeButton duration={12000} />
 
         <div className="relative w-fit mx-auto">
           <ScanFace size={100} className={`mx-auto ${variants.text}`} />
