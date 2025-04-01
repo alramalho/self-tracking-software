@@ -51,7 +51,7 @@ export default function ClientLayout({
                     position="top-center"
                     containerStyle={{
                       bottom: "5rem",
-                      zIndex: 101,
+                      zIndex: 105,
                     }}
                   />
                 </NotificationsProvider>
