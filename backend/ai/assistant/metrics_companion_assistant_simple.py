@@ -27,7 +27,7 @@ class ExtractedMetricEntryList(BaseModel):
 
 every_message_flowchart = {
     "MetricScanner": Node(
-        text="Based on the conversation history, did the user told you about his metric and it's ratings",
+        text="Based on the conversation history, did the user mention their metric rating numbers?",
         connections={"Yes": "CheckMetricDetails", "No": "Converse"},
         temperature=0.7,
     ),
