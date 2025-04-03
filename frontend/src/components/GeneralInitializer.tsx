@@ -13,6 +13,7 @@ import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import { usePathname } from "next/navigation";
 import { useUpgrade } from "@/contexts/UpgradeContext";
+import GenericLoader from "./GenericLoader";
 
 export default function GeneralInitializer({
   children,
@@ -91,35 +92,11 @@ export default function GeneralInitializer({
           />
         )}
         <div className="fixed inset-0 flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin mr-3" />
-          <div className="flex flex-col items-start">
-            <p className="text-left">Loading your data...</p>
-            {showServerMessage && (
-              <span className="text-gray-500 text-sm text-left">
-                we run on cheap servers... consider
-                <br />
-                <Link
-                  target="_blank"
-                  href="https://ko-fi.com/alexramalho"
-                  className="underline"
-                >
-                  donating
-                </Link>{" "}
-                or <span className="underline cursor-pointer" onClick={() => setShowUpgradePopover(true)}>upgrading</span> to support server upgrades
-              </span>
-            )}
-            {showBugMessage && (
-              <span className="text-gray-500 text-sm text-left">
-                okay this is weird... <br />
-                <span
-                  className="underline cursor-pointer"
-                  onClick={() => setShowBugDialog(true)}
-                >
-                  you may get in contact now
-                </span>
-              </span>
-            )}
-          </div>
+          <GenericLoader 
+            showServerMessage={showServerMessage}
+            showBugMessage={showBugMessage}
+            onReportBug={() => setShowBugDialog(true)}
+          />
         </div>
       </>
     );
