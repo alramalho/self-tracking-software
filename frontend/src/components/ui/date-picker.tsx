@@ -6,7 +6,6 @@ import { Calendar as CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
@@ -30,44 +29,55 @@ export function DatePicker({
   id,
   className,
 }: DatePickerProps) {
-  const [open, setOpen] = React.useState(false)
+  // const [open, setOpen] = React.useState(false)
   const today = new Date();
-  const disabledDays = [];
-  if (disablePastDates) {
-    disabledDays.push({ from: new Date(0), to: new Date(today.getTime() - 86400000) });
-  }
-  if (disableFutureDates) {
-    disabledDays.push({ from: new Date(today.getTime() + 86400000), to: new Date(2100, 0, 1) });
-  }
+  const minDate = disablePastDates ? format(today, 'yyyy-MM-dd') : undefined;
+  const maxDate = disableFutureDates ? format(today, 'yyyy-MM-dd') : undefined;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          variant={"outline"}
-          className={cn(
-            "w-[280px] justify-start text-left font-normal",
-            className,
-            !selected && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {selected ? format(selected, "PP") : <span>Pick a date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={selected}
-          onSelect={(date) => {
-            onSelect(date);
-            setOpen(false);
-          }}
-          initialFocus
-          disabled={disabledDays}
-        />
-      </PopoverContent>
-    </Popover>
+    <input
+      type="date"
+      value={selected ? format(selected, 'yyyy-MM-dd') : ''}
+      onChange={(e) => {
+        const date = e.target.value ? new Date(e.target.value) : undefined;
+        onSelect(date);
+        // setOpen(false);
+      }}
+      min={minDate}
+      max={maxDate}
+      className={cn(
+        "w-full p-2 border rounded-md",
+        className
+      )}
+    />
+    // <Popover open={open} onOpenChange={setOpen}>
+    //   <PopoverTrigger asChild>
+    //     <Button
+    //       id={id}
+    //       onClick={() => setOpen(open => !open)}
+    //       variant={"outline"}
+    //       className={cn(
+    //         "w-[280px] justify-start text-left font-normal",
+    //         className,
+    //         !selected && "text-muted-foreground"
+    //       )}
+    //     >
+    //       <CalendarIcon className="mr-2 h-4 w-4" />
+    //       {selected ? format(selected, "PP") : <span>Pick a date</span>}
+    //     </Button>
+    //   </PopoverTrigger>
+    //   <PopoverContent className="w-auto p-0">
+    //     <Calendar
+    //       mode="single"
+    //       selected={selected}
+    //       onSelect={(date) => {
+    //         onSelect(date);
+    //         setOpen(false);
+    //       }}
+    //       initialFocus
+    //       disabled={disabledDays}
+    //     />
+    //   </PopoverContent>
+    // </Popover>
   )
 }
