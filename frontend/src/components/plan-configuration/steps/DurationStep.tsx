@@ -95,24 +95,32 @@ const DurationStep: React.FC<DurationStepProps> = ({
           >
             Set a target date (optional)
           </label>
-          <DatePicker
-            id="date-picker-trigger"
-            selected={
-              currentFinishingDate ? new Date(currentFinishingDate) : undefined
-            }
-            onSelect={(date: Date | undefined) => {
-              const newDate = date?.toISOString();
-              setCurrentFinishingDate(newDate);
-              setPlanDuration({ ...planDuration, date: newDate });
-            }}
-            disablePastDates={true}
-          />
-          <Button variant="ghost" size="icon" onClick={() => {
-            setCurrentFinishingDate(undefined);
-            setPlanDuration({ ...planDuration, date: undefined });
-          }}>
-            <XCircle className="w-4 h-4" />
-          </Button>
+          <div className="w-full flex no-wrap items-center gap-2">
+            <DatePicker
+              id="date-picker-trigger"
+              selected={
+                currentFinishingDate
+                  ? new Date(currentFinishingDate)
+                  : undefined
+              }
+              onSelect={(date: Date | undefined) => {
+                const newDate = date?.toISOString();
+                setCurrentFinishingDate(newDate);
+                setPlanDuration({ ...planDuration, date: newDate });
+              }}
+              disablePastDates={true}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setCurrentFinishingDate(undefined);
+                setPlanDuration({ ...planDuration, date: undefined });
+              }}
+            >
+              <XCircle className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
