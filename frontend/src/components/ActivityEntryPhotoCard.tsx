@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Edit, Smile, BadgeCheck } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
@@ -136,6 +136,17 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }
   }, [description]);
 
+  // Add new state and refs for debounced reactions
+  const pendingReactionsRef = useRef<{
+    adds: Set<string>;
+    removes: Set<string>;
+    timer: NodeJS.Timeout | null;
+  }>({
+    adds: new Set<string>(),
+    removes: new Set<string>(),
+    timer: null,
+  });
+
   // todo: use react query
   async function getReactions() {
     const response = await api.get(
@@ -144,44 +155,141 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     setReactions(response.data.reactions);
   }
 
-  async function addReaction(emoji: string) {
-    setShowEmojiPicker(false);
-
-    await toast.promise(
-      api.post(`/activity-entries/${activityEntryId}/reactions`, {
-        operation: "add",
-        emoji,
-      }),
-      {
-        loading: "Adding reaction...",
-        success: "Reaction added successfully!",
-        error: "Failed to add reaction",
-      }
-    );
-
-    getReactions();
-  }
-  async function removeReaction(emoji: string) {
-    try {
-      setShowEmojiPicker(false);
-
+  // Debounced method to process pending reactions
+  const processPendingReactions = useCallback(async () => {
+    console.log("processing pending reactions");
+    const { adds, removes } = pendingReactionsRef.current;
+    
+    // Clear timer
+    if (pendingReactionsRef.current.timer) {
+      clearTimeout(pendingReactionsRef.current.timer);
+      pendingReactionsRef.current.timer = null;
+    }
+    
+    // Process adds if there are any
+    if (adds.size > 0) {
+      const emojisToAdd = Array.from(adds);
+      adds.clear(); // Clear pending adds
+      
+      await toast.promise(
+        api.post(`/activity-entries/${activityEntryId}/reactions`, {
+          operation: "add",
+          emojis: emojisToAdd,
+        }),
+        {
+          loading: "Adding reactions...",
+          success: "Reactions added successfully!",
+          error: "Failed to add reactions",
+        }
+      );
+    }
+    
+    // Process removes if there are any
+    if (removes.size > 0) {
+      const emojisToRemove = Array.from(removes);
+      removes.clear(); // Clear pending removes
+      
       await toast.promise(
         api.post(`/activity-entries/${activityEntryId}/reactions`, {
           operation: "remove",
-          emoji,
+          emojis: emojisToRemove,
         }),
         {
-          loading: "Removing reaction...",
-          success: "Reaction removed successfully!",
-          error: "Failed to remove reaction",
+          loading: "Removing reactions...",
+          success: "Reactions removed successfully!",
+          error: "Failed to remove reactions",
         }
       );
-    } catch (error) {
-      toast.error("Failed to remove reaction");
-    } finally {
-      getReactions();
     }
-  }
+    
+    // Refresh the reactions after processing
+    getReactions();
+  }, [activityEntryId, api]);
+
+  // Create stable references to functions to avoid dependency issues
+  const processPendingReactionsRef = useRef(processPendingReactions);
+  
+  // Keep the reference updated
+  useEffect(() => {
+    processPendingReactionsRef.current = processPendingReactions;
+  }, [processPendingReactions]);
+
+  // Schedule the reaction processing
+  const scheduleReactionProcessing = useCallback(() => {
+    if (pendingReactionsRef.current.timer) {
+      clearTimeout(pendingReactionsRef.current.timer);
+    }
+    
+    pendingReactionsRef.current.timer = setTimeout(() => {
+      processPendingReactionsRef.current();
+    }, 2500);
+  }, []); // No dependencies - using ref instead
+
+  // Queue a reaction instead of sending immediately
+  const queueReaction = useCallback((emoji: string, operation: 'add' | 'remove') => {
+    setShowEmojiPicker(false);
+    
+    console.log(`Queueing ${operation} reaction for emoji: ${emoji}`);
+    
+    // Add to the appropriate queue and schedule processing
+    if (operation === 'add') {
+      pendingReactionsRef.current.adds.add(emoji);
+      // If this emoji is in the removes queue, remove it
+      pendingReactionsRef.current.removes.delete(emoji);
+    } else {
+      pendingReactionsRef.current.removes.add(emoji);
+      // If this emoji is in the adds queue, remove it
+      pendingReactionsRef.current.adds.delete(emoji);
+    }
+    
+    // Optimistically update UI for better UX
+    setReactions(prevReactions => {
+      const updatedReactions = { ...prevReactions };
+      const username = currentUserUsername || "";
+      
+      if (operation === 'add') {
+        if (!updatedReactions[emoji]) {
+          updatedReactions[emoji] = [username];
+        } else if (!updatedReactions[emoji].includes(username)) {
+          updatedReactions[emoji] = [...updatedReactions[emoji], username];
+        }
+      } else {
+        if (updatedReactions[emoji]) {
+          updatedReactions[emoji] = updatedReactions[emoji].filter(name => name !== username);
+          if (updatedReactions[emoji].length === 0) {
+            delete updatedReactions[emoji];
+          }
+        }
+      }
+      
+      return updatedReactions;
+    });
+    
+    scheduleReactionProcessing();
+  }, [currentUserUsername, scheduleReactionProcessing]);
+
+  // Clean up timer on unmount and process any pending reactions
+  useEffect(() => {
+    return () => {
+      if (pendingReactionsRef.current.timer) {
+        clearTimeout(pendingReactionsRef.current.timer);
+      }
+      
+      // If there are any pending reactions, process them immediately
+      if (pendingReactionsRef.current.adds.size > 0 || pendingReactionsRef.current.removes.size > 0) {
+        processPendingReactionsRef.current();
+      }
+    };
+  }, []); // No dependencies since we're using refs
+
+  // Replace original methods with queued versions 
+  const addReaction = useCallback((emoji: string) => {
+    queueReaction(emoji, 'add');
+  }, [queueReaction]);
+  
+  const removeReaction = useCallback((emoji: string) => {
+    queueReaction(emoji, 'remove');
+  }, [queueReaction]);
 
   // own profile
   // numbers -> usernames -> numbers
@@ -197,12 +305,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
       if (hasUserReacted) {
         if (showUserList[emoji]) {
-          await removeReaction(emoji);
+          removeReaction(emoji);
         } else {
           setShowUserList((prev) => ({ ...prev, [emoji]: true }));
         }
       } else {
-        await addReaction(emoji);
+        addReaction(emoji);
       }
     }
   };
@@ -354,7 +462,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>
               <span className="text-xs text-gray-500">
-                {getFormattedDate(isoDate)} {activityEntryTimezone && `– 📍 ${activityEntryTimezone}`}
+                {getFormattedDate(isoDate)} {activityEntryTimezone && `– 📍 ${activityEntryTimezone}`}
               </span>
             </div>
           </div>
