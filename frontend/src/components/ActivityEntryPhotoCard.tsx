@@ -125,7 +125,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { data: userPlanType } = useUserPlanType(userUsername || "");
 
   const [comments, setComments] = useState<Comment[]>(initialComments);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(isOwnActivityEntry);
   const [showAllComments, setShowAllComments] = useState(false);
 
   useEffect(() => {
@@ -434,7 +434,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                         className={`inline-flex ${
                           variants.card.glassBg
                         } border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md ${
-                          showComments ? variants.text : "text-gray-800"
+                          comments.length > 0 ? variants.darkText : "text-gray-800"
                         }`}
                       >
                         <div className="relative flex items-center justify-center gap-1">
