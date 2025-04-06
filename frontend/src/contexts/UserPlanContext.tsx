@@ -32,6 +32,15 @@ export interface ImageInfo {
   is_public?: boolean;
 }
 
+export interface Comment {
+  id: string;
+  user_id: string;
+  username: string;
+  text: string;
+  created_at: string;
+  picture?: string;
+}
+
 export interface ActivityEntry {
   id: string;
   activity_id: string;
@@ -41,6 +50,7 @@ export interface ActivityEntry {
   reactions?: Record<string, string[]>;
   description?: string;
   timezone?: string;
+  comments?: Comment[];
 }
 
 export interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}
