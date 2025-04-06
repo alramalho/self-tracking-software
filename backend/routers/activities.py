@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, UploadFile, File, Form
-from typing import List
+from typing import List, Dict
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
@@ -202,22 +202,39 @@ async def update_activity_entry(
 @router.post("/activity-entries/{activity_entry_id}/reactions")
 async def add_activity_reaction(
     activity_entry_id: str,
-    emoji: str = Body(...),
+    emoji: str = Body(None),
+    emojis: List[str] = Body(None),
     operation: str = Body(...),
     user: User = Depends(is_clerk_user),
 ):
     try:
         if operation == "add":
-            updated_entry = activities_gateway.add_reaction(
-                activity_entry_id=activity_entry_id, emoji=emoji, user=user
-            )
+            # Handle both single emoji and multiple emojis
+            emoji_list = emojis if emojis else [emoji] if emoji else []
+            if not emoji_list:
+                raise HTTPException(status_code=400, detail="No emojis provided")
+                
+            updated_entry = None
+            for e in emoji_list:
+                updated_entry = activities_gateway.add_reaction(
+                    activity_entry_id=activity_entry_id, emoji=e, user=user
+                )
+            
+            # Only send notification once with all emojis
             activity_entry = activities_gateway.get_activity_entry_by_id(
                 activity_entry_id
             )
+            
+            # Create a message with all the emojis
+            if len(emoji_list) <= 3:
+                emoji_text = " ".join(emoji_list)
+            else:
+                emoji_text = " ".join(emoji_list[:3]) + f" and {len(emoji_list) - 3} more"
+                
             await notification_manager.create_and_process_notification(
                 Notification.new(
                     user_id=activity_entry.user_id,
-                    message=f"Your friend @{user.username} just reacted to your activity",
+                    message=f"@{user.username} reacted to your activity with {emoji_text}",
                     type="info",
                     related_data={
                         "picture": user.picture,
@@ -226,17 +243,24 @@ async def add_activity_reaction(
                     },
                 )   
             )
-            return {"message": "Reaction added successfully", "entry": updated_entry}
+            return {"message": "Reactions added successfully", "entry": updated_entry}
         elif operation == "remove":
-            updated_entry = activities_gateway.remove_reaction(
-                activity_entry_id=activity_entry_id, emoji=emoji, user=user
-            )
-            return {"message": "Reaction removed successfully", "entry": updated_entry}
+            # Handle both single emoji and multiple emojis
+            emoji_list = emojis if emojis else [emoji] if emoji else []
+            if not emoji_list:
+                raise HTTPException(status_code=400, detail="No emojis provided")
+                
+            updated_entry = None
+            for e in emoji_list:
+                updated_entry = activities_gateway.remove_reaction(
+                    activity_entry_id=activity_entry_id, emoji=e, user=user
+                )
+            return {"message": "Reactions removed successfully", "entry": updated_entry}
         else:
             raise HTTPException(status_code=400, detail="Invalid operation")
     except Exception as e:
-        logger.error(f"Error adding reaction: {str(e)}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Failed to add reaction")
+        logger.error(f"Error managing reactions: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to manage reactions")
 
 
 @router.get("/activity-entries/{activity_entry_id}/reactions")
