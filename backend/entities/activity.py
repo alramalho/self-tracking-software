@@ -64,6 +64,34 @@ class ImageInfo(BaseModel):
         )
 
 
+class Comment(BaseModel):
+    id: str
+    user_id: str
+    username: str
+    text: str
+    created_at: str
+    deleted_at: Optional[str] = None
+    picture: Optional[str] = None
+
+    @classmethod
+    def new(
+        cls,
+        user_id: str,
+        username: str,
+        text: str,
+        id: Optional[str] = None,
+        picture: Optional[str] = None,
+    ) -> "Comment":
+        return cls(
+            id=id or str(ObjectId()),
+            user_id=user_id,
+            username=username,
+            text=text,
+            created_at=datetime.now(UTC).isoformat(),
+            picture=picture,
+        )
+
+
 class ActivityEntry(BaseModel):
     id: str
     activity_id: str
@@ -76,6 +104,7 @@ class ActivityEntry(BaseModel):
     description: Optional[str] = Field(default=None, description="Optional description of the activity entry")
     deleted_at: Optional[str] = None
     timezone: Optional[str] = Field(default=None, description="The timezone of the user when the activity was logged.")
+    comments: List[Comment] = Field(default_factory=list, description="List of comments on this activity entry")
 
     @classmethod
     def new(
@@ -89,6 +118,7 @@ class ActivityEntry(BaseModel):
         reactions: Optional[dict[str, List[str]]] = None,
         description: Optional[str] = None,
         timezone: Optional[str] = None,
+        comments: Optional[List[Comment]] = None,
     ) -> "ActivityEntry":
         return cls(
             id=id or str(ObjectId()),
@@ -101,6 +131,7 @@ class ActivityEntry(BaseModel):
             reactions=reactions or {},
             description=description,
             timezone=timezone,
+            comments=comments or [],
         )
 
 

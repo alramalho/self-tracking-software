@@ -1,6 +1,6 @@
 from datetime import datetime, UTC, timedelta
 
-from entities.activity import Activity, ActivityEntry
+from entities.activity import Activity, ActivityEntry, Comment
 from gateways.database.mongodb import MongoDBGateway
 from loguru import logger
 from shared.utils import days_ago
@@ -231,6 +231,65 @@ class ActivitiesGateway:
         active_plans = plans_db_gateway.query_by_criteria({'sessions.activity_id': activity_id, 'finishing_date': {'$gte': current_date}})
         
         return len(active_plans) > 0
+
+    def add_comment(self, activity_entry_id: str, text: str, user: User) -> ActivityEntry:
+        activity_entry = self.get_activity_entry_by_id(activity_entry_id)
+        if activity_entry is None:
+            raise ActivityEntryDoesNotExistException()
+        
+        # Create and add comment
+        comment = Comment.new(
+            user_id=user.id,
+            username=user.username,
+            text=text,
+            picture=user.picture
+        )
+        
+        if not hasattr(activity_entry, 'comments') or activity_entry.comments is None:
+            activity_entry.comments = []
+            
+        activity_entry.comments.append(comment)
+        self.activity_entries_db_gateway.write(activity_entry.dict())
+        logger.info(f"Comment added to ActivityEntry {activity_entry_id} by user {user.username}")
+        
+        return activity_entry
+        
+    def remove_comment(self, activity_entry_id: str, comment_id: str, user: User) -> ActivityEntry:
+        activity_entry = self.get_activity_entry_by_id(activity_entry_id)
+        if activity_entry is None:
+            raise ActivityEntryDoesNotExistException()
+        
+        if not hasattr(activity_entry, 'comments') or not activity_entry.comments:
+            return activity_entry
+            
+        # Find the comment
+        comment_index = None
+        for i, comment in enumerate(activity_entry.comments):
+            if comment.id == comment_id:
+                # Only allow comment deletion by the owner or the activity entry owner
+                if comment.user_id == user.id or activity_entry.user_id == user.id:
+                    comment_index = i
+                break
+                
+        if comment_index is not None:
+            # Just mark as deleted or remove completely
+            comment = activity_entry.comments[comment_index]
+            comment.deleted_at = datetime.now(UTC).isoformat()
+            self.activity_entries_db_gateway.write(activity_entry.dict())
+            logger.info(f"Comment {comment_id} removed from ActivityEntry {activity_entry_id} by user {user.username}")
+            
+        return activity_entry
+        
+    def get_comments(self, activity_entry_id: str) -> List[Comment]:
+        activity_entry = self.get_activity_entry_by_id(activity_entry_id)
+        if activity_entry is None:
+            raise ActivityEntryDoesNotExistException()
+            
+        if not hasattr(activity_entry, 'comments') or activity_entry.comments is None:
+            return []
+            
+        # Return only non-deleted comments
+        return [comment for comment in activity_entry.comments if comment.deleted_at is None]
 
 
 if __name__ == "__main__":

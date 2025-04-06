@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, UploadFile, File, Form
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel
 from auth.clerk import is_clerk_user
 from entities.user import User
@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from loguru import logger
 import traceback
 from entities.notification import Notification
+from fastapi import Request
 
 router = APIRouter()
 
@@ -340,3 +341,96 @@ async def delete_activity_entry(
     except Exception as e:
         logger.error(f"Error deleting activity: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to delete activity")
+
+# Add new response model for comments
+@router.post("/activity-entries/{activity_entry_id}/comments")
+async def add_activity_comment(
+    activity_entry_id: str,
+    request: Request,
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        body = await request.json()
+        text = body["text"]
+        updated_entry = activities_gateway.add_comment(
+            activity_entry_id=activity_entry_id, text=text, user=user
+        )
+        
+        # Get the activity entry owner
+        activity_entry = activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        
+        # Don't notify if commenting on own activity
+        if activity_entry.user_id != user.id:
+            # Create notification for the activity owner
+            await notification_manager.create_and_process_notification(
+                Notification.new(
+                    user_id=activity_entry.user_id,
+                    message=f"@{user.username} commented on your activity: \"{text[:30]}{'...' if len(text) > 30 else ''}\"",
+                    type="info",
+                    related_data={
+                        "picture": user.picture,
+                        "name": user.name,
+                        "username": user.username,
+                    },
+                )
+            )
+            
+        # Return the latest comment
+        latest_comment = updated_entry.comments[-1]
+        return CommentResponse(
+            id=latest_comment.id,
+            user_id=latest_comment.user_id,
+            username=latest_comment.username,
+            text=latest_comment.text,
+            created_at=latest_comment.created_at,
+            picture=latest_comment.picture
+        )
+    except Exception as e:
+        logger.error(f"Error adding comment: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to add comment")
+
+
+@router.delete("/activity-entries/{activity_entry_id}/comments/{comment_id}")
+async def remove_activity_comment(
+    activity_entry_id: str,
+    comment_id: str,
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        updated_entry = activities_gateway.remove_comment(
+            activity_entry_id=activity_entry_id, comment_id=comment_id, user=user
+        )
+        return {"message": "Comment removed successfully"}
+    except Exception as e:
+        logger.error(f"Error removing comment: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to remove comment")
+
+
+class CommentResponse(BaseModel):
+    id: str
+    user_id: str
+    username: str
+    text: str
+    created_at: str
+    picture: Optional[str] = None
+
+@router.get("/activity-entries/{activity_entry_id}/comments", response_model=List[CommentResponse])
+async def get_activity_comments(
+    activity_entry_id: str,
+    user: User = Depends(is_clerk_user),
+):
+    try:
+        comments = activities_gateway.get_comments(activity_entry_id)
+        return [
+            CommentResponse(
+                id=comment.id,
+                user_id=comment.user_id,
+                username=comment.username,
+                text=comment.text,
+                created_at=comment.created_at,
+                picture=comment.picture
+            ) for comment in comments
+        ]
+    except Exception as e:
+        logger.error(f"Error getting comments: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to get comments")

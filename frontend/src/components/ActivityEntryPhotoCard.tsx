@@ -1,35 +1,47 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Smile, BadgeCheck } from "lucide-react";
+import { Edit, Smile, BadgeCheck, MessageCircle } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan, Comment } from "@/contexts/UserPlanContext";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
-import { parseISO, format, isToday, isYesterday, differenceInCalendarDays } from 'date-fns';
+import {
+  parseISO,
+  format,
+  isToday,
+  isYesterday,
+  differenceInCalendarDays,
+} from "date-fns";
 import { twMerge } from "tailwind-merge";
 import { getThemeVariants } from "@/utils/theme";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { PlanBadge } from "./PlanBadge";
+import CommentSection from "./CommentSection";
+import Divider from "./Divider";
+import { Separator } from "./ui/separator";
 
 const getFormattedDate = (date: string) => {
   const parsedDate = parseISO(date);
   const now = new Date();
-  
+
   if (isToday(parsedDate)) {
     return `today at ${format(parsedDate, "HH:mm")}`;
   }
-  
+
   if (isYesterday(parsedDate)) {
     return `yesterday at ${format(parsedDate, "HH:mm")}`;
   }
-  
+
   const diffInCalendarDays = differenceInCalendarDays(now, parsedDate);
-  
+
   if (diffInCalendarDays <= 7) {
-    return `last ${format(parsedDate, "EEEE")} at ${format(parsedDate, "HH:mm")}`;
+    return `last ${format(parsedDate, "EEEE")} at ${format(
+      parsedDate,
+      "HH:mm"
+    )}`;
   }
-  
+
   return format(parsedDate, "MMM d HH:mm");
 };
 interface ActivityEntryPhotoCardProps {
@@ -52,6 +64,7 @@ interface ActivityEntryPhotoCardProps {
   onUsernameClick?: () => void;
   activityEntryId: string;
   description?: string;
+  comments?: Comment[]; // Initial comments if available
 }
 
 interface ReactionCount {
@@ -88,6 +101,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   onUsernameClick,
   activityEntryId,
   description,
+  comments: initialComments = [],
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>(
@@ -97,7 +111,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { data: userData } = useCurrentUserDataQuery();
   const currentUserUsername = userData?.user?.username;
   const isOwnActivityEntry = userData?.user?.username === userUsername;
-  const api = useApiWithAuth(); 
+  const api = useApiWithAuth();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const [showUserList, setShowUserList] = useState<{ [key: string]: boolean }>(
@@ -110,26 +124,15 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { useUserPlanType } = usePaidPlan();
   const { data: userPlanType } = useUserPlanType(userUsername || "");
 
-  const getPlanStyles = () => {
-    if (userPlanType === "plus") {
-      return {
-        ringColor: "ring-blue-500",
-        fillColor: "#3b82f6",
-        textColor: "text-blue-500",
-      };
-    }
-    return {
-      ringColor: "",
-      fillColor: "",
-      textColor: "",
-    };
-  };
-
-  const { ringColor, fillColor, textColor } = getPlanStyles();
+  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [showComments, setShowComments] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
 
   useEffect(() => {
     if (textRef.current) {
-      const lineHeight = parseInt(window.getComputedStyle(textRef.current).lineHeight);
+      const lineHeight = parseInt(
+        window.getComputedStyle(textRef.current).lineHeight
+      );
       const height = textRef.current.scrollHeight;
       const lines = height / lineHeight;
       setShouldShowReadMore(lines > 3);
@@ -159,18 +162,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const processPendingReactions = useCallback(async () => {
     console.log("processing pending reactions");
     const { adds, removes } = pendingReactionsRef.current;
-    
+
     // Clear timer
     if (pendingReactionsRef.current.timer) {
       clearTimeout(pendingReactionsRef.current.timer);
       pendingReactionsRef.current.timer = null;
     }
-    
+
     // Process adds if there are any
     if (adds.size > 0) {
       const emojisToAdd = Array.from(adds);
       adds.clear(); // Clear pending adds
-      
+
       await toast.promise(
         api.post(`/activity-entries/${activityEntryId}/reactions`, {
           operation: "add",
@@ -183,12 +186,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         }
       );
     }
-    
+
     // Process removes if there are any
     if (removes.size > 0) {
       const emojisToRemove = Array.from(removes);
       removes.clear(); // Clear pending removes
-      
+
       await toast.promise(
         api.post(`/activity-entries/${activityEntryId}/reactions`, {
           operation: "remove",
@@ -201,14 +204,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         }
       );
     }
-    
+
     // Refresh the reactions after processing
     getReactions();
   }, [activityEntryId, api]);
 
   // Create stable references to functions to avoid dependency issues
   const processPendingReactionsRef = useRef(processPendingReactions);
-  
+
   // Keep the reference updated
   useEffect(() => {
     processPendingReactionsRef.current = processPendingReactions;
@@ -219,54 +222,59 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     if (pendingReactionsRef.current.timer) {
       clearTimeout(pendingReactionsRef.current.timer);
     }
-    
+
     pendingReactionsRef.current.timer = setTimeout(() => {
       processPendingReactionsRef.current();
     }, 2500);
   }, []); // No dependencies - using ref instead
 
   // Queue a reaction instead of sending immediately
-  const queueReaction = useCallback((emoji: string, operation: 'add' | 'remove') => {
-    setShowEmojiPicker(false);
-    
-    console.log(`Queueing ${operation} reaction for emoji: ${emoji}`);
-    
-    // Add to the appropriate queue and schedule processing
-    if (operation === 'add') {
-      pendingReactionsRef.current.adds.add(emoji);
-      // If this emoji is in the removes queue, remove it
-      pendingReactionsRef.current.removes.delete(emoji);
-    } else {
-      pendingReactionsRef.current.removes.add(emoji);
-      // If this emoji is in the adds queue, remove it
-      pendingReactionsRef.current.adds.delete(emoji);
-    }
-    
-    // Optimistically update UI for better UX
-    setReactions(prevReactions => {
-      const updatedReactions = { ...prevReactions };
-      const username = currentUserUsername || "";
-      
-      if (operation === 'add') {
-        if (!updatedReactions[emoji]) {
-          updatedReactions[emoji] = [username];
-        } else if (!updatedReactions[emoji].includes(username)) {
-          updatedReactions[emoji] = [...updatedReactions[emoji], username];
-        }
+  const queueReaction = useCallback(
+    (emoji: string, operation: "add" | "remove") => {
+      setShowEmojiPicker(false);
+
+      console.log(`Queueing ${operation} reaction for emoji: ${emoji}`);
+
+      // Add to the appropriate queue and schedule processing
+      if (operation === "add") {
+        pendingReactionsRef.current.adds.add(emoji);
+        // If this emoji is in the removes queue, remove it
+        pendingReactionsRef.current.removes.delete(emoji);
       } else {
-        if (updatedReactions[emoji]) {
-          updatedReactions[emoji] = updatedReactions[emoji].filter(name => name !== username);
-          if (updatedReactions[emoji].length === 0) {
-            delete updatedReactions[emoji];
+        pendingReactionsRef.current.removes.add(emoji);
+        // If this emoji is in the adds queue, remove it
+        pendingReactionsRef.current.adds.delete(emoji);
+      }
+
+      // Optimistically update UI for better UX
+      setReactions((prevReactions) => {
+        const updatedReactions = { ...prevReactions };
+        const username = currentUserUsername || "";
+
+        if (operation === "add") {
+          if (!updatedReactions[emoji]) {
+            updatedReactions[emoji] = [username];
+          } else if (!updatedReactions[emoji].includes(username)) {
+            updatedReactions[emoji] = [...updatedReactions[emoji], username];
+          }
+        } else {
+          if (updatedReactions[emoji]) {
+            updatedReactions[emoji] = updatedReactions[emoji].filter(
+              (name) => name !== username
+            );
+            if (updatedReactions[emoji].length === 0) {
+              delete updatedReactions[emoji];
+            }
           }
         }
-      }
-      
-      return updatedReactions;
-    });
-    
-    scheduleReactionProcessing();
-  }, [currentUserUsername, scheduleReactionProcessing]);
+
+        return updatedReactions;
+      });
+
+      scheduleReactionProcessing();
+    },
+    [currentUserUsername, scheduleReactionProcessing]
+  );
 
   // Clean up timer on unmount and process any pending reactions
   useEffect(() => {
@@ -274,22 +282,31 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       if (pendingReactionsRef.current.timer) {
         clearTimeout(pendingReactionsRef.current.timer);
       }
-      
+
       // If there are any pending reactions, process them immediately
-      if (pendingReactionsRef.current.adds.size > 0 || pendingReactionsRef.current.removes.size > 0) {
+      if (
+        pendingReactionsRef.current.adds.size > 0 ||
+        pendingReactionsRef.current.removes.size > 0
+      ) {
         processPendingReactionsRef.current();
       }
     };
   }, []); // No dependencies since we're using refs
 
-  // Replace original methods with queued versions 
-  const addReaction = useCallback((emoji: string) => {
-    queueReaction(emoji, 'add');
-  }, [queueReaction]);
-  
-  const removeReaction = useCallback((emoji: string) => {
-    queueReaction(emoji, 'remove');
-  }, [queueReaction]);
+  // Replace original methods with queued versions
+  const addReaction = useCallback(
+    (emoji: string) => {
+      queueReaction(emoji, "add");
+    },
+    [queueReaction]
+  );
+
+  const removeReaction = useCallback(
+    (emoji: string) => {
+      queueReaction(emoji, "remove");
+    },
+    [queueReaction]
+  );
 
   // own profile
   // numbers -> usernames -> numbers
@@ -325,6 +342,24 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   };
 
   const hasImage = imageUrl && !hasImageExpired;
+
+  const fetchComments = async () => {
+    try {
+      const response = await api.get(
+        `/activity-entries/${activityEntryId}/comments`
+      );
+      setComments(response.data);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      toast.error("Failed to load comments");
+    }
+  };
+
+  useEffect(() => {
+    if (comments.length === 0) {
+      fetchComments();
+    }
+  }, [activityEntryId]);
 
   return (
     <div className="bg-white/50 border rounded-lg overflow-hidden relative">
@@ -364,7 +399,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             </div>
             {hasImage && !isOwnActivityEntry && (
               <>
-                <div className={`absolute bottom-0 right-2 z-30 ${description ? 'mb-8' : 'mb-2'}`}>
+                <div
+                  className={`absolute bottom-0 right-2 z-30 ${
+                    description ? "mb-8" : "mb-2"
+                  }`}
+                >
                   {showEmojiPicker ? (
                     <ReactionBarSelector
                       iconSize={24}
@@ -389,15 +428,34 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                       }
                     />
                   ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowEmojiPicker(!showEmojiPicker);
-                      }}
-                      className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
-                    >
-                      <Smile className={`h-6 w-6 text-gray-800`} />
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setShowComments(!showComments)}
+                        className={`inline-flex ${
+                          variants.card.glassBg
+                        } border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md ${
+                          showComments ? variants.text : "text-gray-800"
+                        }`}
+                      >
+                        <div className="relative flex items-center justify-center gap-1">
+                          <MessageCircle className="h-6 w-6" />
+                          {comments.length > 0 && (
+                            <span className="text-md">
+                              {comments.length > 99 ? "99+" : comments.length}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowEmojiPicker(!showEmojiPicker);
+                        }}
+                        className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
+                      >
+                        <Smile className={`h-6 w-6 text-gray-800`} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </>
@@ -405,9 +463,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </div>
           {hasImage && description && (
             <div className="relative -mt-6 mx-2">
-              <div className={`relative rounded-2xl overflow-hidden ${variants.card.glassBg} backdrop-blur-lg shadow-lg border border-white/20 p-4`}>
-                <div className={`relative ${!isExpanded && 'max-h-[4.5em]'} ${shouldShowReadMore && !isExpanded && 'overflow-hidden'}`}>
-                  <p ref={textRef} className="text-gray-800 font-medium text-sm relative z-10">
+              <div
+                className={`relative rounded-2xl overflow-hidden ${variants.card.glassBg} backdrop-blur-lg shadow-lg border border-white/20 p-4`}
+              >
+                <div
+                  className={`relative ${!isExpanded && "max-h-[4.5em]"} ${
+                    shouldShowReadMore && !isExpanded && "overflow-hidden"
+                  }`}
+                >
+                  <p
+                    ref={textRef}
+                    className="text-gray-800 font-medium text-sm relative z-10"
+                  >
                     {description}
                   </p>
                   {shouldShowReadMore && !isExpanded && (
@@ -419,24 +486,39 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="text-gray-500 underline text-xs font-medium mt-1"
                   >
-                    {isExpanded ? 'Show less' : 'Read more'}
+                    {isExpanded ? "Show less" : "Read more"}
                   </button>
                 )}
               </div>
             </div>
           )}
+
+          {/* Comment section for posts with images */}
+          {hasImage && showComments && (
+            <div className="mx-2 mt-2">
+              <CommentSection
+                activityEntryId={activityEntryId}
+                comments={comments}
+                setComments={setComments}
+                hasImage={true}
+                showAllComments={showAllComments}
+                onToggleShowAll={setShowAllComments}
+              />
+            </div>
+          )}
         </div>
       )}
       <div className="p-4 flex flex-col flex-nowrap items-start justify-between">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-2">
             <div className="relative">
-              <Avatar 
+              <Avatar
                 className={twMerge(
                   "w-8 h-8",
-                  userPlanType !== "free" && "ring-2 ring-offset-2 ring-offset-white",
+                  userPlanType !== "free" &&
+                    "ring-2 ring-offset-2 ring-offset-white",
                   userPlanType !== "free" && variants.ring
-                )} 
+                )}
                 onClick={onAvatarClick}
               >
                 <AvatarImage src={userPicture} alt={userName || ""} />
@@ -452,8 +534,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               {activityEmoji}
             </span>
             <div className="flex flex-col">
-              <span 
-                className="text-sm text-gray-500 hover:underline cursor-pointer" 
+              <span
+                className="text-sm text-gray-500 hover:underline cursor-pointer"
                 onClick={onUsernameClick}
               >
                 @{userUsername}
@@ -462,13 +544,19 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>
               <span className="text-xs text-gray-500">
-                {getFormattedDate(isoDate)} {activityEntryTimezone && `– 📍 ${activityEntryTimezone}`}
+                {getFormattedDate(isoDate)}{" "}
+                {activityEntryTimezone && `– 📍 ${activityEntryTimezone}`}
               </span>
             </div>
           </div>
         </div>
+
         {!hasImage && description && (
-          <div className={`mt-3 ${!isExpanded && 'max-h-[4.5em]'} ${shouldShowReadMore && !isExpanded && 'overflow-hidden'} relative`}>
+          <div
+            className={`mt-3 ${!isExpanded && "max-h-[4.5em]"} ${
+              shouldShowReadMore && !isExpanded && "overflow-hidden"
+            } relative`}
+          >
             <p ref={textRef} className="text-gray-700 text-sm">
               {description}
             </p>
@@ -480,9 +568,48 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="text-blue-500 text-xs font-medium mt-1 hover:text-blue-600"
               >
-                {isExpanded ? 'Show less' : 'Read more'}
+                {isExpanded ? "Show less" : "Read more"}
               </button>
             )}
+          </div>
+        )}
+
+        {!hasImage && (
+          <>
+            <Separator className="my-2 bg-gray-100" />
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className={`p-1 rounded-full hover:bg-gray-100 self-center ${
+                showComments ? variants.text : "text-gray-400"
+              }`}
+            >
+              <div className="relative flex items-end justify-center gap-2">
+                <MessageCircle className="h-[18px] w-[18px] scale-x-[-1]" />
+                {comments.length > 0 ? (
+                  <span className="text-xs">
+                    {showComments ? "Hide" : "Show"}{" "}
+                    {comments.length > 99 ? "99+" : comments.length} comments
+                  </span>
+                ) : (
+                  <span className="text-xs">Add a comment</span>
+                )}
+              </div>
+            </button>
+          </>
+        )}
+
+        {/* Comment section for posts without images */}
+        {!hasImage && showComments && (
+          <div className="mt-3 w-full">
+            <CommentSection
+              activityEntryId={activityEntryId}
+              comments={comments}
+              setComments={setComments}
+              hasImage={false}
+              fullWidth={true}
+              showAllComments={showAllComments}
+              onToggleShowAll={setShowAllComments}
+            />
           </div>
         )}
 
@@ -494,6 +621,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               : "today"}
           </span>
         )}
+
         <div>
           {editable && onEditClick && (
             <button
