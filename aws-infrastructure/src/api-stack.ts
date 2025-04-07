@@ -19,7 +19,7 @@ import {
 
 interface ApiStackProps {
   environment: string;
-  certificateArn: string;
+  certificateArn?: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -174,13 +174,11 @@ export class ApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    let certificate = acm.Certificate.fromCertificateArn(
-      this,
-      "ImportedCertificate",
-      process.env.CERTIFICATE_ARN!
-    );
     const domainName = "api.tracking.so";
-    const protocol = cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS;
+    const certificate = new acm.Certificate(this, "certificate", {
+      domainName: domainName,
+      validation: acm.CertificateValidation.fromDns(),
+    });
 
     this.fargateService =
       new ecs_patterns.ApplicationLoadBalancedFargateService(
@@ -244,10 +242,10 @@ export class ApiStack extends cdk.Stack {
           cpu: 512, // 0.5 vCPU
           memoryLimitMiB: 1024, // 1 GB memory
           publicLoadBalancer: true, // Expose the service to the internet
-          certificate: certificate, // Use the imported certificate if available
-          protocol: protocol, // Use HTTPS if we have a certificate, HTTP otherwise
           redirectHTTP: true, // Redirect HTTP to HTTPS if we have a certificate
-          domainName: domainName, // Set the domain name for the ALB
+          certificate: certificate,
+          domainName: domainName,
+          listenerPort: 443,
         }
       );
 
