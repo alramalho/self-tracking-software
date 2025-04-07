@@ -29,18 +29,18 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id);
 
-    // Create S3 bucket for both deployment types
-    const s3Bucket = new s3.Bucket(this, "S3Bucket", {
-      bucketName: `${KEBAB_CASE_PREFIX}-bucket-${props.environment}`,
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-    });
+    // Get or create S3 bucket for both deployment types
+    const s3Bucket = s3.Bucket.fromBucketName(
+      this,
+      "S3Bucket",
+      `${KEBAB_CASE_PREFIX}-bucket-${props.environment}`
+    );
 
     this.deployFargateBackend(props, s3Bucket);
     this.deployLambdaBackend(props, s3Bucket);
   }
 
-  private deployLambdaBackend(props: ApiStackProps, s3Bucket: s3.Bucket) {
+  private deployLambdaBackend(props: ApiStackProps, s3Bucket: s3.IBucket) {
     this.fastApiLambda = new lambda.DockerImageFunction(this, "AssetFunction", {
       functionName: `${CAMEL_CASE_PREFIX}BackendAPI${props.environment}`,
       code: lambda.DockerImageCode.fromImageAsset(
@@ -154,7 +154,7 @@ export class ApiStack extends cdk.Stack {
     );
   }
 
-  private deployFargateBackend(props: ApiStackProps, s3Bucket: s3.Bucket) {
+  private deployFargateBackend(props: ApiStackProps, s3Bucket: s3.IBucket) {
     // Create VPC for Fargate service
     const vpc = new ec2.Vpc(this, "VPC", {
       maxAzs: 2, // Use 2 Availability Zones for redundancy
@@ -194,7 +194,7 @@ export class ApiStack extends cdk.Stack {
     this.fargateService =
       new ecs_patterns.ApplicationLoadBalancedFargateService(
         this,
-        "ApiServiceV2",
+        "ApiService",
         {
           cluster,
           serviceName: `${KEBAB_CASE_PREFIX}-api-${props.environment}`,
