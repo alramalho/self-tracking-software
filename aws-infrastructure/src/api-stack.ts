@@ -236,7 +236,7 @@ export class ApiStack extends cdk.Stack {
           cpu: 512, // 0.5 vCPU
           memoryLimitMiB: 1024, // 1 GB memory
           publicLoadBalancer: true, // Expose the service to the internet
-          protocol: cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS,
+          protocol: cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS, // Use HTTPS for the ALB listener
           redirectHTTP: true, // Redirect HTTP to HTTPS
         }
       );
@@ -286,7 +286,7 @@ export class ApiStack extends cdk.Stack {
           path.join(__dirname, "..", "..", "backend", "lambdas")
         ),
         environment: {
-          API_URL: `http://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
+          API_URL: `https://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
           ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
         },
       }
@@ -300,7 +300,7 @@ export class ApiStack extends cdk.Stack {
       this,
       `${PASCAL_CASE_PREFIX}FargateApiURL${props.environment}`,
       {
-        value: `http://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
+        value: `https://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
       }
     );
 
