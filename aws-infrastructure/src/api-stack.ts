@@ -19,7 +19,7 @@ import {
 
 interface ApiStackProps {
   environment: string;
-  certificateArn?: string;
+  certificateArn: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -174,11 +174,11 @@ export class ApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const domainName = "api.tracking.so";
-    const certificate = new acm.Certificate(this, "certificate", {
-      domainName: domainName,
-      validation: acm.CertificateValidation.fromDns(),
-    });
+    let certificate = acm.Certificate.fromCertificateArn(
+      this,
+      "ImportedCertificate",
+      process.env.CERTIFICATE_ARN!
+    );
 
     this.fargateService =
       new ecs_patterns.ApplicationLoadBalancedFargateService(
@@ -242,10 +242,8 @@ export class ApiStack extends cdk.Stack {
           cpu: 512, // 0.5 vCPU
           memoryLimitMiB: 1024, // 1 GB memory
           publicLoadBalancer: true, // Expose the service to the internet
+          certificate: certificate, // Use the imported certificate if available
           redirectHTTP: true, // Redirect HTTP to HTTPS if we have a certificate
-          certificate: certificate,
-          domainName: domainName,
-          listenerPort: 443,
         }
       );
 
