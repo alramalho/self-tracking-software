@@ -170,6 +170,7 @@ app.add_middleware(
 
 from fastapi import HTTPException
 
+@app.get("/")
 @app.get("/health")
 def read_root():
     logger.info("Health check")
