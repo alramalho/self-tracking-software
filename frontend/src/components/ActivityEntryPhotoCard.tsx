@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Smile, BadgeCheck, MessageCircle } from "lucide-react";
+import { Edit, Smile, BadgeCheck } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import { useUserPlan, Comment } from "@/contexts/UserPlanContext";
 import toast from "react-hot-toast";
@@ -125,7 +125,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { data: userPlanType } = useUserPlanType(userUsername || "");
 
   const [comments, setComments] = useState<Comment[]>(initialComments);
-  const [showComments, setShowComments] = useState(isOwnActivityEntry);
   const [showAllComments, setShowAllComments] = useState(false);
 
   useEffect(() => {
@@ -428,34 +427,15 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                       }
                     />
                   ) : (
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setShowComments(!showComments)}
-                        className={`inline-flex ${
-                          variants.card.glassBg
-                        } border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md ${
-                          comments.length > 0 ? variants.darkText : "text-gray-800"
-                        }`}
-                      >
-                        <div className="relative flex items-center justify-center gap-1">
-                          <MessageCircle className="h-6 w-6" />
-                          {comments.length > 0 && (
-                            <span className="text-md">
-                              {comments.length > 99 ? "99+" : comments.length}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowEmojiPicker(!showEmojiPicker);
-                        }}
-                        className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
-                      >
-                        <Smile className={`h-6 w-6 text-gray-800`} />
-                      </button>
-                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEmojiPicker(!showEmojiPicker);
+                      }}
+                      className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
+                    >
+                      <Smile className={`h-6 w-6 text-gray-800`} />
+                    </button>
                   )}
                 </div>
               </>
@@ -494,7 +474,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           )}
 
           {/* Comment section for posts with images */}
-          {hasImage && showComments && (
+          {hasImage && (
             <div className="mx-2 mt-2">
               <CommentSection
                 activityEntryId={activityEntryId}
@@ -577,40 +557,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         {!hasImage && (
           <>
             <Separator className="my-2 bg-gray-100" />
-            <button
-              onClick={() => setShowComments(!showComments)}
-              className={`p-1 rounded-full hover:bg-gray-100 self-center ${
-                showComments ? variants.text : "text-gray-400"
-              }`}
-            >
-              <div className="relative flex items-end justify-center gap-2">
-                <MessageCircle className="h-[18px] w-[18px] scale-x-[-1]" />
-                {comments.length > 0 ? (
-                  <span className="text-xs">
-                    {showComments ? "Hide" : "Show"}{" "}
-                    {comments.length > 99 ? "99+" : comments.length} comments
-                  </span>
-                ) : (
-                  <span className="text-xs">Add a comment</span>
-                )}
-              </div>
-            </button>
+            <div className="mt-3 w-full">
+              <CommentSection
+                activityEntryId={activityEntryId}
+                comments={comments}
+                setComments={setComments}
+                hasImage={false}
+                fullWidth={true}
+                showAllComments={showAllComments}
+                onToggleShowAll={setShowAllComments}
+              />
+            </div>
           </>
-        )}
-
-        {/* Comment section for posts without images */}
-        {!hasImage && showComments && (
-          <div className="mt-3 w-full">
-            <CommentSection
-              activityEntryId={activityEntryId}
-              comments={comments}
-              setComments={setComments}
-              hasImage={false}
-              fullWidth={true}
-              showAllComments={showAllComments}
-              onToggleShowAll={setShowAllComments}
-            />
-          </div>
         )}
 
         {hasImage && (
