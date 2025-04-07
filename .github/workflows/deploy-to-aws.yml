@@ -25,7 +25,6 @@ jobs:
           yarn
           yarn bootstrap
           yarn deploy-dev-db
-
           
   deploy-prod-cdk:
     runs-on: ubuntu-latest
