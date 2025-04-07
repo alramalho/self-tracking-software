@@ -25,5 +25,6 @@ new MainStack(
   {
     // @ts-ignore
     environment: process.env.ENVIRONMENT,
+    certificateArn: process.env.CERTIFICATE_ARN,
   }
 );

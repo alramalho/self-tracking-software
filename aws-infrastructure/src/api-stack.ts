@@ -8,6 +8,7 @@ import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
 import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { Construct } from "constructs";
 import * as path from "path";
 import {
@@ -18,6 +19,7 @@ import {
 
 interface ApiStackProps {
   environment: string;
+  certificateArn?: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -173,6 +175,21 @@ export class ApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    // Import certificate if ARN is provided
+    let certificate;
+    if (props.certificateArn) {
+      certificate = acm.Certificate.fromCertificateArn(
+        this,
+        "ImportedCertificate",
+        props.certificateArn
+      );
+    }
+
+    // Determine the protocol based on certificate availability
+    const protocol = certificate
+      ? cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS
+      : cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTP;
+
     // Create Fargate service with ALB
     this.fargateService =
       new ecs_patterns.ApplicationLoadBalancedFargateService(
@@ -236,8 +253,9 @@ export class ApiStack extends cdk.Stack {
           cpu: 512, // 0.5 vCPU
           memoryLimitMiB: 1024, // 1 GB memory
           publicLoadBalancer: true, // Expose the service to the internet
-          protocol: cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS, // Use HTTPS for the ALB listener
-          redirectHTTP: true, // Redirect HTTP to HTTPS
+          certificate: certificate, // Use the imported certificate if available
+          protocol: protocol, // Use HTTPS if we have a certificate, HTTP otherwise
+          redirectHTTP: certificate ? true : undefined, // Redirect HTTP to HTTPS if we have a certificate
         }
       );
 
@@ -273,6 +291,9 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
+    // Determine the protocol for URL based on certificate availability
+    const urlProtocol = certificate ? "https" : "http";
+
     // Create the proxy lambda for cron jobs pointing to Fargate
     const apiCronProxyLambda = new lambda.Function(
       this,
@@ -286,7 +307,7 @@ export class ApiStack extends cdk.Stack {
           path.join(__dirname, "..", "..", "backend", "lambdas")
         ),
         environment: {
-          API_URL: `https://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
+          API_URL: `${urlProtocol}://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
           ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
         },
       }
@@ -300,7 +321,7 @@ export class ApiStack extends cdk.Stack {
       this,
       `${PASCAL_CASE_PREFIX}FargateApiURL${props.environment}`,
       {
-        value: `https://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
+        value: `${urlProtocol}://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
       }
     );
 
