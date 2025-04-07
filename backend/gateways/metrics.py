@@ -1,6 +1,6 @@
 from typing import List, Optional
 from entities.metric import Metric, MetricEntry
-from gateways.database.mongodb import MongoDBGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from datetime import datetime, timedelta, date, UTC
 from loguru import logger
 from pymongo.errors import DuplicateKeyError
@@ -21,8 +21,8 @@ class MetricEntryAlreadyExistsException(Exception):
 
 class MetricsGateway:
     def __init__(self):
-        self.metrics_db_gateway = MongoDBGateway("metrics")
-        self.metric_entries_db_gateway = MongoDBGateway("metric_entries")
+        self.metrics_db_gateway = DynamoDBGateway("metrics")
+        self.metric_entries_db_gateway = DynamoDBGateway("metric_entries")
 
     def get_metric_by_id(self, metric_id: str) -> Optional[Metric]:
         data = self.metrics_db_gateway.query("id", metric_id)

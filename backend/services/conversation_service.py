@@ -6,6 +6,7 @@ from gateways.database.mongodb import MongoDBGateway
 from ai.assistant.memory import DatabaseMemory
 from ai.llm import ask_schema, ask_text
 from datetime import datetime
+from gateways.database.dynamodb import DynamoDBGateway
 from ai.assistant.activity_extractor import (
     ActivityExtractorAssistant,
     ExtractedActivityEntry,
@@ -61,7 +62,7 @@ async def talk_with_assistant(
 ) -> str:
     try:
         user = users_gateway.get_user_by_id(user_id)
-        memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
+        memory = DatabaseMemory(DynamoDBGateway("messages"), user_id=user.id)
 
         # Get the appropriate assistant class
         AssistantClass = ASSISTANT_TYPES.get(assistant_type)

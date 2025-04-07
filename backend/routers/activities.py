@@ -15,13 +15,13 @@ from loguru import logger
 import traceback
 from entities.notification import Notification
 from fastapi import Request
-
+from controllers.plan_controller import PlanController
 router = APIRouter()
 
 activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
 users_gateway = UsersGateway()
-
+plan_controller = PlanController()
 
 class ActivityEntryResponse(BaseModel):
     id: str
@@ -302,7 +302,7 @@ async def delete_activity(
             )
             
         # Check if activity is used in any active plans
-        if activities_gateway.is_activity_in_any_active_plan(activity_id):
+        if plan_controller.is_activity_in_any_active_plan(activity_id):
             raise HTTPException(
                 status_code=400, 
                 detail="Please remove this activity from all active plans before deleting it."

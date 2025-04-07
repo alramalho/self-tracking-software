@@ -3,7 +3,7 @@ from typing import Any, List, Tuple
 
 from entities.user import User
 from loguru import logger
-from gateways.database.mongodb import MongoDBGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from entities.friend_request import FriendRequest
 from gateways.plan_groups import PlanGroupsGateway
 from gateways.friend_requests import FriendRequestGateway
@@ -21,7 +21,7 @@ class UserAlreadyExistsException(Exception):
 # todo: this users gateway now has permissions and CRUD responsiblities... we should split?
 class UsersGateway:
     def __init__(self):
-        self.db_gateway = MongoDBGateway("users")
+        self.db_gateway = DynamoDBGateway("users")
         self.friend_request_gateway = FriendRequestGateway()
         self.plan_groups_gateway = PlanGroupsGateway()
         self.activities_gateway = ActivitiesGateway()
@@ -266,6 +266,6 @@ if __name__ == "__main__":
     from ai.assistant.memory import DatabaseMemory
 
     gateway = UsersGateway()
-    memory = DatabaseMemory(MongoDBGateway("messages"), "66b29679de73d9a05e77a247")
+    memory = DatabaseMemory(DynamoDBGateway("messages"), "66b29679de73d9a05e77a247")
 
     print(memory.read_all_as_str())

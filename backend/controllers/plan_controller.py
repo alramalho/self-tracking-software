@@ -5,6 +5,7 @@ from entities.plan_group import PlanGroupMember
 from entities.activity import Activity, ActivityEntry
 from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
+from gateways.database.dynamodb import DynamoDBGateway
 from typing import List, Optional, Dict, Any, Tuple, Literal, Union
 from pydantic import BaseModel, Field, create_model
 from shared.utils import count_weeks_between_dates
@@ -54,7 +55,7 @@ class GeneratedPlanUpdate(BaseModel):
 
 class PlanController:
     def __init__(self):
-        self.db_gateway = MongoDBGateway("plans")
+        self.db_gateway = DynamoDBGateway("plans")
         self.activities_gateway = ActivitiesGateway()
         self.users_gateway = UsersGateway()
         self.plan_invitation_gateway = PlanInvitationsGateway()
@@ -179,65 +180,6 @@ class PlanController:
             if plan is not None:
                 plans.append(plan)
         return plans
-
-    def get_recommended_plans(self, user: User, limit: int = 5) -> List[Plan]:
-        logger.log("CONTROLLERS", f"Getting recommended plans for user {user.id}")
-        all_plans = [
-            Plan(**plan)
-            for plan in self.db_gateway.scan()
-            if plan["user_id"] != user.id
-        ]
-        user_plans = self.get_plans(user.plan_ids)
-
-        results_map = []
-        for user_plan in user_plans:
-            top_goals_obj = self.db_gateway.vector_search(
-                "goal",
-                user_plan.goal,
-                include_key="user_id",
-                include_values=user.friend_ids,
-                limit=limit,
-            )
-            results_map.append(top_goals_obj)
-
-        results_map = sorted(results_map, key=lambda x: x[0]["score"], reverse=True)
-        top_goals = [obj["goal"] for obj in results_map[:limit]]
-
-        top_plans = [plan for plan in all_plans if plan.goal in top_goals]
-
-        return top_plans
-
-    def get_recommended_activities(self, user: User, limit: int = 5) -> List[Activity]:
-        logger.log("CONTROLLERS", f"Getting recommended activities for user {user.id}")
-
-        if len(user.friend_ids) == 0:
-            return []
-
-        user_activities = self.activities_gateway.get_all_activities_by_user_id(
-            user.id
-        )[:5]
-
-        if len(user_activities) == 0:
-            user_activities = [SAMPLE_SEARCH_ACTIVITY]
-
-        query = ", ".join([activity.title for activity in user_activities])
-        top_activity_objs = self.activities_gateway.activities_db_gateway.vector_search(
-            "title",
-            query,
-            include_key="user_id",
-            include_values=user.friend_ids,
-            limit=limit,
-        )
-        logger.log(
-            "CONTROLLERS", f"Got {len(top_activity_objs)} activities for query: {query}"
-        )
-
-        top_activities = {
-            a["id"]: self.activities_gateway.get_activity_by_id(a["id"])
-            for a in top_activity_objs
-        }
-
-        return list(top_activities.values())
 
     def get_plan(self, plan_id: str) -> Optional[Plan]:
         logger.log("CONTROLLERS", f"Getting plan: {plan_id}")
@@ -450,13 +392,8 @@ class PlanController:
         required_sessions = len(week_sessions)
 
         # Get all activity entries for this week
-        week_entries = self.activities_gateway.activity_entries_db_gateway.query_by_criteria({
-            'activity_id': activity_entry.activity_id,
-            'date': {
-                '$gte': week_start.isoformat(),
-                '$lte': week_end.isoformat()
-            }
-        })
+        week_entries = self.activities_gateway.activity_entries_db_gateway.query("activity_id", activity_entry.activity_id)
+        week_entries = [ActivityEntry(**entry) for entry in week_entries if entry["date"] >= week_start.isoformat() and entry["date"] <= week_end.isoformat()]
         
         # Sort entries by creation time to check if current entry is the last one
         sorted_entries = sorted(week_entries, key=lambda x: x['created_at'])
@@ -472,7 +409,17 @@ class PlanController:
             return False, None
 
         # Get all plans that contain this activity
-        plans = [Plan(**plan) for plan in self.db_gateway.query_by_criteria({'sessions.activity_id': activity_entry.activity_id})]
+        user = self.users_gateway.get_user_by_id(activity_entry.user_id)
+        plans = self.get_all_user_active_plans(user)
+        filtered_plans = []
+        for plan in plans:
+            # Check if any session in this plan has the activity_entry's activity_id
+            for session in plan.sessions:
+                if session.activity_id == activity_entry.activity_id:
+                    filtered_plans.append(plan)
+                    break
+
+        plans = filtered_plans
         
         for plan in plans:
             if self.is_week_finisher_of_plan(activity_entry_id, plan):
@@ -480,6 +427,21 @@ class PlanController:
 
         return False, None
 
+    def is_activity_in_any_active_plan(self, activity_id: str) -> bool:
+        activity = self.activities_gateway.get_activity_by_id(activity_id)
+        user = self.users_gateway.get_user_by_id(activity.user_id)
+        active_plans = self.get_all_user_active_plans(user)
+        filtered_plans = []
+        for plan in active_plans:
+            # Check if any session in this plan has the activity_entry's activity_id
+            for session in plan.sessions:
+                if session.activity_id == activity_id:
+                    filtered_plans.append(plan)
+                    break
+                
+        active_plans = filtered_plans
+        
+        return len(active_plans) > 0
 
     def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None, future_day_limit: int = None, plans: List[Plan] = None, ) -> str:
         """

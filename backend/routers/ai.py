@@ -402,7 +402,7 @@ users_gateway = UsersGateway()
 #     data = await request.json()
 #     message = data["message"]
 
-#     memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+#     memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 #     memory.write(
 #         Message.new(
 #             text=message,
@@ -446,7 +446,7 @@ async def transcribe_audio(
 
 #     try:
 #         # Initialize memory and message generator
-#         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+#         memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 #         generator = ActivityMessageGenerator(user=user, memory=memory)
 #         # Generate the message
 #         message, _ = await generator.get_response(
@@ -475,7 +475,7 @@ async def transcribe_audio(
 
 #     try:
 #         # Initialize memory and message generator
-#         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+#         memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 #         metrics_gateway = MetricsGateway()
 #         metrics = metrics_gateway.get_all_metrics_by_user_id(user.id)
 #         generator = MetricsDashboardMessageGenerator(
@@ -505,7 +505,7 @@ async def transcribe_audio(
 
 #     try:
 #         # Initialize memory and message generator
-#         memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+#         memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 #         generator = PlanMessageGenerator(user=user, memory=memory)
 
 #         # Generate the message
@@ -535,7 +535,7 @@ async def get_past_week_logging_extractions(
         message = body["message"]
         question_checks = body["question_checks"]
 
-        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 
         memory.write(
             Message.new(
@@ -656,7 +656,7 @@ async def get_daily_checkin_extractions(
         message = body["message"]
         question_checks = body["question_checks"]
 
-        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 
         extractor = ActivityExtractorAssistant(user=user, memory=memory)
         metrics_companion = MetricsCompanionAssistant(user=user, memory=memory)
@@ -821,7 +821,7 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
             )
 
-        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 
         memory.write(
             Message.new(
@@ -968,7 +968,7 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
         question_checks = body["question_checks"]
 
         # Initialize memory and assistant
-        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
         plan_creator = PlanCreationAssistantSimple(user=user, memory=memory)
 
         # Log the extraction request
@@ -1042,7 +1042,7 @@ async def log_dynamic_ui_attempt_error(request: Request, user: User = Depends(is
     attempts = body["attempts"]
     id = body["id"]
     extracted_data = body["extracted_data"]
-    memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+    memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
     conversation_history = memory.read_all_as_str(max_messages=4, max_age_in_minutes=30)
 
     telegram = TelegramService()
@@ -1063,7 +1063,7 @@ async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_us
     attempts = body["attempts"]
     extracted_data = body["extracted_data"]
     id = body["id"]
-    memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+    memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
     conversation_history = memory.read_all_as_str(max_messages=4, max_age_in_minutes=30)
 
     telegram = TelegramService()
@@ -1080,7 +1080,7 @@ async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_us
 
 if __name__ == "__main__":
     user_id = "67db3b7c1a1f74601b0d025f"
-    memory = DatabaseMemory(MongoDBGateway("messages"), user_id)
+    memory = DatabaseMemory(DynamoDBGateway("messages"), user_id)
     history = memory.read_all_as_str(max_age_in_minutes=30)
     telegram = TelegramService()
     telegram.send_dynamic_ui_attempt_error_notification(

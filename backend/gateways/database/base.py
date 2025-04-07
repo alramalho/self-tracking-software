@@ -26,7 +26,3 @@ class DBGateway(ABC):
     @abstractmethod
     def count(self, key: str, value: str) -> int:
         pass
-
-    @abstractmethod
-    def vector_search(self, key: str, query: str, limit: int = 5) -> List[Dict]:
-        pass

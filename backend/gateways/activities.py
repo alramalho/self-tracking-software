@@ -2,6 +2,7 @@ from datetime import datetime, UTC, timedelta
 
 from entities.activity import Activity, ActivityEntry, Comment
 from gateways.database.mongodb import MongoDBGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from loguru import logger
 from shared.utils import days_ago
 from typing import List, Optional
@@ -28,8 +29,8 @@ class ActivityEntryAlreadyExistsException(Exception):
 # todo: this activities gateway now has permissions and CRUD responsiblities... we should split?
 class ActivitiesGateway:
     def __init__(self,):
-        self.activities_db_gateway = MongoDBGateway("activities")
-        self.activity_entries_db_gateway = MongoDBGateway("activity_entries")
+        self.activities_db_gateway = DynamoDBGateway("activities")
+        self.activity_entries_db_gateway = DynamoDBGateway("activity_entries")
 
     def get_activity_by_id(self, activity_id:str) -> Activity:
         data = self.activities_db_gateway.query("id", activity_id)
@@ -223,14 +224,6 @@ class ActivitiesGateway:
             self.activity_entries_db_gateway.write(activity_entry.dict())
         
         return activity_entry
-
-    def is_activity_in_any_active_plan(self, activity_id: str) -> bool:
-        plans_db_gateway = MongoDBGateway("plans")
-        
-        current_date = datetime.now(UTC).isoformat()
-        active_plans = plans_db_gateway.query_by_criteria({'sessions.activity_id': activity_id, 'finishing_date': {'$gte': current_date}})
-        
-        return len(active_plans) > 0
 
     def add_comment(self, activity_entry_id: str, text: str, user: User) -> ActivityEntry:
         activity_entry = self.get_activity_entry_by_id(activity_entry_id)

@@ -65,3 +65,8 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 STRIPE_PLUS_PRODUCT_ID = os.getenv("STRIPE_PLUS_PRODUCT_ID")
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 STRIPE_ENDPOINT_SECRET = os.getenv("STRIPE_ENDPOINT_SECRET")
+
+PASCAL_CASE_PREFIX = "TrackingSoftware"
+CAMEL_CASE_PREFIX = "trackingSoftware"
+SNAKE_CASE_PREFIX = "tracking_software"
+KEBAB_CASE_PREFIX = "tracking-software"

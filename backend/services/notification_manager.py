@@ -14,6 +14,7 @@ from constants import (
     ENVIRONMENT,
 )
 from gateways.users import UsersGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from entities.user import User
 from pywebpush import webpush, WebPushException
 import json
@@ -27,7 +28,7 @@ from analytics.posthog import posthog
 
 class NotificationManager:
     def __init__(self):
-        self.db_gateway = MongoDBGateway("notifications")
+        self.db_gateway = DynamoDBGateway("notifications")
         self.users_gateway = UsersGateway()
         self.cron_gateway = EventBridgeCronGateway()
 

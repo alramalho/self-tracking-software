@@ -2,12 +2,11 @@ from typing import List, Optional
 from datetime import datetime, timedelta, UTC
 
 from entities.message import Message, Emotion
-from gateways.database.mongodb import MongoDBGateway
-
+from gateways.database.dynamodb import DynamoDBGateway
 
 class MessagesGateway:
     def __init__(self):
-        self.db_gateway = MongoDBGateway("messages")
+        self.db_gateway = DynamoDBGateway("messages")
 
     def get_message_by_id(self, message_id: str) -> Optional[Message]:
         msgs = self.db_gateway.query("id", message_id)
