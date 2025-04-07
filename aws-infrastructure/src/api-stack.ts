@@ -24,7 +24,7 @@ interface ApiStackProps {
 
 export class ApiStack extends cdk.Stack {
   public fargateService: ecs_patterns.ApplicationLoadBalancedFargateService;
-  public fastApiLambda: lambda.DockerImageFunction;
+  // public fastApiLambda: lambda.DockerImageFunction;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id);
