@@ -8,12 +8,12 @@ class Notification(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     user_id: str
     message: str
-    created_at: datetime = Field(default_factory=datetime.now)
-    sent_at: Optional[datetime] = None
-    processed_at: Optional[datetime] = None
-    opened_at: Optional[datetime] = None
-    concluded_at: Optional[datetime] = None
-    scheduled_for: Optional[datetime] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+    sent_at: Optional[str] = None
+    processed_at: Optional[str] = None
+    opened_at: Optional[str] = None
+    concluded_at: Optional[str] = None
+    scheduled_for: Optional[str] = None
     recurrence: Optional[Literal["daily", "weekly"]] = None
     aws_cronjob_id: Optional[str] = None
     prompt_tag: Optional[str] = None
