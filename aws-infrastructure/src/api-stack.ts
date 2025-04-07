@@ -19,7 +19,7 @@ import {
 
 interface ApiStackProps {
   environment: string;
-  certificateArn?: string;
+  certificateArn: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -168,29 +168,20 @@ export class ApiStack extends cdk.Stack {
       containerInsights: true,
     });
 
-    // Create log group for the Fargate service
     const logGroup = new logs.LogGroup(this, "ApiLogGroup", {
       logGroupName: `/ecs/${KEBAB_CASE_PREFIX}-api-${props.environment}`,
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Import certificate if ARN is provided
-    let certificate;
-    if (props.certificateArn) {
-      certificate = acm.Certificate.fromCertificateArn(
-        this,
-        "ImportedCertificate",
-        props.certificateArn
-      );
-    }
+    let certificate = acm.Certificate.fromCertificateArn(
+      this,
+      "ImportedCertificate",
+      process.env.CERTIFICATE_ARN!
+    );
+    const domainName = "api.tracking.so";
+    const protocol = cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS;
 
-    // Determine the protocol based on certificate availability
-    const protocol = certificate
-      ? cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS
-      : cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTP;
-
-    // Create Fargate service with ALB
     this.fargateService =
       new ecs_patterns.ApplicationLoadBalancedFargateService(
         this,
@@ -255,7 +246,8 @@ export class ApiStack extends cdk.Stack {
           publicLoadBalancer: true, // Expose the service to the internet
           certificate: certificate, // Use the imported certificate if available
           protocol: protocol, // Use HTTPS if we have a certificate, HTTP otherwise
-          redirectHTTP: certificate ? true : undefined, // Redirect HTTP to HTTPS if we have a certificate
+          redirectHTTP: true, // Redirect HTTP to HTTPS if we have a certificate
+          domainName: domainName, // Set the domain name for the ALB
         }
       );
 
@@ -291,8 +283,8 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
-    // Determine the protocol for URL based on certificate availability
-    const urlProtocol = certificate ? "https" : "http";
+    // Determine the API URL based on certificate availability
+    const apiUrl = "https://api.tracking.so";
 
     // Create the proxy lambda for cron jobs pointing to Fargate
     const apiCronProxyLambda = new lambda.Function(
@@ -307,7 +299,7 @@ export class ApiStack extends cdk.Stack {
           path.join(__dirname, "..", "..", "backend", "lambdas")
         ),
         environment: {
-          API_URL: `${urlProtocol}://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
+          API_URL: apiUrl,
           ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
         },
       }
@@ -321,7 +313,18 @@ export class ApiStack extends cdk.Stack {
       this,
       `${PASCAL_CASE_PREFIX}FargateApiURL${props.environment}`,
       {
-        value: `${urlProtocol}://${this.fargateService.loadBalancer.loadBalancerDnsName}`,
+        value: apiUrl,
+      }
+    );
+
+    // Output the actual ALB DNS name for manual DNS configuration
+    new cdk.CfnOutput(
+      this,
+      `${PASCAL_CASE_PREFIX}LoadBalancerDNS${props.environment}`,
+      {
+        value: this.fargateService.loadBalancer.loadBalancerDnsName,
+        description:
+          "Load Balancer DNS Name - Set your domain's CNAME record to point to this",
       }
     );
 
