@@ -12,7 +12,7 @@ export class MainStack extends cdk.Stack {
     super(scope, id);
 
     // Deploy Lambda backend
-    const { fargateService, fastApiLambda } = new ApiStack(this, "ApiStack", {
+    const { fargateService, fastApiLambda } = new ApiStack(this, "ApiStackV2", {
       environment: props.environment,
     });
 
