@@ -236,7 +236,8 @@ export class ApiStack extends cdk.Stack {
           cpu: 512, // 0.5 vCPU
           memoryLimitMiB: 1024, // 1 GB memory
           publicLoadBalancer: true, // Expose the service to the internet
-          listenerPort: 80,
+          protocol: cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTPS,
+          redirectHTTP: true, // Redirect HTTP to HTTPS
         }
       );
 
