@@ -2,7 +2,7 @@ from entities.notification import Notification
 from gateways.database.mongodb import MongoDBGateway
 from gateways.aws.event_bridge import EventBridgeCronGateway
 from ai.llm import ask_text
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import List, Optional, Literal
 import pytz
 from bson.objectid import ObjectId
@@ -47,12 +47,12 @@ class NotificationManager:
         existing_notifications = self.get_all_non_concluded_for_user(notification.user_id)
 
         # Get the date of the new notification
-        notification_date = notification.created_at.date()
+        notification_date = datetime.fromisoformat(notification.created_at).date()
 
         for existing in existing_notifications:
             # avoid double creation
             same_date_and_message = (
-                existing.created_at.date() == notification_date
+                datetime.fromisoformat(existing.created_at).date() == notification_date
                 and existing.message == notification.message
             )
             same_scheduled_type = (
@@ -92,7 +92,7 @@ class NotificationManager:
         if not notification or notification.status != "pending":
             return None
 
-        notification.processed_at = datetime.now()
+        notification.processed_at = datetime.now(UTC).isoformat()
         notification.status = "processed"
 
         if notification.recurrence:
@@ -104,7 +104,7 @@ class NotificationManager:
 
         is_push = False
         if user.pwa_subscription_endpoint:
-            notification.sent_at = datetime.now()
+            notification.sent_at = datetime.now(UTC).isoformat()
             await self.send_push_notification(user.id, title=title, body=body)
             is_push = True
 
@@ -133,7 +133,7 @@ class NotificationManager:
     def mark_as_opened(self, notification_id: str) -> Optional[Notification]:
         notification = self.get_notification(notification_id)
         if notification and notification.status == "processed":
-            notification.opened_at = datetime.now()
+            notification.opened_at = datetime.now(UTC).isoformat()
             notification.status = "opened"
             logger.info(
                 f"Notification '{notification_id}' switched from {notification.status} to opened"
@@ -148,7 +148,7 @@ class NotificationManager:
             if notification.status == "concluded":
                 logger.info(f"Notification '{notification_id}' already concluded")
                 return notification
-            notification.concluded_at = datetime.now()
+            notification.concluded_at = datetime.now(UTC).isoformat()
             notification.status = "concluded"
             self._update_notification(notification)
             logger.info(
@@ -183,7 +183,7 @@ class NotificationManager:
     ) -> List[Notification]:
         notifications = [n for n in self.get_all_non_concluded_for_user(user_id) if n.processed_at]
         ordered_notifications = sorted(
-            notifications, key=lambda x: x.processed_at
+            notifications, key=lambda x: datetime.fromisoformat(x.processed_at) if x.processed_at else datetime.min.replace(tzinfo=UTC)
         )
         return ordered_notifications[limit:]
 
@@ -240,10 +240,10 @@ class NotificationManager:
         elif recurrence == "weekly":
             return f"cron({target_time.minute} {target_time.hour} ? * {target_time.strftime('%a').upper()} *)"
 
-    def _get_next_occurrence(self, cron_str: str) -> datetime:
-        # Implement logic to calculate the next occurrence based on the cron string
-        # This is a placeholder and should be replaced with actual implementation
-        return datetime.now() + timedelta(days=1)
+    def _get_next_occurrence(self, cron_str: str) -> str:
+        # Calculate the next occurrence based on the cron string
+        # This is a placeholder implementation
+        return (datetime.now(UTC) + timedelta(days=1)).isoformat()
 
     def _get_vapid_claims(self, subscription_endpoint: str) -> Dict[str, str]:
         parsed = urlparse(subscription_endpoint)
