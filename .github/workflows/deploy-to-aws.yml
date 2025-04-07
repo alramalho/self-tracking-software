@@ -19,6 +19,7 @@ jobs:
       - name: Deploy CDK to dev
         env:
           ENVIRONMENT: dev 
+          CERTIFICATE_ARN: irrelevant
           # we're only interested in propagating db schema, so env vars for api are irrelevant
         run: |
           cd aws-infrastructure
