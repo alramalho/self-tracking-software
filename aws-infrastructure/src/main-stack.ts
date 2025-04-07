@@ -5,7 +5,7 @@ import { DbStack } from "./db-stack";
 
 interface MainStackProps {
   environment: string;
-  certificateArn?: string;
+  certificateArn: string;
 }
 
 export class MainStack extends cdk.Stack {
