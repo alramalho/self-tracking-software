@@ -17,7 +17,7 @@ export class DbStack extends cdk.Stack {
     // Users Table
     new DynamoDbTableConstruct(this, "UsersTable", {
       name: `${SNAKE_CASE_PREFIX}_users_${props.environment}`,
-      indexFields: ["clerk_id", "email", "username", "deleted"],
+      indexFields: ["clerk_id", "email", "username"],
       writableBy: props.writableBy,
       readableBy: props.readableBy,
     });
@@ -25,7 +25,7 @@ export class DbStack extends cdk.Stack {
     // Activities Table
     new DynamoDbTableConstruct(this, "ActivitiesTable", {
       name: `${SNAKE_CASE_PREFIX}_activities_${props.environment}`,
-      indexFields: ["user_id", "title", "deleted_at"],
+      indexFields: ["user_id", "title"],
       writableBy: props.writableBy,
       readableBy: props.readableBy,
     });
@@ -33,7 +33,7 @@ export class DbStack extends cdk.Stack {
     // Activity Entries Table
     new DynamoDbTableConstruct(this, "ActivityEntriesTable", {
       name: `${SNAKE_CASE_PREFIX}_activity_entries_${props.environment}`,
-      indexFields: ["user_id", "activity_id", "date", "deleted_at"],
+      indexFields: ["user_id", "activity_id", "date"],
       writableBy: props.writableBy,
       readableBy: props.readableBy,
     });
@@ -57,7 +57,7 @@ export class DbStack extends cdk.Stack {
     // Plans Table
     new DynamoDbTableConstruct(this, "PlansTable", {
       name: `${SNAKE_CASE_PREFIX}_plans_${props.environment}`,
-      indexFields: ["user_id", "plan_group_id", "deleted_at"],
+      indexFields: ["user_id", "plan_group_id"],
       writableBy: props.writableBy,
       readableBy: props.readableBy,
     });
