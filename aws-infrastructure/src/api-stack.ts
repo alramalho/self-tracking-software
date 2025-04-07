@@ -194,7 +194,7 @@ export class ApiStack extends cdk.Stack {
     this.fargateService =
       new ecs_patterns.ApplicationLoadBalancedFargateService(
         this,
-        certificate ? "ApiServiceHTTPS" : "ApiServiceHTTP",
+        "ApiServiceV2",
         {
           cluster,
           serviceName: `${KEBAB_CASE_PREFIX}-api-${props.environment}`,
@@ -256,9 +256,6 @@ export class ApiStack extends cdk.Stack {
           certificate: certificate, // Use the imported certificate if available
           protocol: protocol, // Use HTTPS if we have a certificate, HTTP otherwise
           redirectHTTP: certificate ? true : undefined, // Redirect HTTP to HTTPS if we have a certificate
-          loadBalancerName: `${KEBAB_CASE_PREFIX}-alb-${props.environment}${
-            certificate ? "-https" : "-http"
-          }`,
         }
       );
 
