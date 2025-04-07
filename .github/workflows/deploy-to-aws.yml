@@ -42,6 +42,7 @@ jobs:
       - name: Deploy Prod CDK
         env:
           ENVIRONMENT: production
+          CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SHARED_ENCRYPTION_KEY: ${{ secrets.SHARED_ENCRYPTION_KEY }}
           MONGO_DB_CONNECTION_STRING: ${{ secrets.MONGO_DB_CONNECTION_STRING }}

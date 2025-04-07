@@ -5,15 +5,17 @@ import { DbStack } from "./db-stack";
 
 interface MainStackProps {
   environment: string;
+  certificateArn?: string;
 }
 
 export class MainStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MainStackProps) {
     super(scope, id);
 
-    // // Deploy Lambda backend
+    // Deploy Lambda backend
     const { fargateService, fastApiLambda } = new ApiStack(this, "ApiStack", {
       environment: props.environment,
+      certificateArn: props.certificateArn,
     });
 
     new DbStack(this, "DbStack", {
