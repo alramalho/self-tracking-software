@@ -5,6 +5,7 @@ import pytz
 from pydantic import BaseModel, Field
 from entities.message import Message
 from loguru import logger
+from gateways.database.dynamodb import DynamoDBGateway
 
 from gateways.activities import ActivitiesGateway
 from gateways.metrics import MetricsGateway
@@ -141,7 +142,7 @@ weekend_checkin_flowchart = {
 class RecurrentCheckinAssistant:
     def __init__(self, user: User):
         self.user = user
-        self.memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        self.memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
         self.plan_controller = PlanController()
         self.activities_gateway = ActivitiesGateway()
         self.users_gateway = UsersGateway()

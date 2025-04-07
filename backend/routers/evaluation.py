@@ -40,7 +40,7 @@ evaluation_router = APIRouter(prefix="/evaluate", dependencies=[Depends(is_clerk
 #     moods_gateway = MoodsGateway()
 
 #     # Simulate conversation history
-#     memory = DatabaseMemory(MongoDBGateway("messages"), user_id=user.id)
+#     memory = DatabaseMemory(DynamoDBGateway("messages"), user_id=user.id)
 #     for message in request.conversation_history:
 #         if message.is_from_user:
 #             memory.add_user_message(message.content)

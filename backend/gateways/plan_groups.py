@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from typing import List
 from entities.plan_group import PlanGroup
-from gateways.database.mongodb import MongoDBGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from entities.plan_group import PlanGroupMember
 from loguru import logger
 class PlanGroupNotFoundException(Exception):
@@ -9,7 +9,7 @@ class PlanGroupNotFoundException(Exception):
 
 class PlanGroupsGateway:
     def __init__(self):
-        self.db_gateway = MongoDBGateway("plan_groups")
+        self.db_gateway = DynamoDBGateway("plan_groups")
 
     def create_plan_group(self, plan_group: PlanGroup):
         self.db_gateway.write(plan_group.dict())

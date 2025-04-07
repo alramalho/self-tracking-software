@@ -1,12 +1,12 @@
 from typing import List, Optional
 from entities.plan_invitation import PlanInvitation 
-from gateways.database.mongodb import MongoDBGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from loguru import logger
 from datetime import datetime, UTC
 
 class PlanInvitationsGateway:
     def __init__(self):
-        self.db_gateway = MongoDBGateway("plan_invitations")
+        self.db_gateway = DynamoDBGateway("plan_invitations")
 
     def get(self, id: str) -> Optional[PlanInvitation]:
         data = self.db_gateway.query("id", id)

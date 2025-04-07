@@ -9,6 +9,7 @@ from gateways.users import UsersGateway
 from gateways.aws.s3 import S3Gateway
 from gateways.activities import ActivitiesGateway
 from pydantic import Field
+from gateways.database.dynamodb import DynamoDBGateway
 from services.telegram_service import TelegramService
 
 from datetime import datetime, timedelta, date
@@ -218,7 +219,7 @@ async def _process_checkin_notifications(
                         notification
                     )
                 )
-                memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+                memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
                 memory.write(
                     Message.new(
                         id=message_id,

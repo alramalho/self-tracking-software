@@ -1,5 +1,5 @@
 from entities.mood_report import MoodReport
-from gateways.database.mongodb import MongoDBGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from loguru import logger
 
 class MoodReportDoesNotExistException(Exception):
@@ -10,7 +10,7 @@ class MoodReportAlreadyExistsException(Exception):
 
 class MoodsGateway:
     def __init__(self):
-        self.mood_reports_db_gateway = MongoDBGateway("mood_reports")
+        self.mood_reports_db_gateway = DynamoDBGateway("mood_reports")
 
     def get_mood_report_by_id(self, mood_report_id: str) -> MoodReport:
         data = self.mood_reports_db_gateway.query("id", mood_report_id)

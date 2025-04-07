@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Body, HTTPException, Query
 from typing import Dict
+from gateways.database.dynamodb import DynamoDBGateway
 from auth.clerk import is_clerk_user
 from entities.user import User
 from services.notification_manager import NotificationManager
@@ -70,7 +71,7 @@ async def process_scheduled_notification(request: Request):
             logger.error(f"Failed to send push notification: {e}")
             raise Exception(f"Failed to send push notification: {e}")
 
-        memory = DatabaseMemory(MongoDBGateway("messages"), user.id)
+        memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
         memory.write(
             Message.new(
                 text=processed_notification.message,

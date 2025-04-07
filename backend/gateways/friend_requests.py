@@ -1,12 +1,12 @@
 from typing import List, Optional
 from entities.friend_request import FriendRequest
-from gateways.database.mongodb import MongoDBGateway
+from gateways.database.dynamodb import DynamoDBGateway
 from loguru import logger
 from datetime import datetime, UTC
 
 class FriendRequestGateway:
     def __init__(self):
-        self.db_gateway = MongoDBGateway("friend_requests")
+        self.db_gateway = DynamoDBGateway("friend_requests")
 
     def create_friend_request(self, friend_request: FriendRequest) -> FriendRequest:
         self.db_gateway.write(friend_request.dict())
