@@ -12,7 +12,7 @@
     "predeploy": "yarn synth",
     "list": "cdk ls",
     "deploy": "cdk deploy --require-approval never --all",
-    "deploy-dev-db": "cdk deploy --require-approval never TrackingSoftwareInfrastructureStackprod/DbStack"
+    "deploy-dev-db": "cdk deploy --require-approval never TrackingSoftwareInfrastructureStackproduction/DbStack"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",
