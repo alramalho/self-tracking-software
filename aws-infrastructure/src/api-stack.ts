@@ -9,6 +9,7 @@ import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
 import * as path from "path";
 import {
@@ -331,5 +332,77 @@ export class ApiStack extends cdk.Stack {
         value: apiCronProxyLambda.functionArn,
       }
     );
+
+    // Create WAF Web ACL
+    const webAcl = new wafv2.CfnWebACL(this, "WebACL", {
+      defaultAction: { allow: {} },
+      scope: "REGIONAL",
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: `${PASCAL_CASE_PREFIX}-web-acl-metric-${props.environment}`,
+        sampledRequestsEnabled: true,
+      },
+      rules: [
+        // Rate limiting rule
+        {
+          name: "RateLimitRule",
+          priority: 1,
+          statement: {
+            rateBasedStatement: {
+              limit: 2000,
+              aggregateKeyType: "IP",
+            },
+          },
+          action: {
+            block: {},
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: `${PASCAL_CASE_PREFIX}-rate-limit-metric-${props.environment}`,
+          },
+        },
+        // AWS Managed Rules - Common Rule Set
+        {
+          name: "AWSManagedRulesCommonRuleSet",
+          priority: 2,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: "AWS",
+              name: "AWSManagedRulesCommonRuleSet",
+            },
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: `${PASCAL_CASE_PREFIX}-common-rules-metric-${props.environment}`,
+          },
+        },
+        // SQL Injection Prevention
+        {
+          name: "AWSManagedRulesSQLiRuleSet",
+          priority: 3,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: "AWS",
+              name: "AWSManagedRulesSQLiRuleSet",
+            },
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: `${PASCAL_CASE_PREFIX}-sql-injection-metric-${props.environment}`,
+          },
+        },
+      ],
+    });
+
+    // Associate WAF Web ACL with the Application Load Balancer
+    new wafv2.CfnWebACLAssociation(this, "WebAclAssociation", {
+      resourceArn: this.fargateService.loadBalancer.loadBalancerArn,
+      webAclArn: webAcl.attrArn,
+    });
   }
 }
