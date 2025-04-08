@@ -343,13 +343,103 @@ export class ApiStack extends cdk.Stack {
         sampledRequestsEnabled: true,
       },
       rules: [
+        // Block Common Exploit Scanning
+        {
+          name: "BlockExploitScanning",
+          priority: 1,
+          statement: {
+            orStatement: {
+              statements: [
+                {
+                  regexPatternSetReferenceStatement: {
+                    arn: new wafv2.CfnRegexPatternSet(
+                      this,
+                      "ExploitScanningPatterns",
+                      {
+                        scope: "REGIONAL",
+                        regularExpressionList: [
+                          // Admin panels and consoles
+                          ".*/(admin|console|wp-admin|administrator|phpmyadmin).*",
+                          // Common file extensions and paths that shouldn't exist
+                          ".*(.php|.asp|.aspx|.jsp|.env|.git|.svn|.htaccess|.htpasswd|.sql).*",
+                          // Common exploit attempts
+                          ".*(eval(|exec(|system(|phpinfo(|shell_exec(|passthru(|base64_decode().*",
+                          // Common vulnerability scanners and tools
+                          ".*(nmap|nikto|sqlmap|scanbot|acunetix|netsparker).*",
+                          // Common CMS paths
+                          ".*(wp-login|wp-content|joomla|drupal|myadmin).*",
+                        ],
+                        description:
+                          "Regex patterns to match common exploit scanning attempts",
+                      }
+                    ).attrArn,
+                    fieldToMatch: {
+                      uriPath: {},
+                    },
+                    textTransformations: [
+                      {
+                        priority: 1,
+                        type: "URL_DECODE",
+                      },
+                      {
+                        priority: 2,
+                        type: "LOWERCASE",
+                      },
+                    ],
+                  },
+                },
+                {
+                  regexPatternSetReferenceStatement: {
+                    arn: new wafv2.CfnRegexPatternSet(
+                      this,
+                      "ExploitScanningUserAgents",
+                      {
+                        scope: "REGIONAL",
+                        regularExpressionList: [
+                          // Common malicious user agents
+                          ".*(zgrab|python-requests|curl|wget|scanbot|nmap|nikto|sqlmap|masscan|libwww-perl).*",
+                        ],
+                        description:
+                          "Regex patterns to match malicious user agents",
+                      }
+                    ).attrArn,
+                    fieldToMatch: {
+                      singleHeader: {
+                        name: "user-agent",
+                      },
+                    },
+                    textTransformations: [
+                      {
+                        priority: 1,
+                        type: "LOWERCASE",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          action: {
+            block: {
+              customResponse: {
+                responseCode: 403,
+                customResponseBodyKey: "Blocked.",
+              },
+            },
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: `${PASCAL_CASE_PREFIX}-exploit-scanning-metric-${props.environment}`,
+          },
+        },
         // Rate limiting rule
         {
           name: "RateLimitRule",
-          priority: 1,
+          priority: 2,
           statement: {
             rateBasedStatement: {
-              limit: 2000,
+              limit: 500,
               aggregateKeyType: "IP",
             },
           },
@@ -365,7 +455,7 @@ export class ApiStack extends cdk.Stack {
         // AWS Managed Rules - Common Rule Set
         {
           name: "AWSManagedRulesCommonRuleSet",
-          priority: 2,
+          priority: 3,
           overrideAction: { none: {} },
           statement: {
             managedRuleGroupStatement: {
@@ -382,7 +472,7 @@ export class ApiStack extends cdk.Stack {
         // SQL Injection Prevention
         {
           name: "AWSManagedRulesSQLiRuleSet",
-          priority: 3,
+          priority: 4,
           overrideAction: { none: {} },
           statement: {
             managedRuleGroupStatement: {
