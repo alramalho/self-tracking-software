@@ -273,17 +273,6 @@ class ActivitiesGateway:
             
         return activity_entry
         
-    def get_comments(self, activity_entry_id: str) -> List[Comment]:
-        activity_entry = self.get_activity_entry_by_id(activity_entry_id)
-        if activity_entry is None:
-            raise ActivityEntryDoesNotExistException()
-            
-        if not hasattr(activity_entry, 'comments') or activity_entry.comments is None:
-            return []
-            
-        # Return only non-deleted comments
-        return [comment for comment in activity_entry.comments if comment.deleted_at is None]
-
 
 if __name__ == "__main__":
     from gateways.database.mongodb import MongoDBGateway

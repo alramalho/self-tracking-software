@@ -663,6 +663,7 @@ const ProfilePage: React.FC = () => {
                         activityEntryQuantity={entry.quantity}
                         activityEntryReactions={entry.reactions || {}}
                         activityEntryTimezone={entry.timezone}
+                        activityEntryComments={entry.comments}
                         activityMeasure={activity?.measure || ""}
                         isoDate={entry.date}
                         description={entry.description}

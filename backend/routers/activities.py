@@ -377,14 +377,14 @@ async def add_activity_comment(
             
         # Return the latest comment
         latest_comment = updated_entry.comments[-1]
-        return CommentResponse(
-            id=latest_comment.id,
-            user_id=latest_comment.user_id,
-            username=latest_comment.username,
-            text=latest_comment.text,
-            created_at=latest_comment.created_at,
-            picture=latest_comment.picture
-        )
+        return {
+            "id": latest_comment.id,
+            "user_id": latest_comment.user_id,
+            "username": latest_comment.username,
+            "text": latest_comment.text,
+            "created_at": latest_comment.created_at,
+            "picture": latest_comment.picture
+        }
     except Exception as e:
         logger.error(f"Error adding comment: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to add comment")
@@ -404,33 +404,3 @@ async def remove_activity_comment(
     except Exception as e:
         logger.error(f"Error removing comment: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to remove comment")
-
-
-class CommentResponse(BaseModel):
-    id: str
-    user_id: str
-    username: str
-    text: str
-    created_at: str
-    picture: Optional[str] = None
-
-@router.get("/activity-entries/{activity_entry_id}/comments", response_model=List[CommentResponse])
-async def get_activity_comments(
-    activity_entry_id: str,
-    user: User = Depends(is_clerk_user),
-):
-    try:
-        comments = activities_gateway.get_comments(activity_entry_id)
-        return [
-            CommentResponse(
-                id=comment.id,
-                user_id=comment.user_id,
-                username=comment.username,
-                text=comment.text,
-                created_at=comment.created_at,
-                picture=comment.picture
-            ) for comment in comments
-        ]
-    except Exception as e:
-        logger.error(f"Error getting comments: {str(e)}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Failed to get comments")
