@@ -358,6 +358,8 @@ export class ApiStack extends cdk.Stack {
                       {
                         scope: "REGIONAL",
                         regularExpressionList: [
+                          // Block any attempt to access web-related files since this is an API
+                          ".*(favicon\\.ico|robots\\.txt|sitemap\\.xml|\\.html|\\.htm|\\.css|\\.js).*",
                           // Admin panels and consoles
                           ".*(admin|console|wp-admin|administrator|phpmyadmin|teorema505).*",
                           // Common file extensions and paths that shouldn't exist
@@ -371,11 +373,9 @@ export class ApiStack extends cdk.Stack {
                           // Additional suspicious paths
                           ".*(\\.\\.//|\\.\\./|//\\.\\./).*", // Path traversal attempts
                           ".*(etc/passwd|proc/self|/config\\.|/\\.env).*", // Sensitive files
-                          // Ignore common legitimate requests
-                          "^(?!.*(favicon\\.ico|robots\\.txt|sitemap\\.xml).*).*$",
                         ],
                         description:
-                          "Regex patterns to match common exploit scanning attempts",
+                          "Regex patterns to match exploit scanning attempts",
                       }
                     ).attrArn,
                     fieldToMatch: {
@@ -402,7 +402,7 @@ export class ApiStack extends cdk.Stack {
                         scope: "REGIONAL",
                         regularExpressionList: [
                           // Common malicious user agents
-                          ".*(zgrab|python-requests|curl|wget|scanbot|nmap|nikto|sqlmap|masscan|libwww-perl).*",
+                          ".*(zgrab|python-requests|curl|wget|scanbot|nmap|nikto|sqlmap|masscan|libwww-perl|postman|insomnia).*",
                         ],
                         description:
                           "Regex patterns to match malicious user agents",
