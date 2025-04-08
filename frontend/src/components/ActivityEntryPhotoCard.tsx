@@ -52,6 +52,7 @@ interface ActivityEntryPhotoCardProps {
   activityEmoji: string;
   activityEntryTimezone?: string;
   activityEntryReactions: Record<string, string[]>;
+  activityEntryComments?: Comment[]; // Initial comments if available
   isoDate: string;
   daysUntilExpiration: number;
   hasImageExpired?: boolean;
@@ -64,7 +65,6 @@ interface ActivityEntryPhotoCardProps {
   onUsernameClick?: () => void;
   activityEntryId: string;
   description?: string;
-  comments?: Comment[]; // Initial comments if available
 }
 
 interface ReactionCount {
@@ -89,6 +89,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityEmoji,
   activityEntryReactions,
   activityEntryTimezone,
+  activityEntryComments,
   isoDate,
   daysUntilExpiration,
   hasImageExpired,
@@ -101,7 +102,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   onUsernameClick,
   activityEntryId,
   description,
-  comments: initialComments = [],
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>(
@@ -124,7 +124,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const { useUserPlanType } = usePaidPlan();
   const { data: userPlanType } = useUserPlanType(userUsername || "");
 
-  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [comments, setComments] = useState<Comment[]>(
+    activityEntryComments || []
+  );
   const [showAllComments, setShowAllComments] = useState(false);
 
   useEffect(() => {
@@ -341,24 +343,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   };
 
   const hasImage = imageUrl && !hasImageExpired;
-
-  const fetchComments = async () => {
-    try {
-      const response = await api.get(
-        `/activity-entries/${activityEntryId}/comments`
-      );
-      setComments(response.data);
-    } catch (error) {
-      console.error("Error fetching comments:", error);
-      toast.error("Failed to load comments");
-    }
-  };
-
-  useEffect(() => {
-    if (comments.length === 0) {
-      fetchComments();
-    }
-  }, [activityEntryId]);
 
   return (
     <div className="bg-white/50 border rounded-lg overflow-hidden relative">
