@@ -513,12 +513,6 @@ export class ApiStack extends cdk.Stack {
             managedRuleGroupStatement: {
               vendorName: "AWS",
               name: "AWSManagedRulesCommonRuleSet",
-              ruleActionOverrides: [
-                {
-                  actionToUse: { allow: {} },
-                  name: "SizeRestrictions_BODY",
-                },
-              ],
               excludedRules: [{ name: "SizeRestrictions_BODY" }],
             },
           },
