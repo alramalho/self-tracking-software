@@ -342,6 +342,14 @@ export class ApiStack extends cdk.Stack {
         metricName: `${PASCAL_CASE_PREFIX}-web-acl-metric-${props.environment}`,
         sampledRequestsEnabled: true,
       },
+      customResponseBodies: {
+        "blocked-by-waf": {
+          contentType: "APPLICATION_JSON",
+          content: JSON.stringify({
+            error: "Access denied by WAF",
+          }),
+        },
+      },
       rules: [
         // Block Common Exploit Scanning
         {
