@@ -160,9 +160,17 @@ app.include_router(metrics_router)
 app.include_router(messages_router)
 app.include_router(stripe_router)
 
+origins = [
+    "https://tracking.so",
+    "https://app.tracking.so",
+]
+
+if ENVIRONMENT == "dev":
+    origins.append("http://localhost:3000") 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
