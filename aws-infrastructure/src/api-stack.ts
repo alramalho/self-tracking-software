@@ -428,7 +428,7 @@ export class ApiStack extends cdk.Stack {
             block: {
               customResponse: {
                 responseCode: 403,
-                customResponseBodyKey: "Blocked.",
+                customResponseBodyKey: "blocked-by-waf",
               },
             },
           },
