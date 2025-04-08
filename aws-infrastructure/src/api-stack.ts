@@ -359,15 +359,20 @@ export class ApiStack extends cdk.Stack {
                         scope: "REGIONAL",
                         regularExpressionList: [
                           // Admin panels and consoles
-                          ".*/(admin|console|wp-admin|administrator|phpmyadmin).*",
+                          ".*(admin|console|wp-admin|administrator|phpmyadmin|teorema505).*",
                           // Common file extensions and paths that shouldn't exist
-                          ".*(.php|.asp|.aspx|.jsp|.env|.git|.svn|.htaccess|.htpasswd|.sql).*",
-                          // Common exploit attempts
-                          ".*(eval(|exec(|system(|phpinfo(|shell_exec(|passthru(|base64_decode().*",
+                          ".*\\.(php|asp|aspx|jsp|env|git|svn|htaccess|htpasswd|sql|bak|old|backup).*",
+                          // Common paths that shouldn't be accessed
+                          ".*(Core/Skin/Login\\.aspx|wp-login|wp-content|joomla|drupal|myadmin).*",
+                          // Common exploit attempts - properly escaped
+                          ".*(eval\\(|exec\\(|system\\(|phpinfo\\(|shell_exec\\(|passthru\\(|base64_decode\\().*",
                           // Common vulnerability scanners and tools
-                          ".*(nmap|nikto|sqlmap|scanbot|acunetix|netsparker).*",
-                          // Common CMS paths
-                          ".*(wp-login|wp-content|joomla|drupal|myadmin).*",
+                          ".*(nmap|nikto|sqlmap|scanbot|acunetix|netsparker|dirbuster|gobuster|wpscan).*",
+                          // Additional suspicious paths
+                          ".*(\\.\\.//|\\.\\./|//\\.\\./).*", // Path traversal attempts
+                          ".*(etc/passwd|proc/self|/config\\.|/\\.env).*", // Sensitive files
+                          // Ignore common legitimate requests
+                          "^(?!.*(favicon\\.ico|robots\\.txt|sitemap\\.xml).*).*$",
                         ],
                         description:
                           "Regex patterns to match common exploit scanning attempts",
