@@ -351,6 +351,43 @@ export class ApiStack extends cdk.Stack {
         },
       },
       rules: [
+        // Allow large file uploads for /log-activity endpoint
+        {
+          name: "AllowLargeFileUploads",
+          priority: 0, // Run this rule first
+          statement: {
+            byteMatchStatement: {
+              fieldToMatch: {
+                uriPath: {},
+              },
+              positionalConstraint: "EXACTLY",
+              searchString: "/log-activity",
+              textTransformations: [
+                {
+                  priority: 1,
+                  type: "NONE",
+                },
+              ],
+            },
+          },
+          action: {
+            allow: {
+              customRequestHandling: {
+                insertHeaders: [
+                  {
+                    name: "x-waf-rule",
+                    value: "large-file-upload",
+                  },
+                ],
+              },
+            },
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: `${PASCAL_CASE_PREFIX}-large-file-uploads-metric-${props.environment}`,
+          },
+        },
         // Block Common Exploit Scanning
         {
           name: "BlockExploitScanning",
@@ -467,7 +504,7 @@ export class ApiStack extends cdk.Stack {
             metricName: `${PASCAL_CASE_PREFIX}-rate-limit-metric-${props.environment}`,
           },
         },
-        // AWS Managed Rules - Common Rule Set
+        // Update the managed rule group to override body size for /log-activity
         {
           name: "AWSManagedRulesCommonRuleSet",
           priority: 3,
@@ -476,6 +513,13 @@ export class ApiStack extends cdk.Stack {
             managedRuleGroupStatement: {
               vendorName: "AWS",
               name: "AWSManagedRulesCommonRuleSet",
+              ruleActionOverrides: [
+                {
+                  actionToUse: { allow: {} },
+                  name: "SizeRestrictions_BODY",
+                },
+              ],
+              excludedRules: [{ name: "SizeRestrictions_BODY" }],
             },
           },
           visibilityConfig: {
