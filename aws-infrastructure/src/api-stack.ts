@@ -406,7 +406,7 @@ export class ApiStack extends cdk.Stack {
                           // Block any attempt to access web-related files since this is an API
                           ".*(favicon\\.ico|robots\\.txt|sitemap\\.xml|\\.html|\\.htm|\\.css|\\.js).*",
                           // Admin panels and consoles
-                          ".*(admin|console|wp-admin|administrator|phpmyadmin|teorema505).*",
+                          ".*(admin|console|wp-admin|administrator|phpmyadmin|teorema505|geoserver).*",
                           // Common file extensions and paths that shouldn't exist
                           ".*\\.(php|asp|aspx|jsp|env|git|svn|htaccess|htpasswd|sql|bak|old|backup).*",
                           // Common paths that shouldn't be accessed
@@ -419,7 +419,7 @@ export class ApiStack extends cdk.Stack {
                           ".*(\\.\\.//|\\.\\./|//\\.\\./).*", // Path traversal attempts
                           ".*(etc/passwd|proc/self|/config\\.|/\\.env).*", // Sensitive files
                           // Block additional endpoints
-                          ".*(openapi|hello\\.world|containers|geoserver).*",
+                          ".*(openapi|hello\\.world|containers|swagger).*",
                         ],
                         description:
                           "Regex patterns to match exploit scanning attempts",
