@@ -419,7 +419,7 @@ export class ApiStack extends cdk.Stack {
                           ".*(\\.\\.//|\\.\\./|//\\.\\./).*", // Path traversal attempts
                           ".*(etc/passwd|proc/self|/config\\.|/\\.env).*", // Sensitive files
                           // Block additional endpoints
-                          ".*(openapi|hello\\.world|containers).*",
+                          ".*(openapi|hello\\.world|containers|geoserver).*",
                         ],
                         description:
                           "Regex patterns to match exploit scanning attempts",
