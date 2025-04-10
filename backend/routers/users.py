@@ -383,9 +383,10 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
             }
 
         friends = [
-            users_gateway.get_user_by_id(friend_id)
+            users_gateway.get_user_by_safely("id", friend_id)
             for friend_id in current_user.friend_ids
         ]
+        friends = [f for f in friends if f is not None]
         users = [*friends, current_user]
         users_activities_entries = [
             entry

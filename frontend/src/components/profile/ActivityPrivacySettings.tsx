@@ -7,12 +7,13 @@ import { useUserPlan, VisibilityType } from "@/contexts/UserPlanContext";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import Link from "next/link";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useUpgrade } from "@/contexts/UpgradeContext";
 const visibilityOptions = [
   {
     value: "public",
@@ -28,11 +29,15 @@ const visibilityOptions = [
   },
 ] as const;
 
-export default function ActivityPrivacySettings({onClose}: {onClose: () => void}) {
+export default function ActivityPrivacySettings({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery } = useUserPlan();
   const currendUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currendUserDataQuery
+  const { data: userData } = currendUserDataQuery;
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedValue, setSelectedValue] = React.useState<VisibilityType>(
     (userData?.user?.default_activity_visibility as VisibilityType) || "public"
@@ -42,6 +47,8 @@ export default function ActivityPrivacySettings({onClose}: {onClose: () => void}
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const { userPaidPlanType } = usePaidPlan();
+  const { setShowUpgradePopover } = useUpgrade();
 
   const handleSave = async () => {
     try {
@@ -49,7 +56,7 @@ export default function ActivityPrivacySettings({onClose}: {onClose: () => void}
       await api.post("/update-user", {
         default_activity_visibility: selectedValue,
       });
-      currendUserDataQuery.refetch()
+      currendUserDataQuery.refetch();
       toast.success("Privacy settings updated");
       onClose();
     } catch (error) {
@@ -80,13 +87,21 @@ export default function ActivityPrivacySettings({onClose}: {onClose: () => void}
       <RadioGroup.Root
         className="space-y-2"
         value={selectedValue}
-        onValueChange={(value: string) =>
-          setSelectedValue(value as VisibilityType)
-        }
+        onValueChange={(value: string) => {
+          const isOptionLocked =
+            userPaidPlanType === "free" &&
+            (value === "friends" || value === "private");
+          if (!isOptionLocked) {
+            setSelectedValue(value as VisibilityType);
+          }
+        }}
         disabled={isLoading}
       >
         {visibilityOptions.map((option) => {
           const radioId = `radio-${option.value}`;
+          const isLocked =
+            userPaidPlanType === "free" &&
+            (option.value === "friends" || option.value === "private");
           return (
             <label
               key={option.value}
@@ -94,22 +109,30 @@ export default function ActivityPrivacySettings({onClose}: {onClose: () => void}
               className={cn(
                 "flex items-center justify-between space-x-2 rounded-lg border p-4",
                 "transition-colors",
-                isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
+                isLoading || isLocked
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer",
                 selectedValue === option.value &&
                   `${variants.border} ${variants.card.selected.bg}`
               )}
             >
               <div className="flex-1">
                 <div className="font-medium">{option.label}</div>
+                {isLocked && (
+                  <div className="text-sm text-gray-500">
+                    Available for supporters only
+                  </div>
+                )}
               </div>
               <RadioGroup.Item
                 value={option.value}
                 id={radioId}
                 className="hidden"
+                disabled={isLocked}
               >
                 <RadioGroup.Indicator />
               </RadioGroup.Item>
-              {selectedValue === option.value && (
+              {selectedValue === option.value ? (
                 <div
                   className={cn(
                     "h-6 w-6 flex items-center justify-center",
@@ -119,18 +142,35 @@ export default function ActivityPrivacySettings({onClose}: {onClose: () => void}
                 >
                   <Check className="h-5 w-5" />
                 </div>
-              )}
+              ) : isLocked ? (
+                <div className="h-6 w-6 flex items-center justify-center text-gray-400">
+                  <Lock className="h-5 w-5" />
+                </div>
+              ) : null}
             </label>
           );
         })}
       </RadioGroup.Root>
-      <div className="text-sm text-gray-500">
-        You can also set this up individually in the respective{" "}
-        <Link href="/add" className="underline">
-        activity settings
-        </Link>
-        .
-      </div>
+      {userPaidPlanType === "free" ? (
+        <div className="text-sm text-gray-500">
+          Private and friends-only options are only available to supporters.{" "}
+          <span
+            onClick={() => setShowUpgradePopover(true)}
+            className="underline"
+          >
+            Upgrade your plan
+          </span>{" "}
+          to access these features.
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500">
+          You can also set this up individually in the respective{" "}
+          <Link href="/add" className="underline">
+            activity settings
+          </Link>
+          .
+        </div>
+      )}
       <div className="flex justify-end pt-4">
         <Button
           disabled={!hasChanges || isLoading}

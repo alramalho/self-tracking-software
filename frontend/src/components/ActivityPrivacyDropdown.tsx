@@ -1,5 +1,5 @@
 import React from "react";
-import { Check } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,6 +7,9 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { VisibilityType } from "@/contexts/UserPlanContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { cn } from "@/lib/utils";
 
 export function toReadablePrivacySetting(privacySetting: VisibilityType) {
   switch (privacySetting) {
@@ -30,24 +33,53 @@ const ActivityPrivacyDropdown: React.FC<ActivityPrivacyDropdownProps> = ({
   onChange,
   className,
 }) => {
+  const { userPaidPlanType } = usePaidPlan();
+  const { setShowUpgradePopover } = useUpgrade();
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const handleOptionClick = (option: VisibilityType) => {
+    const isLocked = userPaidPlanType === "free" && (option === "friends" || option === "private");
+    setIsOpen(false);
+    if (isLocked) {
+      setTimeout(() => setShowUpgradePopover(true), 100);
+    } else {
+      onChange(option);
+    }
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger className={`p-2 px-3 border rounded-md ${className}`}>
         {toReadablePrivacySetting(value)}
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        {["public", "private", "friends"].map((option) => (
-          <DropdownMenuItem
-            key={option}
-            onClick={() => onChange(option as VisibilityType)}
-            className="flex items-center justify-between"
-          >
-            {toReadablePrivacySetting(option.toLowerCase() as VisibilityType)}
-            {value.toLowerCase() === option && (
-              <Check className="w-4 h-4 ml-2" />
-            )}
-          </DropdownMenuItem>
-        ))}
+        {["public", "private", "friends"].map((option) => {
+          const isLocked = userPaidPlanType === "free" && (option === "friends" || option === "private");
+          return (
+            <DropdownMenuItem
+              key={option}
+              onClick={() => handleOptionClick(option as VisibilityType)}
+              className={cn(
+                "flex items-center justify-between group",
+                isLocked && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <div>
+                {toReadablePrivacySetting(option.toLowerCase() as VisibilityType)}
+                {isLocked && (
+                  <div className="text-xs text-gray-500">
+                    Supporters only
+                  </div>
+                )}
+              </div>
+              {value.toLowerCase() === option ? (
+                <Check className="w-4 h-4 ml-2" />
+              ) : isLocked ? (
+                <Lock className="w-4 h-4 ml-2" />
+              ) : null}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
