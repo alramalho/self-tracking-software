@@ -188,9 +188,13 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   const [isYearly, setIsYearly] = useState(false);
 
   const planFeatures: FeatureItem[] = [
-    { emoji: "✔️", title: <span>Unlimited plans, activities</span> },
+    { emoji: "✔️", title: <span>Unlimited plans & activities</span> },
+    { emoji: "🔒", title: <span>Activity privacy</span> },
     { emoji: "📊", title: <span>Enhanced Analytics</span> },
-    { emoji: "🎨", title: <span>Customizable color themes and reactions</span> },
+    {
+      emoji: "🎨",
+      title: <span>Customizable color themes and reactions</span>,
+    },
     { emoji: "🦾", title: <span>Personalized AI coaching</span> },
   ];
 
@@ -224,8 +228,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
       <div className="space-y-8 pt-6 pb-12">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold">
-            thank you for considering supporting{" "}
-            <span className="italic">open source</span>
+            support <span className="italic">open source</span>
           </h1>
           {/* <p className="text-gray-500 font-cursive text-2xl font-extralight">Become an open source supporter 🔥</p> */}
         </div>
@@ -266,9 +269,16 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               </div>
               {isYearly && (
                 <p className="text-sm text-gray-500">
-                  {isYearly
-                    ? <span>€{(PLUS_DISCOUNTED_YEARLY / 12).toFixed(2)} a month <span className="text-green-500">{YEARLY_DISCOUNT_PERCENT}% off!</span></span>
-                    : `€${PLUS_DISCOUNTED_MONTHLY} a month `}
+                  {isYearly ? (
+                    <span>
+                      €{(PLUS_DISCOUNTED_YEARLY / 12).toFixed(2)} a month{" "}
+                      <span className="text-green-500">
+                        {YEARLY_DISCOUNT_PERCENT}% off!
+                      </span>
+                    </span>
+                  ) : (
+                    `€${PLUS_DISCOUNTED_MONTHLY} a month `
+                  )}
                 </p>
               )}
             </div>
@@ -290,6 +300,11 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 Try free
               </Button>
             </Link>
+            <div className="w-full">
+            <p className="text-sm text-gray-500 mx-auto w-fit mt-1">
+              and help maintaining the app running!
+            </p>
+            </div>
           </Card>
 
           <div className="flex items-center justify-center gap-2">
