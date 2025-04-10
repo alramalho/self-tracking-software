@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 from pydantic import field_validator
-from typing import Optional, List
+from typing import Optional, List, Literal
 from bson import ObjectId
 from datetime import timedelta
 
@@ -15,6 +15,7 @@ class Activity(BaseModel):
     )
     emoji: str
     created_at: str
+    privacy_settings: Optional[Literal["public", "private", "friends"]] = None
     deleted_at: Optional[str] = None
 
     @field_validator("title")
@@ -36,6 +37,7 @@ class Activity(BaseModel):
         measure: str,
         emoji: str,
         id: Optional[str] = None,
+        privacy_settings: Optional[Literal["public", "private", "friends"]] = None,
     ) -> "Activity":
         return cls(
             id=id or str(ObjectId()),
@@ -43,6 +45,7 @@ class Activity(BaseModel):
             title=title,
             measure=measure,
             emoji=emoji,
+            privacy_settings=privacy_settings,
             created_at=datetime.now(UTC).isoformat(),
         )
 

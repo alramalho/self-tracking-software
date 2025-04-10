@@ -16,12 +16,15 @@ import { logger } from "@/utils/logger";
 import { ThemeColor } from "@/utils/theme";
 import { Properties } from "posthog-js";
 
+export type VisibilityType = "public" | "private" | "friends"
+
 export interface Activity {
   id: string;
   title: string;
   measure: string;
   emoji?: string;
   user_id?: string;
+  privacy_settings?: VisibilityType;
 }
 
 export interface ImageInfo {
@@ -76,7 +79,6 @@ export interface MetricEntry {
   created_at: string;
 }
 
-export type VisibilityType = "public" | "private" | "friends"
 
 export interface User {
   id: string;
@@ -104,7 +106,7 @@ export interface User {
   pending_friend_requests: string[];
   timezone?: string;
   theme_base_color?: ThemeColor;
-  default_activity_visibility?: VisibilityType;
+  default_activity_visibility: VisibilityType;
 }
 
 interface FriendRequest {

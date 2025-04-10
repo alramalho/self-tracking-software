@@ -28,7 +28,7 @@ const visibilityOptions = [
   },
 ] as const;
 
-export default function PrivacySettings({onClose}: {onClose: () => void}) {
+export default function ActivityPrivacySettings({onClose}: {onClose: () => void}) {
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery } = useUserPlan();
   const currendUserDataQuery = useCurrentUserDataQuery();
@@ -71,7 +71,7 @@ export default function PrivacySettings({onClose}: {onClose: () => void}) {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Privacy Settings</h2>
+        <h2 className="text-2xl font-bold mb-2">Activity Privacy Settings</h2>
         <p className="text-sm text-gray-500">
           Choose your default activity visibility
         </p>
