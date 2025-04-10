@@ -103,6 +103,15 @@ async def _load_single_user_data(user: User, current_user: User):
             for activity in activities_future.result()
         ]
         entries = [entry.dict() for entry in entries_future.result()]
+        entries = [
+            entry
+            for entry in entries
+            if users_gateway.is_authorized_to_view_activity(
+                activity_id=entry["activity_id"],
+                viewer_id=current_user.id,
+                owner_id=user.id,
+            )
+        ]
         mood_reports = [report.dict() for report in mood_reports_future.result()]
         plans = [
             exclude_embedding_fields(plan.dict()) for plan in plans_future.result()
@@ -155,22 +164,11 @@ async def _load_single_user_data(user: User, current_user: User):
     activity_map = {activity["id"]: activity for activity in activities}
 
     for plan in plans:
-        plan_activity_ids = set(session["activity_id"] for session in plan["sessions"])
         plan["activities"] = [
             activity_map[activity_id]
-            for activity_id in plan_activity_ids
+            for activity_id in plan["activity_ids"]
             if activity_id in activity_map
         ]
-
-    if current_user.id != user.id and not users_gateway.are_friends(
-        current_user.id, user.id
-    ):
-        logger.info(
-            f"Removing photos from activity entries for {user.id} because {current_user.id} is not friends with them"
-        )
-        # remove photos from activity entries
-        for entry in entries:
-            entry.pop("image", None)
 
     result = {
         "user": {
@@ -524,7 +522,9 @@ async def get_user_profile(username_or_id: str):
         if not user:
             user = users_gateway.get_user_by_safely("id", username_or_id)
             if not user:
-                raise HTTPException(status_code=404, detail=f"User '{username_or_id}' not found")
+                raise HTTPException(
+                    status_code=404, detail=f"User '{username_or_id}' not found"
+                )
 
         user_data = {
             "user": user.dict(
@@ -656,7 +656,9 @@ async def get_user_plan_type(username: str):
 
 
 @router.post("/user/daily-checkin-settings")
-async def update_daily_checkin_settings(request: Request, user: User = Depends(is_clerk_user)):
+async def update_daily_checkin_settings(
+    request: Request, user: User = Depends(is_clerk_user)
+):
     try:
         body = await request.json()
         days = body["days"]
@@ -664,9 +666,11 @@ async def update_daily_checkin_settings(request: Request, user: User = Depends(i
         updated_user = users_gateway.update_fields(
             user.id, {"daily_checkin_settings": {"days": days, "time": time}}
         )
-        return {"message": "Daily checkin settings updated successfully", "user": updated_user}
+        return {
+            "message": "Daily checkin settings updated successfully",
+            "user": updated_user,
+        }
     except Exception as e:
         logger.error(f"Failed to update daily checkin settings: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
-

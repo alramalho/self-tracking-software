@@ -120,7 +120,7 @@ class ActivitiesGateway:
         all_activity_entries = self.get_all_activity_entries_by_user_id(user_id)
         ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.date, reverse=True)
         return ordered_activity_entries[:limit]
-
+    
     def create_activity(self, activity: Activity) -> Activity:
         if len(self.activities_db_gateway.query("id", activity.id)) != 0:
             logger.info(f"Activity {activity.id} ({activity.title}) already exists")

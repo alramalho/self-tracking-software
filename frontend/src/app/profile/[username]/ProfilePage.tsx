@@ -58,7 +58,7 @@ import ProfileSettingsPopover from "@/components/profile/ProfileSettingsPopover"
 import UserSettingsPopover from "@/components/profile/UserSettingsPopover";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
-
+import GenericLoader from "@/components/GenericLoader";
 export type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
 // Utility function to convert TimeRange to number of days
@@ -95,7 +95,8 @@ const ProfilePage: React.FC = () => {
   const currentUserReceivedFriendRequests =
     currentUserQuery.data?.receivedFriendRequests;
   const profileDataQuery = useUserDataQuery(username);
-  const { isFetched: isProfileDataFetched, data: profileData } = profileDataQuery;
+  const { isSuccess: isProfileDataSuccesfullyLoaded, data: profileData } =
+    profileDataQuery;
   const { activityEntries, activities } = profileData || {
     activityEntries: [],
     activities: [],
@@ -318,10 +319,6 @@ const ProfilePage: React.FC = () => {
     return streaks;
   };
 
-  if (isProfileDataFetched && !profileData) {
-    return <div>No profile data available.</div>;
-  }
-
   const user = profileData?.user;
 
   const getUsername = (user: User | null) => {
@@ -347,6 +344,18 @@ const ProfilePage: React.FC = () => {
   const isFriend = () => {
     return currentUser?.friend_ids?.includes(profileData?.user?.id || "");
   };
+
+  if (!isProfileDataSuccesfullyLoaded) {
+    return (
+      <div className="flex flex-col items-center mx-auto my-8">
+        <GenericLoader message="Loading profile..." />
+      </div>
+    );
+  }
+
+  if (isProfileDataSuccesfullyLoaded && !profileData) {
+    return <div>No profile data available.</div>;
+  }
 
   return (
     <div className="flex flex-col items-center min-h-screen p-4">
@@ -621,7 +630,9 @@ const ProfilePage: React.FC = () => {
               )}
               {(!profileData?.plans || profileData?.plans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
-                  You haven&apos;t created any plans yet.
+                  {isOnesOwnProfile
+                    ? "You haven&apos;t created any plans yet."
+                    : `${user?.name} hasn't got any public plans available.`}
                 </div>
               )}
               {activitiesNotInPlans.length > 0 && (
@@ -693,7 +704,9 @@ const ProfilePage: React.FC = () => {
             ) : (
               <div className="text-center text-gray-500 py-8">
                 {activityEntries?.length === 0
-                  ? "You haven't completed any activities yet."
+                  ? isOnesOwnProfile
+                    ? "You haven't completed any activities yet."
+                    : `${user?.name} hasn't got any public activities.`
                   : `${user?.name}'s ${activities.length} past activities photos have expired.`}
               </div>
             )}
