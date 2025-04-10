@@ -9,17 +9,12 @@ import {
   Brain,
   User,
   CreditCard,
+  LockKeyhole,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { twMerge } from "tailwind-merge";
 import { capitalize } from "lodash";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import AISettings from "@/components/AISettings";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
@@ -28,6 +23,7 @@ import ConfirmDialog from "../ConfirmDialog";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
+import PrivacySettings from "./PrivacySettings";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -41,6 +37,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showUserSettings, setShowUserSettings] = useState(false);
+  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
 
   const { userPaidPlanType } = usePaidPlan();
@@ -95,6 +92,15 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
             <Button
               variant="ghost"
               className="w-full flex items-center justify-start px-0 gap-2"
+              onClick={() => setShowPrivacySettings(true)}
+            >
+              <LockKeyhole size={28} />
+              <span>Privacy Settings</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full flex items-center justify-start px-0 gap-2"
               onClick={() => setShowUserSettings(true)}
             >
               <User size={28} />
@@ -138,6 +144,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
           onClose={() => setShowUserSettings(false)}
         >
           <UserProfile routing={"hash"} />
+        </AppleLikePopover>
+
+        <AppleLikePopover
+          open={showPrivacySettings}
+          onClose={() => setShowPrivacySettings(false)}
+        >
+          <PrivacySettings onClose={() => setShowPrivacySettings(false)} />
         </AppleLikePopover>
 
         <AppleLikePopover
