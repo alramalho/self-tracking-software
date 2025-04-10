@@ -95,7 +95,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
               onClick={() => setShowPrivacySettings(true)}
             >
               <LockKeyhole size={28} />
-              <span>Privacy Settings</span>
+              <span>Activity Privacy Settings</span>
             </Button>
 
             <Button
