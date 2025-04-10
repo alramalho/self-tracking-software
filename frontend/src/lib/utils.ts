@@ -10,6 +10,10 @@ export function arrayBufferToBase64Async(arrayBuffer: ArrayBuffer) {
   return base64;
 }
 
+export function capitalizeFirstLetter(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export function formatTimeAgo(date: string | Date) {
   const now = new Date();
   const past = new Date(date);

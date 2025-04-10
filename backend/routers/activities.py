@@ -160,6 +160,7 @@ async def upsert_activity(
         title=activity["title"],
         measure=activity["measure"],
         emoji=activity["emoji"],
+        privacy_settings=activity["privacy_settings"],
     )
     created_activity = activities_gateway.create_activity(new_activity)
     return created_activity

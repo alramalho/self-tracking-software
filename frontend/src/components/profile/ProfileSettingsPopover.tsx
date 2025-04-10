@@ -23,7 +23,7 @@ import ConfirmDialog from "../ConfirmDialog";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import PrivacySettings from "./PrivacySettings";
+import PrivacySettings from "./ActivityPrivacySettings";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;

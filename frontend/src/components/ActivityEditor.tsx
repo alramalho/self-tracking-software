@@ -1,39 +1,72 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Check } from "lucide-react";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
-import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
+import {
+  Activity,
+  useUserPlan,
+  VisibilityType,
+} from "@/contexts/UserPlanContext";
 import ConfirmDialog from "./ConfirmDialog";
 import { EmojiInput } from "./ui/EmojiInput";
+import ActivityPrivacyDropdown from "./ActivityPrivacyDropdown";
+
+export function toReadablePrivacySetting(privacySetting: VisibilityType) {
+  switch (privacySetting) {
+    case "public":
+      return "Everyone";
+    case "private":
+      return "Only me";
+    case "friends":
+      return "Only Friends";
+  }
+}
 
 interface ActivityEditorProps {
   onClose: () => void;
-  onSave: (activity: Activity) => void;
   activity?: Activity;
   open: boolean;
 }
 
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   onClose,
-  onSave,
   activity,
   open,
 }) => {
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
+  const [privacySetting, setPrivacySetting] = useState<VisibilityType>(
+    activity?.privacy_settings ||
+      userData?.user?.default_activity_visibility ||
+      "public"
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
   const api = useApiWithAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activity) {
+      setTitle(activity.title || "");
+      setMeasure(activity.measure || "");
+      setEmoji(activity.emoji || "");
+      setPrivacySetting(activity.privacy_settings || userData?.user?.default_activity_visibility || "public");
+    }
+  }, [activity, userData?.user?.default_activity_visibility]);
+
+  useEffect(() => {
+    console.log({ activity });
+  }, [activity]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -65,13 +98,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       const response = await api.post("/upsert-activity", {
         ...activity,
         emoji,
-        title: title.trim(), // is this the best place to do this?
+        title: title.trim(),
         measure: measure.trim(),
+        privacy_settings: privacySetting,
       });
-      refetchUserData();
+      currentUserDataQuery.refetch();
 
       const savedActivity = response.data;
-      onSave(savedActivity);
       toast.success("Activity saved successfully!");
       onClose();
     } catch (error) {
@@ -121,6 +154,15 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           </h2>
           <div className="flex flex-col justify-between h-full">
             <div className="flex flex-col gap-4">
+              <div className="flex flex-row justify-between items-center gap-2">
+                <span className="text-md h-fit">
+                  Who can see this activity?
+                </span>
+                <ActivityPrivacyDropdown
+                  value={privacySetting}
+                  onChange={setPrivacySetting}
+                />
+              </div>
               <EmojiInput
                 value={emoji}
                 onChange={(emoji) => setEmoji(emoji)}
