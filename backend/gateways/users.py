@@ -257,6 +257,15 @@ class UsersGateway:
         user = self.get_user_by_id(user_id)
         return friend_id in user.friend_ids
 
+    def is_authorized_to_view_activity(self, activity_id: str, viewer_id: str, owner_id: str) -> bool:
+        owner = self.get_user_by_id(owner_id)
+        activity = self.activities_gateway.get_activity_by_id(activity_id)
+        privacy_settings = activity.privacy_settings or owner.default_activity_visibility
+        if privacy_settings == "public":
+            return True
+        if activity.privacy_settings == "friends" and viewer_id in owner.friend_ids:
+            return True
+        return False
 
 if __name__ == "__main__":
     from shared.logger import create_logger
