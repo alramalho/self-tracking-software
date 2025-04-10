@@ -76,6 +76,8 @@ export interface MetricEntry {
   created_at: string;
 }
 
+export type VisibilityType = "public" | "private" | "friends"
+
 export interface User {
   id: string;
   name?: string;
@@ -102,6 +104,7 @@ export interface User {
   pending_friend_requests: string[];
   timezone?: string;
   theme_base_color?: ThemeColor;
+  default_activity_visibility?: VisibilityType;
 }
 
 interface FriendRequest {

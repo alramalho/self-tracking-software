@@ -39,6 +39,7 @@ class User(BaseModel):
     unactivated_email_sent_at: Optional[datetime] = None
     theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"] = "blue"
     stripe_settings: Optional[StripeSettings] = None
+    default_activity_visibility: Literal["public", "private", "friends"] = "public"
 
     @classmethod
     def new(
