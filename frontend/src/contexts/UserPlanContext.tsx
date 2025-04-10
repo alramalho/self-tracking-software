@@ -102,7 +102,6 @@ export interface User {
   pending_friend_requests: string[];
   timezone?: string;
   theme_base_color?: ThemeColor;
-  is_dark_mode?: boolean;
 }
 
 interface FriendRequest {
@@ -272,9 +271,7 @@ export interface UserPlanContextType {
   refetchAllData: () => Promise<UserDataEntry>;
   updateTimezone: () => Promise<void>;
   updateTheme: (color: ThemeColor) => Promise<void>;
-  updateDarkMode: (isDark: boolean) => Promise<void>;
   currentTheme: ThemeColor;
-  isDarkMode: boolean;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(
@@ -779,22 +776,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const updateDarkMode = async (isDark: boolean) => {
-    try {
-      const { data } = await api.patch("/users/me", {
-        is_dark_mode: isDark,
-      });
-      await refetchUserData();
-      return data;
-    } catch (err) {
-      handleAuthError(err);
-      throw err;
-    }
-  };
 
   const currentTheme =
     currentUserDataQuery.data?.user?.theme_base_color || "blue";
-  const isDarkMode = currentUserDataQuery.data?.user?.is_dark_mode || false;
 
   const context = {
     useCurrentUserDataQuery,
@@ -814,9 +798,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     refetchAllData,
     updateTimezone,
     updateTheme,
-    updateDarkMode,
     currentTheme,
-    isDarkMode,
   };
 
   return (
