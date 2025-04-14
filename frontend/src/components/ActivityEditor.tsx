@@ -154,7 +154,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           </h2>
           <div className="flex flex-col justify-between h-full">
             <div className="flex flex-col gap-4">
-              <div className="flex flex-row justify-between items-center gap-2">
+              {/* <div className="flex flex-row justify-between items-center gap-2">
                 <span className="text-md h-fit">
                   Who can see this activity?
                 </span>
@@ -162,7 +162,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   value={privacySetting}
                   onChange={setPrivacySetting}
                 />
-              </div>
+              </div> */}
               <EmojiInput
                 value={emoji}
                 onChange={(emoji) => setEmoji(emoji)}

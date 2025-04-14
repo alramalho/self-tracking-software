@@ -109,7 +109,7 @@ const LogPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative max-w-2xl ">
       <h1 className="text-2xl font-bold">Log Activity</h1>
-      {userData?.user?.default_activity_visibility && (
+      {/* {userData?.user?.default_activity_visibility && (
         <div className="flex items-center justify-between mb-10">
           <div className="relative">
             <span className="text-sm text-gray-500 m-0">
@@ -125,8 +125,8 @@ const LogPage: React.FC = () => {
             className="text-sm text-gray-600"
           />
         </div>
-      )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+      )} */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 my-6">
         {activities.map((activity) => (
           <ActivityCard
             key={activity.id}
