@@ -129,8 +129,9 @@ async def log_activity(
                 )
 
         posthog.capture(
-            "activity_entry_created",
-            {
+            distinct_id=user.id,
+            event="activity_entry_created",
+            properties={
                 "activity_entry_id": entry.id,
                 "user_id": user.id,
             },
