@@ -37,6 +37,7 @@ const LogPage: React.FC = () => {
   >();
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
+  const [activityEditorOpen, setActivityEditorOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>(
     undefined
   );
@@ -55,16 +56,12 @@ const LogPage: React.FC = () => {
   };
 
   const handleAddActivity = () => {
-    setEditingActivity({
-      id: "",
-      title: "",
-      measure: "",
-      emoji: "",
-      privacy_settings: "public",
-    });
+    setActivityEditorOpen(true);
+    setEditingActivity(undefined);
   };
 
   const handleEditActivity = (activity: Activity) => {
+    setActivityEditorOpen(true);
     setEditingActivity(activity);
   };
 
@@ -150,9 +147,9 @@ const LogPage: React.FC = () => {
         </button>
       </div>
       <ActivityEditor
-        open={!!editingActivity}
+        open={activityEditorOpen}
         onClose={() => {
-          setEditingActivity(undefined);
+          setActivityEditorOpen(false);
         }}
         activity={editingActivity}
       />
