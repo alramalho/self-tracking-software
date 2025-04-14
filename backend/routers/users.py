@@ -103,15 +103,6 @@ async def _load_single_user_data(user: User, current_user: User):
             for activity in activities_future.result()
         ]
         entries = [entry.dict() for entry in entries_future.result()]
-        entries = [
-            entry
-            for entry in entries
-            if users_gateway.is_authorized_to_view_activity(
-                activity_id=entry["activity_id"],
-                viewer_id=current_user.id,
-                owner_id=user.id,
-            )
-        ]
         mood_reports = [report.dict() for report in mood_reports_future.result()]
         plans = [
             exclude_embedding_fields(plan.dict()) for plan in plans_future.result()
