@@ -260,6 +260,8 @@ class UsersGateway:
     def is_authorized_to_view_activity(self, activity_id: str, viewer_id: str, owner_id: str) -> bool:
         owner = self.get_user_by_id(owner_id)
         activity = self.activities_gateway.get_activity_by_id(activity_id)
+        if not activity:
+            return False
         privacy_settings = activity.privacy_settings or owner.default_activity_visibility
         if privacy_settings == "public":
             return True
