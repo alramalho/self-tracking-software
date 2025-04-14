@@ -89,14 +89,14 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
               <span>Manage my subscription</span>
             </Button>
 }
-            <Button
+            {/* <Button
               variant="ghost"
               className="w-full flex items-center justify-start px-0 gap-2"
               onClick={() => setShowPrivacySettings(true)}
             >
               <LockKeyhole size={28} />
               <span>Activity Privacy Settings</span>
-            </Button>
+            </Button> */}
 
             <Button
               variant="ghost"
