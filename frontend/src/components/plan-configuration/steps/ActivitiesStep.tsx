@@ -25,10 +25,6 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
     onActivitiesChange(selectedActivities);
   }, [selectedActivities, onActivitiesChange]);
 
-  const handleSaveActivity = (activity: Activity) => {
-    setSelectedActivities((prev) => [...prev, activity]);
-  };
-
   const handleToggleActivity = (activity: Activity) => {
     setSelectedActivities((prev) =>
       prev.some((a) => a.id === activity.id)
@@ -72,7 +68,6 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
       <ActivityEditor
         open={showActivityEditor}
         onClose={() => setShowActivityEditor(false)}
-        onSave={handleSaveActivity}
       />
     </div>
   );
