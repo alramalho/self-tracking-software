@@ -118,6 +118,7 @@ async def send_notification_to_all_users(
     filtered_usernames = body.get("filter_usernames", [])
     if len(filtered_usernames) > 0:
         users = [user for user in users if user.username in filtered_usernames]
+        
     sent = 0
     for user in users:
         notification = Notification.new(
