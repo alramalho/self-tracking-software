@@ -78,7 +78,7 @@ class DynamoDBGateway(DBGateway):
             else:
                 break
 
-        non_deleted_items = [item for item in items if not item.get("deleted", False)]
+        non_deleted_items = [item for item in items if not item.get("deleted", False) and not item.get("deleted_at", None)]
         return non_deleted_items
 
     def write(self, data: dict):
