@@ -21,6 +21,7 @@ WS_CLOSE_CODES = {
     1015: "TLS Handshake",
 }
 
+from gateways.database.dynamodb import DynamoDBGateway
 from services.conversation_service import process_message
 from shared.executor import executor
 from typing import Tuple
