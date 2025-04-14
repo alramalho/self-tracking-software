@@ -36,7 +36,7 @@ class User(BaseModel):
     friend_ids: List[str] = Field(default_factory=list)
     plan_invitations: List[str] = Field(default_factory=list)
     referred_user_ids: List[str] = Field(default_factory=list)
-    unactivated_email_sent_at: Optional[datetime] = None
+    unactivated_email_sent_at: Optional[str] = None
     theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"] = "blue"
     stripe_settings: Optional[StripeSettings] = None
     default_activity_visibility: Literal["public", "private", "friends"] = "public"
