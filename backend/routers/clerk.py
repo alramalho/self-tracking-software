@@ -3,13 +3,16 @@ from gateways.users import UsersGateway
 from entities.user import User
 from fastapi import APIRouter, HTTPException, Request, Depends, status
 from svix.webhooks import Webhook, WebhookVerificationError
-from constants import SVIX_SECRET
+from constants import SVIX_SECRET, ENVIRONMENT
 import traceback
 
 async def is_svix_verified(request: Request) -> bool:
     headers = request.headers
     payload = await request.body()
     logger.info("Verifying svix webhook")
+
+    # if ENVIRONMENT == "dev":
+    #     return True
 
     try:
         webhook = Webhook(SVIX_SECRET)
