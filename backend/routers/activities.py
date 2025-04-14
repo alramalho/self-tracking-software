@@ -16,6 +16,7 @@ import traceback
 from entities.notification import Notification
 from fastapi import Request
 from controllers.plan_controller import PlanController
+from analytics.posthog import posthog
 router = APIRouter()
 
 activities_gateway = ActivitiesGateway()
@@ -127,6 +128,13 @@ async def log_activity(
                     )
                 )
 
+        posthog.capture(
+            "activity_entry_created",
+            {
+                "activity_entry_id": entry.id,
+                "user_id": user.id,
+            },
+        )
         return entry
 
     except Exception as e:
