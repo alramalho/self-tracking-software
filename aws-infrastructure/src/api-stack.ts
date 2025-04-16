@@ -420,6 +420,7 @@ export class ApiStack extends cdk.Stack {
                           ".*(etc/passwd|proc/self|/config\\.|/\\.env).*", // Sensitive files
                           // Block additional endpoints
                           ".*(mcp|sse|v2|openapi|hello\\.world|containers|swagger|backend|api|env|\\.php|_profiler|.venv|info|wp-config|aws|server\\.key|composer\\.lock|dump\\.sh|server\\.info|docker|t4|actuator|/api/v1).*",
+                          ".*(dns-query|query|resolve).*",
                         ],
                         description:
                           "Regex patterns to match exploit scanning attempts",
