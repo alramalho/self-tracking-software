@@ -351,10 +351,41 @@ export class ApiStack extends cdk.Stack {
         },
       },
       rules: [
+        // Rule to allow requests with a specific API token
+        {
+          name: "AllowApiTokenBypass",
+          priority: 0, // Highest priority to run first
+          statement: {
+            byteMatchStatement: {
+              fieldToMatch: {
+                singleHeader: {
+                  name: "x-api-token",
+                },
+              },
+              positionalConstraint: "EXACTLY",
+              // Use an environment variable for the token value for security
+              searchString: process.env.WAF_BYPASS_TOKEN!,
+              textTransformations: [
+                {
+                  priority: 0,
+                  type: "NONE",
+                },
+              ],
+            },
+          },
+          action: {
+            allow: {}, // Allow the request if the token matches
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: `${PASCAL_CASE_PREFIX}-api-token-bypass-metric-${props.environment}`,
+          },
+        },
         // Allow large file uploads for /log-activity endpoint
         {
           name: "AllowLargeFileUploads",
-          priority: 0, // Run this rule first
+          priority: 1, // Adjust priority due to the new rule
           statement: {
             byteMatchStatement: {
               fieldToMatch: {
@@ -391,7 +422,7 @@ export class ApiStack extends cdk.Stack {
         // Block Common Exploit Scanning
         {
           name: "BlockExploitScanning",
-          priority: 1,
+          priority: 2, // Adjust priority due to the new rule
           statement: {
             orStatement: {
               statements: [
@@ -489,7 +520,7 @@ export class ApiStack extends cdk.Stack {
         // Rate limiting rule
         {
           name: "RateLimitRule",
-          priority: 2,
+          priority: 3, // Adjust priority due to the new rule
           statement: {
             rateBasedStatement: {
               limit: 500,
@@ -508,7 +539,7 @@ export class ApiStack extends cdk.Stack {
         // Update the managed rule group to override body size for /log-activity
         {
           name: "AWSManagedRulesCommonRuleSet",
-          priority: 3,
+          priority: 4, // Adjust priority due to the new rule
           overrideAction: { none: {} },
           statement: {
             managedRuleGroupStatement: {
@@ -526,7 +557,7 @@ export class ApiStack extends cdk.Stack {
         // SQL Injection Prevention
         {
           name: "AWSManagedRulesSQLiRuleSet",
-          priority: 4,
+          priority: 5, // Adjust priority due to the new rule
           overrideAction: { none: {} },
           statement: {
             managedRuleGroupStatement: {

@@ -69,6 +69,8 @@ jobs:
           STRIPE_PLUS_PRODUCT_ID: ${{ secrets.STRIPE_PLUS_PRODUCT_ID }}
           STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
           STRIPE_ENDPOINT_SECRET: ${{ secrets.STRIPE_ENDPOINT_SECRET }}
+          WAF_BYPASS_TOKEN: ${{ secrets.WAF_BYPASS_TOKEN }}
+          
           
         run: |
           cd aws-infrastructure
