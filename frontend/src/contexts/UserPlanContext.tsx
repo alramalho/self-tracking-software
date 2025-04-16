@@ -107,6 +107,7 @@ export interface User {
   timezone?: string;
   theme_base_color?: ThemeColor;
   default_activity_visibility: VisibilityType;
+  created_at?: string;
 }
 
 interface FriendRequest {
@@ -426,6 +427,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             if (posthog) {
               posthog.capture("load-user-data", {
                 $set: {
+                  created_at: userData.user?.created_at ? new Date(userData.user.created_at).toISOString() : undefined,
                   email: userData.user?.email,
                   name: userData.user?.name,
                   username: userData.user?.username,
