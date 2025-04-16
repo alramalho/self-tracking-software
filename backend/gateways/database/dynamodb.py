@@ -85,8 +85,13 @@ class DynamoDBGateway(DBGateway):
         # logger.debug(f"DynamoDB: Writing to dynamodb ({self.table_name}) ... {data}")
         if "created_at" not in data:
             data["created_at"] = str(datetime.now(UTC).isoformat())
+        
+        # Remove keys with None values to avoid DynamoDB type errors, especially with GSI keys
+        item_to_write = {k: v for k, v in data.items() if v is not None}
+        
         try:
-            self.table.put_item(ReturnConsumedCapacity="TOTAL", Item=data)
+            # Use the filtered dictionary
+            self.table.put_item(ReturnConsumedCapacity="TOTAL", Item=item_to_write) 
         except ClientError as e:
             # logger.debug("DynamoDB: ❌ Fail putting item on dynamodb")
             raise e
