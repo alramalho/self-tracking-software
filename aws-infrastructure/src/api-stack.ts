@@ -369,7 +369,6 @@ export class ApiStack extends cdk.Stack {
               const match = segment.match(/(.*?\/\.\*).*/);
               return match ? match[1] : segment;
             })
-            .filter((segment): segment is string => segment !== undefined)
         )
       );
 
