@@ -38,6 +38,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   initialMessage: string;
   questionPrefix?: string;
   questionsChecks: QuestionsChecks;
+  submitButtonText?: string;
   onSubmit: (text: string) => Promise<T>;
   shouldRenderChildren?: boolean;
   renderIntermediateComponents?: () => React.ReactNode;
@@ -56,6 +57,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   initialMessage,
   questionPrefix = "Be sure to mention:",
   questionsChecks,
+  submitButtonText = "Send",
   onSubmit,
   renderChildren,
   renderIntermediateComponents,
@@ -309,7 +311,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             disabled={isLoading || !text}
             loading={isLoading}
           >
-            Send
+            {submitButtonText ?? "Send"}
           </Button>
         </div>
 
