@@ -373,7 +373,7 @@ export class ApiStack extends cdk.Stack {
       );
 
       // --- NEW: Split route segments into multiple regex patterns to avoid length limits ---
-      const MAX_REGEX_LENGTH = 230; // Stay under WAF's 512 limit
+      const MAX_REGEX_LENGTH = 200; // Stay under WAF's 512 limit
       const combinedRegexList: string[] = [];
       let currentPatternSegments: string[] = [];
 
