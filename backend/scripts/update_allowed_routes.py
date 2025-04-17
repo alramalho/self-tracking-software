@@ -16,10 +16,14 @@ finally:
     sys.stdout = original_stdout
     sys.stderr = original_stderr
 
+existing_routes = set()
 # this should iterate through all the routes in the app and add them to ../aws-infrastructure/allowed-routes.txt
 with open("../aws-infrastructure/allowed-routes.txt", "w") as f:
     f.write("# this is a generated file, do not edit!\n")
     for route in app.routes:
-        f.write(route.path + "\n")
+        route_path = route.path.strip()
+        if route_path not in existing_routes:
+            f.write(route_path + "\n")
+            existing_routes.add(route_path)
 
 print("✅ Done updating allowed routes")

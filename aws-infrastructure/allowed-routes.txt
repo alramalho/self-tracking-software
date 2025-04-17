@@ -32,9 +32,7 @@
 /upsert-activity
 /activity-entries/{activity_entry_id}
 /activity-entries/{activity_entry_id}/reactions
-/activity-entries/{activity_entry_id}/reactions
 /activities/{activity_id}
-/activity-entries/{activity_entry_id}
 /activity-entries/{activity_entry_id}/comments
 /activity-entries/{activity_entry_id}/comments/{comment_id}
 /generate-invitation-link
@@ -78,7 +76,6 @@
 /run-daily-job
 /admin/public/log-error
 /tally/webhook
-/metrics
 /metrics
 /log-metric
 /metric-entries
