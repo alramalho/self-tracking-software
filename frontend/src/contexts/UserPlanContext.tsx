@@ -83,6 +83,7 @@ export interface MetricEntry {
 export interface User {
   id: string;
   name?: string;
+  profile?: string;
   plan_type: "free" | "plus";
   daily_checkin_settings?: {
     days: (
