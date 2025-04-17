@@ -446,7 +446,7 @@ export class ApiStack extends cdk.Stack {
             byteMatchStatement: {
               fieldToMatch: {
                 singleHeader: {
-                  name: "x-api-token",
+                  Name: "x-api-token",
                 },
               },
               positionalConstraint: "EXACTLY",
