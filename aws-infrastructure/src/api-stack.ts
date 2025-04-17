@@ -346,32 +346,47 @@ export class ApiStack extends cdk.Stack {
         allowedRoutesFilePath,
         "utf-8"
       );
-      allowedRoutesRegex = allowedRoutesContent
-        .split(/\r?\n/) // Split by newline (Windows or Unix)
-        .map((line) => line.trim()) // Remove whitespace
+      // Process routes into regex segments suitable for joining with '|'
+      const routeSegments = allowedRoutesContent
+        .split(/\\r?\\n/)
+        .map((line) => line.trim())
         .filter(
           (line) =>
             line.length > 0 && !line.startsWith("#") && line.startsWith("/")
-        ) // Filter out empty lines, comments, AND ensure it starts with /
+        )
         .map((route) => {
-          // Convert to anchored regex
-          const escapedRoute = route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escape regex special chars
-          return `^${escapedRoute}$`;
+          // Convert route parameters like {param} to regex ([^/]+)
+          let segment = route.replace(/\\{[^}]+\\}/g, "[^/]+");
+          // Escape remaining regex special characters *within the segment*
+          // Need to escape characters that are special within regex AND within the URI itself if necessary
+          // Minimal escaping for URI path segments joined by '|': . * + ? ^ $ { } ( ) | [ ] \\ /
+          // We already handled {} and replaced them. We need ^ and $ later.
+          // We need to escape . + * ? ( ) | [ ] \\ /
+          segment = segment.replace(/[.+?()|[\]\\/]/g, "\\$&"); // Corrected escaping
+          // Note: No ^$ anchors here, they will wrap the final combined pattern
+          return segment;
         });
+
+      // Combine segments into one pattern: ^(segment1|segment2|...)$
+      let combinedRegex = "";
+      if (routeSegments.length > 0) {
+        combinedRegex = `^(${routeSegments.join("|")})$`;
+      } else {
+        // If no routes, create a pattern that matches nothing
+        combinedRegex = `^NEVER_MATCH_${cdk.Aws.STACK_ID}$`;
+        console.warn(
+          `WARN: No routes found in ${allowedRoutesFilePath}. WAF will block everything except requests matching other allow rules.`
+        );
+      }
+
+      // Assign the single combined regex to the list (WAF expects a list)
+      allowedRoutesRegex = [combinedRegex]; // Now contains just ONE pattern
     } catch (error) {
       console.error(
         `Error reading allowed routes file at ${allowedRoutesFilePath}:`,
         error
       );
       throw new Error(`Failed to read routes file: ${allowedRoutesFilePath}`);
-    }
-
-    if (allowedRoutesRegex.length === 0) {
-      console.warn(
-        `WARN: No routes found in ${allowedRoutesFilePath}. WAF will block everything except requests matching other allow rules.`
-      );
-      // Consider adding a dummy pattern that won't match anything if WAF requires non-empty RegexPatternSet
-      // allowedRoutesRegex.push(`^NEVER_MATCH_${cdk.Aws.STACK_ID}$`);
     }
 
     // --- Create Regex Pattern Set for Allowed Routes ---
