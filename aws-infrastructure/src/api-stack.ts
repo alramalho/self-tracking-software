@@ -12,6 +12,7 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
 import * as path from "path";
+import * as fs from "fs";
 import {
   CAMEL_CASE_PREFIX,
   KEBAB_CASE_PREFIX,
@@ -333,9 +334,73 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
+    // --- Read Allowed Routes ---
+    const allowedRoutesFilePath = path.join(
+      __dirname,
+      "..",
+      "allowed-routes.txt"
+    ); // Path relative to src/api-stack.ts
+    let allowedRoutesRegex: string[] = [];
+    try {
+      const allowedRoutesContent = fs.readFileSync(
+        allowedRoutesFilePath,
+        "utf-8"
+      );
+      allowedRoutesRegex = allowedRoutesContent
+        .split(/\r?\n/) // Split by newline (Windows or Unix)
+        .map((line) => line.trim()) // Remove whitespace
+        .filter(
+          (line) =>
+            line.length > 0 && !line.startsWith("#") && line.startsWith("/")
+        ) // Filter out empty lines, comments, AND ensure it starts with /
+        .map((route) => {
+          // Convert to anchored regex
+          const escapedRoute = route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escape regex special chars
+          return `^${escapedRoute}$`;
+        });
+    } catch (error) {
+      console.error(
+        `Error reading allowed routes file at ${allowedRoutesFilePath}:`,
+        error
+      );
+      throw new Error(`Failed to read routes file: ${allowedRoutesFilePath}`);
+    }
+
+    if (allowedRoutesRegex.length === 0) {
+      console.warn(
+        `WARN: No routes found in ${allowedRoutesFilePath}. WAF will block everything except requests matching other allow rules.`
+      );
+      // Consider adding a dummy pattern that won't match anything if WAF requires non-empty RegexPatternSet
+      // allowedRoutesRegex.push(`^NEVER_MATCH_${cdk.Aws.STACK_ID}$`);
+    }
+
+    // --- Create Regex Pattern Set for Allowed Routes ---
+    const allowedRoutesPatternSet = new wafv2.CfnRegexPatternSet(
+      this,
+      "AllowedRoutesPatternSet",
+      {
+        name: `${PASCAL_CASE_PREFIX}-allowed-routes-set-${props.environment}-${cdk.Aws.REGION}`.substring(
+          0,
+          128
+        ), // Ensure name uniqueness and length
+        scope: "REGIONAL",
+        regularExpressionList: allowedRoutesRegex,
+        description: "Regex patterns for allowed URI paths read from file",
+      }
+    );
+
     // Create WAF Web ACL
     const webAcl = new wafv2.CfnWebACL(this, "WebACL", {
-      defaultAction: { allow: {} },
+      defaultAction: {
+        block: {
+          // *** CHANGE: Default action is now BLOCK ***
+          customResponse: {
+            // Optional: Provide a custom response for blocked requests
+            responseCode: 403,
+            customResponseBodyKey: "blocked-by-waf",
+          },
+        },
+      },
       scope: "REGIONAL",
       visibilityConfig: {
         cloudWatchMetricsEnabled: true,
@@ -346,12 +411,19 @@ export class ApiStack extends cdk.Stack {
         "blocked-by-waf": {
           contentType: "APPLICATION_JSON",
           content: JSON.stringify({
-            error: "Access denied by WAF",
+            error: "Access denied by WAF", // Generic block message
+          }),
+        },
+        "access-denied-route": {
+          // Optional: Specific message if needed for route blocks
+          contentType: "APPLICATION_JSON",
+          content: JSON.stringify({
+            error: "Access denied: Route not allowed",
           }),
         },
       },
       rules: [
-        // Rule to allow requests with a specific API token
+        // Rule 1 (Priority 0): Allow requests with a specific API token (Bypass)
         {
           name: "AllowApiTokenBypass",
           priority: 0, // Highest priority to run first
@@ -382,26 +454,54 @@ export class ApiStack extends cdk.Stack {
             metricName: `${PASCAL_CASE_PREFIX}-api-token-bypass-metric-${props.environment}`,
           },
         },
-        // Allow large file uploads for /log-activity endpoint
+        // Rule 2 (Priority 1): Allow requests matching the routes file
+        {
+          name: "AllowListedRoutes",
+          priority: 1, // Runs after token bypass
+          statement: {
+            regexPatternSetReferenceStatement: {
+              arn: allowedRoutesPatternSet.attrArn, // Reference the pattern set
+              fieldToMatch: {
+                uriPath: {}, // Match against the URI path
+              },
+              textTransformations: [
+                {
+                  priority: 0,
+                  type: "NONE", // No transformation needed for exact path match
+                },
+              ],
+            },
+          },
+          action: {
+            allow: {}, // Allow if the path matches
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: `${PASCAL_CASE_PREFIX}-allow-listed-routes-metric-${props.environment}`,
+          },
+        },
+        // Rule 3 (Priority 5): Allow large file uploads for /log-activity endpoint (Re-added)
         {
           name: "AllowLargeFileUploads",
-          priority: 1, // Adjust priority due to the new rule
+          priority: 5, // Priority after general allow, before rate limit/managed rules
           statement: {
             byteMatchStatement: {
               fieldToMatch: {
                 uriPath: {},
               },
               positionalConstraint: "EXACTLY",
-              searchString: "/log-activity",
+              searchString: "/log-activity", // Specific path for this rule
               textTransformations: [
                 {
-                  priority: 1,
+                  priority: 0, // Use 0 here, consistent with other uriPath matches
                   type: "NONE",
                 },
               ],
             },
           },
           action: {
+            // Keep original action, likely interacts with size restrictions
             allow: {
               customRequestHandling: {
                 insertHeaders: [
@@ -419,108 +519,10 @@ export class ApiStack extends cdk.Stack {
             metricName: `${PASCAL_CASE_PREFIX}-large-file-uploads-metric-${props.environment}`,
           },
         },
-        // Block Common Exploit Scanning
-        {
-          name: "BlockExploitScanning",
-          priority: 2, // Adjust priority due to the new rule
-          statement: {
-            orStatement: {
-              statements: [
-                {
-                  regexPatternSetReferenceStatement: {
-                    arn: new wafv2.CfnRegexPatternSet(
-                      this,
-                      "ExploitScanningPatterns",
-                      {
-                        scope: "REGIONAL",
-                        regularExpressionList: [
-                          // Block any attempt to access web-related files since this is an API
-                          ".*(favicon\\.ico|robots\\.txt|sitemap\\.xml|\\.html|\\.htm|\\.css|\\.js).*",
-                          // Admin panels and consoles
-                          ".*(admin|console|wp-admin|administrator|phpmyadmin|teorema505|geoserver).*",
-                          // Common file extensions and paths that shouldn't exist
-                          ".*\\.(php|asp|aspx|jsp|env|git|svn|htaccess|htpasswd|sql|bak|old|backup).*",
-                          // Common paths that shouldn't be accessed
-                          ".*(Core/Skin/Login\\.aspx|wp-login|wp-content|joomla|drupal|myadmin).*",
-                          // Common exploit attempts - properly escaped
-                          ".*(eval\\(|exec\\(|system\\(|phpinfo\\(|shell_exec\\(|passthru\\(|base64_decode\\().*",
-                          // Common vulnerability scanners and tools
-                          ".*(nmap|nikto|sqlmap|scanbot|acunetix|netsparker|dirbuster|gobuster|wpscan).*",
-                          // Additional suspicious paths
-                          ".*(\\.\\.//|\\.\\./|//\\.\\./).*", // Path traversal attempts
-                          ".*(etc/passwd|proc/self|/config\\.|/\\.env).*", // Sensitive files
-                          // Block additional endpoints
-                          ".*(mcp|sse|v2|openapi|hello\\.world|containers|swagger|backend|api|env|\\.php|_profiler|.venv|info|wp-config|aws|server\\.key|composer\\.lock|dump\\.sh|server\\.info|docker|t4|actuator|/api/v1).*",
-                          ".*(dns-query|query|resolve).*",
-                        ],
-                        description:
-                          "Regex patterns to match exploit scanning attempts",
-                      }
-                    ).attrArn,
-                    fieldToMatch: {
-                      uriPath: {},
-                    },
-                    textTransformations: [
-                      {
-                        priority: 1,
-                        type: "URL_DECODE",
-                      },
-                      {
-                        priority: 2,
-                        type: "LOWERCASE",
-                      },
-                    ],
-                  },
-                },
-                {
-                  regexPatternSetReferenceStatement: {
-                    arn: new wafv2.CfnRegexPatternSet(
-                      this,
-                      "ExploitScanningUserAgents",
-                      {
-                        scope: "REGIONAL",
-                        regularExpressionList: [
-                          // Common malicious user agents
-                          ".*(zgrab|python-requests|curl|wget|scanbot|nmap|nikto|sqlmap|masscan|libwww-perl|postman|insomnia).*",
-                        ],
-                        description:
-                          "Regex patterns to match malicious user agents",
-                      }
-                    ).attrArn,
-                    fieldToMatch: {
-                      singleHeader: {
-                        name: "user-agent",
-                      },
-                    },
-                    textTransformations: [
-                      {
-                        priority: 1,
-                        type: "LOWERCASE",
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-          action: {
-            block: {
-              customResponse: {
-                responseCode: 403,
-                customResponseBodyKey: "blocked-by-waf",
-              },
-            },
-          },
-          visibilityConfig: {
-            sampledRequestsEnabled: true,
-            cloudWatchMetricsEnabled: true,
-            metricName: `${PASCAL_CASE_PREFIX}-exploit-scanning-metric-${props.environment}`,
-          },
-        },
-        // Rate limiting rule
+        // Rule 4 (Priority 10): Rate limiting rule (Priority Adjusted)
         {
           name: "RateLimitRule",
-          priority: 3, // Adjust priority due to the new rule
+          priority: 10, // Lower priority than allow rules
           statement: {
             rateBasedStatement: {
               limit: 500,
@@ -528,7 +530,13 @@ export class ApiStack extends cdk.Stack {
             },
           },
           action: {
-            block: {},
+            block: {
+              // Block if rate limit exceeded
+              customResponse: {
+                responseCode: 429, // Too Many Requests
+                customResponseBodyKey: "blocked-by-waf", // Reuse generic block message
+              },
+            },
           },
           visibilityConfig: {
             sampledRequestsEnabled: true,
@@ -536,15 +544,16 @@ export class ApiStack extends cdk.Stack {
             metricName: `${PASCAL_CASE_PREFIX}-rate-limit-metric-${props.environment}`,
           },
         },
-        // Update the managed rule group to override body size for /log-activity
+        // Rule 5 (Priority 20): AWS Managed Rules - Common Rule Set (Priority Adjusted)
         {
           name: "AWSManagedRulesCommonRuleSet",
-          priority: 4, // Adjust priority due to the new rule
-          overrideAction: { none: {} },
+          priority: 20, // Lower priority
+          overrideAction: { none: {} }, // Use default actions of the rule group
           statement: {
             managedRuleGroupStatement: {
               vendorName: "AWS",
               name: "AWSManagedRulesCommonRuleSet",
+              // Keep exclusion if large uploads on *allowed* paths are needed, otherwise remove
               excludedRules: [{ name: "SizeRestrictions_BODY" }],
             },
           },
@@ -554,11 +563,11 @@ export class ApiStack extends cdk.Stack {
             metricName: `${PASCAL_CASE_PREFIX}-common-rules-metric-${props.environment}`,
           },
         },
-        // SQL Injection Prevention
+        // Rule 6 (Priority 30): AWS Managed Rules - SQL Injection Rule Set (Priority Adjusted)
         {
           name: "AWSManagedRulesSQLiRuleSet",
-          priority: 5, // Adjust priority due to the new rule
-          overrideAction: { none: {} },
+          priority: 30, // Lower priority
+          overrideAction: { none: {} }, // Use default actions
           statement: {
             managedRuleGroupStatement: {
               vendorName: "AWS",
