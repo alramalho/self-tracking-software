@@ -40,6 +40,7 @@ import { PastWeekLoggingDynamicUI } from "@/components/PastWeekLoggingDynamicUI"
 import { ProgressDots } from "@/components/ProgressDots";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { AccountabilityStepCard } from "@/components/AccountabilityStepCard";
+import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
 type OtherProfile = {
   user: {
     id: string;
@@ -193,69 +194,23 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 }
 
 function ProfileSetupStep({ onNext }: { onNext: () => void }) {
-  const questionsChecks = {
-    "Who you are (your age, occupation, etc.)":
-      "What does the user do or likes to do.",
-    "What do you want to achieve (your vision)":
-      "Does the user share any thoughts about their aspirations?",
-  };
-  const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
-  const api = useApiWithAuth();
   const posthog = usePostHog();
 
   useEffect(() => {
     posthog?.capture("onboarding-profile-setup-view");
   }, [posthog]);
 
-  const renderChildrenContent = useCallback(
-    (data: { question_checks: Record<string, boolean>; message: string }) => (
-      <div>
-        <Button
-          disabled={!allQuestionsAnswered}
-          className="w-full"
-          onClick={() => {
-            posthog?.capture("onboarding-profile-setup-complete", {
-              skipped: false,
-            });
-            onNext();
-          }}
-        >
-          Next
-        </Button>
-      </div>
-    ),
-    [allQuestionsAnswered, onNext]
-  );
 
   return (
     <div className="w-lg max-w-full mx-auto">
       <ProgressDots current={2} max={5} />
-      <DynamicUISuggester<{
-        question_checks: Record<string, boolean>;
-        message: string;
-      }>
-        id="profile-setup"
-        questionPrefix="I'd like to know"
-        initialMessage="Tell me a bit about yourself."
-        placeholder="Voice messages are better suited for this step"
-        questionsChecks={questionsChecks}
-        onSubmit={async (text) => {
-          const response = await api.post(
-            "/ai/update-user-profile-from-questions",
-            {
-              message: text,
-              question_checks: questionsChecks,
-            }
-          );
+      <ProfileSetupDynamicUI onSubmit={() => {
+        posthog?.capture("onboarding-profile-setup-complete", {
+          skipped: false,
+        });
+        onNext();
+      }} />
 
-          setAllQuestionsAnswered(
-            Object.values(response.data.question_checks).every((value) => value)
-          );
-
-          return response.data;
-        }}
-        renderChildren={renderChildrenContent}
-      />
       <Button
         variant="ghost"
         className="w-full mt-6 underline"
