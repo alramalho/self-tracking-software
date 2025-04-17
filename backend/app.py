@@ -184,7 +184,7 @@ def read_root():
     logger.info("Health check")
     return {"status": "ok"}
 
-@app.get("/exception4")
+@app.get("/exception5")
 def read_root():
     raise HTTPException(status_code=500, detail="test")
     return {"status": "ok"}
