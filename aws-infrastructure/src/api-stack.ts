@@ -364,21 +364,48 @@ export class ApiStack extends cdk.Stack {
           return segment;
         });
 
-      // Combine segments into one pattern: ^(segment1|segment2|...)$;
-      let combinedRegex = "";
-      if (routeSegments.length > 0) {
-        combinedRegex = `^(${routeSegments.join("|")})$`;
-        console.log("Combined regex:", combinedRegex);
-      } else {
-        // If no routes, create a pattern that matches nothing
-        combinedRegex = `^NEVER_MATCH_${cdk.Aws.STACK_ID}$`;
+      // --- NEW: Split route segments into multiple regex patterns to avoid length limits ---
+      const MAX_REGEX_LENGTH = 500; // Stay under WAF's 512 limit
+      const combinedRegexList: string[] = [];
+      let currentPatternSegments: string[] = [];
+
+      for (const segment of routeSegments) {
+        // Calculate length if this segment is added to the current pattern
+        const testPattern = `^(${[...currentPatternSegments, segment].join(
+          "|"
+        )})$`;
+
+        if (
+          currentPatternSegments.length > 0 &&
+          testPattern.length > MAX_REGEX_LENGTH
+        ) {
+          // Current pattern is full, finalize it
+          combinedRegexList.push(`^(${currentPatternSegments.join("|")})$`);
+          // Start new pattern with the current segment
+          currentPatternSegments = [segment];
+        } else {
+          // Add segment to the current pattern
+          currentPatternSegments.push(segment);
+        }
+      }
+
+      // Add the last pattern if it has segments
+      if (currentPatternSegments.length > 0) {
+        combinedRegexList.push(`^(${currentPatternSegments.join("|")})$`);
+      }
+
+      // Handle case where no routes were found at all
+      if (combinedRegexList.length === 0 && routeSegments.length === 0) {
         console.warn(
           `WARN: No routes found in ${allowedRoutesFilePath}. WAF will block everything except requests matching other allow rules.`
         );
+        // Add a dummy pattern that matches nothing if WAF requires a non-empty list
+        combinedRegexList.push(`^NEVER_MATCH_${cdk.Aws.STACK_ID}$`);
       }
-      // console.log("Combined regex:", combinedRegex); // Removed log
-      // Assign the single combined regex to the list (WAF expects a list)
-      allowedRoutesRegex = [combinedRegex]; // Now contains just ONE pattern
+      // --- END NEW SECTION ---
+
+      // Assign the list of combined regex patterns
+      allowedRoutesRegex = combinedRegexList;
     } catch (error) {
       console.error(
         `Error reading allowed routes file at ${allowedRoutesFilePath}:`,
@@ -397,6 +424,7 @@ export class ApiStack extends cdk.Stack {
           128
         ), // Ensure name uniqueness and length
         scope: "REGIONAL",
+        // Use the list of combined regex patterns generated above
         regularExpressionList: allowedRoutesRegex,
         description: "Regex patterns for allowed URI paths read from file",
       }
