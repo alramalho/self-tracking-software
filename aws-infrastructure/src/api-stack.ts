@@ -350,19 +350,28 @@ export class ApiStack extends cdk.Stack {
 
       const lines = allowedRoutesContent.split(/\r?\n/);
 
-      const routeSegments = lines
-        .map((line) => line.trim())
-        .filter(
-          (line) =>
-            line.length > 0 && !line.startsWith("#") && line.startsWith("/")
+      const routeSegments: string[] = Array.from(
+        new Set(
+          lines
+            .map((line) => line.trim())
+            .filter(
+              (line) =>
+                line.length > 0 && !line.startsWith("#") && line.startsWith("/")
+            )
+            .map((route) => {
+              // Escape regex chars EXCEPT curly braces initially
+              let segment = route.replace(/[.*+?^$()|[\\]\\]/g, "\\$&"); // Leave {} alone
+              // Now replace literal {param} with the unescaped regex .*
+              segment = segment.replace(/\{[^}]+\}/g, ".*"); // Changed [^/]+ to .*
+              return segment;
+            })
+            .map((segment) => {
+              const match = segment.match(/(.*?\/\.\*).*/);
+              return match ? match[1] : segment;
+            })
+            .filter((segment): segment is string => segment !== undefined)
         )
-        .map((route) => {
-          // Escape regex chars EXCEPT curly braces initially
-          let segment = route.replace(/[.*+?^$()|[\\]\\]/g, "\\$&"); // Leave {} alone
-          // Now replace literal {param} with the unescaped regex .*
-          segment = segment.replace(/\{[^}]+\}/g, ".*"); // Changed [^/]+ to .*
-          return segment;
-        });
+      );
 
       // --- NEW: Split route segments into multiple regex patterns to avoid length limits ---
       const MAX_REGEX_LENGTH = 230; // Stay under WAF's 512 limit
@@ -393,16 +402,6 @@ export class ApiStack extends cdk.Stack {
       if (currentPatternSegments.length > 0) {
         combinedRegexList.push(`^(${currentPatternSegments.join("|")})$`);
       }
-
-      // Handle case where no routes were found at all
-      if (combinedRegexList.length === 0 && routeSegments.length === 0) {
-        console.warn(
-          `WARN: No routes found in ${allowedRoutesFilePath}. WAF will block everything except requests matching other allow rules.`
-        );
-        // Add a dummy pattern that matches nothing if WAF requires a non-empty list
-        combinedRegexList.push(`^NEVER_MATCH_${cdk.Aws.STACK_ID}$`);
-      }
-      // --- END NEW SECTION ---
 
       // Assign the list of combined regex patterns
       console.log("Combined Regex List:", combinedRegexList);
