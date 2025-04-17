@@ -17,12 +17,13 @@ finally:
     sys.stderr = original_stderr
 
 existing_routes = set()
+excluded_routes = set(["/docs", "/openapi.json", "/docs/oauth2-redirect","/redoc"])
 # this should iterate through all the routes in the app and add them to ../aws-infrastructure/allowed-routes.txt
 with open("../aws-infrastructure/allowed-routes.txt", "w") as f:
     f.write("# this is a generated file, do not edit!\n")
     for route in app.routes:
         route_path = route.path.strip()
-        if route_path not in existing_routes:
+        if route_path not in existing_routes and route_path not in excluded_routes:
             f.write(route_path + "\n")
             existing_routes.add(route_path)
 
