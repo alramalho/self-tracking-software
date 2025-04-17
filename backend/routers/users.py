@@ -639,7 +639,7 @@ async def update_theme(body: ThemeUpdate, user: User = Depends(is_clerk_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{username}/get-user-plan-type")
+@router.get("/user/{username}/get-user-plan-type")
 async def get_user_plan_type(username: str):
     user = users_gateway.get_user_by_safely("username", username)
     if not user:

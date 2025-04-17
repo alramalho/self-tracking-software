@@ -23,7 +23,7 @@
 /load-messages
 /update-timezone
 /update-theme
-/{username}/get-user-plan-type
+/user/{username}/get-user-plan-type
 /user/daily-checkin-settings
 /activities
 /activity-entries
