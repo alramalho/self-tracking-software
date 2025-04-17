@@ -1,8 +1,4 @@
 # this is a generated file, do not edit!
-/openapi.json
-/docs
-/docs/oauth2-redirect
-/redoc
 /clerk/webhook
 /user-health
 /user
