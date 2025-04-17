@@ -25,7 +25,7 @@ export function usePaidPlan() {
       queryKey: ["userPlanType", username],
       queryFn: async () => {
         const { data } = await api.get<{ plan_type: PaidPlanType }>(
-          `/${username}/get-user-plan-type`
+          `user/${username}/get-user-plan-type`
         );
         return data.plan_type;
       },
