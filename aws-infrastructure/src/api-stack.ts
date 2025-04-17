@@ -359,13 +359,13 @@ export class ApiStack extends cdk.Stack {
         .map((route) => {
           // Escape regex chars EXCEPT curly braces initially
           let segment = route.replace(/[.*+?^$()|[\\]\\]/g, "\\$&"); // Leave {} alone
-          // Now replace literal {param} with the unescaped regex [^/]+
-          segment = segment.replace(/\{[^}]+\}/g, "[^/]+");
+          // Now replace literal {param} with the unescaped regex .*
+          segment = segment.replace(/\{[^}]+\}/g, ".*"); // Changed [^/]+ to .*
           return segment;
         });
 
       // --- NEW: Split route segments into multiple regex patterns to avoid length limits ---
-      const MAX_REGEX_LENGTH = 420; // Stay under WAF's 512 limit
+      const MAX_REGEX_LENGTH = 230; // Stay under WAF's 512 limit
       const combinedRegexList: string[] = [];
       let currentPatternSegments: string[] = [];
 
@@ -405,6 +405,7 @@ export class ApiStack extends cdk.Stack {
       // --- END NEW SECTION ---
 
       // Assign the list of combined regex patterns
+      console.log("Combined Regex List:", combinedRegexList);
       allowedRoutesRegex = combinedRegexList;
     } catch (error) {
       console.error(
