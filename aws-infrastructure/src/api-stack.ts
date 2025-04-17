@@ -346,31 +346,29 @@ export class ApiStack extends cdk.Stack {
         allowedRoutesFilePath,
         "utf-8"
       );
-      // Process routes into regex segments suitable for joining with '|'
-      const routeSegments = allowedRoutesContent
-        .split(/\\r?\\n/)
+      // console.log("Raw allowed routes content:\n", allowedRoutesContent); // Keep or remove as needed
+
+      const lines = allowedRoutesContent.split(/\r?\n/);
+
+      const routeSegments = lines
         .map((line) => line.trim())
         .filter(
           (line) =>
             line.length > 0 && !line.startsWith("#") && line.startsWith("/")
         )
         .map((route) => {
-          // Convert route parameters like {param} to regex ([^/]+)
-          let segment = route.replace(/\\{[^}]+\\}/g, "[^/]+");
-          // Escape remaining regex special characters *within the segment*
-          // Need to escape characters that are special within regex AND within the URI itself if necessary
-          // Minimal escaping for URI path segments joined by '|': . * + ? ^ $ { } ( ) | [ ] \\ /
-          // We already handled {} and replaced them. We need ^ and $ later.
-          // We need to escape . + * ? ( ) | [ ] \\ /
-          segment = segment.replace(/[.+?()|[\]\\/]/g, "\\$&"); // Corrected escaping
-          // Note: No ^$ anchors here, they will wrap the final combined pattern
+          // Escape regex chars EXCEPT curly braces initially
+          let segment = route.replace(/[.*+?^$()|[\\]\\]/g, "\\$&"); // Leave {} alone
+          // Now replace literal {param} with the unescaped regex [^/]+
+          segment = segment.replace(/\{[^}]+\}/g, "[^/]+");
           return segment;
         });
 
-      // Combine segments into one pattern: ^(segment1|segment2|...)$
+      // Combine segments into one pattern: ^(segment1|segment2|...)$;
       let combinedRegex = "";
       if (routeSegments.length > 0) {
         combinedRegex = `^(${routeSegments.join("|")})$`;
+        console.log("Combined regex:", combinedRegex);
       } else {
         // If no routes, create a pattern that matches nothing
         combinedRegex = `^NEVER_MATCH_${cdk.Aws.STACK_ID}$`;
@@ -378,7 +376,7 @@ export class ApiStack extends cdk.Stack {
           `WARN: No routes found in ${allowedRoutesFilePath}. WAF will block everything except requests matching other allow rules.`
         );
       }
-
+      // console.log("Combined regex:", combinedRegex); // Removed log
       // Assign the single combined regex to the list (WAF expects a list)
       allowedRoutesRegex = [combinedRegex]; // Now contains just ONE pattern
     } catch (error) {
