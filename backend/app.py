@@ -71,7 +71,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 response_body += chunk
 
             # Log the response body and traceback for errors
-            if response.status_code >= 400 and response.status_code != 401 and not (request.method == "POST" and request.url.path == "/"):
+            if response.status_code >= 400 and response.status_code != 401 and response.status_code != 404:
                 error_message = f"Error response body: {response_body.decode()}"
                 user = await get_user_from_request(request)
                 user_id = user.id if user else "unknown"
