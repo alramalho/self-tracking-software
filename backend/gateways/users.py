@@ -151,18 +151,18 @@ class UsersGateway:
                         f"Error updating activity entry {activity_entry.id}: {e}"
                     )
 
-        if "profile" in fields:
-            def compute_timeline_task():
-                self.user_vector_database.upsert_record(
-                    text=fields["profile"],
-                    identifier=user.id,
-                    metadata={"user_id": user.id},
-                )
-                logger.info(f"User {user.id} ({user.name}) profile vector created")
+        # if "profile" in fields:
+        #     async def compute_timeline_task():
+        #         self.user_vector_database.upsert_record(
+        #             text=fields["profile"],
+        #             identifier=user.id,
+        #             metadata={"user_id": user.id},
+        #         )
+        #         logger.info(f"User {user.id} ({user.name}) profile vector created")
 
-                self.reccomendations_gateway.compute_recommended_users(user)
-                
-            asyncio.create_task(compute_timeline_task())
+        #         await self.reccomendations_gateway.compute_recommended_users(user)
+
+        #     asyncio.create_task(compute_timeline_task())
 
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)
