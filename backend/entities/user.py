@@ -17,6 +17,7 @@ class User(BaseModel):
     name: Optional[str] = None
     profile: Optional[str] = None
     picture: Optional[str] = None
+    age: Optional[int] = None
     username: Optional[str] = None
     timezone: Optional[str] = None
     clerk_id: Optional[str] = None

@@ -797,6 +797,7 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 ...,
                 description="The highly condensed highly clear depiction of the user profile based on the input questions.",
             )
+            age: Optional[int] = Field("The user's age, if mentioned.")
 
         class QuestionAnalysisSchema(BaseModel):
             question: str = Field(
@@ -874,7 +875,7 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
 
         # Update user profile
         updated_user = users_gateway.update_fields(
-            user.id, {"profile": profile_response.user_profile}
+            user.id, {"profile": profile_response.user_profile, "age": profile_response.age}
         )
 
         # Write AI response to memory
