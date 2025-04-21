@@ -16,7 +16,7 @@ import { logger } from "@/utils/logger";
 import { ThemeColor } from "@/utils/theme";
 import { Properties } from "posthog-js";
 
-export type VisibilityType = "public" | "private" | "friends"
+export type VisibilityType = "public" | "private" | "friends";
 
 export interface Activity {
   id: string;
@@ -78,7 +78,6 @@ export interface MetricEntry {
   date: string;
   created_at: string;
 }
-
 
 export interface User {
   id: string;
@@ -256,6 +255,7 @@ export interface UserData {
 export interface UserPlanContextType {
   useCurrentUserDataQuery: () => UseQueryResult<UserDataEntry>;
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
+  useRecommendedUsersQuery: () => UseQueryResult<User[]>;
   useMultipleUsersDataQuery: (
     usernames: string[]
   ) => UseQueryResult<Record<string, UserDataEntry>>;
@@ -428,7 +428,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             if (posthog) {
               posthog.capture("load-user-data", {
                 $set: {
-                  created_at: userData.user?.created_at ? new Date(userData.user.created_at).toISOString() : undefined,
+                  created_at: userData.user?.created_at
+                    ? new Date(userData.user.created_at).toISOString()
+                    : undefined,
                   email: userData.user?.email,
                   name: userData.user?.name,
                   username: userData.user?.username,
@@ -436,10 +438,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
                   plan_groups_count: transformedData.planGroups.length,
                   referral_count: userData.user?.referred_user_ids?.length || 0,
                   activities_count: transformedData.activities.length,
-                  activity_entries_count: transformedData.activityEntries.length,
+                  activity_entries_count:
+                    transformedData.activityEntries.length,
                   friend_count: userData.user?.friend_ids?.length || 0,
                   plan_type: userData.user?.plan_type,
-                }
+                },
               });
               posthog.capture("load-user-data-latency", latencyProperties);
             }
@@ -550,6 +553,19 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
+    return query;
+  };
+
+  const useRecommendedUsersQuery = () => {
+    const query = useQuery({
+      queryKey: ["recommendedUsers"],
+      queryFn: async () => {
+        const response = await api.get("/get-recommended-users");
+        return response.data as User[];
+      },
+      enabled: isSignedIn && isLoaded,
+      staleTime: 1000 * 60 * 5,
+    });
     return query;
   };
 
@@ -784,13 +800,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-
   const currentTheme =
     currentUserDataQuery.data?.user?.theme_base_color || "blue";
 
   const context = {
     useCurrentUserDataQuery,
     useUserDataQuery,
+    useRecommendedUsersQuery,
     useMultipleUsersDataQuery,
     useMetricsAndEntriesQuery,
     useIsMetricLoggedToday,

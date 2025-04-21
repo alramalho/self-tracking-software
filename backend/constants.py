@@ -9,6 +9,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 REPLICATE_TTS_MODEL = "replicate:jaaari/kokoro-82m:f559560eb822dc509045f3921a1921234918b91739db4bf3daab2169b71c7a13"
 LLM_MODEL="gpt-4o-mini"
@@ -70,3 +71,7 @@ PASCAL_CASE_PREFIX = "TrackingSoftware"
 CAMEL_CASE_PREFIX = "trackingSoftware"
 SNAKE_CASE_PREFIX = "tracking_software"
 KEBAB_CASE_PREFIX = "tracking-software"
+
+PINECONE_INDEX_NAME = "tracking-software-index"
+# PINECONE_INDEX_HOST = "https://tracking-software-index-a01d20c.svc.aped-4627-b74a.pinecone.io" #prod
+PINECONE_INDEX_HOST = "https://tracking-software-index-dev-a01d20c.svc.aped-4627-b74a.pinecone.io" #dev

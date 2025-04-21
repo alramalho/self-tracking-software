@@ -507,7 +507,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
       <div className="text-center">
         <ScanFace size={100} className="mx-auto mb-4 text-blue-500" />
         <h2 className="text-xl font-bold mb-4">
-          As a last step you need to get an accountability partner.
+          Great! Let&apos;s find you an accountability partner.
         </h2>
         <p className="text-gray-600 mb-6">
           You have several options to get started:
