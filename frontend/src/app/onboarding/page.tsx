@@ -200,16 +200,17 @@ function ProfileSetupStep({ onNext }: { onNext: () => void }) {
     posthog?.capture("onboarding-profile-setup-view");
   }, [posthog]);
 
-
   return (
     <div className="w-lg max-w-full mx-auto">
       <ProgressDots current={2} max={5} />
-      <ProfileSetupDynamicUI onSubmit={() => {
-        posthog?.capture("onboarding-profile-setup-complete", {
-          skipped: false,
-        });
-        onNext();
-      }} />
+      <ProfileSetupDynamicUI
+        onSubmit={() => {
+          posthog?.capture("onboarding-profile-setup-complete", {
+            skipped: false,
+          });
+          onNext();
+        }}
+      />
 
       <Button
         variant="ghost"
@@ -295,7 +296,50 @@ function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
   );
 }
 
+function AccountabilityQuestionStep({
+  onResult,
+}: {
+  onResult: (wantsPartner: boolean) => void;
+}) {
+
+  return (
+    <div className="space-y-6 w-full max-w-md mx-auto text-center">
+      <ProgressDots current={5} max={5} />
+      <ScanFace size={100} className="mx-auto mb-4 text-blue-500" />
+      <h2 className="text-2xl font-bold mb-4">
+        Are you looking for an accountability partner?
+      </h2>
+      <p className="text-gray-600 mb-6">
+        Having an accountability partner increases your chances of success by up
+        to 95%!
+      </p>
+      <div className="flex gap-4 justify-center">
+        <Button
+          className="w-full"
+          onClick={() => {
+            onResult(true);
+          }}
+        >
+          Yes, find me a partner!
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            onResult(false);
+          }}
+        >
+          No, not right now
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
+  const [wantsPartner, setWantsPartner] = useState<boolean | undefined>(
+    undefined
+  );
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const queryClient = useQueryClient();
@@ -433,15 +477,29 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
 
   const handleFinishClick = () => {
     // Show accountability popover if user has no friends and is on free plan
-    if (!currentUser?.friend_ids?.length && userPaidPlanType === "free") {
-      setAccountabilityPopoverOpen(true);
-    } else {
-      posthog?.capture("onboarding-accountability-partner-complete", {
-        skipped: false,
-      });
-      onNext();
-    }
+    posthog?.capture("onboarding-accountability-partner-complete", {
+      skipped: false,
+      wants_partner: wantsPartner,
+    });
+    onNext();
   };
+
+  useEffect(() => {
+    if (wantsPartner == false) {
+      handleFinishClick()
+    }
+  }, [wantsPartner]);
+
+  if (wantsPartner === undefined) {
+    return (
+      <AccountabilityQuestionStep
+        onResult={(result) => {
+          api.post("/update-user", { looking_for_ap: result });
+          setWantsPartner(result)
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 w-full max-w-md mx-auto">
@@ -655,7 +713,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
         <UserSearch onUserClick={(user) => toggleUserInQueue(user)} />
       </AppleLikePopover>
 
-      <AppleLikePopover
+      {/* <AppleLikePopover
         open={accountabilityPopoverOpen}
         onClose={() => setAccountabilityPopoverOpen(false)}
       >
@@ -691,7 +749,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
             </div>
           </Link>
         </div>
-      </AppleLikePopover>
+      </AppleLikePopover> */}
     </div>
   );
 }
