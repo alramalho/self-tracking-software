@@ -109,5 +109,13 @@ export class DbStack extends cdk.Stack {
       writableBy: props.writableBy,
       readableBy: props.readableBy,
     });
+
+    // Recommendations Table
+    new DynamoDbTableConstruct(this, "RecommendationsTable", {
+      name: `${SNAKE_CASE_PREFIX}_recommendations_${props.environment}`,
+      indexFields: ["user_id"],
+      writableBy: props.writableBy,
+      readableBy: props.readableBy,
+    });
   }
 }
