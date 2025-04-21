@@ -19,6 +19,7 @@ from urllib import parse
 import traceback
 from gateways.aws.ses import SESGateway, get_email_template_string
 from analytics.posthog import posthog
+from gateways.recommendations import RecommendationsGateway
 from gateways.messages import MessagesGateway
 from pytz import all_timezones
 from pydantic import BaseModel
@@ -33,6 +34,7 @@ notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
 ses_gateway = SESGateway()
 messages_gateway = MessagesGateway()
+recommendations_gateway = RecommendationsGateway()  
 
 
 @router.get("/user-health")
@@ -243,6 +245,12 @@ async def search_username(username: str, user: User = Depends(is_clerk_user)):
 async def get_friend_count(user: User = Depends(is_clerk_user)):
     friend_count = users_gateway.get_friend_count(user.id)
     return {"friendCount": friend_count}
+
+
+@router.get("/get-recommended-users")
+async def get_recommended_users(user: User = Depends(is_clerk_user)):
+    recommended_users = recommendations_gateway.get_all_user_reccomendations_by_user_id(user.id)
+    return [user.dict() for user in recommended_users]
 
 
 @router.get("/user/{username}")

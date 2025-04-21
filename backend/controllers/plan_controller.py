@@ -1,29 +1,30 @@
-from gateways.database.mongodb import MongoDBGateway
 from gateways.plan_invitations import PlanInvitationsGateway
-from entities.plan import Plan, PlanSession, PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup
+from entities.plan import (
+    Plan,
+    PlanSession,
+)
 from entities.plan_group import PlanGroupMember
 from entities.activity import Activity, ActivityEntry
 from entities.plan_invitation import PlanInvitation
 from ai.llm import ask_schema
 from gateways.database.dynamodb import DynamoDBGateway
-from typing import List, Optional, Dict, Any, Tuple, Literal, Union
-from pydantic import BaseModel, Field, create_model
+from typing import List, Optional, Dict, Any, Tuple, Literal
+from gateways.plan_groups import PlanGroupsGateway
+from pydantic import BaseModel, Field
 from shared.utils import count_weeks_between_dates
 from gateways.activities import ActivitiesGateway, ActivityAlreadyExistsException
 from gateways.users import UsersGateway
 from datetime import datetime, timedelta, UTC
 from entities.user import User
-import concurrent.futures
+from gateways.vector_database.pinecone import PineconeVectorDB
 from loguru import logger
 from bson import ObjectId
-from entities.activity import SAMPLE_SEARCH_ACTIVITY
 from copy import deepcopy
-from gateways.plan_groups import PlanGroupsGateway
-import traceback
-from shared.utils import days_ago
+
 
 class PlanMilestoneProgress(BaseModel):
     """Response entity for milestone progress"""
+
     milestone_id: str
     description: str
     date: str
@@ -31,16 +32,20 @@ class PlanMilestoneProgress(BaseModel):
     is_completed: bool
     criteria_progress: List[Dict[str, Any]]
 
+
 class NextMilestoneResponse(BaseModel):
     """Response entity for the next milestone endpoint"""
+
     plan_id: str
     next_milestone: Optional[PlanMilestoneProgress]
+
 
 class PlanActivityUpdate(BaseModel):
     id: str
     title: str
     measure: str
     emoji: str
+
 
 class GeneratedPlanUpdate(BaseModel):
     goal: str
@@ -53,6 +58,7 @@ class GeneratedPlanUpdate(BaseModel):
     outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
     times_per_week: Optional[int] = None
 
+
 class PlanController:
     def __init__(self):
         self.db_gateway = DynamoDBGateway("plans")
@@ -60,24 +66,34 @@ class PlanController:
         self.users_gateway = UsersGateway()
         self.plan_invitation_gateway = PlanInvitationsGateway()
         self.plan_groups_gateway = PlanGroupsGateway()
-        logger.log("CONTROLLERS", "PlanController initialized")
+        self.vector_database = PineconeVectorDB(namespace="plans")
 
     def get_readable_plan(self, plan: Plan) -> str:
         # Get unique activities for this plan
-        activities = [self.activities_gateway.get_activity_by_id(aid) for aid in plan.activity_ids]
+        activities = [
+            self.activities_gateway.get_activity_by_id(aid) for aid in plan.activity_ids
+        ]
         activity_names = [a.title for a in activities if a]
-        
+
         # Get current week's activity entries
         today = datetime.now(UTC)
-        week_start = (today - timedelta(days=today.weekday() + 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = (today - timedelta(days=today.weekday() + 1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
         week_end = week_start + timedelta(days=6)
-        
+
         # Check if all activities were completed this week
         all_activity_entries_for_plan: List[ActivityEntry] = []
         for activity_id in plan.activity_ids:
-            all_activity_entries_for_plan.extend(self.activities_gateway.get_all_activity_entries_by_activity_id(activity_id))
+            all_activity_entries_for_plan.extend(
+                self.activities_gateway.get_all_activity_entries_by_activity_id(
+                    activity_id
+                )
+            )
 
-        number_of_weeks_old = count_weeks_between_dates(datetime.fromisoformat(plan.created_at), datetime.now(UTC))
+        number_of_weeks_old = count_weeks_between_dates(
+            datetime.fromisoformat(plan.created_at), datetime.now(UTC)
+        )
 
         # Group activity entries by date and count at most 1 per day
         daily_completions = set()
@@ -90,51 +106,66 @@ class PlanController:
         if plan.outline_type == "times_per_week":
             planned_count = plan.times_per_week
         else:  # specific
-            planned_count = len([session for session in plan.sessions 
-                               if week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end])
+            planned_count = len(
+                [
+                    session
+                    for session in plan.sessions
+                    if week_start
+                    <= datetime.fromisoformat(session.date).replace(tzinfo=UTC)
+                    <= week_end
+                ]
+            )
 
         activities_str = "', '".join(activity_names)
         completion_str = f"This week the user had planned {planned_count} activities and completed {len(daily_completions)}"
-        
+
         return f"'{plan.goal}' is {number_of_weeks_old} weeks old - with activities '{activities_str}'. {completion_str}"
 
     def get_readable_plans(self, user_id: str) -> str:
         logger.log("CONTROLLERS", f"Getting readable plans for user {user_id}")
-        
+
         user = self.users_gateway.get_user_by_id(user_id)
         if not user:
             return []
-            
+
         plans = self.get_all_user_active_plans(user)
         if not plans:
             return []
 
-        return "\n".join([f"{i+1}. {self._get_readable_plan(plan)}" for i, plan in enumerate(plans)])
+        return "\n".join(
+            [f"{i+1}. {self._get_readable_plan(plan)}" for i, plan in enumerate(plans)]
+        )
 
     def create_plan(self, plan: Plan) -> Plan:
         logger.log("CONTROLLERS", f"Creating plan for user {plan.user_id}: {plan.goal}")
         self.db_gateway.write(plan.dict())
+        self.vector_database.upsert_record(
+            text=self.get_readable_plan(plan),
+            identifier=plan.id,
+            metadata={"user_id": plan.user_id},
+        )
         return plan
 
     def _process_generated_plan_activities(
-        self,
-        user_id: str,
-        generated_plan_data: GeneratedPlanUpdate
+        self, user_id: str, generated_plan_data: GeneratedPlanUpdate
     ) -> List[Activity]:
         """Helper method to process and create activities from generated plan data"""
         new_plan_activities = []
         # Get existing user activities for matching
         user_activities = self.activities_gateway.get_all_activities_by_user_id(user_id)
-        
+
         for activity in generated_plan_data.activities:
             # Check if activity already exists (matching title and measure)
             existing_activity = next(
-                (a for a in user_activities 
-                 if a.title.lower() == activity.title.lower() 
-                 and a.measure.lower() == activity.measure.lower()),
-                None
+                (
+                    a
+                    for a in user_activities
+                    if a.title.lower() == activity.title.lower()
+                    and a.measure.lower() == activity.measure.lower()
+                ),
+                None,
             )
-            
+
             if existing_activity:
                 # Use existing activity ID
                 activity.id = existing_activity.id
@@ -159,8 +190,7 @@ class PlanController:
         return new_plan_activities
 
     def _create_plan_sessions(
-        self,
-        generated_plan_data: GeneratedPlanUpdate
+        self, generated_plan_data: GeneratedPlanUpdate
     ) -> List[PlanSession]:
         """Helper method to create plan sessions from generated plan data"""
         return [
@@ -175,7 +205,12 @@ class PlanController:
         for plan_id in user.plan_ids:
             plan = self.get_plan(plan_id)
             current_date = datetime.now(UTC)
-            if plan and plan.finishing_date and current_date > datetime.fromisoformat(plan.finishing_date).replace(tzinfo=UTC):
+            if (
+                plan
+                and plan.finishing_date
+                and current_date
+                > datetime.fromisoformat(plan.finishing_date).replace(tzinfo=UTC)
+            ):
                 continue
             if plan is not None:
                 plans.append(plan)
@@ -194,7 +229,9 @@ class PlanController:
         if finishing_date:
             current_date = datetime.now(UTC)
             try:
-                finishing_date = datetime.strptime(finishing_date, "%Y-%m-%d").replace(tzinfo=UTC)
+                finishing_date = datetime.strptime(finishing_date, "%Y-%m-%d").replace(
+                    tzinfo=UTC
+                )
             except ValueError:
                 finishing_date = datetime.fromisoformat(finishing_date)
             return (finishing_date - current_date).days // 7 + 1
@@ -203,6 +240,7 @@ class PlanController:
     def update_plan(self, plan: Plan) -> Plan:
         logger.log("CONTROLLERS", f"Updating plan: {plan.id}")
         self.db_gateway.write(plan.dict())
+        self.vector_database.upsert_record(text=self.get_readable_plan(plan), identifier=plan.id, metadata={"user_id": plan.user_id})
         return plan
 
     def get_plans(self, plan_ids: List[str]) -> List[Plan]:
@@ -267,15 +305,17 @@ class PlanController:
 
         recipient = self.users_gateway.get_user_by_id(invitation.recipient_id)
 
-
-       # skip if user already has a plan with the same group
+        # skip if user already has a plan with the same group
         all_plans = self.get_all_user_active_plans(recipient)
         inviters_plan = self.get_plan(invitation.plan_id)
         for plan in all_plans:
-            if plan.plan_group_id == inviters_plan.plan_group_id and plan.id != inviters_plan.id:
+            if (
+                plan.plan_group_id == inviters_plan.plan_group_id
+                and plan.id != inviters_plan.id
+            ):
                 logger.info(f"User already has a plan with the same group: {plan.id}")
                 raise ValueError("User already has a plan with the same group")
-            
+
         # Update sessions with associated activities
         new_sessions = []
         for session in inviters_plan.sessions:
@@ -370,21 +410,30 @@ class PlanController:
 
     def is_week_finisher_of_plan(self, activity_entry_id: str, plan: Plan) -> bool:
         # Get the activity entry
-        activity_entry = self.activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        activity_entry = self.activities_gateway.get_activity_entry_by_id(
+            activity_entry_id
+        )
         if not activity_entry:
             return False
 
         # Get the current week's start and end dates
-        activity_entry_date = datetime.fromisoformat(activity_entry.date).replace(tzinfo=UTC)
+        activity_entry_date = datetime.fromisoformat(activity_entry.date).replace(
+            tzinfo=UTC
+        )
         week_start = activity_entry_date - timedelta(days=activity_entry_date.weekday())
         week_end = week_start + timedelta(days=6)
 
         # Filter sessions for current week and matching activity
         week_sessions = [
-            session for session in plan.sessions 
-            if (week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end)
+            session
+            for session in plan.sessions
+            if (
+                week_start
+                <= datetime.fromisoformat(session.date).replace(tzinfo=UTC)
+                <= week_end
+            )
         ]
-        
+
         if not week_sessions:
             return False
 
@@ -392,19 +441,32 @@ class PlanController:
         required_sessions = len(week_sessions)
 
         # Get all activity entries for this week
-        week_entries = self.activities_gateway.activity_entries_db_gateway.query("activity_id", activity_entry.activity_id)
-        week_entries = [ActivityEntry(**entry) for entry in week_entries if entry["date"] >= week_start.isoformat() and entry["date"] <= week_end.isoformat()]
-        
-        # Sort entries by creation time to check if current entry is the last one
-        sorted_entries = sorted(week_entries, key=lambda x: x['created_at'])
-        
-        # Check if this entry is the last one and completes all required sessions
-        return (len(sorted_entries) == required_sessions and 
-                sorted_entries[-1]['id'] == activity_entry_id)
+        week_entries = self.activities_gateway.activity_entries_db_gateway.query(
+            "activity_id", activity_entry.activity_id
+        )
+        week_entries = [
+            ActivityEntry(**entry)
+            for entry in week_entries
+            if entry["date"] >= week_start.isoformat()
+            and entry["date"] <= week_end.isoformat()
+        ]
 
-    def is_week_finisher_of_any_plan(self, activity_entry_id: str) -> Tuple[bool, Optional[str]]:
+        # Sort entries by creation time to check if current entry is the last one
+        sorted_entries = sorted(week_entries, key=lambda x: x["created_at"])
+
+        # Check if this entry is the last one and completes all required sessions
+        return (
+            len(sorted_entries) == required_sessions
+            and sorted_entries[-1]["id"] == activity_entry_id
+        )
+
+    def is_week_finisher_of_any_plan(
+        self, activity_entry_id: str
+    ) -> Tuple[bool, Optional[str]]:
         # Get the activity entry
-        activity_entry = self.activities_gateway.get_activity_entry_by_id(activity_entry_id)
+        activity_entry = self.activities_gateway.get_activity_entry_by_id(
+            activity_entry_id
+        )
         if not activity_entry:
             return False, None
 
@@ -420,7 +482,7 @@ class PlanController:
                     break
 
         plans = filtered_plans
-        
+
         for plan in plans:
             if self.is_week_finisher_of_plan(activity_entry_id, plan):
                 return True, plan.goal
@@ -438,16 +500,22 @@ class PlanController:
                 if session.activity_id == activity_id:
                     filtered_plans.append(plan)
                     break
-                
+
         active_plans = filtered_plans
-        
+
         return len(active_plans) > 0
 
-    def get_readable_plans_and_sessions(self, user_id: str, past_day_limit: int = None, future_day_limit: int = None, plans: List[Plan] = None, ) -> str:
+    def get_readable_plans_and_sessions(
+        self,
+        user_id: str,
+        past_day_limit: int = None,
+        future_day_limit: int = None,
+        plans: List[Plan] = None,
+    ) -> str:
         """
         Get readable plans and their sessions for a user within the specified time period.
         Handles both specific schedule plans and times-per-week plans.
-        
+
         Args:
             user_id: The ID of the user
             past_day_limit: Number of past days to include sessions from (inclusive)
@@ -466,12 +534,16 @@ class PlanController:
         readable_plans: List[str] = []
         for index, plan in enumerate(plans):
             plan_header = f"Plan {index + 1} (with ID '{plan.id}'): Name: '{plan.goal}' (ends {datetime.fromisoformat(plan.finishing_date).strftime('%A, %b %d') if plan.finishing_date else 'no end date'})"
-            
+
             if plan.outline_type == "specific":
-                plan_text = self._get_readable_specific_plan(plan, past_day_limit, future_day_limit)
+                plan_text = self._get_readable_specific_plan(
+                    plan, past_day_limit, future_day_limit
+                )
             else:  # times_per_week type
-                plan_text = self._get_readable_times_per_week_plan(plan, past_day_limit, future_day_limit)
-                
+                plan_text = self._get_readable_times_per_week_plan(
+                    plan, past_day_limit, future_day_limit
+                )
+
             readable_plans.append(f"{plan_header}\n{plan_text}")
 
         if not readable_plans:
@@ -481,57 +553,76 @@ class PlanController:
                 return "No recent sessions found in active plans"
             else:
                 return "No upcoming sessions found in active plans"
-            
+
         return "\n\n".join(readable_plans)
 
-    def _get_readable_specific_plan(self, plan: Plan, past_day_limit: Optional[int], future_day_limit: Optional[int]) -> str:
+    def _get_readable_specific_plan(
+        self, plan: Plan, past_day_limit: Optional[int], future_day_limit: Optional[int]
+    ) -> str:
         """Helper method to format specific schedule plans"""
-        current_date = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-        
+        current_date = datetime.now(UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
         # Filter sessions based on time limits
         filtered_sessions = [
-            session for session in plan.sessions
-            if (past_day_limit is None or 
-                (current_date - datetime.fromisoformat(session.date).replace(
-                    tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0)).days <= past_day_limit)
-            and
-            (future_day_limit is None or 
-                (datetime.fromisoformat(session.date).replace(
-                    tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0) - current_date).days <= future_day_limit)
+            session
+            for session in plan.sessions
+            if (
+                past_day_limit is None
+                or (
+                    current_date
+                    - datetime.fromisoformat(session.date).replace(
+                        tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0
+                    )
+                ).days
+                <= past_day_limit
+            )
+            and (
+                future_day_limit is None
+                or (
+                    datetime.fromisoformat(session.date).replace(
+                        tzinfo=UTC, hour=0, minute=0, second=0, microsecond=0
+                    )
+                    - current_date
+                ).days
+                <= future_day_limit
+            )
         ]
-        
+
         # Get activities for sessions
         activity_ids = {session.activity_id for session in filtered_sessions}
         activities = {
-            aid: self.activities_gateway.get_activity_by_id(aid)
-            for aid in activity_ids
+            aid: self.activities_gateway.get_activity_by_id(aid) for aid in activity_ids
         }
-        
+
         past_sessions: List[str] = []
         future_sessions: List[str] = []
-        
+
         for session in filtered_sessions:
             activity = activities.get(session.activity_id)
             if not activity:
                 continue
-            
+
             session_date = datetime.fromisoformat(session.date).replace(tzinfo=UTC)
             formatted_date = session_date.strftime("%A, %b %d")
             session_str = f"  - {formatted_date} - {activity.title} (ID: {activity.id}) ({session.quantity} {activity.measure})"
-            
+
             if session_date <= current_date:
                 past_sessions.append(session_str)
             else:
                 future_sessions.append(session_str)
-            
+
         plan_text = []
         if past_sessions:
-            plan_text.append(f"Sessions that were scheduled for the last {past_day_limit} days (not this are not done sessions):")
+            plan_text.append(
+                f"Sessions that were scheduled for the last {past_day_limit} days (not this are not done sessions):"
+            )
             if len(past_sessions) > 0:
                 plan_text.extend(past_sessions)
             else:
                 plan_text.append("No past sessions found")
-        
+
         if future_sessions:
             if past_sessions:
                 plan_text.append("")
@@ -541,42 +632,54 @@ class PlanController:
                 plan_text.extend(future_sessions)
             else:
                 plan_text.append("No future sessions found")
-        
+
         return "\n".join(plan_text)
 
-    def _get_readable_times_per_week_plan(self, plan: Plan, past_day_limit: Optional[int], future_day_limit: Optional[int]) -> str:
+    def _get_readable_times_per_week_plan(
+        self, plan: Plan, past_day_limit: Optional[int], future_day_limit: Optional[int]
+    ) -> str:
         """Helper method to format times-per-week plans"""
-        current_date = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-        
+        current_date = datetime.now(UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
         # Get unique activities from sessions
         activity_ids = {session.activity_id for session in plan.sessions}
         activities = {
-            aid: self.activities_gateway.get_activity_by_id(aid)
-            for aid in activity_ids
+            aid: self.activities_gateway.get_activity_by_id(aid) for aid in activity_ids
         }
-        
+
         # Format activities list
         activity_list = []
         for activity in activities.values():
             if activity:
                 activity_list.append(f"  - {activity.title} (ID: {activity.id})")
-        
+
         plan_text = []
-        plan_text.append(f"This is a flexible plan targeting {plan.times_per_week} sessions per week.")
+        plan_text.append(
+            f"This is a flexible plan targeting {plan.times_per_week} sessions per week."
+        )
         plan_text.append("Available activities:")
         if len(activity_list) > 0:
             plan_text.extend(activity_list)
         else:
             plan_text.append("No activities found")
-        
+
         # Add past week completion info if requested
         if past_day_limit:
             week_start = current_date - timedelta(days=current_date.weekday())
-            completed_sessions = sum(1 for session in plan.sessions 
-                                   if datetime.fromisoformat(session.date).replace(tzinfo=UTC) >= week_start 
-                                   and datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= current_date)
-            plan_text.append(f"\nThis week's progress: {completed_sessions}/{plan.times_per_week} sessions completed")
-        
+            completed_sessions = sum(
+                1
+                for session in plan.sessions
+                if datetime.fromisoformat(session.date).replace(tzinfo=UTC)
+                >= week_start
+                and datetime.fromisoformat(session.date).replace(tzinfo=UTC)
+                <= current_date
+            )
+            plan_text.append(
+                f"\nThis week's progress: {completed_sessions}/{plan.times_per_week} sessions completed"
+            )
+
         return "\n".join(plan_text)
 
     def generate_sessions(
@@ -658,20 +761,26 @@ class PlanController:
             for session in week.sessions:
                 # Find matching activity
                 activity = next(
-                    (a for a in activities 
-                     if a.title.lower() == session.activity_name.lower()),
-                    None
+                    (
+                        a
+                        for a in activities
+                        if a.title.lower() == session.activity_name.lower()
+                    ),
+                    None,
                 )
-                
+
                 if activity:
-                    sessions.append(PlanSession(
-                        date=session.date,
-                        activity_id=activity.id,
-                        descriptive_guide=session.descriptive_guide,
-                        quantity=session.quantity,
-                    ))
+                    sessions.append(
+                        PlanSession(
+                            date=session.date,
+                            activity_id=activity.id,
+                            descriptive_guide=session.descriptive_guide,
+                            quantity=session.quantity,
+                        )
+                    )
 
         return sessions
+
 
 if __name__ == "__main__":
     from shared.logger import create_logger

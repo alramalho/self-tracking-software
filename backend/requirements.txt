@@ -1,3 +1,6 @@
+pinecone
+numpy
+geopy
 openai
 fastapi
 uvicorn

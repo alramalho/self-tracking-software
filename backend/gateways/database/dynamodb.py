@@ -6,6 +6,33 @@ from loguru import logger
 from constants import ENVIRONMENT, SNAKE_CASE_PREFIX
 import boto3
 from typing import Dict, Any, List, Optional, Union
+from decimal import Decimal
+
+
+def _convert_decimals_to_floats(item: Any) -> Any:
+    if isinstance(item, list):
+        return [_convert_decimals_to_floats(i) for i in item]
+    elif isinstance(item, dict):
+        return {
+            k: _convert_decimals_to_floats(v) for k, v in item.items()
+        }
+    elif isinstance(item, Decimal):
+        return float(item)
+    else:
+        return item
+
+
+def _convert_floats_to_decimals(item: Any) -> Any:
+    if isinstance(item, list):
+        return [_convert_floats_to_decimals(i) for i in item]
+    elif isinstance(item, dict):
+        return {
+            k: _convert_floats_to_decimals(v) for k, v in item.items()
+        }
+    elif isinstance(item, float):
+        return Decimal(str(item))
+    else:
+        return item
 
 
 class DynamoDBGateway(DBGateway):
@@ -59,7 +86,7 @@ class DynamoDBGateway(DBGateway):
                 break
 
         non_deleted_items = [item for item in items if not item.get("deleted", False)]
-        return non_deleted_items
+        return _convert_decimals_to_floats(non_deleted_items)
 
     def query(self, key_name: str, key_value: str):
         items = []
@@ -84,15 +111,22 @@ class DynamoDBGateway(DBGateway):
             for item in items
             if not item.get("deleted", False) and not item.get("deleted_at", None)
         ]
-        return non_deleted_items
+        return _convert_decimals_to_floats(non_deleted_items)
 
     def write(self, data: dict):
         # logger.debug(f"DynamoDB: Writing to dynamodb ({self.table_name}) ... {data}")
         if "created_at" not in data:
             data["created_at"] = str(datetime.now(UTC).isoformat())
 
+        # Recursively convert floats to Decimals
+        processed_data = _convert_floats_to_decimals(data)
+
         # Remove keys with None values to avoid DynamoDB type errors, especially with GSI keys
-        item_to_write = {k: v for k, v in data.items() if v is not None}
+        item_to_write = {}
+        for k, v in processed_data.items():
+            if v is not None:
+                # The conversion is already done recursively
+                item_to_write[k] = v
 
         try:
             # Use the filtered dictionary
@@ -315,7 +349,7 @@ class DynamoDBGateway(DBGateway):
                     response = self.table.scan(**params)
                 items.extend(response.get("Items", []))
 
-            return [item for item in items if not item.get("deleted", False)]
+            return _convert_decimals_to_floats([item for item in items if not item.get("deleted", False)])
 
         except ClientError as e:
             logger.error(f"Failed to query items: {str(e)}")
@@ -335,13 +369,11 @@ class DynamoDBGateway(DBGateway):
 
 
 if __name__ == "__main__":
-    db = DynamoDBGateway("users")
+    db = DynamoDBGateway("recommendations")
     print(
         db.query_by_criteria(
             {
-                "id": {
-                    "$in": ["68062aa8067d78a8aec56aa5", "670fb420158ba86def604e67"]
-                }
+                "user_id": "670fb420158ba86def604e67"
             }
         )
     )

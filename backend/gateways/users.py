@@ -8,7 +8,11 @@ from entities.friend_request import FriendRequest
 from gateways.plan_groups import PlanGroupsGateway
 from gateways.friend_requests import FriendRequestGateway
 from gateways.activities import ActivitiesGateway
-
+from gateways.vector_database.pinecone import PineconeVectorDB
+import asyncio
+from entities.recommendation import Recommendation
+from gateways.recommendations import RecommendationsGateway
+from pydantic import BaseModel
 
 class UserDoesNotExistException(Exception):
     pass
@@ -25,6 +29,9 @@ class UsersGateway:
         self.friend_request_gateway = FriendRequestGateway()
         self.plan_groups_gateway = PlanGroupsGateway()
         self.activities_gateway = ActivitiesGateway()
+        self.user_vector_database = PineconeVectorDB(namespace="users")
+        self.plans_vector_database = PineconeVectorDB(namespace="plans")
+        self.reccomendations_gateway = RecommendationsGateway()
 
     def get_all_users(self) -> list[User]:
         users = [User(**data) for data in self.db_gateway.scan()]
@@ -39,12 +46,16 @@ class UsersGateway:
             user = User(**data[0])
             if not user.deleted:
                 return user
+            
+    def get_all_by_ids(self, ids: List[str]) -> List[User]:
+        data = self.db_gateway.query_by_criteria({"id": {"$in": ids}})
+        return [User(**d) for d in data]
 
     def get_all_users_by_safely(self, keyname: str, keyvalue: str) -> List[User]:
         data = self.db_gateway.query(keyname, keyvalue)
         users = [User(**d) for d in data]
         return [user for user in users if not user.deleted]
-    
+
     def get_all_users_by_regex(self, keyname: str, pattern: str) -> List[User]:
         data = self.db_gateway.regex_query(keyname, pattern)
         users = [User(**d) for d in data]
@@ -92,11 +103,13 @@ class UsersGateway:
         user = self.get_user_by_id(user_id)
 
         self._propagate_relevant_fields(user, fields)
+
         for field_name, new_value in fields.items():
             if not hasattr(user, field_name):
                 raise Exception(f"User does not have field {field_name}")
 
             setattr(user, field_name, new_value)
+
         self.db_gateway.write(user.dict())
         logger.info(f"User {user.id} ({user.name}) fields {fields} updated")
         return User(**user.dict())
@@ -134,7 +147,22 @@ class UsersGateway:
                 try:
                     self.activities_gateway.update_activity_entry(activity_entry)
                 except Exception as e:
-                    logger.error(f"Error updating activity entry {activity_entry.id}: {e}")
+                    logger.error(
+                        f"Error updating activity entry {activity_entry.id}: {e}"
+                    )
+
+        if "profile" in fields:
+            def compute_timeline_task():
+                self.user_vector_database.upsert_record(
+                    text=fields["profile"],
+                    identifier=user.id,
+                    metadata={"user_id": user.id},
+                )
+                logger.info(f"User {user.id} ({user.name}) profile vector created")
+
+                self.reccomendations_gateway.compute_recommended_users(user)
+                
+            asyncio.create_task(compute_timeline_task())
 
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)
@@ -257,17 +285,22 @@ class UsersGateway:
         user = self.get_user_by_id(user_id)
         return friend_id in user.friend_ids
 
-    def is_authorized_to_view_activity(self, activity_id: str, viewer_id: str, owner_id: str) -> bool:
+    def is_authorized_to_view_activity(
+        self, activity_id: str, viewer_id: str, owner_id: str
+    ) -> bool:
         owner = self.get_user_by_id(owner_id)
         activity = self.activities_gateway.get_activity_by_id(activity_id)
         if not activity:
             return False
-        privacy_settings = activity.privacy_settings or owner.default_activity_visibility
+        privacy_settings = (
+            activity.privacy_settings or owner.default_activity_visibility
+        )
         if privacy_settings == "public":
             return True
         if activity.privacy_settings == "friends" and viewer_id in owner.friend_ids:
             return True
         return False
+
 
 if __name__ == "__main__":
     from shared.logger import create_logger
