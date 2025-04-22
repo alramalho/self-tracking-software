@@ -8,6 +8,7 @@
 /update-user
 /search-users/{username}
 /user/friend-count
+/get-recommended-users
 /user/{username}
 /send-friend-request/{recipient_id}
 /accept-friend-request/{request_id}
@@ -79,5 +80,4 @@
 /messages/{message_id}/move-up
 /stripe/webhook
 /health
-/
 /exception
