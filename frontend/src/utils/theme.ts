@@ -15,6 +15,7 @@ export interface ThemeVariants {
   hex: string;
   bg: string;
   fadedBg: string;
+  gradientBg: string;
   darkText: string;
   text: string;
   ring: string;
@@ -53,6 +54,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     raw: "slate",
     hex: "#64748b",
     bg: "bg-slate-500",
+    gradientBg: "bg-gradient-to-r from-slate-500 to-slate-600",
     fadedBg: "bg-slate-200/50",
     text: "text-slate-500",
     ring: "ring-gray-500",
@@ -87,6 +89,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     raw: "blue",
     hex: "#3b82f6",
     bg: "bg-blue-500",
+    gradientBg: "bg-gradient-to-r from-blue-500 to-blue-600",
     fadedBg: "bg-blue-200/50",
     text: "text-blue-500",
     ring: "ring-blue-500",
@@ -121,6 +124,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     raw: "violet",
     hex: "#818cf8",
     bg: "bg-violet-500",
+    gradientBg: "bg-gradient-to-r from-violet-500 to-violet-600",
     fadedBg: "bg-violet-100",
     text: "text-violet-500",
     ring: "ring-violet-500",
@@ -156,6 +160,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#f59e0b",
     bg: "bg-amber-500",
     fadedBg: "bg-amber-100",
+    gradientBg: "bg-gradient-to-r from-amber-500 to-amber-600",
     text: "text-amber-500",
     ring: "ring-amber-500",
     darkText: "text-amber-700",
@@ -189,6 +194,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     raw: "emerald",
     hex: "#10b981",
     bg: "bg-emerald-500",
+    gradientBg: "bg-gradient-to-r from-emerald-500 to-emerald-600",
     fadedBg: "bg-emerald-100",
     text: "text-emerald-500",
     ring: "ring-emerald-500",
@@ -223,6 +229,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     raw: "rose",
     hex: "#f43f5e",
     bg: "bg-rose-500",
+    gradientBg: "bg-gradient-to-r from-rose-500 to-rose-600",
     fadedBg: "bg-rose-100",
     text: "text-rose-500",
     ring: "ring-rose-500",
