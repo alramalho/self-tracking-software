@@ -111,16 +111,20 @@ const LookingForApPage: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-6">
+      <h1 className="text-2xl font-bold">
         Recommended Accountability Partners
       </h1>
+      <p className="text-gray-400 text-sm mt-2">
+        We calculate your compatibility with other users based on your
+        data and goals.<br/><span className="text-xs">If you think we could do anything better, please let us know!</span>
+      </p>
 
       {recommendations.length === 0 ? (
         <div className="text-center py-10">
           <p className="text-gray-500">No recommended users found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
           {recommendations.map((recommendation) => {
             const user = recommendedUsers.find(
               (user) => user.id === recommendation.recommendation_object_id

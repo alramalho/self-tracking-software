@@ -348,7 +348,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
   const { userPaidPlanType } = usePaidPlan();
   const currentUserSentFriendRequests =
     currentUserQuery.data?.sentFriendRequests;
-
+  const router = useRouter();
   const pendingSentFriendRequests =
     currentUserSentFriendRequests?.filter(
       (request) => request.status == "pending"
@@ -529,9 +529,9 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
           icon={<Search size={30} />}
           title="Find someone in our community"
           description="Find someone who will help you stay on track"
-          buttonText="Open discord"
+          buttonText="Open AP Recommendations"
           onClick={() => {
-            window.open("https://discord.gg/xMVb7YmQMQ", "_blank");
+            router.push("/looking-for-ap");
           }}
           color="blue"
         />
