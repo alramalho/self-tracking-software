@@ -249,8 +249,15 @@ async def get_friend_count(user: User = Depends(is_clerk_user)):
 
 @router.get("/get-recommended-users")
 async def get_recommended_users(user: User = Depends(is_clerk_user)):
-    recommended_users = recommendations_gateway.get_all_user_reccomendations_by_user_id(user.id)
-    return [user.dict() for user in recommended_users]
+    recommendations = recommendations_gateway.get_all_user_reccomendations_by_user_id(user.id)
+    recommendations.sort(key=lambda x: x.score, reverse=True)
+    recommendations = recommendations[:20]
+    recommended_user_ids = [r.recommendation_object_id for r in recommendations if r.recommendation_object_type == "user"]
+    recommended_users = users_gateway.get_all_by_ids(recommended_user_ids)
+    return {
+        "recommendations": recommendations,
+        "users": recommended_users
+    }
 
 
 @router.get("/user/{username}")

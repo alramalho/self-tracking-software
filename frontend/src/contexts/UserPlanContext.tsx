@@ -82,6 +82,7 @@ export interface MetricEntry {
 export interface User {
   id: string;
   name?: string;
+  age?: number;
   profile?: string;
   plan_type: "free" | "plus";
   daily_checkin_settings?: {
@@ -208,6 +209,12 @@ export interface Notification {
   related_data: Record<string, string> | null;
 }
 
+export type Recommendation = {
+  recommendation_object_id: string;
+  recommendation_object_type: "user" | "plan";
+  score: number;
+};
+
 export type Emotion = {
   name: string;
   score: number;
@@ -255,7 +262,7 @@ export interface UserData {
 export interface UserPlanContextType {
   useCurrentUserDataQuery: () => UseQueryResult<UserDataEntry>;
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
-  useRecommendedUsersQuery: () => UseQueryResult<User[]>;
+  useRecommendedUsersQuery: () => UseQueryResult<{recommendations: Recommendation[], users: User[]}>;
   useMultipleUsersDataQuery: (
     usernames: string[]
   ) => UseQueryResult<Record<string, UserDataEntry>>;
@@ -561,7 +568,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       queryKey: ["recommendedUsers"],
       queryFn: async () => {
         const response = await api.get("/get-recommended-users");
-        return response.data as User[];
+        return response.data as {recommendations: Recommendation[], users: User[]};
       },
       enabled: isSignedIn && isLoaded,
       staleTime: 1000 * 60 * 5,

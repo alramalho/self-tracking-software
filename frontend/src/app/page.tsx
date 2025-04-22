@@ -21,10 +21,10 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { useCurrentUserDataQuery, useRecommendedUsersQuery, hasLoadedUserData, refetchAllData } =
+  const { useCurrentUserDataQuery, hasLoadedUserData, refetchAllData } =
     useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const { data: recommendedUsers } = useRecommendedUsersQuery();
+  
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const themeColors = useThemeColors();

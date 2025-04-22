@@ -1,0 +1,110 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import Image from "next/image";
+
+interface UserCardProps {
+  user: {
+    id: string;
+    name?: string;
+    username?: string;
+    picture?: string;
+    profile?: string;
+    age?: number;
+  };
+  score: number;
+}
+
+const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden p-4 border border-gray-200">
+      <div className="flex items-center mb-4">
+        <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 mr-4">
+          {user.picture ? (
+            <Image 
+              src={user.picture} 
+              alt={user.name || user.username || "User"} 
+              width={64} 
+              height={64}
+              className="object-cover w-full h-full"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+              {(user.name?.[0] || user.username?.[0] || "?").toUpperCase()}
+            </div>
+          )}
+        </div>
+        <div>
+          <h3 className="font-semibold text-lg">{user.name || "Anonymous"}</h3>
+          {user.username && <p className="text-gray-500">@{user.username}</p>}
+        </div>
+        <div className="ml-auto">
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+            {Math.round(score * 100)}% match
+          </span>
+        </div>
+      </div>
+      
+      <div className="mb-3">
+        {user.profile ? (
+          <p className="text-gray-700 line-clamp-3">{user.profile}</p>
+        ) : (
+          <p className="text-gray-500 italic">No description available</p>
+        )}
+      </div>
+      
+      <div className="flex items-center text-sm text-gray-500">
+        {user.age && <span className="mr-3">{user.age} years old</span>}
+      </div>
+    </div>
+  );
+};
+
+const LookingForApPage: React.FC = () => {
+  const {
+    useCurrentUserDataQuery,
+    useRecommendedUsersQuery,
+    hasLoadedUserData,
+    refetchAllData,
+  } = useUserPlan();
+  
+  const { data: recommendationsData } = useRecommendedUsersQuery();
+  
+  // Safely access data with optional chaining
+  const recommendedUsers = recommendationsData?.users || [];
+  const recommendations = recommendationsData?.recommendations || [];
+
+  // Map user IDs to their recommendation scores
+  const userScores = recommendations
+    .filter(rec => rec.recommendation_object_type === "user")
+    .reduce((acc, rec) => {
+      acc[rec.recommendation_object_id] = rec.score;
+      return acc;
+    }, {} as Record<string, number>);
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <h1 className="text-2xl font-bold mb-6">Recommended Accountability Partners</h1>
+      
+      {recommendedUsers.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-gray-500">No recommended users found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendedUsers.map(user => (
+            <UserCard 
+              key={user.id} 
+              user={user} 
+              score={userScores[user.id] || 0}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LookingForApPage;
