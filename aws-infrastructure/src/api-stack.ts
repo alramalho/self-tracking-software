@@ -209,6 +209,7 @@ export class ApiStack extends cdk.Stack {
                 process.env.MONGO_DB_CONNECTION_STRING!,
               CLERK_JWT_PUBLIC_KEY: process.env.CLERK_JWT_PUBLIC_KEY!,
               SVIX_SECRET: process.env.SVIX_SECRET!,
+              PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
               VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
               ENVIRONMENT: process.env.ENVIRONMENT!,
               JINA_API_KEY: process.env.JINA_API_KEY!,
