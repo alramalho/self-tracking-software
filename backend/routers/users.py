@@ -12,6 +12,7 @@ from gateways.plan_groups import PlanGroupsGateway
 from entities.notification import Notification
 from services.notification_manager import NotificationManager
 from services.telegram_service import TelegramService
+from gateways.friend_requests import FriendRequestGateway
 from constants import MAX_TIMELINE_ENTRIES
 import re
 import concurrent.futures
@@ -34,6 +35,7 @@ notification_manager = NotificationManager()
 plan_groups_gateway = PlanGroupsGateway()
 ses_gateway = SESGateway()
 messages_gateway = MessagesGateway()
+friend_request_gateway = FriendRequestGateway()
 recommendations_gateway = RecommendationsGateway()  
 
 
@@ -283,6 +285,13 @@ async def send_friend_request(
     recipient_id: str, current_user: User = Depends(is_clerk_user)
 ):
     try:
+        existing_requests = friend_request_gateway.get_pending_sent_requests(current_user.id)
+        if any(request.recipient_id == recipient_id for request in existing_requests):
+            return {
+                "message": "Friend request already sent",
+                "request": existing_requests[0],
+            }
+
         friend_request = users_gateway.send_friend_request(
             current_user.id, recipient_id
         )
