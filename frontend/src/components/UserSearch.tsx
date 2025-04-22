@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useApiWithAuth } from '@/api';
+import React, { useState, useEffect } from "react";
+import { useApiWithAuth } from "@/api";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 export interface UserSearchResult {
   user_id: string;
@@ -17,8 +17,13 @@ interface UserSearchProps {
   onUserRemove?: (userId: string) => void;
 }
 
-const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = [], onUserRemove }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+const UserSearch: React.FC<UserSearchProps> = ({
+  onUserClick,
+  selectedUsers = [],
+  onUserRemove,
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
 
@@ -30,10 +35,13 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = []
       }
 
       try {
+        setIsLoading(true);
         const response = await api.get(`/search-users/${searchTerm}`);
         setSearchResults(response.data);
       } catch (error) {
         console.error("Error searching users:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -57,19 +65,24 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = []
               src={user.picture || "/default-avatar.png"}
               alt={user.username}
             />
-            <AvatarFallback>
-              {user.name ? user.name[0] : "U"}
-            </AvatarFallback>
+            <AvatarFallback>{user.name ? user.name[0] : "U"}</AvatarFallback>
           </Avatar>
         ))}
       </div>
-      <Input
-        type="text"
-        placeholder="Search users..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="bg-white"
-      />
+      <div className="relative">
+        <Input
+          type="text"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="bg-white"
+        />
+        {isLoading && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-500 " />
+          </div>
+        )}
+      </div>
       <ul className="mt-2">
         {searchResults.map((user) => (
           <li
@@ -82,9 +95,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserClick, selectedUsers = []
                 src={user.picture || "/default-avatar.png"}
                 alt={user.username}
               />
-              <AvatarFallback>
-                {user.name ? user.name[0] : "U"}
-              </AvatarFallback>
+              <AvatarFallback>{user.name ? user.name[0] : "U"}</AvatarFallback>
             </Avatar>
             <span>{user.username}</span>
           </li>
