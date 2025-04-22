@@ -10,6 +10,7 @@ from gateways.aws.s3 import S3Gateway
 from gateways.activities import ActivitiesGateway
 from pydantic import Field
 from gateways.database.dynamodb import DynamoDBGateway
+from typing import List
 from services.telegram_service import TelegramService
 
 from datetime import datetime, timedelta, date
@@ -30,6 +31,7 @@ from slowapi import Limiter
 from gateways.metrics import MetricsGateway
 from slowapi.util import get_remote_address
 import pytz
+from gateways.recommendations import RecommendationsGateway
 import traceback
 
 router = APIRouter()
@@ -41,6 +43,7 @@ s3_gateway = S3Gateway()
 ses_gateway = SESGateway()
 prompt_controller = RecurrentMessageGenerator()
 metrics_gateway = MetricsGateway()
+recommendations_gateway = RecommendationsGateway()
 limiter = Limiter(key_func=get_remote_address)
 
 ALLOWED_ORIGINS: Set[str] = {
@@ -348,6 +351,14 @@ async def run_daily_metrics_notification(
 
     # return result
 
+def _process_recommendations_outdated(users: List[User]) -> dict:
+    result = []
+    for user in users:
+        if user.recommendations_outdated:
+            recommendations_gateway.compute_recommended_users(user)
+            result.append(user.username)
+    return result
+
 
 @router.post("/run-daily-job")
 async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
@@ -380,6 +391,9 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     unactivated_emails_result = await _process_unactivated_emails(
         filtered_users, unactivated_emails_dry_run
     )
+    recommendations_outdated_result = await _process_recommendations_outdated(
+        filtered_users
+    )
 
     result = {
         "dry_run": {
@@ -388,6 +402,7 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
         },
         "users_checked": len(filtered_users),
         # "notification_result": notification_result,
+        "recommendations_outdated": recommendations_outdated_result,
         "unactivated_emails_result": unactivated_emails_result,
     }
 

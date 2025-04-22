@@ -37,7 +37,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden p-4 border border-gray-200">
       <div className="flex items-center mb-4">
-        <Avatar className="w-14 h-14 mr-3">
+        <Avatar onClick={() => router.push(`/profile/${user.username}`)} className="w-14 h-14 mr-3">
           <AvatarImage src={user?.picture} alt={user?.name} />
           <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
         </Avatar>
@@ -102,7 +102,11 @@ const LookingForApPage: React.FC = () => {
     }, {} as Record<string, number>);
 
   if (isLoadingRecommendations) {
-    return <Loader2 className="w-8 h-8 animate-spin" />;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
   }
 
   return (

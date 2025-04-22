@@ -50,7 +50,7 @@ def tanh_fit(x, A=0.61244, B=-0.77700, C=2.34078, D=0.39498):
 def calculate_geo_sim(loc_1: Tuple[float, float], loc_2: Tuple[float, float]) -> float:
     distance = np.sqrt((loc_1[0] - loc_2[0]) ** 2 + (loc_1[1] - loc_2[1]) ** 2)
     distance_in_km = distance * 111.32
-    return float(tanh_fit(distance_in_km))
+    return max(1, float(tanh_fit(distance_in_km)))
 
 
 def timezone_to_approx_latlong(timezone_str: str) -> Optional[Tuple[float, float]]:
@@ -113,7 +113,8 @@ class RecommendationsGateway:
         from controllers.plan_controller import PlanController
 
         self.delete_all_for_user(current_user.id)
-        all_users = UsersGateway().get_all_users()
+        users_gateway = UsersGateway()
+        all_users = users_gateway.get_all_users()
         users_looking_for_partners = [
             u for u in all_users if u.looking_for_ap and u.id != current_user.id
         ]
@@ -240,9 +241,8 @@ class RecommendationsGateway:
         logger.info(
             f"Computed {len(results)} recommendations for user {current_user.username}"
         )
-        # --- Return the results dictionary which contains scores per user ID ---
+        users_gateway.update_fields(current_user.id, {"recommendations_outdated": False})
         return results
-        # ----------------------------------------------------------------------
 
     def delete_all_for_user(self, user_id: str):
         self.db_gateway.delete_all("user_id", user_id)
