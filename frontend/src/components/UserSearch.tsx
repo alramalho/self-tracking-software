@@ -3,6 +3,11 @@ import { useApiWithAuth } from "@/api";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, X } from "lucide-react";
+import { Button } from "./ui/button";
+import { useRouter } from "next/navigation";
+import { useUserPlan } from "@/contexts/UserPlanContext";
+import { getThemeVariants } from "@/utils/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 export interface UserSearchResult {
   user_id: string;
@@ -26,6 +31,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
+  const router = useRouter();
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -101,6 +111,19 @@ const UserSearch: React.FC<UserSearchProps> = ({
           </li>
         ))}
       </ul>
+      {userData?.user?.looking_for_ap ? (
+        <Button 
+          variant="outline"
+          onClick={() => router.push("/looking-for-ap")}
+          className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.gradientBg}`}
+        >
+          Find me an Accountability Partner 🤝
+        </Button>
+      ) : (
+        <p className="text-sm text-gray-500 mt-2 px-2">
+          Looking for an AP? You can set this up in your settings.
+        </p>
+      )}
     </div>
   );
 };
