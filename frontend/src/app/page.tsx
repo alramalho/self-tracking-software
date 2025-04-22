@@ -5,7 +5,7 @@ import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { useRouter } from "next/navigation";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, X } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +16,6 @@ import { getThemeVariants } from "@/utils/theme";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useNotifications } from "@/hooks/useNotifications";
 import Link from "next/link";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -24,7 +23,6 @@ const HomePage: React.FC = () => {
   const { useCurrentUserDataQuery, hasLoadedUserData, refetchAllData } =
     useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const themeColors = useThemeColors();
@@ -35,10 +33,17 @@ const HomePage: React.FC = () => {
     false
   );
 
-  const hasFriends = userData?.user?.friend_ids?.length && userData?.user?.friend_ids?.length > 0
+  const hasFriends =
+    userData?.user?.friend_ids?.length &&
+    userData?.user?.friend_ids?.length > 0;
 
   useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && (!onboardingCompleted && !hasFriends)) {
+    if (
+      isSignedIn &&
+      hasLoadedUserData &&
+      !onboardingCompleted &&
+      !hasFriends
+    ) {
       router.push("/onboarding");
     }
   }, [userData, isSignedIn]);
@@ -54,7 +59,9 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl space-y-4">
-      <div className={`flex justify-between items-center ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4`}>
+      <div
+        className={`flex justify-between items-center ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4`}
+      >
         {isAppInstalled ? (
           <div className="flex flex-row gap-3 items-center text-center">
             <span className="mb-2 text-[40px]">🎯</span>

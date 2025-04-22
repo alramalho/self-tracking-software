@@ -107,9 +107,9 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
             icon={<Search size={30} />}
             title="Find someone in our community"
             description="Find someone who will help you stay on track"
-            buttonText="Open discord"
+            buttonText="Open AP Recommendations"
             onClick={() => {
-              window.open("https://discord.gg/xMVb7YmQMQ", "_blank");
+              router.push("/looking-for-ap");
             }}
             color="blue"
           />
@@ -124,7 +124,6 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
             />
           </div>
         </div>
-
       </>
       // <div className="text-left text-gray-500">
       //   You haven&apos;t added any friends yet 🙁
