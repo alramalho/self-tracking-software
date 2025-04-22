@@ -249,6 +249,10 @@ export class ApiStack extends cdk.Stack {
         }
       );
 
+    this.fargateService.targetGroup.configureHealthCheck({
+      path: "/health",
+    });
+
     // Set up autoscaling
     const scaling = this.fargateService.service.autoScaleTaskCount({
       minCapacity: 1,
