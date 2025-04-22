@@ -433,27 +433,58 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
 
 
 def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
-    search_patterns = [
-        f"^{re.escape(username[:i])}.*" for i in range(len(username), 0, -1)
-    ]
-
-    results = []
-    for pattern in search_patterns:
-        users = users_gateway.get_all_users_by_regex("username", pattern)
-        for user in users:
-            if user.id not in [result["user_id"] for result in results]:
-                results.append(
-                    {
-                        "user_id": user.id,
-                        "username": user.username,
-                        "name": user.name,
-                        "picture": user.picture,
-                    }
-                )
-
-        if len(results) >= limit or user.username == username:
-            break
-
+    # Get all users (this could be cached or optimized further)
+    all_users = users_gateway.get_all_users()
+    
+    # Filter out the current user
+    filtered_users = [u for u in all_users if u.id != user.id]
+    
+    # Create a list to store results with exact matches first, then prefix matches
+    exact_matches = []
+    prefix_matches = []
+    
+    # Normalize search term
+    search_term = username.lower()
+    
+    # Search for matches
+    for u in filtered_users:
+        u_username = u.username.lower()
+        
+        # Check for exact match
+        if u_username == search_term:
+            exact_matches.append({
+                "user_id": u.id,
+                "username": u.username,
+                "name": u.name,
+                "picture": u.picture,
+            })
+        # Check for prefix match
+        elif u_username.startswith(search_term):
+            prefix_matches.append({
+                "user_id": u.id,
+                "username": u.username,
+                "name": u.name,
+                "picture": u.picture,
+            })
+    
+    # Combine results, ensuring we don't exceed the limit
+    results = exact_matches + prefix_matches
+    
+    # If we don't have enough matches, add other users with partial matches
+    if len(results) < limit:
+        for u in filtered_users:
+            if u.id not in [r["user_id"] for r in results]:
+                # Check for contains match (username contains the search term)
+                if search_term in u.username.lower():
+                    results.append({
+                        "user_id": u.id,
+                        "username": u.username,
+                        "name": u.name,
+                        "picture": u.picture,
+                    })
+                    if len(results) >= limit:
+                        break
+    
     return results[:limit]
 
 
