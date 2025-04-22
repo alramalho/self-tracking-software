@@ -114,7 +114,7 @@ class UsersGateway:
         logger.info(f"User {user.id} ({user.name}) fields {fields} updated")
         return User(**user.dict())
 
-    def _propagate_relevant_fields(self, user: User, fields: dict):
+    def _propagate_relevant_fields(self, user: User, fields: dict) -> User:
         if any(field in fields.keys() for field in ("username", "name", "picture")):
             new_username = fields.get("username", None)
             new_name = fields.get("name", None)
@@ -151,18 +151,10 @@ class UsersGateway:
                         f"Error updating activity entry {activity_entry.id}: {e}"
                     )
 
-        # if "profile" in fields:
-        #     async def compute_timeline_task():
-        #         self.user_vector_database.upsert_record(
-        #             text=fields["profile"],
-        #             identifier=user.id,
-        #             metadata={"user_id": user.id},
-        #         )
-        #         logger.info(f"User {user.id} ({user.name}) profile vector created")
+        if "profile" in fields:
+            user.recommendations_outdated = True
 
-        #         await self.reccomendations_gateway.compute_recommended_users(user)
-
-        #     asyncio.create_task(compute_timeline_task())
+        return user
 
     def delete_user(self, user_id: str):
         user = self.get_user_by_id(user_id)

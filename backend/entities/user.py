@@ -42,6 +42,7 @@ class User(BaseModel):
     theme_base_color: Literal["random", "slate", "blue", "violet", "amber", "emerald", "rose"] = "blue"
     stripe_settings: Optional[StripeSettings] = None
     default_activity_visibility: Literal["public", "private", "friends"] = "public"
+    recommendations_outdated: bool = False
 
     @classmethod
     def new(

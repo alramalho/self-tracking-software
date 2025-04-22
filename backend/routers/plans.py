@@ -76,6 +76,9 @@ async def create_plan(
     new_plan.plan_group_id = plan_group.id
     plan_controller.update_plan(new_plan)
 
+    if (len(current_user.plan_ids) == 0):
+        users_gateway.update_fields(current_user.id, {"recommendations_outdated": True})
+
     # Update the user with the new plan_id
     users_gateway.add_plan_to_user(current_user.id, new_plan.id)
 
@@ -389,7 +392,10 @@ async def update_plan(
     plan = plan_controller.get_plan(plan_id)
     for key, value in data.items():
         setattr(plan, key, value)
-        
+
+    if (len(current_user.plan_ids) > 0 and plan_id == current_user.plan_ids[0]):
+        users_gateway.update_fields(current_user.id, {"recommendations_outdated": True})
+
     return plan_controller.update_plan(plan)
 
 
