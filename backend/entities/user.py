@@ -30,7 +30,7 @@ class User(BaseModel):
     deleted_at: Optional[str] = None
     is_pwa_installed: bool = False
     is_pwa_notifications_enabled: bool = False
-    looking_for_ap: Optional[bool] = True
+    looking_for_ap: Optional[bool] = False
     pwa_subscription_endpoint: Optional[str] = None
     pwa_subscription_key: Optional[str] = None
     pwa_subscription_auth_token: Optional[str] = None
