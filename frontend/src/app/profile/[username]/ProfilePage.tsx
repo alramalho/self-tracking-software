@@ -631,7 +631,7 @@ const ProfilePage: React.FC = () => {
               {(!profileData?.plans || profileData?.plans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
                   {isOnesOwnProfile
-                    ? "You haven&apos;t created any plans yet."
+                    ? "You haven't created any plans yet."
                     : `${user?.name} hasn't got any public plans available.`}
                 </div>
               )}
