@@ -198,17 +198,28 @@ class RecommendationsGateway:
             scores = []
             metadata = {}
             if "profile_sim_score" in results[result_key]:
-                scores.append(results[result_key]["profile_sim_score"])
                 metadata["profile_sim_score"] = results[result_key]["profile_sim_score"]
+                scores.append(results[result_key]["profile_sim_score"])
+            else:
+                scores.append(0)
+
             if "plan_sim_score" in results[result_key]:
                 scores.append(results[result_key]["plan_sim_score"])
                 metadata["plan_sim_score"] = results[result_key]["plan_sim_score"]
+            else:
+                scores.append(0)
+
             if "geo_sim_score" in results[result_key]:
                 scores.append(results[result_key]["geo_sim_score"])
                 metadata["geo_sim_score"] = results[result_key]["geo_sim_score"]
+            else:
+                scores.append(0)
+
             if "age_sim_score" in results[result_key]:
                 scores.append(results[result_key]["age_sim_score"])
                 metadata["age_sim_score"] = results[result_key]["age_sim_score"]
+            else:
+                scores.append(0)
 
             if len(scores) > 0:
                 final_score = float(np.average(scores))
