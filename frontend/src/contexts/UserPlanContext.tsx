@@ -99,6 +99,7 @@ export interface User {
     time: "MORNING" | "AFTERNOON" | "EVENING";
   };
   picture?: string;
+  looking_for_ap?: boolean;
   username?: string;
   email: string;
   plan_ids: string[];
