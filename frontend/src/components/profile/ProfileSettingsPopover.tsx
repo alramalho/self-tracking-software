@@ -196,7 +196,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <CircleAlert size={16} /> This will make your profile discoverable and allow us to recommend your profile to people also looking for AP&apos;s.
                         </span> */}
                       </div>
-                      <div className="relative space-y-2 p-3 border rounded-md bg-gray-50 mr-5">
+                      <div className="relative space-y-2 p-3 border rounded-md bg-gray-50 pr-8">
                         {currentUserData?.user?.profile ? (
                           <p className="text-sm text-gray-700 italic">
                             {currentUserData.user.profile}
@@ -209,10 +209,10 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="absolute bottom-1 right-1 text-gray-500 hover:text-gray-700"
+                          className="absolute bottom-1 right-0 text-gray-500 hover:text-gray-700"
                           onClick={() => navigateTo("editProfile")}
                         >
-                          <Pencil size={16} />
+                          <Pencil size={18} />
                         </Button>
                       </div>
                       <Button
