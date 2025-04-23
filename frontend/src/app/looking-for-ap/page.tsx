@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import GenericLoader from "@/components/GenericLoader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import posthog from "posthog-js";
+import { useNotifications } from "@/hooks/useNotifications";
 interface UserCardProps {
   user: User;
   score: number;
@@ -116,6 +117,8 @@ const LookingForApPage: React.FC = () => {
 
   const recommendedUsers = recommendationsData?.users || [];
   const recommendations = recommendationsData?.recommendations || [];
+  const { isPushGranted, requestPermission: requestNotificationPermission } = useNotifications();
+
 
   const userScores = recommendations
     .filter((rec) => rec.recommendation_object_type === "user")
@@ -175,6 +178,19 @@ const LookingForApPage: React.FC = () => {
             );
           })}
         </div>
+      )}
+
+      {!isPushGranted && (
+        <p className="text-gray-400 text-sm mt-4 px-4">
+          Nothing of relevance yet?<br/>{" "}
+          <span
+            className="underline cursor-pointer"
+            onClick={() => requestNotificationPermission()}
+          >
+            Enable notifications
+          </span>{" "}
+          to be immediately notified when a potential partner is found.
+        </p>
       )}
     </div>
   );
