@@ -807,7 +807,8 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 description="The highly condensed highly clear depiction of the user profile based on the input questions.",
             )
             age: Optional[int] = Field(
-                "The user's age as a single integer, if mentioned."
+                ...,
+                description="The user's age as a single integer, if mentioned.",
             )
 
         class QuestionAnalysisSchema(BaseModel):
