@@ -41,6 +41,7 @@ import { ProgressDots } from "@/components/ProgressDots";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { AccountabilityStepCard } from "@/components/AccountabilityStepCard";
 import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
+import { useNotifications } from "@/hooks/useNotifications";
 type OtherProfile = {
   user: {
     id: string;
@@ -309,9 +310,12 @@ function AccountabilityQuestionStep({
       <h2 className="text-2xl font-bold mb-4">
         Are you looking for an accountability partner?
       </h2>
-      <p className="text-gray-600 mb-6">
+      <p className="text-gray-600 mb-2">
         Having an accountability partner increases your chances of success by up
         to 95%!
+      </p>
+      <p className="text-gray-500 mb-6 text-sm mt-0">
+        We will ask your permission for notifications to alert you when we have found a match.
       </p>
       <div className="flex gap-4 justify-center">
         <Button
@@ -366,8 +370,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
   const [copied, copyToClipboard] = useClipboard();
   const { setShowUpgradePopover } = useUpgrade();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [accountabilityPopoverOpen, setAccountabilityPopoverOpen] =
-    useState(false);
+  const { requestPermission: requestNotificationPermission } = useNotifications();
   const [usersInQueue, setUsersInQueue] = useState<UserSearchResult[]>([]);
   const posthog = usePostHog();
 
@@ -494,6 +497,9 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
     return (
       <AccountabilityQuestionStep
         onResult={(result) => {
+          if (result) {
+            requestNotificationPermission()
+          }
           api.post("/update-user", { looking_for_ap: result });
           setWantsPartner(result)
         }}
