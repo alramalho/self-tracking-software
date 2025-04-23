@@ -114,7 +114,7 @@ async def log_activity(
             for friend_id in user.friend_ids:
                 logger.info(f"Creating notification for friend '{friend_id}'")
                 activity = activities_gateway.get_activity_by_id(activity_id)
-                message = f"Your friend {user.name} just uploaded a photo 📸 after logging {quantity} {activity.measure} of {activity.emoji} {activity.title} "
+                message = f"{user.username} logged {quantity} {activity.measure} of {activity.emoji} {activity.title} with a photo 📸!"
                 await notification_manager.create_and_process_notification(
                     Notification.new(
                         user_id=friend_id,
