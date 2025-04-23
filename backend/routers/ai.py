@@ -858,7 +858,7 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         )
 
         question_checks_task = ask_schema_async(
-            text=f"Analyse the interaction {conversation_history} and determine whether it contains information to answer all the questions: {list(question_checks.values())}",
+            text=f"Analyse the conversation history and determine whether it contains information to answer all the questions: {list(question_checks.values())}. \n\nConversation history: {conversation_history}",
             system="You are a friendly AI assistant.",
             pymodel=QuestionChecksSchema,
         )
