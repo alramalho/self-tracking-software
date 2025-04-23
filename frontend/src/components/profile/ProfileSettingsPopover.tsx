@@ -196,7 +196,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <CircleAlert size={16} /> This will make your profile discoverable and allow us to recommend your profile to people also looking for AP&apos;s.
                         </span> */}
                       </div>
-                      <div className="relative space-y-2 p-3 border rounded-md bg-gray-50">
+                      <div className="relative space-y-2 p-3 border rounded-md bg-gray-50 mr-5">
                         {currentUserData?.user?.profile ? (
                           <p className="text-sm text-gray-700 italic">
                             {currentUserData.user.profile}
