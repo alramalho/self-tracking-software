@@ -15,7 +15,6 @@ import GenericLoader from "@/components/GenericLoader";
 const PlansPage: React.FC = () => {
   const { isSignedIn } = useSession();
   const { useCurrentUserDataQuery } = useUserPlan();
-  const [showServerMessage, setShowServerMessage] = useState(false);
   const { data: userData } = useCurrentUserDataQuery();
   const { setShowUpgradePopover } = useUpgrade();
   // const { message: aiMessage, messageId, isDismissed, dismiss, timestamp } = useAIMessageCache('plan');
@@ -26,13 +25,6 @@ const PlansPage: React.FC = () => {
   //   }
   // }, [aiMessage, isDismissed]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowServerMessage(true);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   if (!isSignedIn) {
     return (
@@ -53,7 +45,7 @@ const PlansPage: React.FC = () => {
   if (!userData) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <GenericLoader showServerMessage={showServerMessage} />
+        <GenericLoader />
       </div>
     );
   }

@@ -117,7 +117,7 @@ const LookingForApPage: React.FC = () => {
   if (isLoadingRecommendations) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
+        <GenericLoader secondMessage="The first time you run this it might take a while. Hang tight!" />
       </div>
     );
   }

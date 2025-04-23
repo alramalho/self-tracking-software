@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import Link from "next/link";
 
 export interface UserSearchResult {
   user_id: string;
@@ -111,17 +112,24 @@ const UserSearch: React.FC<UserSearchProps> = ({
           </li>
         ))}
       </ul>
-      {userData?.user?.looking_for_ap ? (
-        <Button 
-          variant="outline"
-          onClick={() => router.push("/looking-for-ap")}
-          className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.gradientBg}`}
-        >
-          Find me an Accountability Partner 🤝
-        </Button>
-      ) : (
+      <Button
+        variant="outline"
+        disabled={!userData?.user?.looking_for_ap}
+        onClick={() => router.push("/looking-for-ap")}
+        className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.gradientBg}`}
+      >
+        Find me an Accountability Partner 🤝
+      </Button>
+      {!userData?.user?.looking_for_ap && (
         <p className="text-sm text-gray-500 mt-2 px-2">
-          Looking for an AP? You can set this up in your settings.
+          To enable this feature, go to{" "}
+          <Link
+            href={`/profile/${userData?.user?.username}`}
+            className="underline"
+          >
+            your profile page
+          </Link>{" "}
+          and mark that you&apos;re looking for an accountability partner.
         </p>
       )}
     </div>
