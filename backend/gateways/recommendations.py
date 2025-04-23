@@ -4,6 +4,8 @@ from gateways.database.dynamodb import DynamoDBGateway
 from loguru import logger
 from entities.user import User
 from gateways.vector_database.pinecone import PineconeVectorDB
+from datetime import datetime
+from pytz import UTC
 import numpy as np
 import pytz
 from typing import Tuple
@@ -101,7 +103,11 @@ class RecommendationsGateway:
         self, user_id: str
     ) -> List[Recommendation]:
         data = self.db_gateway.query_by_criteria({"user_id": user_id})
-        return [Recommendation(**item) for item in data if item["recommendation_object_type"] == "user"]
+        return [
+            Recommendation(**item)
+            for item in data
+            if item["recommendation_object_type"] == "user"
+        ]
 
     def upsert_recommendation(self, recommendation: Recommendation) -> Recommendation:
         self.db_gateway.write(recommendation.dict())
@@ -241,10 +247,15 @@ class RecommendationsGateway:
         logger.info(
             f"Computed {len(results)} recommendations for user {current_user.username}"
         )
-        users_gateway.update_fields(current_user.id, {"recommendations_outdated": False})
+        users_gateway.update_fields(
+            current_user.id,
+            {
+                "recommendations_outdated": False,
+                "recommendations_last_calculated_at": datetime.now(UTC).isoformat(),
+            },
+        )
         return results
 
     def delete_all_for_user(self, user_id: str):
         self.db_gateway.delete_all("user_id", user_id)
         logger.warning(f"Deleted all recommendations for user {user_id}")
-
