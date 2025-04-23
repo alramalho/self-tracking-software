@@ -43,6 +43,7 @@ class User(BaseModel):
     stripe_settings: Optional[StripeSettings] = None
     default_activity_visibility: Literal["public", "private", "friends"] = "public"
     recommendations_outdated: bool = False
+    recommendations_last_calculated_at: Optional[str] = None
 
     @classmethod
     def new(

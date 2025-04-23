@@ -4,7 +4,7 @@ from typing import List, Literal
 from auth.clerk import is_clerk_user
 from entities.user import User
 from gateways.users import UsersGateway
-from shared.utils import exclude_embedding_fields
+from shared.utils import exclude_embedding_fields, is_hours_old
 from gateways.activities import ActivitiesGateway
 from gateways.moodreports import MoodsGateway
 from controllers.plan_controller import PlanController
@@ -12,6 +12,8 @@ from gateways.plan_groups import PlanGroupsGateway
 from entities.notification import Notification
 from services.notification_manager import NotificationManager
 from services.telegram_service import TelegramService
+from datetime import datetime
+from pytz import UTC
 from gateways.friend_requests import FriendRequestGateway
 from constants import MAX_TIMELINE_ENTRIES
 import re
@@ -36,7 +38,7 @@ plan_groups_gateway = PlanGroupsGateway()
 ses_gateway = SESGateway()
 messages_gateway = MessagesGateway()
 friend_request_gateway = FriendRequestGateway()
-recommendations_gateway = RecommendationsGateway()  
+recommendations_gateway = RecommendationsGateway()
 
 
 @router.get("/user-health")
@@ -251,22 +253,34 @@ async def get_friend_count(user: User = Depends(is_clerk_user)):
 
 @router.get("/get-recommended-users")
 async def get_recommended_users(user: User = Depends(is_clerk_user)):
-    if user.recommendations_outdated:
+    if (
+        user.recommendations_outdated
+        or not user.recommendations_last_calculated_at
+        or is_hours_old(user.recommendations_last_calculated_at, 48)
+    ):
         await recommendations_gateway.compute_recommended_users(user)
 
-    recommendations = recommendations_gateway.get_all_user_reccomendations_by_user_id(user.id)
+    recommendations = recommendations_gateway.get_all_user_reccomendations_by_user_id(
+        user.id
+    )
     recommendations.sort(key=lambda x: x.score, reverse=True)
     recommendations = recommendations[:20]
-    recommended_user_ids = [r.recommendation_object_id for r in recommendations if r.recommendation_object_type == "user"]
+    recommended_user_ids = [
+        r.recommendation_object_id
+        for r in recommendations
+        if r.recommendation_object_type == "user"
+    ]
     recommended_users = users_gateway.get_all_by_ids(recommended_user_ids)
 
-    plan_ids_to_fetch = [u.plan_ids[0] for u in recommended_users if len(u.plan_ids) > 0]
+    plan_ids_to_fetch = [
+        u.plan_ids[0] for u in recommended_users if len(u.plan_ids) > 0
+    ]
     plans = plan_controller.get_all_by_ids(plan_ids_to_fetch)
-    
+
     return {
         "recommendations": recommendations,
         "users": recommended_users,
-        "plans": plans
+        "plans": plans,
     }
 
 
@@ -290,7 +304,9 @@ async def send_friend_request(
     recipient_id: str, current_user: User = Depends(is_clerk_user)
 ):
     try:
-        existing_requests = friend_request_gateway.get_pending_sent_requests(current_user.id)
+        existing_requests = friend_request_gateway.get_pending_sent_requests(
+            current_user.id
+        )
         if any(request.recipient_id == recipient_id for request in existing_requests):
             return {
                 "message": "Friend request already sent",
@@ -449,56 +465,62 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
 def search_users(user: User, username: str, limit: int = 3) -> List[dict]:
     # Get all users (this could be cached or optimized further)
     all_users = users_gateway.get_all_users()
-    
+
     # Filter out the current user
     filtered_users = [u for u in all_users if u.id != user.id]
-    
+
     # Create a list to store results with exact matches first, then prefix matches
     exact_matches = []
     prefix_matches = []
-    
+
     # Normalize search term
     search_term = username.lower()
-    
+
     # Search for matches
     for u in filtered_users:
         u_username = u.username.lower()
-        
+
         # Check for exact match
         if u_username == search_term:
-            exact_matches.append({
-                "user_id": u.id,
-                "username": u.username,
-                "name": u.name,
-                "picture": u.picture,
-            })
+            exact_matches.append(
+                {
+                    "user_id": u.id,
+                    "username": u.username,
+                    "name": u.name,
+                    "picture": u.picture,
+                }
+            )
         # Check for prefix match
         elif u_username.startswith(search_term):
-            prefix_matches.append({
-                "user_id": u.id,
-                "username": u.username,
-                "name": u.name,
-                "picture": u.picture,
-            })
-    
+            prefix_matches.append(
+                {
+                    "user_id": u.id,
+                    "username": u.username,
+                    "name": u.name,
+                    "picture": u.picture,
+                }
+            )
+
     # Combine results, ensuring we don't exceed the limit
     results = exact_matches + prefix_matches
-    
+
     # If we don't have enough matches, add other users with partial matches
     if len(results) < limit:
         for u in filtered_users:
             if u.id not in [r["user_id"] for r in results]:
                 # Check for contains match (username contains the search term)
                 if search_term in u.username.lower():
-                    results.append({
-                        "user_id": u.id,
-                        "username": u.username,
-                        "name": u.name,
-                        "picture": u.picture,
-                    })
+                    results.append(
+                        {
+                            "user_id": u.id,
+                            "username": u.username,
+                            "name": u.name,
+                            "picture": u.picture,
+                        }
+                    )
                     if len(results) >= limit:
                         break
-    
+
     return results[:limit]
 
 

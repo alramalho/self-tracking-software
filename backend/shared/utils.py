@@ -1,6 +1,16 @@
 from datetime import UTC, datetime, timedelta, timezone
 
 
+def is_hours_old(iso_str: str, hours: int) -> bool:
+    if iso_str is None or iso_str == "":
+        return False
+    iso_str = iso_str.replace("Z", "+00:00")  # Replace 'Z' with '+00:00'
+    dt = datetime.fromisoformat(iso_str)
+    # Ensure dt has timezone info
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return (datetime.now(UTC) - dt).total_seconds() > hours * 3600
+
 def _dict_to_markdown(data: dict, indent: int = 0) -> str:
     """Convert a dictionary to a readable markdown format."""
     result = []
