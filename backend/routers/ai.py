@@ -1,5 +1,6 @@
 # WebSocket close codes as defined in RFC 6455
 from shared.logger import create_logger
+
 create_logger()
 
 WS_CLOSE_CODES = {
@@ -567,7 +568,9 @@ async def get_past_week_logging_extractions(
 
         # Create tasks for parallel execution
         activities_task = extractor.get_response(
-            user_input=message, message_id=str(ObjectId()), manual_memory_management=True
+            user_input=message,
+            message_id=str(ObjectId()),
+            manual_memory_management=True,
         )
 
         class QuestionAnalysisSchema(BaseModel):
@@ -580,7 +583,8 @@ async def get_past_week_logging_extractions(
                 description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
             )
             decision: bool = Field(
-                ..., description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
+                ...,
+                description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
             )
 
         class QuestionChecksSchema(BaseModel):
@@ -596,10 +600,9 @@ async def get_past_week_logging_extractions(
             pymodel=QuestionChecksSchema,
         )
 
-
         # Wait for all tasks to complete
-        activities_result, questions_checks_result = (
-            await asyncio.gather(activities_task, question_checks_task)
+        activities_result, questions_checks_result = await asyncio.gather(
+            activities_task, question_checks_task
         )
 
         question_checks_keys = list(question_checks.keys())
@@ -607,8 +610,10 @@ async def get_past_week_logging_extractions(
             question_checks_keys[i]: questions_checks_result.analysis[i].decision
             for i in range(len(question_checks_keys))
         }
-        unanswered_questions = [q for q, answered in question_results.items() if not answered]
-        
+        unanswered_questions = [
+            q for q, answered in question_results.items() if not answered
+        ]
+
         message = await ask_text_async(
             text=f"""Based on the conversation history: {conversation_history}
                     And the question check results where:
@@ -625,13 +630,16 @@ async def get_past_week_logging_extractions(
         # Unpack the results
         _, extracted_activities_entries = activities_result
         extracted_question_analysis = questions_checks_result
-        activity_entries = [a.data["entry"] for a in extracted_activities_entries if "entry" in a.data]
+        activity_entries = [
+            a.data["entry"] for a in extracted_activities_entries if "entry" in a.data
+        ]
 
-        
         result = {
             "message": message,
             "question_checks": {
-                question_checks_keys[i]: extracted_question_analysis.analysis[i].decision
+                question_checks_keys[i]: extracted_question_analysis.analysis[
+                    i
+                ].decision
                 for i in range(len(question_checks_keys))
             },
         }
@@ -644,7 +652,7 @@ async def get_past_week_logging_extractions(
         logger.error(f"Error getting daily checkin extractions: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 @router.post("/get-daily-checkin-extractions")
 async def get_daily_checkin_extractions(
@@ -665,16 +673,17 @@ async def get_daily_checkin_extractions(
         extractor.write_assistant_message(
             ai_message
         )  # We just need to do this once, as they have shared memory!
-        extractor.write_user_message(
-            message,
-            message_id=str(ObjectId())
-        )
+        extractor.write_user_message(message, message_id=str(ObjectId()))
         # Create tasks for parallel execution
         activities_task = extractor.get_response(
-            user_input=message, message_id=str(ObjectId()), manual_memory_management=True
+            user_input=message,
+            message_id=str(ObjectId()),
+            manual_memory_management=True,
         )
         metrics_task = metrics_companion.get_response(
-            user_input=message, message_id=str(ObjectId()), manual_memory_management=True
+            user_input=message,
+            message_id=str(ObjectId()),
+            manual_memory_management=True,
         )
 
         class ResponseSchema(BaseModel):
@@ -797,7 +806,9 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 ...,
                 description="The highly condensed highly clear depiction of the user profile based on the input questions.",
             )
-            age: Optional[int] = Field("The user's age, if mentioned.")
+            age: Optional[int] = Field(
+                "The user's age as a single integer, if mentioned."
+            )
 
         class QuestionAnalysisSchema(BaseModel):
             question: str = Field(
@@ -809,7 +820,8 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
             )
             decision: bool = Field(
-                ..., description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
+                ...,
+                description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
             )
 
         class QuestionChecksSchema(BaseModel):
@@ -851,15 +863,19 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         )
 
         # Wait for both parallel tasks to complete
-        profile_response, question_checks_response = await asyncio.gather(profile_task, question_checks_task)
+        profile_response, question_checks_response = await asyncio.gather(
+            profile_task, question_checks_task
+        )
 
         # Generate appropriate message based on question check results
         question_results = {
             question_checks_keys[i]: question_checks_response.analysis[i].decision
             for i in range(len(question_checks_keys))
         }
-        unanswered_questions = [q for q, answered in question_results.items() if not answered]
-        
+        unanswered_questions = [
+            q for q, answered in question_results.items() if not answered
+        ]
+
         message_response = await ask_schema_async(
             text=f"""Based on the conversation history: {conversation_history}
                     And the question check results where:
@@ -874,9 +890,14 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         )
 
         # Update user profile
-        updated_user = users_gateway.update_fields(
-            user.id, {"profile": profile_response.user_profile, "age": profile_response.age}
-        )
+        updates = {"profile": profile_response.user_profile}
+        try:
+            treated_age = int(profile_response.age)
+            updates["age"] = treated_age
+        except:
+            pass
+
+        updated_user = users_gateway.update_fields(user.id, updates)
 
         # Write AI response to memory
         memory.write(
@@ -901,7 +922,9 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
 
 
 @router.post("/reject-past-week-logging")
-async def reject_past_week_logging(request: Request, user: User = Depends(is_clerk_user)):
+async def reject_past_week_logging(
+    request: Request, user: User = Depends(is_clerk_user)
+):
     """
     Endpoint to handle past week logging rejection feedback.
     Just sends a Telegram message with the feedback.
@@ -927,6 +950,7 @@ async def reject_past_week_logging(request: Request, user: User = Depends(is_cle
         logger.error(f"Error handling plan rejection: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/reject-plan")
 async def reject_plan(request: Request, user: User = Depends(is_clerk_user)):
@@ -1038,7 +1062,9 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
 
 
 @router.post("/log-dynamic-ui-attempt-error")
-async def log_dynamic_ui_attempt_error(request: Request, user: User = Depends(is_clerk_user)):
+async def log_dynamic_ui_attempt_error(
+    request: Request, user: User = Depends(is_clerk_user)
+):
     body = await request.json()
     question_checks = body["question_checks"]
     attempts = body["attempts"]
@@ -1057,6 +1083,7 @@ async def log_dynamic_ui_attempt_error(request: Request, user: User = Depends(is
         extracted_data=extracted_data,
         id=id,
     )
+
 
 @router.post("/log-dynamic-ui-skip")
 async def log_dynamic_ui_skip(request: Request, user: User = Depends(is_clerk_user)):
