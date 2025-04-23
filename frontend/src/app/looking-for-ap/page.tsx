@@ -10,13 +10,17 @@ import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
 import GenericLoader from "@/components/GenericLoader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
+import posthog from "posthog-js";
 interface UserCardProps {
   user: User;
   score: number;
 }
 
 const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const { data: userData, isLoading: isLoadingUser } =
+    useCurrentUserDataQuery();
+  const currentUser = userData?.user;
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const api = useApiWithAuth();
   const router = useRouter();
@@ -24,6 +28,12 @@ const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
   const handleSendFriendRequest = async () => {
     try {
       setIsSendingRequest(true);
+      posthog.capture("ap_friend_request_sent", {
+        sent_from_user_id: currentUser?.id,
+        sent_from_user_username: currentUser?.username,
+        sent_to_user_id: user.id,
+        sent_to_user_username: user.username,
+      });
       await api.post(`/send-friend-request/${user.id}`);
       toast.success("Friend request sent successfully!");
     } catch (error) {
@@ -37,7 +47,10 @@ const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden p-4 border border-gray-200">
       <div className="flex items-center mb-4">
-        <Avatar onClick={() => router.push(`/profile/${user.username}`)} className="w-14 h-14 mr-3">
+        <Avatar
+          onClick={() => router.push(`/profile/${user.username}`)}
+          className="w-14 h-14 mr-3"
+        >
           <AvatarImage src={user?.picture} alt={user?.name} />
           <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
         </Avatar>
@@ -115,8 +128,12 @@ const LookingForApPage: React.FC = () => {
         Recommended Accountability Partners
       </h1>
       <p className="text-gray-400 text-sm mt-2">
-        We calculate your compatibility with other users based on your
-        data and goals.<br/><span className="text-xs">If you think we could do anything better, please let us know!</span>
+        We calculate your compatibility with other users based on your data and
+        goals.
+        <br />
+        <span className="text-xs">
+          If you think we could do anything better, please let us know!
+        </span>
       </p>
 
       {recommendations.length === 0 ? (
