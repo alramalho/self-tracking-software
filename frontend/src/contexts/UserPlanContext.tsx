@@ -568,7 +568,17 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     const query = useQuery({
       queryKey: ["recommendedUsers"],
       queryFn: async () => {
+        const startTime = performance.now();
         const response = await api.get("/get-recommended-users");
+        const endTime = performance.now();
+        const latencySeconds = (endTime - startTime) / 1000;
+        const latencyProperties: Properties = {
+          latency_seconds: Math.round(latencySeconds * 1000) / 1000,
+        };
+        if (posthog) {
+          posthog.capture("get-recommended-users-latency", latencyProperties);
+        }
+
         return response.data as {recommendations: Recommendation[], users: User[]};
       },
       enabled: isSignedIn && isLoaded,
