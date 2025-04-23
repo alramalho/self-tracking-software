@@ -3,11 +3,10 @@ import AppleLikePopover from "./AppleLikePopover";
 import { TextAreaWithVoice } from "./ui/TextAreaWithVoice";
 import { useMutation } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
-import { Toaster, toast } from "sonner";
 import { Checkbox } from "./ui/checkbox";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePostHog } from "posthog-js/react";
@@ -78,6 +77,8 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   const [alreadyLoggedAttemptError, setAlreadyLoggedAttemptError] =
     useState(false);
   const api = useApiWithAuth();
+  const [showMessage, setShowMessage] = useState(false);
+  const [message, setMessage] = useState("");
 
   const posthog = usePostHog();
 
@@ -151,7 +152,8 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       }
 
       if (data.message) {
-        toast(<Remark>{data.message}</Remark>, { duration: 12000 });
+        setMessage(data.message);
+        setShowMessage(true);
       }
 
       // Then show extracted data after checkboxes
@@ -196,9 +198,11 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
     setIsSubmitting(true);
     try {
       await onAccept(extractedData);
-      toast.success("Data processed successfully!");
+      setMessage("Data processed successfully!");
+      setShowMessage(true);
     } catch (error) {
-      toast.error("Failed to process data");
+      setMessage("Failed to process data");
+      setShowMessage(true);
       console.error("Error processing data:", error);
     } finally {
       setIsSubmitting(false);
@@ -240,22 +244,38 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
   return (
     <>
-      <div className="space-y-4 overflow-y-auto">
-        <Toaster position="top-center" closeButton duration={12000} />
-
-        <div className="relative w-fit mx-auto">
-          <ScanFace size={100} className={`mx-auto ${variants.text}`} />
-          {wave && (
-            <motion.span
-              className="absolute bottom-[9px] left-[-40px] text-5xl"
-              initial="initial"
-              animate="wave"
-              variants={waveVariants}
-              style={{ transformOrigin: "90% 90%" }}
-            >
-              👋
-            </motion.span>
-          )}
+      <div className="space-y-4 overflow-y-auto overflow-x-visible">
+        <div className="flex justify-center items-center gap-4 overflow-visible">
+          <motion.div
+            layout
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <ScanFace size={100} className={`${variants.text}`} />
+            {wave && (
+              <motion.span
+                className="absolute bottom-[9px] left-[-40px] text-5xl"
+                initial="initial"
+                animate="wave"
+                variants={waveVariants}
+                style={{ transformOrigin: "90% 90%" }}
+              >
+                👋
+              </motion.span>
+            )}
+          </motion.div>
+          <AnimatePresence>
+            {showMessage && (
+              <motion.div
+                initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, x: -10 }}
+                transition={{ duration: 0.3, layout: true }}
+                className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md max-w-[250px] text-sm border border-gray-200 dark:border-gray-700 flex-shrink"
+              >
+                <Remark>{message}</Remark>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div>
@@ -279,12 +299,10 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             <div
               key={key}
               className="flex items-center space-x-2"
-              onClick={() =>
-                toast(
-                  "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below",
-                  { icon: "ℹ️" }
-                )
-              }
+              onClick={() => {
+                setMessage("These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below");
+                setShowMessage(true);
+              }}
             >
               <Checkbox checked={checkedItems[key] || false} disabled />
               <label className="text-sm text-gray-700">{key}</label>
