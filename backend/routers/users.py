@@ -259,9 +259,14 @@ async def get_recommended_users(user: User = Depends(is_clerk_user)):
     recommendations = recommendations[:20]
     recommended_user_ids = [r.recommendation_object_id for r in recommendations if r.recommendation_object_type == "user"]
     recommended_users = users_gateway.get_all_by_ids(recommended_user_ids)
+
+    plan_ids_to_fetch = [u.plan_ids[0] for u in recommended_users if len(u.plan_ids) > 0]
+    plans = plan_controller.get_all_by_ids(plan_ids_to_fetch)
+    
     return {
         "recommendations": recommendations,
-        "users": recommended_users
+        "users": recommended_users,
+        "plans": plans
     }
 
 

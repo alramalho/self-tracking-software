@@ -263,7 +263,11 @@ export interface UserData {
 export interface UserPlanContextType {
   useCurrentUserDataQuery: () => UseQueryResult<UserDataEntry>;
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
-  useRecommendedUsersQuery: () => UseQueryResult<{recommendations: Recommendation[], users: User[]}>;
+  useRecommendedUsersQuery: () => UseQueryResult<{
+    recommendations: Recommendation[];
+    users: User[];
+    plans: ApiPlan[];
+  }>;
   useMultipleUsersDataQuery: (
     usernames: string[]
   ) => UseQueryResult<Record<string, UserDataEntry>>;
@@ -579,7 +583,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
           posthog.capture("get-recommended-users-latency", latencyProperties);
         }
 
-        return response.data as {recommendations: Recommendation[], users: User[]};
+        return response.data as {
+          recommendations: Recommendation[];
+          users: User[];
+          plans: ApiPlan[];
+        };
       },
       enabled: isSignedIn && isLoaded,
       staleTime: 1000 * 60 * 5,

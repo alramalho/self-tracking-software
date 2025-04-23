@@ -68,6 +68,10 @@ class PlanController:
         self.plan_groups_gateway = PlanGroupsGateway()
         self.vector_database = PineconeVectorDB(namespace="plans")
 
+    def get_all_by_ids(self, ids: List[str]) -> List[User]:
+        data = self.db_gateway.query_by_criteria({"id": {"$in": ids}})
+        return [Plan(**d) for d in data]
+
     def get_readable_plan(self, plan: Plan) -> str:
         # Get unique activities for this plan
         activities = [
