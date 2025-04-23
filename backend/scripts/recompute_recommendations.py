@@ -14,14 +14,14 @@ users_pinecone_vector_db = PineconeVectorDB("users")
 plans_pinecone_vector_db = PineconeVectorDB("plans")
 
 user = users_gateway.get_user_by("username", "alex")
-user_plans = plan_controller.get_all_user_active_plans(user)
-for plan in user_plans:
-    plans_pinecone_vector_db.upsert_record(text=plan.goal, identifier=plan.id, metadata={"user_id": user.id})
+# user_plans = plan_controller.get_all_user_active_plans(user)
+# for plan in user_plans:
+#     plans_pinecone_vector_db.upsert_record(text=plan.goal, identifier=plan.id, metadata={"user_id": user.id})
 
-print(f"Upserted {len(user_plans)} plans for user {user.id}")
+# print(f"Upserted {len(user_plans)} plans for user {user.id}")
 
-if user.profile:
-    users_pinecone_vector_db.upsert_record(text=user.profile, identifier=user.id, metadata={"user_id": user.id})
-    print(f"Upserted user profile for user {user.id}")
+# if user.profile:
+#     users_pinecone_vector_db.upsert_record(text=user.profile, identifier=user.id, metadata={"user_id": user.id})
+#     print(f"Upserted user profile for user {user.id}")
 
 asyncio.run(recommendations_gateway.compute_recommended_users(user))

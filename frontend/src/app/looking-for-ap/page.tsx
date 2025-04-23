@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { User, useUserPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan, User, useUserPlan } from "@/contexts/UserPlanContext";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Loader2, UserPlus } from "lucide-react";
@@ -14,9 +14,10 @@ import posthog from "posthog-js";
 interface UserCardProps {
   user: User;
   score: number;
+  plan?: ApiPlan;
 }
 
-const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
+const UserCard: React.FC<UserCardProps> = ({ user, score, plan }) => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData, isLoading: isLoadingUser } =
     useCurrentUserDataQuery();
@@ -57,6 +58,11 @@ const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
         <div onClick={() => router.push(`/profile/${user.username}`)}>
           <h3 className="font-semibold text-lg">{user.name || "Anonymous"}</h3>
           {user.username && <p className="text-gray-500">@{user.username}</p>}
+          {user.timezone && (
+            <p className="text-gray-500 text-sm line-clamp-3 mt-1">
+              📍 {user.timezone.replace("_", " ")}
+            </p>
+          )}
         </div>
         <div className="ml-auto">
           <span className="mt-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium text-nowrap">
@@ -73,17 +79,21 @@ const UserCard: React.FC<UserCardProps> = ({ user, score }) => {
         )}
       </div>
 
-      {user.timezone && (
-        <div className="mb-3">
-          <p className="text-gray-500 text-sm line-clamp-3">
-            📍 {user.timezone.replace("_", " ")}
-          </p>
-        </div>
-      )}
-
       <div className="flex items-center text-sm text-gray-500">
         {user.age && <span className="mr-3">{user.age} years old</span>}
       </div>
+
+      {plan && (
+        <div>
+          <p className="text-gray-400 text-xs">Working on</p>
+          <p>
+            {plan.emoji && (
+              <span className="font-bold text-3xl mr-2">{plan.emoji}</span>
+            )}{" "}
+            <span className="font-bold text-xl">{plan.goal}</span>
+          </p>
+        </div>
+      )}
 
       <Button
         loading={isSendingRequest}
@@ -149,11 +159,18 @@ const LookingForApPage: React.FC = () => {
             if (!user) {
               return null;
             }
+            const plan = recommendationsData?.plans.find((plan) => {
+              if (user.plan_ids.length > 0) {
+                return user.plan_ids[0] === plan.id;
+              }
+              return false;
+            });
             return (
               <UserCard
                 key={user.id}
                 user={user}
                 score={userScores[user.id] || 0}
+                plan={plan}
               />
             );
           })}
