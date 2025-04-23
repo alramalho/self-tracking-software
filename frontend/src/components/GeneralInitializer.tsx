@@ -26,8 +26,6 @@ export default function GeneralInitializer({
   const { data: userData } = currentUserDataQuery;
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRan, setHasRan] = useState(false);
-  const [showServerMessage, setShowServerMessage] = useState(false);
-  const [showBugMessage, setShowBugMessage] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
   const { setShowUpgradePopover } = useUpgrade();
 
@@ -46,20 +44,6 @@ export default function GeneralInitializer({
       setHasRan(true);
     }
   }, [isSignedIn, hasLoadedUserData, userData, hasRan]);
-
-  useEffect(() => {
-    const timer1 = setTimeout(() => {
-      setShowServerMessage(true);
-    }, 4000);
-    const timer2 = setTimeout(() => {
-      setShowBugMessage(true);
-    }, 30000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, []);
 
   const reportBug = async (text: string, email: string) => {
     await toast.promise(
@@ -93,8 +77,6 @@ export default function GeneralInitializer({
         )}
         <div className="fixed inset-0 flex items-center justify-center">
           <GenericLoader 
-            showServerMessage={showServerMessage}
-            showBugMessage={showBugMessage}
             onReportBug={() => setShowBugDialog(true)}
           />
         </div>
