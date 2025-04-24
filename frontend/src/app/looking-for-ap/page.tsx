@@ -151,11 +151,11 @@ const LookingForApPage: React.FC = () => {
     );
   }
 
-  if ((userData?.user?.plan_ids && userData?.user?.plan_ids.length && userData?.user?.plan_ids.length === 0) || userData?.user?.looking_for_ap || !isPushGranted) {
+  if ((userData?.user?.plan_ids && userData?.user?.plan_ids.length && userData?.user?.plan_ids.length === 0) || !userData?.user?.looking_for_ap || !isPushGranted) {
     const hasPlans = userData?.user?.plan_ids && userData?.user?.plan_ids.length && userData?.user?.plan_ids.length > 0;
     const userProfile = userData?.user?.profile;
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8 px-4 max-w-2xl">
         <div className="flex flex-col items-center gap-2 text-center w-full">
           <ScanFace className={`w-20 h-20 mx-auto ${variants.text}`} />
           <h1 className="text-2xl font-bold">Hey there!</h1>
@@ -238,7 +238,7 @@ const LookingForApPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 max-w-3xl">
       <h1 className="text-2xl font-bold">
         Recommended Accountability Partners
       </h1>
@@ -256,7 +256,7 @@ const LookingForApPage: React.FC = () => {
           <p className="text-gray-500">No recommended users found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
           {recommendations.map((recommendation) => {
             const user = recommendedUsers.find(
               (user) => user.id === recommendation.recommendation_object_id
