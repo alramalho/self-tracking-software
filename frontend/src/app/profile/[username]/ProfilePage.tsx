@@ -33,7 +33,7 @@ import {
   isBefore,
   addWeeks,
 } from "date-fns";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
 import { Badge } from "@/components/ui/badge";
@@ -85,9 +85,11 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [initialActiveView, setInitialActiveView] = useState<string | null>(null);
   const { useCurrentUserDataQuery, useUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const params = useParams();
+  const searchParams = useSearchParams();
   const username = params.username as string;
   const currentUser = currentUserQuery.data?.user;
   const currentUserSentFriendRequests =
@@ -138,6 +140,14 @@ const ProfilePage: React.FC = () => {
       clearProfileNotifications();
     }
   }, [isOnesOwnProfile, clearProfileNotifications]);
+
+  useEffect(() => {
+    const activeView = searchParams.get('activeView');
+    if (activeView && isOnesOwnProfile) {
+      setShowUserProfile(true);
+      setInitialActiveView(activeView);
+    }
+  }, [searchParams, isOnesOwnProfile]);
 
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
@@ -565,6 +575,7 @@ const ProfilePage: React.FC = () => {
             <ProfileSettingsPopover
               open={showUserProfile}
               onClose={() => setShowUserProfile(false)}
+              initialActiveView={initialActiveView}
             />
           </>
         )}

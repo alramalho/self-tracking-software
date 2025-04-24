@@ -42,6 +42,7 @@ import {
 interface ProfileSettingsPopoverProps {
   open: boolean;
   onClose: () => void;
+  initialActiveView?: ActiveView | null;
 }
 
 // Define possible views including sub-views
@@ -68,10 +69,11 @@ const viewLevels: Record<ActiveView, number> = {
 const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   open,
   onClose,
+  initialActiveView = null,
 }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Single state for view navigation
-  const [activeView, setActiveView] = useState<ActiveView>("main");
+  const [activeView, setActiveView] = useState<ActiveView>(initialActiveView as ActiveView || "main");
   const api = useApiWithAuth();
   const previousViewRef = useRef<ActiveView>("main");
 
@@ -92,6 +94,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
     signOut();
     posthog.reset();
   };
+
+  // Use initialActiveView when it changes
+  React.useEffect(() => {
+    if (initialActiveView && open) {
+      setActiveView(initialActiveView as ActiveView);
+    }
+  }, [initialActiveView, open]);
 
   // Reset view when popover closes
   React.useEffect(() => {
