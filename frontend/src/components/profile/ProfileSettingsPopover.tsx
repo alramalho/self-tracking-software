@@ -46,7 +46,7 @@ interface ProfileSettingsPopoverProps {
 }
 
 // Define possible views including sub-views
-type ActiveView =
+export type ActiveView =
   | "main"
   | "userSummary"
   | "userProfile"

@@ -54,7 +54,7 @@ import { twMerge } from "tailwind-merge";
 import { PlanBadge } from "@/components/PlanBadge";
 import ColorPalettePickerPopup from "@/components/profile/ColorPalettePickerPopup";
 import StreakDetailsPopover from "@/components/profile/StreakDetailsPopover";
-import ProfileSettingsPopover from "@/components/profile/ProfileSettingsPopover";
+import ProfileSettingsPopover, { ActiveView } from "@/components/profile/ProfileSettingsPopover";
 import UserSettingsPopover from "@/components/profile/UserSettingsPopover";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -575,7 +575,7 @@ const ProfilePage: React.FC = () => {
             <ProfileSettingsPopover
               open={showUserProfile}
               onClose={() => setShowUserProfile(false)}
-              initialActiveView={initialActiveView}
+              initialActiveView={initialActiveView as ActiveView | null}
             />
           </>
         )}
