@@ -11,7 +11,6 @@ import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePostHog } from "posthog-js/react";
 import { Remark } from "react-remark";
-import { toast } from "sonner";
 const waveVariants = {
   initial: { rotate: 0 },
   wave: {
@@ -300,12 +299,12 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             <div
               key={key}
               className="flex items-center space-x-2"
-              onClick={() =>
-                toast(
-                  "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below",
-                  { icon: "ℹ️" }
-                )
-              }
+              onClick={() => {
+                setMessage(
+                  "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below"
+                );
+                setShowMessage(true);
+              }}
             >
               <Checkbox checked={checkedItems[key] || false} disabled />
               <label className="text-sm text-gray-700">{key}</label>
