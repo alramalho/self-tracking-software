@@ -267,7 +267,7 @@ class DynamoDBGateway(DBGateway):
                                 raise ValueError(
                                     "$in operator requires a list of values"
                                 )
-                            if not op_value:
+                            if not op_value or len(op_value) == 0:
                                 raise ValueError(
                                     "$in operator requires a non-empty list of values"
                                 )

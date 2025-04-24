@@ -69,6 +69,8 @@ class PlanController:
         self.vector_database = PineconeVectorDB(namespace="plans")
 
     def get_all_by_ids(self, ids: List[str]) -> List[User]:
+        if not ids:
+            return []
         data = self.db_gateway.query_by_criteria({"id": {"$in": ids}})
         return [Plan(**d) for d in data]
 

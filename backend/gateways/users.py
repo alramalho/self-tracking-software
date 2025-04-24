@@ -48,6 +48,8 @@ class UsersGateway:
                 return user
             
     def get_all_by_ids(self, ids: List[str]) -> List[User]:
+        if not ids:
+            return []
         data = self.db_gateway.query_by_criteria({"id": {"$in": ids}})
         return [User(**d) for d in data]
 
