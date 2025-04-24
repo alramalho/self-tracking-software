@@ -3,6 +3,7 @@
 import { useSession, SignOutButton, useClerk } from "@clerk/clerk-react";
 import BottomNav from "../components/BottomNav";
 import { Toaster } from "react-hot-toast";
+import { Toaster as SonnerToaster } from "sonner";
 import { UserPlanProviderWrapper } from "@/components/UserPlanProviderWrapper";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { useEffect, useState } from "react";
@@ -47,6 +48,7 @@ export default function ClientLayout({
                       <GeneralInitializer>{children}</GeneralInitializer>
                     </div>
                   </main>
+                  <SonnerToaster position="top-center" />
                   <Toaster
                     position="top-center"
                     containerStyle={{
