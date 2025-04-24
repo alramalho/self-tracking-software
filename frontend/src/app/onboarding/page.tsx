@@ -502,6 +502,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
           }
           api.post("/update-user", { looking_for_ap: result });
           setWantsPartner(result)
+          currentUserQuery.refetch();
         }}
       />
     );
