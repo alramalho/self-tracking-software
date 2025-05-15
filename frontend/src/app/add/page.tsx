@@ -32,6 +32,15 @@ const LogPage: React.FC = () => {
   const { data: userData } = currentUserDataQuery;
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const activities = userData?.activities || [];
+  const activityEntries = userData?.activityEntries || [];
+  
+  // Sort activities by entry count
+  const sortedActivities = [...activities].sort((a, b) => {
+    const aEntryCount = activityEntries.filter(entry => entry.activity_id === a.id).length;
+    const bEntryCount = activityEntries.filter(entry => entry.activity_id === b.id).length;
+    return bEntryCount - aEntryCount; // Sort in descending order (most entries first)
+  });
+  
   const [selectedActivity, setSelectedActivity] = useState<
     Activity | undefined
   >();
@@ -77,19 +86,19 @@ const LogPage: React.FC = () => {
     setActivityLogData(null);
   };
 
-  const updateActivityPrivacy = async (value: VisibilityType) => {
-    await toast.promise(
-      api.post("/update-user", {
-        default_activity_visibility: value,
-      }),
-      {
-        loading: "Updating privacy settings...",
-        success: "Privacy settings updated",
-        error: "Failed to update privacy settings",
-      }
-    );
-    currentUserDataQuery.refetch();
-  };
+  // const updateActivityPrivacy = async (value: VisibilityType) => {
+  //   await toast.promise(
+  //     api.post("/update-user", {
+  //       default_activity_visibility: value,
+  //     }),
+  //     {
+  //       loading: "Updating privacy settings...",
+  //       success: "Privacy settings updated",
+  //       error: "Failed to update privacy settings",
+  //     }
+  //   );
+  //   currentUserDataQuery.refetch();
+  // };
 
   const metrics = metricsAndEntriesData?.metrics ?? [];
 
@@ -127,7 +136,7 @@ const LogPage: React.FC = () => {
         </div>
       )} */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 my-6">
-        {activities.map((activity) => (
+        {sortedActivities.map((activity) => (
           <ActivityCard
             key={activity.id}
             activity={activity}
