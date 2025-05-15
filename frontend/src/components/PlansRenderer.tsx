@@ -37,6 +37,19 @@ const isPlanExpired = (plan: ApiPlan): boolean => {
   return isBefore(finishingDate, new Date());
 };
 
+// Function to sort plans with active plans first, then expired plans
+const sortPlansByExpiration = (plans: ApiPlan[]): ApiPlan[] => {
+  // Create a copy to avoid mutating the original array
+  return [...plans].sort((a, b) => {
+    const aExpired = isPlanExpired(a);
+    const bExpired = isPlanExpired(b);
+    
+    if (aExpired && !bExpired) return 1; // a is expired, b is not, so b comes first
+    if (!aExpired && bExpired) return -1; // a is not expired, b is, so a comes first
+    return 0; // both are either expired or not expired, maintain original order
+  });
+};
+
 interface SortablePlanProps {
   plan: ApiPlan;
   planGroup?: PlanGroup;
@@ -75,7 +88,7 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   const handleReactivate = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isReactivating) return;
-
+    
     setIsReactivating(true);
     try {
       await onReactivate(plan.id!);
@@ -157,7 +170,8 @@ const PlansRenderer: React.FC = () => {
 
   useEffect(() => {
     if (userData?.plans) {
-      setOrderedPlans(userData.plans);
+      // Sort plans with active plans first, then expired plans
+      setOrderedPlans(sortPlansByExpiration(userData.plans));
     }
   }, [userData?.plans]);
 
@@ -224,7 +238,7 @@ const PlansRenderer: React.FC = () => {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-
+    
     if (!over || active.id === over.id) {
       return;
     }
