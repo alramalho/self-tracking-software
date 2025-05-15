@@ -1,34 +1,51 @@
 "use client";
 
-import { useSession, SignOutButton, useClerk } from "@clerk/clerk-react";
+import { useSession } from "@clerk/clerk-react";
 import BottomNav from "../components/BottomNav";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
 import { UserPlanProviderWrapper } from "@/components/UserPlanProviderWrapper";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import GeneralInitializer from "@/components/GeneralInitializer";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { LoggerProvider } from "@/components/LoggerProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { UpgradeProvider } from "@/contexts/UpgradeContext";
 import { DailyCheckinPopoverProvider } from "@/contexts/DailyCheckinContext";
 
-const queryClient = new QueryClient();
+// Configure QueryClient with longer gcTime to support persistence
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Set a longer garbage collection time to keep cached data
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      staleTime: 1, // 5 minutes - data is considered fresh for 5 minutes
+    },
+  },
+});
+
+const localStoragePersister = createSyncStoragePersister({
+  storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  key: 'TRACKING_SO_QUERY_CACHE',
+  throttleTime: 1000,
+});
 
 export default function ClientLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isSignedIn, isLoaded } = useSession();
+  const { isSignedIn } = useSession(); // Removed isLoaded as it's not used directly here
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister: localStoragePersister }}
+    >
       <LoggerProvider>
         <UserPlanProviderWrapper>
           <ThemeProvider>
@@ -62,6 +79,6 @@ export default function ClientLayout({
           </ThemeProvider>
         </UserPlanProviderWrapper>
       </LoggerProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
