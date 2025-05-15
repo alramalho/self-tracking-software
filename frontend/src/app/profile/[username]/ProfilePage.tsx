@@ -59,6 +59,7 @@ import UserSettingsPopover from "@/components/profile/UserSettingsPopover";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
+import { isPlanExpired } from "@/components/PlansRenderer";
 export type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
 // Utility function to convert TimeRange to number of days
@@ -605,10 +606,12 @@ const ProfilePage: React.FC = () => {
           </TabsList>
           <TabsContent value="plans">
             <div className="space-y-4 mt-4">
-              {profileData?.plans?.map((plan) => (
-                <div key={plan.id} className="p-4 border rounded-lg bg-white">
-                  <div className="flex flex-row items-center gap-2 mb-4">
-                    <span className="text-4xl">{plan.emoji}</span>
+              {profileData?.plans
+                .filter((p) => !isPlanExpired(p))
+                .map((plan) => (
+                  <div key={plan.id} className="p-4 border rounded-lg bg-white">
+                    <div className="flex flex-row items-center gap-2 mb-4">
+                      <span className="text-4xl">{plan.emoji}</span>
                     <h3 className="text-lg font-semibold">{plan.goal}</h3>
                   </div>
                   <PlanActivityEntriesRenderer
