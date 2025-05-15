@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import posthog from "posthog-js";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan, hasCachedUserData } from "@/contexts/UserPlanContext";
 import { useSession } from "@clerk/nextjs";
 import { useNotifications } from "@/hooks/useNotifications";
 import BottomNav from "./BottomNav";
@@ -20,19 +20,22 @@ export default function GeneralInitializer({
 }: {
   children: React.ReactNode;
 }) {
-  const { isSignedIn, isLoaded } = useSession();
+  const { isSignedIn, isLoaded: isClerkLoaded } = useSession();
   const { useCurrentUserDataQuery, hasLoadedUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
+  const { data: userData, isLoading: isUserDataLoading } = currentUserDataQuery;
   const { isAppInstalled, isPushGranted } = useNotifications();
-  const [hasRan, setHasRan] = useState(false);
+  const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
   const { setShowUpgradePopover } = useUpgrade();
 
+  // Determine if there is any cached data to potentially display on initial load.
+  const [initialCacheExists] = useState(() => hasCachedUserData());
+  
   const email = userData?.user?.email || "";
 
   useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && userData?.user && !hasRan) {
+    if (isSignedIn && hasLoadedUserData && userData?.user && !hasRanPosthogIdentify) {
       posthog.identify(userData?.user.id, {
         email: userData?.user.email,
         name: userData?.user.name,
@@ -40,10 +43,9 @@ export default function GeneralInitializer({
         is_app_installed: isAppInstalled,
         is_push_granted: isPushGranted,
       });
-
-      setHasRan(true);
+      setHasRanPosthogIdentify(true);
     }
-  }, [isSignedIn, hasLoadedUserData, userData, hasRan]);
+  }, [isSignedIn, hasLoadedUserData, userData, hasRanPosthogIdentify, isAppInstalled, isPushGranted]);
 
   const reportBug = async (text: string, email: string) => {
     await toast.promise(
@@ -62,7 +64,11 @@ export default function GeneralInitializer({
     );
   };
 
-  if (!isLoaded || (isSignedIn && !hasLoadedUserData)) {
+  // Show full-screen loader if:
+  // 1. Clerk is not loaded yet OR
+  // 2. User is signed in, BUT main user data is still loading AND our initial check found no cache at all.
+  // This allows the app to render children (and potentially the mini-loader) if there was some cache initially.
+  if (!isClerkLoaded || (isSignedIn && isUserDataLoading && !initialCacheExists)) {
     return (
       <>
         {showBugDialog && (
@@ -88,6 +94,14 @@ export default function GeneralInitializer({
     <>
       {children}
       {isSignedIn && <BottomNav />}
+      
+      {/* Show a mini loader if user is signed in and main user data is actively loading, 
+          even if we are showing children due to initially existing cache. */}
+      {isSignedIn && isUserDataLoading && (
+        <div className="fixed bottom-20 left-4 bg-white dark:bg-gray-900 p-2 rounded-full shadow-md z-50">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+        </div>
+      )}
     </>
   );
 }

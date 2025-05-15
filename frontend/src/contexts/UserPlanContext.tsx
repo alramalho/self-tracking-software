@@ -10,6 +10,7 @@ import {
   useQuery,
   UseQueryResult,
   useQueryClient,
+  QueryClient,
 } from "@tanstack/react-query";
 import { usePostHog } from "posthog-js/react";
 import { logger } from "@/utils/logger";
@@ -357,6 +358,26 @@ export function convertPlanToApiPlan(plan: Plan): ApiPlan {
   } as ApiPlan;
 }
 
+// Function to check if we have any cached query data by TanStack Query
+export const hasCachedUserData = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    // Check if the cache key used by PersistQueryClientProvider exists
+    const cachedData = localStorage.getItem('TRACKING_SO_QUERY_CACHE');
+    if (!cachedData) return false;
+
+    // Further check if the parsed cache is not empty and has some clientState
+    // This is a heuristic, as the exact structure can vary
+    const parsedCache = JSON.parse(cachedData);
+    return !!parsedCache && !!parsedCache.clientState && Object.keys(parsedCache.clientState).length > 0;
+
+  } catch (error) {
+    // If parsing fails or any other error, assume no valid cache
+    console.warn("Error checking for cached user data:", error);
+    return false;
+  }
+};
+
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -365,7 +386,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const { signOut } = useClerk();
   const api = useApiWithAuth();
   const posthog = usePostHog();
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // This hook provides the QueryClient instance configured in layoutClient.tsx
 
   const handleAuthError = (err: unknown) => {
     console.error("[UserPlanProvider] Auth error:", err);
