@@ -205,6 +205,15 @@ class PlanController:
             if session.activity_id
         ]
 
+    def get_all_user_plans(self, user: User) -> List[Plan]:
+        logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
+        plans = []
+        for plan_id in user.plan_ids:
+            plan = self.get_plan(plan_id)
+            if plan is not None:
+                plans.append(plan)
+        return plans
+    
     def get_all_user_active_plans(self, user: User) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
         plans = []
