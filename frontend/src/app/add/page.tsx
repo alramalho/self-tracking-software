@@ -1,25 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Activity,
   useUserPlan,
-  VisibilityType,
 } from "@/contexts/UserPlanContext";
 import { Loader2, Plus } from "lucide-react";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
-import ActivityEditor, {
-  toReadablePrivacySetting,
-} from "@/components/ActivityEditor";
+import ActivityEditor from "@/components/ActivityEditor";
 import {
   ActivityCard,
-  getActivityPrivacySettingIcon,
 } from "@/components/ActivityCard";
-import { useApiWithAuth } from "@/api";
-import toast from "react-hot-toast";
-import { Button } from "@/components/ui/button";
-import ActivityPrivacyDropdown from "@/components/ActivityPrivacyDropdown";
 
 interface ActivityLogData {
   date: Date;
@@ -27,7 +19,7 @@ interface ActivityLogData {
 }
 
 const LogPage: React.FC = () => {
-  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
+  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery, refetchUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
@@ -50,18 +42,24 @@ const LogPage: React.FC = () => {
   const [editingActivity, setEditingActivity] = useState<Activity | undefined>(
     undefined
   );
-  const api = useApiWithAuth();
+  const [currentActivityLogData, setCurrentActivityLogData] = useState<ActivityLogData | null>(null);
 
-  useEffect(() => {
-    console.log({ editingActivity });
-  }, [editingActivity]);
+  const handleActivityLogSubmit = useCallback((data: ActivityLogData) => {
+    if (!selectedActivity) return;
 
-  const [activityLogData, setActivityLogData] =
-    useState<ActivityLogData | null>(null);
+    // This function now *only* sets state to show the ActivityPhotoUploader.
+    // It does not make any API calls or queue any tasks directly.
+    setCurrentActivityLogData(data);
+    setShowActivityLogger(false); // Hide the logger popover
+    setShowPhotoUploader(true);  // Show the photo uploader
+  }, [selectedActivity]);
 
   const handleActivitySelected = (activity: Activity) => {
     setSelectedActivity(activity);
     setShowActivityLogger(true);
+    // Reset these states in case a previous flow was interrupted
+    setShowPhotoUploader(false);
+    setCurrentActivityLogData(null);
   };
 
   const handleAddActivity = () => {
@@ -74,31 +72,13 @@ const LogPage: React.FC = () => {
     setEditingActivity(activity);
   };
 
-  const handleActivityLogSubmit = (data: ActivityLogData) => {
-    setActivityLogData(data);
-    setShowActivityLogger(false);
-    setShowPhotoUploader(true);
-  };
-
-  const handleActivityLogged = () => {
+  const handleActivityLoggedAndPhotoSkippedOrDone = () => {
     setShowPhotoUploader(false);
     setSelectedActivity(undefined);
-    setActivityLogData(null);
+    setCurrentActivityLogData(null);
+    // Optionally refetch data if needed, though the components involved in API calls should handle their own refetches.
+    // refetchUserData(); 
   };
-
-  // const updateActivityPrivacy = async (value: VisibilityType) => {
-  //   await toast.promise(
-  //     api.post("/update-user", {
-  //       default_activity_visibility: value,
-  //     }),
-  //     {
-  //       loading: "Updating privacy settings...",
-  //       success: "Privacy settings updated",
-  //       error: "Failed to update privacy settings",
-  //     }
-  //   );
-  //   currentUserDataQuery.refetch();
-  // };
 
   const metrics = metricsAndEntriesData?.metrics ?? [];
 
@@ -118,23 +98,6 @@ const LogPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 mb-16 relative max-w-2xl ">
       <h1 className="text-2xl font-bold">Log Activity</h1>
-      {/* {userData?.user?.default_activity_visibility && (
-        <div className="flex items-center justify-between mb-10">
-          <div className="relative">
-            <span className="text-sm text-gray-500 m-0">
-              Your default activity visibility is: {" "}
-            </span>
-            <span className="text-[11px] text-gray-400 absolute top-full left-0">
-              (Individual activities can be set to a different visibility)
-            </span>
-          </div>
-          <ActivityPrivacyDropdown
-            value={userData.user.default_activity_visibility}
-            onChange={updateActivityPrivacy} // Read-only in this context
-            className="text-sm text-gray-600"
-          />
-        </div>
-      )} */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 my-6">
         {sortedActivities.map((activity) => (
           <ActivityCard
@@ -165,23 +128,36 @@ const LogPage: React.FC = () => {
 
       {selectedActivity && (
         <>
-          <ActivityLoggerPopover
-            open={showActivityLogger}
-            onClose={() => setShowActivityLogger(false)}
-            selectedActivity={selectedActivity}
-            onSubmit={handleActivityLogSubmit}
-          />
+          {!showPhotoUploader && showActivityLogger && (
+            <ActivityLoggerPopover
+              open={true} // Visibility is controlled by showActivityLogger
+              onClose={() => {
+                setShowActivityLogger(false);
+                // If closing without submitting, consider clearing selectedActivity if that's the desired UX
+                // setSelectedActivity(undefined);
+              }}
+              selectedActivity={selectedActivity}
+              onSubmit={handleActivityLogSubmit} 
+            />
+          )}
 
-          <ActivityPhotoUploader
-            open={showPhotoUploader}
-            activityData={{
-              activityId: selectedActivity.id,
-              date: activityLogData?.date ?? new Date(),
-              quantity: activityLogData?.quantity ?? 0,
-            }}
-            onClose={() => setShowPhotoUploader(false)}
-            onSuccess={handleActivityLogged}
-          />
+          {showPhotoUploader && currentActivityLogData && (
+            <ActivityPhotoUploader
+              open={true} // Visibility is controlled by showPhotoUploader
+              activityData={{
+                activityId: selectedActivity!.id, 
+                date: currentActivityLogData.date, 
+                quantity: currentActivityLogData.quantity,
+              }}
+              onClose={() => { 
+                setShowPhotoUploader(false);
+                // Optionally clear selectedActivity and currentActivityLogData if uploader is closed manually
+                // setSelectedActivity(undefined);
+                // setCurrentActivityLogData(null);
+              }}
+              onSuccess={handleActivityLoggedAndPhotoSkippedOrDone}
+            />
+          )}
         </>
       )}
     </div>
