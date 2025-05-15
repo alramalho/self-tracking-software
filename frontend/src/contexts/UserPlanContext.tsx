@@ -286,7 +286,7 @@ export interface UserPlanContextType {
     username?: string;
     forceUpdate?: boolean;
   }) => Promise<UserDataEntry>;
-  refetchUserData: () => Promise<UserDataEntry>;
+  refetchUserData: (notify?: boolean) => Promise<UserDataEntry>;
   refetchAllData: () => Promise<UserDataEntry>;
   updateTimezone: () => Promise<void>;
   updateTheme: (color: ThemeColor) => Promise<void>;
@@ -703,19 +703,22 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const currentUserDataQuery = useCurrentUserDataQuery();
 
-  const refetchUserData = async () => {
-    return toast.promise(
-      currentUserDataQuery.refetch().then((result) => {
-        if (result.error) throw result.error;
-        if (!result.data) throw new Error("User data is undefined");
-        return result.data;
-      }),
-      {
+  const refetchUserData = async (notify = true) => {
+    const refetchPromise = currentUserDataQuery.refetch().then((result) => {
+      if (result.error) throw result.error;
+      if (!result.data) throw new Error("User data is undefined");
+      return result.data;
+    });
+
+    if (notify) {
+      return toast.promise(refetchPromise, {
         loading: "Updating...",
         success: "Updated successfully",
         error: "Failed to update",
-      }
-    );
+      });
+    }
+
+    return refetchPromise;
   };
 
   const refetchAllData = async () => {

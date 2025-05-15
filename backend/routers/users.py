@@ -91,7 +91,7 @@ async def _load_single_user_data(user: User, current_user: User):
         mood_reports_future = executor.submit(
             moods_gateway.get_all_mood_reports_by_user_id, user.id
         )
-        plans_future = executor.submit(plan_controller.get_all_user_active_plans, user)
+        plans_future = executor.submit(plan_controller.get_all_user_plans, user)
         plan_groups_future = executor.submit(
             plan_groups_gateway.get_all_plan_groups_by_plan_ids, user.plan_ids
         )

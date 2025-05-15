@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
-import { Plus, PlusSquare } from "lucide-react";
+import { Plus, PlusSquare, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { ApiPlan, PlanGroup } from "@/contexts/UserPlanContext";
 import {
@@ -28,6 +28,14 @@ import { useRouter } from "next/navigation";
 import Divider from "./Divider";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
+import { parseISO, format, addMonths, isBefore } from "date-fns";
+
+// Helper function to check if a plan is expired
+const isPlanExpired = (plan: ApiPlan): boolean => {
+  if (!plan.finishing_date) return false;
+  const finishingDate = parseISO(plan.finishing_date);
+  return isBefore(finishingDate, new Date());
+};
 
 interface SortablePlanProps {
   plan: ApiPlan;
@@ -38,6 +46,7 @@ interface SortablePlanProps {
   onInviteSuccess: () => void;
   onPlanRemoved?: () => void;
   priority: number;
+  onReactivate: (planId: string) => Promise<void>;
 }
 
 const SortablePlan: React.FC<SortablePlanProps> = ({
@@ -49,6 +58,7 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   onInviteSuccess,
   onPlanRemoved,
   priority,
+  onReactivate,
 }) => {
   const {
     attributes,
@@ -59,34 +69,70 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
     isDragging,
   } = useSortable({ id: plan.id! });
 
+  const isExpired = isPlanExpired(plan);
+  const [isReactivating, setIsReactivating] = useState(false);
+
+  const handleReactivate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isReactivating) return;
+
+    setIsReactivating(true);
+    try {
+      await onReactivate(plan.id!);
+    } finally {
+      setIsReactivating(false);
+    }
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    userSelect: 'none' as const,
-    WebkitUserSelect: 'none' as const,
-    touchAction: isDragging ? 'none' as const : 'pan-y' as const,
+    userSelect: "none" as const,
+    WebkitUserSelect: "none" as const,
+    touchAction: isDragging ? ("none" as const) : ("pan-y" as const),
+    opacity: isExpired ? 0.35 : 1,
+    position: "relative" as const,
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <PlanCard
-        plan={plan}
-        planGroup={planGroup}
-        isSelected={isSelected}
-        currentUserId={currentUserId}
-        onSelect={onSelect}
-        onInviteSuccess={onInviteSuccess}
-        onPlanRemoved={onPlanRemoved}
-        priority={priority}
-        isDragging={isDragging}
-        dragHandleProps={{ ...attributes, ...listeners }}
-      />
+    <div className="relative">
+      <div ref={setNodeRef} style={style}>
+        <PlanCard
+          plan={plan}
+          planGroup={planGroup}
+          isSelected={isSelected}
+          currentUserId={currentUserId}
+          onSelect={onSelect}
+          onInviteSuccess={onInviteSuccess}
+          onPlanRemoved={onPlanRemoved}
+          priority={priority}
+          isDragging={isDragging}
+          dragHandleProps={{ ...attributes, ...listeners }}
+        />
+      </div>
+      {isExpired && (
+        <div
+          className="absolute inset-0 flex items-center justify-center rounded-md"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant="secondary"
+            className="font-medium border-2"
+            onClick={handleReactivate}
+            disabled={isReactivating}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isReactivating ? "animate-spin" : ""}`}
+            />
+            Reactivate
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
 
 const PlansRenderer: React.FC = () => {
-  const router = useRouter();
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
@@ -121,6 +167,22 @@ const PlansRenderer: React.FC = () => {
       setSelectedPlanId(firstPlan.id || null);
     }
   }, [orderedPlans]);
+
+  const handleReactivatePlan = async (planId: string) => {
+    try {
+      const oneMonthLater = format(addMonths(new Date(), 1), "yyyy-MM-dd");
+      await api.post(`/plans/${planId}/update`, {
+        data: {
+          finishing_date: oneMonthLater,
+        },
+      });
+      await refetchUserData(false);
+      toast.success("Plan reactivated successfully");
+    } catch (error) {
+      console.error("Failed to reactivate plan:", error);
+      toast.error("Failed to reactivate plan");
+    }
+  };
 
   if (userData?.plans && userData.plans.length === 0) {
     return (
@@ -162,7 +224,7 @@ const PlansRenderer: React.FC = () => {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (!over || active.id === over.id) {
       return;
     }
@@ -178,7 +240,7 @@ const PlansRenderer: React.FC = () => {
 
     try {
       await api.post("/plans/update-plan-order", {
-        plan_ids: items.map(plan => plan.id),
+        plan_ids: items.map((plan) => plan.id),
       });
       currentUserDataQuery.refetch();
       toast.success("Plan priority updated");
@@ -198,7 +260,7 @@ const PlansRenderer: React.FC = () => {
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">
           <SortableContext
-            items={orderedPlans.map(plan => plan.id!)}
+            items={orderedPlans.map((plan) => plan.id!)}
             strategy={verticalListSortingStrategy}
           >
             {orderedPlans.map((plan, index) => (
@@ -212,6 +274,7 @@ const PlansRenderer: React.FC = () => {
                 onInviteSuccess={handleInviteSuccess}
                 onPlanRemoved={handlePlanRemoved}
                 priority={index + 1}
+                onReactivate={handleReactivatePlan}
               />
             ))}
           </SortableContext>
