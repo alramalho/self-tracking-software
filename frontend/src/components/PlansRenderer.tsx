@@ -31,7 +31,7 @@ import toast from "react-hot-toast";
 import { parseISO, format, addMonths, isBefore } from "date-fns";
 
 // Helper function to check if a plan is expired
-const isPlanExpired = (plan: ApiPlan): boolean => {
+export const isPlanExpired = (plan: ApiPlan): boolean => {
   if (!plan.finishing_date) return false;
   const finishingDate = parseISO(plan.finishing_date);
   return isBefore(finishingDate, new Date());
