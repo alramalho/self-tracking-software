@@ -220,7 +220,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 bg-transparent outline-none text-sm"
+              className="flex-1 bg-transparent outline-none text-[16px]"
               disabled={isSubmitting}
             />
             
