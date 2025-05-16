@@ -292,7 +292,9 @@ export interface UserPlanContextType {
   refetchAllData: () => Promise<UserDataEntry>;
   updateTimezone: () => Promise<void>;
   updateTheme: (color: ThemeColor) => Promise<void>;
+  updateLocalUserData: (updater: (data: UserDataEntry) => UserDataEntry) => void;
   currentTheme: ThemeColor;
+  syncCurrentUserWithProfile: () => void;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(
@@ -851,6 +853,39 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Helper function to synchronize profile and current user data
+  const syncUserData = (userData: UserDataEntry) => {
+    // If the user has a username, also invalidate their profile query
+    if (userData?.user?.username) {
+      // Invalidate the profile query for this username
+      queryClient.invalidateQueries({
+        queryKey: ["userData", userData.user.username],
+      });
+    }
+  };
+
+  // Add this listener to react to all current user data changes
+  useEffect(() => {
+    if (currentUserDataQuery.data?.user?.username && isSignedIn) {
+      const username = currentUserDataQuery.data.user.username;
+      
+      // Add an observer to the query cache
+      const unsubscribe = queryClient.getQueryCache().subscribe(event => {
+        // If current user data was updated
+        if (event.type === 'updated' && 
+            event.query.queryKey[0] === 'userData' && 
+            event.query.queryKey[1] === 'current') {
+          // Also invalidate the profile query for this user
+          syncUserData(event.query.state.data as UserDataEntry);
+        }
+      });
+      
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [currentUserDataQuery.data?.user?.username, isSignedIn, queryClient]);
+
   const currentTheme =
     currentUserDataQuery.data?.user?.theme_base_color || "blue";
 
@@ -873,7 +908,19 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     refetchAllData,
     updateTimezone,
     updateTheme,
+    updateLocalUserData: (updater: (data: UserDataEntry) => UserDataEntry) => {
+      queryClient.setQueryData(["userData", "current"], (oldData: UserDataEntry | undefined) => {
+        if (!oldData) return oldData;
+        return updater(oldData);
+      });
+    },
     currentTheme,
+    // Add a new function to manually synchronize user data
+    syncCurrentUserWithProfile: () => {
+      if (currentUserDataQuery.data) {
+        syncUserData(currentUserDataQuery.data);
+      }
+    },
   };
 
   return (
