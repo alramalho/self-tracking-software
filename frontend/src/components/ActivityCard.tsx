@@ -45,7 +45,7 @@ export const ActivityCard = ({
       <button
         onClick={onClick}
         className={cn(
-          "flex flex-col items-left justify-center p-6 rounded-lg border-2 w-full aspect-square",
+          "flex flex-col items-left justify-center p-6 rounded-lg border-2 w-full h-full aspect-square",
           selected
             ? cn(variants.card.selected.border, variants.card.selected.bg)
             : "border-gray-300 bg-white"
