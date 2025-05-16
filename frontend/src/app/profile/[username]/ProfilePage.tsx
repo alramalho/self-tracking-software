@@ -11,6 +11,7 @@ import {
   UserPlus,
   X,
   SquareArrowUp,
+  ChevronLeft,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -374,6 +375,14 @@ const ProfilePage: React.FC = () => {
         <div
           className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-lg bg-white/60 backdrop-blur-sm`}
         >
+          {!isOnesOwnProfile && (
+            <button 
+              className="absolute left-4 p-2 rounded-full hover:bg-gray-100"
+              onClick={() => window.history.back()}
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
               <Avatar

@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { useRouter } from "next/navigation";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, ChevronLeft } from "lucide-react";
 
 const FriendsPage: React.FC<{ params: { username: string } }> = ({
   params,
@@ -51,8 +51,14 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold mb-4">Friends</h1>
+      <div className="flex items-center justify-between relative mb-4">
+        <button
+          className="absolute left-0 p-2 rounded-full hover:bg-gray-100"
+          onClick={() => window.history.back()}
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="text-2xl font-bold mx-auto">Friends</h1>
         {isOwnProfile && (
           <button
             onClick={() => setIsSearchOpen(true)}
