@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { format, addDays, isToday, subMonths } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
 import { Brush } from 'lucide-react';
 
 export interface HeatmapData {
@@ -77,6 +77,13 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   // Convert dates to UTC
   const utcStartDate = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
   const utcEndDate = endDate ? new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())) : undefined;
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const userData = currentUserDataQuery.data;
+  const userActivities = userData?.activities
+  const isOwnActivity = (activity: Activity) => {
+    return userActivities?.some((userActivity) => userActivity.id === activity.id);
+  }
 
   const numberOfWeeks = utcEndDate
     ? Math.ceil(
@@ -128,7 +135,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             <div className="flex flex-col">
               <span className="text-sm font-semibold mb-1 flex items-center">
                 {activity.emoji} {activity.title}
-                {onEditActivity && (
+                {onEditActivity && isOwnActivity(activity) && (
                   <button 
                     onClick={() => onEditActivity(activity)}
                     className="ml-2 p-1 text-gray-500 hover:text-gray-700"
