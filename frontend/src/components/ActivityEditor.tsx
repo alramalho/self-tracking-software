@@ -13,6 +13,8 @@ import {
 import ConfirmDialog from "./ConfirmDialog";
 import { EmojiInput } from "./ui/EmojiInput";
 import ActivityPrivacyDropdown from "./ActivityPrivacyDropdown";
+import SteppedColorPicker from "./SteppedColorPicker";
+import { Separator } from "./ui/separator";
 
 export function toReadablePrivacySetting(privacySetting: VisibilityType) {
   switch (privacySetting) {
@@ -39,7 +41,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
-  const { useCurrentUserDataQuery } = useUserPlan();
+  const { useCurrentUserDataQuery, updateLocalUserData, syncCurrentUserWithProfile } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const [privacySetting, setPrivacySetting] = useState<VisibilityType>(
@@ -47,6 +49,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       userData?.user?.default_activity_visibility ||
       "public"
   );
+  const [colorHex, setColorHex] = useState(activity?.color_hex || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const api = useApiWithAuth();
@@ -60,7 +63,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       setTitle(activity.title || "");
       setMeasure(activity.measure || "");
       setEmoji(activity.emoji || "");
-      setPrivacySetting(activity.privacy_settings || userData?.user?.default_activity_visibility || "public");
+      setPrivacySetting(
+        activity.privacy_settings ||
+          userData?.user?.default_activity_visibility ||
+          "public"
+      );
+      setColorHex(activity.color_hex || "");
     }
   }, [activity, userData?.user?.default_activity_visibility]);
 
@@ -101,10 +109,28 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         title: title.trim(),
         measure: measure.trim(),
         privacy_settings: privacySetting,
+        color_hex: colorHex === "" ? null : colorHex,
       });
-      currentUserDataQuery.refetch();
+      
+      const savedActivity = response.data as Activity;
+      updateLocalUserData((currentData) => {
+        if (!activity) {
+          return {
+            ...currentData,
+            activities: [...currentData.activities, savedActivity],
+          };
+        }
+        
+        return {
+          ...currentData,
+          activities: currentData.activities.map((act: Activity) => 
+            act.id === savedActivity.id ? savedActivity : act
+          ),
+        };
+      });
 
-      const savedActivity = response.data;
+      syncCurrentUserWithProfile();
+      
       toast.success("Activity saved successfully!");
       onClose();
     } catch (error) {
@@ -125,7 +151,15 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     setIsDeleting(true);
     try {
       await api.delete(`/activities/${activity!.id}`);
-      currentUserDataQuery.refetch();
+      
+      updateLocalUserData((currentData) => {
+        return {
+          ...currentData,
+          activities: currentData.activities.filter((act: Activity) => act.id !== activity!.id),
+        };
+      });
+      
+      syncCurrentUserWithProfile();
       toast.success("Activity deleted successfully!");
       onClose();
     } catch (error: any) {
@@ -180,29 +214,32 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   onChange={(e) => setMeasure(e.target.value)}
                 />
               )}
-              {activity && (
-                <Button
-                  onClick={handleDelete}
-                  variant="destructive"
-                  className="w-full"
-                  disabled={isSaving}
-                >
-                  {isDeleting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4 mr-2" />
-                  )}
-                  Delete Activity
-                </Button>
-              )}
+              <SteppedColorPicker value={colorHex} onChange={setColorHex} />
+
+              <Separator className="my-4" />
             </div>
             <Button
               onClick={handleSave}
-              className="w-full py-5 mt-8"
+              className="w-full py-5"
               loading={isSaving}
             >
               Save Activity
             </Button>
+            {activity && (
+              <Button
+                onClick={handleDelete}
+                variant="outline"
+                className="w-full mt-4 text-red-500"
+                disabled={isSaving}
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Delete Activity
+              </Button>
+            )}
           </div>
         </div>
       </AppleLikePopover>

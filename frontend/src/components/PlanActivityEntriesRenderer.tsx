@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { format, startOfWeek, endOfWeek, isBefore, isAfter } from "date-fns";
 import { Activity, Plan, ActivityEntry } from "@/contexts/UserPlanContext";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
+import ActivityEditor from "./ActivityEditor";
 
 export const isWeekCompleted = (
   weekStartDate: Date,
@@ -23,7 +24,8 @@ export const isWeekCompleted = (
       entriesThisWeek.map((entry) => format(new Date(entry.date), "yyyy-MM-dd"))
     );
 
-    const isCompleted = uniqueDaysWithActivities.size >= (plan.times_per_week || 0);
+    const isCompleted =
+      uniqueDaysWithActivities.size >= (plan.times_per_week || 0);
 
     return isCompleted;
   } else {
@@ -72,6 +74,8 @@ const PlanActivityEntriesRenderer: React.FC<
   PlanActivityEntriesRendererProps
 > = ({ plan, activities, activityEntries, startDate, endDate }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
 
   const planActivities = useMemo(
     () => activities.filter((a) => plan.activity_ids?.includes(a.id)),
@@ -113,6 +117,16 @@ const PlanActivityEntriesRenderer: React.FC<
       count: entry.quantity,
     }));
     return formattedEntries;
+  };
+
+  const handleOpenActivityEditor = (activity: Activity) => {
+    setEditingActivity(activity);
+    setIsActivityEditorOpen(true);
+  };
+
+  const handleCloseActivityEditor = () => {
+    setEditingActivity(null);
+    setIsActivityEditorOpen(false);
   };
 
   const getIntensityForDate = (dateStr: string) => {
@@ -200,8 +214,16 @@ const PlanActivityEntriesRenderer: React.FC<
         getWeekCompletionStatus={(weekStartDate: Date) =>
           isWeekCompleted(weekStartDate, plan, planActivityEntries)
         }
+        onEditActivity={handleOpenActivityEditor}
       />
       <div className="flex justify-center mt-4">{renderActivityViewer()}</div>
+      {editingActivity && (
+        <ActivityEditor
+          open={isActivityEditorOpen}
+          onClose={handleCloseActivityEditor}
+          activity={editingActivity}
+        />
+      )}
     </div>
   );
 };

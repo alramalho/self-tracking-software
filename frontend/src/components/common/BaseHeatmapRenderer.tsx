@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { format, addDays, isToday, subMonths } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { Activity } from "@/contexts/UserPlanContext";
+import { Brush } from 'lucide-react';
 
 export interface HeatmapData {
   date: string;
@@ -19,6 +20,8 @@ export interface BaseHeatmapRendererProps {
   ) => { activityIndex: number; intensity: number }[] | null;
   noActivityLegend?: boolean;
   getWeekCompletionStatus?: (weekStartDate: Date) => boolean;
+  onEditActivity?: (activity: Activity) => void;
+  refreshKey?: number | string;
 }
 
 export const getActivityColorMatrix = () => {
@@ -68,7 +71,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   onDateClick,
   getIntensityForDate,
   noActivityLegend = false,
-  getWeekCompletionStatus
+  getWeekCompletionStatus,
+  onEditActivity,
 }) => {
   // Convert dates to UTC
   const utcStartDate = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
@@ -122,8 +126,17 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               )}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold mb-1">
+              <span className="text-sm font-semibold mb-1 flex items-center">
                 {activity.emoji} {activity.title}
+                {onEditActivity && (
+                  <button 
+                    onClick={() => onEditActivity(activity)}
+                    className="ml-2 p-1 text-gray-500 hover:text-gray-700"
+                    title={`Edit ${activity.title}`}
+                  >
+                    <Brush size={16} />
+                  </button>
+                )}
               </span>
               <span className="text-xs text-gray-500">
                 ({activity.measure})
