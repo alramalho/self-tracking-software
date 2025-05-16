@@ -26,6 +26,7 @@ export interface Activity {
   emoji?: string;
   user_id?: string;
   privacy_settings?: VisibilityType;
+  color_hex?: string;
 }
 
 export interface ImageInfo {

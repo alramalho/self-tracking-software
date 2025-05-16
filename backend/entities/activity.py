@@ -16,6 +16,7 @@ class Activity(BaseModel):
     emoji: str
     created_at: str
     privacy_settings: Optional[Literal["public", "private", "friends"]] = None
+    color_hex: Optional[str] = Field(default=None, description="Optional HEX color code for the activity.")
     deleted_at: Optional[str] = None
 
     @field_validator("title")
@@ -38,6 +39,7 @@ class Activity(BaseModel):
         emoji: str,
         id: Optional[str] = None,
         privacy_settings: Optional[Literal["public", "private", "friends"]] = None,
+        color_hex: Optional[str] = None,
     ) -> "Activity":
         return cls(
             id=id or str(ObjectId()),
@@ -47,6 +49,7 @@ class Activity(BaseModel):
             emoji=emoji,
             privacy_settings=privacy_settings,
             created_at=datetime.now(UTC).isoformat(),
+            color_hex=color_hex,
         )
 
 
