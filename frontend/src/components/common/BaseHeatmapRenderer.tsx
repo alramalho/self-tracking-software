@@ -35,10 +35,26 @@ export const getActivityColorMatrix = () => {
   return baseColors;
 };
 
+// Helper function to convert HEX to RGBA
+const hexToRgba = (hex: string, alpha: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const intensityAlphaLevels = [0.2, 0.4, 0.6, 0.8, 1.0]; // Define alpha levels for intensities 0-4
+
 export const getActivityColor = (
   activityIndex: number,
-  intensityLevel: number
+  intensityLevel: number,
+  activity?: Activity
 ) => {
+  if (activity?.color_hex) {
+    // Ensure intensityLevel is within the bounds of our alpha levels array
+    const alpha = intensityAlphaLevels[Math.min(intensityLevel, intensityAlphaLevels.length - 1)];
+    return hexToRgba(activity.color_hex, alpha);
+  }
   const colorMatrix = getActivityColorMatrix();
   const row = colorMatrix[activityIndex % colorMatrix.length];
   return row[Math.min(intensityLevel, row.length - 1)];
@@ -81,14 +97,27 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         {!noActivityLegend && activities.map((activity, index) => (
           <React.Fragment key={index}>
             <div className="flex flex-row gap-0 items-center">
-              {colorMatrix[index % colorMatrix.length].map(
-                (color, intensityIndex) => (
+              {activity.color_hex ? (
+                intensityAlphaLevels.map((alpha, intensityIdx) => (
                   <div
-                    key={intensityIndex}
+                    key={intensityIdx}
                     className="w-4 h-4"
-                    style={{ backgroundColor: color }}
-                    title={`Intensity level ${intensityIndex + 1}`}
+                    style={{
+                      backgroundColor: hexToRgba(activity.color_hex!, alpha),
+                    }}
+                    title={`${activity.title} - Intensity ${intensityIdx + 1}`}
                   />
+                ))
+              ) : (
+                colorMatrix[index % colorMatrix.length].map(
+                  (color, intensityIndex) => (
+                    <div
+                      key={intensityIndex}
+                      className="w-4 h-4"
+                      style={{ backgroundColor: color }}
+                      title={`Intensity level ${intensityIndex + 1}`}
+                    />
+                  )
                 )
               )}
             </div>
@@ -126,9 +155,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               const [year, month, day] = data.date.split('/').map(Number);
               const dateObj = new Date(Date.UTC(year, month - 1, day));
               
-              const intensities = getIntensityForDate(
-                format(dateObj, "yyyy-MM-dd")
-              );
+              const dateStrForIntensity = format(dateObj, "yyyy-MM-dd");
+              const intensities = getIntensityForDate(dateStrForIntensity);
 
               // Compare UTC dates for today check
               const today = new Date();
@@ -168,18 +196,19 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                 const gap = 1; // Gap between rectangles
 
                 if (intensities.length === 1) {
-                  // Single full-size rectangle
+                  const activity = activities[intensities[0].activityIndex];
                   rects.push(
                     <rect
                       key={0}
                       {...props}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity)}
                       rx={4}
                     />
                   );
                 } else if (intensities.length === 2) {
-                  // Two vertical rectangles
                   const halfWidth = (rectWidth - gap) / 2;
+                  const activity1 = activities[intensities[0].activityIndex];
+                  const activity2 = activities[intensities[1].activityIndex];
                   rects.push(
                     <path
                       key={0}
@@ -190,7 +219,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
                          L ${baseX} ${baseY + 4}
                          Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity1)}
                     />,
                     <path
                       key={1}
@@ -201,13 +230,15 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
                          L ${baseX + halfWidth + gap} ${baseY + rectHeight}
                          L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity)}
+                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity, activity2)}
                     />
                   );
                 } else if (intensities.length === 3) {
-                  // Two rectangles on top, one on bottom
                   const halfWidth = (rectWidth - gap) / 2;
                   const halfHeight = (rectHeight - gap) / 2;
+                  const activity1 = activities[intensities[0].activityIndex];
+                  const activity2 = activities[intensities[1].activityIndex];
+                  const activity3 = activities[intensities[2].activityIndex];
                   rects.push(
                     <path
                       key={0}
@@ -217,7 +248,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX} ${baseY + halfHeight}
                          L ${baseX} ${baseY + 4}
                          Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity1)}
                     />,
                     <path
                       key={1}
@@ -227,7 +258,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX + rectWidth} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity)}
+                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity, activity2)}
                     />,
                     <path
                       key={2}
@@ -238,13 +269,16 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX + 4} ${baseY + rectHeight}
                          Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
                          L ${baseX} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity)}
+                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity, activity3)}
                     />
                   );
                 } else if (intensities.length >= 4) {
-                  // Four equal rectangles
                   const halfWidth = (rectWidth - gap) / 2;
                   const halfHeight = (rectHeight - gap) / 2;
+                  const activity1 = activities[intensities[0].activityIndex];
+                  const activity2 = activities[intensities[1].activityIndex];
+                  const activity3 = activities[intensities[2].activityIndex];
+                  const activity4 = activities[intensities[3].activityIndex];
                   rects.push(
                     <path
                       key={0}
@@ -254,7 +288,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX} ${baseY + halfHeight}
                          L ${baseX} ${baseY + 4}
                          Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity)}
+                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity1)}
                     />,
                     <path
                       key={1}
@@ -264,7 +298,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX + rectWidth} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity)}
+                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity, activity2)}
                     />,
                     <path
                       key={2}
@@ -274,7 +308,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX + 4} ${baseY + rectHeight}
                          Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
                          L ${baseX} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity)}
+                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity, activity3)}
                     />,
                     <path
                       key={3}
@@ -284,7 +318,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
                          L ${baseX + halfWidth + gap} ${baseY + rectHeight}
                          L ${baseX + halfWidth + gap} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(intensities[3].activityIndex, intensities[3].intensity)}
+                      fill={getActivityColor(intensities[3].activityIndex, intensities[3].intensity, activity4)}
                     />
                   );
                 }
