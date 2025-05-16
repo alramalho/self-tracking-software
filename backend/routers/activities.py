@@ -156,10 +156,10 @@ async def upsert_activity(
     activity: dict = Body(...), user: User = Depends(is_clerk_user)
 ):
     activity_id = activity.get("id", None)
-    activity = activities_gateway.get_activity_by_id(activity_id)
+    existent_activity = activities_gateway.get_activity_by_id(activity_id)
 
-    if activity:
-        if activity.user_id != user.id:
+    if existent_activity:
+        if existent_activity.user_id != user.id:
             raise HTTPException(status_code=403, detail="Not authorized to update this activity")
         try:
             updated_activity = activities_gateway.update_activity(Activity(**activity))
