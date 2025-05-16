@@ -1,11 +1,18 @@
-import { Activity, useUserPlan, VisibilityType } from "@/contexts/UserPlanContext";
+import {
+  Activity,
+  useUserPlan,
+  VisibilityType,
+} from "@/contexts/UserPlanContext";
 import { Earth, Edit, Lock, Users } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { toReadablePrivacySetting } from "./ActivityEditor";
 
-export function getActivityPrivacySettingIcon(privacySetting: VisibilityType, size: number = 12) {
+export function getActivityPrivacySettingIcon(
+  privacySetting: VisibilityType,
+  size: number = 12
+) {
   switch (privacySetting) {
     case "public":
       return <Earth size={size} className="inline-block" />;
@@ -33,7 +40,6 @@ export const ActivityCard = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
-
   return (
     <div className="relative" data-testid="activity-card">
       <button
@@ -48,18 +54,22 @@ export const ActivityCard = ({
         {activity.emoji && (
           <span className="text-4xl mb-2 text-left">{activity.emoji}</span>
         )}
-        <span className="text-xl font-medium text-left">
-          {activity.title}
-        </span>
+        <span className="text-xl font-medium text-left">{activity.title}</span>
         <span className="text-sm text-gray-500 text-left">
           {activity.measure}
         </span>
-        {activity.privacy_settings && activity.privacy_settings !== userData?.user?.default_activity_visibility && (
-          <span className="text-[10px] text-left flex items-center gap-1 mt-2 text-gray-400">
-            {getActivityPrivacySettingIcon(activity.privacy_settings)}
-            {toReadablePrivacySetting(activity.privacy_settings)}
-          </span>
-        )}
+        {activity.privacy_settings &&
+          activity.privacy_settings !==
+            userData?.user?.default_activity_visibility && (
+            <span className="text-[10px] text-left flex items-center gap-1 mt-2 text-gray-400">
+              {getActivityPrivacySettingIcon(activity.privacy_settings)}
+              {toReadablePrivacySetting(activity.privacy_settings)}
+            </span>
+          )}
+        <div
+          className="absolute bottom-2 right-2 w-5 h-5 rounded-sm"
+          style={{ backgroundColor: activity.color_hex || "#e5e7eb" }}
+        />
       </button>
       {onEditClick && (
         <button
