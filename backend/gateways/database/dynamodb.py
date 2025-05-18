@@ -239,6 +239,9 @@ class DynamoDBGateway(DBGateway):
         attr_names = {}
         attr_values = {}
 
+        # Filter out deleted items
+        query_criteria["deleted_at"] = None
+
         for field, value in query_criteria.items():
             # Handle array field paths by checking for [] notation
             if "[]." in field:
@@ -369,8 +372,6 @@ class DynamoDBGateway(DBGateway):
                     response = self.table.scan(**params)
                 items.extend(response.get("Items", []))
 
-            # Filter out deleted items
-            items = [item for item in items if not item.get("deleted", False)]
 
             # Apply client-side sorting if needed
             # Since $in is used with created_at sort, we need client-side sorting
