@@ -13,9 +13,7 @@ def _convert_decimals_to_floats(item: Any) -> Any:
     if isinstance(item, list):
         return [_convert_decimals_to_floats(i) for i in item]
     elif isinstance(item, dict):
-        return {
-            k: _convert_decimals_to_floats(v) for k, v in item.items()
-        }
+        return {k: _convert_decimals_to_floats(v) for k, v in item.items()}
     elif isinstance(item, Decimal):
         return float(item)
     else:
@@ -26,9 +24,7 @@ def _convert_floats_to_decimals(item: Any) -> Any:
     if isinstance(item, list):
         return [_convert_floats_to_decimals(i) for i in item]
     elif isinstance(item, dict):
-        return {
-            k: _convert_floats_to_decimals(v) for k, v in item.items()
-        }
+        return {k: _convert_floats_to_decimals(v) for k, v in item.items()}
     elif isinstance(item, float):
         return Decimal(str(item))
     else:
@@ -216,32 +212,34 @@ class DynamoDBGateway(DBGateway):
             return
 
     def query_by_criteria(
-        self, criteria: Dict[str, Any], index_name: Optional[str] = None
+        self,
+        criteria: Dict[str, Any],
+        index_name: Optional[str] = None,
+        limit: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Query items based on multiple criteria.
+        Query items based on multiple criteria with optional sorting and limiting.
 
         Args:
             criteria: Dictionary of field-value pairs. Values can be:
-                     - Simple value for equality check
-                     - Dict with operators ($gt, $gte, $lt, $lte, $between, $in, etc.)
-                     - Array field paths using dot notation (e.g. 'sessions[].activity_id')
+                    - Simple value for equality check
+                    - Dict with operators ($gt, $gte, $lt, $lte, $between, $in, etc.)
+                    - Array field paths using dot notation (e.g. 'sessions[].activity_id')
+                    - Special $sort field for sorting results: {"$sort": {"field_name": 1|-1}}
             index_name: Optional name of the index to use
-
-        Example:
-            query_by_criteria({
-                'user_id': '123',
-                'date': {'$gte': '2024-01-01', '$lte': '2024-12-31'},
-                'status': 'active',
-                'role': {'$in': ['admin', 'editor']},
-                'sessions[].activity_id': 'abc123'  # Will find plans where any session has this activity_id
-            })
+            limit: Optional maximum number of items to return (applied after sorting)
         """
+        # Extract sort configuration if present
+        sort_config = None
+        query_criteria = criteria.copy()
+        if "$sort" in query_criteria:
+            sort_config = query_criteria.pop("$sort")
+
         expression_parts = []
         attr_names = {}
         attr_values = {}
 
-        for field, value in criteria.items():
+        for field, value in query_criteria.items():
             # Handle array field paths by checking for [] notation
             if "[]." in field:
                 base_field, array_path = field.split("[].")
@@ -258,11 +256,11 @@ class DynamoDBGateway(DBGateway):
                 # Handle regular fields as before
                 attr_name = f"#{field}"
                 attr_names[attr_name] = field
-                
+
                 if isinstance(value, dict):  # Complex condition with operators
                     for op, op_value in value.items():
                         # Special handling for $in to avoid creating an unused attribute value
-                        if op == '$in':
+                        if op == "$in":
                             if not isinstance(op_value, list):
                                 raise ValueError(
                                     "$in operator requires a list of values"
@@ -271,20 +269,20 @@ class DynamoDBGateway(DBGateway):
                                 raise ValueError(
                                     "$in operator requires a non-empty list of values"
                                 )
-                            
+
                             in_placeholders = []
                             for i, item in enumerate(op_value):
                                 placeholder = f":{field}_in{i}"
                                 attr_values[placeholder] = item
                                 in_placeholders.append(placeholder)
-                            
+
                             expression_parts.append(
                                 f"{attr_name} IN ({', '.join(in_placeholders)})"
                             )
-                        else: # Handle other operators
+                        else:  # Handle other operators
                             attr_value = f":{field}{op.replace('$', '')}"
                             attr_values[attr_value] = op_value
-                            
+
                             if op == "$gt":
                                 expression_parts.append(f"{attr_name} > {attr_value}")
                             elif op == "$gte":
@@ -318,38 +316,83 @@ class DynamoDBGateway(DBGateway):
             }
 
             # Check if $in operator is used
-            has_in_operator = any(isinstance(v, dict) and '$in' in v for v in criteria.values())
+            has_in_operator = any(
+                isinstance(v, dict) and "$in" in v for v in query_criteria.values()
+            )
 
-            # If querying by an indexed field AND $in is NOT used, try to use query instead of scan
-            if (
-                not has_in_operator and
-                len(criteria) == 1
-                and next(iter(criteria.keys())) + "-index" in self._get_table_indexes()
-            ):
-                index_name = next(iter(criteria.keys())) + "-index"
-                params["IndexName"] = index_name
-                # KeyConditionExpression must be set for query, and FilterExpression is not allowed for KeyCondition
-                # We assume the single criterion is suitable for KeyConditionExpression here
-                # This might need refinement if complex conditions are used on the indexed field
-                params["KeyConditionExpression"] = filter_expression 
-                del params["FilterExpression"] # Remove FilterExpression when using KeyConditionExpression
-                response = self.table.query(**params)
-            else:
-                # Use scan if $in is present or if not querying a single indexed field
+            # For the current use case, we need to use scan since we're using $in
+            # Cannot use query with $in on non-key attributes
+            if has_in_operator:
+                # If sorting with an index, use that index for the scan
+                if sort_config:
+                    sort_field = next(iter(sort_config.keys()))
+                    possible_index = f"{sort_field}-index"
+
+                    if possible_index in self._get_table_indexes():
+                        params["IndexName"] = possible_index
+
+                # Use scan operation
                 response = self.table.scan(**params)
+            else:
+                # If not using $in, we can try to use query if applicable
+                if (
+                    len(query_criteria) == 1
+                    and next(iter(query_criteria.keys())) + "-index"
+                    in self._get_table_indexes()
+                ):
+                    index_name = next(iter(query_criteria.keys())) + "-index"
+                    params["IndexName"] = index_name
+                    params["KeyConditionExpression"] = filter_expression
+                    del params["FilterExpression"]
+
+                    # Only for query operations we can use ScanIndexForward
+                    if sort_config:
+                        sort_field = next(iter(sort_config.keys()))
+                        if index_name.startswith(f"{sort_field}-"):
+                            params["ScanIndexForward"] = (
+                                next(iter(sort_config.values())) > 0
+                            )
+
+                    response = self.table.query(**params)
+                else:
+                    # Fall back to scan
+                    response = self.table.scan(**params)
 
             items = response.get("Items", [])
 
             # Handle pagination
             while "LastEvaluatedKey" in response:
                 params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-                if "IndexName" in params:
+                if "KeyConditionExpression" in params:
                     response = self.table.query(**params)
                 else:
                     response = self.table.scan(**params)
                 items.extend(response.get("Items", []))
 
-            return _convert_decimals_to_floats([item for item in items if not item.get("deleted", False)])
+            # Filter out deleted items
+            items = [item for item in items if not item.get("deleted", False)]
+
+            # Apply client-side sorting if needed
+            # Since $in is used with created_at sort, we need client-side sorting
+            if sort_config:
+                for field, direction in sort_config.items():
+                    items.sort(
+                        key=lambda x: (
+                            x.get(field, None) is None,
+                            (
+                                x.get(field, None)
+                                if x.get(field, None) is not None
+                                else ""
+                            ),
+                        ),
+                        reverse=(direction < 0),
+                    )
+
+            # Apply limit after sorting
+            if limit is not None and limit > 0:
+                items = items[:limit]
+
+            return _convert_decimals_to_floats(items)
 
         except ClientError as e:
             logger.error(f"Failed to query items: {str(e)}")
@@ -370,10 +413,4 @@ class DynamoDBGateway(DBGateway):
 
 if __name__ == "__main__":
     db = DynamoDBGateway("recommendations")
-    print(
-        db.query_by_criteria(
-            {
-                "user_id": "670fb420158ba86def604e67"
-            }
-        )
-    )
+    print(db.query_by_criteria({"user_id": "670fb420158ba86def604e67"}))

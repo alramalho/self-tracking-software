@@ -427,19 +427,14 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
         ]
         friends = [f for f in friends if f is not None]
         users = [*friends, current_user]
-        users_activities_entries = [
-            entry
-            for user in users
-            for entry in activities_gateway.get_most_recent_activity_entries(
-                user.id, limit=10
+        users_activities_entries = (
+            activities_gateway.get_most_recent_activity_entries_for_users(
+                [u.id for u in users], limit=MAX_TIMELINE_ENTRIES
             )
-        ]
-        sorted_users_activities_entries = sorted(
-            users_activities_entries, key=lambda x: x.created_at, reverse=True
-        )[:MAX_TIMELINE_ENTRIES]
+        )
         users_activities = [
             activities_gateway.get_activity_by_id(aentry.activity_id)
-            for aentry in sorted_users_activities_entries
+            for aentry in users_activities_entries
             if activities_gateway.get_activity_by_id(aentry.activity_id)
         ]
 

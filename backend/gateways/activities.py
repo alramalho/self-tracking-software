@@ -121,6 +121,14 @@ class ActivitiesGateway:
         ordered_activity_entries = sorted(all_activity_entries, key=lambda x: x.date, reverse=True)
         return ordered_activity_entries[:limit]
     
+    def get_most_recent_activity_entries_for_users(self, user_ids: List[str], limit: int = 5) -> List[ActivityEntry]:
+        all_activity_entries = self.activity_entries_db_gateway.query_by_criteria({
+            "user_id": {"$in": user_ids},
+            "$sort": {"created_at": -1}
+        }, limit=limit)
+        
+        return [ActivityEntry(**data) for data in all_activity_entries]
+    
     def create_activity(self, activity: Activity) -> Activity:
         if len(self.activities_db_gateway.query("id", activity.id)) != 0:
             logger.info(f"Activity {activity.id} ({activity.title}) already exists")
