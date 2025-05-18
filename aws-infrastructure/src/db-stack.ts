@@ -33,7 +33,7 @@ export class DbStack extends cdk.Stack {
     // Activity Entries Table
     new DynamoDbTableConstruct(this, "ActivityEntriesTable", {
       name: `${SNAKE_CASE_PREFIX}_activity_entries_${props.environment}`,
-      indexFields: ["user_id", "activity_id", "date"],
+      indexFields: ["user_id", "activity_id", "date", "created_at"],
       writableBy: props.writableBy,
       readableBy: props.readableBy,
     });
