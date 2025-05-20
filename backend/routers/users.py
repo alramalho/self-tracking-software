@@ -421,22 +421,16 @@ async def get_timeline_data(current_user: User = Depends(is_clerk_user)):
                 "recommended_users": [],
             }
 
-        friends = [
-            users_gateway.get_user_by_safely("id", friend_id)
-            for friend_id in current_user.friend_ids
-        ]
-        friends = [f for f in friends if f is not None]
+        friends = users_gateway.get_all_by_ids(current_user.friend_ids)
         users = [*friends, current_user]
         users_activities_entries = (
             activities_gateway.get_most_recent_activity_entries_for_users(
                 [u.id for u in users], limit=MAX_TIMELINE_ENTRIES
             )
         )
-        users_activities = [
-            activities_gateway.get_activity_by_id(aentry.activity_id)
-            for aentry in users_activities_entries
-            if activities_gateway.get_activity_by_id(aentry.activity_id)
-        ]
+        users_activities = activities_gateway.get_all_activites_by_ids(
+            [aentry.activity_id for aentry in users_activities_entries]
+        )
 
         return {
             "recommended_activity_entries": [
