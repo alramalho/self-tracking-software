@@ -34,11 +34,11 @@ export interface BaseExtractionResponse {
 
 export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   id: string;
-  initialMessage: string;
+  initialMessage?: string;
   questionPrefix?: string;
-  questionsChecks: QuestionsChecks;
+  questionsChecks?: QuestionsChecks;
   submitButtonText?: string;
-  onSubmit: (text: string) => Promise<T>;
+  onSubmit: (text: string) => Promise<T | void>;
   shouldRenderChildren?: boolean;
   renderIntermediateComponents?: () => React.ReactNode;
   renderChildren?: (data: T) => React.ReactNode;
@@ -47,6 +47,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   creationMessage?: string;
   placeholder?: string;
   title?: string;
+  description?: string;
   wave?: boolean;
   onSkip?: () => void;
 };
@@ -66,6 +67,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   creationMessage = "Do you want me to process this for you?",
   placeholder = "You can also record a voice message for extended detail",
   title,
+  description,
   wave = false,
   onSkip,
 }: DynamicUISuggesterProps<T>) {
@@ -89,7 +91,9 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   const variants = getThemeVariants(themeColors.raw);
 
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>(
-    Object.fromEntries(Object.keys(questionsChecks).map((key) => [key, false]))
+    Object.fromEntries(
+      Object.keys(questionsChecks ?? {}).map((key) => [key, false])
+    )
   );
 
   // Add refs for scrolling
@@ -112,6 +116,9 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       return await onSubmit(text);
     },
     onSuccess: (data) => {
+      if (!data) {
+        data = { question_checks: {}, message: "" } as T;
+      }
       // Store the extracted data
       setExtractedData(data);
       const thisAttempt = attempts + 1;
@@ -181,7 +188,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       // Reset state
       setCheckedItems(
         Object.fromEntries(
-          Object.keys(questionsChecks).map((key) => [key, false])
+          Object.keys(questionsChecks ?? {}).map((key) => [key, false])
         )
       );
       setExtractedData(null);
@@ -294,24 +301,38 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <div className="px-4">{renderIntermediateComponents()}</div>
         )}
 
-        <div ref={checkboxesRef} className="space-y-3 mt-12 px-4">
-          <p className="text-sm text-gray-500">{questionPrefix}</p>
-          {Object.keys(questionsChecks).map((key) => (
-            <div
-              key={key}
-              className="flex items-center space-x-2"
-              onClick={() => {
-                setMessage(
-                  "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below"
-                );
-                setShowMessage(true);
-              }}
+        {description && (
+          <div className="px-4">
+            <p
+              className={`text-sm text-gray-500 ${
+                questionsChecks ? "text-left" : "text-center"
+              }`}
             >
-              <Checkbox checked={checkedItems[key] || false} disabled />
-              <label className="text-sm text-gray-700">{key}</label>
-            </div>
-          ))}
-        </div>
+              {description}
+            </p>
+          </div>
+        )}
+
+        {questionsChecks && (
+          <div ref={checkboxesRef} className="space-y-3 mt-12 px-4">
+            <p className="text-sm text-gray-500">{questionPrefix}</p>
+            {Object.keys(questionsChecks ?? {}).map((key) => (
+              <div
+                key={key}
+                className="flex items-center space-x-2"
+                onClick={() => {
+                  setMessage(
+                    "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below"
+                  );
+                  setShowMessage(true);
+                }}
+              >
+                <Checkbox checked={checkedItems[key] || false} disabled />
+                <label className="text-sm text-gray-700">{key}</label>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="w-full px-4">
           <TextAreaWithVoice
