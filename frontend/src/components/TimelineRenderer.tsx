@@ -40,8 +40,10 @@ function isInCurrentWeek(date: string) {
 const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
   onOpenSearch,
 }) => {
-  const { timelineData, hasLoadedTimelineData, useCurrentUserDataQuery } =
+  const { useTimelineDataQuery, useCurrentUserDataQuery } =
     useUserPlan();
+  const timelineDataQuery = useTimelineDataQuery();
+  const timelineData = timelineDataQuery.data;
   const { data: userData } = useCurrentUserDataQuery();
   const router = useRouter();
   const { isSupported: isShareSupported, share } = useShare();
@@ -51,11 +53,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
   const { setShowUpgradePopover } = useUpgrade();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  useEffect(() => {
-    timelineData.refetch();
-  }, []);
-
-  if (!hasLoadedTimelineData) {
+  if (!timelineDataQuery.isFetched && !timelineData) {
     return (
       <div className="flex justify-center items-center w-full">
         <Loader2 className="animate-spin text-gray-500" />
@@ -165,7 +163,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
   }
 
   const sortedEntries = [
-    ...(timelineData.data?.recommendedActivityEntries || []),
+    ...(timelineData?.recommendedActivityEntries || []),
   ].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
@@ -208,16 +206,16 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
         Friend&apos;s last activities
       </h2>
 
-      {timelineData.isFetched &&
-        timelineData.data?.recommendedActivities &&
-        timelineData.data?.recommendedUsers &&
+      {timelineDataQuery.isFetched &&
+        timelineData?.recommendedActivities &&
+        timelineData?.recommendedUsers &&
         sortedEntries.map((entry: TaggedActivityEntry) => {
           const activity: Activity | undefined =
-            timelineData.data!.recommendedActivities!.find(
+            timelineData?.recommendedActivities?.find(
               (a: Activity) => a.id === entry.activity_id
             );
           const user: User | undefined =
-            timelineData.data!.recommendedUsers!.find(
+            timelineData?.recommendedUsers?.find(
               (u: User) => u.id === activity?.user_id
             );
           if (!activity) return null;

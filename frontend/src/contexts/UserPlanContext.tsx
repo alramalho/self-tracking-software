@@ -264,6 +264,7 @@ export interface UserData {
 
 export interface UserPlanContextType {
   useCurrentUserDataQuery: () => UseQueryResult<UserDataEntry>;
+  useTimelineDataQuery: () => UseQueryResult<TimelineData | null>;
   useUserDataQuery: (username: string) => UseQueryResult<UserDataEntry>;
   useRecommendedUsersQuery: () => UseQueryResult<{
     recommendations: Recommendation[];
@@ -280,8 +281,6 @@ export interface UserPlanContextType {
   useHasMetricsToLogToday: () => boolean;
   useIsMetricLoggedToday: (metricId: string) => boolean;
   hasLoadedUserData: boolean;
-  hasLoadedTimelineData: boolean;
-  timelineData: UseQueryResult<TimelineData | null>;
   messagesData: UseQueryResult<{ messages: Message[] }>;
   notificationsData: UseQueryResult<{ notifications: Notification[] }>;
   fetchUserData: (options?: {
@@ -504,7 +503,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const fetchTimelineDataFn = async () => {
-    if (!isSignedIn) return null;
+    console.log("fetchTimelineDataFn");
 
     try {
       const startTime = performance.now();
@@ -641,12 +640,16 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const timelineData = useQuery({
-    queryKey: ["timelineData"],
-    queryFn: fetchTimelineDataFn,
-    enabled: isSignedIn && isLoaded,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const useTimelineDataQuery = () => {
+    const query = useQuery({
+      queryKey: ["timelineData"],
+      queryFn: fetchTimelineDataFn,
+      enabled: isSignedIn && isLoaded,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    return query;
+  };
 
   const useMultipleUsersDataQuery = (usernames: string[]) =>
     useQuery({
@@ -726,6 +729,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const currentUserDataQuery = useCurrentUserDataQuery();
+  const timelineDataQuery = useTimelineDataQuery();
 
   const refetchUserData = async (notify = true) => {
     const refetchPromise = currentUserDataQuery.refetch().then((result) => {
@@ -749,7 +753,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     return toast.promise(
       Promise.all([
         currentUserDataQuery.refetch(),
-        timelineData.refetch(),
+        timelineDataQuery.refetch(),
         notificationsData.refetch(),
         messagesData.refetch(),
       ]).then(([userData]) => {
@@ -853,29 +857,21 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Helper function to synchronize profile and current user data
   const syncUserData = (userData: UserDataEntry) => {
-    // If the user has a username, also invalidate their profile query
     if (userData?.user?.username) {
-      // Invalidate the profile query for this username
       queryClient.invalidateQueries({
         queryKey: ["userData", userData.user.username],
       });
     }
   };
 
-  // Add this listener to react to all current user data changes
   useEffect(() => {
     if (currentUserDataQuery.data?.user?.username && isSignedIn) {
-      const username = currentUserDataQuery.data.user.username;
       
-      // Add an observer to the query cache
       const unsubscribe = queryClient.getQueryCache().subscribe(event => {
-        // If current user data was updated
         if (event.type === 'updated' && 
             event.query.queryKey[0] === 'userData' && 
             event.query.queryKey[1] === 'current') {
-          // Also invalidate the profile query for this user
           syncUserData(event.query.state.data as UserDataEntry);
         }
       });
@@ -895,12 +891,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     useRecommendedUsersQuery,
     useMultipleUsersDataQuery,
     useMetricsAndEntriesQuery,
+    useTimelineDataQuery,
     useIsMetricLoggedToday,
     useHasMetricsToLogToday,
     hasLoadedUserData:
       currentUserDataQuery.isSuccess && !!currentUserDataQuery.data,
-    hasLoadedTimelineData: timelineData.isSuccess && !!timelineData.data,
-    timelineData,
     messagesData,
     notificationsData,
     fetchUserData,
