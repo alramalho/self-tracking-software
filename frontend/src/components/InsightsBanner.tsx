@@ -26,8 +26,8 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const timeString = `${hours % 12 || 12}:${minutes
     .toString()
     .padStart(2, "0")}${hours >= 12 ? "pm" : "am"}`;
-  const canLogMetrics =
-    process.env.NEXT_PUBLIC_ENVIRONMENT === "development" ? true : hours >= 16;
+  const canLogMetrics = true
+    // process.env.NEXT_PUBLIC_ENVIRONMENT === "development" ? true : hours >= 16;
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
