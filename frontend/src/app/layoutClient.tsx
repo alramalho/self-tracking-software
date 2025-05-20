@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
     queries: {
       // Set a longer garbage collection time to keep cached data
       gcTime: 1000 * 60 * 60 * 24, // 24 hours
-      staleTime: 1, // 5 minutes - data is considered fresh for 5 minutes
+      staleTime: 1, // immediately refetch data
     },
   },
 });

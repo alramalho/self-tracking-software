@@ -62,6 +62,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
     );
   }
 
+
   const handleShareReferralLink = async () => {
     const link = `https://app.tracking.so/join/${userData?.user?.username}`;
 

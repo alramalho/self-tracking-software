@@ -243,7 +243,6 @@ export interface UserDataEntry {
   sentFriendRequests: FriendRequest[];
   receivedFriendRequests: FriendRequest[];
   notifications: Notification[];
-  expiresAt: string;
 }
 
 export interface TaggedActivityEntry extends ActivityEntry {
@@ -255,7 +254,6 @@ export interface TimelineData {
   recommendedUsers?: User[];
   recommendedActivities?: Activity[];
   recommendedActivityEntries?: TaggedActivityEntry[];
-  expiresAt: string;
 }
 
 export interface UserData {
@@ -294,6 +292,7 @@ export interface UserPlanContextType {
   updateLocalUserData: (updater: (data: UserDataEntry) => UserDataEntry) => void;
   currentTheme: ThemeColor;
   syncCurrentUserWithProfile: () => void;
+  isWaitingForData: boolean;
 }
 
 const UserPlanContext = createContext<UserPlanContextType | undefined>(
@@ -412,9 +411,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchUserData = async ({
     username,
   }: { username?: string } = {}): Promise<UserDataEntry> => {
-    if (!isSignedIn) {
-      throw new Error("User not signed in");
-    }
 
     try {
       const startTime = performance.now();
@@ -446,7 +442,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             sentFriendRequests: userData.sent_friend_requests || [],
             receivedFriendRequests: userData.received_friend_requests || [],
             notifications: [],
-            expiresAt: addMinutes(new Date(), 10).toISOString(),
           };
 
           const endTime = performance.now();
@@ -503,8 +498,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const fetchTimelineDataFn = async () => {
-    console.log("fetchTimelineDataFn");
-
     try {
       const startTime = performance.now();
       const response = await api.get("/timeline");
@@ -524,7 +517,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         recommendedUsers: response.data.recommended_users,
         recommendedActivities: response.data.recommended_activities,
         recommendedActivityEntries: response.data.recommended_activity_entries,
-        expiresAt: addMinutes(new Date(), 10).toISOString(),
       } as TimelineData;
     } catch (err) {
       handleAuthError(err);
@@ -643,7 +635,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const useTimelineDataQuery = () => {
     const query = useQuery({
       queryKey: ["timelineData"],
-      queryFn: fetchTimelineDataFn,
+      queryFn: () => fetchTimelineDataFn(),
       enabled: isSignedIn && isLoaded,
       staleTime: 1000 * 60 * 5, // 5 minutes
     });
@@ -683,7 +675,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
               sentFriendRequests: typedValue.sent_friend_requests || [],
               receivedFriendRequests: typedValue.received_friend_requests || [],
               notifications: [],
-              expiresAt: addMinutes(new Date(), 10).toISOString(),
             };
           }
           return transformedData;
@@ -916,6 +907,10 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         syncUserData(currentUserDataQuery.data);
       }
     },
+    isWaitingForData: currentUserDataQuery.isPending || currentUserDataQuery.isFetching || 
+                     timelineDataQuery.isPending || timelineDataQuery.isFetching || 
+                     notificationsData.isPending || notificationsData.isFetching || 
+                     messagesData.isPending || messagesData.isFetching,
   };
 
   return (
