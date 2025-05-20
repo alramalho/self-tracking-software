@@ -249,6 +249,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <motion.div
             layout
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className="relative"
           >
             <ScanFace size={100} className={`${variants.text}`} />
             {wave && (
