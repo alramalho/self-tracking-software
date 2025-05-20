@@ -14,6 +14,8 @@ import { useApiWithAuth } from "@/api";
 import { usePathname } from "next/navigation";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import GenericLoader from "./GenericLoader";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
 
 export default function GeneralInitializer({
   children,
@@ -27,6 +29,8 @@ export default function GeneralInitializer({
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
   const { setShowUpgradePopover } = useUpgrade();
 
   // Determine if there is any cached data to potentially display on initial load.
@@ -98,8 +102,8 @@ export default function GeneralInitializer({
       {/* Show a mini loader if user is signed in and main user data is actively loading, 
           even if we are showing children due to initially existing cache. */}
       {isSignedIn && isUserDataLoading && (
-        <div className="fixed bottom-20 left-4 bg-white dark:bg-gray-900 p-2 rounded-full shadow-md z-50">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+        <div className="fixed bottom-[6.5rem] left-4 bg-white dark:bg-gray-900 p-2 rounded-full shadow-md z-50">
+          <Loader2 className={`h-6 w-6 animate-spin ${variants.text}`} />
         </div>
       )}
     </>
