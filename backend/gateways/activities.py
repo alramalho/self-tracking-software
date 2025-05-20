@@ -60,7 +60,7 @@ class ActivitiesGateway:
         return [Activity(**data) for data in self.activities_db_gateway.scan()]
     
     def get_all_activites_by_ids(self, activity_ids: list[str]) -> list[Activity]:
-        return [Activity(**data) for data in self.activities_db_gateway.query("id", {"$in": [ObjectId(activity_id) for activity_id in activity_ids]})]
+        return [Activity(**data) for data in self.activities_db_gateway.query_by_criteria({"id": {"$in": activity_ids}})]
         
     def get_all_activities_by_user_id(self, user_id:str) -> list[Activity]:
         return [Activity(**data) for data in self.activities_db_gateway.query("user_id", user_id)]
@@ -126,7 +126,7 @@ class ActivitiesGateway:
             "user_id": {"$in": user_ids},
             "$sort": {"created_at": -1}
         }, limit=limit)
-        
+
         return [ActivityEntry(**data) for data in all_activity_entries]
     
     def create_activity(self, activity: Activity) -> Activity:
