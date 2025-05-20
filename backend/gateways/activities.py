@@ -124,8 +124,8 @@ class ActivitiesGateway:
     def get_most_recent_activity_entries_for_users(self, user_ids: List[str], limit: int = 5) -> List[ActivityEntry]:
         all_activity_entries = self.activity_entries_db_gateway.query_by_criteria({
             "user_id": {"$in": user_ids},
-            "$sort": {"created_at": -1}
-        }, limit=limit)
+        })
+        all_activity_entries = sorted(all_activity_entries, key=lambda x: x["created_at"], reverse=True)[:limit]
 
         return [ActivityEntry(**data) for data in all_activity_entries]
     
