@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { differenceInDays } from "date-fns";
+import { InsightsBanner } from "@/components/InsightsBanner";
 
 interface DailyCheckinContextType {
   show: (initialMessage?: string) => void;
@@ -109,10 +110,14 @@ export const DailyCheckinPopoverProvider: React.FC<{
       }}
     >
       {children}
-      <DailyCheckinBanner
+      {/* <DailyCheckinBanner
         open={showDailyCheckinPopover}
         onClose={() => setShowDailyCheckinPopover(false)}
         initialMessage={initialMessage}
+      /> */}
+      <InsightsBanner
+        open={showDailyCheckinPopover}
+        onClose={() => setShowDailyCheckinPopover(false)}
       />
     </DailyCheckinContext.Provider>
   );

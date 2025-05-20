@@ -8,39 +8,44 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
+import { DynamicUISuggester } from "./DynamicUISuggester";
 
 interface MetricRating {
   rating: number;
 }
 
-export function MetricRaters({onAllRatingsSubmitted}: {onAllRatingsSubmitted: () => void}) {
-  const { useMetricsAndEntriesQuery } = useUserPlan();
+export function MetricRaters({
+  onAllRatingsSubmitted,
+}: {
+  onAllRatingsSubmitted: () => void;
+}) {
+  const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
+  const user = userData?.user;
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics || [];
   const entries = metricsAndEntriesData?.entries || [];
   const [ratings, setRatings] = useState<Record<string, MetricRating>>({});
-  const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const api = useApiWithAuth();
 
   const metricLoggingDisabled = (metric: Metric) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     return entries.some(
       (entry) =>
-        entry.metric_id === metric.id &&
-        entry.date.split("T")[0] === today
+        entry.metric_id === metric.id && entry.date.split("T")[0] === today
     );
   };
 
   const handleRatingSelected = (metricId: string, rating: number) => {
-    setRatings(prev => ({
+    setRatings((prev) => ({
       ...prev,
-      [metricId]: { rating }
+      [metricId]: { rating },
     }));
   };
 
-  const handleSubmitAllRatings = async () => {
+  const handleSubmitAllRatings = async (description: string) => {
     setIsSubmitting(true);
     try {
       // Submit all ratings in sequence with the same description
@@ -56,7 +61,6 @@ export function MetricRaters({onAllRatingsSubmitted}: {onAllRatingsSubmitted: ()
       metricsAndEntriesQuery.refetch();
       // Clear ratings and description after successful submission
       setRatings({});
-      setDescription("");
       onAllRatingsSubmitted();
     } catch (error) {
       console.error("Error submitting ratings:", error);
@@ -66,10 +70,14 @@ export function MetricRaters({onAllRatingsSubmitted}: {onAllRatingsSubmitted: ()
     }
   };
 
-  const hasUnloggedMetrics = metrics.some(metric => !metricLoggingDisabled(metric));
-  const unloggedMetrics = metrics.filter(metric => !metricLoggingDisabled(metric));
-  const allMetricsRated = hasUnloggedMetrics && 
-    unloggedMetrics.every(metric => ratings[metric.id]);
+  const hasUnloggedMetrics = metrics.some(
+    (metric) => !metricLoggingDisabled(metric)
+  );
+  const unloggedMetrics = metrics.filter(
+    (metric) => !metricLoggingDisabled(metric)
+  );
+  const allMetricsRated =
+    hasUnloggedMetrics && unloggedMetrics.every((metric) => ratings[metric.id]);
 
   return (
     <div className="space-y-8">
@@ -101,29 +109,23 @@ export function MetricRaters({onAllRatingsSubmitted}: {onAllRatingsSubmitted: ()
       {hasUnloggedMetrics && (
         <>
           <Divider />
-          <div className={`space-y-4 transition-opacity duration-200 ${allMetricsRated ? 'opacity-100' : 'opacity-50'}`}>
-            <h1 className="text-center font-bold text-lg">
-              Why these ratings?
-            </h1>
-            <TextAreaWithVoice
-              placeholder="Anything specific that influenced your ratings today?"
-              value={description}
-              onChange={setDescription}
-              className="min-h-[100px] bg-white"
-              disabled={!allMetricsRated}
+          <div
+            className={`space-y-4 transition-opacity duration-200 ${
+              allMetricsRated ? "opacity-100" : "opacity-50"
+            }`}
+          >
+            <DynamicUISuggester
+              id="daily-checkin"
+              title={`Why these ratings ${user?.name}?`}
+              description="This will help me understand you better"
+              onSubmit={async (description) => {
+                await handleSubmitAllRatings(description);
+              }}
+              wave={false}
             />
-
-            <Button
-              size="lg"
-              className="w-full max-w-sm mx-auto block"
-              disabled={!allMetricsRated || isSubmitting}
-              onClick={handleSubmitAllRatings}
-            >
-              {isSubmitting ? "Submitting..." : "Submit All Ratings"}
-            </Button>
           </div>
         </>
       )}
     </div>
   );
-} 
+}
