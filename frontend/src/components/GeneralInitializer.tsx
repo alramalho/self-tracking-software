@@ -44,6 +44,7 @@ export default function GeneralInitializer({
         name: userData?.user.name,
         username: userData?.user.username,
         is_app_installed: isAppInstalled,
+        is_looking_for_ap: userData?.user.looking_for_ap,
         is_push_granted: isPushGranted,
       });
       setHasRanPosthogIdentify(true);
