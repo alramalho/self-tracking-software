@@ -36,7 +36,7 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
           {canLogMetrics ? (
             <>
               <h2 className="text-xl font-semibold m-4 mt-6 text-center">
-                It&apos;s {timeString}, let&apos;s log your metrics 😊
+                It&apos;s {timeString}, {hours < 19 ? "how's your day going?" : "how was your day?"} 😊
               </h2>
               <MetricRaters onAllRatingsSubmitted={onClose} />
             </>
