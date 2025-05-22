@@ -377,13 +377,13 @@ const ProfilePage: React.FC = () => {
         >
           {!isOnesOwnProfile && (
             <button 
-              className="absolute left-4 p-2 rounded-full hover:bg-gray-100"
+              className="absolute -left-1 -top-1 p-2 rounded-full hover:bg-gray-100"
               onClick={() => window.history.back()}
             >
               <ChevronLeft size={24} />
             </button>
           )}
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 p-2">
             <div className="relative">
               <Avatar
                 className={twMerge(
