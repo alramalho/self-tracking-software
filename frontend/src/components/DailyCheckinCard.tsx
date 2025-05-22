@@ -12,7 +12,9 @@ interface DailyCheckinCardProps {
   aiMessage: string | null;
 }
 
-export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({ aiMessage }) => {
+export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
+  aiMessage,
+}) => {
   const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
@@ -45,33 +47,21 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({ aiMessage })
   const [message, setMessage] = useState<string | null>(null);
   const [messageId, setMessageId] = useState<string | null>(null);
 
-
   function buildMessage() {
     let pool: Record<string, string> = {};
-    if (daysSinceLastEntry && daysSinceLastEntry >= 3) {
-      pool[
-        "How did yesterday go?"
-      ] = `Hey ${user?.username}! It's been ${daysSinceLastEntry} days since your last checkin, let's start with yesterday. How did it went?`;
-      pool[
-        "How was your day yesterday?"
-      ] = `Hey ${user?.username}, long time no see (${daysSinceLastEntry} days actually). How was your day yesterday?`;
-    } else if (daysSinceLastEntry && daysSinceLastEntry == 2) {
-      // means last checkin was not today (0 days ago), nor yesterday (1)
-      pool[
-        "How did yesterday go?"
-      ] = `Hey ${user?.username}! Yesterday I didn't hear from you. How was your day?`;
-      pool[
-        "How was your day yesterday?"
-      ] = `Hey ${user?.username}, long time no see (${daysSinceLastEntry} days actually). How was your day yesterday?`;
+    const currentHours = new Date().getHours();
+
+    if (currentHours < 19) {
+      pool["How is your day going?"] = `Hey ${user?.username}! How is your day going?`;
     } else {
       pool["How was your day?"] = `Hey ${user?.username}! how was your day?`;
-      pool[
-        "How are you feeling today?"
-      ] = `Hi ${user?.username}, how are you feeling today?`;
-      pool[
-        "Tell me about your day"
-      ] = `hi ${user?.username}, care to tell me about your day?`;
     }
+    pool[
+      "How are you feeling today?"
+    ] = `Hi ${user?.username}, how are you feeling today?`;
+    pool[
+      "Tell me about your day"
+    ] = `hi ${user?.username}, care to tell me about your day?`;
 
     const randomPick = Math.floor(Math.random() * Object.keys(pool).length);
     return {
@@ -88,7 +78,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({ aiMessage })
 
   if (!hasMissingCheckin)
     return (
-    <AINotification
+      <AINotification
         messages={[aiMessage ?? "Thanks for submitting your daily checkin!"]}
         hasNotification={shouldShowNotification}
         createdAt={new Date().toISOString()}
