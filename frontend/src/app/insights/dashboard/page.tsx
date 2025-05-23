@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useUserPlan,
   Metric,
@@ -28,6 +28,7 @@ import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 import AINotification from "@/components/AINotification";
 import { Button } from "@/components/ui/button";
 import { subDays } from "date-fns";
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation

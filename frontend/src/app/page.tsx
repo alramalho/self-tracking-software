@@ -19,6 +19,8 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useNotifications } from "@/hooks/useNotifications";
 import Link from "next/link";
 import { useMetrics } from "@/hooks/useMetrics";
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import AINotification from "@/components/AINotification";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -26,11 +28,11 @@ const HomePage: React.FC = () => {
   const { useCurrentUserDataQuery, hasLoadedUserData, notificationsData } =
     useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const { 
-    userMetrics, 
-    getMetricWeekData, 
-    getPositiveCorrelations, 
-    formatCorrelationString 
+  const {
+    userMetrics,
+    getMetricWeekData,
+    getPositiveCorrelations,
+    formatCorrelationString,
   } = useMetrics();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -38,6 +40,7 @@ const HomePage: React.FC = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { isAppInstalled, clearGeneralNotifications } = useNotifications();
+  const { show: showDailyCheckin, hasMissingCheckin, checkinMessage } = useDailyCheckin();
   const [onboardingCompleted] = useLocalStorage<boolean>(
     "onboarding-completed",
     false
@@ -47,9 +50,11 @@ const HomePage: React.FC = () => {
     userData?.user?.friend_ids?.length &&
     userData?.user?.friend_ids?.length > 0;
 
-  const unreadNotifications = 
-    notificationsData.data?.notifications?.filter(n =>  n.status !== "concluded" && n.type !== "engagement") || [];
-  console.log({unreadNotifications});
+  const unreadNotifications =
+    notificationsData.data?.notifications?.filter(
+      (n) => n.status !== "concluded" && n.type !== "engagement"
+    ) || [];
+  console.log({ unreadNotifications });
   const unreadNotificationsCount = unreadNotifications.length;
 
   useEffect(() => {
@@ -77,7 +82,18 @@ const HomePage: React.FC = () => {
 
   // Color mapping for metrics
   const getMetricColor = (index: number) => {
-    const colors = ['blue', 'yellow', 'green', 'purple', 'rose', 'orange', 'amber', 'pink', 'red', 'gray'] as const;
+    const colors = [
+      "blue",
+      "yellow",
+      "green",
+      "purple",
+      "rose",
+      "orange",
+      "amber",
+      "pink",
+      "red",
+      "gray",
+    ] as const;
     return colors[index % colors.length];
   };
 
@@ -109,7 +125,9 @@ const HomePage: React.FC = () => {
               <Bell size={24} />
               {unreadNotificationsCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                  {unreadNotificationsCount > 9
+                    ? "9+"
+                    : unreadNotificationsCount}
                 </span>
               )}
             </button>
@@ -127,7 +145,9 @@ const HomePage: React.FC = () => {
       {userData?.plans && userData.plans.length > 0 && (
         <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">Your Streaks</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Your Streaks
+            </h3>
             <button
               onClick={() => router.push(`/profile/${userData.user?.username}`)}
               className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
@@ -144,7 +164,9 @@ const HomePage: React.FC = () => {
                 activityEntries={userData.activityEntries || []}
                 size="medium"
                 timeRangeDays={60}
-                onClick={() => router.push(`/profile/${userData.user?.username}`)}
+                onClick={() =>
+                  router.push(`/profile/${userData.user?.username}`)
+                }
               />
             ))}
           </div>
@@ -155,37 +177,52 @@ const HomePage: React.FC = () => {
       {userMetrics.length > 0 && (
         <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">Your Metrics</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Your Metrics
+            </h3>
             <button
-              onClick={() => router.push('/insights/dashboard')}
+              onClick={() => router.push("/insights/dashboard")}
               className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               View Insights
             </button>
           </div>
           <div className="space-y-4">
+            {hasMissingCheckin && (
+              <AINotification
+                messages={[checkinMessage ?? ""]}
+                hasNotification={false}
+                createdAt={new Date().toISOString()}
+                onClick={() => showDailyCheckin()}
+              />
+            )}
             {userMetrics.slice(0, 3).map((metric, index) => {
               const weekData = getMetricWeekData(metric.id);
-              const hasAnyData = weekData.some(val => val > 0);
+              const hasAnyData = weekData.some((val) => val > 0);
               const positiveCorrelations = getPositiveCorrelations(metric.id);
-              
+
               return (
-                <div key={metric.id} className="bg-gray-100/60 rounded-lg p-4 border border-white/50">
+                <div
+                  key={metric.id}
+                  className="bg-gray-100/60 rounded-lg p-4 border border-white/50"
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">{metric.emoji} {metric.title}</span>
+                    <span className="text-sm font-medium">
+                      {metric.emoji} {metric.title}
+                    </span>
                     <span className="text-xs text-gray-500">Last 7 days</span>
                   </div>
                   {hasAnyData ? (
-                    <WeekMetricBarChart 
-                      data={weekData} 
-                      color={getMetricColor(index)} 
+                    <WeekMetricBarChart
+                      data={weekData}
+                      color={getMetricColor(index)}
                     />
                   ) : (
                     <div className="py-2 text-center">
                       <p className="text-sm text-gray-500">
-                        No data this week. {" "}
+                        No data this week.{" "}
                         <button
-                          onClick={() => router.push('/insights/dashboard')}
+                          onClick={() => showDailyCheckin()}
                           className="text-blue-600 hover:text-blue-800 font-medium"
                         >
                           Check in now
@@ -195,12 +232,18 @@ const HomePage: React.FC = () => {
                   )}
                   {positiveCorrelations.length > 0 && (
                     <div className="text-xs text-gray-600 mt-3">
-                      {positiveCorrelations.slice(0, 2).map((correlation, i) => (
-                        <span key={correlation.activity.id}>
-                          <span className="text-green-600">{formatCorrelationString(correlation)}</span>
-                          {i < Math.min(positiveCorrelations.length - 1, 1) ? " and " : ` boost your ${metric.title.toLowerCase()}`}
-                        </span>
-                      ))}
+                      {positiveCorrelations
+                        .slice(0, 2)
+                        .map((correlation, i) => (
+                          <span key={correlation.activity.id}>
+                            <span className="text-green-600">
+                              {formatCorrelationString(correlation)}
+                            </span>
+                            {i < Math.min(positiveCorrelations.length - 1, 1)
+                              ? " and "
+                              : ` boost your ${metric.title.toLowerCase()}`}
+                          </span>
+                        ))}
                     </div>
                   )}
                 </div>

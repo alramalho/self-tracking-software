@@ -10,6 +10,7 @@ interface DailyCheckinContextType {
   shouldShowNotification: boolean;
   dismissCheckin: () => void;
   markAsSubmitted: () => void;
+  checkinMessage: string | undefined;
 }
 
 const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
@@ -35,11 +36,44 @@ export const DailyCheckinPopoverProvider: React.FC<{
   );
   const [hasMissingCheckin, setHasMissingCheckin] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const { useMetricsAndEntriesQuery } = useUserPlan();
+  const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const entries = metricsAndEntriesData?.entries;
+  const { data: userData } = useCurrentUserDataQuery();
+  const [checkinMessage, setCheckinMessage] = useState<string | undefined>(
+    undefined
+  );
+  const user = userData?.user;
 
+  useEffect(() => {
+    if (user) {
+      setCheckinMessage(buildCheckinMessage().message);
+    }
+  }, [user]);
+
+  const buildCheckinMessage = (): { message: string; id: string } => {
+    const currentHours = new Date().getHours();
+    let pool: Record<string, string> = {};
+
+    if (currentHours < 19) {
+      pool["How is your day going?"] = `Hey ${user?.username}! You haven't checked in yet. How is your day going?`;
+    } else {
+      pool["How was your day?"] = `Hey ${user?.username}! How was your day?`;
+    }
+    // pool[
+    //   "How are you feeling today?"
+    // ] = `Hi ${user?.username}, how are you feeling today?`;
+    // pool[
+    //   "Tell me about your day"
+    // ] = `hi ${user?.username}, care to tell me about your day?`;
+
+    const randomPick = Math.floor(Math.random() * Object.keys(pool).length);
+    return {
+      message: pool[Object.keys(pool)[randomPick]],
+      id: Object.keys(pool)[randomPick],
+    };
+  }
   // Find the latest entry by date
   const latestEntry =
     entries && entries.length > 0
@@ -107,6 +141,8 @@ export const DailyCheckinPopoverProvider: React.FC<{
         shouldShowNotification,
         dismissCheckin,
         markAsSubmitted,
+        checkinMessage,
+        buildCheckinMessage,
       }}
     >
       {children}

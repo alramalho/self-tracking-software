@@ -42,36 +42,14 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     shouldShowNotification,
     hasMissingCheckin,
     dismissCheckin,
+    buildCheckinMessage,
   } = useDailyCheckin();
   const { userPaidPlanType } = usePaidPlan();
   const [message, setMessage] = useState<string | null>(null);
   const [messageId, setMessageId] = useState<string | null>(null);
 
-  function buildMessage() {
-    let pool: Record<string, string> = {};
-    const currentHours = new Date().getHours();
-
-    if (currentHours < 19) {
-      pool["How is your day going?"] = `Hey ${user?.username}! How is your day going?`;
-    } else {
-      pool["How was your day?"] = `Hey ${user?.username}! how was your day?`;
-    }
-    pool[
-      "How are you feeling today?"
-    ] = `Hi ${user?.username}, how are you feeling today?`;
-    pool[
-      "Tell me about your day"
-    ] = `hi ${user?.username}, care to tell me about your day?`;
-
-    const randomPick = Math.floor(Math.random() * Object.keys(pool).length);
-    return {
-      message: pool[Object.keys(pool)[randomPick]],
-      id: Object.keys(pool)[randomPick],
-    };
-  }
-
   useEffect(() => {
-    const message = buildMessage();
+    const message = buildCheckinMessage();
     setMessage(message.message);
     setMessageId(message.id);
   }, [user, hasMissingCheckin]);

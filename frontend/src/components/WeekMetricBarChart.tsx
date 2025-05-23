@@ -47,7 +47,7 @@ export const WeekMetricBarChart: React.FC<WeekMetricBarChartProps> = ({
           // Special case for 0: show number above the chart area with no bar
           return (
             <div key={i} className="flex-1 relative">
-              <div className="relative h-2">
+              <div className="relative h-2 mt-6">
                 {" "}
                 {/* Small baseline height */}
                 <span

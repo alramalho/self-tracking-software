@@ -88,6 +88,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -352,7 +353,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <Button
             className="w-full"
             onClick={() => submitMutation.mutateAsync(text)}
-            disabled={!submitAlwaysOn && (!isLoading || !text)}
+            disabled={!submitAlwaysOn && (!isLoading || !text || isRecording)}
             loading={isLoading}
           >
             {submitButtonText ?? "Send"}
@@ -427,6 +428,8 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             <TextAreaWithVoice
               value={rejectionFeedback}
               onChange={(value) => setRejectionFeedback(value)}
+              onRecordingStarted={() => {setIsRecording(true)}}
+              onRecordingStopped={() => {setIsRecording(false)}}
               placeholder="Tell us what we got wrong..."
             />
           </div>
