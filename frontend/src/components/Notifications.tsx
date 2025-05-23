@@ -11,7 +11,6 @@ import { Remark } from "react-remark";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { formatTimeAgo } from "@/lib/utils";
-import AINotification from "./AINotification";
 
 interface NotificationsProps {}
 

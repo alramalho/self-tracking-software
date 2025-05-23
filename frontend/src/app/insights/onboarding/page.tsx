@@ -13,6 +13,8 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
 import { defaultMetrics } from "../metrics";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useUpgrade } from "@/contexts/UpgradeContext";
 const MAX_METRICS = 2;
 
 export default function OnboardingPage() {
@@ -27,7 +29,10 @@ export default function OnboardingPage() {
   const [createdMetricIds, setCreatedMetricIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const api = useApiWithAuth();
-
+  const { userPaidPlanType } = usePaidPlan();
+  const isUserOnFreePlan = userPaidPlanType === "free";
+  const { setShowUpgradePopover } = useUpgrade();
+  
   const requestNotificationPermission = async () => {
     try {
       setIsLoading(true);
@@ -46,6 +51,14 @@ export default function OnboardingPage() {
       console.error("Error requesting notification permission:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleContinue = () => {
+    if (isUserOnFreePlan) {
+      setShowUpgradePopover(true);
+    } else {
+      requestNotificationPermission();
     }
   };
 
@@ -160,12 +173,12 @@ export default function OnboardingPage() {
               <Button
                 size="lg"
                 className="w-full max-w-sm"
-                onClick={requestNotificationPermission}
+                onClick={handleContinue}
                 loading={isLoading}
                 disabled={isLoading}
               >
                 <ChevronRight className="w-4 h-4 mr-2" />
-                Get Started
+                {isUserOnFreePlan ? "Try for free" : "Get Started"}
               </Button>
             </div>
           </>

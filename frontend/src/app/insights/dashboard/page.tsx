@@ -56,6 +56,11 @@ export default function InsightsDashboardPage() {
   const hasLoadedMetricsAndEntries =
     metricsAndEntriesQuery.isSuccess && !!metricsAndEntriesData;
   const { userPaidPlanType } = usePaidPlan();
+  const isUserOnFreePlan = userPaidPlanType === "free";
+
+  if (isUserOnFreePlan) {
+    router.push("/insights/onboarding")
+  }
 
   const addMetric = async ({
     title,

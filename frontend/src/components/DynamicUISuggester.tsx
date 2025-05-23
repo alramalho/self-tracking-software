@@ -46,6 +46,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   onReject?: (feedback: string, data: T) => Promise<void>;
   creationMessage?: string;
   placeholder?: string;
+  submitAlwaysOn?: boolean;
   title?: string;
   description?: string;
   wave?: boolean;
@@ -70,6 +71,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   description,
   wave = false,
   onSkip,
+  submitAlwaysOn = false,
 }: DynamicUISuggesterProps<T>) {
   const [text, setText] = useState("");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
@@ -350,7 +352,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <Button
             className="w-full"
             onClick={() => submitMutation.mutateAsync(text)}
-            disabled={isLoading || !text}
+            disabled={!submitAlwaysOn && (!isLoading || !text)}
             loading={isLoading}
           >
             {submitButtonText ?? "Send"}

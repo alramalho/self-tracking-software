@@ -228,7 +228,26 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
       <div className="space-y-8 pt-6 pb-12">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold">
-            support <span className="italic">open source</span>
+            support the <span className="italic">open source</span> community of
+            <div >
+              <div className="inline-block mx-2 translate-y-1">
+                <picture>
+                  <source
+                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
+                    type="image/webp"
+                  />
+                  <img
+                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
+                    alt="🔥"
+                    width="32"
+                    height="32"
+                  />
+                </picture>
+              </div>
+              <span className="text-2xl font-bold text-gray-500">
+                tracking.so
+              </span>
+            </div>
           </h1>
           {/* <p className="text-gray-500 font-cursive text-2xl font-extralight">Become an open source supporter 🔥</p> */}
         </div>
@@ -301,9 +320,9 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               </Button>
             </Link>
             <div className="w-full">
-            <p className="text-sm text-gray-500 mx-auto w-fit mt-1">
-              and help maintaining the app running!
-            </p>
+              <p className="text-sm text-gray-500 mx-auto w-fit mt-1">
+                and help maintaining the app running!
+              </p>
             </div>
           </Card>
 

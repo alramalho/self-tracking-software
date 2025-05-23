@@ -14,7 +14,7 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { useRouter } from "next/navigation";
-import { Bell, Loader2, ScanFace, Search, Send, UserPlus } from "lucide-react";
+import { Bell, Loader2, PersonStandingIcon, ScanFace, Search, Send, UserPlus } from "lucide-react";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
@@ -27,6 +27,8 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import AppleLikePopover from "./AppleLikePopover";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { AccountabilityStepCard } from "./AccountabilityStepCard";
+import { WeekMetricBarChart } from "./WeekMetricBarChart";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -40,8 +42,7 @@ function isInCurrentWeek(date: string) {
 const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
   onOpenSearch,
 }) => {
-  const { useTimelineDataQuery, useCurrentUserDataQuery } =
-    useUserPlan();
+  const { useTimelineDataQuery, useCurrentUserDataQuery } = useUserPlan();
   const timelineDataQuery = useTimelineDataQuery();
   const timelineData = timelineDataQuery.data;
   const { data: userData } = useCurrentUserDataQuery();
@@ -52,6 +53,8 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
     useNotifications();
   const { setShowUpgradePopover } = useUpgrade();
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const { userPaidPlanType } = usePaidPlan();
+  const isUserOnFreePlan = userPaidPlanType === "free";
 
   if (!timelineDataQuery.isFetched && !timelineData) {
     return (
@@ -61,7 +64,6 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
       </div>
     );
   }
-
 
   const handleShareReferralLink = async () => {
     const link = `https://app.tracking.so/join/${userData?.user?.username}`;
@@ -81,6 +83,42 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
   };
 
   if (!userData?.user?.friend_ids?.length) {
+    const demoMetrics: Array<{
+      emoji: string;
+      name: string;
+      trend: string;
+      data: number[];
+      bgColor:
+        | "yellow"
+        | "blue"
+        | "green"
+        | "rose"
+        | "pink"
+        | "red"
+        | "orange"
+        | "amber"
+        | "purple"
+        | "gray";
+      correlations: string[];
+    }> = [
+      {
+        emoji: "😊",
+        name: "Happiness",
+        trend: "+15%",
+        data: [4, 3, 5, 4, 1, 3, 5],
+        bgColor: "blue",
+        correlations: ["🏃‍♂️ Exercise", "🧘‍♂️ Meditation"],
+      },
+      {
+        emoji: "⚡",
+        name: "Energy",
+        trend: "+8%",
+        data: [3, 4, 3, 5, 4, 3, 4],
+        bgColor: "yellow",
+        correlations: ["☕ Morning routine"],
+      },
+    ];
+
     return (
       <>
         <AINotification
@@ -91,75 +129,108 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
           ]}
           createdAt={new Date().toISOString()}
         />
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <AccountabilityStepCard
-            icon={<UserPlus size={30} />}
-            title="Invite a friend to the app"
-            description="Share your invite link and both join the app free of cost."
-            buttonText="Share Invite"
-            onClick={handleShareReferralLink}
-            secondaryText="Search for a friend"
-            secondaryOnClick={onOpenSearch}
-            color="blue"
-          />
-          <AccountabilityStepCard
-            icon={<Search size={30} />}
-            title="Find someone in our community"
-            description="Find someone who will help you stay on track"
-            buttonText="Open AP Recommendations"
-            onClick={() => {
-              router.push("/looking-for-ap");
-            }}
-            color="blue"
-          />
-          <div>
-            <AccountabilityStepCard
-              icon={<ScanFace size={30} />}
-              title="Use our AI coach"
-              description="Get personalized suggestions and support from our AI coach"
-              buttonText="Try free"
-              onClick={() => setShowUpgradePopover(true)}
-              color="gradient"
-            />
+        <div className="mt-6 grid grid-cols-1 gap-6">
+          {/* Combined Friend Finding Card */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <UserPlus size={30} className="text-blue-500" />
+              <div>
+                <h3 className="text-lg font-semibold">
+                  Find Your Accountability Partner
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Connect with friends or find someone in our community
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                onClick={handleShareReferralLink}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                <Send size={16} className="mr-2" />
+                Invite Friends
+              </Button>
+              <Button
+                onClick={onOpenSearch}
+                variant="outline"
+                className="flex-1"
+              >
+                <Search size={16} className="mr-2" />
+                Search Users
+              </Button>
+              <Button
+                onClick={() => router.push("/looking-for-ap")}
+                variant="outline"
+                className="flex-1"
+              >
+                <PersonStandingIcon size={16} className="mr-2" />
+                Browse Community
+              </Button>
+            </div>
           </div>
+
+          {/* Expanded AI Coach Card */}
+          {isUserOnFreePlan && (
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <ScanFace size={30} className="text-purple-500" />
+                <div>
+                  <h3 className="text-lg font-semibold">AI Coach & Insights</h3>
+                  <p className="text-gray-600 text-sm">
+                    Get personalized coaching and track your daily metrics
+                  </p>
+                </div>
+              </div>
+
+              {/* Demo Metrics Preview */}
+              <div className="space-y-4 mb-6">
+                <div className="text-sm font-medium text-gray-700 mb-3">
+                  Preview: Track metrics like happiness, energy & productivity
+                </div>
+
+                {demoMetrics.map((metric) => (
+                  <div
+                    key={metric.name}
+                    className="bg-white/60 rounded-lg p-4 border border-white/50"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">
+                        {metric.emoji} {metric.name}
+                      </span>
+                      <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                        {metric.trend} this week
+                      </span>
+                    </div>
+                    <WeekMetricBarChart
+                      data={metric.data}
+                      color={metric.bgColor}
+                    />
+                    <div className="text-xs text-gray-600">
+                      {metric.correlations.map((correlation, i) => (
+                        <span key={correlation}>
+                          <span className="text-green-600">{correlation}</span>
+                          {i < metric.correlations.length - 1
+                            ? " and "
+                            : " boost your " + metric.name.toLowerCase()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                onClick={() => setShowUpgradePopover(true)}
+                className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
+              >
+                <ScanFace size={16} className="mr-2" />
+                Try AI Coaching Free
+              </Button>
+            </div>
+          )}
         </div>
       </>
-      // <div className="text-left text-gray-500">
-      //   You haven&apos;t added any friends yet 🙁
-      //   <br />
-      //   <span className="text-sm text-gray-500">
-      //     By doing so, you&apos;ll{" "}
-      //     <span className="font-bold">
-      //       increase your chances of success by up to 95%
-      //     </span>
-      //   </span>
-      //   <p className="text-sm text-gray-500 mt-4">
-      //     <span className="underline cursor-pointer" onClick={onOpenSearch}>
-      //       Search
-      //     </span>{" "}
-      //     for friends already using the app, or invite new ones by{" "}
-      //     <span
-      //       className="underline cursor-pointer"
-      //       onClick={async () => {
-      //         try {
-      //           const link = `https://app.tracking.so/join/${userData?.user?.username}`;
-      //           if (isShareSupported) {
-      //             const success = await share(link);
-      //             if (!success) throw new Error("Failed to share");
-      //           } else {
-      //             const success = await copyToClipboard(link);
-      //             if (!success) throw new Error("Failed to copy");
-      //             toast.success("Copied to clipboard");
-      //           }
-      //         } catch (error) {
-      //           console.error("Failed to copy link to clipboard");
-      //         }
-      //       }}
-      //     >
-      //       sharing your profile link.
-      //     </span>
-      //   </p>
-      // </div>
     );
   }
 
@@ -203,7 +274,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <h2 className="text-lg font-semibold mb-4">
+      <h2 className="text-lg font-semibold mt-4">
         Friend&apos;s last activities
       </h2>
 
@@ -215,10 +286,9 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
             timelineData?.recommendedActivities?.find(
               (a: Activity) => a.id === entry.activity_id
             );
-          const user: User | undefined =
-            timelineData?.recommendedUsers?.find(
-              (u: User) => u.id === activity?.user_id
-            );
+          const user: User | undefined = timelineData?.recommendedUsers?.find(
+            (u: User) => u.id === activity?.user_id
+          );
           if (!activity) return null;
 
           const daysUntilExpiration =

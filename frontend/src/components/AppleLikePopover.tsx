@@ -18,6 +18,7 @@ interface AppleLikePopoverProps {
   className?: string;
   open?: boolean;
   title?: string;
+  displayIcon?: boolean;
 }
 
 const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
@@ -27,6 +28,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
   className,
   open = false,
   title = "Content",
+  displayIcon = true,
 }) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -47,7 +49,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
         <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
           <DrawerContent className={`px-4 pb-4 ${className}`}>
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
-            {!unclosable && (
+            {!unclosable && displayIcon && (
               <DrawerClose asChild>
                 <Button
                   data-testid="close-popover"
