@@ -8,6 +8,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { Search, RefreshCw, X } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
+import PlanStreak from "@/components/PlanStreak";
 
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan } from "@/contexts/UserPlanContext";
@@ -93,6 +94,34 @@ const HomePage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Plan Streaks Section */}
+      {userData?.plans && userData.plans.length > 0 && (
+        <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-gray-900">Your Streaks</h3>
+            <button
+              onClick={() => router.push(`/profile/${userData.user?.username}`)}
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              View Details
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {userData.plans.map((plan) => (
+              <PlanStreak
+                key={plan.id}
+                plan={plan}
+                activities={userData.activities || []}
+                activityEntries={userData.activityEntries || []}
+                size="medium"
+                timeRangeDays={60}
+                onClick={() => router.push(`/profile/${userData.user?.username}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <Notifications />
 
