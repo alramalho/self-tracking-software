@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
+import UserCard from "@/components/UserCard";
 
 
 const LookingForApPage: React.FC = () => {
@@ -33,7 +34,11 @@ const LookingForApPage: React.FC = () => {
   if (hasPlans && userData?.user?.looking_for_ap && isPushGranted) {
     router.push("/ap-search");
   }
+  
   const userProfile = userData?.user?.profile;
+  const currentUser = userData?.user;
+  const currentPlan = userData?.plans?.[0]; // Get the first plan if available
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-2xl">
       <div className="flex flex-col items-center gap-2 text-center w-full">
@@ -81,44 +86,63 @@ const LookingForApPage: React.FC = () => {
             </Button>
           </div>
 
-          <div className="flex flex-row items-center gap-3 p-4 border rounded-lg bg-white shadow-sm">
-            <div
-              className={`h-6 w-6 flex items-center justify-center rounded-full ${
-                userProfile
-                  ? "bg-green-100 text-green-600"
-                  : "bg-gray-100 text-gray-400"
-              }`}
-            >
-              {userProfile ? (
-                <CheckCircle className="w-5 h-5" />
-              ) : (
-                <span className="text-lg font-semibold">2</span>
-              )}
+          <div className="flex flex-col gap-3 p-4 border rounded-lg bg-white shadow-sm">
+            <div className="flex flex-row items-center gap-3">
+              <div
+                className={`h-6 w-6 flex items-center justify-center rounded-full ${
+                  userProfile
+                    ? "bg-green-100 text-green-600"
+                    : "bg-gray-100 text-gray-400"
+                }`}
+              >
+                {userProfile ? (
+                  <CheckCircle className="w-5 h-5" />
+                ) : (
+                  <span className="text-lg font-semibold">2</span>
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium">
+                  {userProfile ? "Here's your profile:" : "Complete your profile"}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {userProfile
+                    ? "This is how other users will see you"
+                    : "Add a description to help find compatible partners"}
+                </p>
+              </div>
+              <Button
+                variant={userProfile ? "outline" : "default"}
+                onClick={async () => {
+                  await api.post("/update-user", {
+                    looking_for_ap: true,
+                  });
+                  router.push(
+                    `/profile/${userData?.user?.username}?activeView=editProfile&redirectTo=/looking-for-ap`
+                  );
+                }}
+                className={userProfile ? "border-green-200 text-green-600" : ""}
+              >
+                {userProfile ? "Edit Profile" : "Add Description"}
+              </Button>
             </div>
-            <div className="flex-1">
-              <h3 className="font-medium">
-                {userProfile ? "Here's your profile:" : "Complete your profile"}
-              </h3>
-              <p className="text-sm text-gray-500">
-                {userProfile
-                  ? userProfile
-                  : "Add a description to help find compatible partners"}
-              </p>
-            </div>
-            <Button
-              variant={userProfile ? "outline" : "default"}
-              onClick={async () => {
-                await api.post("/update-user", {
-                  looking_for_ap: true,
-                });
-                router.push(
-                  `/profile/${userData?.user?.username}?activeView=editProfile&redirectTo=/looking-for-ap`
-                );
-              }}
-              className={userProfile ? "border-green-200 text-green-600" : ""}
-            >
-              {userProfile ? "Edit Profile" : "Add Description"}
-            </Button>
+            
+            {/* Show UserCard when profile exists */}
+            {userProfile && currentUser && (
+              <div className="mt-4">
+                <UserCard
+                  user={currentUser}
+                  plan={currentPlan}
+                  plans={userData?.plans || []}
+                  activities={userData?.activities || []}
+                  activityEntries={userData?.activityEntries || []}
+                  showFriendRequest={false}
+                  showScore={false}
+                  showStreaks={true}
+                  className="max-w-sm mx-auto"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-row items-center gap-3 p-4 border rounded-lg bg-white shadow-sm">

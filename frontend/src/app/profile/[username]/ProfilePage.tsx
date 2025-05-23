@@ -61,6 +61,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { isPlanExpired } from "@/components/PlansRenderer";
+import PlanStreak from "@/components/PlanStreak";
 export type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
 // Utility function to convert TimeRange to number of days
@@ -76,11 +77,6 @@ export const getTimeRangeDays = (timeRange: TimeRange): number => {
       return 60;
   }
 };
-
-interface PlanStreak {
-  emoji: string;
-  score: number;
-}
 
 const ProfilePage: React.FC = () => {
   const { clearProfileNotifications } = useNotifications();
@@ -240,97 +236,6 @@ const ProfilePage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  const calculateWeekStreaks = (): PlanStreak[] => {
-    if (!profileData?.plans) {
-      return [];
-    }
-
-    const streaks: PlanStreak[] = [];
-
-    // Calculate date range based on selected timeRange
-    const now = new Date();
-    const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 });
-    const daysToSubtract = getTimeRangeDays(timeRange);
-    const rangeStartDate = subDays(now, daysToSubtract);
-
-    profileData.plans.forEach((plan) => {
-      // Filter activities and entries for this plan
-      const planActivities = activities.filter(
-        (activity) => plan.activity_ids?.includes(activity.id) ?? false
-      );
-      const planActivityEntries = activityEntries.filter(
-        (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
-      );
-
-      // Start from the range start date or the earliest activity date, whichever is later
-      let weekStart = startOfWeek(rangeStartDate, { weekStartsOn: 0 });
-
-      if (planActivityEntries.length > 0) {
-        const earliestActivityDate = new Date(
-          Math.min(
-            ...planActivityEntries.map((entry) =>
-              new Date(entry.date).getTime()
-            )
-          )
-        );
-
-        if (isAfter(earliestActivityDate, weekStart)) {
-          weekStart = startOfWeek(earliestActivityDate, { weekStartsOn: 0 });
-        }
-      }
-
-      // Initialize plan score
-      let planScore = 0;
-      let weekCount = 0;
-      let incompleteWeeks = 0;
-
-      while (isBefore(weekStart, currentWeekStart)) {
-        // Only check completed weeks
-        weekCount++;
-        const convertedPlan = convertApiPlanToPlan(plan, planActivities);
-
-        // Only check weeks that fall within our time range
-        if (
-          isAfter(weekStart, rangeStartDate) ||
-          format(weekStart, "yyyy-MM-dd") ===
-            format(rangeStartDate, "yyyy-MM-dd")
-        ) {
-          const wasCompleted = isWeekCompleted(
-            weekStart,
-            convertedPlan,
-            planActivityEntries
-          );
-
-          if (wasCompleted) {
-            planScore += 1;
-            incompleteWeeks = 0;
-          } else {
-            incompleteWeeks += 1;
-            if (incompleteWeeks > 1) {
-              planScore = Math.max(0, planScore - 1);
-            }
-          }
-        }
-
-        // Move to next week using date-fns addWeeks to handle DST correctly
-        weekStart = addWeeks(weekStart, 1);
-        if (
-          format(weekStart, "yyyy-MM-dd") ===
-          format(currentWeekStart, "yyyy-MM-dd")
-        ) {
-          break; // Stop if we've reached the current week
-        }
-      }
-
-      streaks.push({
-        emoji: plan.emoji || "💪",
-        score: planScore,
-      });
-    });
-
-    return streaks;
-  };
 
   const user = profileData?.user;
 
@@ -539,36 +444,21 @@ const ProfilePage: React.FC = () => {
                   </>
                 )}
 
-                {isOnesOwnProfile &&
-                  calculateWeekStreaks().map((streak, index) => (
-                    <div
-                      key={index}
-                      className="relative text-2xl font-bold flex items-center gap-1 min-w-fit min-h-fit"
-                      onClick={() => setShowStreakDetails(true)}
-                    >
-                      <div
-                        className={
-                          streak.score === 0 ? "opacity-40 grayscale" : ""
-                        }
-                      >
-                        <picture>
-                          <source
-                            srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
-                            type="image/webp"
-                          />
-                          <img
-                            src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
-                            alt="🔥"
-                            width="50"
-                            height="50"
-                          />
-                        </picture>
-                        <Badge className="absolute bottom-0 right-[-10px]">
-                          x{streak.score} {streak.emoji}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+                {isOnesOwnProfile && profileData?.plans && (
+                  <div className="flex justify-start gap-2">
+                    {profileData.plans.map((plan) => (
+                      <PlanStreak
+                        key={plan.id}
+                        plan={plan}
+                        activities={activities}
+                        activityEntries={activityEntries}
+                        timeRangeDays={getTimeRangeDays(timeRange)}
+                        size="medium"
+                        onClick={() => setShowStreakDetails(true)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <StreakDetailsPopover

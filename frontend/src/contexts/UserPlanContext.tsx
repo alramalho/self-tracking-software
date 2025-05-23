@@ -112,6 +112,7 @@ export interface User {
   theme_base_color?: ThemeColor;
   default_activity_visibility: VisibilityType;
   created_at?: string;
+  last_active_at?: string;
 }
 
 interface FriendRequest {

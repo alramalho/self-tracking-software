@@ -228,17 +228,9 @@ class RecommendationsGateway:
             if target_user.id not in results:
                 results[target_user.id] = {}
 
-            activities_gateway = ActivitiesGateway()
-            _, ordered_activity_entries = activities_gateway.get_recent_activity_entries(
-                target_user.id, past_day_limit=100
+            results[target_user.id]["recent_activity_score"] = calculate_recency_sim(
+                datetime.fromisoformat(target_user.last_active_at or target_user.created_at).replace(tzinfo=UTC)
             )
-
-            if len(ordered_activity_entries) > 0:
-                results[target_user.id]["recent_activity_score"] = calculate_recency_sim(
-                    datetime.fromisoformat(ordered_activity_entries[0].date).replace(tzinfo=UTC)
-                )
-            else:
-                results[target_user.id]["recent_activity_score"] = 0
 
 
         # calculate final scores
