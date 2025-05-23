@@ -38,11 +38,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useRouter } from "next/navigation";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
   onClose: () => void;
   initialActiveView?: ActiveView | null;
+  redirectTo?: string | null;
 }
 
 // Define possible views including sub-views
@@ -70,6 +72,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   open,
   onClose,
   initialActiveView = null,
+  redirectTo = null,
 }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Single state for view navigation
@@ -89,7 +92,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   );
   const themeColors = useThemeColors();
   const themeVariants = getThemeVariants(themeColors.raw);
-
+  const router = useRouter();
+  
   const handleLogout = () => {
     signOut();
     posthog.reset();
@@ -268,7 +272,11 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       onSubmit={async () => {
                         // Refetch user data after update and navigate back
                         await refetchUserData();
-                        navigateTo("userSummary");
+                        if (redirectTo) {
+                          router.push(redirectTo);
+                        } else {
+                          navigateTo("userSummary");
+                        }
                       }}
                     />
                   </div>

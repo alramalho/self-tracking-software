@@ -34,7 +34,19 @@ def calculate_age_sim(age1: int, age2: int) -> float:
     return float(np.exp(-k * (np.log(age1 / age2)) ** 2))
 
 
-def tanh_fit(x, A=0.61244, B=-0.77700, C=2.34078, D=0.39498):
+def calculate_recency_sim(last_active_at: datetime | None) -> float:
+    if not last_active_at:
+        return 0
+
+    hours_since_last_active = (datetime.now(UTC) - last_active_at).total_seconds() / 3600
+    return tanh_fit_recency(hours_since_last_active)
+
+def tanh_fit(x, A, B, C, D):
+    x = np.asarray(x)
+    return np.maximum(A * np.tanh(B * np.log10(x) + C) + D, 0)
+
+
+def tanh_fit_distance(x, A=0.61244, B=-0.77700, C=2.34078, D=0.39498):
     """
     Four‑parameter hyperbolic‑tangent fit to the data:
       x = 1     → y ≈ 1.0
@@ -45,14 +57,27 @@ def tanh_fit(x, A=0.61244, B=-0.77700, C=2.34078, D=0.39498):
 
     Model: y = A * tanh(B * log10(x) + C) + D, clamped at y >= 0
     """
-    x = np.asarray(x)
-    return np.maximum(A * np.tanh(B * np.log10(x) + C) + D, 0)
+    return tanh_fit(x, A, B, C, D)
+
+
+def tanh_fit_recency(x, A=0.61244, B=-0.77700, C=2.34078, D=0.39498):
+    """
+    Four‑parameter hyperbolic‑tangent fit to the data (x measured in hours):
+      x = 1     → y ≈ 1.0
+      x = 10    → y ≈ 0.95
+      x = 100   → y ≈ 0.80
+      x = 1000  → y ≈ 0.40
+      x = 10000 → y ≈ 0.00
+
+    Model: y = A * tanh(B * log10(x) + C) + D, clamped at y >= 0
+    """
+    return tanh_fit(x, A, B, C, D)
 
 
 def calculate_geo_sim(loc_1: Tuple[float, float], loc_2: Tuple[float, float]) -> float:
     distance = np.sqrt((loc_1[0] - loc_2[0]) ** 2 + (loc_1[1] - loc_2[1]) ** 2)
     distance_in_km = distance * 111.32
-    return max(1, float(tanh_fit(distance_in_km)))
+    return max(0, float(tanh_fit_distance(distance_in_km)))
 
 
 def timezone_to_approx_latlong(timezone_str: str) -> Optional[Tuple[float, float]]:
@@ -117,6 +142,7 @@ class RecommendationsGateway:
     async def compute_recommended_users(self, current_user: User) -> Dict:
         from gateways.users import UsersGateway
         from controllers.plan_controller import PlanController
+        from gateways.activities import ActivitiesGateway
 
         self.delete_all_for_user(current_user.id)
         users_gateway = UsersGateway()
@@ -142,7 +168,6 @@ class RecommendationsGateway:
                 results[result.fields["user_id"]]["profile_sim_score"] = result.score
 
         # calculate plan sim
-
         user_plans = PlanController().get_all_user_active_plans(current_user)
         if len(user_plans) > 0:
             plan_search_result = self.plans_vector_database.query(
@@ -157,7 +182,6 @@ class RecommendationsGateway:
                 results[result.fields["user_id"]]["plan_sim_score"] = result.score
 
         # calculate geo sim
-
         async def process_user_geo_sim(target_user, results):
             loc_1 = timezone_to_approx_latlong(current_user.timezone)
             loc_2 = timezone_to_approx_latlong(target_user.timezone)
@@ -198,6 +222,25 @@ class RecommendationsGateway:
                     f"User {target_user.username} or current user {current_user.username} has no age"
                 )
 
+
+        # calculate recency of activity sim
+        for target_user in users_looking_for_partners:
+            if target_user.id not in results:
+                results[target_user.id] = {}
+
+            activities_gateway = ActivitiesGateway()
+            _, ordered_activity_entries = activities_gateway.get_recent_activity_entries(
+                target_user.id, past_day_limit=100
+            )
+
+            if len(ordered_activity_entries) > 0:
+                results[target_user.id]["recent_activity_score"] = calculate_recency_sim(
+                    datetime.fromisoformat(ordered_activity_entries[0].date).replace(tzinfo=UTC)
+                )
+            else:
+                results[target_user.id]["recent_activity_score"] = 0
+
+
         # calculate final scores
         for (
             result_key
@@ -225,6 +268,12 @@ class RecommendationsGateway:
             if "age_sim_score" in results[result_key]:
                 scores.append(results[result_key]["age_sim_score"])
                 metadata["age_sim_score"] = results[result_key]["age_sim_score"]
+            else:
+                scores.append(0)
+
+            if "recent_activity_score" in results[result_key]:
+                scores.append(results[result_key]["recent_activity_score"])
+                metadata["recent_activity_score"] = results[result_key]["recent_activity_score"]
             else:
                 scores.append(0)
 
@@ -259,3 +308,19 @@ class RecommendationsGateway:
     def delete_all_for_user(self, user_id: str):
         self.db_gateway.delete_all("user_id", user_id)
         logger.warning(f"Deleted all recommendations for user {user_id}")
+
+
+if __name__ == "__main__":
+    from shared.logger import create_logger
+    create_logger()
+    from gateways.users import UsersGateway
+
+    recommendations_gateway = RecommendationsGateway()
+    users_gateway = UsersGateway()
+    user = users_gateway.get_user_by_id("670fb420158ba86def604e67")
+
+    async def main():
+        result = await recommendations_gateway.compute_recommended_users(user)
+        print(result)
+
+    asyncio.run(main())

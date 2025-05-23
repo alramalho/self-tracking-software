@@ -10,7 +10,7 @@ import uuid
 import os
 from services.notification_manager import NotificationManager
 from gateways.users import UsersGateway
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from loguru import logger
 import traceback
 from entities.notification import Notification
@@ -176,6 +176,8 @@ async def upsert_activity(
         privacy_settings=activity["privacy_settings"],
     )
     created_activity = activities_gateway.create_activity(new_activity)
+
+    users_gateway.update_user(user.id, {"last_active_at": datetime.now(UTC).isoformat()})
     return created_activity
 
 
