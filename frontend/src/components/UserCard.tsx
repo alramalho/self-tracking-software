@@ -26,17 +26,17 @@ interface UserCardProps {
   className?: string;
 }
 
-const UserCard: React.FC<UserCardProps> = ({ 
-  user, 
-  score = 0, 
-  plan, 
+const UserCard: React.FC<UserCardProps> = ({
+  user,
+  score = 0,
+  plan,
   plans = [],
   activities = [],
   activityEntries = [],
   showFriendRequest = true,
   showScore = true,
   showStreaks = true,
-  className = ""
+  className = "",
 }) => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData, isLoading: isLoadingUser } =
@@ -59,12 +59,12 @@ const UserCard: React.FC<UserCardProps> = ({
         sent_to_user_username: user.username,
         message: message || undefined,
       });
-      
+
       const payload: any = {};
       if (message.trim()) {
         payload.message = message.trim();
       }
-      
+
       await api.post(`/send-friend-request/${user.id}`, payload);
       toast.success("Friend request sent successfully!");
       setMessage(""); // Clear message after sending
@@ -81,24 +81,35 @@ const UserCard: React.FC<UserCardProps> = ({
   const hasProfilePicture = user.picture;
 
   // Common overlay components
-  const CompatibilityBadge = () => showScore && (
-    <div className="absolute top-2 right-2">
-      <div className={`inline-flex border border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all ${variants.card.glassBg}`}>
-        <span className="text-gray-800 font-medium">
-          {Math.round(score * 100)}% match
-        </span>
+  const CompatibilityBadge = () =>
+    showScore && (
+      <div className="absolute top-2 right-2">
+        <div
+          className={`inline-flex border border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all ${variants.card.glassBg}`}
+        >
+          <span className="text-gray-800 font-medium">
+            {Math.round(score * 100)}% match
+          </span>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   const UserNameOverlay = () => (
     <div className="absolute bottom-2 left-2 right-2">
-      <div className={`rounded-2xl overflow-hidden ${variants.card.glassBg} backdrop-blur-lg shadow-lg border border-white/20 p-3`}>
-        <h3 className="font-semibold text-lg text-gray-800 cursor-pointer" onClick={handleProfileClick}>
+      <div
+        className={`rounded-2xl overflow-hidden ${variants.card.glassBg} backdrop-blur-lg shadow-lg border border-white/20 p-3`}
+      >
+        <h3
+          className="font-semibold text-lg text-gray-800 cursor-pointer"
+          onClick={handleProfileClick}
+        >
           {user.name || "Anonymous"}
         </h3>
         {user.username && (
-          <p className="text-gray-600 text-sm cursor-pointer" onClick={handleProfileClick}>
+          <p
+            className="text-gray-600 text-sm cursor-pointer"
+            onClick={handleProfileClick}
+          >
             @{user.username}
           </p>
         )}
@@ -111,7 +122,7 @@ const UserCard: React.FC<UserCardProps> = ({
     <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
       <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
         {hasProfilePicture ? (
-          <div 
+          <div
             className="w-full h-64 bg-gray-200 rounded-2xl overflow-hidden cursor-pointer"
             onClick={handleProfileClick}
           >
@@ -122,7 +133,7 @@ const UserCard: React.FC<UserCardProps> = ({
             />
           </div>
         ) : (
-          <div 
+          <div
             className="w-full h-64 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center cursor-pointer"
             onClick={handleProfileClick}
           >
@@ -133,7 +144,7 @@ const UserCard: React.FC<UserCardProps> = ({
             </Avatar>
           </div>
         )}
-        
+
         <CompatibilityBadge />
         <UserNameOverlay />
       </div>
@@ -141,7 +152,9 @@ const UserCard: React.FC<UserCardProps> = ({
   );
 
   return (
-    <div className={`bg-white/50 border rounded-lg overflow-hidden relative ${className}`}>
+    <div
+      className={`bg-white/50 border rounded-lg overflow-hidden relative ${className}`}
+    >
       <ProfileImageArea />
 
       <div className="p-4 flex flex-col space-y-4">
@@ -152,16 +165,22 @@ const UserCard: React.FC<UserCardProps> = ({
               <span>📍 {user.timezone.replace("_", " ")}</span>
             </div>
           )}
-          
-          {user.last_active_at && (
-            <div className="flex items-center text-sm text-gray-600">
-              <span>Last active {formatDistanceToNow(new Date(user.last_active_at), { addSuffix: true })}</span>
-            </div>
-          )}
+
+          <div className="flex items-center text-sm text-gray-600">
+            <span>
+              Last active{" "}
+              {formatDistanceToNow(
+                new Date(user.last_active_at || user.created_at),
+                { addSuffix: true }
+              )}
+            </span>
+          </div>
 
           {user.profile && (
             <div className="mt-2">
-              <p className="text-gray-700 text-sm line-clamp-3">{user.profile}</p>
+              <p className="text-gray-700 text-sm line-clamp-3">
+                {user.profile}
+              </p>
             </div>
           )}
 
@@ -171,13 +190,20 @@ const UserCard: React.FC<UserCardProps> = ({
               <p className="text-gray-500 text-xs mb-2">Working on</p>
               <div className="space-y-2">
                 {plans.slice(0, 3).map((planItem) => (
-                  <div key={planItem.id} className="p-2 border-b border-gray-200 last:border-b-0">
+                  <div
+                    key={planItem.id}
+                    className="p-2 border-b border-gray-200 last:border-b-0"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center flex-1">
                         {planItem.emoji && (
-                          <span className="text-2xl mr-2">{planItem.emoji}</span>
+                          <span className="text-2xl mr-2">
+                            {planItem.emoji}
+                          </span>
                         )}
-                        <span className="font-semibold text-gray-800">{planItem.goal}</span>
+                        <span className="font-semibold text-gray-800">
+                          {planItem.goal}
+                        </span>
                       </div>
                       {showStreaks && activities.length > 0 && (
                         <PlanStreak
@@ -245,4 +271,4 @@ const UserCard: React.FC<UserCardProps> = ({
   );
 };
 
-export default UserCard; 
+export default UserCard;
