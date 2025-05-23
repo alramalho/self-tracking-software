@@ -79,7 +79,6 @@ export const getTimeRangeDays = (timeRange: TimeRange): number => {
 };
 
 const ProfilePage: React.FC = () => {
-  const { clearProfileNotifications } = useNotifications();
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -133,12 +132,6 @@ const ProfilePage: React.FC = () => {
         : profileDataQuery.refetch();
     }
   }, [username, currentUserQuery, isOnesOwnProfile, profileDataQuery]);
-
-  useEffect(() => {
-    if (isOnesOwnProfile) {
-      clearProfileNotifications();
-    }
-  }, [isOnesOwnProfile, clearProfileNotifications]);
 
   useEffect(() => {
     const activeView = searchParams.get('activeView');

@@ -18,11 +18,9 @@ import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 
 interface NotificationsContextType {
   notificationCount: number;
-  profileNotificationCount: number;
   dailyCheckinNotification: boolean;
   addToNotificationCount: (count: number, type?: 'profile' | 'general') => void;
   clearGeneralNotifications: () => void;
-  clearProfileNotifications: () => void;
   sendLocalNotification: (
     title: string,
     body: string,
@@ -53,7 +51,6 @@ export const NotificationsProvider = ({
   const { notificationsData } = useUserPlan();
   const { isSignedIn } = useSession();
   const [notificationCount, setNotificationCount] = useState(0);
-  const [profileNotificationCount, setProfileNotificationCount] = useState(0);
   const { shouldShowNotification } = useDailyCheckin();
   const [dailyCheckinNotification, setDailyCheckinNotification] = useState(false);
 
@@ -155,15 +152,11 @@ export const NotificationsProvider = ({
     setDailyCheckinNotification(shouldShowNotification);
   }, [shouldShowNotification]);
 
-  const addToNotificationCount = (count: number, type: 'profile' | 'general' = 'general') => {
-    if (type === 'profile') {
-      setProfileNotificationCount(prev => prev + count);
-    } else {
-      setNotificationCount(prev => prev + count);
-    }
+  const addToNotificationCount = (count: number) => {
+    setNotificationCount(prev => prev + count);
   };
 
-  const clearGeneralNotifications = async () => {
+  const clearAllNotifications = async () => {
     setNotificationCount(0);
     
     if (navigator.clearAppBadge) {
@@ -173,18 +166,8 @@ export const NotificationsProvider = ({
       const notifications = await registration.getNotifications();
       notifications.forEach((notification) => notification.close());
     }
-  };
 
-  const clearProfileNotifications = async () => {
-    setProfileNotificationCount(0);
     
-    if (navigator.clearAppBadge) {
-      await navigator.clearAppBadge();
-    }
-    if (registration) {
-      const notifications = await registration.getNotifications();
-      notifications.forEach((notification) => notification.close());
-    }
   };
 
   const sendLocalNotification = async (
@@ -342,11 +325,9 @@ export const NotificationsProvider = ({
     <NotificationsContext.Provider
       value={{
         notificationCount,
-        profileNotificationCount,
         dailyCheckinNotification,
         addToNotificationCount,
-        clearGeneralNotifications,
-        clearProfileNotifications,
+        clearGeneralNotifications: clearAllNotifications,
         sendLocalNotification,
         sendPushNotification,
         requestPermission,
