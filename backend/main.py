@@ -7,16 +7,16 @@ if __name__ == "__main__":
     from pyngrok import ngrok
 
     port = 8000
-    public_url = ngrok.connect(port).public_url
-    logger.info(
-        "\033[94mWebhook link to use (NGROK tunnel):\n"
-        + public_url
-        + "/clerk/webhook\n"
-        + public_url
-        + "/stripe/webhook\033[0m"
-    )
+    # public_url = ngrok.connect(port).public_url
+    # logger.info(
+    #     "\033[94mWebhook link to use (NGROK tunnel):\n"
+    #     + public_url
+    #     + "/clerk/webhook\n"
+    #     + public_url
+    #     + "/stripe/webhook\033[0m"
+    # )
 
-    os.environ["API_URL"] = public_url
+    # os.environ["API_URL"] = public_url
     ssl_keyfile = "../localhost.key"
     ssl_certfile = "../localhost.crt"
 

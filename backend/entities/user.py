@@ -23,6 +23,7 @@ class User(BaseModel):
     clerk_id: Optional[str] = None
     language: Optional[str] = "English"
     plan_type: Optional[Literal["free", "plus"]] = "free"
+    last_active_at: Optional[str] = None
     daily_checkin_settings: Optional[DailyCheckinSettings] = None
     email: str
     created_at: str

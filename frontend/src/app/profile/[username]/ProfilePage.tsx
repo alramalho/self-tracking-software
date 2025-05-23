@@ -122,6 +122,7 @@ const ProfilePage: React.FC = () => {
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const redirectTo = searchParams.get('redirectTo');
 
   useEffect(() => {
     if (currentUser?.username && !username) {
@@ -586,6 +587,7 @@ const ProfilePage: React.FC = () => {
               open={showUserProfile}
               onClose={() => setShowUserProfile(false)}
               initialActiveView={initialActiveView as ActiveView | null}
+              redirectTo={redirectTo}
             />
           </>
         )}
