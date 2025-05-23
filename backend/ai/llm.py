@@ -61,16 +61,17 @@ def run_async_in_sync(coro):
     return result
 
 def ask_text(
-    text: str, system: str, model: str = LLM_MODEL, temperature: float = 0
+    text: str, system: str | None = None, model: str = LLM_MODEL, temperature: float = 0
 ) -> str:
     agent: Agent[None, TextResponse] = Agent(
         get_model(model),
         result_type=TextResponse,
-        system_prompt=system,
+        system_prompt=system if system else "",
         model_settings={'temperature': temperature},
     )
     # Instead of run_sync, use our custom async runner
     result = run_async_in_sync(agent.run(text))
+    logger.info(f"Asked text {text} with model {model} and got result {result.data.text}")
     return result.data.text
 
 def ask_schema(
