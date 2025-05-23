@@ -166,15 +166,17 @@ const UserCard: React.FC<UserCardProps> = ({
             </div>
           )}
 
-          <div className="flex items-center text-sm text-gray-600">
-            <span>
-              Last active{" "}
-              {formatDistanceToNow(
-                new Date(user.last_active_at || user.created_at),
-                { addSuffix: true }
-              )}
-            </span>
-          </div>
+          {(user.last_active_at || user.created_at) && (
+            <div className="flex items-center text-sm text-gray-600">
+              <span>
+                Last active{" "}
+                {formatDistanceToNow(
+                  new Date(user.last_active_at || user.created_at!),
+                  { addSuffix: true }
+                )}
+              </span>
+            </div>
+          )}
 
           {user.profile && (
             <div className="mt-2">
