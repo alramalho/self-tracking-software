@@ -5,7 +5,7 @@ import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { useRouter } from "next/navigation";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { Search, RefreshCw, X } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 import PlanStreak from "@/components/PlanStreak";
@@ -21,14 +21,15 @@ import Link from "next/link";
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { useCurrentUserDataQuery, hasLoadedUserData, refetchAllData } =
+  const { useCurrentUserDataQuery, hasLoadedUserData, notificationsData } =
     useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { isAppInstalled } = useNotifications();
+  const { isAppInstalled, clearGeneralNotifications } = useNotifications();
   const [onboardingCompleted] = useLocalStorage<boolean>(
     "onboarding-completed",
     false
@@ -37,6 +38,9 @@ const HomePage: React.FC = () => {
   const hasFriends =
     userData?.user?.friend_ids?.length &&
     userData?.user?.friend_ids?.length > 0;
+
+  const unreadNotificationsCount = 
+    notificationsData.data?.notifications?.filter(n => !n.opened_at).length || 0;
 
   useEffect(() => {
     if (
@@ -54,8 +58,11 @@ const HomePage: React.FC = () => {
     setIsSearchOpen(false);
   };
 
-  const handleRefresh = async () => {
-    await refetchAllData();
+  const handleNotificationsClose = async () => {
+    setIsNotificationsOpen(false);
+    await clearGeneralNotifications();
+    // Optionally refetch notifications to update the UI
+    await notificationsData.refetch();
   };
 
   return (
@@ -78,14 +85,19 @@ const HomePage: React.FC = () => {
           </Link>
         )}
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            onClick={handleRefresh}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span className="text-sm text-gray-500">Refresh</span>
-          </Button>
+          <div className="relative">
+            <button
+              onClick={() => setIsNotificationsOpen(true)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 relative"
+            >
+              <Bell size={24} />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
+              )}
+            </button>
+          </div>
           <button
             onClick={() => setIsSearchOpen(true)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
@@ -132,10 +144,24 @@ const HomePage: React.FC = () => {
       <AppleLikePopover
         onClose={() => setIsSearchOpen(false)}
         open={isSearchOpen}
+        title="Search Users"
       >
         <div className="p-4">
           <h2 className="text-xl font-semibold mb-4">Search Users</h2>
           <UserSearch onUserClick={handleUserClick} />
+        </div>
+      </AppleLikePopover>
+
+      <AppleLikePopover
+        onClose={handleNotificationsClose}
+        open={isNotificationsOpen}
+        title="Notifications"
+      >
+        <div className="p-4">
+          <div className="flex items-start flex-col justify-between mb-4">
+            <h2 className="text-xl font-semibold">{unreadNotificationsCount > 0 ? "Notifications" : "✅ No new notifications"}</h2>
+          </div>
+          <Notifications />
         </div>
       </AppleLikePopover>
 
