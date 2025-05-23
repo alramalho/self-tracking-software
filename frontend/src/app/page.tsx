@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import AINotification from "@/components/AINotification";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -40,6 +41,9 @@ const HomePage: React.FC = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { isAppInstalled, clearGeneralNotifications } = useNotifications();
+  const { userPaidPlanType } = usePaidPlan();
+  const isUserOnFreePlan = userPaidPlanType === "free";
+
   const {
     show: showDailyCheckin,
     hasMissingCheckin,
@@ -178,7 +182,7 @@ const HomePage: React.FC = () => {
       )}
 
       {/* Your Metrics Section */}
-      {userMetrics.length > 0 && (
+      {userMetrics.length > 0 && !isUserOnFreePlan && (
         <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900">

@@ -578,7 +578,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       queryKey: ["userData", "current"],
       queryFn: () => fetchUserData(),
       enabled: isLoaded && isSignedIn,
-      staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
     return query;
@@ -638,7 +637,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       queryKey: ["timelineData"],
       queryFn: () => fetchTimelineDataFn(),
       enabled: isSignedIn && isLoaded,
-      staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
     return query;
