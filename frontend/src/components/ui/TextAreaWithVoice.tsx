@@ -15,6 +15,8 @@ interface TextAreaWithVoiceProps {
   label?: string;
   disabled?: boolean;
   className?: string;
+  onRecordingStarted?: () => void;
+  onRecordingStopped?: () => void;
 }
 
 export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
@@ -25,6 +27,8 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
   label,
   disabled,
   className,
+  onRecordingStarted,
+  onRecordingStopped,
 }) => {
   const [isTranscribing, setIsTranscribing] = React.useState(false);
   const [showPointer, setShowPointer] = React.useState(true);
@@ -126,7 +130,14 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
             variant="ghost"
             size="icon"
             className={`h-8 w-8 rounded-full hover:bg-gray-100 ${isTranscribing ? "opacity-50" : ""}`}
-            onClick={() => toggleRecording(handleVoiceRecording)}
+            onClick={() => {
+              if (isRecording) {
+                onRecordingStopped?.();
+              } else {
+                onRecordingStarted?.();
+              }
+              toggleRecording(handleVoiceRecording);
+            }}
             disabled={disabled || isTranscribing}
           >
             {isTranscribing ? (
