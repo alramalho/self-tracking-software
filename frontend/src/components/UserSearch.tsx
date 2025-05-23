@@ -32,8 +32,9 @@ const UserSearch: React.FC<UserSearchProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const router = useRouter();
@@ -114,24 +115,19 @@ const UserSearch: React.FC<UserSearchProps> = ({
       </ul>
       <Button
         variant="outline"
-        disabled={!userData?.user?.looking_for_ap}
-        onClick={() => router.push("/looking-for-ap")}
+        onClick={async () => {
+          if (!userData?.user?.looking_for_ap) {
+            await api.post("/update-user", {
+              looking_for_ap: true,
+            });
+            currentUserDataQuery.refetch();
+          }
+          router.push("/looking-for-ap");
+        }}
         className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.gradientBg}`}
       >
         Find me an Accountability Partner 🤝
       </Button>
-      {!userData?.user?.looking_for_ap && (
-        <p className="text-sm text-gray-500 mt-2 px-2">
-          To enable this feature, go to{" "}
-          <Link
-            href={`/profile/${userData?.user?.username}`}
-            className="underline"
-          >
-            your profile page
-          </Link>{" "}
-          and mark that you&apos;re looking for an accountability partner.
-        </p>
-      )}
     </div>
   );
 };
