@@ -33,7 +33,7 @@ const themeTextClasses: Record<BaseThemeColor, string> = {
 };
 
 const BottomNav = () => {
-  const { notificationCount, profileNotificationCount } = useNotifications();
+  const { notificationCount } = useNotifications();
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
@@ -213,13 +213,6 @@ const BottomNav = () => {
               <Loader2 size={24} className="animate-spin" />
             ) : (
               <User size={24} strokeWidth={2.5} />
-            )}
-            {profileNotificationCount > 0 && (
-              <div className="absolute top-0 right-0 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
-                {profileNotificationCount > 99
-                  ? "99+"
-                  : profileNotificationCount}
-              </div>
             )}
             <span className="text-[10px] mt-1 font-medium">
               {isActiveRoute("/profile") ? "Profile" : ""}

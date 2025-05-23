@@ -39,8 +39,10 @@ const HomePage: React.FC = () => {
     userData?.user?.friend_ids?.length &&
     userData?.user?.friend_ids?.length > 0;
 
-  const unreadNotificationsCount = 
-    notificationsData.data?.notifications?.filter(n => !n.opened_at).length || 0;
+  const unreadNotifications = 
+    notificationsData.data?.notifications?.filter(n =>  n.status !== "concluded" && n.type !== "engagement") || [];
+  console.log({unreadNotifications});
+  const unreadNotificationsCount = unreadNotifications.length;
 
   useEffect(() => {
     if (
@@ -134,8 +136,6 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       )}
-
-      <Notifications />
 
       <div className="mb-6">
         <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)} />

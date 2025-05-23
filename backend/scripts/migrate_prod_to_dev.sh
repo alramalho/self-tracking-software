@@ -143,3 +143,4 @@ else
 fi
 
 echo "All Tracking Software production data has been migrated to development tables." 
+echo "✅ Done. Don't forget to run now ./update-clerk-id.sh"
