@@ -17,8 +17,9 @@ import UserCard from "@/components/UserCard";
 
 const LookingForApPage: React.FC = () => {
   const router = useRouter();
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserDataQuery;
   const api = useApiWithAuth();
 
   const { isPushGranted, requestPermission: requestNotificationPermission } =
@@ -117,6 +118,7 @@ const LookingForApPage: React.FC = () => {
                   await api.post("/update-user", {
                     looking_for_ap: true,
                   });
+                  currentUserDataQuery.refetch();
                   router.push(
                     `/profile/${userData?.user?.username}?activeView=editProfile&redirectTo=/looking-for-ap`
                   );
