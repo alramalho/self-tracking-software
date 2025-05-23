@@ -128,6 +128,8 @@ async def log_activity(
                     )
                 )
 
+        users_gateway.update_fields(user.id, {"last_active_at": datetime.now(UTC).isoformat()})
+
         posthog.capture(
             distinct_id=user.id,
             event="activity_entry_created",
@@ -177,7 +179,6 @@ async def upsert_activity(
     )
     created_activity = activities_gateway.create_activity(new_activity)
 
-    users_gateway.update_user(user.id, {"last_active_at": datetime.now(UTC).isoformat()})
     return created_activity
 
 

@@ -301,9 +301,14 @@ async def get_user_profile(username: str, current_user: User = Depends(is_clerk_
 
 @router.post("/send-friend-request/{recipient_id}")
 async def send_friend_request(
-    recipient_id: str, current_user: User = Depends(is_clerk_user)
+    request: Request,
+    recipient_id: str,
+    current_user: User = Depends(is_clerk_user),
 ):
     try:
+        body = await request.json()
+        message = body.get("message", None)
+
         existing_requests = friend_request_gateway.get_pending_sent_requests(
             current_user.id
         )
@@ -319,7 +324,7 @@ async def send_friend_request(
         notification = await notification_manager.create_and_process_notification(
             Notification.new(
                 user_id=recipient_id,
-                message=f"{current_user.name} sent you a friend request",
+                message=f"{current_user.name} sent you a friend request{f' with the message: {message}' if message else ''}",
                 type="friend_request",
                 related_id=friend_request.id,
                 related_data={
