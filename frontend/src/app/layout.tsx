@@ -13,9 +13,9 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title:
-    "Tracking Software APP - Your Free and Open Source App for Activity Tracking",
+    "Tracking.so – Improve your lifestyle",
   description:
-    "Measure your progress and manage your habits. Gain insights, set goals, and achieve accountability with your friends and personal AI coach.",
+    "Measure your progress and manage your habits. Gain insights, set goals, and achieve accountability with your friends and personal AI coach. All with our free and open source app",
   manifest: "/manifest.json",
 };
 
