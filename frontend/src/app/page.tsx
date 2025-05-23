@@ -40,7 +40,11 @@ const HomePage: React.FC = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { isAppInstalled, clearGeneralNotifications } = useNotifications();
-  const { show: showDailyCheckin, hasMissingCheckin, checkinMessage } = useDailyCheckin();
+  const {
+    show: showDailyCheckin,
+    hasMissingCheckin,
+    checkinMessage,
+  } = useDailyCheckin();
   const [onboardingCompleted] = useLocalStorage<boolean>(
     "onboarding-completed",
     false
@@ -274,14 +278,12 @@ const HomePage: React.FC = () => {
         title="Notifications"
         displayIcon={false}
       >
-        <div className="p-4">
-          {unreadNotificationsCount == 0 && (
-            <div className="flex items-start flex-col justify-between mb-4">
-              <h2 className="text-xl font-semibold">✅ No new notifications</h2>
-            </div>
-          )}
-          <Notifications />
-        </div>
+        {unreadNotificationsCount == 0 && (
+          <div className="flex items-start flex-col justify-between mb-4">
+            <h2 className="text-xl font-semibold">✅ No new notifications</h2>
+          </div>
+        )}
+        <Notifications />
       </AppleLikePopover>
 
       {/* <DailyCheckinBanner/> */}
