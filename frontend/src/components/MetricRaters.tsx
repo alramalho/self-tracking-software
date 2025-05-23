@@ -121,7 +121,7 @@ export function MetricRaters({
               onSubmit={async (description) => {
                 await handleSubmitAllRatings(description);
               }}
-              submitAlwaysOn={true}
+              canSubmitEmpty={true}
               submitButtonText="Submit"
               wave={false}
             />

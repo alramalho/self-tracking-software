@@ -46,7 +46,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   onReject?: (feedback: string, data: T) => Promise<void>;
   creationMessage?: string;
   placeholder?: string;
-  submitAlwaysOn?: boolean;
+  canSubmitEmpty?: boolean;
   title?: string;
   description?: string;
   wave?: boolean;
@@ -71,7 +71,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   description,
   wave = false,
   onSkip,
-  submitAlwaysOn = false,
+  canSubmitEmpty = false,
 }: DynamicUISuggesterProps<T>) {
   const [text, setText] = useState("");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
@@ -342,6 +342,14 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             value={text}
             onChange={handleTextChange}
             placeholder={placeholder}
+            onRecordingStarted={() => {
+              console.log("recording started");
+              setIsRecording(true);
+            }}
+            onRecordingStopped={() => {
+              console.log("recording stopped");
+              setIsRecording(false);
+            }}
             onVoiceTranscripted={async (transcript) => {
               setText(transcript);
               await submitMutation.mutateAsync(transcript);
@@ -353,7 +361,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <Button
             className="w-full"
             onClick={() => submitMutation.mutateAsync(text)}
-            disabled={!submitAlwaysOn && (!isLoading || !text || isRecording)}
+            disabled={(!canSubmitEmpty && !text) || isRecording || isLoading}
             loading={isLoading}
           >
             {submitButtonText ?? "Send"}
@@ -428,8 +436,6 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             <TextAreaWithVoice
               value={rejectionFeedback}
               onChange={(value) => setRejectionFeedback(value)}
-              onRecordingStarted={() => {setIsRecording(true)}}
-              onRecordingStopped={() => {setIsRecording(false)}}
               placeholder="Tell us what we got wrong..."
             />
           </div>

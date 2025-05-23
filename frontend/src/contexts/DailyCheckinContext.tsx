@@ -11,6 +11,7 @@ interface DailyCheckinContextType {
   dismissCheckin: () => void;
   markAsSubmitted: () => void;
   checkinMessage: string | undefined;
+  buildCheckinMessage: () => { message: string; id: string };
 }
 
 const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
