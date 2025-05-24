@@ -23,6 +23,7 @@ interface AINotificationProps {
   onClick?: () => void;
   preview?: boolean;
   hasNotification?: boolean;
+  replyMessage?: string;
 }
 
 const AINotification: React.FC<AINotificationProps> = ({
@@ -31,6 +32,7 @@ const AINotification: React.FC<AINotificationProps> = ({
   onDismiss,
   onClick,
   hasNotification,
+  replyMessage,
   preview = false,
 }) => {
   const themeColors = useThemeColors();
@@ -113,7 +115,7 @@ const AINotification: React.FC<AINotificationProps> = ({
           </div>
           {onClick && (
             <div
-              className="flex flex-row items-center gap-1 underline text-gray-500"
+              className={`flex flex-row items-center gap-1 p-1 px-2 mt-2 rounded-full ${variants.button.glass} cursor-pointer`}
               onClick={(e) => {
                 e.stopPropagation();
                 onClick();
@@ -122,12 +124,12 @@ const AINotification: React.FC<AINotificationProps> = ({
               {preview ? (
                 <>
                   <Key size={15} />
-                  <span className="text-xs">Unlock</span>
+                  <span className="text-sm">Unlock</span>
                 </>
               ) : (
                 <>
                   <Reply size={15} />
-                  <span className="text-xs">Reply</span>
+                  <span className="text-sm">{replyMessage ?? "Reply"}</span>
                 </>
               )}
             </div>
