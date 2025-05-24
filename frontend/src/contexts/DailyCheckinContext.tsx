@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { differenceInDays } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 import { InsightsBanner } from "@/components/InsightsBanner";
 
 interface DailyCheckinContextType {
@@ -86,11 +86,15 @@ export const DailyCheckinPopoverProvider: React.FC<{
       : undefined;
 
   const daysSinceLastEntry = latestEntry
-    ? differenceInDays(new Date(), new Date(latestEntry.date))
+    ? differenceInCalendarDays(new Date(), new Date(latestEntry.date))
     : undefined;
 
   useEffect(() => {
-    if (!latestEntry || (daysSinceLastEntry && daysSinceLastEntry > 1)) {
+    console.log("entries", entries);
+    console.log("latestEntry", latestEntry);
+    console.log("daysSinceLastEntry", daysSinceLastEntry);
+    
+    if (!latestEntry || (daysSinceLastEntry && daysSinceLastEntry >= 1)) {
       setHasMissingCheckin(true);
       return;
     }
