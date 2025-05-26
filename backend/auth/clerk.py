@@ -23,9 +23,26 @@ def get_token_from_request(request: Request) -> str:
     # Try to get the token from the Authorization header first
     auth_header = request.headers.get("Authorization")
     if auth_header:
-        return auth_header.split(" ")[1]
+        # Validate Authorization header format
+        auth_parts = auth_header.split(" ")
+        if len(auth_parts) != 2 or auth_parts[0].lower() != "bearer":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Authorization header format. Expected 'Bearer <token>'",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        token = auth_parts[1]
+        
+        # Validate JWT format (should have 3 segments)
+        if len(token.split(".")) != 3:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid JWT format - token must have 3 segments",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return token
     
-    # Fallback to getting the token from the _session cookie
+    # Fallback to getting the token from the __session cookie
     token = request.cookies.get("__session")
     if not token:
         raise HTTPException(
@@ -33,6 +50,15 @@ def get_token_from_request(request: Request) -> str:
             detail="No authentication information available",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Validate JWT format for cookie token as well
+    if len(token.split(".")) != 3:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid JWT format in session cookie - token must have 3 segments",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     return token
 
 async def get_token_from_websocket(websocket: WebSocket) -> str:
@@ -49,6 +75,16 @@ async def get_token_from_websocket(websocket: WebSocket) -> str:
             detail="No authentication information available",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Validate JWT format (should have 3 segments)
+    if len(token.split(".")) != 3:
+        logger.error('AUTH', f"Invalid JWT format - token has {len(token.split('.'))} segments instead of 3")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid JWT format - token must have 3 segments",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     return token
 
 async def validate_token(token: str) -> Tuple[bool, str]:
@@ -80,7 +116,21 @@ async def validate_token(token: str) -> Tuple[bool, str]:
             )
 
     except JWTError as e:
-        logger.error(f"Could not validate user credentials. Error: {str(e)}")
+        # Log more specific information about the JWT error
+        error_msg = str(e)
+        logger.error(f"JWT validation failed. Error: {error_msg}")
+        logger.error(f"Token preview (first 50 chars): {token[:50]}...")
+        logger.error(f"Token segments count: {len(token.split('.'))}")
+        
+        if "Not enough segments" in error_msg:
+            logger.error("JWT format error: Token should have exactly 3 segments separated by dots (header.payload.signature)")
+        elif "Invalid signature" in error_msg:
+            logger.error("JWT signature validation failed - check CLERK_JWT_PUBLIC_KEY")
+        elif "Invalid header" in error_msg:
+            logger.error("JWT header is malformed")
+        elif "Invalid payload" in error_msg:
+            logger.error("JWT payload is malformed")
+            
         raise credentials_exception
     return True, clerk_id
 
