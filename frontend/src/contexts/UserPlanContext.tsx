@@ -501,7 +501,23 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchTimelineDataFn = async () => {
     try {
       const startTime = performance.now();
-      const response = await api.get("/timeline");
+      const result = await smallRetryMechanism(
+        async () => {
+          const response = await api.get("/timeline");
+          
+          return {
+            recommendedUsers: response.data.recommended_users,
+            recommendedActivities: response.data.recommended_activities,
+            recommendedActivityEntries: response.data.recommended_activity_entries,
+          } as TimelineData;
+        },
+        {
+          shouldRetry: (err) =>
+            axios.isAxiosError(err) &&
+            (err.response?.status === 404 || err.response?.status === 401),
+        }
+      );
+      
       const endTime = performance.now();
       const latencySeconds = (endTime - startTime) / 1000;
 
@@ -514,12 +530,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         posthog.capture("timeline-latency", timelineLatencyProperties);
       }
 
-      return {
-        recommendedUsers: response.data.recommended_users,
-        recommendedActivities: response.data.recommended_activities,
-        recommendedActivityEntries: response.data.recommended_activity_entries,
-      } as TimelineData;
+      return result;
     } catch (err) {
+      console.error("[UserPlanProvider] Error fetching timeline data:", err);
       handleAuthError(err);
       toast.error("Failed to fetch timeline data. Please try again.");
       throw err;
