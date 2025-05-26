@@ -12,10 +12,8 @@ const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title:
-    "Tracking.so – Improve your lifestyle",
-  description:
-    "Measure your progress and manage your habits. Gain insights, set goals, and achieve accountability with your friends and personal AI coach. All with our free and open source app",
+  title: "the self tracking app that gets you motivated | tracking.so ",
+  description: "improve your consistency and improve your lifestyle. free and open source.",
   manifest: "/manifest.json",
 };
 
