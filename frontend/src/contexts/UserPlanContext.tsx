@@ -368,11 +368,11 @@ export const hasCachedUserData = () => {
     const cachedData = localStorage.getItem('TRACKING_SO_QUERY_CACHE');
     if (!cachedData) return false;
 
-    // Further check if the parsed cache is not empty and has some clientState
-    // This is a heuristic, as the exact structure can vary
+    // Parse the cache and check if there are any queries in clientState
     const parsedCache = JSON.parse(cachedData);
-    return !!parsedCache && !!parsedCache.clientState && Object.keys(parsedCache.clientState).length > 0;
-
+    const queries = parsedCache?.clientState?.queries;
+    const mutations = parsedCache?.clientState?.mutations;
+    return Array.isArray(queries) && queries.length > 0 || Array.isArray(mutations) && mutations.length > 0;
   } catch (error) {
     // If parsing fails or any other error, assume no valid cache
     console.warn("Error checking for cached user data:", error);
@@ -649,7 +649,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     const query = useQuery({
       queryKey: ["timelineData"],
       queryFn: () => fetchTimelineDataFn(),
-      enabled: isSignedIn && isLoaded,
+      enabled: isLoaded && isSignedIn,
     });
 
     return query;
