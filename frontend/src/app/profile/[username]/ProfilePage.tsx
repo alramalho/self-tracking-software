@@ -446,7 +446,6 @@ const ProfilePage: React.FC = () => {
                         activities={activities}
                         activityEntries={activityEntries}
                         timeRangeDays={getTimeRangeDays(timeRange)}
-                        size="medium"
                         onClick={() => setShowStreakDetails(true)}
                       />
                     ))}
