@@ -8,8 +8,8 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { Search, Bell, ChevronDown, ChevronRight } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
-import PlanStreak from "@/components/PlanStreak";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
+import PlansAchievements from "@/components/PlansAchievements";
 
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan, MetricEntry } from "@/contexts/UserPlanContext";
@@ -170,19 +170,13 @@ const HomePage: React.FC = () => {
             </button>
           </div>
           <div className="flex flex-wrap gap-3">
-            {userData.plans.map((plan) => (
-              <PlanStreak
-                key={plan.id}
-                plan={plan}
-                activities={userData.activities || []}
-                activityEntries={userData.activityEntries || []}
-                size="medium"
-                timeRangeDays={60}
-                onClick={() =>
-                  router.push(`/profile/${userData.user?.username}`)
-                }
-              />
-            ))}
+            <PlansAchievements
+              plans={userData.plans}
+              activities={userData.activities || []}
+              activityEntries={userData.activityEntries || []}
+              timeRangeDays={60}
+              onClick={() => router.push(`/profile/${userData.user?.username}`)}
+            />
           </div>
         </div>
       )}
@@ -195,7 +189,9 @@ const HomePage: React.FC = () => {
               <button
                 onClick={() => setIsMetricsCollapsed(!isMetricsCollapsed)}
                 className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
-                aria-label={isMetricsCollapsed ? "Expand metrics" : "Collapse metrics"}
+                aria-label={
+                  isMetricsCollapsed ? "Expand metrics" : "Collapse metrics"
+                }
               >
                 {isMetricsCollapsed ? (
                   <ChevronRight size={16} className="text-gray-600" />
@@ -215,7 +211,7 @@ const HomePage: React.FC = () => {
               <ChevronRight size={16} />
             </button>
           </div>
-          
+
           {isMetricsCollapsed ? (
             // Minimal collapsed version
             <div className="space-y-3">
@@ -232,43 +228,54 @@ const HomePage: React.FC = () => {
                   </button>
                 </div>
               )}
-              
+
               {/* Metrics overview */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {/* Progress indicator */}
                   <div className="text-sm text-gray-600">
                     <span className="font-medium">
-                      {userMetrics.filter(metric => {
-                        const today = new Date().toISOString().split("T")[0];
-                        return entries.some(
-                          (entry: MetricEntry) =>
-                            entry.metric_id === metric.id && entry.date.split("T")[0] === today
-                        );
-                      }).length}
+                      {
+                        userMetrics.filter((metric) => {
+                          const today = new Date().toISOString().split("T")[0];
+                          return entries.some(
+                            (entry: MetricEntry) =>
+                              entry.metric_id === metric.id &&
+                              entry.date.split("T")[0] === today
+                          );
+                        }).length
+                      }
                     </span>
-                    <span className="text-gray-500"> of {userMetrics.length} logged today</span>
+                    <span className="text-gray-500">
+                      {" "}
+                      of {userMetrics.length} logged today
+                    </span>
                   </div>
-                  
+
                   {/* Metric icons with status indicators */}
                   <div className="flex items-center gap-1">
                     {userMetrics.slice(0, 5).map((metric) => {
                       const today = new Date().toISOString().split("T")[0];
                       const isLoggedToday = entries.some(
                         (entry: MetricEntry) =>
-                          entry.metric_id === metric.id && entry.date.split("T")[0] === today
+                          entry.metric_id === metric.id &&
+                          entry.date.split("T")[0] === today
                       );
-                      
+
                       return (
                         <div
                           key={metric.id}
                           className="relative flex items-center justify-center"
                         >
-                          <span 
+                          <span
                             className={`text-lg transition-opacity duration-200 ${
-                              isLoggedToday ? 'opacity-100' : 'opacity-40'
+                              isLoggedToday ? "opacity-100" : "opacity-40"
                             }`}
-                            title={`${metric.title} ${isLoggedToday ? '(logged today)' : '(not logged today)'}`}
+                            title={`${metric.title} ${
+                              isLoggedToday
+                                ? "(logged today)"
+                                : "(not logged today)"
+                            }`}
                           >
                             {metric.emoji}
                           </span>
