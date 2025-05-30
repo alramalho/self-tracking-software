@@ -22,6 +22,7 @@ import { useMetrics } from "@/hooks/useMetrics";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import AINotification from "@/components/AINotification";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -49,12 +50,13 @@ const HomePage: React.FC = () => {
   const { userPaidPlanType } = usePaidPlan();
   const isUserOnFreePlan = userPaidPlanType === "free";
   const currentHour = new Date().getHours();
-
+  const isAfter2PM = currentHour >= 14;
   const {
     show: showDailyCheckin,
-    hasMissingCheckin,
+    hasCheckedInToday,
     checkinMessage,
   } = useDailyCheckin();
+
   const [onboardingCompleted] = useLocalStorage<boolean>(
     "onboarding-completed",
     false
@@ -216,17 +218,29 @@ const HomePage: React.FC = () => {
             // Minimal collapsed version
             <div className="space-y-3">
               {/* Missing checkin indicator */}
-              {hasMissingCheckin && currentHour > 14 && (
-                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                  <span className="text-sm font-medium">Missing check-in</span>
-                  <button
-                    onClick={() => showDailyCheckin()}
-                    className="text-xs text-amber-700 hover:text-amber-800 font-medium ml-auto"
-                  >
-                    Check in now
-                  </button>
-                </div>
+              {!hasCheckedInToday && (
+                <>
+                  {isAfter2PM ? (
+                    <>
+                      <div className="flex items-center gap-2 text-amber-600 mx-2">
+                        <PulsatingCirclePill variant="yellow" size="md" />
+                        <span className="text-xs font-medium">
+                          Missing check-in!
+                        </span>
+                        <button
+                          onClick={() => showDailyCheckin()}
+                          className="text-xs bg-amber-50 text-amber-700 hover:text-amber-800 font-medium ml-auto px-3 py-2 rounded-lg border border-amber-200"
+                        >
+                          Check in now
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-500">
+                      Checkin will be available at 2pm
+                    </span>
+                  )}
+                </>
               )}
 
               {/* Metrics overview */}

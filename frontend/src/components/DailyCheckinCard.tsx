@@ -40,7 +40,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
   const {
     show: showDailyCheckinPopover,
     shouldShowNotification,
-    hasMissingCheckin,
+    hasCheckedInToday,
     dismissCheckin,
     buildCheckinMessage,
   } = useDailyCheckin();
@@ -52,9 +52,9 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     const message = buildCheckinMessage();
     setMessage(message.message);
     setMessageId(message.id);
-  }, [user, hasMissingCheckin]);
+  }, [user, hasCheckedInToday]);
 
-  if (!hasMissingCheckin)
+  if (hasCheckedInToday)
     return (
       <AINotification
         messages={[aiMessage ?? "Thanks for submitting your daily checkin!"]}

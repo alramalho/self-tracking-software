@@ -6,7 +6,7 @@ import { InsightsBanner } from "@/components/InsightsBanner";
 
 interface DailyCheckinContextType {
   show: (initialMessage?: string) => void;
-  hasMissingCheckin: boolean;
+  hasCheckedInToday: boolean;
   shouldShowNotification: boolean;
   dismissCheckin: () => void;
   markAsSubmitted: () => void;
@@ -35,7 +35,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
   const [initialMessage, setInitialMessage] = useState<string | undefined>(
     undefined
   );
-  const [hasMissingCheckin, setHasMissingCheckin] = useState(false);
+  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
@@ -90,12 +90,9 @@ export const DailyCheckinPopoverProvider: React.FC<{
     : undefined;
 
   useEffect(() => {
-    console.log("entries", entries);
-    console.log("latestEntry", latestEntry);
-    console.log("daysSinceLastEntry", daysSinceLastEntry);
     
-    if (!latestEntry || (daysSinceLastEntry && daysSinceLastEntry >= 1)) {
-      setHasMissingCheckin(true);
+    if (!latestEntry || (daysSinceLastEntry && daysSinceLastEntry >= 1) ) {
+      setHasCheckedInToday(true);
       return;
     }
 
@@ -109,12 +106,12 @@ export const DailyCheckinPopoverProvider: React.FC<{
       lastCheckin.getDate() === today.getDate();
 
     if (wasToday) {
-      setHasMissingCheckin(false);
+      setHasCheckedInToday(false);
     } else {
       const now = new Date();
       const hours = now.getHours();
       const isAfter4PM = hours >= 16;
-      setHasMissingCheckin(isAfter4PM);
+      setHasCheckedInToday(isAfter4PM);
     }
 
     // Reset dismissal state at the start of a new day
@@ -133,7 +130,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
     setShowDailyCheckinPopover(false);
   };
 
-  const shouldShowNotification = hasMissingCheckin && !isDismissed;
+  const shouldShowNotification = hasCheckedInToday && !isDismissed;
 
   return (
     <DailyCheckinContext.Provider
@@ -142,7 +139,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
           setInitialMessage(initialMessage);
           setShowDailyCheckinPopover(true);
         },
-        hasMissingCheckin,
+        hasCheckedInToday: hasCheckedInToday,
         shouldShowNotification,
         dismissCheckin,
         markAsSubmitted,
