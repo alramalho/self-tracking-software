@@ -9,26 +9,98 @@ import {
   isAfter,
   isBefore,
   addWeeks,
+  isSameDay,
+  min,
 } from "date-fns";
 import {
   convertApiPlanToPlan,
   useUserPlan,
+  Plan,
+  Activity,
+  ActivityEntry,
+  ApiPlan,
 } from "@/contexts/UserPlanContext";
 import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
-import { TimeRange, getTimeRangeDays } from "@/app/profile/[username]/ProfilePage";
 
 interface StreakDetailsPopoverProps {
   open: boolean;
   onClose: () => void;
-  timeRange: TimeRange;
-  onTimeRangeChange: (value: TimeRange) => void;
 }
+
+export const calculatePlanAchievement = (
+  plan: ApiPlan,
+  activities: Activity[],
+  activityEntries: ActivityEntry[],
+  threshold: number,
+  initialDate?: Date
+) => {
+  const planActivities = activities.filter(
+    (activity) => plan.activity_ids?.includes(activity.id) ?? false
+  );
+  const planActivityEntries = activityEntries.filter(
+    (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
+  );
+
+  if (planActivityEntries.length === 0) {
+    return { planScore: 0, completedWeeks: 0, incompleteWeeks: 0, isAchieved: false, totalWeeks: 0 };
+  }
+
+  const firstEntryDate = initialDate
+    ? initialDate
+    : min(planActivityEntries.map((entry) => parseISO(entry.date)));
+
+  const now = new Date();
+  const currentWeekStart = startOfWeek(now, {
+    weekStartsOn: 0,
+  });
+
+  let weekStart = startOfWeek(firstEntryDate, {
+    weekStartsOn: 0,
+  });
+
+  let planScore = 0;
+  let completedWeeks = 0;
+  let incompleteWeeks = 0;
+  let totalWeeks = 0;
+
+  const convertedPlan = convertApiPlanToPlan(plan, planActivities);
+
+  while (
+    isAfter(currentWeekStart, weekStart) ||
+    isSameDay(weekStart, currentWeekStart)
+  ) {
+    totalWeeks += 1;
+    const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
+    const wasCompleted = isWeekCompleted(
+      weekStart,
+      convertedPlan,
+      planActivityEntries
+    );
+
+    if (wasCompleted) {
+      planScore += 1;
+      completedWeeks += 1;
+      if (!isCurrentWeek) {
+        incompleteWeeks = 0;
+      }
+    } else if (!isCurrentWeek) {
+      incompleteWeeks += 1;
+      if (incompleteWeeks > 1) {
+        planScore = Math.max(0, planScore - 1);
+      }
+    }
+
+    weekStart = addWeeks(weekStart, 1);
+  }
+
+  const isAchieved = totalWeeks > 0 ? (completedWeeks / totalWeeks) >= threshold : false;
+
+  return { planScore, completedWeeks, incompleteWeeks, isAchieved, totalWeeks };
+};
 
 const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
   open,
   onClose,
-  timeRange,
-  onTimeRangeChange,
 }) => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
@@ -39,143 +111,66 @@ const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
   };
 
   return (
-    <AppleLikePopover
-      open={open}
-      onClose={onClose}
-      title="Streak Details"
-    >
+    <AppleLikePopover open={open} onClose={onClose} title="Streak Details">
       <div className="p-4 space-y-6">
-        <h3 className="text-xl font-semibold mb-4">
-          🔥 Streak Breakdown
-        </h3>
+        <h3 className="text-xl font-semibold mb-4">🔥 Streak Breakdown</h3>
+
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium mb-2">How streaks are calculated:</h4>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>• Each completed week adds <span className="font-bold">+1</span> to your streak</li>
+            <li>• Each incomplete week subtracts <span className="font-bold">-1</span> from your streak</li>
+            <li>
+              • You have a <span className="font-bold">1 week buffer</span> before it starts subtracting from your
+              streak.
+            </li>
+            <li>• Streak score cannot go below <span className="font-bold">0</span></li>
+          </ul>
+        </div>
 
         <div className="space-y-4">
           {profileData?.plans?.map((plan) => {
-            // Filter activities and entries for this plan
-            const planActivities = activities.filter(
-              (activity) =>
-                plan.activity_ids?.includes(activity.id) ?? false
-            );
-            const planActivityEntries = activityEntries.filter(
-              (entry) =>
-                plan.activity_ids?.includes(entry.activity_id) ?? false
-            );
-
-            // Calculate score for this plan
-            const now = new Date();
-            const currentWeekStart = startOfWeek(now, {
-              weekStartsOn: 0,
-            });
-            const daysToSubtract = getTimeRangeDays(timeRange);
-            const rangeStartDate = subDays(now, daysToSubtract);
-
-            let weekStart = startOfWeek(rangeStartDate, {
-              weekStartsOn: 0,
-            });
-            let planScore = 0;
-            let completedWeeks = 0;
-            let incompleteWeeks = 0;
-
-            while (weekStart < currentWeekStart) {
-              const convertedPlan = convertApiPlanToPlan(
+            const { planScore, completedWeeks, incompleteWeeks } =
+              calculatePlanAchievement(
                 plan,
-                planActivities
+                activities,
+                activityEntries,
+                // TODO: Determine a sensible default or pass a threshold value
+                0.75 // Defaulting to 0.75, adjust as needed
               );
-              const wasCompleted = isWeekCompleted(
-                weekStart,
-                convertedPlan,
-                planActivityEntries
-              );
-
-              if (wasCompleted) {
-                planScore += 1;
-                completedWeeks += 1;
-                // Reset buffer when a week is completed
-                incompleteWeeks = 0;
-              } else {
-                incompleteWeeks += 1;
-                // Only decrease score if we've missed more than one week (buffer week)
-                if (incompleteWeeks > 1) {
-                  planScore = Math.max(0, planScore - 1);
-                }
-              }
-
-              weekStart = new Date(
-                weekStart.getTime() + 7 * 24 * 60 * 60 * 1000
-              );
-            }
 
             if (
               planScore === 0 &&
               completedWeeks === 0 &&
-              incompleteWeeks === 0
+              incompleteWeeks === 0 &&
+              !activityEntries.some(entry => plan.activity_ids?.includes(entry.activity_id))
             ) {
               return null;
             }
 
             return (
-              <div
-                key={plan.id}
-                className="p-4 border rounded-lg bg-white/50"
-              >
+              <div key={plan.id} className="p-4 border rounded-lg bg-white/50">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-2xl">{plan.emoji}</span>
                   <h4 className="font-medium">{plan.goal}</h4>
                 </div>
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p>• Completed weeks: {completedWeeks}</p>
-                  <p>• Incomplete weeks: {incompleteWeeks}</p>
-                  <p>• Current streak score: {planScore}</p>
+                  <p>
+                    • Completed weeks:{" "}
+                    <span className="font-bold">{completedWeeks}</span>
+                  </p>
+                  <p>
+                    • Incomplete weeks since last streak:{" "}
+                    <span className="font-bold">{incompleteWeeks}</span>
+                  </p>
+                  <p>
+                    • Current streak score:{" "}
+                    <span className="font-bold">{planScore}</span>
+                  </p>
                 </div>
               </div>
             );
           })}
-        </div>
-
-        <div className="flex flex-row gap-4 justify-between items-center">
-          <span className="text-sm text-gray-500">Time range</span>
-          <div className="flex self-center">
-            <select
-              className="p-2 border rounded-md font-medium text-gray-800"
-              value={timeRange}
-              onChange={(e) =>
-                onTimeRangeChange(
-                  e.target.value as TimeRange
-                )
-              }
-            >
-              <option value="60 Days">Since 60 days ago</option>
-              <option value="120 Days">Since 120 days ago</option>
-              <option value="180 Days">Since 180 days ago</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium mb-2">
-            How streaks are calculated:
-          </h4>
-          <ul className="text-sm text-gray-600 space-y-2">
-            <li>• Each completed week adds +1 to your streak</li>
-            <li>• You have a 1-week buffer when you miss a week.</li>
-            <li>
-              • After the buffer week, each additional incomplete week
-              subtracts -1 from your streak
-            </li>
-            <li>• Streak score cannot go below 0</li>
-            <li>
-              • Current week is not counted (as it is still in progress)
-            </li>
-          </ul>
-          <br />
-          <br />
-          <p className="text-sm text-gray-600">
-            The goal of the streaks is to motivate you to keep consistent!
-            Without over-stressing or demotivating when you fail.
-            <br />
-            That&apos;s why you have a 1-week buffer when you miss a week
-            :) We all have off weeks!
-          </p>
         </div>
       </div>
     </AppleLikePopover>

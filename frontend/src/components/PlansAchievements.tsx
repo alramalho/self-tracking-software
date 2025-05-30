@@ -12,11 +12,14 @@ import {
   format,
   addWeeks,
   isBefore,
+  subDays,
 } from "date-fns";
 import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Badge } from "./ui/badge";
+import FireBadge from "./FireBadge";
+import { calculatePlanAchievement } from "./profile/StreakDetailsPopover";
 
 interface PlansAchievementsProps {
   plans: ApiPlan[];
@@ -27,8 +30,8 @@ interface PlansAchievementsProps {
   onClick?: () => void;
 }
 
-const ACHIEVEMENT_THRESHOLD = 0.8; // 80% completion required
-const ACHIEVEMENT_WEEKS = 12; // Last 12 weeks for achievement calculation
+export const ACHIEVEMENT_THRESHOLD = 0.8; // 80% completion required
+export const ACHIEVEMENT_WEEKS = 12; // Last 12 weeks for achievement calculation
 
 const PlansAchievements: React.FC<PlansAchievementsProps> = ({
   plans,
@@ -45,79 +48,15 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
   const plansData = useMemo(() => {
     return plans.map(plan => {
       // Calculate streak
-      const planActivities = activities.filter(
-        (activity) => plan.activity_ids?.includes(activity.id) ?? false
-      );
-      const planActivityEntries = activityEntries.filter(
-        (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
-      );
-
-      const now = new Date();
-      const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 });
-      const rangeStartDate = subWeeks(now, Math.floor(timeRangeDays / 7));
-
-      let weekStart = startOfWeek(rangeStartDate, { weekStartsOn: 0 });
-      let streak = 0;
-
-      while (isBefore(weekStart, currentWeekStart)) {
-        const convertedPlan = convertApiPlanToPlan(plan, planActivities);
-        const wasCompleted = isWeekCompleted(
-          weekStart,
-          convertedPlan,
-          planActivityEntries
-        );
-
-        if (wasCompleted) {
-          streak += 1;
-        }
-
-        weekStart = addWeeks(weekStart, 1);
-        if (
-          format(weekStart, "yyyy-MM-dd") === format(currentWeekStart, "yyyy-MM-dd")
-        ) {
-          break;
-        }
-      }
-
-      // Calculate achievement
-      weekStart = startOfWeek(
-        subWeeks(now, ACHIEVEMENT_WEEKS - 1),
-        { weekStartsOn: 0 }
-      );
-      let completedWeeks = 0;
-
-      while (isBefore(weekStart, currentWeekStart)) {
-        const convertedPlan = convertApiPlanToPlan(plan, planActivities);
-        const wasCompleted = isWeekCompleted(
-          weekStart,
-          convertedPlan,
-          planActivityEntries
-        );
-
-        if (wasCompleted) {
-          completedWeeks++;
-        }
-
-        weekStart = addWeeks(weekStart, 1);
-        if (
-          format(weekStart, "yyyy-MM-dd") === format(currentWeekStart, "yyyy-MM-dd")
-        ) {
-          break;
-        }
-      }
-
-      const achievementRatio = completedWeeks / ACHIEVEMENT_WEEKS;
-      const isAchieved = achievementRatio >= ACHIEVEMENT_THRESHOLD;
-      const weeksToAchieve =
-        Math.ceil(ACHIEVEMENT_WEEKS * ACHIEVEMENT_THRESHOLD) - completedWeeks;
-
+      const NinetyDaysAgo = subDays(new Date(), ACHIEVEMENT_WEEKS * 7);
+      const { planScore, completedWeeks, incompleteWeeks, isAchieved, totalWeeks } = calculatePlanAchievement(plan, activities, activityEntries, ACHIEVEMENT_THRESHOLD, NinetyDaysAgo);
       return {
         plan,
-        streak,
+        streak: planScore,
         achievement: {
           completedWeeks,
           isAchieved,
-          weeksToAchieve: Math.max(0, weeksToAchieve),
+          weeksToAchieve: Math.max(0, ACHIEVEMENT_WEEKS - completedWeeks), 
           progress: (completedWeeks / ACHIEVEMENT_WEEKS) * 100,
         }
       };
@@ -130,42 +69,26 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
       <div className="flex flex-wrap gap-3">
         {plansData.map(({ plan, streak, achievement }) => (
           <div key={plan.id} className="flex items-center gap-2" onClick={onClick}>
-            {/* Streak Badge (Fire) */}
-            <div className={`relative ${streak === 0 ? "opacity-40 grayscale" : ""}`}>
-              <picture>
-                <source
-                  srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
-                  type="image/webp"
-                />
-                <img
-                  src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
-                  alt="🔥"
-                  width="60"
-                  height="60"
-                />
-              </picture>
-              <Badge className="absolute -bottom-2 -right-2 text-sm bg-black/60">
-                x{streak} <span className="opacity-100 ml-1">{plan.emoji}</span>
-              </Badge>
-            </div>
+            <FireBadge>
+              x{streak} <span className="opacity-100 ml-1">{plan.emoji}</span>
+            </FireBadge>
 
-            {/* Star Badge (if achieved) */}
             {achievement.isAchieved && (
               <div className="relative">
                 <picture>
                   <source
-                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f31f/512.webp"
+                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3c6/512.webp"
                     type="image/webp"
                   />
                   <img
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f31f/512.gif"
-                    alt="🌟"
+                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3c6/512.gif"
+                    alt="🏆"
                     width="60"
                     height="60"
                   />
                 </picture>
-                <Badge className="absolute -bottom-2 -right-2 text-2xl bg-transparent">
-                  <span className="opacity-100 ml-1">{plan.emoji}</span>
+                <Badge className="absolute -bottom-[10px] -right-[10px] text-2xl bg-transparent">
+                  <span className="opacity-100 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">{plan.emoji}</span>
                 </Badge>
               </div>
             )}
@@ -185,9 +108,10 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-600">
-                {achievement.weeksToAchieve}{" "}
+                {achievement.weeksToAchieve} weeks to achieve <span className="text-lg">{plan.emoji}</span> lifestyle badge!
+                {/* {achievement.weeksToAchieve}{" "}
                 {achievement.weeksToAchieve === 1 ? "week" : "weeks"} till <span className="text-lg">{plan.emoji}</span> lifestyle
-                badge!
+                badge! */}
               </p>
             </div>
           ))}
