@@ -92,7 +92,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
   useEffect(() => {
     
     if (!latestEntry || (daysSinceLastEntry && daysSinceLastEntry >= 1) ) {
-      setHasCheckedInToday(true);
+      setHasCheckedInToday(false);
       return;
     }
 
@@ -106,13 +106,8 @@ export const DailyCheckinPopoverProvider: React.FC<{
       lastCheckin.getDate() === today.getDate();
 
     if (wasToday) {
-      setHasCheckedInToday(false);
-    } else {
-      const now = new Date();
-      const hours = now.getHours();
-      const isAfter4PM = hours >= 16;
-      setHasCheckedInToday(isAfter4PM);
-    }
+      setHasCheckedInToday(true);
+    } 
 
     // Reset dismissal state at the start of a new day
     if (!wasToday && isDismissed) {
