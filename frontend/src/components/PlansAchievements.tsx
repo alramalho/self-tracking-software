@@ -21,6 +21,7 @@ import { Badge } from "./ui/badge";
 import FireBadge from "./FireBadge";
 import { calculatePlanAchievement } from "./profile/StreakDetailsPopover";
 import TrophyBadge from "./FireBadge";
+import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 
 interface PlansAchievementsProps {
   plans: ApiPlan[];
@@ -29,6 +30,7 @@ interface PlansAchievementsProps {
   timeRangeDays?: number;
   className?: string;
   onClick?: () => void;
+  isExpanded?: boolean;
 }
 
 export const ACHIEVEMENT_THRESHOLD = 0.8; // 80% completion required
@@ -45,6 +47,7 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
   timeRangeDays = 60,
   className = "",
   onClick,
+  isExpanded = true, // Default to true for backward compatibility
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -79,51 +82,71 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
 
   return (
     <div className={`flex flex-col gap-3 ${className} w-full`}>
-      {/* All badges row */}
-      <div className="flex flex-wrap gap-3">
-        {plansData.map(({ plan, streak, achievement }) => (
-          <div
-            key={plan.id}
-            className="flex items-center gap-2"
-            onClick={onClick}
-          >
-            <FireBadge>
-              x{streak} <span className="opacity-100 ml-1">{plan.emoji}</span>
-            </FireBadge>
-
-            {achievement.isAchieved && (
-              <TrophyBadge>
-                <span className="opacity-100 ml-1">{plan.emoji}</span>
-              </TrophyBadge>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-2 mt-4 px-2 w-full">
-        {plansData
-          .filter(({ achievement }) => !achievement.isAchieved)
-          .map(({ plan, achievement }) => (
+      <Collapsible open={isExpanded}>
+        {/* All badges row - always visible */}
+        <div className="flex flex-wrap gap-3">
+          {plansData.map(({ plan, streak, achievement }) => (
             <div
               key={plan.id}
-              className="w-full flex flex-col justify-center gap-1"
+              className="flex items-center gap-2"
+              onClick={onClick}
             >
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all duration-500 ${variants.bg}`}
-                  style={{ width: `${achievement.progress}%` }}
-                />
+              <div className={`overflow-visible transition-all duration-300 ${
+                isExpanded ? 'h-[60px] w-[60px]' : 'h-[50px] w-[50px]'
+              } overflow-hidden relative`}>
+                <div className={`transition-all duration-300 ${
+                  isExpanded ? 'scale-100' : 'scale-80'
+                }`}>
+                  <FireBadge>
+                    x{streak} <span className="opacity-100 ml-1">{plan.emoji}</span>
+                  </FireBadge>
+                </div>
               </div>
-              <p className="text-xs text-gray-600">
-                {achievement.weeksToAchieve} weeks to achieve{" "}
-                <span className="text-lg">{plan.emoji}</span> lifestyle badge!
-                {/* {achievement.weeksToAchieve}{" "}
-                {achievement.weeksToAchieve === 1 ? "week" : "weeks"} till <span className="text-lg">{plan.emoji}</span> lifestyle
-                badge! */}
-              </p>
+
+              {achievement.isAchieved && (
+                <div className={`transition-all duration-300 ${
+                  isExpanded 
+                    ? 'opacity-100 h-[60px] w-[60px] max-w-full' 
+                    : 'opacity-0 h-[55px] w-[55px] max-w-0 overflow-hidden'
+                } relative`}>
+                  <div className={`transition-all duration-300 ${
+                    isExpanded ? 'scale-100' : 'scale-80'
+                  }`}>
+                    <TrophyBadge>
+                      <span className="opacity-100 ml-1">{plan.emoji}</span>
+                    </TrophyBadge>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
-      </div>
+        </div>
+
+        {/* Progress bars - smoothly animate in/out */}
+        <CollapsibleContent>
+          <div className="flex flex-col gap-2 mt-4 px-2 w-full">
+            {plansData
+              .filter(({ achievement }) => !achievement.isAchieved)
+              .map(({ plan, achievement }) => (
+                <div
+                  key={plan.id}
+                  className="w-full flex flex-col justify-center gap-1"
+                >
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${variants.bg}`}
+                      style={{ width: `${achievement.progress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {achievement.weeksToAchieve} weeks to achieve{" "}
+                    <span className="text-lg">{plan.emoji}</span> lifestyle badge!
+                  </p>
+                </div>
+              ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };
