@@ -326,22 +326,23 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
     posthog?.capture("onboarding-accountability-partner-view");
   }, [posthog]);
 
-  const handleFinishClick = (wantsPartner: boolean) => {
-    if (wantsPartner) {
+  const handleFinishClick = (lookingForAP: boolean) => {
+    if (lookingForAP) {
       requestNotificationPermission();
     }
     try {
-      api.post("/update-user", { looking_for_ap: wantsPartner });
+      api.post("/update-user", { looking_for_ap: lookingForAP });
     } catch (error) {
       console.error("Error updating user:", error);
       toast.error("Failed to save your preferences. Please try again later.");
     }
 
-    currentUserQuery.refetch();
     posthog?.capture("onboarding-accountability-partner-complete", {
       skipped: false,
-      wants_partner: wantsPartner,
+      $set: { is_looking_for_ap: lookingForAP },
     });
+
+    currentUserQuery.refetch();
     onNext();
   };
 
