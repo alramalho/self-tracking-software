@@ -44,11 +44,10 @@ const LookingForApPage: React.FC = () => {
     <div className="container mx-auto py-8 px-4 max-w-2xl">
       <div className="flex flex-col items-center gap-2 text-center w-full">
         <ScanFace className={`w-20 h-20 mx-auto ${variants.text}`} />
-        <h1 className="text-2xl font-bold">Hey there!</h1>
+        <h1 className="text-2xl font-bold">Hey {userData?.user?.name?.includes(" ") ? userData?.user?.name.split(" ")[0] : "there"}!</h1>
+        <h1 className="text-xl font-bold">Let&apos;s find you a partner</h1>
         <p className="text-gray-500 text-sm">
-          In order to give you the best matches, you need to have at least one
-          plan and your profile description filled in. You should also enable
-          notifications to be notified when a potential partner is found.
+          There&apos;s a few things you need to do to get started.
         </p>
 
         <div className="flex w-full flex-col gap-4 mt-6 text-left">
@@ -69,7 +68,7 @@ const LookingForApPage: React.FC = () => {
             <div className="flex-1">
               <h3 className="font-medium">Create a plan</h3>
               <p className="text-sm text-gray-500">
-                You need at least one plan to find a partner
+                You need at least one plan so your matches know what you&apos;re working on
               </p>
             </div>
             <Button

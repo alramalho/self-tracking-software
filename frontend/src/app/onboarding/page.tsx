@@ -297,7 +297,11 @@ function PastWeekLoggingStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
+function AccountabilityPartnerStep({
+  onNext,
+}: {
+  onNext: (isLookingForAP: boolean) => void;
+}) {
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const queryClient = useQueryClient();
@@ -343,7 +347,7 @@ function AccountabilityPartnerStep({ onNext }: { onNext: () => void }) {
     });
 
     currentUserQuery.refetch();
-    onNext();
+    onNext(lookingForAP);
   };
 
   return (
@@ -416,13 +420,17 @@ export default function OnboardingPage() {
       default:
         return (
           <AccountabilityPartnerStep
-            onNext={() => {
+            onNext={(isLookingForAP) => {
               setOnboardingCompleted(true);
-              router.push("/");
               hotToast.success(
                 "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner.",
                 { duration: 8000 }
               );
+              if (isLookingForAP) {
+                router.push("/looking-for-ap");
+              } else {
+                router.push("/");
+              }
             }}
           />
         );
