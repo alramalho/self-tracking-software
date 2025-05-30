@@ -120,7 +120,10 @@ const PlanStreak: React.FC<PlanStreakProps> = ({
   }, [activities, activityEntries, plan, timeRangeDays]);
 
   return (
-
+    <FireBadge>
+      <span className="opacity-100 ml-1">{planData.plan.emoji}</span>
+      <span className="opacity-100 ml-1">x{planData.streak}</span>
+    </FireBadge>
     // <div
     //   className={`relative ${sizeClasses.container} font-bold flex items-center gap-1 min-w-fit min-h-fit ${onClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''} ${className}`}
     //   onClick={onClick}
@@ -142,9 +145,9 @@ const PlanStreak: React.FC<PlanStreakProps> = ({
     //         height={sizeClasses.image.height}
     //       />
     //     </picture>
-    //     <Badge className={`absolute bottom-0 right-[-10px] ${sizeClasses.badge}`}>
-    //       x{streak.score} {streak.emoji}
-    //     </Badge>
+    // <Badge className={`absolute bottom-0 right-[-10px] ${sizeClasses.badge}`}>
+    //   x{streak.score} {streak.emoji}
+    // </Badge>
     //   </div>
     // </div>
   );
