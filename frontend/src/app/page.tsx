@@ -311,9 +311,13 @@ const HomePage: React.FC = () => {
           ) : (
             // Expanded version (existing code)
             <div className="space-y-4">
-              {hasMissingCheckin && (
+              {!hasCheckedInToday && (
                 <AINotification
-                  messages={[checkinMessage ?? ""]}
+                  messages={[
+                    isAfter2PM
+                      ? checkinMessage ?? ""
+                      : "Checkin will be available at 2pm",
+                  ]}
                   hasNotification={false}
                   createdAt={new Date().toISOString()}
                   replyMessage="Check in now"
