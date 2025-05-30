@@ -50,6 +50,7 @@ const UserCard: React.FC<UserCardProps> = ({
   const { data: userData, isLoading: isLoadingUser } =
     useCurrentUserDataQuery();
   const currentUser = userData?.user;
+  const isOwnUser = currentUser?.id === user.id;
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [message, setMessage] = useState("");
   const api = useApiWithAuth();
@@ -57,9 +58,16 @@ const UserCard: React.FC<UserCardProps> = ({
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
-  const lastActivity: Activity | undefined = activityEntries.length > 0
-    ? activities.find(a => a.id === activityEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.activity_id)
-    : undefined;
+  const lastActivity: Activity | undefined =
+    activityEntries.length > 0
+      ? activities.find(
+          (a) =>
+            a.id ===
+            activityEntries.sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            )[0]?.activity_id
+        )
+      : undefined;
   const handleSendFriendRequest = async () => {
     try {
       setIsSendingRequest(true);
@@ -188,35 +196,42 @@ const UserCard: React.FC<UserCardProps> = ({
                     <PulsatingCirclePill variant="yellow" size="md" />
                   </div>
                   <span className="italic">No recent activity</span>
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ 
-                      opacity: activityTooltipOpen ? 1 : 0,
-                      y: activityTooltipOpen ? 0 : 10
-                    }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute bg-amber-400 text-gray-800 p-2 text-xs rounded-lg rounded-bl-none w-48 bottom-[10px] left-[20px] cursor-pointer"
-                  >
-                    <button>
-                      <p>
-                        Add an activity to rank higher
-                        <br />
-                        in the partner search!
-                      </p>
-                    </button>
-                  </motion.div>
+                  {isOwnUser && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{
+                        opacity: activityTooltipOpen ? 1 : 0,
+                        y: activityTooltipOpen ? 0 : 10,
+                      }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute bg-amber-400 text-gray-800 p-2 text-xs rounded-lg rounded-bl-none w-48 bottom-[10px] left-[20px] cursor-pointer"
+                    >
+                      <button>
+                        <p>
+                          Add an activity to rank higher
+                          <br />
+                          in the partner search!
+                        </p>
+                      </button>
+                    </motion.div>
+                  )}
                 </div>
               </>
             ) : (
-              <span>
-                Last active{" "}
-                {formatDistanceToNow(
-                  new Date(user.last_active_at || user.created_at!),
-                  { addSuffix: true }
-                )}{" "}
-                {lastActivity &&
-                  `(${lastActivity.emoji} ${lastActivity.title})`}
-              </span>
+              <>
+                <div className="mx-1 mr-2">
+                  <PulsatingCirclePill variant="green" size="md" />
+                </div>
+                <span>
+                  Last active{" "}
+                  {formatDistanceToNow(
+                    new Date(user.last_active_at || user.created_at!),
+                    { addSuffix: true }
+                  )}{" "}
+                  {lastActivity &&
+                    `(${lastActivity.emoji} ${lastActivity.title})`}
+                </span>
+              </>
             )}
           </div>
 

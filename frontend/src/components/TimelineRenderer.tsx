@@ -14,7 +14,7 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { useRouter } from "next/navigation";
-import { Bell, Loader2, PersonStandingIcon, ScanFace, Search, Send, UserPlus } from "lucide-react";
+import { Bell, Loader2, PersonStandingIcon, ScanFace, Search, Send, UserPlus, ChevronDown, ChevronRight } from "lucide-react";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
@@ -29,6 +29,8 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { AccountabilityStepCard } from "./AccountabilityStepCard";
 import { WeekMetricBarChart } from "./WeekMetricBarChart";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -55,6 +57,10 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { userPaidPlanType } = usePaidPlan();
   const isUserOnFreePlan = userPaidPlanType === "free";
+  const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] = useLocalStorage<boolean>(
+    "partner-section-collapsed",
+    false
+  );
 
   if (!timelineDataQuery.isFetched && !timelineData) {
     return (
@@ -130,46 +136,80 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
           createdAt={new Date().toISOString()}
         /> */}
         <div className="mt-6 grid grid-cols-1 gap-6">
-          {/* Combined Friend Finding Card */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <UserPlus size={30} className="text-blue-500" />
-              <div>
-                <h3 className="text-lg font-semibold">
-                  Find Your Accountability Partner
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  Improve your chances of success by{" "}
-                  <span className="font-bold">95%</span> by finding an
-                  accountability partner
-                </p>
+          {/* Find your Accountability Partner Card */}
+          <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
+            <Collapsible open={!isPartnerSectionCollapsed} onOpenChange={(open) => setIsPartnerSectionCollapsed(!open)}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <CollapsibleTrigger asChild>
+                    <button
+                      className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
+                      aria-label={
+                        isPartnerSectionCollapsed ? "Expand partner section" : "Collapse partner section"
+                      }
+                    >
+                      {isPartnerSectionCollapsed ? (
+                        <ChevronRight size={16} className="text-gray-600" />
+                      ) : (
+                        <ChevronDown size={16} className="text-gray-600" />
+                      )}
+                    </button>
+                  </CollapsibleTrigger>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Find your Accountability Partner
+                  </h3>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={handleShareReferralLink}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                <Send size={16} className="mr-2" />
-                Invite Friends
-              </Button>
-              <Button
-                onClick={onOpenSearch}
-                variant="outline"
-                className="flex-1"
-              >
-                <Search size={16} className="mr-2" />
-                Search Users
-              </Button>
-              <Button
-                onClick={() => router.push("/looking-for-ap")}
-                variant="outline"
-                className="flex-1"
-              >
-                <PersonStandingIcon size={16} className="mr-2" />
-                Browse Community
-              </Button>
-            </div>
+
+              {/* Always show summary in collapsed state */}
+              <div className="space-y-3">
+                {/* Partner overview - always visible */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <UserPlus size={20} className="text-blue-500" />
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">Improve your success rate by </span>
+                      <span className="font-bold text-blue-600">95%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expandable detailed content */}
+                <CollapsibleContent className="space-y-0">
+                  <div className="space-y-4 pt-4">
+                    <p className="text-gray-600 text-sm">
+                      Improve your chances of success by finding an accountability partner
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        onClick={handleShareReferralLink}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                      >
+                        <Send size={16} className="mr-2" />
+                        Invite Friends
+                      </Button>
+                      <Button
+                        onClick={onOpenSearch}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Search size={16} className="mr-2" />
+                        Search Users
+                      </Button>
+                      <Button
+                        onClick={() => router.push("/looking-for-ap")}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <PersonStandingIcon size={16} className="mr-2" />
+                        Browse Community
+                      </Button>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
           </div>
 
           {/* Expanded AI Coach Card */}
