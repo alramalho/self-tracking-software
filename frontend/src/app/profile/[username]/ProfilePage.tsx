@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useClerk } from "@clerk/nextjs";
 import {
   Bell,
   ChartArea,
@@ -10,7 +9,6 @@ import {
   Settings,
   UserPlus,
   X,
-  SquareArrowUp,
   ChevronLeft,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -18,51 +16,38 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
-import AppleLikePopover from "@/components/AppleLikePopover";
 import {
   convertApiPlanToPlan,
   User,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
 import {
-  format,
   parseISO,
   differenceInDays,
   subDays,
-  startOfWeek,
-  isAfter,
-  isBefore,
-  addWeeks,
 } from "date-fns";
 import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
-import { usePostHog } from "posthog-js/react";
-import ConfirmDialog from "@/components/ConfirmDialog";
 import Divider from "@/components/Divider";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
 import { twMerge } from "tailwind-merge";
 import { PlanBadge } from "@/components/PlanBadge";
-import ColorPalettePickerPopup from "@/components/profile/ColorPalettePickerPopup";
 import StreakDetailsPopover from "@/components/profile/StreakDetailsPopover";
 import ProfileSettingsPopover, { ActiveView } from "@/components/profile/ProfileSettingsPopover";
-import UserSettingsPopover from "@/components/profile/UserSettingsPopover";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { isPlanExpired } from "@/components/PlansRenderer";
 import PlanStreak from "@/components/PlanStreak";
-export type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
 // Utility function to convert TimeRange to number of days
 export const getTimeRangeDays = (timeRange: TimeRange): number => {
@@ -107,17 +92,16 @@ const ProfilePage: React.FC = () => {
 
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
-  const [showServerMessage, setShowServerMessage] = useState(false);
   const { share, isSupported: isShareSupported } = useShare();
-  const [copied, copyToClipboard] = useClipboard();
+  const [_, copyToClipboard] = useClipboard();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
-  const [showStreakDetails, setShowStreakDetails] = useState(false);
   const profilePaidPlanType = profileData?.user?.plan_type;
   const { userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const redirectTo = searchParams.get('redirectTo');
+  const [showStreakDetails, setShowStreakDetails] = useState(redirectTo === 'streak-details');
 
   useEffect(() => {
     if (currentUser?.username && !username) {
@@ -221,14 +205,6 @@ const ProfilePage: React.FC = () => {
       setTimeout(() => setShowStreakDetails(true), 100);
     }
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowServerMessage(true);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const user = profileData?.user;
 
@@ -410,7 +386,7 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
 
-            <div className="relative overflow-x-scroll w-full h-fit">
+            <div className="relative overflow-x-scroll w-full h-fit pb-3">
               <div className="flex justify-start gap-2 cursor-pointer hover:opacity-90 transition-opacity">
                 {isOnesOwnProfile && userPaidPlanType == "plus" && (
                   <>
@@ -457,7 +433,6 @@ const ProfilePage: React.FC = () => {
                 open={showStreakDetails}
                 onClose={() => setShowStreakDetails(false)}
                 timeRange={timeRange}
-                onTimeRangeChange={handleTimeRangeChange}
               />
             </div>
           </div>
