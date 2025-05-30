@@ -23,11 +23,13 @@ import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import AINotification from "@/components/AINotification";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
+import RefreshIcon from "@/components/RefreshButton";
+import { useCeilingSwipe } from "@/hooks/useCeilingSwipe";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { useCurrentUserDataQuery, hasLoadedUserData, notificationsData } =
+  const { useCurrentUserDataQuery, hasLoadedUserData, notificationsData, refetchAllData } =
     useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const {
@@ -61,6 +63,17 @@ const HomePage: React.FC = () => {
     "onboarding-completed",
     false
   );
+
+  // Use the custom hook for pull-to-refresh
+  const { 
+    isRefreshing, 
+    showIcon,
+    scrollPercentage
+  } = useCeilingSwipe({ 
+    onRefresh: refetchAllData,
+    pullThresholdToRefresh: 150,
+    pullDistanceForMaxPercentage: 180
+  });
 
   const hasFriends =
     userData?.user?.friend_ids?.length &&
@@ -114,6 +127,10 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl space-y-4">
+      <RefreshIcon 
+        isVisible={showIcon && !isRefreshing} 
+        scrollPercentage={scrollPercentage} 
+      />
       <div
         className={`flex justify-between items-center ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4`}
       >
