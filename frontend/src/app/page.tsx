@@ -10,6 +10,7 @@ import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
 import PlansAchievements from "@/components/PlansAchievements";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { useSession } from "@clerk/nextjs";
 import { useUserPlan, MetricEntry } from "@/contexts/UserPlanContext";
@@ -187,64 +188,63 @@ const HomePage: React.FC = () => {
       {/* Your Metrics Section */}
       {userMetrics.length > 0 && !isUserOnFreePlan && (
         <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+          <Collapsible open={!isMetricsCollapsed} onOpenChange={(open) => setIsMetricsCollapsed(!open)}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <CollapsibleTrigger asChild>
+                  <button
+                    className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
+                    aria-label={
+                      isMetricsCollapsed ? "Expand metrics" : "Collapse metrics"
+                    }
+                  >
+                    {isMetricsCollapsed ? (
+                      <ChevronRight size={16} className="text-gray-600" />
+                    ) : (
+                      <ChevronDown size={16} className="text-gray-600" />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Your Metrics
+                </h3>
+              </div>
               <button
-                onClick={() => setIsMetricsCollapsed(!isMetricsCollapsed)}
-                className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
-                aria-label={
-                  isMetricsCollapsed ? "Expand metrics" : "Collapse metrics"
-                }
+                onClick={() => router.push("/insights/dashboard")}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
               >
-                {isMetricsCollapsed ? (
-                  <ChevronRight size={16} className="text-gray-600" />
-                ) : (
-                  <ChevronDown size={16} className="text-gray-600" />
-                )}
+                View Insights
+                <ChevronRight size={16} />
               </button>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Your Metrics
-              </h3>
             </div>
-            <button
-              onClick={() => router.push("/insights/dashboard")}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
-            >
-              View Insights
-              <ChevronRight size={16} />
-            </button>
-          </div>
 
-          {isMetricsCollapsed ? (
-            // Minimal collapsed version
+            {/* Always show metrics overview in collapsed state */}
             <div className="space-y-3">
-              {/* Missing checkin indicator */}
+              {/* Missing checkin indicator - always present but conditionally styled */}
               {!hasCheckedInToday && (
-                <>
+                <div className={`transition-all duration-300 ${isMetricsCollapsed ? 'mx-2' : ''}`}>
                   {isAfter2PM ? (
-                    <>
-                      <div className="flex items-center gap-2 text-amber-600 mx-2">
-                        <PulsatingCirclePill variant="yellow" size="md" />
-                        <span className="text-xs font-medium">
-                          Missing check-in!
-                        </span>
-                        <button
-                          onClick={() => showDailyCheckin()}
-                          className="text-xs bg-amber-50 text-amber-700 hover:text-amber-800 font-medium ml-auto px-3 py-2 rounded-lg border border-amber-200"
-                        >
-                          Check in now
-                        </button>
-                      </div>
-                    </>
+                    <div className="flex items-center gap-2 text-amber-600">
+                      <PulsatingCirclePill variant="yellow" size="md" />
+                      <span className="text-xs font-medium">
+                        Missing check-in!
+                      </span>
+                      <button
+                        onClick={() => showDailyCheckin()}
+                        className="text-xs bg-amber-50 text-amber-700 hover:text-amber-800 font-medium ml-auto px-3 py-2 rounded-lg border border-amber-200"
+                      >
+                        Check in now
+                      </button>
+                    </div>
                   ) : (
                     <span className="text-xs text-gray-500">
                       Checkin will be available at 2pm
                     </span>
                   )}
-                </>
+                </div>
               )}
 
-              {/* Metrics overview */}
+              {/* Metrics overview - always visible */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {/* Progress indicator */}
@@ -308,78 +308,66 @@ const HomePage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            // Expanded version (existing code)
-            <div className="space-y-4">
-              {!hasCheckedInToday && (
-                <AINotification
-                  messages={[
-                    isAfter2PM
-                      ? checkinMessage ?? ""
-                      : "Checkin will be available at 2pm",
-                  ]}
-                  hasNotification={false}
-                  createdAt={new Date().toISOString()}
-                  replyMessage="Check in now"
-                  onClick={() => showDailyCheckin()}
-                />
-              )}
-              {userMetrics.slice(0, 3).map((metric, index) => {
-                const weekData = getMetricWeekData(metric.id);
-                const hasAnyData = weekData.some((val) => val > 0);
-                const positiveCorrelations = getPositiveCorrelations(metric.id);
 
-                return (
-                  <div
-                    key={metric.id}
-                    className="bg-gray-100/60 rounded-lg p-4 border border-white/50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        {metric.emoji} {metric.title}
-                      </span>
-                      <span className="text-xs text-gray-500">Last 7 days</span>
-                    </div>
-                    {hasAnyData ? (
-                      <WeekMetricBarChart
-                        data={weekData}
-                        color={getMetricColor(index)}
-                      />
-                    ) : (
-                      <div className="py-2 text-center">
-                        <p className="text-sm text-gray-500">
-                          No data this week.{" "}
-                          <button
-                            onClick={() => showDailyCheckin()}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                          >
-                            Check in now
-                          </button>
-                        </p>
+              <CollapsibleContent className="space-y-0">
+                <div className="space-y-4 pt-4">
+                  {userMetrics.slice(0, 3).map((metric, index) => {
+                    const weekData = getMetricWeekData(metric.id);
+                    const hasAnyData = weekData.some((val) => val > 0);
+                    const positiveCorrelations = getPositiveCorrelations(metric.id);
+
+                    return (
+                      <div
+                        key={metric.id}
+                        className="bg-gray-100/60 rounded-lg p-4 border border-white/50"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">
+                            {metric.emoji} {metric.title}
+                          </span>
+                          <span className="text-xs text-gray-500">Last 7 days</span>
+                        </div>
+                        {hasAnyData ? (
+                          <WeekMetricBarChart
+                            data={weekData}
+                            color={getMetricColor(index)}
+                          />
+                        ) : (
+                          <div className="py-2 text-center">
+                            <p className="text-sm text-gray-500">
+                              No data this week.{" "}
+                              <button
+                                onClick={() => showDailyCheckin()}
+                                className="text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                Check in now
+                              </button>
+                            </p>
+                          </div>
+                        )}
+                        {positiveCorrelations.length > 0 && (
+                          <div className="text-xs text-gray-600 mt-3">
+                            {positiveCorrelations
+                              .slice(0, 2)
+                              .map((correlation, i) => (
+                                <span key={correlation.activity.id}>
+                                  <span className="text-green-600">
+                                    {formatCorrelationString(correlation)}
+                                  </span>
+                                  {i < Math.min(positiveCorrelations.length - 1, 1)
+                                    ? " and "
+                                    : ` boost your ${metric.title.toLowerCase()}`}
+                                </span>
+                              ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {positiveCorrelations.length > 0 && (
-                      <div className="text-xs text-gray-600 mt-3">
-                        {positiveCorrelations
-                          .slice(0, 2)
-                          .map((correlation, i) => (
-                            <span key={correlation.activity.id}>
-                              <span className="text-green-600">
-                                {formatCorrelationString(correlation)}
-                              </span>
-                              {i < Math.min(positiveCorrelations.length - 1, 1)
-                                ? " and "
-                                : ` boost your ${metric.title.toLowerCase()}`}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
             </div>
-          )}
+          </Collapsible>
         </div>
       )}
 
