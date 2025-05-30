@@ -22,7 +22,7 @@ const FireBadge: React.FC<FireBadgeProps> = ({ children, ...props }) => {
         />
       </picture>
       {children && (
-        <Badge className="absolute -bottom-2 -right-2 text-sm bg-black/60">
+        <Badge className="absolute -bottom-1 -right-1 text-sm bg-black/60">
           {children}
         </Badge>
       )}

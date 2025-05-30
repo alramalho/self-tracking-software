@@ -46,6 +46,10 @@ const HomePage: React.FC = () => {
     "metrics-section-collapsed",
     false
   );
+  const [isStreaksCollapsed, setIsStreaksCollapsed] = useLocalStorage<boolean>(
+    "streaks-section-collapsed", 
+    false
+  );
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { isAppInstalled, clearGeneralNotifications } = useNotifications();
@@ -162,9 +166,24 @@ const HomePage: React.FC = () => {
       {userData?.plans && userData.plans.length > 0 && (
         <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Your Streaks
-            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsStreaksCollapsed(!isStreaksCollapsed)}
+                className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
+                aria-label={
+                  isStreaksCollapsed ? "Expand streaks" : "Collapse streaks"
+                }
+              >
+                {isStreaksCollapsed ? (
+                  <ChevronRight size={16} className="text-gray-600" />
+                ) : (
+                  <ChevronDown size={16} className="text-gray-600" />
+                )}
+              </button>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Your Streaks
+              </h3>
+            </div>
             <button
               onClick={() => router.push(`/profile/${userData.user?.username}?redirectTo=streak-details`)}
               className="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
@@ -173,6 +192,7 @@ const HomePage: React.FC = () => {
               <ChevronRight size={16} />
             </button>
           </div>
+          
           <div className="flex flex-wrap gap-3">
             <PlansAchievements
               plans={userData.plans}
@@ -180,6 +200,7 @@ const HomePage: React.FC = () => {
               activityEntries={userData.activityEntries || []}
               timeRangeDays={60}
               onClick={() => router.push(`/profile/${userData.user?.username}`)}
+              isExpanded={!isStreaksCollapsed}
             />
           </div>
         </div>
