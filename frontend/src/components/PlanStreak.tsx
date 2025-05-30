@@ -120,10 +120,7 @@ const PlanStreak: React.FC<PlanStreakProps> = ({
   }, [activities, activityEntries, plan, timeRangeDays]);
 
   return (
-    <FireBadge onClick={onClick}>
-      x{planData.streak}{" "}
-      <span className="opacity-100 ml-1">{planData.plan.emoji}</span>
-    </FireBadge>
+
     // <div
     //   className={`relative ${sizeClasses.container} font-bold flex items-center gap-1 min-w-fit min-h-fit ${onClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''} ${className}`}
     //   onClick={onClick}

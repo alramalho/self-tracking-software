@@ -20,6 +20,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { Badge } from "./ui/badge";
 import FireBadge from "./FireBadge";
 import { calculatePlanAchievement } from "./profile/StreakDetailsPopover";
+import TrophyBadge from "./FireBadge";
 
 interface PlansAchievementsProps {
   plans: ApiPlan[];
@@ -32,6 +33,10 @@ interface PlansAchievementsProps {
 
 export const ACHIEVEMENT_THRESHOLD = 0.8; // 80% completion required
 export const ACHIEVEMENT_WEEKS = 12; // Last 12 weeks for achievement calculation
+export const LIFESTYLE_START_COUNTING_DATE = subDays(
+  new Date(),
+  ACHIEVEMENT_WEEKS * 7
+);
 
 const PlansAchievements: React.FC<PlansAchievementsProps> = ({
   plans,
@@ -46,19 +51,28 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
 
   // Calculate streaks and achievements for all plans
   const plansData = useMemo(() => {
-    return plans.map(plan => {
+    return plans.map((plan) => {
       // Calculate streak
-      const NinetyDaysAgo = subDays(new Date(), ACHIEVEMENT_WEEKS * 7);
-      const { planScore, completedWeeks, incompleteWeeks, isAchieved, totalWeeks } = calculatePlanAchievement(plan, activities, activityEntries, ACHIEVEMENT_THRESHOLD, NinetyDaysAgo);
+      const {
+        planScore,
+        completedWeeks,
+        isAchieved,
+      } = calculatePlanAchievement(
+        plan,
+        activities,
+        activityEntries,
+        ACHIEVEMENT_THRESHOLD,
+        LIFESTYLE_START_COUNTING_DATE
+      );
       return {
         plan,
         streak: planScore,
         achievement: {
           completedWeeks,
           isAchieved,
-          weeksToAchieve: Math.max(0, ACHIEVEMENT_WEEKS - completedWeeks), 
+          weeksToAchieve: Math.max(0, ACHIEVEMENT_WEEKS - completedWeeks),
           progress: (completedWeeks / ACHIEVEMENT_WEEKS) * 100,
-        }
+        },
       };
     });
   }, [plans, activities, activityEntries, timeRangeDays]);
@@ -68,29 +82,19 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
       {/* All badges row */}
       <div className="flex flex-wrap gap-3">
         {plansData.map(({ plan, streak, achievement }) => (
-          <div key={plan.id} className="flex items-center gap-2" onClick={onClick}>
+          <div
+            key={plan.id}
+            className="flex items-center gap-2"
+            onClick={onClick}
+          >
             <FireBadge>
               x{streak} <span className="opacity-100 ml-1">{plan.emoji}</span>
             </FireBadge>
 
             {achievement.isAchieved && (
-              <div className="relative">
-                <picture>
-                  <source
-                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3c6/512.webp"
-                    type="image/webp"
-                  />
-                  <img
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3c6/512.gif"
-                    alt="🏆"
-                    width="60"
-                    height="60"
-                  />
-                </picture>
-                <Badge className="absolute -bottom-[10px] -right-[10px] text-2xl bg-transparent">
-                  <span className="opacity-100 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">{plan.emoji}</span>
-                </Badge>
-              </div>
+              <TrophyBadge>
+                <span className="opacity-100 ml-1">{plan.emoji}</span>
+              </TrophyBadge>
             )}
           </div>
         ))}
@@ -100,7 +104,10 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
         {plansData
           .filter(({ achievement }) => !achievement.isAchieved)
           .map(({ plan, achievement }) => (
-            <div key={plan.id} className="w-full flex flex-col justify-center gap-1">
+            <div
+              key={plan.id}
+              className="w-full flex flex-col justify-center gap-1"
+            >
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all duration-500 ${variants.bg}`}
@@ -108,7 +115,8 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-600">
-                {achievement.weeksToAchieve} weeks to achieve <span className="text-lg">{plan.emoji}</span> lifestyle badge!
+                {achievement.weeksToAchieve} weeks to achieve{" "}
+                <span className="text-lg">{plan.emoji}</span> lifestyle badge!
                 {/* {achievement.weeksToAchieve}{" "}
                 {achievement.weeksToAchieve === 1 ? "week" : "weeks"} till <span className="text-lg">{plan.emoji}</span> lifestyle
                 badge! */}
@@ -120,4 +128,4 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
   );
 };
 
-export default PlansAchievements; 
+export default PlansAchievements;
