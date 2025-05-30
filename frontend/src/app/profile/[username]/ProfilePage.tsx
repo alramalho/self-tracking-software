@@ -21,11 +21,7 @@ import {
   User,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import {
-  parseISO,
-  differenceInDays,
-  subDays,
-} from "date-fns";
+import { parseISO, differenceInDays, subDays } from "date-fns";
 import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
@@ -41,15 +37,23 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { twMerge } from "tailwind-merge";
 import { PlanBadge } from "@/components/PlanBadge";
-import StreakDetailsPopover from "@/components/profile/StreakDetailsPopover";
-import ProfileSettingsPopover, { ActiveView } from "@/components/profile/ProfileSettingsPopover";
+import StreakDetailsPopover, {
+  calculatePlanAchievement,
+} from "@/components/profile/StreakDetailsPopover";
+import ProfileSettingsPopover, {
+  ActiveView,
+} from "@/components/profile/ProfileSettingsPopover";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { isPlanExpired } from "@/components/PlansRenderer";
 import PlanStreak from "@/components/PlanStreak";
 
+type TimeRange = "60 Days" | "120 Days" | "180 Days";
+
 // Utility function to convert TimeRange to number of days
+import FireBadge from "@/components/FireBadge";
+import TrophyBadge from "@/components/TrophyBadge";
 export const getTimeRangeDays = (timeRange: TimeRange): number => {
   switch (timeRange) {
     case "60 Days":
@@ -67,7 +71,9 @@ const ProfilePage: React.FC = () => {
   const { isPushGranted, setIsPushGranted, requestPermission } =
     useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [initialActiveView, setInitialActiveView] = useState<string | null>(null);
+  const [initialActiveView, setInitialActiveView] = useState<string | null>(
+    null
+  );
   const { useCurrentUserDataQuery, useUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const params = useParams();
@@ -100,8 +106,23 @@ const ProfilePage: React.FC = () => {
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const redirectTo = searchParams.get('redirectTo');
-  const [showStreakDetails, setShowStreakDetails] = useState(redirectTo === 'streak-details');
+  const redirectTo = searchParams.get("redirectTo");
+  const [showStreakDetails, setShowStreakDetails] = useState(
+    redirectTo === "streak-details"
+  );
+
+  const achivements = useMemo(() => {
+    return profileData?.plans.map((plan) => {
+      const planData = calculatePlanAchievement(
+        plan,
+        activities,
+        activityEntries,
+        0.75,
+        new Date()
+      );
+      return { plan, achievement: planData };
+    });
+  }, [profileData?.plans, activities, activityEntries]);
 
   useEffect(() => {
     if (currentUser?.username && !username) {
@@ -118,7 +139,7 @@ const ProfilePage: React.FC = () => {
   }, [username, currentUserQuery, isOnesOwnProfile, profileDataQuery]);
 
   useEffect(() => {
-    const activeView = searchParams.get('activeView');
+    const activeView = searchParams.get("activeView");
     if (activeView && isOnesOwnProfile) {
       setShowUserProfile(true);
       setInitialActiveView(activeView);
@@ -251,7 +272,7 @@ const ProfilePage: React.FC = () => {
           className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-lg bg-white/60 backdrop-blur-sm`}
         >
           {!isOnesOwnProfile && (
-            <button 
+            <button
               className="absolute -left-1 -top-1 p-2 rounded-full hover:bg-gray-100"
               onClick={() => window.history.back()}
             >
@@ -386,8 +407,35 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
 
-            <div className="relative overflow-x-scroll w-full h-fit pb-3">
+            {/* <div className="relative overflow-x-scroll w-full pb-3 h-full">
               <div className="flex justify-start gap-2 cursor-pointer hover:opacity-90 transition-opacity">
+                {isOnesOwnProfile && profileData?.plans && (
+                  <div className="flex justify-start gap-2">
+                    {achivements
+                      ?.filter(({ achievement }) => achievement.isAchieved)
+                      .map(({ plan }) => {
+                        return (
+                          <TrophyBadge key={plan.id}>
+                            <span className="opacity-100 ml-1">
+                              {plan.emoji}
+                            </span>
+                          </TrophyBadge>
+                        );
+                      })}
+                    {achivements?.map(({ plan, achievement }) => {
+                      return (
+                        <FireBadge
+                          key={plan.id}
+                          onClick={() => setShowStreakDetails(true)}
+                        >
+                          x{achievement.planScore}
+                          <span className="opacity-100 ml-1">{plan.emoji}</span>
+                        </FireBadge>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {isOnesOwnProfile && userPaidPlanType == "plus" && (
                   <>
                     <div
@@ -412,29 +460,13 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </>
                 )}
-
-                {isOnesOwnProfile && profileData?.plans && (
-                  <div className="flex justify-start gap-2">
-                    {profileData.plans.map((plan) => (
-                      <PlanStreak
-                        key={plan.id}
-                        plan={plan}
-                        activities={activities}
-                        activityEntries={activityEntries}
-                        timeRangeDays={getTimeRangeDays(timeRange)}
-                        onClick={() => setShowStreakDetails(true)}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
 
               <StreakDetailsPopover
                 open={showStreakDetails}
                 onClose={() => setShowStreakDetails(false)}
-                timeRange={timeRange}
               />
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -480,16 +512,19 @@ const ProfilePage: React.FC = () => {
                   <div key={plan.id} className="p-4 border rounded-lg bg-white">
                     <div className="flex flex-row items-center gap-2 mb-4">
                       <span className="text-4xl">{plan.emoji}</span>
-                    <h3 className="text-lg font-semibold">{plan.goal}</h3>
+                      <h3 className="text-lg font-semibold">{plan.goal}</h3>
+                    </div>
+                    <PlanActivityEntriesRenderer
+                      plan={convertApiPlanToPlan(plan, activities)}
+                      activities={activities}
+                      activityEntries={activityEntries}
+                      startDate={subDays(
+                        new Date(),
+                        getTimeRangeDays(timeRange)
+                      )}
+                    />
                   </div>
-                  <PlanActivityEntriesRenderer
-                    plan={convertApiPlanToPlan(plan, activities)}
-                    activities={activities}
-                    activityEntries={activityEntries}
-                    startDate={subDays(new Date(), getTimeRangeDays(timeRange))}
-                  />
-                </div>
-              ))}
+                ))}
               {profileData?.plans && profileData?.plans.length > 0 && (
                 <div className="flex flex-row gap-4 justify-between items-center">
                   <span className="text-sm text-gray-500">Time range</span>
