@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { ApiPlan, User, useUserPlan } from "@/contexts/UserPlanContext";
+import {
+  Activity,
+  ActivityEntry,
+  ApiPlan,
+  User,
+  useUserPlan,
+} from "@/contexts/UserPlanContext";
 import { posthog } from "posthog-js";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
@@ -12,14 +18,16 @@ import { getThemeVariants } from "@/utils/theme";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
 import PlanStreak from "@/components/PlanStreak";
+import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
+import { motion } from "framer-motion";
 
 interface UserCardProps {
   user: User;
   score?: number;
   plan?: ApiPlan;
   plans?: ApiPlan[];
-  activities?: any[];
-  activityEntries?: any[];
+  activities?: Activity[];
+  activityEntries?: ActivityEntry[];
   showFriendRequest?: boolean;
   showScore?: boolean;
   showStreaks?: boolean;
@@ -48,7 +56,10 @@ const UserCard: React.FC<UserCardProps> = ({
   const router = useRouter();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
-
+  const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
+  const lastActivity: Activity | undefined = activityEntries.length > 0
+    ? activities.find(a => a.id === activityEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.activity_id)
+    : undefined;
   const handleSendFriendRequest = async () => {
     try {
       setIsSendingRequest(true);
@@ -166,17 +177,48 @@ const UserCard: React.FC<UserCardProps> = ({
             </div>
           )}
 
-          {(user.last_active_at || user.created_at) && (
-            <div className="flex items-center text-sm text-gray-600">
+          <div className="flex items-center text-sm text-gray-600">
+            {!lastActivity ? (
+              <>
+                <div
+                  className="flex items-center gap-1 relative"
+                  onClick={() => setActivityTooltipOpen((prev) => !prev)}
+                >
+                  <div className="mx-1">
+                    <PulsatingCirclePill variant="yellow" size="md" />
+                  </div>
+                  <span className="italic">No recent activity</span>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ 
+                      opacity: activityTooltipOpen ? 1 : 0,
+                      y: activityTooltipOpen ? 0 : 10
+                    }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute bg-amber-400 text-gray-800 p-2 text-xs rounded-lg rounded-bl-none w-48 bottom-[10px] left-[20px] cursor-pointer"
+                  >
+                    <button>
+                      <p>
+                        Add an activity to rank higher
+                        <br />
+                        in the partner search!
+                      </p>
+                    </button>
+                  </motion.div>
+                </div>
+              </>
+            ) : (
               <span>
                 Last active{" "}
                 {formatDistanceToNow(
                   new Date(user.last_active_at || user.created_at!),
                   { addSuffix: true }
-                )}
+                )}{" "}
+                {lastActivity &&
+                  `(${lastActivity.emoji} ${lastActivity.title})`}
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
           {user.profile && (
             <div className="mt-2">
