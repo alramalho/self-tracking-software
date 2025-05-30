@@ -139,7 +139,9 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
                   Find Your Accountability Partner
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Connect with friends or find someone in our community
+                  Improve your chances of success by{" "}
+                  <span className="font-bold">95%</span> by finding an
+                  accountability partner
                 </p>
               </div>
             </div>
