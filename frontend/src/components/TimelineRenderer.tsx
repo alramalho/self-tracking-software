@@ -121,14 +121,14 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
 
     return (
       <>
-        <AINotification
+        {/* <AINotification
           messages={[
             "Hey There! I'm Jarvis, your helper assistant throughout tracking.so. ",
             "I see you haven't added any friends yet... statistically, you'll have **95%** more chances of success if you do, you know? Also, this timeline would get prettier 😅",
             "Here's a how you could do it:",
           ]}
           createdAt={new Date().toISOString()}
-        />
+        /> */}
         <div className="mt-6 grid grid-cols-1 gap-6">
           {/* Combined Friend Finding Card */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
