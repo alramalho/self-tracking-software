@@ -33,7 +33,6 @@ import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
 import { endOfWeek, format, startOfWeek } from "date-fns";
-import { Confetti } from "@/components/Confetti";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
