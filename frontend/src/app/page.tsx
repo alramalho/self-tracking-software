@@ -459,20 +459,21 @@ const HomePage: React.FC = () => {
             <button
               onClick={() =>
                 router.push(
-                  `/profile/${userData.user?.username}?redirectTo=streak-details`
+                  `/plans`
                 )
               }
               className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
             >
-              View Details
+              View Plan
               <ChevronRight size={16} />
             </button>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <PlanWeekDisplay
+              title={`${userData.plans[0].goal} plan`}
               plan={convertApiPlanToPlan(
-                userData.plans[2],
+                userData.plans[0],
                 userData.activities || []
               )}
               date={new Date()}

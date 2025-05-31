@@ -40,7 +40,7 @@ const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
             </li>
             <li>
               • You have a <span className="font-bold">1 week buffer</span>{" "}
-              before it starts subtracting from your streak.
+              before it starts subtracting
             </li>
             <li>
               • Streak score cannot go below{" "}
@@ -49,7 +49,7 @@ const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
           </ul>
         </div>
 
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           {profileData?.plans?.map((plan) => {
             const progressData = plansProgress.find(
               (p) => p.plan.id === plan.id
@@ -81,7 +81,7 @@ const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
                 </div>
                 <div className="space-y-2 text-sm text-gray-600">
                   <p>
-                    • Completed weeks:{" "}
+                    • Total Completed weeks:{" "}
                     <span className="font-bold">{completedWeeks}</span>
                   </p>
                   <p>
@@ -96,7 +96,7 @@ const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
               </div>
             );
           })}
-        </div>
+        </div> */}
       </div>
     </AppleLikePopover>
   );

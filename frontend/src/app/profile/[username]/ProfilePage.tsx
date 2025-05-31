@@ -33,8 +33,6 @@ import Divider from "@/components/Divider";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import { useShare } from "@/hooks/useShare";
 import { useClipboard } from "@/hooks/useClipboard";
-import { useUpgrade } from "@/contexts/UpgradeContext";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { twMerge } from "tailwind-merge";
 import { PlanBadge } from "@/components/PlanBadge";
 import ProfileSettingsPopover, {
@@ -44,7 +42,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { isPlanExpired } from "@/components/PlansRenderer";
-import PlanStreak from "@/components/PlanStreak";
+import StreakDetailsPopover from "@/components/profile/StreakDetailsPopover";
 
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
@@ -103,18 +101,6 @@ const ProfilePage: React.FC = () => {
   const [showStreakDetails, setShowStreakDetails] = useState(
     redirectTo === "streak-details"
   );
-  const achivements = useMemo(() => {
-    return profileData?.plans.map((plan) => {
-      const planData = calculatePlanAchievement(
-        plan,
-        activities,
-        activityEntries,
-        0.75,
-        new Date()
-      );
-      return { plan, achievement: planData };
-    });
-  }, [profileData?.plans, activities, activityEntries]);
 
   useEffect(() => {
     if (currentUser?.username && !username) {
@@ -454,11 +440,13 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
 
-              <StreakDetailsPopover
-                open={showStreakDetails}
-                onClose={() => setShowStreakDetails(false)}
-              />
-            </div> */}
+              </div> */}
+            <StreakDetailsPopover
+              open={showStreakDetails}
+              onClose={() => {
+                setShowStreakDetails(false);
+              }}
+            />
           </div>
         </div>
 
