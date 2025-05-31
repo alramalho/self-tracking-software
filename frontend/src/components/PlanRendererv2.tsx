@@ -78,8 +78,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       // Small delay to ensure the layout is complete
       setTimeout(() => {
         currentWeekRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
+          behavior: "smooth",
+          block: "center",
         });
       }, 100);
     }
@@ -335,23 +335,32 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </Select>
       </div>
 
-      <div className="flex flex-col gap-2 mt-2 max-h-[500px] bg-gray-50 overflow-y-auto ring-2 ring-gray-200 rounded-lg p-4">
-      <div className="flex flex-row items-center justify-start gap-2 mb-2">
+      <div className="flex flex-col gap-2 mt-2 max-h-[500px] bg-gray-50 overflow-y-auto ring-2 ring-gray-200 rounded-lg p-2">
+        <div className="flex flex-row items-center justify-start gap-2 my-4">
           <span className="text-4xl">🗓️</span>
           <h2 className="text-xl font-semibold mt-2">Weeks Overview</h2>
         </div>
         {planProgress?.weeks.map((week, index) => {
-          const isCurrentWeek = isSameWeek(week.startDate, new Date(), { weekStartsOn: 0 });
+          const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
+            weekStartsOn: 0,
+          });
           return (
             <div
               key={index}
               ref={isCurrentWeek ? currentWeekRef : null}
-              className="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-white"
+              className="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-white p-2"
             >
-              <span className="text-lg font-semibold">
-                Week {index + 1} {isCurrentWeek && "(Current)"}
-              </span>
               <PlanWeekDisplay
+                title={
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-lg font-semibold">
+                      Week {index + 1} {isCurrentWeek && "(Current)"}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {format(week.startDate, "d")}-{format(endOfWeek(week.startDate), "d MMM")}
+                    </span>
+                  </div>
+                }
                 plan={convertApiPlanToPlan(selectedPlan, activities)}
                 date={week.startDate}
               />
@@ -363,7 +372,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
         <div className="flex flex-row items-center justify-start gap-2 mb-2">
           <span className="text-4xl">🎯</span>
-          <h2 className="text-xl font-semibold mt-2">Full Activities Overview</h2>
+          <h2 className="text-xl font-semibold mt-2">
+            Full Activities Overview
+          </h2>
         </div>
 
         {/* {selectedPlan.outline_type === "times_per_week" && (

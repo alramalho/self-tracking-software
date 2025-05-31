@@ -4,7 +4,7 @@ import {
   isSameWeek,
   isAfter,
   isBefore,
-  format
+  format,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -27,7 +27,7 @@ import Confetti from "react-confetti-boom";
 
 interface PlanWeekDisplayProps {
   plan: Plan;
-  title?: string;
+  title?: string | React.ReactNode;
   date: Date;
   className?: string;
 }
@@ -63,28 +63,24 @@ export const PlanWeekDisplay = ({
     triggerOnce: true,
   });
 
-  if (!planProgress || !week) {
-    return null;
-  }
-
   const totalPlannedActivities =
     plan.outline_type === "times_per_week"
-      ? (week.plannedActivities as number)
-      : (week.plannedActivities as PlanSession[]).length;
+      ? (week?.plannedActivities as number)
+      : (week?.plannedActivities as PlanSession[]).length;
 
   const uniqueDaysWithActivities = new Set(
-    week.completedActivities.map((entry) => format(new Date(entry.date), "yyyy-MM-dd"))
+    week?.completedActivities.map((entry) =>
+      format(new Date(entry.date), "yyyy-MM-dd")
+    )
   );
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
-  const isWeekCompleted = checkIsWeekCompleted(
-    week.startDate,
-    plan,
-    week.completedActivities
-  );
+  const isWeekCompleted = week
+    ? checkIsWeekCompleted(week.startDate, plan, week.completedActivities)
+    : false;
 
-  const isCurrentWeek = isSameWeek(week.startDate, new Date());
+  const isCurrentWeek = week ? isSameWeek(week.startDate, new Date()) : false;
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
   useEffect(() => {
@@ -111,6 +107,10 @@ export const PlanWeekDisplay = ({
     isWeekCompleted,
   ]);
 
+  if (!planProgress || !week) {
+    return null;
+  }
+
   return (
     <div
       ref={ref}
@@ -120,7 +120,11 @@ export const PlanWeekDisplay = ({
       )}
     >
       {title && (
-        <h2 className="text-md font-semibold text-gray-800">{title}</h2>
+        typeof title === "string" ? (
+          <h2 className="text-md font-semibold text-gray-800">{title}</h2>
+        ) : (
+          title
+        )
       )}
 
       <div className="flex gap-1 mt-3">
@@ -138,7 +142,7 @@ export const PlanWeekDisplay = ({
       </div>
 
       <div className="flex flex-col items-start justify-center gap-0">
-        <span className="flex w-full flex-row items-center justify-between text-xs text-gray-700">
+        <span className="flex w-full flex-row items-center justify-between text-xs text-gray-700 gap-2">
           <span>
             <span className="text-lg uppercase">{plan.emoji}</span> ACTIVITIES:
             <span className="font-semibold">
@@ -153,7 +157,7 @@ export const PlanWeekDisplay = ({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ delay: 0.3, duration: 0.4 }}
-                className="mt-1 ml-2 text-sm font-normal text-green-600"
+                className="mt-1 text-sm font-normal text-green-600"
               >
                 🎉 Fantastic work this week!
               </motion.span>
@@ -180,9 +184,7 @@ export const PlanWeekDisplay = ({
           <div className="flex flex-row flex-wrap gap-4">
             {plan.sessions
               .filter((session) => {
-                return (
-                  isSameWeek(session.date, date)
-                );
+                return isSameWeek(session.date, date);
               })
               .map((session) => {
                 const activity = userData?.activities.find(
@@ -226,7 +228,7 @@ export const PlanWeekDisplay = ({
 
       <AnimatePresence>
         {isFullyDone && showConfetti && (
-          <div className="fixed -top-[50vh] left-0 w-screen h-screen pointer-events-none z-[101]">
+          <div className="fixed top-1/2 left-0 w-screen h-screen pointer-events-none z-[101]">
             <Confetti mode="boom" particleCount={150} />
           </div>
         )}

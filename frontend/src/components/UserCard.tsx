@@ -267,10 +267,6 @@ const UserCard: React.FC<UserCardProps> = ({
                       {showStreaks && activities.length > 0 && (
                         <PlanStreak
                           plan={planItem}
-                          activities={activities}
-                          activityEntries={activityEntries}
-                          size="small"
-                          timeRangeDays={60}
                         />
                       )}
                     </div>
