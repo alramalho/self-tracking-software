@@ -3,64 +3,7 @@ import { format, startOfWeek, endOfWeek, isBefore, isAfter } from "date-fns";
 import { Activity, Plan, ActivityEntry } from "@/contexts/UserPlanContext";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 import ActivityEditor from "./ActivityEditor";
-
-export const isWeekCompleted = (
-  weekStartDate: Date,
-  plan: Plan,
-  planActivityEntries: ActivityEntry[]
-) => {
-  const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 }); // 0 = Sunday
-  const weekStart = startOfWeek(weekStartDate, { weekStartsOn: 0 }); // 0 = Sunday
-
-  if (plan.outline_type === "times_per_week") {
-    // For times_per_week plans, count unique days with activities
-    const entriesThisWeek = planActivityEntries.filter((entry) => {
-      const entryDate = new Date(entry.date);
-      return isAfter(entryDate, weekStart) && isBefore(entryDate, weekEndDate);
-    });
-
-    // Get unique days by formatting dates and using Set
-    const uniqueDaysWithActivities = new Set(
-      entriesThisWeek.map((entry) => format(new Date(entry.date), "yyyy-MM-dd"))
-    );
-
-    const isCompleted =
-      uniqueDaysWithActivities.size >= (plan.times_per_week || 0);
-
-    return isCompleted;
-  } else {
-    // For specific plans, check if all planned sessions for the week are completed
-    const plannedSessionsThisWeek = plan.sessions.filter((session) => {
-      const sessionDate = new Date(session.date);
-      return (
-        isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEndDate)
-      );
-    });
-
-    // If no sessions planned this week, return false
-    if (plannedSessionsThisWeek.length === 0) {
-      return false;
-    }
-
-    // Check if all planned sessions have corresponding entries
-    const allSessionsCompleted = plannedSessionsThisWeek.every((session) => {
-      const sessionDate = new Date(session.date);
-      const weekStart = startOfWeek(sessionDate, { weekStartsOn: 0 });
-      const weekEnd = endOfWeek(sessionDate, { weekStartsOn: 0 });
-
-      const completedSessionsThisWeek = planActivityEntries.filter(
-        (entry) =>
-          entry.activity_id === session.activity_id &&
-          isAfter(new Date(entry.date), weekStart) &&
-          isBefore(new Date(entry.date), weekEnd)
-      );
-
-      return completedSessionsThisWeek.length > 0;
-    });
-
-    return allSessionsCompleted;
-  }
-};
+import { isWeekCompleted } from "@/contexts/PlanProgressContext/lib";
 
 interface PlanActivityEntriesRendererProps {
   plan: Plan;
@@ -170,7 +113,7 @@ const PlanActivityEntriesRenderer: React.FC<
     );
 
     return (
-      <div className="mt-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
+      <div className="p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
         <h3 className="text-lg font-semibold mb-4 text-left">
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
@@ -204,6 +147,8 @@ const PlanActivityEntriesRenderer: React.FC<
 
   return (
     <div className="px-4">
+      <div className="flex justify-center mb-4">{renderActivityViewer()}</div>
+      
       <BaseHeatmapRenderer
         activities={planActivities}
         startDate={getDefaultStartDate()}
@@ -216,7 +161,6 @@ const PlanActivityEntriesRenderer: React.FC<
         }
         onEditActivity={handleOpenActivityEditor}
       />
-      <div className="flex justify-center mt-4">{renderActivityViewer()}</div>
       {editingActivity && (
         <ActivityEditor
           open={isActivityEditorOpen}

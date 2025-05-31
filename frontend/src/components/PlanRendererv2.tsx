@@ -41,6 +41,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import {
+  getCompletedOn,
+  isSessionCompleted,
+} from "@/contexts/PlanProgressContext/lib";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -65,11 +69,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     if (timeRange === "recent") {
       return subDays(new Date(), 30);
     }
-    // For "all", find the earliest date between plan start and first activity
     return undefined;
   }, [timeRange, selectedPlan.sessions]);
 
-  // Get usernames of all plan group members except current user
   const memberUsernames = useMemo(() => {
     if (!selectedPlan.plan_group_id || !userData?.user?.username) return [];
 
@@ -84,13 +86,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   const { data: membersData } = useMultipleUsersDataQuery(memberUsernames);
 
-  // Replace getUserData function with this helper
   const getMemberData = (username: string): UserDataEntry | undefined => {
     if (username === userData?.user?.username) return userData;
     return membersData?.[username];
   };
 
-  // Get current user's activities
   const activities = useMemo(() => {
     return userData?.activities || [];
   }, [userData]);
@@ -99,7 +99,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     return userData?.activityEntries || [];
   }, [userData]);
 
-  // Get plan group members and their associated plans
   const { planGroupMembers, memberPlans } = useMemo(() => {
     if (!selectedPlan.plan_group_id)
       return { planGroupMembers: [], memberPlans: new Map() };
@@ -108,14 +107,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       (group) => group.id === selectedPlan.plan_group_id
     );
 
-    // Fetch data for all members except current user
     group?.members?.forEach((member) => {
       if (member.username !== userData?.user?.username) {
         fetchUserData({ username: member.username });
       }
     });
 
-    // Get each member's plan from the plan group
     const memberPlans = new Map<string, ApiPlan>();
     group?.members?.forEach((member) => {
       const memberData = getMemberData(member.username);
@@ -133,7 +130,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     };
   }, [selectedPlan, userData?.planGroups, membersData]);
 
-  // Add this helper function near the top of the component
   const getCompletedSessionsForPlan = useCallback(
     (plan: ApiPlan, startDate?: Date, endDate?: Date) => {
       const userId = plan.user_id;
@@ -149,7 +145,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         plan.activity_ids?.includes(entry.activity_id)
       );
 
-      // Filter by date range if provided
       if (startDate && endDate) {
         completedEntries = completedEntries.filter((entry) => {
           const entryDate = parseISO(entry.date);
@@ -157,21 +152,19 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         });
       }
 
-      // Group entries by date and take only one per day
       const entriesByDate = completedEntries.reduce((acc, entry) => {
-        const dateKey = format(parseISO(entry.date), 'yyyy-MM-dd');
+        const dateKey = format(parseISO(entry.date), "yyyy-MM-dd");
         if (!acc[dateKey]) {
           acc[dateKey] = entry;
         }
         return acc;
-      }, {} as { [key: string]: typeof completedEntries[0] });
+      }, {} as { [key: string]: (typeof completedEntries)[0] });
 
       return Object.values(entriesByDate);
     },
     [userData, planGroupMembers, membersData]
   );
 
-  // Modify the useEffect for session data calculation
   useEffect(() => {
     const calculateSessionData = () => {
       setLoading(true);
@@ -180,7 +173,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         return;
       }
 
-      // Get all plans in the group
       const groupPlans = planGroupMembers
         .map((member) => {
           const memberData = getMemberData(member.username);
@@ -190,7 +182,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         })
         .filter((p): p is ApiPlan => p !== undefined);
 
-      // Get all dates from plans and completed entries
       const allDates = [
         ...groupPlans.flatMap((plan) => {
           return plan.sessions.map((s) => parseISO(s.date));
@@ -205,10 +196,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         return;
       }
 
-      // Calculate weekly data
-      const startDate = timeRange === "recent" 
-        ? subDays(new Date(), 30) 
-        : subWeeks(startOfWeek(allDates[0]), 1);
+      const startDate =
+        timeRange === "recent"
+          ? subDays(new Date(), 30)
+          : subWeeks(startOfWeek(allDates[0]), 1);
       const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
       const weeklyData: {
         [key: string]: { [username: string]: number; planned: number };
@@ -219,15 +210,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         const weekKey = format(currentWeekStart, "yyyy-MM-dd");
         const weekEnd = endOfWeek(currentWeekStart);
 
-        // Skip weeks before startDate for "recent" view
         if (timeRange === "recent" && isBefore(weekEnd, startDate)) {
           currentWeekStart = addWeeks(currentWeekStart, 1);
           continue;
         }
 
         weeklyData[weekKey] = { planned: 0 };
-
-        // Calculate planned sessions for this week
+          
         if (selectedPlan.outline_type === "times_per_week") {
           weeklyData[weekKey].planned = selectedPlan.times_per_week || 0;
         } else {
@@ -238,14 +227,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           weeklyData[weekKey].planned += plannedThisWeek;
         }
 
-        // Calculate data for each user in the plan group
         groupPlans.forEach((plan) => {
           const member = planGroupMembers.find(
             (m) => m.user_id === plan.user_id
           );
           if (!member) return;
 
-          // Count completed sessions this week
           const completedThisWeek = getCompletedSessionsForPlan(
             plan,
             currentWeekStart,
@@ -257,7 +244,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         currentWeekStart = addWeeks(currentWeekStart, 1);
       }
 
-      // Format data for chart
       const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
         week: format(parseISO(week), "MMM d, yyyy"),
         planned: data.planned,
@@ -275,72 +261,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     calculateSessionData();
   }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
 
-  const isSessionCompleted = (session: ApiPlan["sessions"][0]) => {
-    const sessionDate = parseISO(session.date);
-    const weekStart = startOfWeek(sessionDate);
-    const weekEnd = endOfWeek(sessionDate);
-
-    const plannedSessionsThisWeek = selectedPlan.sessions
-      .filter((s) => {
-        const sDate = parseISO(s.date);
-        return (
-          s.activity_id === session.activity_id &&
-          sDate >= weekStart &&
-          sDate <= weekEnd
-        );
-      })
-      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    const completedSessionsThisWeek = activityEntries
-      .filter(
-        (entry) =>
-          entry.activity_id === session.activity_id &&
-          parseISO(entry.date) >= weekStart &&
-          parseISO(entry.date) <= weekEnd
-      )
-      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    const sessionIndex = plannedSessionsThisWeek.findIndex(
-      (s) => s.date === session.date
-    );
-    return completedSessionsThisWeek.length > sessionIndex;
-  };
-
-  const getCompletedOn = (session: ApiPlan["sessions"][0]) => {
-    const sessionDate = parseISO(session.date);
-    const weekStart = startOfWeek(sessionDate);
-    const weekEnd = endOfWeek(sessionDate);
-
-    const plannedSessionsThisWeek = selectedPlan.sessions
-      .filter((s) => {
-        const sDate = parseISO(s.date);
-        return (
-          s.activity_id === session.activity_id &&
-          sDate >= weekStart &&
-          sDate <= weekEnd
-        );
-      })
-      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    const completedSessionsThisWeek = activityEntries
-      .filter(
-        (entry) =>
-          entry.activity_id === session.activity_id &&
-          parseISO(entry.date) >= weekStart &&
-          parseISO(entry.date) <= weekEnd
-      )
-      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    const sessionIndex = plannedSessionsThisWeek.findIndex(
-      (s) => s.date === session.date
-    );
-
-    return completedSessionsThisWeek[sessionIndex]?.date
-      ? parseISO(completedSessionsThisWeek[sessionIndex]?.date)
-      : undefined;
-  };
-
-  // Add this helper function near other helper functions
   const areAllWeeklyActivitiesCompleted = useCallback(() => {
     const currentWeekStart = startOfWeek(new Date());
     const currentWeekEnd = endOfWeek(new Date());
@@ -352,9 +272,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
     return (
       thisWeekSessions.length > 0 &&
-      thisWeekSessions.every((session) => isSessionCompleted(session))
+      thisWeekSessions.every((session) =>
+        isSessionCompleted(session, selectedPlan, activityEntries)
+      )
     );
-  }, [selectedPlan.sessions, isSessionCompleted]);
+  }, [selectedPlan.sessions]);
 
   return (
     <div>
@@ -433,8 +355,16 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   const activity = activities.find(
                     (a) => a.id === session.activity_id
                   );
-                  const completed = isSessionCompleted(session);
-                  const completedOn = getCompletedOn(session);
+                  const completed = isSessionCompleted(
+                    session,
+                    selectedPlan,
+                    activityEntries
+                  );
+                  const completedOn = getCompletedOn(
+                    session,
+                    selectedPlan,
+                    activityEntries
+                  );
                   if (!activity) return null;
 
                   return (
@@ -514,7 +444,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                     name: `${member.name}'s Sessions`,
                     color: `hsl(var(--chart-${index + 2}))`,
                   })),
-                // Add current user last
                 ...(userData?.user?.username
                   ? [
                       {

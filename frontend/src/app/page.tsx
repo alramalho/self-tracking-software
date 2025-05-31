@@ -10,10 +10,19 @@ import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
 import PlansAchievements from "@/components/PlansAchievements";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 import { useSession } from "@clerk/nextjs";
-import { useUserPlan, MetricEntry } from "@/contexts/UserPlanContext";
+import {
+  useUserPlan,
+  MetricEntry,
+  convertApiPlanToPlan,
+} from "@/contexts/UserPlanContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -21,16 +30,20 @@ import { useNotifications } from "@/hooks/useNotifications";
 import Link from "next/link";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
-import AINotification from "@/components/AINotification";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
-import RefreshIcon from "@/components/RefreshButton";
+import { endOfWeek, format, startOfWeek } from "date-fns";
+import { Confetti } from "@/components/Confetti";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
   const router = useRouter();
-  const { useCurrentUserDataQuery, hasLoadedUserData, notificationsData, refetchAllData } =
-    useUserPlan();
+  const {
+    useCurrentUserDataQuery,
+    hasLoadedUserData,
+    notificationsData,
+    refetchAllData,
+  } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const {
     userMetrics,
@@ -47,7 +60,11 @@ const HomePage: React.FC = () => {
     false
   );
   const [isStreaksCollapsed, setIsStreaksCollapsed] = useLocalStorage<boolean>(
-    "streaks-section-collapsed", 
+    "streaks-section-collapsed",
+    false
+  );
+  const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
+    "plans-section-collapsed",
     false
   );
   const themeColors = useThemeColors();
@@ -118,6 +135,10 @@ const HomePage: React.FC = () => {
     return colors[index % colors.length];
   };
 
+  const currentWeekString = `${format(
+    startOfWeek(new Date(), { weekStartsOn: 0 }),
+    "d"
+  )}-${format(endOfWeek(new Date(), { weekStartsOn: 0 }), "d MMM")}`;
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl space-y-4">
       <div
@@ -180,19 +201,23 @@ const HomePage: React.FC = () => {
                   <ChevronDown size={16} className="text-gray-600" />
                 )}
               </button>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-md font-semibold text-gray-900">
                 Your Streaks
               </h3>
             </div>
             <button
-              onClick={() => router.push(`/profile/${userData.user?.username}?redirectTo=streak-details`)}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+              onClick={() =>
+                router.push(
+                  `/profile/${userData.user?.username}?redirectTo=streak-details`
+                )
+              }
+              className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
             >
               View Details
               <ChevronRight size={16} />
             </button>
           </div>
-          
+
           <div className="flex flex-wrap gap-3">
             <PlansAchievements
               plans={userData.plans}
@@ -209,7 +234,10 @@ const HomePage: React.FC = () => {
       {/* Your Metrics Section */}
       {userMetrics.length > 0 && !isUserOnFreePlan && (
         <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
-          <Collapsible open={!isMetricsCollapsed} onOpenChange={(open) => setIsMetricsCollapsed(!open)}>
+          <Collapsible
+            open={!isMetricsCollapsed}
+            onOpenChange={(open) => setIsMetricsCollapsed(!open)}
+          >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <CollapsibleTrigger asChild>
@@ -226,13 +254,13 @@ const HomePage: React.FC = () => {
                     )}
                   </button>
                 </CollapsibleTrigger>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-md font-semibold text-gray-900">
                   Your Metrics
                 </h3>
               </div>
               <button
                 onClick={() => router.push("/insights/dashboard")}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+                className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
               >
                 View Insights
                 <ChevronRight size={16} />
@@ -243,7 +271,11 @@ const HomePage: React.FC = () => {
             <div className="space-y-3">
               {/* Missing checkin indicator - always present but conditionally styled */}
               {!hasCheckedInToday && (
-                <div className={`transition-all duration-300 ${isMetricsCollapsed ? 'mx-2' : ''}`}>
+                <div
+                  className={`transition-all duration-300 ${
+                    isMetricsCollapsed ? "mx-2" : ""
+                  }`}
+                >
                   {isAfter2PM ? (
                     <div className="flex items-center gap-2 text-amber-600">
                       <PulsatingCirclePill variant="yellow" size="md" />
@@ -335,7 +367,9 @@ const HomePage: React.FC = () => {
                   {userMetrics.slice(0, 3).map((metric, index) => {
                     const weekData = getMetricWeekData(metric.id);
                     const hasAnyData = weekData.some((val) => val > 0);
-                    const positiveCorrelations = getPositiveCorrelations(metric.id);
+                    const positiveCorrelations = getPositiveCorrelations(
+                      metric.id
+                    );
 
                     return (
                       <div
@@ -346,7 +380,9 @@ const HomePage: React.FC = () => {
                           <span className="text-sm font-medium">
                             {metric.emoji} {metric.title}
                           </span>
-                          <span className="text-xs text-gray-500">Last 7 days</span>
+                          <span className="text-xs text-gray-500">
+                            Last 7 days
+                          </span>
                         </div>
                         {hasAnyData ? (
                           <WeekMetricBarChart
@@ -375,7 +411,8 @@ const HomePage: React.FC = () => {
                                   <span className="text-green-600">
                                     {formatCorrelationString(correlation)}
                                   </span>
-                                  {i < Math.min(positiveCorrelations.length - 1, 1)
+                                  {i <
+                                  Math.min(positiveCorrelations.length - 1, 1)
                                     ? " and "
                                     : ` boost your ${metric.title.toLowerCase()}`}
                                 </span>
@@ -389,6 +426,59 @@ const HomePage: React.FC = () => {
               </CollapsibleContent>
             </div>
           </Collapsible>
+        </div>
+      )}
+
+      {/* Plan Section */}
+      {userData?.plans && userData.plans.length > 0 && (
+        <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsPlansCollapsed(!isPlansCollapsed)}
+                className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
+                aria-label={
+                  isPlansCollapsed ? "Expand plans" : "Collapse plans"
+                }
+              >
+                {isPlansCollapsed ? (
+                  <ChevronRight size={16} className="text-gray-600" />
+                ) : (
+                  <ChevronDown size={16} className="text-gray-600" />
+                )}
+              </button>
+              <div className="flex justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-md font-semibold text-gray-900">
+                    This Week
+                  </h3>
+                </div>
+              </div>
+              <span className="text-sm text-gray-500">{currentWeekString}</span>
+            </div>
+            <button
+              onClick={() =>
+                router.push(
+                  `/profile/${userData.user?.username}?redirectTo=streak-details`
+                )
+              }
+              className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+            >
+              View Details
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <PlanWeekDisplay
+              plan={convertApiPlanToPlan(
+                userData.plans[2],
+                userData.activities || []
+              )}
+              date={new Date()}
+              className={`${isPlansCollapsed ? "h-0" : "h-full"}`}
+            />
+          </div>
         </div>
       )}
 

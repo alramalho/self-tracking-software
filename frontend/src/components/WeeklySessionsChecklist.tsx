@@ -7,6 +7,7 @@ import { parseISO, startOfWeek, endOfWeek } from "date-fns";
 import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { motion, AnimatePresence } from "framer-motion";
+import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/PlanProgressContext/lib";
 
 interface WeeklySessionsChecklistProps {
   plan: ApiPlan;
@@ -25,19 +26,12 @@ export function WeeklySessionsChecklist({
   });
   // Get current week's completed sessions count (unique days)
   const currentWeekStart = startOfWeek(new Date());
-  const currentWeekEnd = endOfWeek(new Date());
 
-  const completedSessionsThisWeek = activityEntries
-    .filter((entry) => plan.activity_ids?.includes(entry.activity_id))
-    .filter((entry) => {
-      const entryDate = parseISO(entry.date);
-      return entryDate >= currentWeekStart && entryDate <= currentWeekEnd;
-    })
-    .reduce((uniqueDays, entry) => {
-      const dayKey = entry.date.split("T")[0]; // Get YYYY-MM-DD part
-      uniqueDays.add(dayKey);
-      return uniqueDays;
-    }, new Set<string>()).size;
+  const completedSessionsThisWeek = countTimesPerWeekPlanCompletedWeekSessions(
+    plan,
+    activityEntries,
+    currentWeekStart
+  );
 
   useEffect(() => {
     if (inView) {

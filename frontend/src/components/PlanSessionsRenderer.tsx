@@ -83,7 +83,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
     );
 
     return (
-      <div className="mt-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
+      <div className="p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
         <h3 className="text-lg font-semibold mb-4 text-left">
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
@@ -122,6 +122,8 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
 
   return (
     <div className="px-4">
+      <div className="flex justify-center mb-4">{renderActivityViewer()}</div>
+      
       <BaseHeatmapRenderer
         activities={activities}
         startDate={getDefaultStartDate()}
@@ -130,7 +132,6 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}
       />
-      <div className="flex justify-center mt-4">{renderActivityViewer()}</div>
     </div>
   );
 };
