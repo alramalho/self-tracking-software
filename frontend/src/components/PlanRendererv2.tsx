@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   format,
   parseISO,
@@ -9,6 +9,7 @@ import {
   isAfter,
   isBefore,
   subDays,
+  isSameWeek,
 } from "date-fns";
 import {
   ApiPlan,
@@ -45,6 +46,8 @@ import {
   getCompletedOn,
   isSessionCompleted,
 } from "@/contexts/PlanProgressContext/lib";
+import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { PlanWeekDisplay } from "./PlanWeekDisplay";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -64,6 +67,23 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     { week: string; [key: string]: number | string }[]
   >([]);
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
+
+  const { plansProgress } = usePlanProgress();
+  const planProgress = plansProgress.find((p) => p.plan.id === selectedPlan.id);
+  const currentWeekRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to current week when weeks data loads
+  useEffect(() => {
+    if (currentWeekRef.current && planProgress?.weeks.length) {
+      // Small delay to ensure the layout is complete
+      setTimeout(() => {
+        currentWeekRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }, 100);
+    }
+  }, [planProgress?.weeks.length]);
 
   const getStartDate = useCallback(() => {
     if (timeRange === "recent") {
@@ -216,7 +236,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         }
 
         weeklyData[weekKey] = { planned: 0 };
-          
+
         if (selectedPlan.outline_type === "times_per_week") {
           weeklyData[weekKey].planned = selectedPlan.times_per_week || 0;
         } else {
@@ -261,22 +281,22 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     calculateSessionData();
   }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
 
-  const areAllWeeklyActivitiesCompleted = useCallback(() => {
-    const currentWeekStart = startOfWeek(new Date());
-    const currentWeekEnd = endOfWeek(new Date());
+  // const areAllWeeklyActivitiesCompleted = useCallback(() => {
+  //   const currentWeekStart = startOfWeek(new Date());
+  //   const currentWeekEnd = endOfWeek(new Date());
 
-    const thisWeekSessions = selectedPlan.sessions.filter((session) => {
-      const sessionDate = parseISO(session.date);
-      return sessionDate >= currentWeekStart && sessionDate <= currentWeekEnd;
-    });
+  //   const thisWeekSessions = selectedPlan.sessions.filter((session) => {
+  //     const sessionDate = parseISO(session.date);
+  //     return sessionDate >= currentWeekStart && sessionDate <= currentWeekEnd;
+  //   });
 
-    return (
-      thisWeekSessions.length > 0 &&
-      thisWeekSessions.every((session) =>
-        isSessionCompleted(session, selectedPlan, activityEntries)
-      )
-    );
-  }, [selectedPlan.sessions]);
+  //   return (
+  //     thisWeekSessions.length > 0 &&
+  //     thisWeekSessions.every((session) =>
+  //       isSessionCompleted(session, selectedPlan, activityEntries)
+  //     )
+  //   );
+  // }, [selectedPlan.sessions]);
 
   return (
     <div>
@@ -315,22 +335,47 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </Select>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="flex flex-col gap-2 mt-2 max-h-[500px] bg-gray-50 overflow-y-auto ring-2 ring-gray-200 rounded-lg p-4">
+      <div className="flex flex-row items-center justify-start gap-2 mb-2">
+          <span className="text-4xl">🗓️</span>
+          <h2 className="text-xl font-semibold mt-2">Weeks Overview</h2>
+        </div>
+        {planProgress?.weeks.map((week, index) => {
+          const isCurrentWeek = isSameWeek(week.startDate, new Date(), { weekStartsOn: 0 });
+          return (
+            <div
+              key={index}
+              ref={isCurrentWeek ? currentWeekRef : null}
+              className="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-white"
+            >
+              <span className="text-lg font-semibold">
+                Week {index + 1} {isCurrentWeek && "(Current)"}
+              </span>
+              <PlanWeekDisplay
+                plan={convertApiPlanToPlan(selectedPlan, activities)}
+                date={week.startDate}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
         <div className="flex flex-row items-center justify-start gap-2 mb-2">
           <span className="text-4xl">🎯</span>
-          <h2 className="text-xl font-semibold mt-2">Activities Overview</h2>
+          <h2 className="text-xl font-semibold mt-2">Full Activities Overview</h2>
         </div>
 
-        {selectedPlan.outline_type === "times_per_week" && (
+        {/* {selectedPlan.outline_type === "times_per_week" && (
           <WeeklySessionsChecklist
             plan={selectedPlan}
             activityEntries={activityEntries}
           />
-        )}
+        )} */}
 
-        {selectedPlan.outline_type === "specific" &&
-          areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />}
-
+        {/* {selectedPlan.outline_type === "specific" &&
+          areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />} */}
+        {/* 
         {selectedPlan.outline_type === "specific" && (
           <>
             <div className="mb-4">
@@ -379,7 +424,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 })}
             </div>
           </>
-        )}
+        )} */}
         <div className="mt-4">
           {selectedPlan.outline_type === "specific" && (
             <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">

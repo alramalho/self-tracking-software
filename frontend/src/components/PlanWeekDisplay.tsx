@@ -4,6 +4,7 @@ import {
   isSameWeek,
   isAfter,
   isBefore,
+  format
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -22,9 +23,11 @@ import { useInView } from "react-intersection-observer";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Confetti from "react-confetti-boom";
 
 interface PlanWeekDisplayProps {
   plan: Plan;
+  title?: string;
   date: Date;
   className?: string;
 }
@@ -40,6 +43,7 @@ const MiniActivityCard = ({ activity }: { activity: Activity }) => {
 
 export const PlanWeekDisplay = ({
   plan,
+  title,
   date,
   className,
 }: PlanWeekDisplayProps) => {
@@ -68,7 +72,11 @@ export const PlanWeekDisplay = ({
       ? (week.plannedActivities as number)
       : (week.plannedActivities as PlanSession[]).length;
 
-  const totalCompletedActivities = week.completedActivities?.length || 0;
+  const uniqueDaysWithActivities = new Set(
+    week.completedActivities.map((entry) => format(new Date(entry.date), "yyyy-MM-dd"))
+  );
+
+  const totalCompletedActivities = uniqueDaysWithActivities.size;
 
   const isWeekCompleted = checkIsWeekCompleted(
     week.startDate,
@@ -111,9 +119,9 @@ export const PlanWeekDisplay = ({
         className
       )}
     >
-      <h2 className="text-md font-semibold text-gray-800">
-        {plan.goal}
-      </h2>
+      {title && (
+        <h2 className="text-md font-semibold text-gray-800">{title}</h2>
+      )}
 
       <div className="flex gap-1 mt-3">
         {Array.from({ length: totalPlannedActivities }, (_, index) => (
@@ -147,7 +155,7 @@ export const PlanWeekDisplay = ({
                 transition={{ delay: 0.3, duration: 0.4 }}
                 className="mt-1 ml-2 text-sm font-normal text-green-600"
               >
-                🎉 Week completed!
+                🎉 Fantastic work this week!
               </motion.span>
             )}
           </AnimatePresence>
@@ -155,30 +163,25 @@ export const PlanWeekDisplay = ({
       </div>
 
       {/* coming up section, wherewe either display  */}
-      {plan.outline_type == "times_per_week" &&
-        isCurrentWeek &&
-        !isWeekCompleted && (
-          <div className="flex flex-col items-start justify-center gap-0 mt-4">
-            <span className="text-sm text-gray-500">Coming up, any of</span>
-            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 mt-2">
-              {week.weekActivities.map((activity) => (
-                <MiniActivityCard key={activity.id} activity={activity} />
-              ))}
-            </div>
+      {plan.outline_type == "times_per_week" && !isWeekCompleted && (
+        <div className="flex flex-col items-start justify-center gap-0 mt-4">
+          <span className="text-sm text-gray-500">Coming up, any of</span>
+          <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 mt-2">
+            {week.weekActivities.map((activity) => (
+              <MiniActivityCard key={activity.id} activity={activity} />
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-      {plan.outline_type == "specific" && isCurrentWeek && !isWeekCompleted && (
+      {plan.outline_type == "specific" && !isWeekCompleted && (
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
           <span className="text-sm text-gray-500">Coming up:</span>
           <div className="flex flex-row flex-wrap gap-4">
             {plan.sessions
               .filter((session) => {
-                const endOfCurrentWeek = endOfWeek(new Date());
-                const beginningOfCurrentWeek = startOfWeek(new Date());
                 return (
-                  isAfter(session.date, beginningOfCurrentWeek) &&
-                  isBefore(session.date, endOfCurrentWeek)
+                  isSameWeek(session.date, date)
                 );
               })
               .map((session) => {
@@ -221,13 +224,13 @@ export const PlanWeekDisplay = ({
         </div>
       )}
 
-      {/* <AnimatePresence>
+      <AnimatePresence>
         {isFullyDone && showConfetti && (
-          <div className="fixed top-0 left-0 w-screen h-screen pointer-events-none z-[101]">
+          <div className="fixed -top-[50vh] left-0 w-screen h-screen pointer-events-none z-[101]">
             <Confetti mode="boom" particleCount={150} />
           </div>
         )}
-      </AnimatePresence> */}
+      </AnimatePresence>
     </div>
   );
 };

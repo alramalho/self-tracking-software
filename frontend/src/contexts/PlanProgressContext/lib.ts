@@ -279,10 +279,9 @@ export function getPlanWeek(
 
   // Filter to have only the activity entries that are within that week date range and are part of the plan
   const planActivityEntriesThisWeek = userActivityEntries.filter((entry) => {
-    const entryDate = new Date(entry.date);
     const isInPlan = plan.activity_ids?.includes(entry.activity_id) ?? false;
     const isInWeek =
-      isAfter(entryDate, weekStart) && isBefore(entryDate, weekEnd);
+      isAfter(entry.date, weekStart) && isBefore(entry.date, weekEnd);
     return isInPlan && isInWeek;
   });
 
@@ -304,16 +303,31 @@ export function getPlanWeek(
     plannedActivities = sessionsThisWeek;
   }
 
+  let weekActivities: Activity[];
+
+  if (plan.outline_type === "times_per_week") {
+    weekActivities = planActivities;
+  } else {
+    const sessionsThisWeek = plan.sessions.filter((session) => {
+      const sessionDate = new Date(session.date);
+      return isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEnd);
+    });
+
+    const activityIdsThisWeek = Array.from(
+      new Set(sessionsThisWeek.map((session) => session.activity_id))
+    );
+
+    weekActivities = planActivities.filter((activity) =>
+      activityIdsThisWeek.includes(activity.id)
+    );
+  }
+
   return {
     startDate: weekStart,
     activities: planActivities,
     completedActivities,
     plannedActivities,
-    weekActivities: planActivities.filter((activity) =>
-      planActivityEntriesThisWeek.some(
-        (entry) => entry.activity_id === activity.id
-      )
-    ),
+    weekActivities,
   };
 }
 
@@ -325,7 +339,9 @@ export function getPlanWeeks(
 ): PlanWeek[] {
   const weeks: PlanWeek[] = [];
   let weekStart = startOfWeek(startDate ?? new Date(), { weekStartsOn: 0 });
-  const planEndDate = new Date(plan.finishing_date || addWeeks(weekStart, 12));
+  const planEndDate = new Date(
+    plan.finishing_date || addWeeks(weekStart, ACHIEVEMENT_WEEKS)
+  );
   while (isBefore(weekStart, planEndDate)) {
     weeks.push(
       getPlanWeek(weekStart, plan, userActivityEntries, userActivities)
