@@ -14,14 +14,14 @@ import {
   isBefore,
   subDays,
 } from "date-fns";
-import { isWeekCompleted } from "@/components/PlanActivityEntriesRenderer";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Badge } from "./ui/badge";
 import FireBadge from "./FireBadge";
-import { calculatePlanAchievement } from "./profile/StreakDetailsPopover";
 import TrophyBadge from "./FireBadge";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
+import { calculatePlanAchievement } from "@/contexts/PlanProgressContext/lib";
+import { usePlanProgress } from "@/contexts/PlanProgressContext";
 
 interface PlansAchievementsProps {
   plans: ApiPlan[];
@@ -32,13 +32,6 @@ interface PlansAchievementsProps {
   onClick?: () => void;
   isExpanded?: boolean;
 }
-
-export const ACHIEVEMENT_THRESHOLD = 0.8; // 80% completion required
-export const ACHIEVEMENT_WEEKS = 12; // Last 12 weeks for achievement calculation
-export const LIFESTYLE_START_COUNTING_DATE = subDays(
-  new Date(),
-  ACHIEVEMENT_WEEKS * 7
-);
 
 const PlansAchievements: React.FC<PlansAchievementsProps> = ({
   plans,
@@ -51,41 +44,14 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-
-  // Calculate streaks and achievements for all plans
-  const plansData = useMemo(() => {
-    return plans.map((plan) => {
-      // Calculate streak
-      const {
-        planScore,
-        completedWeeks,
-        isAchieved,
-      } = calculatePlanAchievement(
-        plan,
-        activities,
-        activityEntries,
-        ACHIEVEMENT_THRESHOLD,
-        LIFESTYLE_START_COUNTING_DATE
-      );
-      return {
-        plan,
-        streak: planScore,
-        achievement: {
-          completedWeeks,
-          isAchieved,
-          weeksToAchieve: Math.max(0, ACHIEVEMENT_WEEKS - completedWeeks),
-          progress: (completedWeeks / ACHIEVEMENT_WEEKS) * 100,
-        },
-      };
-    });
-  }, [plans, activities, activityEntries, timeRangeDays]);
+  const { plansProgress } = usePlanProgress();
 
   return (
     <div className={`flex flex-col gap-3 ${className} w-full`}>
       <Collapsible open={isExpanded}>
         {/* All badges row - always visible */}
         <div className="flex flex-wrap gap-3">
-          {plansData.map(({ plan, streak, achievement }) => (
+          {plansProgress.map(({ plan, achievement }) => (
             <div
               key={plan.id}
               className="flex items-center gap-2"
@@ -98,7 +64,7 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
                   isExpanded ? 'scale-100' : 'scale-80'
                 }`}>
                   <FireBadge>
-                    x{streak} <span className="opacity-100 ml-1">{plan.emoji}</span>
+                    x{achievement.streak} <span className="opacity-100 ml-1">{plan.emoji}</span>
                   </FireBadge>
                 </div>
               </div>
@@ -125,7 +91,7 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
         {/* Progress bars - smoothly animate in/out */}
         <CollapsibleContent>
           <div className="flex flex-col gap-2 mt-4 px-2 w-full">
-            {plansData
+            {plansProgress
               .filter(({ achievement }) => !achievement.isAchieved)
               .map(({ plan, achievement }) => (
                 <div

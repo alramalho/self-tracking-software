@@ -1,28 +1,38 @@
-import { format, isPast, isToday, parseISO, differenceInDays, isYesterday, isSameDay } from "date-fns";
+import {
+  format,
+  isPast,
+  isToday,
+  parseISO,
+  differenceInDays,
+  isYesterday,
+  isSameDay,
+} from "date-fns";
 import { Check } from "lucide-react";
 import { ActivityEntry, Activity } from "@/contexts/UserPlanContext";
 
 export interface Entry {
-  date: string;
+  date: Date;
   activity_id: string;
   quantity: number;
+  description?: string;
 }
 
 export const SmallActivityEntryCard = ({
   entry,
   activity,
+  selected,
   onClick,
   completed,
   completedOn,
 }: {
   entry: Entry;
   activity: Activity;
-  onClick?: () => void;
+  selected?: boolean;
+  onClick?: (sessionId: string) => void;
   completed?: boolean;
   completedOn?: Date;
 }) => {
-  const dateInfoStr = (isoDate: string) => {
-    const date = parseISO(isoDate);
+  const dateInfoStr = (date: Date) => {
     const today = new Date();
     const diffInDays = Math.ceil(
       (date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
@@ -35,7 +45,7 @@ export const SmallActivityEntryCard = ({
   const completedOnStr = (date: Date) => {
     if (isToday(date)) return "today";
     if (isYesterday(date)) return "yesterday";
-    
+
     const daysDiff = differenceInDays(new Date(), date);
     if (daysDiff <= 7) {
       return format(date, "EEEE").toLowerCase();
@@ -44,35 +54,44 @@ export const SmallActivityEntryCard = ({
   };
 
   return (
-    <div
-      key={`${entry.date}-${entry.activity_id}`}
-      className={`relative flex flex-col items-center justify-center rounded-lg border-2 p-4 ${
-        onClick ? "cursor-pointer bg-gray-100 hover:bg-opacity-80" : ""
-      } `}
-      onClick={onClick}
-    >
-      {completed && (
-        <div className="absolute top-2 right-2">
-          <Check className="h-5 w-5 text-green-500" />
+    <>
+      <div
+        key={`${entry.date}-${entry.activity_id}`}
+        className={`relative flex flex-col items-center justify-center rounded-lg bg-gray-100 m-2 p-2 transition-all duration-200 ${
+          onClick ? "cursor-pointer bg-gray-100 hover:bg-opacity-80" : ""
+        } ${selected ? "ring-2 ring-gray-300 ring-offset-2" : ""}`}
+        onClick={() => onClick?.(`${entry.date}-${entry.activity_id}`)}
+      >
+        {completed && (
+          <div className="absolute top-2 right-2">
+            <Check className="h-5 w-5 text-green-500" />
+          </div>
+        )}
+        {activity?.emoji && (
+          <span className="text-2xl mb-2">{activity.emoji}</span>
+        )}
+        <span className="text-xs text-gray-500 mt-1 text-center">
+          {dateInfoStr(entry.date)}
+        </span>
+        <span className="text-md font-medium text-center text-gray-800">
+          {activity?.title || "Unknown Activity"}
+        </span>
+        <span className="text-xs text-gray-800 text-center mb-3">
+          {entry.quantity} {activity?.measure}
+        </span>
+        {completedOn && !isSameDay(completedOn, entry.date) && (
+          <span className="text-xs text-green-600 text-center">
+            done {completedOnStr(completedOn)}
+          </span>
+        )}
+      </div>
+      {entry.description && selected && (
+        <div className="rounded-lg bg-gray-100 m-1 p-3">
+          <span className="text-xs text-gray-800 text-center">
+            {entry.description}
+          </span>
         </div>
       )}
-      {activity?.emoji && (
-        <span className="text-3xl mb-2">{activity.emoji}</span>
-      )}
-      <span className="text-xs text-gray-500 mt-2 text-center">
-        {dateInfoStr(entry.date)}
-      </span>
-      <span className="text-lg font-medium text-center text-gray-800">
-        {activity?.title || "Unknown Activity"}
-      </span>
-      <span className="text-xs text-gray-800 text-center mb-3">
-        {entry.quantity} {activity?.measure}
-      </span>
-      {completedOn && !isSameDay(completedOn, parseISO(entry.date)) && (
-        <span className="text-xs text-green-600 text-center">
-          done {completedOnStr(completedOn)}
-        </span>
-      )}
-    </div>
+    </>
   );
 };

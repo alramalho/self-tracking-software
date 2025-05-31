@@ -154,6 +154,17 @@ export interface PlanMilestone {
   progress?: number;
 }
 
+export interface ApiPlanSession {
+  date: string;
+  descriptive_guide: string;
+  quantity: number;
+  activity_id: string;
+}
+
+export interface PlanSession extends Omit<ApiPlanSession, "date"> {
+  date: Date
+  activity_name?: string
+}
 export interface Plan {
   id?: string;
   user_id?: string;
@@ -163,17 +174,12 @@ export interface Plan {
   activity_ids?: string[];
   plan_group_id?: string;
   milestones?: PlanMilestone[];
-  sessions: {
-    date: Date;
-    descriptive_guide: string;
-    quantity: number;
-    activity_id?: string;
-    activity_name?: string;
-  }[];
+  sessions: PlanSession[];
   notes?: string;
   duration_type?: "habit" | "lifestyle" | "custom";
   outline_type?: "specific" | "times_per_week";
   times_per_week?: number;
+  created_at: string;
 }
 
 export interface ApiPlan {
@@ -184,12 +190,7 @@ export interface ApiPlan {
   emoji?: string;
   finishing_date?: string;
   activity_ids?: string[];
-  sessions: {
-    date: string;
-    descriptive_guide: string;
-    quantity: number;
-    activity_id: string;
-  }[];
+  sessions: ApiPlanSession[];
   created_at: string;
   deleted_at?: string;
   duration_type?: "habit" | "lifestyle" | "custom";
@@ -290,7 +291,9 @@ export interface UserPlanContextType {
   refetchAllData: () => Promise<UserDataEntry>;
   updateTimezone: () => Promise<void>;
   updateTheme: (color: ThemeColor) => Promise<void>;
-  updateLocalUserData: (updater: (data: UserDataEntry) => UserDataEntry) => void;
+  updateLocalUserData: (
+    updater: (data: UserDataEntry) => UserDataEntry
+  ) => void;
   currentTheme: ThemeColor;
   syncCurrentUserWithProfile: () => void;
   isWaitingForData: boolean;
@@ -362,17 +365,20 @@ export function convertPlanToApiPlan(plan: Plan): ApiPlan {
 
 // Function to check if we have any cached query data by TanStack Query
 export const hasCachedUserData = () => {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   try {
     // Check if the cache key used by PersistQueryClientProvider exists
-    const cachedData = localStorage.getItem('TRACKING_SO_QUERY_CACHE');
+    const cachedData = localStorage.getItem("TRACKING_SO_QUERY_CACHE");
     if (!cachedData) return false;
 
     // Parse the cache and check if there are any queries in clientState
     const parsedCache = JSON.parse(cachedData);
     const queries = parsedCache?.clientState?.queries;
     const mutations = parsedCache?.clientState?.mutations;
-    return Array.isArray(queries) && queries.length > 0 || Array.isArray(mutations) && mutations.length > 0;
+    return (
+      (Array.isArray(queries) && queries.length > 0) ||
+      (Array.isArray(mutations) && mutations.length > 0)
+    );
   } catch (error) {
     // If parsing fails or any other error, assume no valid cache
     console.warn("Error checking for cached user data:", error);
@@ -412,7 +418,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchUserData = async ({
     username,
   }: { username?: string } = {}): Promise<UserDataEntry> => {
-
     try {
       const startTime = performance.now();
       const result = await smallRetryMechanism(
@@ -504,11 +509,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const result = await smallRetryMechanism(
         async () => {
           const response = await api.get("/timeline");
-          
+
           return {
             recommendedUsers: response.data.recommended_users,
             recommendedActivities: response.data.recommended_activities,
-            recommendedActivityEntries: response.data.recommended_activity_entries,
+            recommendedActivityEntries:
+              response.data.recommended_activity_entries,
           } as TimelineData;
         },
         {
@@ -517,7 +523,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             (err.response?.status === 404 || err.response?.status === 401),
         }
       );
-      
+
       const endTime = performance.now();
       const latencySeconds = (endTime - startTime) / 1000;
 
@@ -870,15 +876,16 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (currentUserDataQuery.data?.user?.username && isSignedIn) {
-      
-      const unsubscribe = queryClient.getQueryCache().subscribe(event => {
-        if (event.type === 'updated' && 
-            event.query.queryKey[0] === 'userData' && 
-            event.query.queryKey[1] === 'current') {
+      const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+        if (
+          event.type === "updated" &&
+          event.query.queryKey[0] === "userData" &&
+          event.query.queryKey[1] === "current"
+        ) {
           syncUserData(event.query.state.data as UserDataEntry);
         }
       });
-      
+
       return () => {
         unsubscribe();
       };
@@ -907,10 +914,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     updateTimezone,
     updateTheme,
     updateLocalUserData: (updater: (data: UserDataEntry) => UserDataEntry) => {
-      queryClient.setQueryData(["userData", "current"], (oldData: UserDataEntry | undefined) => {
-        if (!oldData) return oldData;
-        return updater(oldData);
-      });
+      queryClient.setQueryData(
+        ["userData", "current"],
+        (oldData: UserDataEntry | undefined) => {
+          if (!oldData) return oldData;
+          return updater(oldData);
+        }
+      );
     },
     currentTheme,
     // Add a new function to manually synchronize user data
@@ -919,10 +929,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         syncUserData(currentUserDataQuery.data);
       }
     },
-    isWaitingForData: currentUserDataQuery.isPending || currentUserDataQuery.isFetching || 
-                     timelineDataQuery.isPending || timelineDataQuery.isFetching || 
-                     notificationsData.isPending || notificationsData.isFetching || 
-                     messagesData.isPending || messagesData.isFetching,
+    isWaitingForData:
+      currentUserDataQuery.isPending ||
+      currentUserDataQuery.isFetching ||
+      timelineDataQuery.isPending ||
+      timelineDataQuery.isFetching ||
+      notificationsData.isPending ||
+      notificationsData.isFetching ||
+      messagesData.isPending ||
+      messagesData.isFetching,
   };
 
   return (

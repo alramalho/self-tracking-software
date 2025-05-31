@@ -85,7 +85,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     );
 
     return (
-      <div className="mt-4 p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
+      <div className="p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
         <h3 className="text-lg font-semibold mb-4 text-left">
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
@@ -132,6 +132,8 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
               {activities.map((a) => a.emoji)}
             </span>
         </div>
+        <div className="flex justify-center mb-4">{renderActivityViewer()}</div>
+        
         <BaseHeatmapRenderer
           activities={activities}
           startDate={startDate}
@@ -141,7 +143,6 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
           getIntensityForDate={getIntensityForDate}
         />
       </div>
-      <div className="flex justify-center">{renderActivityViewer()}</div>
     </div>
   );
 };

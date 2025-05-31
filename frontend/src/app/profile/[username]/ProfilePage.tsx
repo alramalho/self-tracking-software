@@ -37,9 +37,6 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { twMerge } from "tailwind-merge";
 import { PlanBadge } from "@/components/PlanBadge";
-import StreakDetailsPopover, {
-  calculatePlanAchievement,
-} from "@/components/profile/StreakDetailsPopover";
 import ProfileSettingsPopover, {
   ActiveView,
 } from "@/components/profile/ProfileSettingsPopover";
@@ -52,8 +49,6 @@ import PlanStreak from "@/components/PlanStreak";
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
 // Utility function to convert TimeRange to number of days
-import FireBadge from "@/components/FireBadge";
-import TrophyBadge from "@/components/TrophyBadge";
 export const getTimeRangeDays = (timeRange: TimeRange): number => {
   switch (timeRange) {
     case "60 Days":
@@ -102,15 +97,12 @@ const ProfilePage: React.FC = () => {
   const [_, copyToClipboard] = useClipboard();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
   const profilePaidPlanType = profileData?.user?.plan_type;
-  const { userPaidPlanType } = usePaidPlan();
-  const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const redirectTo = searchParams.get("redirectTo");
   const [showStreakDetails, setShowStreakDetails] = useState(
     redirectTo === "streak-details"
   );
-
   const achivements = useMemo(() => {
     return profileData?.plans.map((plan) => {
       const planData = calculatePlanAchievement(
