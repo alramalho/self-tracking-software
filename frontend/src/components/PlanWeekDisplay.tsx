@@ -66,7 +66,7 @@ export const PlanWeekDisplay = ({
   const totalPlannedActivities =
     plan.outline_type === "times_per_week"
       ? (week?.plannedActivities as number)
-      : (week?.plannedActivities as PlanSession[]).length;
+      : (week?.plannedActivities as PlanSession[])?.length || 0;
 
   const uniqueDaysWithActivities = new Set(
     week?.completedActivities.map((entry) =>
