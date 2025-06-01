@@ -10,7 +10,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePostHog } from "posthog-js/react";
 import { Remark } from "react-remark";
-import { QuestionChecks } from "./QuestionChecks";
+import { QuestionChecks, QuestionsChecks } from "./QuestionChecks";
 
 const waveVariants = {
   initial: { rotate: 0 },
@@ -24,13 +24,6 @@ const waveVariants = {
     },
   },
 };
-
-interface QuestionCheckItem {
-  title: string;
-  description: string;
-}
-
-type QuestionsChecks = Record<string, QuestionCheckItem>;
 
 // Base interface that all extraction response types should extend
 export interface BaseExtractionResponse {

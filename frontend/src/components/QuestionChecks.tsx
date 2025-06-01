@@ -1,13 +1,15 @@
 import React, { forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface QuestionCheckItem {
+export interface QuestionCheckItem {
   title: string;
   description?: string;
 }
 
+export type QuestionsChecks = Record<string, QuestionCheckItem>;
+
 interface QuestionChecksProps {
-  questionsChecks: Record<string, QuestionCheckItem>;
+  questionsChecks: QuestionsChecks;
   checkedItems: Record<string, boolean>;
   questionPrefix: string;
   onItemClick: () => void;
