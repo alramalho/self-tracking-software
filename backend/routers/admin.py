@@ -448,7 +448,7 @@ class GlobalErrorLog(BaseModel):
 
 
 @router.post("/admin/public/log-error", tags=["public"])
-@limiter.limit("3/minute")
+@limiter.limit("20/minute")
 async def log_error(error: GlobalErrorLog, request: Request):
     """Protected public endpoint to log client-side errors"""
 
