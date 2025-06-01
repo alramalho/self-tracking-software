@@ -14,6 +14,7 @@ import {
 } from "@/contexts/UserPlanContext";
 import { EntryCard } from "./EntryCard";
 import { useMutation } from "@tanstack/react-query";
+import { Description } from "@radix-ui/react-alert-dialog";
 
 // Interface for plan extraction response
 interface PastWeekLoggingResponse extends BaseExtractionResponse {
@@ -38,13 +39,22 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
     }
   }, [activities, onNext]);
 
-  const initialAIMessage ="What did you do recently?"
-  
+  const initialAIMessage = "What did you do recently?";
+
   // Track which plan steps we've identified in the text
   const questionChecks = {
-    "Which of them did you complete recently": "Does the user mentions which activities did they do recently?",
-    "In which days did you do them": "For every mentioned activity, does the user mention the date or day of the week that the activity was done? (If there are no activities then consider this to be irrelvant, and just return true to validate)",
-    "Their quantity (eg. read 100 pages of a book on monday, ran 10 km on tuesday, etc)": "For every mentioned activity, does the user mention the quantity (pages / km / etc) of the activity they did? (If there are no activities then consider this to be irrelvant, and just return true to validate)", 
+    "Does the user mentions which activities did they do recently?": {
+      title: "Which activities did you do?",
+      description: "Reading, running, etc.",
+    },
+    "For every mentioned activity, does the user mention the date or day of the week that the activity was done? (If there are no activities then consider this to be irrelvant, and just return true to validate)": {
+      title: "When did you do them?",
+      description: "Monday, tuesday, etc (can also be an estimation)",
+    },
+    "For every mentioned activity, does the user mention the quantity (pages / km / etc) of the activity they did? (If there are no activities then consider this to be irrelvant, and just return true to validate)": {
+      title: "Their 'quantity'",
+      description: "10 pages, 3 km, 90 minutes, etc",
+    },
   };
 
   // Submit text to AI for plan extraction
@@ -73,6 +83,7 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
       formData.append("activity_id", entry.activity_id);
       formData.append("iso_date_string", entry.date);
       formData.append("quantity", entry.quantity.toString());
+      formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
 
       const response = await api.post("/log-activity", formData);
       return response.data;
@@ -158,13 +169,18 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
   function renderIntermediateComponents() {
     return (
       <div className="flex flex-col gap-2 w-full">
-        <h2 className="text-md font-semibold text-left">
+        <h2 className="text-sm font-normal text-left text-gray-500">
           Your existing activities
         </h2>
 
         <div className="flex flex-row flex-wrap gap-2">
           {activities.map((a) => (
-            <EntryCard key={a.id} emoji={a.emoji || ""} title={a.title} description={a.measure} />
+            <EntryCard
+              key={a.id}
+              emoji={a.emoji || ""}
+              title={a.title}
+              description={a.measure}
+            />
           ))}
         </div>
       </div>
@@ -174,9 +190,9 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
   return (
     <DynamicUISuggester<PastWeekLoggingResponse>
       id="past-week-logging"
-      title="Let's create you a fancy dashboard by logging activities"
+      title="Let's log you some activities!"
       initialMessage={initialAIMessage}
-      placeholder="It is highly recommended to use voice messages for this step"
+      placeholder="For example: this week I ran 4km on monday and read 20 pages of my book yesterday."
       questionPrefix="In order for me to properly log them for you, I need to know:"
       creationMessage="Do you want me to create these activities and entries for you? (You can edit them later)"
       questionsChecks={questionChecks}

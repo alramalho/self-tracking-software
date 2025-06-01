@@ -3,7 +3,6 @@ import AppleLikePopover from "./AppleLikePopover";
 import { TextAreaWithVoice } from "./ui/TextAreaWithVoice";
 import { useMutation } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
-import { Checkbox } from "./ui/checkbox";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +10,8 @@ import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePostHog } from "posthog-js/react";
 import { Remark } from "react-remark";
+import { QuestionChecks } from "./QuestionChecks";
+
 const waveVariants = {
   initial: { rotate: 0 },
   wave: {
@@ -24,7 +25,12 @@ const waveVariants = {
   },
 };
 
-type QuestionsChecks = Record<string, string>;
+interface QuestionCheckItem {
+  title: string;
+  description: string;
+}
+
+type QuestionsChecks = Record<string, QuestionCheckItem>;
 
 // Base interface that all extraction response types should extend
 export interface BaseExtractionResponse {
@@ -56,7 +62,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
 export function DynamicUISuggester<T extends BaseExtractionResponse>({
   id,
   initialMessage,
-  questionPrefix = "Be sure to mention:",
+  questionPrefix = "Please mention:",
   questionsChecks,
   submitButtonText = "Send",
   onSubmit,
@@ -95,8 +101,12 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>(
     Object.fromEntries(
-      Object.keys(questionsChecks ?? {}).map((key) => [key, false])
+      Object.keys(questionsChecks ?? {}).map((q) => [q, false])
     )
+  );
+
+  const allQuestionsChecked = Object.values(checkedItems).every(
+    (check) => check
   );
 
   // Add refs for scrolling
@@ -296,7 +306,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             </>
           )}
 
-          <p className="text-center text-2xl font-semibold mt-0">
+          <p className="text-center text-2xl font-semibold mt-2">
             {initialMessage}
           </p>
         </div>
@@ -317,24 +327,18 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         )}
 
         {questionsChecks && (
-          <div ref={checkboxesRef} className="space-y-3 mt-12 px-4">
-            <p className="text-sm text-gray-500">{questionPrefix}</p>
-            {Object.keys(questionsChecks ?? {}).map((key) => (
-              <div
-                key={key}
-                className="flex items-center space-x-2"
-                onClick={() => {
-                  setMessage(
-                    "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below"
-                  );
-                  setShowMessage(true);
-                }}
-              >
-                <Checkbox checked={checkedItems[key] || false} disabled />
-                <label className="text-sm text-gray-700">{key}</label>
-              </div>
-            ))}
-          </div>
+          <QuestionChecks
+            ref={checkboxesRef}
+            questionsChecks={questionsChecks}
+            checkedItems={checkedItems}
+            questionPrefix={questionPrefix}
+            onItemClick={() => {
+              setMessage(
+                "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below"
+              );
+              setShowMessage(true);
+            }}
+          />
         )}
 
         <div className="w-full px-4">
@@ -359,12 +363,13 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
         <div className="px-4">
           <Button
-            className="w-full"
+            variant={allQuestionsChecked ? "outline" : "default"}
+            className={`w-full ${allQuestionsChecked ? "bg-white" : ""}`}
             onClick={() => submitMutation.mutateAsync(text)}
-            disabled={(!canSubmitEmpty && !text) || isRecording || isLoading}
+            disabled={(!canSubmitEmpty && !text) || isRecording || isLoading || isSubmitting}
             loading={isLoading}
           >
-            {submitButtonText ?? "Send"}
+            {submitButtonText ?? "Send"} {allQuestionsChecked ? "again" : ""}
           </Button>
         </div>
 
@@ -398,7 +403,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               {onReject && (
                 <Button
                   variant="outline"
-                  className="w-full flex items-center gap-2 text-red-600"
+                  className="w-full flex items-center gap-2 text-red-600 bg-white border-red-600"
                   onClick={() => setRejectionFeedbackOpen(true)}
                   disabled={isSubmitting}
                 >
@@ -409,7 +414,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               {onAccept && (
                 <Button
                   variant="outline"
-                  className="w-full flex items-center gap-2 text-green-600"
+                  className="w-full flex items-center gap-2 text-green-600 bg-white border-green-600"
                   onClick={handleAccept}
                   disabled={isSubmitting}
                   loading={isSubmitting}
@@ -428,20 +433,22 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         onClose={() => setRejectionFeedbackOpen(false)}
       >
         <div className="space-y-4">
-          <h2 className="text-sm text-gray-500 m-4 mt-6 text-center">
-            Why not?
+          <h2 className="text-md text-gray-800 m-4 mt-6 text-center font-semibold">
+            Please tell us what we got wrong
           </h2>
+          <p className="text-sm text-gray-500 px-4 py-2 text-center">
+            The AI has a smart memory and can learn from your feedback. You can
+            ask the AI to correct the mistake.
+          </p>
 
           <div className="px-4 w-full">
             <TextAreaWithVoice
+              disabled={isSubmitting}
               value={rejectionFeedback}
               onChange={(value) => setRejectionFeedback(value)}
-              placeholder="Tell us what we got wrong..."
+              placeholder="The AI got the activity dates wrong"
             />
           </div>
-          <span className="text-sm text-gray-500 m-4 mt-6 text-center">
-            the message gets
-          </span>
 
           <div className="px-4">
             <Button

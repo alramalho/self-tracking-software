@@ -526,6 +526,71 @@ async def transcribe_audio(
 #         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+class QuestionAnalysisSchema(BaseModel):
+    question: str = Field(
+        ...,
+        description="The question that the user should answer.",
+    )
+    reasoning: str = Field(
+        ...,
+        description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
+    )
+    decision: bool = Field(
+        ...,
+        description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
+    )
+
+class QuestionChecksSchema(BaseModel):
+    analysis: List[QuestionAnalysisSchema] = Field(
+        description="The analysis of each question and user message.",
+    )
+
+class MessageGenerationSchema(BaseModel):
+    message: str = Field(
+        ...,
+        description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
+    )
+
+async def analyse_question_checks(question_checks: List[str], conversation_history: str) -> Tuple[bool, Dict[str, bool], str]:
+    question_checks_keys = list(question_checks.keys())
+
+    question_checks_response = await ask_schema_async(
+            text=f"Analyse the conversation history and determine whether it contains information to answer all the questions: {list(question_checks.keys())}. \n\nConversation history: {conversation_history}",
+            system="",
+            pymodel=QuestionChecksSchema,
+        )
+    
+    question_results = {
+        question_checks_keys[i]: question_checks_response.analysis[i].decision
+        for i in range(len(question_checks_keys))
+    }
+    question_results['reasoning'] = {
+        question_checks_keys[i]: question_checks_response.analysis[i].reasoning
+        for i in range(len(question_checks_keys))
+    }
+    unanswered_questions = [
+        q for q, answered in question_results.items() if not answered
+    ]
+
+    all_questions_answered = all(question_results.values())
+    
+    message_response = await ask_schema_async(
+        text=f"""Based on the conversation history: {conversation_history}
+                And the question check results where:
+                - Answered questions: {[q for q, answered in question_results.items() if answered]}
+                - Unanswered questions: {unanswered_questions}
+                
+                Generate an appropriate short message to the user.
+                If there are unanswered questions, kindly ask for those specific pieces of information.
+                If all questions are answered, thank the user.""",
+        system="You are an AI that is helping the user to create a profil and plan for the tracking.so app.",
+        pymodel=MessageGenerationSchema,    
+    )
+
+    return all_questions_answered, question_results, message_response.message
+
+
 @router.post("/get-past-week-logging-extractions")
 async def get_past_week_logging_extractions(
     request: Request, user: User = Depends(is_clerk_user)
@@ -573,75 +638,36 @@ async def get_past_week_logging_extractions(
             manual_memory_management=True,
         )
 
-        class QuestionAnalysisSchema(BaseModel):
-            question: str = Field(
-                ...,
-                description="The question that the user should answer.",
-            )
-            reasoning: str = Field(
-                ...,
-                description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
-            )
-            decision: bool = Field(
-                ...,
-                description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
-            )
-
-        class QuestionChecksSchema(BaseModel):
-            analysis: List[QuestionAnalysisSchema] = Field(
-                description="The analysis of each question and user message.",
-            )
-
         conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
 
-        question_checks_task = ask_schema_async(
-            text=f"Analyse the interaction {conversation_history} and determine whether it contains information to answer all the questions: {list(question_checks.values())}",
-            system="You are a friendly AI assistant.",
-            pymodel=QuestionChecksSchema,
-        )
+        question_checks_task = analyse_question_checks(question_checks, conversation_history)
 
         # Wait for all tasks to complete
-        activities_result, questions_checks_result = await asyncio.gather(
-            activities_task, question_checks_task
+        activities_result, question_checks_response = await asyncio.gather(
+            activities_task, question_checks_task,
         )
 
-        question_checks_keys = list(question_checks.keys())
-        question_results = {
-            question_checks_keys[i]: questions_checks_result.analysis[i].decision
-            for i in range(len(question_checks_keys))
-        }
-        unanswered_questions = [
-            q for q, answered in question_results.items() if not answered
-        ]
+        _, question_results, message = question_checks_response
 
-        message = await ask_text_async(
-            text=f"""Based on the conversation history: {conversation_history}
-                    And the question check results where:
-                    - Answered questions: {[q for q, answered in question_results.items() if answered]}
-                    - Unanswered questions: {unanswered_questions}
-                    
-                    Generate an appropriate short message to the user.
-                    If there are unanswered questions, kindly ask for those specific pieces of information.
-                    If there are questions are answered, thank the user. 
-                    If it is a mix, acknowledge the given information and ask for the missing information.""",
-            system="You are a friendly AI assistant.",
+        memory.write(
+            Message.new(
+                text=message,
+                sender_name="Jarvis",
+                sender_id="0",
+                recipient_name=user.name,
+                recipient_id=user.id,
+            )
         )
 
         # Unpack the results
         _, extracted_activities_entries = activities_result
-        extracted_question_analysis = questions_checks_result
         activity_entries = [
             a.data["entry"] for a in extracted_activities_entries if "entry" in a.data
         ]
 
         result = {
             "message": message,
-            "question_checks": {
-                question_checks_keys[i]: extracted_question_analysis.analysis[
-                    i
-                ].decision
-                for i in range(len(question_checks_keys))
-            },
+            "question_checks": question_results,
         }
 
         if len(activity_entries) > 0:
@@ -697,7 +723,7 @@ async def get_daily_checkin_extractions(
             )
 
         schema_task = ask_schema_async(
-            text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
+            text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.keys())}",
             system="",
             pymodel=ResponseSchema,
             model=LLM_MODEL,
@@ -795,7 +821,6 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         body = await request.json()
         question_checks = body["question_checks"]
         message = body["message"]
-        question_checks_keys = list(question_checks.keys())
 
         class UserProfileSchema(BaseModel):
             reasoning: str = Field(
@@ -811,30 +836,6 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 description="The user's age as a single integer, if mentioned.",
             )
 
-        class QuestionAnalysisSchema(BaseModel):
-            question: str = Field(
-                ...,
-                description="The question that the user should answer.",
-            )
-            reasoning: str = Field(
-                ...,
-                description="The step by step reasoning regarding the question and whether the conversation contains information to answer the question.",
-            )
-            decision: bool = Field(
-                ...,
-                description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
-            )
-
-        class QuestionChecksSchema(BaseModel):
-            analysis: List[QuestionAnalysisSchema] = Field(
-                description="The analysis of each question and user message.",
-            )
-
-        class MessageGenerationSchema(BaseModel):
-            message: str = Field(
-                ...,
-                description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
-            )
 
         memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 
@@ -853,42 +854,18 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
 
         # Create parallel tasks for profile generation and question checks
         profile_task = ask_schema_async(
-            text=f"Please generate an user profile based on a message that he sent to answer the following questions: {list(question_checks.values())}. Message: {message}",
+            text=f"Please generate an user profile based on a message that he sent to answer the following questions: {list(question_checks.keys())}. Message: {message}",
             pymodel=UserProfileSchema,
         )
 
-        question_checks_task = ask_schema_async(
-            text=f"Analyse the conversation history and determine whether it contains information to answer all the questions: {list(question_checks.values())}. \n\nConversation history: {conversation_history}",
-            system="You are a friendly AI assistant.",
-            pymodel=QuestionChecksSchema,
-        )
+        question_checks_task = analyse_question_checks(question_checks, conversation_history)
 
         # Wait for both parallel tasks to complete
         profile_response, question_checks_response = await asyncio.gather(
             profile_task, question_checks_task
         )
 
-        # Generate appropriate message based on question check results
-        question_results = {
-            question_checks_keys[i]: question_checks_response.analysis[i].decision
-            for i in range(len(question_checks_keys))
-        }
-        unanswered_questions = [
-            q for q, answered in question_results.items() if not answered
-        ]
-
-        message_response = await ask_schema_async(
-            text=f"""Based on the conversation history: {conversation_history}
-                    And the question check results where:
-                    - Answered questions: {[q for q, answered in question_results.items() if answered]}
-                    - Unanswered questions: {unanswered_questions}
-                    
-                    Generate an appropriate short message to the user.
-                    If there are unanswered questions, kindly ask for those specific pieces of information.
-                    If all questions are answered, thank the user.""",
-            system="You are a friendly AI assistant.",
-            pymodel=MessageGenerationSchema,
-        )
+        _, question_results, message = question_checks_response
 
         # Update user profile
         updates = {"profile": profile_response.user_profile}
@@ -903,7 +880,7 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         # Write AI response to memory
         memory.write(
             Message.new(
-                text=message_response.message,
+                text=message,
                 sender_name="Jarvis",
                 sender_id="0",
                 recipient_name=user.name,
@@ -912,7 +889,7 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
         )
 
         return {
-            "message": message_response.message,
+            "message": message,
             "user": updated_user,
             "question_checks": question_results,
         }
@@ -996,6 +973,20 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
 
         # Initialize memory and assistant
         memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
+        
+        memory.write(
+            Message.new(
+                text=message,
+                sender_name=user.name,
+                sender_id=user.id,
+                recipient_name="Jarvis",
+                recipient_id="0",
+                emotions=[],
+            )
+        )
+
+        conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+        print(conversation_history)
         plan_creator = PlanCreationAssistantSimple(user=user, memory=memory)
 
         # Log the extraction request
@@ -1003,56 +994,33 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
             f"Extracting plan for user {user.id} from message: {message[:50]}..."
         )
 
-        class ResponseSchema(BaseModel):
-            reasoning: str = Field(
-                ...,
-                description="Your question by question extensive step by step reasoning.",
-            )
-            decisions: List[bool] = Field(
-                ...,
-                description="A list of boolean values, indicating whether the user message contains information to the question (should have same order as the questions)",
-            )
-            message: str = Field(
-                ...,
-                description="A short and prose message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
-            )
-
-        response = await ask_schema_async(
-            text=f"Does the following message '{message}' contain information to all the questions: {list(question_checks.values())}",
-            system="Youa are a friendly AI assitant.",
-            pymodel=ResponseSchema,
-        )
-
-        question_checks_keys = list(question_checks.keys())
-
-        all_questions_answered = all(response.decisions)
+        result = {}
+        
+        all_questions_answered, question_results, message_response = await analyse_question_checks(question_checks, conversation_history)
+        result["question_checks"] = question_results
 
         if not all_questions_answered:
-            return {
-                "message": response.message,
-                "question_checks": {
-                    question_checks_keys[i]: response.decisions[i]
-                    for i in range(len(question_checks))
-                },
-            }
+            result["message"] = message_response
+        else:
+            ai_response, suggestions = await plan_creator.get_response(
+                user_input=message, message_id=str(ObjectId()), manual_memory_management=True
+            )
 
-        # Process the message and get suggestions
-        response_text, suggestions = await plan_creator.get_response(
-            user_input=message, message_id=str(ObjectId())
-        )
-
-        # Return the extracted plan data
-        result = {
-            "question_checks": {
-                question_checks_keys[i]: response.decisions[i]
-                for i in range(len(question_checks))
-            },
-            "message": response_text,
-        }
-
-        if len(suggestions) > 0:
-            result["plan"] = suggestions[0].data["plan"]
-            result["activities"] = suggestions[0].data["activities"]
+            memory.write(
+                Message.new(
+                    text=ai_response,
+                    sender_name="Jarvis",
+                    sender_id="0",
+                    recipient_name=user.name,
+                    recipient_id=user.id,
+                    emotions=[],
+                )
+            )
+                
+            result["message"] = ai_response
+            if len(suggestions) > 0:
+                result["plan"] = suggestions[0].data["plan"]
+                result["activities"] = suggestions[0].data["activities"]
 
         return result
 

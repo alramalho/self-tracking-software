@@ -12,7 +12,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.providers.deepseek import DeepSeekProvider
 from pydantic_ai.providers.google_vertex import GoogleVertexProvider
 from pydantic_ai.providers.mistral import MistralProvider
-from constants import LLM_MODEL, DEEPSEEK_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, FIREWORKS_API_KEY, MISTRAL_API_KEY
+from constants import LLM_MODEL, DEEPSEEK_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, FIREWORKS_API_KEY, MISTRAL_API_KEY, OPENROUTER_API_KEY
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -23,6 +23,8 @@ class TextResponse(BaseModel):
 def get_model(model: str = LLM_MODEL):
     if 'lmstudio' in model:
         return OpenAIModel(model_name=model.replace('lmstudio:', ''), provider=OpenAIProvider(base_url="http://172.0.0.1:1234/v1", api_key="lmstudio"))
+    elif 'openrouter' in model:
+        return OpenAIModel(model_name=model.replace('openrouter:', ''), provider=OpenAIProvider(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY))
     elif 'fireworks' in model:
         return OpenAIModel(model_name=model.replace('fireworks:', ''), provider=OpenAIProvider(base_url="https://api.fireworks.ai/inference/v1", api_key=FIREWORKS_API_KEY))
     elif 'gemini' in model:

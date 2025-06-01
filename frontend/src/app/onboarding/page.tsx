@@ -355,33 +355,28 @@ function AccountabilityPartnerStep({
       <ProgressDots current={5} max={5} />
       <ScanFace size={100} className="mx-auto mb-4 text-blue-500" />
       <h2 className="text-2xl font-bold mb-4">
-        Are you looking for an accountability partner?
+        Lastly, are you interested in an accountability partner?
       </h2>
       <p className="text-gray-600 mb-2">
-        Having an accountability partner increases your chances of success by up
-        to 95%!
-      </p>
-      <p className="text-gray-500 mb-6 text-sm mt-0">
-        We will ask your permission for notifications to alert you when we have
-        found a match.
+        Research shows this increases your chances of success by up to 95%!
       </p>
       <div className="flex gap-4 justify-center">
+        <Button
+          variant="outline"
+          className="w-full bg-white"
+          onClick={() => {
+            handleFinishClick(false);
+          }}
+        >
+          No
+        </Button>
         <Button
           className="w-full"
           onClick={() => {
             handleFinishClick(true);
           }}
         >
-          Yes, find me a partner!
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            handleFinishClick(false);
-          }}
-        >
-          No, not right now
+          Yes
         </Button>
       </div>
     </div>
@@ -398,42 +393,59 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (hasLoadedUserData && userData?.plans && userData?.plans.length > 0) {
-      if (userData?.activities && userData?.activities.length > 0) {
+    if (onboardingCompleted) {
+      router.push("/");
+      return;
+    }
+
+    if (hasLoadedUserData) {
+      if (!userData?.user?.profile) {
+        setStep(1);
+      } else if (!userData?.plans?.length) {
+        setStep(3);
+      } else if (!userData?.activities?.length) {
+        setStep(4);
+      } else if (!userData?.user?.looking_for_ap) {
         setStep(5);
       } else {
-        setStep(4);
+        onFinish(true);
       }
     }
   }, [hasLoadedUserData]);
 
+  function nextStep() {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+    setStep(step + 1);
+  }
+
+  function onFinish(isLookingForAP: boolean) {
+    setOnboardingCompleted(true);
+    hotToast.success(
+      "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner.",
+      { duration: 8000 }
+    );
+    if (isLookingForAP) {
+      router.push("/looking-for-ap");
+    } else {
+      router.push("/");
+    }
+  }
+
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <WelcomeStep onNext={() => setStep(2)} />;
+        return <WelcomeStep onNext={nextStep} />;
       case 2:
-        return <ProfileSetupStep onNext={() => setStep(3)} />;
+        return <ProfileSetupStep onNext={nextStep} />;
       case 3:
-        return <PlanCreationStep onNext={() => setStep(4)} />;
+        return <PlanCreationStep onNext={nextStep} />;
       case 4:
-        return <PastWeekLoggingStep onNext={() => setStep(5)} />;
+        return <PastWeekLoggingStep onNext={nextStep} />;
       default:
-        return (
-          <AccountabilityPartnerStep
-            onNext={(isLookingForAP) => {
-              setOnboardingCompleted(true);
-              hotToast.success(
-                "You're all set! You can now start using the app. Any question just use the feedback button in the bottom right corner.",
-                { duration: 8000 }
-              );
-              if (isLookingForAP) {
-                router.push("/looking-for-ap");
-              } else {
-                router.push("/");
-              }
-            }}
-          />
-        );
+        return <AccountabilityPartnerStep onNext={onFinish} />;
     }
   };
 

@@ -97,21 +97,75 @@ test.describe.serial("Onboarding Flow", () => {
     await page.waitForTimeout(2000);
   }
 
+  async function waitAndClickButton(page, buttonName, timeout = 60000) {
+    const button = page.getByRole("button", { name: buttonName });
+
+    // Wait for button to be enabled with timeout
+    await expect(button).toBeEnabled({ timeout });
+
+    // Click the button
+    await button.click();
+  }
+
+  async function waitAndFillTextArea(page, text, timeout = 90000) {
+    const textArea = page.getByRole("textbox");
+    await expect(textArea).toBeEnabled({ timeout });
+    await textArea.fill(text);
+  }
+
   test("can create books plan through onboarding", async () => {
+    // ⚠️ REMEMBER TO MANUALLY CREATE THE USER BEFORE AND DELETE ITS USER.PROFILE BEFORE STARTING
+    // await deleteProfileIfExists();
     await deleteActivityIfExists("Reading");
     await deletePlanIfExists("Read 12 Books");
 
     await goToPage("/onboarding");
 
-    await page.getByText("Read 12 Books", { exact: true }).click();
+    await page.getByText("Let's go!", { exact: true }).click();
 
-    await page.getByRole("button", { name: "Create Plan" }).click();
+    // profile setup step
+    await waitAndFillTextArea(
+      page,
+      "I am a 27 Male software engineer who loves reading books."
+    );
 
-    await page.getByRole("button", { name: "Continue to Dashboard" }).click();
+    await waitAndClickButton(page, "Send");
+    await waitAndClickButton(page, "Next");
+
+    // plan creator step
+    await waitAndFillTextArea(
+      page,
+      "I want to 'Read 12 books' this year to improve my knowledge and learn new things."
+    );
+    await waitAndClickButton(page, "Send");
+
+    await page.getByRole("textbox").first().fill("3 times per week.");
+    await waitAndClickButton(page, "Send");
+    await waitAndClickButton(page, "Accept");
+
+    await expect(
+      page.getByText("Let's log you some activities!")
+    ).toBeVisible();
+
+    // activity logging step
+    await waitAndFillTextArea(
+      page,
+      "This week I read 100 pages. 20 on monday and the rest between tuesday and friday."
+    );
+    await waitAndClickButton(page, "Send");
+    await waitAndClickButton(page, "Accept");
+
+    // DID NOT GO PAST THIS STEP
+    await expect(
+      page.getByText("Lastly, are you interested in an accountability partner?")
+    ).toBeVisible();
+
+    // accountability partner step
+    await waitAndClickButton(page, "Yes");
 
     await verifyPlanCreation("Read 12 Books");
 
-    await verifyActivityCreation("Reading");
+    await verifyActivityCreation("reading");
 
     await verifyMilestones();
   });

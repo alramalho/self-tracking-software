@@ -23,11 +23,18 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
   const currentUserDataQuery = useCurrentUserDataQuery();
   // Track which plan steps we've identified in the text
   const questionChecks = {
-    "Your goal": "Does the message mention a specific goal or objective?",
-    "The activities you want to inlcude (their name, and their unit of measurement, for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers')":
-      "Does the message mention specific activities to be done, and their unit of measurement? (for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers'). You may suggest the unit of measurement to the user, given the relevant context you have available.",
-    "Either do you want the plan to be on a times per week basis or if you want me to generate a specific schedule for you":
-      "Does the message indicate if the plan is on a specific schedule or a times per week basis?",
+    "Does the message mention a goal that is concrete and measurable?": {
+      title: "Your plan goal",
+      description: "Make sure it's concrete and measurable. E.g. 'Read 12 books a year' instead of 'Read more books'",
+    },
+    "Does the message mention specific activities to be done, and their unit of measurement? (for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers'). You may suggest the unit of measurement to the user, given the relevant context you have available.": {
+      title: "Your activities",
+      description: "Mention their name and how they're measured, like pages, sessions, minutes, etc.",
+    },
+    "Does the message indicate if the plan is on a specific schedule or a times per week basis?": {
+      title: "The Plan type",
+      description: "Either 'times per week' basis or a custom build specific schedule",
+    },
   };
 
   // Submit text to AI for plan extraction
@@ -79,6 +86,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
         ai_message: data.message,
       });
       toast.success("Feedback submitted. Our team was alerted. Let's try again later");
+      onNext();
     } catch (error) {
       console.error("Error rejecting plan:", error);
       toast.error("Failed to submit feedback. Please try again.");
@@ -188,7 +196,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
       shouldRenderChildren={shouldRenderChildren}
       renderChildren={renderExtractedData}
       creationMessage="Do you want me to create this plan for you? (You can edit it later)"
-      placeholder="This is much easier to do via voice. Click the microphone icon to record a voice message"
+      placeholder="I want to read 12 books this year to improve my knowledge and learn new things. I'm thinking of reading 3 times per week."
     />
   );
 }

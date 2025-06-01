@@ -169,7 +169,7 @@ export const PlanWeekDisplay = ({
       {/* coming up section, wherewe either display  */}
       {plan.outline_type == "times_per_week" && !isWeekCompleted && (
         <div className="flex flex-col items-start justify-center gap-0 mt-4">
-          <span className="text-sm text-gray-500">Coming up, any of</span>
+          <span className="text-sm text-gray-500">Coming up, any of:</span>
           <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 mt-2">
             {week.weekActivities.map((activity) => (
               <MiniActivityCard key={activity.id} activity={activity} />

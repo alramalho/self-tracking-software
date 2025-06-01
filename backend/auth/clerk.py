@@ -139,7 +139,7 @@ async def is_clerk_user(token: str = Depends(get_token_from_request)) -> User:
     if validated:
         user = UsersGateway().get_user_by_safely("clerk_id", clerk_id)
         if not user:
-            raise HTTPException(status_code=401, detail=f"User not found with clerk id {clerk_id}")
+            raise HTTPException(status_code=404, detail=f"User not found with clerk id {clerk_id}")
         return user
 
 async def is_clerk_user_ws(websocket: WebSocket) -> User:
@@ -148,5 +148,5 @@ async def is_clerk_user_ws(websocket: WebSocket) -> User:
     if validated:
         user = UsersGateway().get_user_by_safely("clerk_id", clerk_id)
         if not user:
-            raise HTTPException(status_code=401, detail=f"User not found with clerk id {clerk_id}")
+            raise HTTPException(status_code=404, detail=f"User not found with clerk id {clerk_id}")
         return user

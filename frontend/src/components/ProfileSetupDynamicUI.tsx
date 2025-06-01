@@ -12,10 +12,14 @@ export function ProfileSetupDynamicUI({
   submitButtonText?: string;
 }) {
   const questionsChecks = {
-    "Who you are (your age, occupation, etc.)":
-      "What does the user do or likes to do.",
-    "What do you want to achieve (your vision)":
-      "Does the user share any thoughts about their aspirations?",
+    "What does the user do or likes to do." : {
+      title: "Who you are",
+      description: "Like your age, occupation, or anything that you find relevant for the coach to know.",
+    },
+    // "Does the user share any thoughts about their goals, aspirations or interests?": {
+    //   title: "What do you want to achieve",
+    //   description: "Your vision or goals with the app.",
+    // },
   };
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
   const api = useApiWithAuth();
