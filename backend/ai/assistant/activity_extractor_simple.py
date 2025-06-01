@@ -21,7 +21,7 @@ class ExtractedActivityEntry(BaseModel):
         ..., description="The date of when the activity was done. YYYY-MM-DD"
     )
     measure: str = Field(
-        ..., description="The measure of the activity (minutes, kilometers, pages, etc)"
+        ..., description="The measure of the activity (minutes, kilometers, pages, etc). If activity was already existent. This must match the activity's measure."
     )
     quantity: int = Field(
         ...,

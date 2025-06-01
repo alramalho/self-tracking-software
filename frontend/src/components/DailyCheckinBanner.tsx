@@ -84,18 +84,22 @@ export function DailyCheckinBanner({
     }
   }
 
+  const metricsAdjectivString = metrics
+    ?.map((m) => toAdjective(m.title))
+    .join(" / ");
+
+  const metricsString = metrics?.map((m) => m.title).join(" / ");
+
   const questionsChecks = {
-    "what activities did you do": "what activities has the user done",
+    "what activities has the user done": {
+      title: "What activities did you do",
+    },
     ...metrics?.reduce(
       (acc, m, i, arr) => ({
         ...acc,
-        [`How ${arr
-          .map((m) => toAdjective(m.title))
-          .join(
-            " / "
-          )} did you feel (out of 5), and why`]: `wether the user mentioned their ${arr
-          .map((m) => m.title)
-          .join(" / ")} metrics (out of 5)`,
+        [`wether the user mentioned their ${metricsString} metrics (out of 5)`]: {
+          title: `How ${metricsAdjectivString} did you feel (out of 5), and why`,
+        },
       }),
       {}
     ),

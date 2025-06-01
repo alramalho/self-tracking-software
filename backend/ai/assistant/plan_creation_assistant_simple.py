@@ -29,10 +29,15 @@ class ExtractedActivity(BaseModel):
         ...,
         description="The id of the activity, if known. If it is a new activity, the id will be created by the system, so do not include it.",
     )
+    reasoning: str = Field(
+        ...,
+        description="Your step by step reasoning on which activity details are most suitable.",
+    )
     title: str = Field(..., description="The title of the activity")
     emoji: str = Field(..., description="The emoji of the activity")
     measure: str = Field(..., description=(
-        "The unit of measurement to measure the activity. For example, for 'reading' the measure could be 'pages',"
+        "The unit of measurement to measure the activity. Note this should be as atomic as possible "
+        "(e.g. 'marathons' or 'books' wouldn't be valid, but 'pages' or 'minutes' would be valid). For example, for 'reading' the measure could be 'pages',"
         "for 'running' the measure could be 'kilometers' or 'gym' could 'minutes' or 'sessions'."
         "note that for example 'sessions per week' would not be valid, as it is not a unit of single activity measurement,"
         "but rather a frequency of the activity."
@@ -72,7 +77,7 @@ plan_creation_simple_flowchart = {
         text=(
             "Extract plan details from the user's message, including goal, activities, plan type, "
             "sessions, milestones, and finishing date. For activities not already in the user's list, "
-            "generate appropriate IDs and measurement units. Update plan_steps to indicate which elements "
+            "generate appropriate IDs and measurement units (careful, these should be as atomic as possible!). Update plan_steps to indicate which elements "
             "were found in the message."
         ),
         output_schema=ExtractedPlanDetails,
@@ -114,9 +119,9 @@ class PlanCreationAssistant(BaseAssistant):
         return f"""You are an AI assistant specialized in creating structured plans. Your role is to help users define their goals, 
 identify activities, and create structured plans with sessions, milestones, and timelines.
 
-When presented with a user message, extract plan details including:
+When presented with a conversation history, extract plan details including:
 1. The overall goal of the plan
-2. Activities the user wants to include (with appropriate emoji and measurement units)
+2. Activities the user wants to include (with appropriate emoji and measurement units).
 3. Plan type (specific dates or times per week)
 4. Sessions (only if the plan is on a specific schedule)
 5. Milestones (if mentioned)
@@ -124,6 +129,8 @@ When presented with a user message, extract plan details including:
 
 Be precise and thoughtful in your interpretations. If information is missing, make reasonable inferences
 based on the user's goal. Format your response according to the required schema.
+
+Analyse the conversation history as a whole, and not just the last message.
 
 Today is {datetime.now().strftime('%b %d, %Y')}.
 """

@@ -10,8 +10,8 @@
     "dotenv": "^16.4.5"
   },
   "scripts": {
-    "dev": "playwright test --ui",
     "test": "playwright test --headed",
+    "test:dev": "playwright test --ui",
     "test:ci": "playwright test --reporter=dot"
   }
 }

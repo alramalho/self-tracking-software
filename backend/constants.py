@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -12,7 +13,8 @@ FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 REPLICATE_TTS_MODEL = "replicate:jaaari/kokoro-82m:f559560eb822dc509045f3921a1921234918b91739db4bf3daab2169b71c7a13"
-LLM_MODEL="gpt-4o-mini"
+LLM_MODEL="openrouter:gpt-4.1-mini"
+# LLM_MODEL="gpt-4.1-mini-2025-04-14"
 # LLM_MODEL="fireworks:accounts/fireworks/models/deepseek-v3"
 # LLM_MODEL="lmstudio:deepseek-r1-distill-qwen-32b"
 SHARED_ENCRYPTION_KEY=os.getenv("SHARED_ENCRYPTION_KEY")
