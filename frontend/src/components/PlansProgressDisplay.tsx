@@ -8,18 +8,13 @@ import {
 } from "@/contexts/PlanProgressContext/lib";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import FireBadge from "./FireBadge";
-import TrophyBadge from "./FireBadge";
 import { Plan, PlanSession } from "@/contexts/UserPlanContext";
-import { useUserPlan } from "@/contexts/UserPlanContext";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import Confetti from "react-confetti-boom";
-import { Collapsible } from "./ui/collapsible";
-import { CollapsibleContent } from "@radix-ui/react-collapsible";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { CircleCheck, Flame } from "lucide-react";
 import { Medal } from "lucide-react";
-import MedalBadge from "./MedalBadge";
 
 interface PlansProgressDisplayProps {
   plans: Plan[];
