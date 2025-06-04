@@ -508,7 +508,7 @@ const ProfilePage: React.FC = () => {
                               variants.ringBright,
                               variants.verySoftGrandientBg
                             )
-                          : "bg-white"
+                          : "bg-white ring-gray-200"
                       }`}
                     >
                       <div className="flex flex-row items-center gap-2 mb-6">
