@@ -208,7 +208,7 @@ const UserCard: React.FC<UserCardProps> = ({
                     >
                       <button>
                         <p>
-                          Add an activity to rank higher
+                          Log an activity to rank higher
                           <br />
                           in the partner search!
                         </p>

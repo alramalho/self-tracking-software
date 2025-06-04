@@ -196,7 +196,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
       shouldRenderChildren={shouldRenderChildren}
       renderChildren={renderExtractedData}
       creationMessage="Do you want me to create this plan for you? (You can edit it later)"
-      placeholder="I want to read 12 books this year to improve my knowledge and learn new things. I'm thinking of reading 3 times per week."
+      placeholder="1. I want to read 12 books this year 2. reading measured in pages 3. 3 times per week"
     />
   );
 }
