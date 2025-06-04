@@ -71,15 +71,31 @@ const BottomNav = () => {
   return (
     <>
       <FloatingActionMenu />
-      <nav className={`box-border fixed bottom-0 left-0 right-0 bg-transparent backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-[50] pb-1 ${isDesktop ? "max-w-2xl rounded-t-xl mx-auto" : ""}`}>
-        <div className="flex justify-around items-center py-2 px-4 max-w-screen-xl mx-auto">
+      <nav className={cn(
+        "box-border bg-transparent backdrop-blur-xl z-[50]",
+        isDesktop 
+          ? "fixed left-0 top-0 bottom-0 w-64 py-6 border-l border-gray-200 border-2"
+          : "fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-1"
+      )}>
+        <div className={cn(
+          "max-w-screen-xl mx-auto",
+          isDesktop 
+            ? "flex flex-col justify-start items-stretch h-full px-4 space-y-2"
+            : "flex justify-around items-center py-2 px-4"
+        )}>
           <Link
             href="/"
             data-testid="nav-home"
             className={cn(
-              "flex flex-col justify-center items-center p-2 transition-all duration-200 relative",
+              "transition-all duration-200 relative",
+              isDesktop 
+                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/")
-                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                ? cn(
+                    activeThemeClass, 
+                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                  )
                 : "text-gray-500 hover:text-gray-700"
             )}
             onClick={() => {
@@ -88,18 +104,29 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingFeed ? (
-              <Loader2 size={24} className="animate-spin" />
-            ) : (
-              <Home size={24} strokeWidth={2.5} />
-            )}
+            <div className={cn(isDesktop ? "mr-3" : "")}>
+              {isLoadingFeed ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <Home size={24} strokeWidth={2.5} />
+              )}
+            </div>
             {notificationCount > 0 && (
-              <div className="absolute top-0 right-0 bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold">
+              <div className={cn(
+                "absolute bg-red-500 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] font-bold",
+                isDesktop ? "top-2 left-8" : "top-0 right-0"
+              )}>
                 {notificationCount > 99 ? "99+" : notificationCount}
               </div>
             )}
-            <span className="text-[10px] mt-1 font-medium">
-              {isActiveRoute("/") ? "Home" : ""}
+            <span className={cn(
+              "font-medium",
+              isDesktop 
+                ? "text-sm" 
+                : "text-[10px] mt-1",
+              !isDesktop && !isActiveRoute("/") && "hidden"
+            )}>
+              Home
             </span>
           </Link>
 
@@ -107,9 +134,15 @@ const BottomNav = () => {
             href="/plans"
             data-testid="nav-plans"
             className={cn(
-              "flex flex-col justify-center items-center p-2 transition-all duration-200",
+              "transition-all duration-200",
+              isDesktop 
+                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/plans")
-                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                ? cn(
+                    activeThemeClass,
+                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                  )
                 : "text-gray-500 hover:text-gray-700"
             )}
             onClick={() => {
@@ -118,13 +151,21 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingPlans ? (
-              <Loader2 size={24} className="animate-spin" />
-            ) : (
-              <ChartArea size={24} strokeWidth={2.5} />
-            )}
-            <span className="text-[10px] mt-1 font-medium">
-              {isActiveRoute("/plans") ? "Plans" : ""}
+            <div className={cn(isDesktop ? "mr-3" : "")}>
+              {isLoadingPlans ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <ChartArea size={24} strokeWidth={2.5} />
+              )}
+            </div>
+            <span className={cn(
+              "font-medium",
+              isDesktop 
+                ? "text-sm" 
+                : "text-[10px] mt-1",
+              !isDesktop && !isActiveRoute("/plans") && "hidden"
+            )}>
+              Plans
             </span>
           </Link>
 
@@ -132,9 +173,15 @@ const BottomNav = () => {
             href="/add"
             data-testid="nav-add"
             className={cn(
-              "flex flex-col justify-center items-center p-2 transition-all duration-200 relative",
+              "transition-all duration-200 relative",
+              isDesktop 
+                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/add")
-                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                ? cn(
+                    activeThemeClass,
+                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                  )
                 : "text-gray-500 hover:text-gray-700"
             )}
             onClick={() => {
@@ -143,19 +190,29 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingLog ? (
-              <Loader2 size={30} className="animate-spin" />
-            ) : (
-              <div className={`${themeColors.primary} rounded-full p-2`}>
-                <PlusSquare
-                  size={24}
-                  strokeWidth={2.5}
-                  className="text-white"
-                />
-              </div>
-            )}
-            <span className="text-[10px] mt-1 font-medium">
-              {isActiveRoute("/add") ? "Add" : ""}
+            <div className={cn(isDesktop ? "mr-3" : "")}>
+              {isLoadingLog ? (
+                <Loader2 size={30} className="animate-spin" />
+              ) : isDesktop ? (
+                <PlusSquare size={24} strokeWidth={2.5} className={cn(isDesktop ? "" : activeThemeClass)} />
+              ) : (
+                <div className={`${!isDesktop ? themeColors.primary : "bg-gray-100/80"} rounded-full p-2`}>
+                  <PlusSquare
+                    size={24}
+                    strokeWidth={2.5}
+                    className="text-white"
+                  />
+                </div>
+              )}
+            </div>
+            <span className={cn(
+              "font-medium",
+              isDesktop 
+                ? "text-sm" 
+                : "text-[10px] mt-1",
+              !isDesktop && !isActiveRoute("/add") && "hidden"
+            )}>
+              Add
             </span>
           </Link>
 
@@ -163,9 +220,15 @@ const BottomNav = () => {
             href="/insights/dashboard"
             data-testid="nav-insights"
             className={cn(
-              "relative flex flex-col justify-center items-center p-2 transition-all duration-200",
+              "relative transition-all duration-200",
+              isDesktop 
+                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/insights")
-                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                ? cn(
+                    activeThemeClass,
+                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                  )
                 : "text-gray-500 hover:text-gray-700"
             )}
             onClick={() => {
@@ -174,33 +237,50 @@ const BottomNav = () => {
               }
             }}
           >
+            <div className={cn(isDesktop ? "mr-3" : "")}>
               {isLoadingInsights ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
                 <ScanFace size={24} strokeWidth={2.5} />
               )}
-              <span className="text-[10px] mt-1 font-medium">
-                {isActiveRoute("/insights") ? "AI Insights" : ""}
-              </span>
-              {hasCheckinNotification && (
-                <div className="absolute top-0 right-0 z-10">
-                  <Badge
-                    variant="destructive"
-                    className="h-5 w-5 flex items-center justify-center p-0 text-xs"
-                  >
-                    1
-                  </Badge>
-                </div>
-              )}
+            </div>
+            <span className={cn(
+              "font-medium",
+              isDesktop 
+                ? "text-sm" 
+                : "text-[10px] mt-1",
+              !isDesktop && !isActiveRoute("/insights") && "hidden"
+            )}>
+              AI Insights
+            </span>
+            {hasCheckinNotification && (
+              <div className={cn(
+                "absolute z-10",
+                isDesktop ? "top-2 left-8" : "top-0 right-0"
+              )}>
+                <Badge
+                  variant="destructive"
+                  className="h-5 w-5 flex items-center justify-center p-0 text-xs"
+                >
+                  1
+                </Badge>
+              </div>
+            )}
           </Link>
 
           <Link
             href={`/profile/${userUsername}`}
             data-testid="nav-profile"
             className={cn(
-              "relative flex flex-col justify-center items-center p-2 transition-all duration-200",
+              "relative transition-all duration-200",
+              isDesktop 
+                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/profile")
-                ? cn(activeThemeClass, "scale-110 -translate-y-0.5")
+                ? cn(
+                    activeThemeClass,
+                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                  )
                 : "text-gray-500 hover:text-gray-700"
             )}
             onClick={() => {
@@ -209,13 +289,21 @@ const BottomNav = () => {
               }
             }}
           >
-            {isLoadingProfile ? (
-              <Loader2 size={24} className="animate-spin" />
-            ) : (
-              <User size={24} strokeWidth={2.5} />
-            )}
-            <span className="text-[10px] mt-1 font-medium">
-              {isActiveRoute("/profile") ? "Profile" : ""}
+            <div className={cn(isDesktop ? "mr-3" : "")}>
+              {isLoadingProfile ? (
+                <Loader2 size={24} className="animate-spin" />
+              ) : (
+                <User size={24} strokeWidth={2.5} />
+              )}
+            </div>
+            <span className={cn(
+              "font-medium",
+              isDesktop 
+                ? "text-sm" 
+                : "text-[10px] mt-1",
+              !isDesktop && !isActiveRoute("/profile") && "hidden"
+            )}>
+              Profile
             </span>
           </Link>
         </div>
