@@ -403,7 +403,7 @@ export default function OnboardingPage() {
         setStep(1);
       } else if (!userData?.plans?.length) {
         setStep(3);
-      } else if (!userData?.activities?.length) {
+      } else if (!userData?.activityEntries?.length) {
         setStep(4);
       } else if (!userData?.user?.looking_for_ap) {
         setStep(5);
