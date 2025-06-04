@@ -17,6 +17,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { UpgradeProvider } from "@/contexts/UpgradeContext";
 import { PlanProgressProvider } from "@/contexts/PlanProgressContext";
 import { DailyCheckinPopoverProvider } from "@/contexts/DailyCheckinContext";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // Configure QueryClient with longer gcTime to support persistence
 const queryClient = new QueryClient({
@@ -41,6 +42,7 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const { isSignedIn } = useSession(); // Removed isLoaded as it's not used directly here
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   return (
     <PersistQueryClientProvider
@@ -55,14 +57,16 @@ export default function ClientLayout({
                 <DailyCheckinPopoverProvider>
                   <NotificationsProvider>
                     <main
-                      className="relative h-[100dvh]
-                            [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f8f8f8_1px)] 
-                            [background-size:20px_20px] flex flex-col items-center justify-center p-4"
+                      className={cn(
+                        "relative h-[100dvh] [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f8f8f8_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4",
+                        isSignedIn && isDesktop ? "ml-64" : ""
+                      )}
                     >
                       <div
                         className={cn(
                           "absolute inset-0 overflow-auto",
-                          isSignedIn ? "pb-[4.7rem]" : ""
+                          isSignedIn && !isDesktop ? "pb-[4.7rem]" : "",
+                          isSignedIn && isDesktop ? "left-0" : ""
                         )}
                       >
                         <GeneralInitializer>{children}</GeneralInitializer>
