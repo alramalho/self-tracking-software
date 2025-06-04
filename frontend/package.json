@@ -65,6 +65,7 @@
     "react-hot-toast": "^2.4.1",
     "react-intersection-observer": "^9.13.1",
     "react-remark": "^2.1.0",
+    "react-simple-pull-to-refresh": "^1.3.3",
     "recharts": "^2.13.0",
     "sonner": "^2.0.1",
     "tailwind-merge": "^2.5.2",
