@@ -759,23 +759,21 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const refetchAllData = async () => {
-    return toast.promise(
-      Promise.all([
+    try {
+      const [userData] = await Promise.all([
         currentUserDataQuery.refetch(),
-        timelineDataQuery.refetch(),
+        timelineDataQuery.refetch(), 
         notificationsData.refetch(),
         messagesData.refetch(),
-      ]).then(([userData]) => {
-        if (userData.error) throw userData.error;
-        if (!userData.data) throw new Error("User data is undefined");
-        return userData.data;
-      }),
-      {
-        loading: "Refreshing all data...",
-        success: "All data refreshed successfully",
-        error: "Failed to refresh data",
-      }
-    );
+      ]);
+
+      if (userData.error) throw userData.error;
+      if (!userData.data) throw new Error("User data is undefined");
+      return userData.data;
+    } catch (err) {
+      toast.error("Failed to refresh data");
+      throw err;
+    }
   };
 
   const useMetricsAndEntriesQuery = () =>
