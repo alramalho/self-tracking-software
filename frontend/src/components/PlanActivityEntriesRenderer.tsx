@@ -113,7 +113,7 @@ const PlanActivityEntriesRenderer: React.FC<
     );
 
     return (
-      <div className="p-4 bg-white/50 backdrop-blur-sm rounded-xl w-full max-w-md border border-gray-200">
+      <div className="p-4 bg-gray-100/70 backdrop-blur-sm rounded-xl w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4 text-left">
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
@@ -146,7 +146,7 @@ const PlanActivityEntriesRenderer: React.FC<
   };
 
   return (
-    <div className="px-4">
+    <div className="px-0">
       <div className="flex justify-center mb-4">{renderActivityViewer()}</div>
       
       <BaseHeatmapRenderer

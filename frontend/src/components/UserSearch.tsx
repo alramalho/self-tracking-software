@@ -124,7 +124,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
           }
           router.push("/looking-for-ap");
         }}
-        className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.gradientBg}`}
+        className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.hardGradientBg}`}
       >
         Find me an Accountability Partner 🤝
       </Button>

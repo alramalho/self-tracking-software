@@ -32,9 +32,9 @@ interface PlanWeekDisplayProps {
   className?: string;
 }
 
-const MiniActivityCard = ({ activity }: { activity: Activity }) => {
+export const MiniActivityCard = ({ activity, className }: { activity: Activity, className?: string }) => {
   return (
-    <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 rounded-md text-center min-w-16">
+    <div className={cn("flex flex-col items-center gap-2 p-2 bg-gray-100 rounded-md text-center min-w-16", className)}>
       <span className="text-xl">{activity.emoji}</span>
       <span className="text-xs text-gray-700">{activity.title}</span>
     </div>
@@ -83,6 +83,24 @@ export const PlanWeekDisplay = ({
   const isCurrentWeek = week ? isSameWeek(week.startDate, new Date()) : false;
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
+
+  // Helper function to check if a streak was achieved this week
+  const wasStreakAchievedThisWeek = (planProgressData: any) => {
+    const currentWeek = planProgressData.weeks?.find((week: any) =>
+      isSameWeek(week.startDate, new Date())
+    );
+
+    if (!currentWeek || !currentWeek.completedActivities?.length) {
+      return false;
+    }
+
+    // Check if this week has completed activities and the streak is > 0
+    return (
+      planProgressData.achievement.streak > 0 &&
+      currentWeek.completedActivities.length > 0
+    );
+  };
+  
   useEffect(() => {
     if (inView) {
       const timer = setInterval(() => {

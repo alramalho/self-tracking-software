@@ -6,6 +6,7 @@ import {
   ApiPlan,
   PlanSession,
   convertApiPlanToPlan,
+  Plan,
 } from "@/contexts/UserPlanContext";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
 
@@ -27,14 +28,14 @@ export interface PlanWeek {
 }
 
 export interface PlanProgressData {
-  plan: ApiPlan;
+  plan: Plan;
   weeks: PlanWeek[];
   achievement: PlanAchievementResult;
 }
 
 export interface PlanProgressContextType {
   calculatePlanAchievement: (
-    plan: ApiPlan,
+    plan: Plan,
     activities: Activity[],
     activityEntries: ActivityEntry[],
     initialDate?: Date
@@ -67,9 +68,9 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const planProgress = plans.map(
       (plan): PlanProgressData => ({
-        plan,
+        plan: convertApiPlanToPlan(plan, activities),
         achievement: calculatePlanAchievement(
-          plan,
+          convertApiPlanToPlan(plan, activities),
           activities,
           activityEntries
         ),

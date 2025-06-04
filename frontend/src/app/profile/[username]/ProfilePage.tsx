@@ -10,6 +10,7 @@ import {
   UserPlus,
   X,
   ChevronLeft,
+  Medal,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -42,7 +43,9 @@ import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { isPlanExpired } from "@/components/PlansRenderer";
-import StreakDetailsPopover from "@/components/profile/StreakDetailsPopover";
+import StreakDetailsPopover from "@/components/profile/PlanProgresPopover";
+import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { cn } from "@/lib/utils";
 
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
@@ -88,7 +91,9 @@ const ProfilePage: React.FC = () => {
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
     string | null
   >(null);
+  const userInformalName = profileData?.user?.name?.includes(" ") ? profileData.user.name.split(" ")[0] : profileData?.user?.username;
 
+  const { plansProgress } = usePlanProgress();
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const { share, isSupported: isShareSupported } = useShare();
@@ -244,7 +249,7 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center min-h-screen p-4">
+    <div className="flex flex-col items-center min-h-screen p-2">
       <div className="w-full max-w-3xl">
         <div
           className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-lg bg-white/60 backdrop-blur-sm`}
@@ -488,23 +493,65 @@ const ProfilePage: React.FC = () => {
             <div className="space-y-4 mt-4">
               {profileData?.plans
                 .filter((p) => !isPlanExpired(p))
-                .map((plan) => (
-                  <div key={plan.id} className="p-4 border rounded-lg bg-white">
-                    <div className="flex flex-row items-center gap-2 mb-4">
-                      <span className="text-4xl">{plan.emoji}</span>
-                      <h3 className="text-lg font-semibold">{plan.goal}</h3>
-                    </div>
-                    <PlanActivityEntriesRenderer
-                      plan={convertApiPlanToPlan(plan, activities)}
-                      activities={activities}
-                      activityEntries={activityEntries}
-                      startDate={subDays(
-                        new Date(),
-                        getTimeRangeDays(timeRange)
+                .map((plan) => {
+                  const planProgress = plansProgress.find(
+                    (p) => p.plan.id === plan.id
+                  );
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`p-4 ring-2 rounded-lg ${
+                        planProgress?.achievement.isAchieved
+                          ? cn(
+                              "ring-offset-2 ring-offset-white",
+                              variants.card.selected.border,
+                              variants.ringBright,
+                              variants.verySoftGrandientBg
+                            )
+                          : "bg-white"
+                      }`}
+                    >
+                      <div className="flex flex-row items-center gap-2 mb-6">
+                        <span className="text-4xl">{plan.emoji}</span>
+                        <div className="flex flex-col gap-0">
+                          <h3 className="text-lg font-semibold">{plan.goal}</h3>
+                          {plan.outline_type == "times_per_week" && (
+                            <span className="text-sm text-gray-500">
+                              {plan.times_per_week} times per week
+                            </span>
+                          )}
+                          {plan.outline_type == "specific" && (
+                            <span className="text-sm text-gray-500">
+                              {plan.times_per_week} AI coached plan
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {planProgress?.achievement.isAchieved && (
+                        <div className="flex flex-row items-center gap-2">
+                          <Medal size={32} className="text-yellow-500" />
+                          <span className="text-sm text-gray-500">
+                            Part of {userInformalName}&apos;s lifestyle for{" "}
+                            {
+                              planProgress?.achievement.streak
+                            }{" "}
+                            weeks
+                          </span>
+                        </div>
                       )}
-                    />
-                  </div>
-                ))}
+                      <PlanActivityEntriesRenderer
+                        plan={convertApiPlanToPlan(plan, activities)}
+                        activities={activities}
+                        activityEntries={activityEntries}
+                        startDate={subDays(
+                          new Date(),
+                          getTimeRangeDays(timeRange)
+                        )}
+                      />
+                    </div>
+                  );
+                })}
               {profileData?.plans && profileData?.plans.length > 0 && (
                 <div className="flex flex-row gap-4 justify-between items-center">
                   <span className="text-sm text-gray-500">Time range</span>
