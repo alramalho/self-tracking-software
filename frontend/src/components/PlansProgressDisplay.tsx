@@ -150,10 +150,9 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
           const shouldShow = index == 0 || isExpanded;
 
           return (
-            <Collapsible open={shouldShow}>
+            <Collapsible open={shouldShow} key={plan.id}>
               <CollapsibleContent className="space-y-0">
                 <div
-                  key={plan.id}
                   className={`flex flex-col gap-4 p-2 rounded-lg transition-all duration-300 ${
                     achievement.isAchieved && canDisplayLifestyleAchieved
                       ? cn(
