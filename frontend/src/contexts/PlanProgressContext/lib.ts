@@ -11,7 +11,6 @@ import {
 
 import {
   Activity,
-  convertApiPlanToPlan,
   ActivityEntry,
   ApiPlan,
   PlanSession,
@@ -21,8 +20,7 @@ import { endOfWeek, startOfWeek } from "date-fns";
 import { Plan } from "../UserPlanContext";
 import { PlanAchievementResult, PlanWeek } from ".";
 
-export const ACHIEVEMENT_THRESHOLD = 0.8; // 80% completion required
-export const ACHIEVEMENT_WEEKS = 12; // Last 12 weeks for achievement calculation
+export const ACHIEVEMENT_WEEKS = 9;
 export const LIFESTYLE_START_COUNTING_DATE = subDays(
   new Date(),
   ACHIEVEMENT_WEEKS * 7
@@ -174,7 +172,7 @@ export const isWeekCompleted = (
 };
 
 export const calculatePlanAchievement = (
-  plan: ApiPlan,
+  plan: Plan,
   activities: Activity[],
   activityEntries: ActivityEntry[],
   initialDate?: Date
@@ -215,19 +213,13 @@ export const calculatePlanAchievement = (
   let incompleteWeeks = 0;
   let totalWeeks = 0;
 
-  const convertedPlan = convertApiPlanToPlan(plan, planActivities);
-
   while (
     isAfter(currentWeekStart, weekStart) ||
     isSameDay(weekStart, currentWeekStart)
   ) {
     totalWeeks += 1;
     const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
-    const wasCompleted = isWeekCompleted(
-      weekStart,
-      convertedPlan,
-      planActivityEntries
-    );
+    const wasCompleted = isWeekCompleted(weekStart, plan, planActivityEntries);
 
     if (wasCompleted) {
       streak += 1;
@@ -245,12 +237,8 @@ export const calculatePlanAchievement = (
     weekStart = addWeeks(weekStart, 1);
   }
 
-  const isAchieved =
-    totalWeeks > 0
-      ? completedWeeks / totalWeeks >= ACHIEVEMENT_THRESHOLD
-      : false;
-  const weeksToAchieve =
-    Math.ceil(ACHIEVEMENT_WEEKS * ACHIEVEMENT_THRESHOLD) - completedWeeks;
+  const isAchieved = streak >= ACHIEVEMENT_WEEKS;
+  const weeksToAchieve = ACHIEVEMENT_WEEKS - streak;
 
   return {
     streak,

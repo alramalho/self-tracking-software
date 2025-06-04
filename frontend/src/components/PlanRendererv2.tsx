@@ -317,24 +317,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       )}
 
-      <div className="flex flex-row justify-between items-center mb-4">
-        <span className="text-sm text-gray-500">Time range</span>
-        <Select
-          value={timeRange}
-          onValueChange={(value: "recent" | "all") => setTimeRange(value)}
-        >
-          <div className="bg-white font-semibold text-gray-800">
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Since 30 days ago</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </div>
-        </Select>
-      </div>
-
       <div className="flex flex-col gap-2 mt-2 max-h-[500px] bg-gray-50 overflow-y-auto ring-2 ring-gray-200 rounded-lg p-2">
         <div className="flex flex-row items-center justify-start gap-2 my-4">
           <span className="text-4xl">🗓️</span>
@@ -357,7 +339,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                       Week {index + 1} {isCurrentWeek && "(Current)"}
                     </span>
                     <span className="text-sm text-gray-500">
-                      {format(week.startDate, "d")}-{format(endOfWeek(week.startDate), "d MMM")}
+                      {format(week.startDate, "d")}-
+                      {format(endOfWeek(week.startDate), "d MMM")}
                     </span>
                   </div>
                 }
@@ -367,6 +350,24 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             </div>
           );
         })}
+      </div>
+
+      <div className="flex flex-row justify-between items-center my-4">
+        <span className="text-sm text-gray-500">Time range</span>
+        <Select
+          value={timeRange}
+          onValueChange={(value: "recent" | "all") => setTimeRange(value)}
+        >
+          <div className="bg-white font-semibold text-gray-800">
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Since 30 days ago</SelectItem>
+              <SelectItem value="all">All time</SelectItem>
+            </SelectContent>
+          </div>
+        </Select>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">

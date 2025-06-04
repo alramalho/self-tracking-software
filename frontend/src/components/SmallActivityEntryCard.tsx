@@ -9,6 +9,7 @@ import {
 } from "date-fns";
 import { Check } from "lucide-react";
 import { ActivityEntry, Activity } from "@/contexts/UserPlanContext";
+import { cn } from "@/lib/utils";
 
 export interface Entry {
   date: Date;
@@ -24,6 +25,7 @@ export const SmallActivityEntryCard = ({
   onClick,
   completed,
   completedOn,
+  className,
 }: {
   entry: Entry;
   activity: Activity;
@@ -31,6 +33,7 @@ export const SmallActivityEntryCard = ({
   onClick?: (sessionId: string) => void;
   completed?: boolean;
   completedOn?: Date;
+  className?: string;
 }) => {
   const dateInfoStr = (date: Date) => {
     const today = new Date();
@@ -57,9 +60,12 @@ export const SmallActivityEntryCard = ({
     <>
       <div
         key={`${entry.date}-${entry.activity_id}`}
-        className={`relative flex flex-col items-center justify-center rounded-lg bg-gray-100 m-2 p-2 transition-all duration-200 ${
-          onClick ? "cursor-pointer bg-gray-100 hover:bg-opacity-80" : ""
-        } ${selected ? "ring-2 ring-gray-300 ring-offset-2" : ""}`}
+        className={cn(
+          `relative flex flex-col items-center justify-center rounded-lg bg-gray-100 m-2 p-2 transition-all duration-200 ${
+            onClick ? "cursor-pointer bg-gray-100 hover:bg-opacity-80" : ""
+          } ${selected ? "ring-2 ring-gray-300 ring-offset-2" : ""}`,
+          className
+        )}
         onClick={() => onClick?.(`${entry.date}-${entry.activity_id}`)}
       >
         {completed && (
@@ -85,13 +91,7 @@ export const SmallActivityEntryCard = ({
           </span>
         )}
       </div>
-      {entry.description && selected && (
-        <div className="rounded-lg bg-gray-100 m-1 p-3">
-          <span className="text-xs text-gray-800 text-center">
-            {entry.description}
-          </span>
-        </div>
-      )}
+
     </>
   );
 };

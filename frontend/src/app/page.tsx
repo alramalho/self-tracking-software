@@ -5,12 +5,19 @@ import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { useRouter } from "next/navigation";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { Search, Bell, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  HelpCircle,
+} from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
-import PlansAchievements from "@/components/PlansAchievements";
+// import PlansAchievements from "@/components/PlansAchievements";
 import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
+import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import {
   Collapsible,
   CollapsibleContent,
@@ -33,6 +40,8 @@ import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
 import { endOfWeek, format, startOfWeek } from "date-fns";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
+import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 
 const HomePage: React.FC = () => {
   const { isSignedIn } = useSession();
@@ -58,10 +67,6 @@ const HomePage: React.FC = () => {
     "metrics-section-collapsed",
     false
   );
-  const [isStreaksCollapsed, setIsStreaksCollapsed] = useLocalStorage<boolean>(
-    "streaks-section-collapsed",
-    false
-  );
   const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
     "plans-section-collapsed",
     false
@@ -78,6 +83,8 @@ const HomePage: React.FC = () => {
     hasCheckedInToday,
     checkinMessage,
   } = useDailyCheckin();
+
+  const [showPlanProgressExplainer, setShowPlanProgressExplainer] = useState(false)
 
   const [onboardingCompleted] = useLocalStorage<boolean>(
     "onboarding-completed",
@@ -138,8 +145,9 @@ const HomePage: React.FC = () => {
     startOfWeek(new Date(), { weekStartsOn: 0 }),
     "d"
   )}-${format(endOfWeek(new Date(), { weekStartsOn: 0 }), "d MMM")}`;
+  
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl space-y-4">
+    <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
       <div
         className={`flex justify-between items-center ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4`}
       >
@@ -188,28 +196,34 @@ const HomePage: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsStreaksCollapsed(!isStreaksCollapsed)}
+                onClick={() => setIsPlansCollapsed((prev) => !prev)}
                 className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
                 aria-label={
-                  isStreaksCollapsed ? "Expand streaks" : "Collapse streaks"
+                  isPlansCollapsed ? "Expand streaks" : "Collapse streaks"
                 }
               >
-                {isStreaksCollapsed ? (
+                {isPlansCollapsed ? (
                   <ChevronRight size={16} className="text-gray-600" />
                 ) : (
                   <ChevronDown size={16} className="text-gray-600" />
                 )}
               </button>
-              <h3 className="text-md font-semibold text-gray-900">
-                Your Streaks
-              </h3>
+              <div className="flex flex-row items-center justify-between gap-2">
+                <h3 className="text-md font-semibold text-gray-900">
+                  Your Plans
+                </h3>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPlanProgressExplainer(true)}
+                >
+                  <HelpCircle className="h-4 w-4 text-gray-400" />
+                </Button>
+              </div>
             </div>
             <button
-              onClick={() =>
-                router.push(
-                  `/profile/${userData.user?.username}?redirectTo=streak-details`
-                )
-              }
+              onClick={() => router.push(`/plans`)}
               className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
             >
               View Details
@@ -218,14 +232,29 @@ const HomePage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <PlansAchievements
+            <PlansProgressDisplay
+              plans={userData.plans.map((p) =>
+                convertApiPlanToPlan(p, userData.activities || [])
+              )}
+              isExpanded={!isPlansCollapsed}
+            />
+            {/* <PlansAchievements
               plans={userData.plans}
               activities={userData.activities || []}
               activityEntries={userData.activityEntries || []}
               timeRangeDays={60}
               onClick={() => router.push(`/profile/${userData.user?.username}`)}
               isExpanded={!isStreaksCollapsed}
-            />
+            /> */}
+            {/* <PlanWeekDisplay
+              title={`${userData.plans[0].goal} plan`}
+              plan={convertApiPlanToPlan(
+                userData.plans[0],
+                userData.activities || []
+              )}
+              date={new Date()}
+              className={`${isPlansCollapsed ? "h-0" : "h-full"}`}
+            /> */}
           </div>
         </div>
       )}
@@ -428,60 +457,6 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      {/* Plan Section */}
-      {userData?.plans && userData.plans.length > 0 && (
-        <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsPlansCollapsed(!isPlansCollapsed)}
-                className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
-                aria-label={
-                  isPlansCollapsed ? "Expand plans" : "Collapse plans"
-                }
-              >
-                {isPlansCollapsed ? (
-                  <ChevronRight size={16} className="text-gray-600" />
-                ) : (
-                  <ChevronDown size={16} className="text-gray-600" />
-                )}
-              </button>
-              <div className="flex justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-md font-semibold text-gray-900">
-                    This Week
-                  </h3>
-                </div>
-              </div>
-              <span className="text-sm text-gray-500">{currentWeekString}</span>
-            </div>
-            <button
-              onClick={() =>
-                router.push(
-                  `/plans`
-                )
-              }
-              className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
-            >
-              View Plan
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <PlanWeekDisplay
-              title={`${userData.plans[0].goal} plan`}
-              plan={convertApiPlanToPlan(
-                userData.plans[0],
-                userData.activities || []
-              )}
-              date={new Date()}
-              className={`${isPlansCollapsed ? "h-0" : "h-full"}`}
-            />
-          </div>
-        </div>
-      )}
-
       <div className="mb-6">
         <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)} />
       </div>
@@ -512,6 +487,13 @@ const HomePage: React.FC = () => {
       </AppleLikePopover>
 
       {/* <DailyCheckinBanner/> */}
+
+      <PlanProgressPopover
+        open={showPlanProgressExplainer}
+        onClose={() => {
+          setShowPlanProgressExplainer(false);
+        }}
+      />
     </div>
   );
 };

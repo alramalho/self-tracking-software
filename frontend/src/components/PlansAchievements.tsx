@@ -23,7 +23,6 @@ import TrophyBadge from "./FireBadge";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import {
   ACHIEVEMENT_WEEKS,
-  calculatePlanAchievement,
 } from "@/contexts/PlanProgressContext/lib";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 

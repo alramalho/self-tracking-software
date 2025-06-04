@@ -4,31 +4,29 @@ import {
   useUserPlan,
 } from "@/contexts/UserPlanContext";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { ACHIEVEMENT_WEEKS } from "@/contexts/PlanProgressContext/lib";
+import { AlertTriangle, Flame, Medal } from "lucide-react";
 
-interface StreakDetailsPopoverProps {
+interface PlanProgressPopoverProps {
   open: boolean;
   onClose: () => void;
 }
 
-const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
+const PlanProgressPopover: React.FC<PlanProgressPopoverProps> = ({
   open,
   onClose,
 }) => {
   const { useCurrentUserDataQuery } = useUserPlan();
-  const { plansProgress } = usePlanProgress();
   const currentUserQuery = useCurrentUserDataQuery();
   const profileData = currentUserQuery.data;
-  const { activityEntries } = profileData || {
-    activityEntries: [],
-  };
 
   return (
     <AppleLikePopover open={open} onClose={onClose} title="Streak Details">
       <div className="p-4 space-y-6">
-        <h3 className="text-xl font-semibold mb-4">🔥 Streak Breakdown</h3>
+        <h3 className="text-xl font-semibold mb-4"> Plan progress Breakdown</h3>
 
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium mb-2">How streaks are calculated:</h4>
+          <h4 className="font-medium mb-2 flex items-center gap-2" ><Flame className="text-red-500 inline-block" size={24} /> How streaks are calculated:</h4>
           <ul className="text-sm text-gray-600 space-y-2">
             <li>
               • Each completed week adds <span className="font-bold">+1</span>{" "}
@@ -45,6 +43,18 @@ const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
             <li>
               • Streak score cannot go below{" "}
               <span className="font-bold">0</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium mb-2 flex items-center gap-2"><Medal className="text-yellow-500 inline-block" size={24} /> How lifestyle badges are calculated:</h4>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>
+              • You get a lifetyle badge if you achieve a streak of {ACHIEVEMENT_WEEKS} weeks!
+            </li>
+            <li>
+              • <AlertTriangle size={16} className="text-amber-500 inline-block" /> You lose the badge if you drop your streak!
             </li>
           </ul>
         </div>
@@ -102,4 +112,4 @@ const StreakDetailsPopover: React.FC<StreakDetailsPopoverProps> = ({
   );
 };
 
-export default StreakDetailsPopover;
+export default PlanProgressPopover;

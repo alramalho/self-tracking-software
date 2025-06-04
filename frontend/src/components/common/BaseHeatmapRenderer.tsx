@@ -93,7 +93,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix();
     return (
-      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 mt-2">
+      <div className="grid grid-cols-[auto_1fr] gap-3 mt-2">
         <div className="flex items-center gap-2">
           <div
             className="w-4 h-4"
@@ -133,7 +133,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
               )}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold mb-1 flex items-center">
+              <span className="text-sm font-semibold flex items-center">
                 {activity.emoji} {activity.title}
                 {onEditActivity && isOwnActivity(activity) && (
                   <button 
@@ -156,15 +156,15 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   };
 
   return (
-    <div className="mb-4 grid gap-4">
+    <div className="mb-4 grid gap-5">
       <div className="overflow-x-auto">
-        <div className="relative">
+        <div className="relative mt-2">
           <HeatMap
             value={heatmapData}
             startDate={utcStartDate}
             endDate={utcEndDate}
             width={45 + 26 * numberOfWeeks}
-            height={235}
+            height={220}
             rectSize={20}
             legendRender={() => <></>}
             rectProps={{
@@ -385,7 +385,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
           />
         </div>
       </div>
-      <div className="flex justify-start">{renderActivityLegend()}</div>
+      <div className="flex justify-center">{renderActivityLegend()}</div>
     </div>
   );
 };
