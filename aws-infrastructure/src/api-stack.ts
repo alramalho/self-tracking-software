@@ -204,6 +204,7 @@ export class ApiStack extends cdk.Stack {
             }),
             environment: {
               OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+              OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
               SHARED_ENCRYPTION_KEY: process.env.SHARED_ENCRYPTION_KEY!,
               MONGO_DB_CONNECTION_STRING:
                 process.env.MONGO_DB_CONNECTION_STRING!,
