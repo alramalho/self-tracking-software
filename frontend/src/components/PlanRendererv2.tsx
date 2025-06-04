@@ -317,7 +317,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       )}
 
-      <div className="flex flex-col gap-2 mt-2 max-h-[500px] bg-gray-50 overflow-y-auto ring-2 ring-gray-200 rounded-lg p-2">
+      <div className="flex flex-col gap-2 mt-2 max-h-[500px] bg-gray-50 overflow-y-auto overscroll-behavior-none ring-2 ring-gray-200 rounded-lg p-2">
         <div className="flex flex-row items-center justify-start gap-2 my-4">
           <span className="text-4xl">🗓️</span>
           <h2 className="text-xl font-semibold mt-2">Weeks Overview</h2>
