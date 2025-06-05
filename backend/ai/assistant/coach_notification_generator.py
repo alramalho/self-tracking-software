@@ -56,7 +56,7 @@ def generate_notification_message(user: User, plan: Plan):
         },
         {
             "role": "assistant",
-            "content": "You're nearly there Alex—(burps) 3 to go, eat pain, spit fire, and walk it off!",
+            "content": "You're nearly there Alex—(burps) 3 to go, 5 days left, eat pain, spit fire, and (burps) walk it off!",
         },
         {
             "role": "user",
@@ -69,7 +69,7 @@ def generate_notification_message(user: User, plan: Plan):
         },
         {
             "role": "assistant",
-            "content": "New week! (burps) Three tasks left? Crush 'em like rat skulls, baby!",
+            "content": "New week! (burps) Three tasks left and full we~burps~ek to go? Crush 'em like rat skulls, baby!",
         },
         {
             "role": "user",
