@@ -21,7 +21,10 @@ from loguru import logger
 from bson import ObjectId
 from copy import deepcopy
 import pytz
-
+from entities.notification import Notification
+from services.notification_manager import NotificationManager
+from copy import copy
+from ai.assistant.coach_notification_generator import generate_notification_message
 
 class PlanMilestoneProgress(BaseModel):
     """Response entity for milestone progress"""
@@ -68,6 +71,7 @@ class PlanController:
         self.plan_invitation_gateway = PlanInvitationsGateway()
         self.plan_groups_gateway = PlanGroupsGateway()
         self.vector_database = PineconeVectorDB(namespace="plans")
+        self.notification_manager = NotificationManager()
 
     def get_all_by_ids(self, ids: List[str]) -> List[Plan]:
         if not ids:
@@ -831,7 +835,7 @@ class PlanController:
                 if week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end
             ])
         
-        num_activities_left = num_planned_activities_this_week - num_activities_this_week
+        num_activities_left = abs(num_planned_activities_this_week - num_activities_this_week)
 
         return num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left
     
@@ -864,6 +868,55 @@ class PlanController:
         
         logger.log("CONTROLLERS", f"Updated plan {plan.id} current week state to {new_state}")
         return plan
+    
+    async def process_plan_state_recalculation(self, user: User, user_coached_plan: Plan, push_notify:bool= False):
+        if len(user.plan_ids) == 0:
+            logger.info(f"User {user.username} has no plans")
+            return None
+
+        if user.plan_type == "free":
+            logger.info(f"Skipping user {user.username} because he is in free plan")
+            return None
+
+        all_users_activity_entries = (
+            self.activities_gateway.get_all_activity_entries_by_user_id(user.id)
+        )
+        activities_in_last_week = [
+            activity
+            for activity in all_users_activity_entries
+            if datetime.fromisoformat(activity.date).replace(tzinfo=UTC)
+            > (datetime.now(UTC) - timedelta(days=7))
+        ]
+
+        if len(activities_in_last_week) == 0:
+            logger.info(f"No activities in last week for user {user.username}")
+            return None
+
+        old_plan_state = copy(user_coached_plan.current_week.state)
+        user_coached_plan = self.recalculate_current_week_state(
+            user_coached_plan, user
+        )
+
+        if user_coached_plan.current_week.state == old_plan_state:
+            logger.info(
+                (
+                    f"Not a state transition (old: {old_plan_state}, "
+                    f"new: {user_coached_plan.current_week.state}) for plan '{user_coached_plan.goal}' of "
+                    f"user '{user.username}'. Skipping notification"
+                )
+            )
+            return None
+
+        message = generate_notification_message(user, user_coached_plan)
+        notification = await self.notification_manager.create_and_process_notification(
+            Notification.new(
+                user_id=user.id,
+                message=message,
+                type="coach",
+            ),
+            push_notify=push_notify
+        )
+        return (user.username, notification.message)
 
 
 if __name__ == "__main__":

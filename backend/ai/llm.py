@@ -182,17 +182,11 @@ async def ask_schema_async(
 from typing import Literal, List
 
 
-class ChatMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    timestamp: str
-    content: str
-
-
 def ask_schema_simple_openai(
-    message_history: List[ChatMessage],
+    message_history: dict,
     pymodel: Type[T],
     model: str = LLM_MODEL,
-    temperature: float = 0,
+    temperature: float = 0.4,
 ) -> T:
     from openai import OpenAI
 
@@ -201,9 +195,8 @@ def ask_schema_simple_openai(
     )
     completion = client.beta.chat.completions.parse(
         model=model,
-        messages=[*message_history],
+        messages=message_history,
         temperature=temperature,
         response_format=pymodel
     )
     return completion.choices[0].message.parsed
-

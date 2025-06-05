@@ -177,10 +177,6 @@ export const calculatePlanAchievement = (
   activityEntries: ActivityEntry[],
   initialDate?: Date
 ): PlanAchievementResult => {
-  console.log("calculating plan achievement");
-  const planActivities = activities.filter(
-    (activity) => plan.activity_ids?.includes(activity.id) ?? false
-  );
   const planActivityEntries = activityEntries.filter(
     (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
   );

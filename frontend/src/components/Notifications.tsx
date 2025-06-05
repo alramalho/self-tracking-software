@@ -163,7 +163,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
   // Filter out engagement notifications from the regular notifications
   const regularNotifications = notificationsData?.data?.notifications?.filter(
-    (n) => n.type !== "engagement"
+    (n) => n.type !== "engagement" && n.type != "coach"
   );
 
   return (
