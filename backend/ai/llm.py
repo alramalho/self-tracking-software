@@ -184,19 +184,23 @@ async def ask_schema_async(
 from typing import Literal, List
 
 
-def ask_schema_simple_openai(
-    message_history: dict,
-    pymodel: Type[T],
+def ask_simple_text_openrouter(
+    message_history: List[dict],
     model: str = LLM_MODEL,
     temperature: float = 0.4,
-) -> T:
+) -> str:
     client = OpenAI(
-        api_key=OPENAI_API_KEY,
+        api_key=OPENROUTER_API_KEY,
+        base_url="https://openrouter.ai/api/v1",
     )
-    completion = client.beta.chat.completions.parse(
+    completion = client.chat.completions.create(
+        extra_headers={
+            "HTTP-Referer": "https://tracking.so",  # Optional. Site URL for rankings on openrouter.ai.
+            "X-Title": "Tracking Software",  # Optional. Site title for rankings on openrouter.ai.
+        },
         model=model,
         messages=message_history,
         temperature=temperature,
-        response_format=pymodel
     )
-    return completion.choices[0].message.parsed
+    message = completion.choices[0].message.content
+    return message
