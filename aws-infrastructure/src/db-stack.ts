@@ -17,7 +17,7 @@ export class DbStack extends cdk.Stack {
     // Users Table
     new DynamoDbTableConstruct(this, "UsersTable", {
       name: `${SNAKE_CASE_PREFIX}_users_${props.environment}`,
-      indexFields: ["clerk_id", "email", "username"],
+      indexFields: ["clerk_id", "email", "username", "plan_type"],
       writableBy: props.writableBy,
       readableBy: props.readableBy,
     });
