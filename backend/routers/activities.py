@@ -128,6 +128,7 @@ async def log_activity(
                     )
                 )
 
+
         users_gateway.update_fields(user.id, {"last_active_at": datetime.now(UTC).isoformat()})
 
         posthog.capture(

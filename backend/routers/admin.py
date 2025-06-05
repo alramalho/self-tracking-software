@@ -32,6 +32,8 @@ from gateways.metrics import MetricsGateway
 from slowapi.util import get_remote_address
 import pytz
 from gateways.recommendations import RecommendationsGateway
+from controllers.plan_controller import PlanController
+from ai.assistant.coach_notification_generator import generate_notification_message
 import traceback
 
 router = APIRouter()
@@ -42,6 +44,7 @@ activities_gateway = ActivitiesGateway()
 s3_gateway = S3Gateway()
 ses_gateway = SESGateway()
 prompt_controller = RecurrentMessageGenerator()
+plans_contoller = PlanController()
 metrics_gateway = MetricsGateway()
 recommendations_gateway = RecommendationsGateway()
 limiter = Limiter(key_func=get_remote_address)
@@ -121,7 +124,7 @@ async def send_notification_to_all_users(
     filtered_usernames = body.get("filter_usernames", [])
     if len(filtered_usernames) > 0:
         users = [user for user in users if user.username in filtered_usernames]
-        
+
     sent = 0
     for user in users:
         notification = Notification.new(
@@ -146,11 +149,11 @@ async def _process_metrics_notification(
             # Get user's local time - default to UTC if timezone not set
             user_tz = pytz.timezone(user.timezone) if user.timezone else UTC
             user_local_time = datetime.now(UTC).astimezone(user_tz)
-            
+
             # Only process if it's 21:00 in user's timezone
             if user_local_time.hour != 21:
                 continue
-                
+
             missing_metrics_today, missing_metric_entries_today = (
                 metrics_gateway.get_missing_metric_and_entries_today_by_user_id(user.id)
             )
@@ -158,7 +161,13 @@ async def _process_metrics_notification(
                 f"{metric.title.lower()} {metric.emoji}"
                 for metric in missing_metrics_today
             ]
-            missing_metrics_titles_str = " and ".join([", ".join(missing_metrics_titles[:-1]), missing_metrics_titles[-1]]) if len(missing_metrics_titles) > 1 else missing_metrics_titles[0] if missing_metrics_titles else ""
+            missing_metrics_titles_str = (
+                " and ".join(
+                    [", ".join(missing_metrics_titles[:-1]), missing_metrics_titles[-1]]
+                )
+                if len(missing_metrics_titles) > 1
+                else missing_metrics_titles[0] if missing_metrics_titles else ""
+            )
             if len(missing_metric_entries_today) > 0:
                 notification = Notification.new(
                     user_id=user.id,
@@ -185,7 +194,9 @@ async def _process_metrics_notification(
                     }
                 )
         except Exception as e:
-            logger.error(f"Error processing metrics notification for user {user.username}: {str(e)}")
+            logger.error(
+                f"Error processing metrics notification for user {user.username}: {str(e)}"
+            )
             continue
 
     return {"notifications_processed": notifications_processed}
@@ -351,6 +362,7 @@ async def run_daily_metrics_notification(
 
     # return result
 
+
 def _process_recommendations_outdated(users: List[User]) -> dict:
     result = []
     for user in users:
@@ -359,6 +371,60 @@ def _process_recommendations_outdated(users: List[User]) -> dict:
             result.append(user.username)
     return result
 
+
+@router.post("/run-hourly-job")
+async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
+    body = await request.json()
+    filter_usernames = body.get("filter_usernames", [])
+
+    users = users_gateway.get_all_users()
+    if len(filter_usernames) > 0:
+        users = [user for user in users if user.username in filter_usernames]
+
+    users_coached_plan_ids = [u.plan_ids[0] for u in users if len(u.plan_ids) > 0]
+    users_coached_plans = plans_contoller.get_plans(users_coached_plan_ids)
+
+    result = {'sent_notifications_to': {}}
+
+    for user, user_coached_plan in zip(users, users_coached_plans):
+        if len(user.plan_ids) == 0:
+            logger.info(f"User {user.username} has no plans")
+            continue
+
+        current_user_time = datetime.now(pytz.timezone(user.timezone))
+        is_8_am_in_users_timezone = (
+            current_user_time.hour == 9
+        )
+        all_users_activity_entries = activities_gateway.get_all_activity_entries_by_user_id(
+            user.id
+        )
+        activities_in_last_week = [
+            activity
+            for activity in all_users_activity_entries
+            if datetime.fromisoformat(activity.date).replace(tzinfo=UTC) > (datetime.now(UTC) - timedelta(days=7))
+        ]
+
+        if len(activities_in_last_week) == 0:
+            logger.info(f"No activities in last week for user {user.username}")
+            continue
+
+        if not is_8_am_in_users_timezone:
+            logger.info(f"Skipping user {user.username} because it's not 8 am in their timezone")
+            continue
+
+        user_coached_plan = plans_contoller.recalculate_current_week_state(user_coached_plan, user)
+
+        message = generate_notification_message(user, user_coached_plan)
+        notification = await notification_manager.create_and_process_notification(
+            Notification.new(
+                user_id=user.id,
+                message=message,
+                type="coach",
+            )
+        )
+        result['sent_notifications_to'][user.username] = notification.message
+    
+    return result
 
 @router.post("/run-daily-job")
 async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
@@ -434,8 +500,9 @@ WS_CLOSE_CODES = {
     1012: "Service Restart",
     1013: "Try Again Later",
     1014: "Bad Gateway",
-    1015: "TLS Handshake"
+    1015: "TLS Handshake",
 }
+
 
 class GlobalErrorLog(BaseModel):
     error_message: str
@@ -487,7 +554,6 @@ async def log_error(error: GlobalErrorLog, request: Request):
             except:
                 referrer_domain = error.referrer
 
-
         user = None
         try:
             user = users_gateway.get_user_by("clerk_id", error.user_clerk_id)
@@ -525,14 +591,14 @@ async def log_error(error: GlobalErrorLog, request: Request):
         )
         telegram = TelegramService()
         # Send error notification to Telegram
-        
+
         telegram.send_error_notification(
             error_message=f"500 page client error: {error.error_message}\nContext: {context}",
             user_username=user.username if user else "unknown",
             user_id=error.user_clerk_id,
             path=request.url.path,
             status_code="500",
-            method=request.method
+            method=request.method,
         )
 
         # Send email for critical errors in production

@@ -20,6 +20,7 @@ from gateways.vector_database.pinecone import PineconeVectorDB
 from loguru import logger
 from bson import ObjectId
 from copy import deepcopy
+import pytz
 
 
 class PlanMilestoneProgress(BaseModel):
@@ -68,7 +69,7 @@ class PlanController:
         self.plan_groups_gateway = PlanGroupsGateway()
         self.vector_database = PineconeVectorDB(namespace="plans")
 
-    def get_all_by_ids(self, ids: List[str]) -> List[User]:
+    def get_all_by_ids(self, ids: List[str]) -> List[Plan]:
         if not ids:
             return []
         data = self.db_gateway.query_by_criteria({"id": {"$in": ids}})
@@ -795,6 +796,74 @@ class PlanController:
                     )
 
         return sessions
+
+    def get_plan_week_stats(self, plan: Plan, user: User) -> Tuple[int, int, int]:
+        current_date = datetime.now(pytz.timezone(user.timezone))
+        
+        # Get start of the week (Sunday)
+        days_since_sunday = (current_date.weekday() + 1) % 7
+        week_start = (current_date - timedelta(days=days_since_sunday)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        week_end = week_start + timedelta(days=7, hours=23, minutes=59, seconds=59)
+        
+        num_left_days_in_the_week = abs(week_end - current_date).days + 1 # include today
+
+        num_activities_this_week = 0
+        for activity_id in plan.activity_ids:
+            activity_entries = self.activities_gateway.get_all_activity_entries_by_activity_id(activity_id)
+            
+            # Count entries from this week (only count max 1 per day to avoid double counting)
+            daily_completions = set()
+            for entry in activity_entries:
+                entry_date = datetime.fromisoformat(entry.date).replace(tzinfo=UTC)
+                if week_start <= entry_date <= week_end:
+                    daily_completions.add(entry_date.date())
+            
+            num_activities_this_week += len(daily_completions)
+        
+        # Calculate planned activities for this week
+        if plan.outline_type == 'times_per_week':
+            num_planned_activities_this_week = plan.times_per_week or 0
+        else:  # specific schedule
+            num_planned_activities_this_week = len([
+                session for session in plan.sessions
+                if week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end
+            ])
+        
+        num_activities_left = num_planned_activities_this_week - num_activities_this_week
+
+        return num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left
+    
+    def recalculate_current_week_state(self, plan: Plan, user: User) -> Plan:
+        num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = self.get_plan_week_stats(plan, user)
+        # Determine the state based on completion vs planned activities
+        if num_activities_left <= 0:
+            new_state = 'COMPLETED'
+        else:
+            margin = num_left_days_in_the_week - num_activities_left
+            max_margin = max(0, 7 - num_planned_activities_this_week)
+
+            if margin <= max_margin and margin >= 0:
+                if margin >= 2 or margin == max_margin:
+                    new_state = 'ON_TRACK'
+                else:
+                    new_state = 'AT_RISK'
+            elif margin < 0:
+                new_state = 'FAILED'
+            else:
+                raise ValueError(f"Unexpected margin calculation: {margin}")
+        
+        # Update the plan's current week state
+        plan.current_week.state = new_state
+        current_date = datetime.now(pytz.timezone(user.timezone))
+        plan.current_week.state_last_calculated_at = current_date.isoformat()
+        
+        # Save the updated plan
+        self.update_plan(plan)
+        
+        logger.log("CONTROLLERS", f"Updated plan {plan.id} current week state to {new_state}")
+        return plan
 
 
 if __name__ == "__main__":

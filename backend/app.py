@@ -9,11 +9,9 @@ else:
 create_logger(level=level)
 
 from fastapi.middleware.cors import CORSMiddleware
-import base64
 import json
 from loguru import logger
 import traceback
-import asyncio
 from routers.evaluation import evaluation_router
 from routers.clerk import router as clerk_router
 from routers.users import router as users_router
