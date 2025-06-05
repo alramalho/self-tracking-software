@@ -8,15 +8,28 @@ import {
 } from "@/contexts/PlanProgressContext/lib";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import FireBadge from "./FireBadge";
-import { Plan, PlanSession } from "@/contexts/UserPlanContext";
+import {
+  Plan,
+  PlanSession,
+  useUserPlan,
+  Notification,
+} from "@/contexts/UserPlanContext";
 import { AnimatePresence } from "framer-motion";
 import Confetti from "react-confetti-boom";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { CircleCheck, Flame } from "lucide-react";
+import {
+  BadgeCheck,
+  CircleCheck,
+  Flame,
+  Loader2,
+  TrendingUp,
+} from "lucide-react";
 import { Medal } from "lucide-react";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
-
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { MessageBubble } from "./MessageBubble";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 interface PlansProgressDisplayProps {
   plans: Plan[];
   isExpanded: boolean;
@@ -28,12 +41,17 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   isExpanded,
   className,
 }) => {
+  const { userPaidPlanType } = usePaidPlan();
   const [canDisplayLifestyleAchieved, setCanDisplayLifestyleAchieved] =
     useState(false);
   const { plansProgress } = usePlanProgress();
 
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const { notificationsData } = useUserPlan();
+  const lastCoachMessage = notificationsData?.data?.notifications?.find(
+    (notification: Notification) => notification.type === "coach"
+  )?.message;
 
   // Helper function to check if a streak was achieved this week
   const wasStreakAchievedThisWeek = (planProgressData: any) => {
@@ -108,7 +126,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
       </Collapsible>
 
       {/* Progress bars section */}
-      <div className="flex flex-col gap-0">
+      <div className="flex flex-col gap-0 overflow-visible">
         {plansProgress.map((planProgressData, index) => {
           const { plan, weeks, achievement } = planProgressData;
 
@@ -148,17 +166,20 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
           const showConfetti = isCurrentWeek && isWeekCompleted;
 
           const shouldShow = index == 0 || isExpanded;
+          const isCoached = index == 0 && userPaidPlanType != "free";
 
           return (
             <Collapsible open={shouldShow} key={plan.id}>
-              <CollapsibleContent className="space-y-0">
+              <CollapsibleContent className="space-y-0 overflow-visible">
                 <div
-                  className={`flex flex-col gap-4 p-2 rounded-lg transition-all duration-300 ${
-                    achievement.isAchieved && canDisplayLifestyleAchieved
+                  className={`flex flex-col gap-2 p-2 rounded-lg transition-all duration-300 ${
+                    (achievement.isAchieved && canDisplayLifestyleAchieved) ||
+                    isCoached
                       ? cn(
                           variants.verySoftGrandientBg,
                           variants.ringBright,
-                          "ring-2 ring-offset-2 ring-offset-white"
+                          "ring-2 ring-offset-2 ring-offset-white",
+                          "m-1"
                         )
                       : "bg-gray-100/60"
                   } from-gray-50`}
@@ -174,14 +195,49 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                     </div>
                   </div>
 
+                  {isCoached && (
+                    <div className="absolute top-0 right-0 opacity-60">
+                      <div className="flex items-center gap-1 p-2">
+                        <BadgeCheck className={cn("h-4 w-4", variants.text)} />
+                        <span className="text-xs font-medium text-gray-500">
+                          Coached plan
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {isCoached && (
+                    <div className="flex items-center gap-1 p-2">
+                      <MessageBubble direction="left">
+                        <div className="flex items-center gap-2">
+                          <Avatar>
+                            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg" />
+                            <AvatarFallback>CN</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col gap-1">
+                            {notificationsData.isLoading ? (
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                            ) : (
+                              <>
+                                <span className="text-sm italic text-gray-500">
+                                  {lastCoachMessage}
+                                </span>
+                                <span className="text-[10px] italic text-gray-400">
+                                  Coach Pickle Rick
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </MessageBubble>
+                    </div>
+                  )}
                   {/* Current week progress with animated legend */}
-                  <div>
+                  <div className="space-y-2">
                     <SteppedBarProgress
                       value={totalCompletedActivities}
                       maxValue={totalPlannedActivities}
-                      goal={
-                        <Flame size={19} className="text-orange-400 mb-1" />
-                      }
+                      goal={<Flame size={19} className="text-orange-400" />}
                       onFullyDone={() => {
                         console.log("finished");
                       }}

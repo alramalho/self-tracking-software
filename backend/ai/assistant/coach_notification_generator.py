@@ -1,13 +1,5 @@
 from __future__ import annotations as _annotations
 
-import asyncio
-import os
-import urllib.parse
-from dataclasses import dataclass
-from typing import Any
-
-from httpx import AsyncClient
-from controllers.plan_controller import PlanController
 from entities.user import User
 from entities.plan import Plan
 from pydantic import BaseModel
@@ -20,23 +12,26 @@ from constants import LLM_MODEL
 def generate_notification_message(user: User, plan: Plan):
     from controllers.plan_controller import PlanController
 
-    num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = PlanController().get_plan_week_stats(plan, user)
+    num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = (
+        PlanController().get_plan_week_stats(plan, user)
+    )
 
     current_date = datetime.now(pytz.timezone(user.timezone))
 
     def generate_plan_details(plan_state, n_days_left, n_activities_left, date_str):
         return (
-            f"You are assisting the user {user.name} with the plan {plan.goal}"
+            f"You are assisting the user Morty with the plan {plan.goal}"
             f"Today is {date_str}, and there are {n_days_left} days till sunday and the"
             f"and the user still got {n_activities_left} activities lefte to do."
             f"Becuase of that, the plan is {plan_state}"
         )
 
     system = (
-        "You are an expert coach that knows how to to motivate a user with few words",
-        "Your goal is to generate simple motivational messages to be used for the user, based on the given plan data.",
-        "The message must contain 12 words at max.",
-        "The 'FAILED' state message should be always the same.",
+        "You are Pickle Rick acting as a plan motivator coach."
+        "Your goal is to generate simple motivational messages to be used for the user, based on the given plan data."
+        "They must include AT LEAST one burp"
+        "The message must very concise, one small sentence, in the unhinged style of Pickle Rick."
+        "The 'FAILED' state message should always state the plan's gonna be adjusted."
     )
 
     class MessageSchema(BaseModel):
@@ -45,6 +40,10 @@ def generate_notification_message(user: User, plan: Plan):
     return ask_schema_simple_openai(
         pymodel=MessageSchema,
         message_history=[
+            {
+                "role": "system",
+                "content": system,
+            },
             {
                 "role": "user",
                 "content": generate_plan_details(
@@ -56,7 +55,7 @@ def generate_notification_message(user: User, plan: Plan):
             },
             {
                 "role": "assistant",
-                "content": "Almost there! Slow and steady, and you will be proud of yourself!",
+                    "content": "You're nearly there Alex—(burps) 3 to go, eat pain, spit fire, and walk it off!",
             },
             {
                 "role": "user",
@@ -69,7 +68,7 @@ def generate_notification_message(user: User, plan: Plan):
             },
             {
                 "role": "assistant",
-                "content": "New week, new start! Let's crush your 3 activiies! 💪",
+                "content": "New week! (burps) Three tasks left? Crush 'em like rat skulls, baby!",
             },
             {
                 "role": "user",
@@ -82,7 +81,7 @@ def generate_notification_message(user: User, plan: Plan):
             },
             {
                 "role": "assistant",
-                "content": "You didn't make it this week. Click here to readjust your plan",
+                "content": "Didn’t make it? (_burps_) Of course not—click here, fix your mess!",
             },
             {
                 "role": "user",
@@ -95,7 +94,7 @@ def generate_notification_message(user: User, plan: Plan):
             },
             {
                 "role": "assistant",
-                "content": "Way to go! I'm proud of you 🔥",
+                "content": "Holy crap, you didn’t screw it up! I’m... actually proud!",
             },
             {
                 "role": "user",

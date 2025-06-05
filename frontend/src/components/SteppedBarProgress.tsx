@@ -43,7 +43,6 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
             return prev + 1;
           }
           clearInterval(timer);
-          console.log({ prev, maxValue });
           if (prev >= maxValue) {
             setIsFullyDone(true);
             console.log("inside onFullyDone");
@@ -58,7 +57,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   }, [inView, value, maxValue]);
 
   return (
-    <div ref={ref} className={cn("flex flex-col gap-1", className)}>
+    <div ref={ref} className={cn("flex flex-col gap-0", className)}>
       {/* Progress bar */}
       <div className="flex items-center gap-2">
         <div className="flex gap-1 flex-1">

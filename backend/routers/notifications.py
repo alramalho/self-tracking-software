@@ -129,7 +129,6 @@ async def load_notifications(user: User = Depends(is_clerk_user)):
     engagement_notifications = [n for n in notifications if n.type == "engagement"]
     latest_engagement = engagement_notifications[0] if engagement_notifications else None
     
-    # Filter out concluded notifications
     notifications = [n for n in notifications if n.status != "concluded"]
     
     # Mark processed notifications as opened

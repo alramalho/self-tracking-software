@@ -170,6 +170,7 @@ export interface Plan {
   user_id?: string;
   emoji?: string;
   goal: string;
+  state: "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED";
   finishing_date?: Date;
   activity_ids?: string[];
   plan_group_id?: string;
@@ -209,7 +210,7 @@ export interface Notification {
   opened_at: string | null;
   concluded_at: string | null;
   status: "pending" | "processed" | "opened" | "concluded";
-  type: "friend_request" | "plan_invitation" | "engagement" | "info";
+  type: "friend_request" | "plan_invitation" | "engagement" | "info" | "coach";
   related_id: string | null;
   related_data: Record<string, string> | null;
 }

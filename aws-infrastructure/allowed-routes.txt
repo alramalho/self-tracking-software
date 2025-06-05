@@ -70,6 +70,7 @@
 /regenerate-image-url
 /send-notification-to-all-users
 /run-daily-metrics-notification
+/run-hourly-job
 /run-daily-job
 /admin/public/log-error
 /tally/webhook
