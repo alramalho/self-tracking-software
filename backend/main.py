@@ -31,7 +31,7 @@ if __name__ == "__main__":
                     if "https://" in line:
                         public_url = line.strip().split()[-1]
                         if public_url.startswith("https://"):
-                            logger.ingo(
+                            logger.info(
                                 "\033[94mWebhook link to use (LocalTunnel):\n"
                                 + public_url
                                 + "/clerk/webhook\n"

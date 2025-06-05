@@ -7,7 +7,9 @@ from bson import ObjectId
 class PlanSession(BaseModel):
     date: str
     activity_id: str
-    descriptive_guide: str = Field(default="", description="A note describing the session")
+    descriptive_guide: str = Field(
+        default="", description="A note describing the session"
+    )
     quantity: int
 
 
@@ -30,8 +32,18 @@ class PlanMilestone(BaseModel):
 
     date: str
     description: str
-    criteria: Optional[List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]] = Field(default=None, description="The criteria that need to be met to achieve the milestone. If unexistent it means the milestone progress is manually updated.")
+    criteria: Optional[
+        List[Union[PlanMilestoneCriteria, PlanMilestoneCriteriaGroup]]
+    ] = Field(
+        default=None,
+        description="The criteria that need to be met to achieve the milestone. If unexistent it means the milestone progress is manually updated.",
+    )
     progress: Optional[int] = None  # Progress as a percentage (0-100)
+
+
+class PlanCurrentWeek(BaseModel):
+    state: Literal["ON_TRACK", "AT_RISK", "FAILED", "COMPLETED"]
+    state_last_calculated_at: Optional[str]
 
 
 class Plan(BaseModel):
@@ -49,6 +61,9 @@ class Plan(BaseModel):
     outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
     times_per_week: Optional[int] = None
     notes: Optional[str] = None
+    current_week: PlanCurrentWeek = PlanCurrentWeek(
+        state="ON_TRACK", state_last_calculated_at=None
+    )
     milestones: Optional[List[PlanMilestone]] = None
 
     @classmethod
@@ -67,6 +82,7 @@ class Plan(BaseModel):
         times_per_week: Optional[int] = None,
         activity_ids: Optional[List[str]] = None,
         milestones: Optional[List[PlanMilestone]] = None,
+        current_week: Optional[PlanCurrentWeek] = None,
     ) -> "Plan":
         return cls(
             id=id or str(ObjectId()),
@@ -83,4 +99,8 @@ class Plan(BaseModel):
             times_per_week=times_per_week,
             activity_ids=activity_ids,
             milestones=milestones,
+            current_week=current_week
+            or PlanCurrentWeek(
+                state="ON_TRACK", state_last_calculated_at=datetime.now(UTC).isoformat()
+            ),
         )
