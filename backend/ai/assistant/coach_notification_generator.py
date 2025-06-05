@@ -11,12 +11,17 @@ from constants import LLM_MODEL
 
 def generate_notification_message(user: User, plan: Plan):
     from controllers.plan_controller import PlanController
+    from loguru import logger
+
+    logger.info(f"Generating notification message for user '{user.username}' with plan '{plan.goal}'")
 
     num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = (
         PlanController().get_plan_week_stats(plan, user)
     )
+    logger.debug(f"Plan stats - planned: {num_planned_activities_this_week}, days left: {num_left_days_in_the_week}, activities left: {num_activities_left}")
 
     current_date = datetime.now(pytz.timezone(user.timezone))
+    logger.debug(f"Current date in user timezone: {current_date}")
 
     def generate_plan_details(plan_state, n_days_left, n_activities_left, date_str):
         return (
@@ -37,7 +42,8 @@ def generate_notification_message(user: User, plan: Plan):
     class MessageSchema(BaseModel):
         message: str
 
-    return ask_schema_simple_openai(
+    logger.info("Calling LLM to generate notification message")
+    message = ask_schema_simple_openai(
         pymodel=MessageSchema,
         message_history=[
             {
@@ -81,7 +87,7 @@ def generate_notification_message(user: User, plan: Plan):
             },
             {
                 "role": "assistant",
-                "content": "Didn’t make it? (_burps_) Of course not—click here, fix your mess!",
+                "content": "Didn't make it? (_burps_) Of course not—click here, fix your mess!",
             },
             {
                 "role": "user",
@@ -94,7 +100,7 @@ def generate_notification_message(user: User, plan: Plan):
             },
             {
                 "role": "assistant",
-                "content": "Holy crap, you didn’t screw it up! I’m... actually proud!",
+                "content": "Holy crap, you didn't screw it up! I'm... actually proud!",
             },
             {
                 "role": "user",
@@ -109,3 +115,6 @@ def generate_notification_message(user: User, plan: Plan):
         model="gpt-4o-mini",
         temperature=0,
     ).message
+
+    logger.info(f"Generated notification message: {message}")
+    return message
