@@ -37,6 +37,7 @@ from ai.assistant.plan_creation_assistant_simple import (
     PlanCreationAssistant as PlanCreationAssistantSimple,
 )
 from entities.message import Message
+from entities.notification import Notification
 from ai.llm import ask_schema_async, ask_text_async
 from ai.assistant.memory import DatabaseMemory
 from gateways.database.mongodb import MongoDBGateway
@@ -526,7 +527,6 @@ async def transcribe_audio(
 #         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 class QuestionAnalysisSchema(BaseModel):
     question: str = Field(
         ...,
@@ -541,10 +541,12 @@ class QuestionAnalysisSchema(BaseModel):
         description="The boolean representing the decisions (true if there is sufficient information, false otherwise).",
     )
 
+
 class QuestionChecksSchema(BaseModel):
     analysis: List[QuestionAnalysisSchema] = Field(
         description="The analysis of each question and user message.",
     )
+
 
 class MessageGenerationSchema(BaseModel):
     message: str = Field(
@@ -552,20 +554,23 @@ class MessageGenerationSchema(BaseModel):
         description="The message to be sent to the user where you should either thank him, or ask him to address the missing questions.",
     )
 
-async def analyse_question_checks(question_checks: List[str], conversation_history: str) -> Tuple[bool, Dict[str, bool], str]:
+
+async def analyse_question_checks(
+    question_checks: List[str], conversation_history: str
+) -> Tuple[bool, Dict[str, bool], str]:
     question_checks_keys = list(question_checks.keys())
 
     question_checks_response = await ask_schema_async(
-            text=f"Analyse the conversation history and determine whether it contains information to answer all the questions: {list(question_checks.keys())}. \n\nConversation history: {conversation_history}",
-            system="",
-            pymodel=QuestionChecksSchema,
-        )
-    
+        text=f"Analyse the conversation history and determine whether it contains information to answer all the questions: {list(question_checks.keys())}. \n\nConversation history: {conversation_history}",
+        system="",
+        pymodel=QuestionChecksSchema,
+    )
+
     question_results = {
         question_checks_keys[i]: question_checks_response.analysis[i].decision
         for i in range(len(question_checks_keys))
     }
-    question_results['reasoning'] = {
+    question_results["reasoning"] = {
         question_checks_keys[i]: question_checks_response.analysis[i].reasoning
         for i in range(len(question_checks_keys))
     }
@@ -574,7 +579,7 @@ async def analyse_question_checks(question_checks: List[str], conversation_histo
     ]
 
     all_questions_answered = all(question_results.values())
-    
+
     message_response = await ask_schema_async(
         text=f"""Based on the conversation history: {conversation_history}
                 And the question check results where:
@@ -585,10 +590,38 @@ async def analyse_question_checks(question_checks: List[str], conversation_histo
                 If there are unanswered questions, kindly ask for those specific pieces of information.
                 If all questions are answered, thank the user.""",
         system="You are an AI that is helping the user to create a profil and plan for the tracking.so app.",
-        pymodel=MessageGenerationSchema,    
+        pymodel=MessageGenerationSchema,
     )
 
     return all_questions_answered, question_results, message_response.message
+
+
+@router.post("/generate-coach-message")
+async def generate_coach_message(request: Request, user: User = Depends(is_clerk_user)):
+    if user.plan_type == "free":
+        raise HTTPException(status_code=401, detail="You're on free plan.")
+
+    if len(user.plan_ids) == 0:
+        raise HTTPException(status_code=401, detail="You have no plans.")
+
+    plan_controller = PlanController()
+    user_coached_plan = plan_controller.get_plan(user.plan_ids[0])
+    from ai.assistant.coach_notification_generator import generate_notification_message
+
+    plan_controller.recalculate_current_week_state(plan=user_coached_plan, user=user)
+    
+    message = generate_notification_message(user=user, plan=user_coached_plan)
+
+    await notification_manager.create_and_process_notification(
+        Notification.new(
+            user_id=user.id,
+            message=message,
+            type="coach",
+        ),
+        push_notify=False,
+    )
+
+    return {"message": message}
 
 
 @router.post("/get-past-week-logging-extractions")
@@ -640,11 +673,14 @@ async def get_past_week_logging_extractions(
 
         conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
 
-        question_checks_task = analyse_question_checks(question_checks, conversation_history)
+        question_checks_task = analyse_question_checks(
+            question_checks, conversation_history
+        )
 
         # Wait for all tasks to complete
         activities_result, question_checks_response = await asyncio.gather(
-            activities_task, question_checks_task,
+            activities_task,
+            question_checks_task,
         )
 
         _, question_results, message = question_checks_response
@@ -836,7 +872,6 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 description="The user's age as a single integer, if mentioned.",
             )
 
-
         memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 
         memory.write(
@@ -858,7 +893,9 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
             pymodel=UserProfileSchema,
         )
 
-        question_checks_task = analyse_question_checks(question_checks, conversation_history)
+        question_checks_task = analyse_question_checks(
+            question_checks, conversation_history
+        )
 
         # Wait for both parallel tasks to complete
         profile_response, question_checks_response = await asyncio.gather(
@@ -973,7 +1010,7 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
 
         # Initialize memory and assistant
         memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
-        
+
         memory.write(
             Message.new(
                 text=message,
@@ -995,15 +1032,19 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
         )
 
         result = {}
-        
-        all_questions_answered, question_results, message_response = await analyse_question_checks(question_checks, conversation_history)
+
+        all_questions_answered, question_results, message_response = (
+            await analyse_question_checks(question_checks, conversation_history)
+        )
         result["question_checks"] = question_results
 
         if not all_questions_answered:
             result["message"] = message_response
         else:
             ai_response, suggestions = await plan_creator.get_response(
-                user_input=message, message_id=str(ObjectId()), manual_memory_management=True
+                user_input=message,
+                message_id=str(ObjectId()),
+                manual_memory_management=True,
             )
 
             memory.write(
@@ -1016,7 +1057,7 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
                     emotions=[],
                 )
             )
-                
+
             result["message"] = ai_response
             if len(suggestions) > 0:
                 result["plan"] = suggestions[0].data["plan"]

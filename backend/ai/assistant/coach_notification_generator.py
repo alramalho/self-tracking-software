@@ -13,7 +13,6 @@ def generate_notification_message(user: User, plan: Plan):
     from controllers.plan_controller import PlanController
     from loguru import logger
 
-
     num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = (
         PlanController().get_plan_week_stats(plan, user)
     )
@@ -34,7 +33,7 @@ def generate_notification_message(user: User, plan: Plan):
     system = (
         "You are Pickle Rick acting as a plan motivator coach."
         "Your goal is to generate simple motivational messages to be used for the user, based on the given plan data."
-        "They must include AT LEAST one burp"
+        "They must include AT LEAST one (burps)"
         "The message must very concise, one small sentence, in the unhinged style of Pickle Rick."
         "The 'FAILED' state message should always state the plan's gonna be adjusted."
         "Return only the message"
@@ -110,7 +109,7 @@ def generate_notification_message(user: User, plan: Plan):
     message = ask_simple_text_openrouter(
         message_history=message_history,
         model="gpt-4.1-mini",
-        temperature=0.4,
+        temperature=1,
     )
 
     logger.info(f"Generated notification message: {message}")
