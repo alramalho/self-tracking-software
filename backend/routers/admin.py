@@ -35,6 +35,8 @@ from gateways.recommendations import RecommendationsGateway
 from controllers.plan_controller import PlanController
 from ai.assistant.coach_notification_generator import generate_notification_message
 import traceback
+from copy import copy
+
 
 router = APIRouter()
 security = HTTPBearer()
@@ -375,6 +377,7 @@ def _process_recommendations_outdated(users: List[User]) -> dict:
 @router.post("/run-hourly-job")
 async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     body = await request.json()
+    trigger_hour = body.get("trigger_hour", 9)
     filter_usernames = body.get("filter_usernames", [])
 
     users = users_gateway.get_all_users()
@@ -384,7 +387,7 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     users_coached_plan_ids = [u.plan_ids[0] for u in users if len(u.plan_ids) > 0]
     users_coached_plans = plans_contoller.get_plans(users_coached_plan_ids)
 
-    result = {'sent_notifications_to': {}}
+    result = {"sent_notifications_to": {}}
 
     for user, user_coached_plan in zip(users, users_coached_plans):
         if len(user.plan_ids) == 0:
@@ -392,16 +395,15 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
             continue
 
         current_user_time = datetime.now(pytz.timezone(user.timezone))
-        is_8_am_in_users_timezone = (
-            current_user_time.hour == 9
-        )
-        all_users_activity_entries = activities_gateway.get_all_activity_entries_by_user_id(
-            user.id
+        is_8_am_in_users_timezone = current_user_time.hour == trigger_hour
+        all_users_activity_entries = (
+            activities_gateway.get_all_activity_entries_by_user_id(user.id)
         )
         activities_in_last_week = [
             activity
             for activity in all_users_activity_entries
-            if datetime.fromisoformat(activity.date).replace(tzinfo=UTC) > (datetime.now(UTC) - timedelta(days=7))
+            if datetime.fromisoformat(activity.date).replace(tzinfo=UTC)
+            > (datetime.now(UTC) - timedelta(days=7))
         ]
 
         if len(activities_in_last_week) == 0:
@@ -409,10 +411,26 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
             continue
 
         if not is_8_am_in_users_timezone:
-            logger.info(f"Skipping user {user.username} because it's not 8 am in their timezone")
+            logger.info(
+                f"Skipping user {user.username} because it's not 8 am in their timezone"
+            )
             continue
 
-        user_coached_plan = plans_contoller.recalculate_current_week_state(user_coached_plan, user)
+        
+        old_plan_state = copy(user_coached_plan.current_week.state)
+        user_coached_plan = plans_contoller.recalculate_current_week_state(
+            user_coached_plan, user
+        )
+
+        if user_coached_plan.current_week.state == old_plan_state:
+            logger.info(
+                (
+                    f"Not a state transition (old: {old_plan_state}, "
+                    f"new: {user_coached_plan.current_week.state}) for plan '{user_coached_plan.goal} of "
+                    f"user '{user.username}'. Skipping notification"
+                )
+            )
+            continue
 
         message = generate_notification_message(user, user_coached_plan)
         notification = await notification_manager.create_and_process_notification(
@@ -422,9 +440,10 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
                 type="coach",
             )
         )
-        result['sent_notifications_to'][user.username] = notification.message
-    
+        result["sent_notifications_to"][user.username] = notification.message
+
     return result
+
 
 @router.post("/run-daily-job")
 async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
