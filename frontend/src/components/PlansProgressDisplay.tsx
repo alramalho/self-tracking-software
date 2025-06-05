@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { isSameWeek, format } from "date-fns";
+import React, { useState, useEffect, useMemo } from "react";
+import { isSameWeek, format, isToday, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import {
@@ -24,12 +24,16 @@ import {
   Flame,
   Loader2,
   TrendingUp,
+  RefreshCw,
 } from "lucide-react";
 import { Medal } from "lucide-react";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { MessageBubble } from "./MessageBubble";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useApiWithAuth } from "@/api";
+
 interface PlansProgressDisplayProps {
   plans: Plan[];
   isExpanded: boolean;
@@ -49,9 +53,72 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { notificationsData } = useUserPlan();
-  const lastCoachMessage = notificationsData?.data?.notifications?.find(
-    (notification: Notification) => notification.type === "coach"
-  )?.message;
+
+  // Convert to state for coach message management
+  const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
+    undefined
+  );
+  const [isGeneratingCoachMessage, setIsGeneratingCoachMessage] =
+    useState(false);
+  const api = useApiWithAuth();
+  const [
+    lastTimeCoachMessageWasGenerated,
+    setLastTimeCoachMessageWasGenerated,
+  ] = useLocalStorage<Date | undefined>(
+    "last-coach-message-generated-at",
+    undefined
+  );
+
+  const canGenerateNewMessage = useMemo(() => {
+    if (!lastTimeCoachMessageWasGenerated) return true;
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    return isBefore(lastTimeCoachMessageWasGenerated, twoHoursAgo);
+  }, [lastTimeCoachMessageWasGenerated]);
+
+  // Function to generate coach message
+  const generateCoachMessage = async () => {
+    if (isGeneratingCoachMessage) return;
+
+    if (!canGenerateNewMessage) {
+      console.log("Must wait 2 hours between coach message generations");
+      return;
+    }
+
+    try {
+      setIsGeneratingCoachMessage(true);
+      const response = await api.post(
+        "/ai/generate-coach-message",
+        {},
+        {
+          headers: {
+            "Content-Type": "application/json",
+            // Add your auth headers here if needed
+          },
+        }
+      );
+
+      setLastCoachMessage(response.data.message);
+      setLastTimeCoachMessageWasGenerated(new Date());
+      notificationsData.refetch()
+    } catch (error) {
+      console.error("Failed to generate coach message:", error);
+    } finally {
+      setIsGeneratingCoachMessage(false);
+    }
+  };
+
+  // Initialize coach message from notifications data
+  useEffect(() => {
+    if (notificationsData?.data?.notifications) {
+      const initialCoachMessage = notificationsData?.data?.notifications?.find(
+        (notification: Notification) => notification.type === "coach"
+      )?.message;
+
+      if (initialCoachMessage) {
+        setLastCoachMessage(initialCoachMessage);
+      }
+    }
+  }, []);
 
   // Helper function to check if a streak was achieved this week
   const wasStreakAchievedThisWeek = (planProgressData: any) => {
@@ -214,20 +281,38 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                             <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg" />
                             <AvatarFallback>CN</AvatarFallback>
                           </Avatar>
-                          <div className="flex flex-col gap-1">
-                            {notificationsData.isLoading ? (
-                              <Loader2 className="h-6 w-6 animate-spin" />
-                            ) : (
-                              <>
-                                <span className="text-sm italic text-gray-500">
-                                  {lastCoachMessage}
-                                </span>
-                                <span className="text-[10px] italic text-gray-400">
-                                  Coach Pickle Rick
-                                </span>
-                              </>
-                            )}
+                          <div className="flex flex-col gap-1 flex-1">
+                            <span className={`text-sm italic ${isGeneratingCoachMessage || !canGenerateNewMessage ? "text-gray-400" : "text-gray-500"}`}>
+                              {lastCoachMessage}
+                            </span>
+                            <span className="text-[10px] italic text-gray-400">
+                              Coach Pickle Rick
+                            </span>
                           </div>
+                          <button
+                            onClick={generateCoachMessage}
+                            disabled={
+                              isGeneratingCoachMessage || !canGenerateNewMessage
+                            }
+                            className={cn(
+                              "p-1 rounded-full transition-all duration-200",
+                              canGenerateNewMessage && !isGeneratingCoachMessage
+                                ? "hover:bg-gray-100 text-gray-600 hover:text-gray-800 cursor-pointer"
+                                : "text-gray-300 cursor-not-allowed"
+                            )}
+                            title={
+                              !canGenerateNewMessage
+                                ? "Wait 2 hours between message generations"
+                                : "Generate new coach message"
+                            }
+                          >
+                            <RefreshCw
+                              className={cn(
+                                "h-4 w-4",
+                                isGeneratingCoachMessage && "animate-spin"
+                              )}
+                            />
+                          </button>
                         </div>
                       </MessageBubble>
                     </div>
