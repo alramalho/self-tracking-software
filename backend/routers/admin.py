@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from auth.clerk import is_clerk_user
 from entities.user import User
@@ -378,49 +378,51 @@ def _process_recommendations_outdated(users: List[User]) -> dict:
 
 
 @router.post("/run-hourly-job")
-async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
+async def run_daily_job(request: Request, background_tasks: BackgroundTasks, verified: User = Depends(admin_auth)):
     body = await request.json()
     trigger_hour = body.get("trigger_hour", 9)
     filter_usernames = body.get("filter_usernames", [])
 
-    users = users_gateway.get_all_users()
+    users = users_gateway.get_all_paid_users()
     if len(filter_usernames) > 0:
         users = [user for user in users if user.username in filter_usernames]
 
     users_coached_plan_ids = [u.plan_ids[0] for u in users if len(u.plan_ids) > 0]
     users_coached_plans = plans_contoller.get_plans(users_coached_plan_ids)
 
-    result = {"sent_notifications_to": {}}
+    # Counter for tasks started
+    tasks_started = 0
+    started_for_users = []
 
-    # Create tasks for parallel processing
-    tasks = []
+    # Add tasks to FastAPI background tasks
     for user, user_coached_plan in zip(users, users_coached_plans):
         try:
             current_user_time = datetime.now(pytz.timezone(user.timezone))
         except pytz.exceptions.UnknownTimeZoneError:
             current_user_time = datetime.now(pytz.timezone("Europe/Berlin"))
 
-        is_8_am_in_users_timezone = current_user_time.hour == trigger_hour
-        if not is_8_am_in_users_timezone:
+        is_trigger_hour_in_users_timezone = current_user_time.hour == trigger_hour
+        if not is_trigger_hour_in_users_timezone:
             logger.info(
-                f"Skipping user {user.username} because it's not 8 am in their timezone"
+                f"Skipping user {user.username} because it's not {trigger_hour} am in their timezone"
             )
             continue
 
-        task = plans_contoller.process_plan_state_recalculation(user, user_coached_plan, push_notify=True)
-        tasks.append(task)
+        # Add to background tasks - these will run after response is sent
+        background_tasks.add_task(
+            plans_contoller.process_plan_state_recalculation,
+            user,
+            user_coached_plan,
+            True  # push_notify=True
+        )
+        tasks_started += 1
+        started_for_users.append(user.username)
 
-    # Process all users in parallel
-    if tasks:
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Collect successful results
-        for result_item in results:
-            if result_item and not isinstance(result_item, Exception):
-                username, message = result_item
-                result["sent_notifications_to"][username] = message
-
-    return result
+    return {
+        "message": f"Started background tasks for {tasks_started} users",
+        "started_for_users": started_for_users,
+        "total_users_checked": len(users)
+    }
 
 
 @router.post("/run-daily-job")

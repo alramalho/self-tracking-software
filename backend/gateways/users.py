@@ -35,7 +35,11 @@ class UsersGateway:
 
     def get_all_users(self) -> list[User]:
         users = [User(**data) for data in self.db_gateway.scan()]
-        return [user for user in users if not user.deleted]
+        return [user for user in users if not user.deleted_at]
+    
+    def get_all_paid_users(self) -> list[User]:
+        users = [User(**data) for data in self.db_gateway.query("plan_type", "plus")]
+        return [user for user in users if not user.deleted_at]
 
     def get_user_by_id(self, id: str) -> User:
         return self.get_user_by("id", id)
