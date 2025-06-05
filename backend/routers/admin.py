@@ -395,8 +395,11 @@ async def run_daily_job(request: Request, verified: User = Depends(admin_auth)):
     # Create tasks for parallel processing
     tasks = []
     for user, user_coached_plan in zip(users, users_coached_plans):
+        try:
+            current_user_time = datetime.now(pytz.timezone(user.timezone))
+        except pytz.exceptions.UnknownTimeZoneError:
+            current_user_time = datetime.now(pytz.timezone("Europe/Berlin"))
 
-        current_user_time = datetime.now(pytz.timezone(user.timezone))
         is_8_am_in_users_timezone = current_user_time.hour == trigger_hour
         if not is_8_am_in_users_timezone:
             logger.info(
