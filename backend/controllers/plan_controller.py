@@ -810,7 +810,7 @@ class PlanController:
         week_start = (current_date - timedelta(days=days_since_sunday)).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        week_end = week_start + timedelta(days=7, hours=23, minutes=59, seconds=59)
+        week_end = week_start + timedelta(days=6, hours=23, minutes=59, seconds=59) # sunday 00 is already new week
         
         num_left_days_in_the_week = max(0, (week_end - current_date).days + 1) # include today
 
@@ -839,6 +839,7 @@ class PlanController:
         num_activities_left = max(0, num_planned_activities_this_week - num_activities_this_week)
 
         return num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left
+    
     def recalculate_current_week_state(self, plan: Plan, user: User) -> Plan:
         
         num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = self.get_plan_week_stats(plan, user)
