@@ -12,6 +12,8 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.providers.deepseek import DeepSeekProvider
 from pydantic_ai.providers.google_vertex import GoogleVertexProvider
 from pydantic_ai.providers.mistral import MistralProvider
+from openai import OpenAI
+
 from constants import (
     LLM_MODEL,
     DEEPSEEK_API_KEY,
@@ -188,8 +190,6 @@ def ask_schema_simple_openai(
     model: str = LLM_MODEL,
     temperature: float = 0.4,
 ) -> T:
-    from openai import OpenAI
-
     client = OpenAI(
         api_key=OPENAI_API_KEY,
     )

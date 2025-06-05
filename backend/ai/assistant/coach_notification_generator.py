@@ -112,8 +112,8 @@ def generate_notification_message(user: User, plan: Plan):
                 ),
             },
         ],
-        model="gpt-4o-mini",
-        temperature=0,
+        model="gpt-4.1-mini",
+        temperature=0.4,
     ).message
 
     logger.info(f"Generated notification message: {message}")
