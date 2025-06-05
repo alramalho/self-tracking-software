@@ -383,21 +383,16 @@ async def run_daily_job(request: Request, background_tasks: BackgroundTasks, ver
     body = await request.json()
     trigger_hour = body.get("trigger_hour", 9)
     filter_usernames = body.get("filter_usernames", [])
-    logger.info(f"Job parameters - trigger_hour: {trigger_hour}, filter_usernames: {filter_usernames}")
 
     users = users_gateway.get_all_paid_users()
-    logger.info(f"Retrieved {len(users)} paid users")
 
     if len(filter_usernames) > 0:
         users = [user for user in users if user.username in filter_usernames]
-        logger.info(f"Filtered to {len(users)} users based on username filter")
 
     users_with_plans = [u for u in users if len(u.plan_ids) > 0]
-    logger.info(f"{len(users_with_plans)} users have active plans")
 
     users_coached_plan_ids = [u.plan_ids[0] for u in users_with_plans]
     users_coached_plans = plans_contoller.get_plans(users_coached_plan_ids)
-    logger.info(f"Retrieved {len(users_coached_plans)} coached plans")
 
     # Counter for tasks started
     tasks_started = 0
@@ -405,14 +400,11 @@ async def run_daily_job(request: Request, background_tasks: BackgroundTasks, ver
 
     # Add tasks to FastAPI background tasks
     for user, user_coached_plan in zip(users, users_coached_plans):
-        logger.info(f"Processing user {user.username}")
         
         try:
             current_user_time = datetime.now(pytz.timezone(user.timezone))
-            logger.info(f"User {user.username} current time: {current_user_time} (timezone: {user.timezone})")
         except pytz.exceptions.UnknownTimeZoneError:
             current_user_time = datetime.now(pytz.timezone("Europe/Berlin"))
-            logger.warning(f"Unknown timezone for user {user.username}, defaulting to Europe/Berlin: {current_user_time}")
 
         is_trigger_hour_in_users_timezone = current_user_time.hour == trigger_hour
         if not is_trigger_hour_in_users_timezone:
@@ -421,8 +413,6 @@ async def run_daily_job(request: Request, background_tasks: BackgroundTasks, ver
             )
             continue
 
-        logger.info(f"Adding background task for user {user.username} with plan '{user_coached_plan.goal}'")
-        # Add to background tasks - these will run after response is sent
         background_tasks.add_task(
             plans_contoller.process_plan_state_recalculation,
             user,

@@ -800,8 +800,9 @@ class PlanController:
                     )
 
         return sessions
-
+    
     def get_plan_week_stats(self, plan: Plan, user: User) -> Tuple[int, int, int]:
+        
         current_date = datetime.now(pytz.timezone(user.timezone))
         
         # Get start of the week (Sunday)
@@ -838,32 +839,24 @@ class PlanController:
         num_activities_left = abs(num_planned_activities_this_week - num_activities_this_week)
 
         return num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left
-    
     def recalculate_current_week_state(self, plan: Plan, user: User) -> Plan:
-        logger.info(f"Starting recalculate_current_week_state for plan '{plan.goal}' of user '{user.username}'")
         
         num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = self.get_plan_week_stats(plan, user)
-        logger.info(f"Plan stats - planned: {num_planned_activities_this_week}, days left: {num_left_days_in_the_week}, activities left: {num_activities_left}")
         
         # Determine the state based on completion vs planned activities
         if num_activities_left <= 0:
             new_state = 'COMPLETED'
-            logger.info(f"Setting state to COMPLETED - no activities left")
         else:
             margin = num_left_days_in_the_week - num_activities_left
             max_margin = max(0, 7 - num_planned_activities_this_week)
-            logger.info(f"Calculating state - margin: {margin}, max_margin: {max_margin}")
 
             if margin <= max_margin and margin >= 0:
                 if margin >= 2 or margin == max_margin:
                     new_state = 'ON_TRACK'
-                    logger.info(f"Setting state to ON_TRACK - good margin")
                 else:
                     new_state = 'AT_RISK'
-                    logger.info(f"Setting state to AT_RISK - tight margin")
             elif margin < 0:
                 new_state = 'FAILED'
-                logger.info(f"Setting state to FAILED - negative margin")
             else:
                 error_msg = f"Unexpected margin calculation: {margin}"
                 logger.error(error_msg)
@@ -882,7 +875,6 @@ class PlanController:
         return plan
     
     async def process_plan_state_recalculation(self, user: User, user_coached_plan: Plan, push_notify:bool= False):
-        logger.info(f"Starting process_plan_state_recalculation for user '{user.username}' with plan '{user_coached_plan.goal}'")
         
         if len(user.plan_ids) == 0:
             logger.info(f"User {user.username} has no plans - skipping recalculation")
@@ -892,7 +884,6 @@ class PlanController:
             logger.info(f"Skipping user {user.username} because they are on free plan")
             return None
 
-        logger.info(f"Fetching activity entries for user {user.username}")
         all_users_activity_entries = (
             self.activities_gateway.get_all_activity_entries_by_user_id(user.id)
         )
@@ -902,15 +893,12 @@ class PlanController:
             if datetime.fromisoformat(activity.date).replace(tzinfo=UTC)
             > (datetime.now(UTC) - timedelta(days=7))
         ]
-        logger.info(f"Found {len(activities_in_last_week)} activities in last week")
 
         if len(activities_in_last_week) == 0:
             logger.info(f"No activities in last week for user {user.username} - skipping recalculation")
             return None
 
         old_plan_state = copy(user_coached_plan.current_week.state)
-        logger.info(f"Current plan state is {old_plan_state}")
-        logger.info(f"Recalculating plan week state for plan '{user_coached_plan.goal}' of user '{user.username}'")
         
         user_coached_plan = self.recalculate_current_week_state(
             user_coached_plan, user
@@ -922,11 +910,8 @@ class PlanController:
             )
             return None
 
-        logger.info(f"State changed from {old_plan_state} to {user_coached_plan.current_week.state}")
-        logger.info(f"Generating notification message for plan '{user_coached_plan.goal}' of user '{user.username}'")
         message = generate_notification_message(user, user_coached_plan)
         
-        logger.info(f"Creating notification with push_notify={push_notify}")
         notification = await self.notification_manager.create_and_process_notification(
             Notification.new(
                 user_id=user.id,
