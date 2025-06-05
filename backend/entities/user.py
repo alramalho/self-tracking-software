@@ -19,7 +19,7 @@ class User(BaseModel):
     picture: Optional[str] = None
     age: Optional[int] = None
     username: Optional[str] = None
-    timezone: Optional[str] = None
+    timezone: Optional[str] = "Europe/Berlin"
     clerk_id: Optional[str] = None
     language: Optional[str] = "English"
     plan_type: Optional[Literal["free", "plus"]] = "free"
