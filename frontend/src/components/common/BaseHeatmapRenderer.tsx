@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { format, addDays, isToday, subMonths } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
-import { Brush } from 'lucide-react';
+import { Brush } from "lucide-react";
 
 export interface HeatmapData {
   date: string;
@@ -55,7 +55,10 @@ export const getActivityColor = (
 ) => {
   if (activity?.color_hex) {
     // Ensure intensityLevel is within the bounds of our alpha levels array
-    const alpha = intensityAlphaLevels[Math.min(intensityLevel, intensityAlphaLevels.length - 1)];
+    const alpha =
+      intensityAlphaLevels[
+        Math.min(intensityLevel, intensityAlphaLevels.length - 1)
+      ];
     return hexToRgba(activity.color_hex, alpha);
   }
   const colorMatrix = getActivityColorMatrix();
@@ -74,20 +77,32 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   getWeekCompletionStatus,
   onEditActivity,
 }) => {
+  // Add state for selected date
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
   // Convert dates to UTC
-  const utcStartDate = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
-  const utcEndDate = endDate ? new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())) : undefined;
+  const utcStartDate = new Date(
+    Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+  );
+  const utcEndDate = endDate
+    ? new Date(
+        Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
+      )
+    : undefined;
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const userData = currentUserDataQuery.data;
-  const userActivities = userData?.activities
+  const userActivities = userData?.activities;
   const isOwnActivity = (activity: Activity) => {
-    return userActivities?.some((userActivity) => userActivity.id === activity.id);
-  }
+    return userActivities?.some(
+      (userActivity) => userActivity.id === activity.id
+    );
+  };
 
   const numberOfWeeks = utcEndDate
     ? Math.ceil(
-        (utcEndDate.getTime() - utcStartDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+        (utcEndDate.getTime() - utcStartDate.getTime()) /
+          (7 * 24 * 60 * 60 * 1000)
       )
     : 52;
   const renderActivityLegend = () => {
@@ -102,55 +117,66 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             }}
             title="Today's date"
           />
+          <div
+            className="w-4 h-4"
+            style={{
+              border: "2px solid #0066FF",
+            }}
+            title="Selected date"
+          />
         </div>
-        <span className="text-sm font-semibold">Today</span>
-        
-        {!noActivityLegend && activities.map((activity, index) => (
-          <React.Fragment key={index}>
-            <div className="flex flex-row gap-0 items-center">
-              {activity.color_hex ? (
-                intensityAlphaLevels.map((alpha, intensityIdx) => (
-                  <div
-                    key={intensityIdx}
-                    className="w-4 h-4"
-                    style={{
-                      backgroundColor: hexToRgba(activity.color_hex!, alpha),
-                    }}
-                    title={`${activity.title} - Intensity ${intensityIdx + 1}`}
-                  />
-                ))
-              ) : (
-                colorMatrix[index % colorMatrix.length].map(
-                  (color, intensityIndex) => (
-                    <div
-                      key={intensityIndex}
-                      className="w-4 h-4"
-                      style={{ backgroundColor: color }}
-                      title={`Intensity level ${intensityIndex + 1}`}
-                    />
-                  )
-                )
-              )}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold flex items-center">
-                {activity.emoji} {activity.title}
-                {onEditActivity && isOwnActivity(activity) && (
-                  <button 
-                    onClick={() => onEditActivity(activity)}
-                    className="ml-2 p-1 text-gray-500 hover:text-gray-700"
-                    title={`Edit ${activity.title}`}
-                  >
-                    <Brush size={16} />
-                  </button>
-                )}
-              </span>
-              <span className="text-xs text-gray-500">
-                ({activity.measure})
-              </span>
-            </div>
-          </React.Fragment>
-        ))}
+        <span className="text-sm font-semibold">Today / Selected</span>
+
+        {!noActivityLegend &&
+          activities.map((activity, index) => (
+            <React.Fragment key={index}>
+              <div className="flex flex-row gap-0 items-center">
+                {activity.color_hex
+                  ? intensityAlphaLevels.map((alpha, intensityIdx) => (
+                      <div
+                        key={intensityIdx}
+                        className="w-4 h-4"
+                        style={{
+                          backgroundColor: hexToRgba(
+                            activity.color_hex!,
+                            alpha
+                          ),
+                        }}
+                        title={`${activity.title} - Intensity ${
+                          intensityIdx + 1
+                        }`}
+                      />
+                    ))
+                  : colorMatrix[index % colorMatrix.length].map(
+                      (color, intensityIndex) => (
+                        <div
+                          key={intensityIndex}
+                          className="w-4 h-4"
+                          style={{ backgroundColor: color }}
+                          title={`Intensity level ${intensityIndex + 1}`}
+                        />
+                      )
+                    )}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold flex items-center">
+                  {activity.emoji} {activity.title}
+                  {onEditActivity && isOwnActivity(activity) && (
+                    <button
+                      onClick={() => onEditActivity(activity)}
+                      className="ml-2 p-1 text-gray-500 hover:text-gray-700"
+                      title={`Edit ${activity.title}`}
+                    >
+                      <Brush size={16} />
+                    </button>
+                  )}
+                </span>
+                <span className="text-xs text-gray-500">
+                  ({activity.measure})
+                </span>
+              </div>
+            </React.Fragment>
+          ))}
       </div>
     );
   };
@@ -172,31 +198,51 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
             }}
             rectRender={(props, data) => {
               // Convert date string to UTC Date object
-              const [year, month, day] = data.date.split('/').map(Number);
+              const [year, month, day] = data.date.split("/").map(Number);
               const dateObj = new Date(Date.UTC(year, month - 1, day));
-              
+
               const dateStrForIntensity = format(dateObj, "yyyy-MM-dd");
               const intensities = getIntensityForDate(dateStrForIntensity);
 
               // Compare UTC dates for today check
               const today = new Date();
-              const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+              const todayUTC = new Date(
+                Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+              );
               const isCurrentDay = dateObj.getTime() === todayUTC.getTime();
+
+              // Check if this date is selected
+              const isSelectedDate =
+                selectedDate &&
+                (() => {
+                  const selectedUTC = new Date(
+                    Date.UTC(
+                      selectedDate.getFullYear(),
+                      selectedDate.getMonth(),
+                      selectedDate.getDate()
+                    )
+                  );
+                  return dateObj.getTime() === selectedUTC.getTime();
+                })();
 
               // Check if this is the last day of the week (Saturday)
               const isLastDayOfWeek = dateObj.getUTCDay() === 6;
-              
+
               // If it's Saturday and we have the completion check function, check if the week is completed
               // We need to get the start of this week (Sunday) to check completion
-              const isWeekCompleted = isLastDayOfWeek && getWeekCompletionStatus && (() => {
-                const weekStart = new Date(dateObj);
-                weekStart.setUTCDate(weekStart.getUTCDate() - 6); // Go back 6 days to get to Sunday
-                return getWeekCompletionStatus(weekStart);
-              })();
-              
+              const isWeekCompleted =
+                isLastDayOfWeek &&
+                getWeekCompletionStatus &&
+                (() => {
+                  const weekStart = new Date(dateObj);
+                  weekStart.setUTCDate(weekStart.getUTCDate() - 6); // Go back 6 days to get to Sunday
+                  return getWeekCompletionStatus(weekStart);
+                })();
+
               const renderRects = () => {
                 if (!intensities || intensities.length === 0) {
-                  return (
+                  const rects = [];
+                  rects.push(
                     <rect
                       key={data.index}
                       {...props}
@@ -206,6 +252,36 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       rx={4}
                     />
                   );
+
+                  // Add today's border if needed
+                  if (isCurrentDay) {
+                    rects.push(
+                      <rect
+                        key="today-border"
+                        {...props}
+                        fill="none"
+                        stroke="#FF0000"
+                        strokeWidth={2}
+                        rx={4}
+                      />
+                    );
+                  }
+
+                  // Add selected date border if needed
+                  if (isSelectedDate) {
+                    rects.push(
+                      <rect
+                        key="selected-border"
+                        {...props}
+                        fill="none"
+                        stroke="#0066FF"
+                        strokeWidth={2}
+                        rx={4}
+                      />
+                    );
+                  }
+
+                  return <g>{rects}</g>;
                 }
 
                 const rects = [];
@@ -221,7 +297,11 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                     <rect
                       key={0}
                       {...props}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity)}
+                      fill={getActivityColor(
+                        intensities[0].activityIndex,
+                        intensities[0].intensity,
+                        activity
+                      )}
                       rx={4}
                     />
                   );
@@ -236,21 +316,35 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX + halfWidth} ${baseY}
                          L ${baseX + halfWidth} ${baseY + rectHeight}
                          L ${baseX + 4} ${baseY + rectHeight}
-                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
+                        baseY + rectHeight - 4
+                      }
                          L ${baseX} ${baseY + 4}
                          Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity1)}
+                      fill={getActivityColor(
+                        intensities[0].activityIndex,
+                        intensities[0].intensity,
+                        activity1
+                      )}
                     />,
                     <path
                       key={1}
                       d={`M ${baseX + halfWidth + gap} ${baseY}
                          L ${baseX + rectWidth - 4} ${baseY}
-                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${baseY + 4}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
+                        baseY + 4
+                      }
                          L ${baseX + rectWidth} ${baseY + rectHeight - 4}
-                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
+                        baseX + rectWidth - 4
+                      } ${baseY + rectHeight}
                          L ${baseX + halfWidth + gap} ${baseY + rectHeight}
                          L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity, activity2)}
+                      fill={getActivityColor(
+                        intensities[1].activityIndex,
+                        intensities[1].intensity,
+                        activity2
+                      )}
                     />
                   );
                 } else if (intensities.length === 3) {
@@ -268,28 +362,46 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX} ${baseY + halfHeight}
                          L ${baseX} ${baseY + 4}
                          Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity1)}
+                      fill={getActivityColor(
+                        intensities[0].activityIndex,
+                        intensities[0].intensity,
+                        activity1
+                      )}
                     />,
                     <path
                       key={1}
                       d={`M ${baseX + halfWidth + gap} ${baseY}
                          L ${baseX + rectWidth - 4} ${baseY}
-                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${baseY + 4}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
+                        baseY + 4
+                      }
                          L ${baseX + rectWidth} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity, activity2)}
+                      fill={getActivityColor(
+                        intensities[1].activityIndex,
+                        intensities[1].intensity,
+                        activity2
+                      )}
                     />,
                     <path
                       key={2}
                       d={`M ${baseX} ${baseY + halfHeight + gap}
                          L ${baseX + rectWidth} ${baseY + halfHeight + gap}
                          L ${baseX + rectWidth} ${baseY + rectHeight - 4}
-                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
+                        baseX + rectWidth - 4
+                      } ${baseY + rectHeight}
                          L ${baseX + 4} ${baseY + rectHeight}
-                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
+                        baseY + rectHeight - 4
+                      }
                          L ${baseX} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity, activity3)}
+                      fill={getActivityColor(
+                        intensities[2].activityIndex,
+                        intensities[2].intensity,
+                        activity3
+                      )}
                     />
                   );
                 } else if (intensities.length >= 4) {
@@ -308,17 +420,27 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX} ${baseY + halfHeight}
                          L ${baseX} ${baseY + 4}
                          Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(intensities[0].activityIndex, intensities[0].intensity, activity1)}
+                      fill={getActivityColor(
+                        intensities[0].activityIndex,
+                        intensities[0].intensity,
+                        activity1
+                      )}
                     />,
                     <path
                       key={1}
                       d={`M ${baseX + halfWidth + gap} ${baseY}
                          L ${baseX + rectWidth - 4} ${baseY}
-                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${baseY + 4}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
+                        baseY + 4
+                      }
                          L ${baseX + rectWidth} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY + halfHeight}
                          L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(intensities[1].activityIndex, intensities[1].intensity, activity2)}
+                      fill={getActivityColor(
+                        intensities[1].activityIndex,
+                        intensities[1].intensity,
+                        activity2
+                      )}
                     />,
                     <path
                       key={2}
@@ -326,19 +448,35 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                          L ${baseX + halfWidth} ${baseY + halfHeight + gap}
                          L ${baseX + halfWidth} ${baseY + rectHeight}
                          L ${baseX + 4} ${baseY + rectHeight}
-                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${baseY + rectHeight - 4}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
+                        baseY + rectHeight - 4
+                      }
                          L ${baseX} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(intensities[2].activityIndex, intensities[2].intensity, activity3)}
+                      fill={getActivityColor(
+                        intensities[2].activityIndex,
+                        intensities[2].intensity,
+                        activity3
+                      )}
                     />,
                     <path
                       key={3}
-                      d={`M ${baseX + halfWidth + gap} ${baseY + halfHeight + gap}
+                      d={`M ${baseX + halfWidth + gap} ${
+                        baseY + halfHeight + gap
+                      }
                          L ${baseX + rectWidth} ${baseY + halfHeight + gap}
                          L ${baseX + rectWidth} ${baseY + rectHeight - 4}
-                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${baseX + rectWidth - 4} ${baseY + rectHeight}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
+                        baseX + rectWidth - 4
+                      } ${baseY + rectHeight}
                          L ${baseX + halfWidth + gap} ${baseY + rectHeight}
-                         L ${baseX + halfWidth + gap} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(intensities[3].activityIndex, intensities[3].intensity, activity4)}
+                         L ${baseX + halfWidth + gap} ${
+                        baseY + halfHeight + gap
+                      }`}
+                      fill={getActivityColor(
+                        intensities[3].activityIndex,
+                        intensities[3].intensity,
+                        activity4
+                      )}
                     />
                   );
                 }
@@ -357,6 +495,20 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   );
                 }
 
+                // Add selected date border if needed
+                if (isSelectedDate) {
+                  rects.push(
+                    <rect
+                      key="selected-border"
+                      {...props}
+                      fill="none"
+                      stroke="#0066FF"
+                      strokeWidth={2}
+                      rx={4}
+                    />
+                  );
+                }
+
                 return <g>{rects}</g>;
               };
 
@@ -364,6 +516,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                 <g
                   onClick={() => {
                     if (!isNaN(dateObj.getTime())) {
+                      setSelectedDate(dateObj);
                       onDateClick(dateObj);
                     }
                   }}
