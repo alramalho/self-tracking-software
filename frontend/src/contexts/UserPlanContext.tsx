@@ -165,6 +165,11 @@ export interface PlanSession extends Omit<ApiPlanSession, "date"> {
   date: Date
   activity_name?: string
 }
+
+interface PlanCurrentWeek {
+  state: "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED";
+  state_last_calculated_at?: string;
+}
 export interface Plan {
   id?: string;
   user_id?: string;
@@ -183,6 +188,7 @@ export interface Plan {
   created_at: string;
   updated_by_coach_at?: string;
   coach_notes?: string;
+  current_week: PlanCurrentWeek
 }
 
 export interface ApiPlan {
@@ -203,6 +209,7 @@ export interface ApiPlan {
   milestones?: PlanMilestone[];
   updated_by_coach_at?: string;
   coach_notes?: string;
+  current_week: PlanCurrentWeek
 }
 
 export interface Notification {

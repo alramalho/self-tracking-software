@@ -5,7 +5,7 @@ import PlansRenderer from "@/components/PlansRenderer";
 import { useSession } from "@clerk/nextjs";
 import Link from "next/link";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AINotification from "@/components/AINotification";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
 import { useFeatureFlag } from "@/hooks/useFeatureFlags";
@@ -17,6 +17,8 @@ const PlansPage: React.FC = () => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const { setShowUpgradePopover } = useUpgrade();
+  const searchParams = useSearchParams();
+  const selectedPlanFromUrl = searchParams.get('selectedPlan');
   // const { message: aiMessage, messageId, isDismissed, dismiss, timestamp } = useAIMessageCache('plan');
 
   // useEffect(() => {
@@ -76,7 +78,7 @@ const PlansPage: React.FC = () => {
         />
       )} */}
 
-      <PlansRenderer />
+      <PlansRenderer initialSelectedPlanId={selectedPlanFromUrl} />
     </div>
   );
 };

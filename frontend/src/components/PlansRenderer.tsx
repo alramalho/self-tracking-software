@@ -145,12 +145,16 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   );
 };
 
-const PlansRenderer: React.FC = () => {
+interface PlansRendererProps {
+  initialSelectedPlanId?: string | null;
+}
+
+const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) => {
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(initialSelectedPlanId || null);
   const [orderedPlans, setOrderedPlans] = useState<ApiPlan[]>([]);
 
   const mouseSensor = useSensor(MouseSensor, {
@@ -176,11 +180,13 @@ const PlansRenderer: React.FC = () => {
   }, [userData?.plans]);
 
   useEffect(() => {
-    if (!selectedPlanId && orderedPlans && orderedPlans.length > 0) {
+    if (initialSelectedPlanId && orderedPlans.some(plan => plan.id === initialSelectedPlanId)) {
+      setSelectedPlanId(initialSelectedPlanId);
+    } else if (!selectedPlanId && orderedPlans && orderedPlans.length > 0) {
       const firstPlan = orderedPlans[0];
       setSelectedPlanId(firstPlan.id || null);
     }
-  }, [orderedPlans]);
+  }, [orderedPlans, initialSelectedPlanId]);
 
   const handleReactivatePlan = async (planId: string) => {
     try {
