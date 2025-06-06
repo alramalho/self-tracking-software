@@ -41,6 +41,7 @@ import { Button } from "./ui/button";
 import { motion } from "framer-motion";
 
 const PlanStatus = ({ plan }: { plan: Plan }) => {
+  console.log("plan STATUS", plan);
   if (!plan?.current_week?.state) {
     return null;
   }
@@ -105,7 +106,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const { notificationsData } = useUserPlan();
 
-  const [isFullyDone, setIsFullyDone] = useState<boolean>(false);
+  const [isAnimationCompleted, setIsAnimationCompleted] = useState<boolean>(false);
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
     undefined
   );
@@ -378,7 +379,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                         </MessageBubble>
                       </div>
                       <AnimatePresence>
-                        {isFullyDone && (
+                        {isAnimationCompleted && (
                           <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -397,7 +398,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                       value={totalCompletedActivities}
                       maxValue={totalPlannedActivities}
                       goal={<Flame size={19} className="text-orange-400" />}
-                      onFullyDone={() => setIsFullyDone(true)}
+                      onAnimationCompleted={() => setIsAnimationCompleted(true)}
                       className="w-full"
                       // celebration={
                       //   <span className="flex items-center gap-1">

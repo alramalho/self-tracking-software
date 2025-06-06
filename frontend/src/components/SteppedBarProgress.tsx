@@ -9,6 +9,7 @@ interface SteppedBarProgressProps {
   maxValue: number;
   goal: string | React.ReactNode;
   className?: string;
+  onAnimationCompleted?: () => void;
   onFullyDone?: () => void;
   color?: string;
   celebration?: string | React.ReactNode;
@@ -21,6 +22,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   className,
   celebration,
   color = "bg-green-500",
+  onAnimationCompleted,
   onFullyDone,
 }) => {
   const [animatedValue, setAnimatedValue] = useState(0);
@@ -32,10 +34,6 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   });
 
   useEffect(() => {
-    console.log("isFullyDone", isFullyDone);
-  }, [isFullyDone]);
-
-  useEffect(() => {
     if (inView) {
       const timer = setInterval(() => {
         setAnimatedValue((prev) => {
@@ -43,9 +41,9 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
             return prev + 1;
           }
           clearInterval(timer);
+          onAnimationCompleted?.();
           if (prev >= maxValue) {
             setIsFullyDone(true);
-            console.log("inside onFullyDone");
             onFullyDone?.();
           }
           return prev;
@@ -54,7 +52,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
 
       return () => clearInterval(timer);
     }
-  }, [inView, value, maxValue]);
+  }, [inView, value, maxValue, onAnimationCompleted]);
 
   return (
     <div ref={ref} className={cn("flex flex-col gap-0", className)}>
