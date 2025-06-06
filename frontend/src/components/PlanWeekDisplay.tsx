@@ -5,6 +5,7 @@ import {
   isAfter,
   isBefore,
   format,
+  isFuture,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -81,6 +82,7 @@ export const PlanWeekDisplay = ({
     : false;
 
   const isCurrentWeek = week ? isSameWeek(week.startDate, new Date()) : false;
+  const isFutureWeek = week ? isAfter(week.startDate, endOfWeek(new Date())) : false
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
 
@@ -203,10 +205,10 @@ export const PlanWeekDisplay = ({
         </div>
       )}
 
-      {plan.outline_type == "specific" && !isWeekCompleted && (
+      {plan.outline_type == "specific" && (isCurrentWeek || isFutureWeek) && (
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
           <span className="text-sm text-gray-500">Coming up:</span>
-          <div className="flex flex-row flex-wrap gap-4">
+          <div className="flex flex-row flex-wrap gap-2">
             {plan.sessions
               .filter((session) => {
                 return isSameWeek(session.date, date);

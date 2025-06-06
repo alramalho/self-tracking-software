@@ -6,7 +6,7 @@ interface PlanGenerationConfig {
   finishingDate?: string;
   activities: Activity[];
   description?: string;
-  isEdit?: boolean;
+  existingPlan?: ApiPlan;
 }
 
 export function usePlanGeneration() {
@@ -20,7 +20,7 @@ export function usePlanGeneration() {
       finishing_date: config.finishingDate,
       activities: config.activities,
       description: config.description,
-      is_edit: config.isEdit,
+      existing_plan: config.existingPlan,
     });
 
     return response.data.sessions;

@@ -17,6 +17,7 @@ from gateways.users import UsersGateway
 from datetime import datetime, timedelta, UTC
 from entities.user import User
 from gateways.vector_database.pinecone import PineconeVectorDB
+from entities.plan import PlanState
 from loguru import logger
 from bson import ObjectId
 from copy import deepcopy
@@ -24,7 +25,12 @@ import pytz
 from entities.notification import Notification
 from services.notification_manager import NotificationManager
 from copy import copy
-from ai.assistant.coach_notification_generator import generate_notification_message
+from ai.assistant.coach_notification_generator import (
+    generate_notification_message,
+    generate_coach_notes,
+)
+import threading
+
 
 class PlanMilestoneProgress(BaseModel):
     """Response entity for milestone progress"""
@@ -218,7 +224,7 @@ class PlanController:
             if plan is not None:
                 plans.append(plan)
         return plans
-    
+
     def get_all_user_active_plans(self, user: User) -> List[Plan]:
         logger.log("CONTROLLERS", f"Getting all plans for user {user.id}")
         plans = []
@@ -260,7 +266,11 @@ class PlanController:
     def update_plan(self, plan: Plan) -> Plan:
         logger.log("CONTROLLERS", f"Updating plan: {plan.id}")
         self.db_gateway.write(plan.dict())
-        self.vector_database.upsert_record(text=self.get_readable_plan(plan), identifier=plan.id, metadata={"user_id": plan.user_id})
+        self.vector_database.upsert_record(
+            text=self.get_readable_plan(plan),
+            identifier=plan.id,
+            metadata={"user_id": plan.user_id},
+        )
         return plan
 
     def get_plans(self, plan_ids: List[str]) -> List[Plan]:
@@ -702,28 +712,74 @@ class PlanController:
 
         return "\n".join(plan_text)
 
+    def to_sessions_str(
+        self, session: PlanSession, plan_activities: Optional[List[Activity]]
+    ) -> str:
+        if not plan_activities:
+            plan = self.get_plan(session.plan_id)
+            plan_activities = self.activities_gateway.get_all_activites_by_ids(
+                plan.activity_ids
+            )
+
+        activities = [a for a in plan_activities if a.id == session.activity_id]
+        if len(activities) == 0:
+            logger.error("Session belong to no plan activity! Skipping")
+            return None
+
+        activity = activities[0]
+        readable_date = datetime.strptime(session.date, "%Y-%m-%d").strftime(
+            "%b %d %Y, %A"
+        )
+
+        return f"–{activity.title} ({session.quantity} {activity.measure}) in {readable_date}"
+
     def generate_sessions(
         self,
         goal: str,
         finishing_date: Optional[str] = None,
         activities: List[Activity] = None,
-        description: Optional[str] = None,
-        is_edit: Optional[bool] = None,
+        edit_description: Optional[str] = None,
+        existing_plan: Optional[Plan] = None,
     ) -> List[PlanSession]:
         logger.log("CONTROLLERS", f"Generating sessions for goal: {goal}")
         current_date = datetime.now().strftime("%Y-%m-%d, %A")
         if not finishing_date:
-            finishing_date = (datetime.now() + timedelta(days=120)).strftime("%Y-%m-%d")
+            finishing_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
         number_of_weeks = self._count_number_of_weeks_till(finishing_date)
+
+        if existing_plan and existing_plan:
+            plan_activities = self.activities_gateway.get_all_activites_by_ids(
+                existing_plan.activity_ids
+            )
+            sessions = []
+            for s in existing_plan.sessions[:10]:  # first 10 not to overwhelm prompt
+                session_str = self.to_sessions_str(s, plan_activities)
+                if session_str:
+                    sessions.append(session_str)
+
+            introduction = (
+                f"You are a plan coach assistant. You are coaching with the plan '{goal}'"
+                f"Your task is to generate an adapted plan based on this edit description: \n-{edit_description}\n"
+                f"Here are the CURRENT plan nex 10 sessions for reference. \n{"\n".join(sessions)}"
+                f"You must use this information thoughtfully as the basis for your plan generation. In regards to that:"
+                f"The plan has the finishing date of {finishing_date} and today is {current_date}."
+                f"Additional requirements:"
+            )
+        else:
+            introduction = (
+                f"You will act as a personal coach for the goal of {goal}.\n"
+                f"The plan has the finishing date of {finishing_date} and today is {current_date}."
+            )
+
         system_prompt = f"""
-        You will act as a personal coach for the goal of {goal}, given the finishing date of {finishing_date} and that today is {current_date}.
+        {introduction}
         No date should be before today ({current_date}).
-        For that, you will develop a progressive plan over the course of {number_of_weeks} weeks.
-        Keep the activties to a minimum.
+        You must develop a progressive plan over the course of {number_of_weeks} weeks.
+        Keep the activities to a minimum.
         The plan should be progressive (intensities or recurrence of activities should increase over time).
         The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
-        It is absolutely mandatory that all present sessions activity names are contained in the list of activities.
+        It is an absolute requirement that all present sessions activity names are contained in the list of activities.
 
         Please only include these activities in plan:
         {"\n - ".join([str(a) for a in activities])}
@@ -731,11 +787,8 @@ class PlanController:
 
         user_prompt = f"Please generate me a plan to achieve the goal of {goal} by {finishing_date}."
 
-        if description:
-            user_prompt += f"\nAdditional description: {description}"
-
-        if is_edit:
-            user_prompt = f"This is an edit to the existing plan with goal: {goal}.\n\n{user_prompt}"
+        if edit_description:
+            user_prompt += f"\nAdditional description: {edit_description}"
 
         class GeneratedSession(BaseModel):
             date: str
@@ -800,83 +853,173 @@ class PlanController:
                     )
 
         return sessions
-    
+
     def get_plan_week_stats(self, plan: Plan, user: User) -> Tuple[int, int, int]:
-        
+
         current_date = datetime.now(pytz.timezone(user.timezone))
-        
+
         # Get start of the week (Sunday)
         days_since_sunday = (current_date.weekday() + 1) % 7
         week_start = (current_date - timedelta(days=days_since_sunday)).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        week_end = week_start + timedelta(days=6, hours=23, minutes=59, seconds=59) # sunday 00 is already new week
-        
-        num_left_days_in_the_week = max(0, (week_end - current_date).days + 1) # include today
+        week_end = week_start + timedelta(
+            days=6, hours=23, minutes=59, seconds=59
+        )  # sunday 00 is already new week
+
+        num_left_days_in_the_week = max(
+            0, (week_end - current_date).days + 1
+        )  # include today
 
         num_activities_this_week = 0
         for activity_id in plan.activity_ids:
-            activity_entries = self.activities_gateway.get_all_activity_entries_by_activity_id(activity_id)
-            
+            activity_entries = (
+                self.activities_gateway.get_all_activity_entries_by_activity_id(
+                    activity_id
+                )
+            )
+
             # Count entries from this week (only count max 1 per day to avoid double counting)
             daily_completions = set()
             for entry in activity_entries:
                 entry_date = datetime.fromisoformat(entry.date).replace(tzinfo=UTC)
                 if week_start <= entry_date <= week_end:
                     daily_completions.add(entry_date.date())
-            
+
             num_activities_this_week += len(daily_completions)
-        
+
         # Calculate planned activities for this week
-        if plan.outline_type == 'times_per_week':
+        if plan.outline_type == "times_per_week":
             num_planned_activities_this_week = plan.times_per_week or 0
         else:  # specific schedule
-            num_planned_activities_this_week = len([
-                session for session in plan.sessions
-                if week_start <= datetime.fromisoformat(session.date).replace(tzinfo=UTC) <= week_end
-            ])
-        
-        num_activities_left = max(0, num_planned_activities_this_week - num_activities_this_week)
+            num_planned_activities_this_week = len(
+                [
+                    session
+                    for session in plan.sessions
+                    if week_start
+                    <= datetime.fromisoformat(session.date).replace(tzinfo=UTC)
+                    <= week_end
+                ]
+            )
 
-        return num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left
-    
+        num_activities_left = max(
+            0, num_planned_activities_this_week - num_activities_this_week
+        )
+
+        return (
+            num_planned_activities_this_week,
+            num_left_days_in_the_week,
+            num_activities_left,
+        )
+
+    def process_state_transition(self, plan: Plan, user: User, new_state: PlanState):
+        if new_state == "FAILED":
+            if plan.outline_type == "times_per_week":
+                plan.times_per_week = max(1, plan.times_per_week - 1)
+                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+
+            if plan.outline_type == "specific":
+                activities = self.activities_gateway.get_all_activites_by_ids(
+                    plan.activity_ids
+                )
+                old_sessions = copy(plan.sessions)
+                plan.sessions = self.generate_sessions(
+                    goal=plan.goal,
+                    finishing_date=plan.finishing_date,
+                    activities=activities,
+                    existing_plan=plan,
+                    edit_description=(
+                        f"The user has failed the current plan's week."
+                        "Please adapt so it is downgraded 1 level of difficulty."
+                        "The update should be minimal"
+                    ),
+                )
+                plan.coach_notes = generate_coach_notes(
+                    plan, new_state, activities, old_sessions, plan.sessions
+                )
+                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+
+            self.update_plan(plan)
+
+        elif new_state == "COMPLETED":
+
+            if plan.outline_type == "specific":
+                activities = self.activities_gateway.get_all_activites_by_ids(
+                    plan.activity_ids
+                )
+                old_sessions = copy(plan.sessions)
+                plan.sessions = self.generate_sessions(
+                    goal=plan.goal,
+                    finishing_date=plan.finishing_date,
+                    activities=activities,
+                    existing_plan=plan,
+                    edit_description=(
+                        f"The user has completed the the current plan's week."
+                        "Consider if there are changes necessary to achieve the goal"
+                        "You may leave the plan as is"
+                    ),
+                )
+                plan.coach_notes = generate_coach_notes(
+                    plan, new_state, activities, old_sessions, plan.sessions
+                )
+                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+
+                self.update_plan(plan)
+
     def recalculate_current_week_state(self, plan: Plan, user: User) -> Plan:
-        
-        num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = self.get_plan_week_stats(plan, user)
-        
+
+        (
+            num_planned_activities_this_week,
+            num_left_days_in_the_week,
+            num_activities_left,
+        ) = self.get_plan_week_stats(plan, user)
+
         # Determine the state based on completion vs planned activities
         if num_activities_left <= 0:
-            new_state = 'COMPLETED'
+            new_state = "COMPLETED"
         else:
             margin = num_left_days_in_the_week - num_activities_left
             max_margin = max(0, 7 - num_planned_activities_this_week)
 
             if margin <= max_margin and margin >= 0:
                 if margin >= 2 or margin == max_margin:
-                    new_state = 'ON_TRACK'
+                    new_state = "ON_TRACK"
                 else:
-                    new_state = 'AT_RISK'
+                    new_state = "AT_RISK"
             elif margin < 0:
-                new_state = 'FAILED'
+                new_state = "FAILED"
             else:
                 error_msg = f"Unexpected margin calculation: {margin}"
                 logger.error(error_msg)
                 raise ValueError(error_msg)
-        
+
         # Update the plan's current week state
-        old_state = plan.current_week.state
+        old_state = copy(plan.current_week.state)
         plan.current_week.state = new_state
         current_date = datetime.now(pytz.timezone(user.timezone))
         plan.current_week.state_last_calculated_at = current_date.isoformat()
-        
+
+        if old_state != new_state:
+            # Run state transition processing in a separate thread to avoid blocking
+            thread = threading.Thread(
+                target=self.process_state_transition,
+                args=(plan, user, new_state),
+                daemon=False,
+            )
+            thread.start()
+
         # Save the updated plan
         self.update_plan(plan)
-        
-        logger.info(f"Updated plan {plan.id} current week state from {old_state} to {new_state}")
+
+        logger.info(
+            f"Updated plan {plan.id} current week state from {old_state} to {new_state}"
+        )
         return plan
-    
-    async def process_plan_state_recalculation(self, user: User, user_coached_plan: Plan, push_notify:bool= False):
-        
+
+    async def process_plan_state_recalculation(
+        self, user: User, user_coached_plan: Plan, push_notify: bool = False
+    ):
+
         if len(user.plan_ids) == 0:
             logger.info(f"User {user.username} has no plans - skipping recalculation")
             return None
@@ -896,14 +1039,14 @@ class PlanController:
         ]
 
         if len(activities_in_last_week) == 0:
-            logger.info(f"No activities in last week for user {user.username} - skipping recalculation")
+            logger.info(
+                f"No activities in last week for user {user.username} - skipping recalculation"
+            )
             return None
 
         old_plan_state = copy(user_coached_plan.current_week.state)
-        
-        user_coached_plan = self.recalculate_current_week_state(
-            user_coached_plan, user
-        )
+
+        user_coached_plan = self.recalculate_current_week_state(user_coached_plan, user)
 
         if user_coached_plan.current_week.state == old_plan_state:
             logger.info(
@@ -912,17 +1055,19 @@ class PlanController:
             return None
 
         message = generate_notification_message(user, user_coached_plan)
-        
+
         notification = await self.notification_manager.create_and_process_notification(
             Notification.new(
                 user_id=user.id,
                 message=message,
                 type="coach",
             ),
-            push_notify=push_notify
+            push_notify=push_notify,
         )
 
-        logger.info(f"Plan state recalculation successful for plan '{user_coached_plan.goal}' of user '{user.username}'")
+        logger.info(
+            f"Plan state recalculation successful for plan '{user_coached_plan.goal}' of user '{user.username}'"
+        )
         return (user.username, notification.message)
 
 

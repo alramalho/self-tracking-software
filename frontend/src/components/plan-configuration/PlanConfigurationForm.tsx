@@ -116,7 +116,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         finishingDate: currentFinishingDate?.split("T")[0],
         activities: selectedActivities,
         description,
-        isEdit,
+        existingPlan: isEdit ? plan : undefined,
       });
 
       setGeneratedSessions(sessions);

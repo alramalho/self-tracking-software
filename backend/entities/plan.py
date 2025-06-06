@@ -15,7 +15,6 @@ class PlanSession(BaseModel):
 
 class PlanMilestoneCriteria(BaseModel):
     """Represents a single activity requirement."""
-
     activity_id: str
     quantity: int
 
@@ -41,10 +40,10 @@ class PlanMilestone(BaseModel):
     progress: Optional[int] = None  # Progress as a percentage (0-100)
 
 
+PlanState = Literal["ON_TRACK", "AT_RISK", "FAILED", "COMPLETED"]
 class PlanCurrentWeek(BaseModel):
-    state: Literal["ON_TRACK", "AT_RISK", "FAILED", "COMPLETED"]
+    state: PlanState
     state_last_calculated_at: Optional[str]
-
 
 class Plan(BaseModel):
     id: str
@@ -61,6 +60,8 @@ class Plan(BaseModel):
     outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
     times_per_week: Optional[int] = None
     notes: Optional[str] = None
+    coach_notes: Optional[str] = None
+    updated_by_coach_at: Optional[str] = None
     current_week: PlanCurrentWeek = PlanCurrentWeek(
         state="ON_TRACK", state_last_calculated_at=None
     )
@@ -83,6 +84,8 @@ class Plan(BaseModel):
         activity_ids: Optional[List[str]] = None,
         milestones: Optional[List[PlanMilestone]] = None,
         current_week: Optional[PlanCurrentWeek] = None,
+        updated_by_coach_at: Optional[str] = None,
+        coach_notes: Optional[str] = None,
     ) -> "Plan":
         return cls(
             id=id or str(ObjectId()),
@@ -98,9 +101,10 @@ class Plan(BaseModel):
             outline_type=outline_type,
             times_per_week=times_per_week,
             activity_ids=activity_ids,
+            updated_by_coach_at=updated_by_coach_at,
             milestones=milestones,
-            current_week=current_week
-            or PlanCurrentWeek(
+            current_week=current_week or PlanCurrentWeek(
                 state="ON_TRACK", state_last_calculated_at=datetime.now(UTC).isoformat()
             ),
+            coach_notes=coach_notes,
         )

@@ -39,7 +39,7 @@ class GenerateSessionsRequest(BaseModel):
     finishing_date: str | None = None
     activities: List[Activity]
     description: str | None = None
-    is_edit: bool | None = None
+    existing_plan: Plan | None = None
 
 
 @router.get("/generate-invitation-link")
@@ -406,8 +406,8 @@ async def generate_sessions(data: GenerateSessionsRequest, user: User = Depends(
             goal=data.goal,
             finishing_date=data.finishing_date.split("T")[0] if data.finishing_date else None,
             activities=data.activities,
-            description=data.description,
-            is_edit=data.is_edit,
+            edit_description=data.description,
+            existing_plan=data.existing_plan,
         )
         logger.info(f"Generated sessions: {sessions}")
         return {"sessions": sessions}

@@ -1,9 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserPlanContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import InviteButton from "./InviteButton";
-import { Settings, GripVertical, GripHorizontal } from "lucide-react";
+import {
+  Settings,
+  GripVertical,
+  GripHorizontal,
+  BadgeCheck,
+} from "lucide-react";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
@@ -14,6 +19,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { twMerge } from "tailwind-merge";
 import { usePlanEdit } from "@/hooks/usePlanEdit";
 import { PlanEditModal } from "./PlanEditModal";
+import { cn } from "@/lib/utils";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -42,12 +48,20 @@ const PlanCard: React.FC<PlanCardProps> = ({
   isDragging = false,
   dragHandleProps,
 }) => {
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { data: currentUserData } = currentUserDataQuery;
+  const isCoached = currentUserData?.user?.plan_ids?.[0] === plan.id;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showSettings, setShowSettings] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const api = useApiWithAuth();
   const { showEditModal, setShowEditModal, handleEditPlan } = usePlanEdit();
+
+  useEffect(() => {
+    console.log({ isCoached });
+  }, [isCoached]);
 
   const handleSettingsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -93,7 +107,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
             </Badge>
           </div>
         )}
-        <div 
+        <div
           className="absolute bottom-2 right-[50%] translate-x-[50%] z-10 text-gray-300 cursor-grab active:cursor-grabbing"
           {...dragHandleProps}
         >
@@ -102,13 +116,13 @@ const PlanCard: React.FC<PlanCardProps> = ({
           </div>
         </div>
         <div
-          className={`flex flex-col items-left justify-center p-4 pr-20 rounded-lg border-2 ${
+          className={`flex flex-col items-left justify-center p-4 pr-20 rounded-lg ring-2 ${
             isSelected
               ? twMerge(
-                  variants.card.selected.border,
-                  variants.card.selected.bg
+                  variants.ringBright,
+                  variants.softGradientBg
                 )
-              : "border-gray-300 bg-white"
+              : cn("ring-gray-300", isCoached ? cn(variants.verySoftGrandientBg): " bg-white")
           } sm:aspect-square w-full relative`}
         >
           {plan.emoji && (
@@ -153,14 +167,19 @@ const PlanCard: React.FC<PlanCardProps> = ({
           )}
         </div>
 
-        <div className="absolute top-2 right-2 flex gap-2">
+        <div className="absolute top-2 right-2 flex gap-1 items-center justify-center">
+          {isCoached && (
+            <div className="flex items-center justify-center gap-1 mr-2">
+              <span className="text-xs text-gray-500">Coached</span>
+              <BadgeCheck className={cn("h-4 w-4", variants.text)} />
+            </div>
+          )}
           {!hideInviteButton && (
             <InviteButton planId={plan.id!} onInviteSuccess={onInviteSuccess} />
           )}
           <button
             data-testid="plan-settings-button"
             onClick={handleSettingsClick}
-            className="p-1"
           >
             <Settings className="h-4 w-4" />
           </button>

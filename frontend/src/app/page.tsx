@@ -19,7 +19,6 @@ import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
 // import PlansAchievements from "@/components/PlansAchievements";
-import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import {
   Collapsible,
