@@ -948,7 +948,7 @@ class PlanController:
                     plan.activity_ids
                 )
                 old_sessions = copy(plan.sessions)
-                plan.sessions = self.generate_sessions(
+                new_sessions = self.generate_sessions(
                     goal=plan.goal,
                     finishing_date=plan.finishing_date,
                     activities=activities,
@@ -959,6 +959,13 @@ class PlanController:
                         "You may leave the plan as is"
                     ),
                 )
+                
+                # Keep old sessions up to and including today, use new sessions from tomorrow onwards
+                today = datetime.now(UTC).date()
+                past_sessions = [s for s in old_sessions if datetime.fromisoformat(s.date).date() <= today] 
+                future_sessions = [s for s in new_sessions if datetime.fromisoformat(s.date).date() > today]
+                plan.sessions = past_sessions + future_sessions
+                
                 plan.coach_notes = generate_coach_notes(
                     plan, new_state, activities, old_sessions, plan.sessions
                 )
