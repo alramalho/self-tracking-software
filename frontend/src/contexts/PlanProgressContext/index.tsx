@@ -72,7 +72,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
         ? (convertedPlan.sessions.length > 0 
             ? convertedPlan.sessions.sort((a, b) => a.date.getTime() - b.date.getTime())[0].date
             : new Date())
-        : new Date();
+        : undefined
       
       return {
         plan: convertedPlan,
@@ -80,7 +80,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
           convertedPlan,
           activities,
           activityEntries,
-          planStartDate
+          // planStartDate
         ),
         weeks: getPlanWeeks(
           convertedPlan,
