@@ -41,6 +41,9 @@ import { Button } from "./ui/button";
 import { motion } from "framer-motion";
 
 const PlanStatus = ({ plan }: { plan: Plan }) => {
+  if (!plan?.current_week?.state) {
+    return null;
+  }
   const statusConfig = {
     ON_TRACK: {
       icon: <TrendingUp className="h-5 w-5 text-green-500" />,
@@ -66,7 +69,9 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
     <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
       <div className="flex items-center gap-2">
         {config.icon}
-        <span className={`text-sm font-medium italic text-gray-500 uppercase animate-pulse`}>
+        <span
+          className={`text-sm font-medium italic text-gray-500 uppercase animate-pulse`}
+        >
           {config.message}
         </span>
       </div>
@@ -100,7 +105,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const { notificationsData } = useUserPlan();
 
-  const [isFullyDone, setIsFullyDone] = useState<boolean>(false)
+  const [isFullyDone, setIsFullyDone] = useState<boolean>(false);
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
     undefined
   );
