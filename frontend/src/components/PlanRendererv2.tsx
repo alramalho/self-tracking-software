@@ -52,6 +52,7 @@ import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { MessageBubble } from "./MessageBubble";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -336,11 +337,30 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               <span className="font-semibold">
                 {formatDistance(
                   new Date(),
-                  parseISO(selectedPlan.updated_by_coach_at),
-                )} ago
+                  parseISO(selectedPlan.updated_by_coach_at)
+                )}{" "}
+                ago
               </span>
             </span>
           </div>
+        )}
+        {selectedPlan.coach_notes && (
+          <MessageBubble direction="left">
+            <div className="flex flex-col items-start gap-2">
+              <Avatar>
+                <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg" />
+                <AvatarFallback>CN</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-1 flex-1">
+                <span className={`text-sm italic text-gray-500`}>
+                  {selectedPlan.coach_notes}
+                </span>
+                <span className="text-[10px] italic text-gray-400">
+                  Coach Pickle Rick
+                </span>
+              </div>
+            </div>
+          </MessageBubble>
         )}
         {planProgress?.weeks.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
