@@ -66,21 +66,29 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const { plans, activities, activityEntries } = userData;
 
-    const planProgress = plans.map(
-      (plan): PlanProgressData => ({
-        plan: convertApiPlanToPlan(plan, activities),
+    const planProgress = plans.map((plan): PlanProgressData => {
+      const convertedPlan = convertApiPlanToPlan(plan, activities);
+      const planStartDate = convertedPlan.outline_type === "specific" 
+        ? (convertedPlan.sessions.length > 0 
+            ? convertedPlan.sessions.sort((a, b) => a.date.getTime() - b.date.getTime())[0].date
+            : new Date())
+        : new Date();
+      
+      return {
+        plan: convertedPlan,
         achievement: calculatePlanAchievement(
-          convertApiPlanToPlan(plan, activities),
+          convertedPlan,
           activities,
-          activityEntries
+          activityEntries,
+          planStartDate
         ),
         weeks: getPlanWeeks(
-          convertApiPlanToPlan(plan, activities),
+          convertedPlan,
           activities,
           activityEntries
         ),
-      })
-    );
+      };
+    });
     console.log("planProgress", planProgress);
     return planProgress;
   }, [userData?.plans, userData?.activities, userData?.activityEntries]);

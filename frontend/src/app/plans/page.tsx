@@ -53,7 +53,7 @@ const PlansPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
+    <div className="container mx-auto p-3 max-w-2xl">
       <h1 className="text-2xl font-bold mb-4">
         Welcome
         {userData.user?.name ? `, ${userData.user.name}` : ""}. Here are your

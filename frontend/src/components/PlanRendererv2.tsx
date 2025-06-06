@@ -72,6 +72,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     { week: string; [key: string]: number | string }[]
   >([]);
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
+  const [showAllWeeks, setShowAllWeeks] = useState(false);
 
   const { plansProgress } = usePlanProgress();
   const planProgress = plansProgress.find((p) => p.plan.id === selectedPlan.id);
@@ -191,6 +192,27 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     },
     [userData, planGroupMembers, membersData]
   );
+
+  // Filter weeks to show current and next week, or all weeks based on showAllWeeks state
+  const weeksToDisplay = useMemo(() => {
+    if (!planProgress?.weeks) return [];
+    
+    if (showAllWeeks) {
+      return planProgress.weeks;
+    }
+
+    const currentWeekIndex = planProgress.weeks.findIndex(week => 
+      isSameWeek(week.startDate, new Date(), { weekStartsOn: 0 })
+    );
+
+    if (currentWeekIndex === -1) {
+      // If no current week found, show first two weeks
+      return planProgress.weeks.slice(0, 2);
+    }
+
+    // Show current week and next week (if it exists)
+    return planProgress.weeks.slice(currentWeekIndex, currentWeekIndex + 2);
+  }, [planProgress?.weeks, showAllWeeks]);
 
   useEffect(() => {
     const calculateSessionData = () => {
@@ -324,10 +346,20 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       )}
 
-      <div className="flex flex-col gap-2 mt-2 max-h-[500px] bg-gray-50 overflow-y-auto overscroll-behavior-none ring-2 ring-gray-200 rounded-lg p-2">
-        <div className="flex flex-row items-center justify-start gap-2 my-4">
-          <span className="text-4xl">🗓️</span>
-          <h2 className="text-xl font-semibold mt-2">Weeks Overview</h2>
+      <div className="flex flex-col gap-2 mt-2 bg-gray-50 ring-2 ring-gray-200 rounded-lg p-2">
+        <div className="flex flex-row items-center justify-between my-4">
+          <div className="flex flex-row items-center justify-start gap-2">
+            <span className="text-4xl">🗓️</span>
+            <h2 className="text-xl font-semibold mt-2">Weeks Overview</h2>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAllWeeks(!showAllWeeks)}
+            className="text-sm"
+          >
+            {showAllWeeks ? "Show Current + Next" : "Show All Weeks"}
+          </Button>
         </div>
         {selectedPlan.updated_by_coach_at && (
           <div className="flex flex-row items-center justify-center gap-2 my-4">
@@ -365,13 +397,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             </div>
           </MessageBubble>
         )}
-        {planProgress?.weeks.map((week, index) => {
+        {weeksToDisplay.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
             weekStartsOn: 0,
           });
+          const actualWeekIndex = planProgress?.weeks.findIndex(w => w.startDate.getTime() === week.startDate.getTime()) ?? index;
           return (
             <div
-              key={index}
+              key={actualWeekIndex}
               ref={isCurrentWeek ? currentWeekRef : null}
               className="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-white p-2"
             >
@@ -379,7 +412,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 title={
                   <div className="flex justify-between items-center w-full">
                     <span className="text-lg font-semibold">
-                      Week {index + 1} {isCurrentWeek && "(Current)"}
+                      Week {actualWeekIndex + 1} {isCurrentWeek && "(Current)"}
                     </span>
                     <span className="text-sm text-gray-500">
                       {format(week.startDate, "d")}-
