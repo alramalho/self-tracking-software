@@ -24,7 +24,10 @@ import {
   Flame,
   Loader2,
   TrendingUp,
+  TrendingDown,
+  AlertTriangle,
   RefreshCw,
+  MoveRight,
 } from "lucide-react";
 import { Medal } from "lucide-react";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
@@ -33,6 +36,49 @@ import { MessageBubble } from "./MessageBubble";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useApiWithAuth } from "@/api";
+import Link from "next/link";
+import { Button } from "./ui/button";
+import { motion } from "framer-motion";
+
+const PlanStatus = ({ plan }: { plan: Plan }) => {
+  const statusConfig = {
+    ON_TRACK: {
+      icon: <TrendingUp className="h-5 w-5 text-green-500" />,
+      message: "On track!",
+    },
+    AT_RISK: {
+      icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
+      message: "At risk",
+    },
+    FAILED: {
+      icon: <TrendingDown className="h-5 w-5 text-red-500" />,
+      message: "Off track!",
+    },
+    COMPLETED: {
+      icon: <CircleCheck className="h-5 w-5 text-green-500" />,
+      message: "Week completed!",
+    },
+  };
+
+  const config = statusConfig[plan.current_week.state];
+
+  return (
+    <div className="flex flex-col items-center justify-between bg-transparent rounded-md">
+      <div className="flex items-center gap-2">
+        {config.icon}
+        <span className={`text-sm font-medium italic text-gray-500 uppercase animate-pulse`}>
+          {config.message}
+        </span>
+      </div>
+      <Link
+        href={`/plans?selectedPlan=${plan.id}`}
+        className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors p-1 px-3"
+      >
+        See coach notes <MoveRight className="h-4 w-4 inline" />
+      </Link>
+    </div>
+  );
+};
 
 interface PlansProgressDisplayProps {
   plans: Plan[];
@@ -54,7 +100,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const { notificationsData } = useUserPlan();
 
-  // Convert to state for coach message management
+  const [isFullyDone, setIsFullyDone] = useState<boolean>(false)
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
     undefined
   );
@@ -99,7 +145,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
 
       setLastCoachMessage(response.data.message);
       setLastTimeCoachMessageWasGenerated(new Date());
-      notificationsData.refetch()
+      notificationsData.refetch();
     } catch (error) {
       console.error("Failed to generate coach message:", error);
     } finally {
@@ -274,48 +320,71 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                   )}
 
                   {isCoached && (
-                    <div className="flex items-center gap-1 p-2">
-                      <MessageBubble direction="left">
-                        <div className="flex items-center gap-2">
-                          <Avatar>
-                            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg" />
-                            <AvatarFallback>CN</AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col gap-1 flex-1">
-                            <span className={`text-sm italic ${isGeneratingCoachMessage || !canGenerateNewMessage ? "text-gray-400" : "text-gray-500"}`}>
-                              {lastCoachMessage}
-                            </span>
-                            <span className="text-[10px] italic text-gray-400">
-                              Coach Pickle Rick
-                            </span>
-                          </div>
-                          <button
-                            onClick={generateCoachMessage}
-                            disabled={
-                              isGeneratingCoachMessage || !canGenerateNewMessage
-                            }
-                            className={cn(
-                              "p-1 rounded-full transition-all duration-200",
-                              canGenerateNewMessage && !isGeneratingCoachMessage
-                                ? "hover:bg-gray-100 text-gray-600 hover:text-gray-800 cursor-pointer"
-                                : "text-gray-300 cursor-not-allowed"
-                            )}
-                            title={
-                              !canGenerateNewMessage
-                                ? "Wait 2 hours between message generations"
-                                : "Generate new coach message"
-                            }
-                          >
-                            <RefreshCw
+                    <>
+                      <div className="flex flex-col items-center gap-1 p-2">
+                        <MessageBubble direction="left">
+                          <div className="flex items-center gap-2">
+                            <Avatar>
+                              <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg" />
+                              <AvatarFallback>CN</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col gap-1 flex-1">
+                              <span
+                                className={`text-sm italic ${
+                                  isGeneratingCoachMessage ||
+                                  !canGenerateNewMessage
+                                    ? "text-gray-400"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                {lastCoachMessage}
+                              </span>
+                              <span className="text-[10px] italic text-gray-400">
+                                Coach Pickle Rick
+                              </span>
+                            </div>
+                            <button
+                              onClick={generateCoachMessage}
+                              disabled={
+                                isGeneratingCoachMessage ||
+                                !canGenerateNewMessage
+                              }
                               className={cn(
-                                "h-4 w-4",
-                                isGeneratingCoachMessage && "animate-spin"
+                                "p-1 rounded-full transition-all duration-200",
+                                canGenerateNewMessage &&
+                                  !isGeneratingCoachMessage
+                                  ? "hover:bg-gray-100 text-gray-600 hover:text-gray-800 cursor-pointer"
+                                  : "text-gray-300 cursor-not-allowed"
                               )}
-                            />
-                          </button>
-                        </div>
-                      </MessageBubble>
-                    </div>
+                              title={
+                                !canGenerateNewMessage
+                                  ? "Wait 2 hours between message generations"
+                                  : "Generate new coach message"
+                              }
+                            >
+                              <RefreshCw
+                                className={cn(
+                                  "h-4 w-4",
+                                  isGeneratingCoachMessage && "animate-spin"
+                                )}
+                              />
+                            </button>
+                          </div>
+                        </MessageBubble>
+                      </div>
+                      <AnimatePresence>
+                        {isFullyDone && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                          >
+                            <PlanStatus plan={plan} />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
                   )}
                   {/* Current week progress with animated legend */}
                   <div className="space-y-2">
@@ -323,18 +392,16 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                       value={totalCompletedActivities}
                       maxValue={totalPlannedActivities}
                       goal={<Flame size={19} className="text-orange-400" />}
-                      onFullyDone={() => {
-                        console.log("finished");
-                      }}
+                      onFullyDone={() => setIsFullyDone(true)}
                       className="w-full"
-                      celebration={
-                        <span className="flex items-center gap-1">
-                          🎉
-                          <span className="text-xs font-normal text-gray-500 animate-pulse">
-                            Week completed
-                          </span>
-                        </span>
-                      }
+                      // celebration={
+                      //   <span className="flex items-center gap-1">
+                      //     🎉
+                      //     <span className="text-xs font-normal text-gray-500 animate-pulse">
+                      //       Week completed
+                      //     </span>
+                      //   </span>
+                      // }
                     />
 
                     {/* Lifestyle achievement progress */}

@@ -348,15 +348,18 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <MessageBubble direction="left">
             <div className="flex flex-col items-start gap-2">
               <Avatar>
-                <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg" />
+                <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/bethsanchez.jpg" />
                 <AvatarFallback>CN</AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-1 flex-1">
+                <span className="text-[12px] text-gray-500 italic">
+                  Ugh, my dad sucks at advice. I got this.
+                </span>
                 <span className={`text-sm italic text-gray-500`}>
                   {selectedPlan.coach_notes}
                 </span>
                 <span className="text-[10px] italic text-gray-400">
-                  Coach Pickle Rick
+                  Coach Betch Sanchez
                 </span>
               </div>
             </div>
