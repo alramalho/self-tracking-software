@@ -252,7 +252,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                   } from-gray-50`}
                 >
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 pr-[5rem]">
                       <span className="text-xl">{plan.emoji || "📋"}</span>
                       <div className="flex flex-col gap-1">
                         <span className="text-md font-semibold text-gray-800">
@@ -267,7 +267,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                       <div className="flex items-center gap-1 p-2">
                         <BadgeCheck className={cn("h-4 w-4", variants.text)} />
                         <span className="text-xs font-medium text-gray-500">
-                          Coached plan
+                          Coached
                         </span>
                       </div>
                     </div>
