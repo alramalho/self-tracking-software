@@ -10,6 +10,7 @@ import {
   isBefore,
   subDays,
   isSameWeek,
+  formatDistance,
 } from "date-fns";
 import {
   ApiPlan,
@@ -18,7 +19,7 @@ import {
   convertApiPlanToPlan,
 } from "@/contexts/UserPlanContext";
 import { BarChart } from "@/components/charts/bar";
-import { Loader2, PlusSquare } from "lucide-react";
+import { BadgeCheck, BadgeCheckIcon, Loader2, PlusSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
   SmallActivityEntryCard,
@@ -48,6 +49,9 @@ import {
 } from "@/contexts/PlanProgressContext/lib";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
+import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -71,6 +75,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const { plansProgress } = usePlanProgress();
   const planProgress = plansProgress.find((p) => p.plan.id === selectedPlan.id);
   const currentWeekRef = useRef<HTMLDivElement>(null);
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
   // Auto-scroll to current week when weeks data loads
   useEffect(() => {
@@ -322,6 +328,20 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <span className="text-4xl">🗓️</span>
           <h2 className="text-xl font-semibold mt-2">Weeks Overview</h2>
         </div>
+        {selectedPlan.updated_by_coach_at && (
+          <div className="flex flex-row items-center justify-center gap-2 my-4">
+            <BadgeCheck className="h-5 w-5 text-green-500" />
+            <span className="text-sm text-gray-500 text-center">
+              Last updated by coach{" "}
+              <span className="font-semibold">
+                {formatDistance(
+                  new Date(),
+                  parseISO(selectedPlan.updated_by_coach_at),
+                )} ago
+              </span>
+            </span>
+          </div>
+        )}
         {planProgress?.weeks.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
             weekStartsOn: 0,

@@ -16,6 +16,7 @@ export interface ThemeVariants {
   bg: string;
   fadedBg: string;
   hardGradientBg: string;
+  softGradientBg: string;
   verySoftGrandientBg: string;
   darkText: string;
   text: string;
@@ -58,6 +59,8 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#64748b",
     bg: "bg-slate-500",
     hardGradientBg: "bg-gradient-to-r from-slate-500 to-slate-600",
+    softGradientBg:
+      "bg-gradient-to-r from-gray-100/20 to-slate-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-slate-50/60 backdrop-blur-sm",
     fadedBg: "bg-slate-200/50",
@@ -99,6 +102,8 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#3b82f6",
     bg: "bg-blue-500",
     hardGradientBg: "bg-gradient-to-r from-blue-500 to-blue-600",
+    softGradientBg:
+      "bg-gradient-to-r from-gray-100/20 to-blue-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-blue-50/60 backdrop-blur-sm",
     fadedBg: "bg-blue-200/50",
@@ -140,6 +145,8 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#818cf8",
     bg: "bg-violet-500",
     hardGradientBg: "bg-gradient-to-r from-violet-500 to-violet-600",
+    softGradientBg:
+      "bg-gradient-to-r from-gray-100/20 to-violet-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-violet-50/60 backdrop-blur-sm",
     fadedBg: "bg-violet-100",
@@ -181,6 +188,8 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#f59e0b",
     bg: "bg-amber-500",
     hardGradientBg: "bg-gradient-to-r from-amber-500 to-amber-600",
+    softGradientBg:
+      "bg-gradient-to-r from-gray-100/20 to-amber-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-amber-50/60 backdrop-blur-sm",
     fadedBg: "bg-amber-100",
@@ -222,6 +231,8 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#10b981",
     bg: "bg-emerald-500",
     hardGradientBg: "bg-gradient-to-r from-emerald-500 to-emerald-600",
+    softGradientBg:
+      "bg-gradient-to-r from-gray-100/20 to-emerald-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-emerald-50/60 backdrop-blur-sm",
     fadedBg: "bg-emerald-100",
@@ -263,6 +274,8 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#f43f5e",
     bg: "bg-rose-500",
     hardGradientBg: "bg-gradient-to-r from-rose-500 to-rose-600",
+    softGradientBg:
+      "bg-gradient-to-r from-gray-100/20to-rose-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-rose-50/60 backdrop-blur-sm",
     fadedBg: "bg-rose-100",

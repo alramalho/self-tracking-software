@@ -181,6 +181,7 @@ export interface Plan {
   outline_type?: "specific" | "times_per_week";
   times_per_week?: number;
   created_at: string;
+  updated_by_coach_at?: string;
 }
 
 export interface ApiPlan {
@@ -199,6 +200,7 @@ export interface ApiPlan {
   times_per_week?: number;
   notes?: string;
   milestones?: PlanMilestone[];
+  updated_by_coach_at?: string;
 }
 
 export interface Notification {
