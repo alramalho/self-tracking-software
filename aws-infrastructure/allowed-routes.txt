@@ -57,6 +57,7 @@
 /clear-all-notifications
 /get-pwa-subscription
 /ai/transcribe
+/ai/generate-coach-message
 /ai/get-past-week-logging-extractions
 /ai/get-daily-checkin-extractions
 /ai/reject-daily-checkin
