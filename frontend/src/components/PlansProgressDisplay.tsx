@@ -47,7 +47,7 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
       message: "On track!",
     },
     AT_RISK: {
-      icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
+      icon: <AlertTriangle className="h-5 w-5 text-amber-500" />,
       message: "At risk",
     },
     FAILED: {
@@ -63,7 +63,7 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
   const config = statusConfig[plan.current_week.state];
 
   return (
-    <div className="flex flex-col items-center justify-between bg-transparent rounded-md">
+    <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
       <div className="flex items-center gap-2">
         {config.icon}
         <span className={`text-sm font-medium italic text-gray-500 uppercase animate-pulse`}>
@@ -74,7 +74,7 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
         href={`/plans?selectedPlan=${plan.id}`}
         className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors p-1 px-3"
       >
-        See coach notes <MoveRight className="h-4 w-4 inline" />
+        Coach notes <MoveRight className="h-4 w-4 inline" />
       </Link>
     </div>
   );
