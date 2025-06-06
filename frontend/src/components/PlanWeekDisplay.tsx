@@ -123,7 +123,14 @@ export const PlanWeekDisplay = ({
     totalCompletedActivities,
     totalPlannedActivities,
     isWeekCompleted,
+    plan.id
   ]);
+
+  // Reset animation when plan changes
+  useEffect(() => {
+    setAnimatedCompletedActivities(0);
+    setIsFullyDone(false);
+  }, [plan.id, totalCompletedActivities, totalPlannedActivities]);
 
   if (!planProgress || !week) {
     return null;
