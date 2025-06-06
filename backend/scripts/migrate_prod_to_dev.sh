@@ -19,7 +19,7 @@ TABLES=(
     "tracking_software_metric_entries"
     "tracking_software_metrics"
     "tracking_software_mood_reports"
-    "tracking_software_notifications"
+    # "tracking_software_notifications"
     "tracking_software_plan_groups"
     "tracking_software_plan_invitations"
     "tracking_software_plans"
