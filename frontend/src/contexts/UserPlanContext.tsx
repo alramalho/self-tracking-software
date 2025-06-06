@@ -188,7 +188,7 @@ export interface Plan {
   created_at: string;
   updated_by_coach_at?: string;
   coach_notes?: string;
-  current_week: PlanCurrentWeek
+  current_week?: PlanCurrentWeek
 }
 
 export interface ApiPlan {
@@ -209,7 +209,7 @@ export interface ApiPlan {
   milestones?: PlanMilestone[];
   updated_by_coach_at?: string;
   coach_notes?: string;
-  current_week: PlanCurrentWeek
+  current_week?: PlanCurrentWeek
 }
 
 export interface Notification {
