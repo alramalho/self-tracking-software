@@ -41,7 +41,6 @@ import { Button } from "./ui/button";
 import { motion } from "framer-motion";
 
 const PlanStatus = ({ plan }: { plan: Plan }) => {
-  console.log("plan STATUS", plan);
   if (!plan?.current_week?.state) {
     return null;
   }
@@ -76,12 +75,14 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
           {config.message}
         </span>
       </div>
-      <Link
-        href={`/plans?selectedPlan=${plan.id}`}
-        className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors p-1 px-3"
-      >
-        Coach notes <MoveRight className="h-4 w-4 inline" />
-      </Link>
+      {["COMPLETED", "FAILED"].includes(plan?.current_week?.state) && (
+        <Link
+          href={`/plans?selectedPlan=${plan.id}`}
+          className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors p-1 px-3"
+        >
+          Coach notes <MoveRight className="h-4 w-4 inline" />
+        </Link>
+      )}
     </div>
   );
 };
@@ -106,7 +107,8 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const { notificationsData } = useUserPlan();
 
-  const [isAnimationCompleted, setIsAnimationCompleted] = useState<boolean>(false);
+  const [isAnimationCompleted, setIsAnimationCompleted] =
+    useState<boolean>(false);
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
     undefined
   );
