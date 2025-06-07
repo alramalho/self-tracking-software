@@ -375,11 +375,14 @@ def _process_recommendations_outdated(users: List[User]) -> dict:
     return result
 
 
-
 @router.post("/run-hourly-job")
-async def run_daily_job(request: Request, background_tasks: BackgroundTasks, verified: User = Depends(admin_auth)):
+async def run_daily_job(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    verified: User = Depends(admin_auth),
+):
     logger.info("Starting hourly job execution")
-    
+
     body = await request.json()
     trigger_hour = body.get("trigger_hour", 9)
     filter_usernames = body.get("filter_usernames", [])
@@ -400,7 +403,7 @@ async def run_daily_job(request: Request, background_tasks: BackgroundTasks, ver
 
     # Add tasks to FastAPI background tasks
     for user, user_coached_plan in zip(users, users_coached_plans):
-        
+
         try:
             current_user_time = datetime.now(pytz.timezone(user.timezone))
         except pytz.exceptions.UnknownTimeZoneError:
@@ -417,16 +420,18 @@ async def run_daily_job(request: Request, background_tasks: BackgroundTasks, ver
             plans_contoller.process_plan_state_recalculation,
             user,
             user_coached_plan,
-            True  # push_notify=True
+            True,  # push_notify=True
         )
         tasks_started += 1
         started_for_users.append(user.username)
 
-    logger.info(f"Hourly job completed. Started {tasks_started} background tasks out of {len(users)} users checked")
+    logger.info(
+        f"Hourly job completed. Started {tasks_started} background tasks out of {len(users)} users checked"
+    )
     return {
         "message": f"Started background tasks for {tasks_started} users",
         "started_for_users": started_for_users,
-        "total_users_checked": len(users)
+        "total_users_checked": len(users),
     }
 
 

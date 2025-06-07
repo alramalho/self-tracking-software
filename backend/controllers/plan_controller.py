@@ -27,7 +27,8 @@ from services.notification_manager import NotificationManager
 from copy import copy
 from ai.assistant.coach_notification_generator import (
     generate_notification_message,
-    generate_coach_notes,
+    generate_times_per_week_based_week_end_coach_notes,
+    generate_session_based_week_end_coach_notes
 )
 import threading
 
@@ -918,6 +919,11 @@ class PlanController:
                 plan.times_per_week = max(1, plan.times_per_week - 1)
                 plan.updated_by_coach_at = datetime.now(UTC).isoformat()
 
+                plan.coach_notes = generate_times_per_week_based_week_end_coach_notes(
+                    plan, new_state, activities
+                )
+                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+
             if plan.outline_type == "specific":
                 activities = self.activities_gateway.get_all_activites_by_ids(
                     plan.activity_ids
@@ -934,7 +940,7 @@ class PlanController:
                         "The update should be minimal"
                     ),
                 )
-                plan.coach_notes = generate_coach_notes(
+                plan.coach_notes = generate_session_based_week_end_coach_notes(
                     plan, new_state, activities, old_sessions, plan.sessions
                 )
                 plan.updated_by_coach_at = datetime.now(UTC).isoformat()
@@ -966,7 +972,7 @@ class PlanController:
                 future_sessions = [s for s in new_sessions if datetime.fromisoformat(s.date).date() > today]
                 plan.sessions = past_sessions + future_sessions
                 
-                plan.coach_notes = generate_coach_notes(
+                plan.coach_notes = generate_times_per_week_based_week_end_coach_notes(
                     plan, new_state, activities, old_sessions, plan.sessions
                 )
                 plan.updated_by_coach_at = datetime.now(UTC).isoformat()
