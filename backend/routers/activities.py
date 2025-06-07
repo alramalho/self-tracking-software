@@ -21,6 +21,7 @@ from entities.notification import Notification
 from fastapi import Request
 from controllers.plan_controller import PlanController
 from analytics.posthog import posthog
+import threading
 
 router = APIRouter()
 
@@ -136,13 +137,19 @@ async def log_activity(
                     )
                 )
 
-        # # process coach update
-        # if user.plan_type != "free" and len(user.plan_ids) > 0:
-        #     plan = plan_controller.get_plan(user.plan_ids[0])
-        #     if activity_id in plan.activity_ids:
-        #         await plan_controller.process_plan_state_recalculation(
-        #             user=user, user_coached_plan=plan
-        #         )
+        # process coach update
+        if user.plan_type != "free" and len(user.plan_ids) > 0:
+            plan = plan_controller.get_plan(user.plan_ids[0])
+            if activity_id in plan.activity_ids:
+                # Run state transition processing in a separate thread to avoid blocking
+                logger.info(f"Processing plan state transition for plan {plan.id}")
+                thread = threading.Thread(
+                    target=plan_controller.process_plan_state_recalculation,
+                    args=(user, plan, False),
+                    daemon=False,
+                )
+                thread.start()
+
 
         users_gateway.update_fields(
             user.id, {"last_active_at": datetime.now(UTC).isoformat()}
