@@ -617,6 +617,9 @@ async def generate_coach_message(request: Request, user: User = Depends(is_clerk
             user_id=user.id,
             message=message,
             type="coach",
+            related_data={
+                "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg",
+            },
         ),
         push_notify=False,
     )

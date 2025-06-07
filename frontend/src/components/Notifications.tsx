@@ -139,7 +139,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   const hasPictureData = (notification: Notification) => {
-    return notification.related_data && notification.related_data.name;
+    return notification.related_data && notification.related_data.picture;
+  };
+  const hasUsernameData = (notification: Notification) => {
+    return notification.related_data && notification.related_data.username;
   };
 
   const handleClearAll = async () => {
@@ -163,7 +166,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
   // Filter out engagement notifications from the regular notifications
   const regularNotifications = notificationsData?.data?.notifications?.filter(
-    (n) => n.type !== "engagement" && n.type != "coach"
+    (n) => n.type !== "engagement"
   );
 
   return (
@@ -218,7 +221,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
                       </Avatar>
                     </Link>
                   )}
-                {hasPictureData(notification) ? (
+                {hasUsernameData(notification) ? (
                   <Link
                     href={`/profile/${notification.related_data!.username}`}
                   >
