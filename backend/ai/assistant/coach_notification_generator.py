@@ -12,7 +12,171 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 
-def generate_coach_notes(
+
+def generate_times_per_week_based_week_end_coach_notes(
+    plan: Plan,
+    new_plan_state: Literal["FAILED", "COMPLETED"],
+    plan_activities: List[Activity],
+):
+    if new_plan_state not in ["FAILED", "COMPLETED"]:
+        raise ValueError(f"Invalid new plan state: {new_plan_state}")
+    
+    if plan.outline_type != "times_per_week":
+        raise ValueError("Plan is not of type times per week.")
+
+    current_date = datetime.now(pytz.UTC).strftime("%b %d %Y, %A")
+    system = (
+        "You are Beth Sanchez acting as a plan adjustment coach. "
+        "Your task is to generate brief, psychologically-aware coach notes about plan changes. "
+        "Use Beth's intelligent but sometimes passive-aggressive tone. "
+        "Reference psychological concepts when appropriate. "
+        "Be supportive but honest about failures, with a touch of maternal concern. "
+        "For FAILED plans, provide encouragement and mention that the plan has been adjusted by reducing it by one times per week to make it more achievable. "
+        "For COMPLETED plans, show genuine congratulations and pride with some psychological insight. "
+        "Keep it concise and in Beth's sophisticated but relatable style. "
+        f"Today is {current_date}"
+    )
+
+    def generate_message_str(
+        inner_plan_activities: List[Activity],
+        inner_new_plan_state: Literal["FAILED", "COMPLETED"],
+        plan_goal: str,
+        times_per_week: int,
+    ):
+        activities_str = ", ".join([f"{a.title} (measured in {a.measure})" for a in inner_plan_activities])
+        return (
+            f"This week I {inner_new_plan_state} my plan. My Plan: '{plan_goal}', consisting "
+            f"of doing any of the activities {activities_str} at least {times_per_week} times per week."
+        )
+
+    message_history = [
+        {
+            "role": "system",
+            "content": system,
+        },
+        {
+            "role": "user",
+            "content": generate_message_str(
+                inner_plan_activities=[
+                    Activity(
+                        id="running_001",
+                        user_id="dummy_user",
+                        title="Running",
+                        measure="km",
+                        emoji="🏃‍♂️",
+                        created_at="2024-12-01T00:00:00Z",
+                        updated_at="2024-12-01T00:00:00Z",
+                    ),
+                    Activity(
+                        id="gym_001", 
+                        user_id="dummy_user",
+                        title="Gym Session",
+                        measure="session",
+                        emoji="💪",
+                        created_at="2024-12-01T00:00:00Z",
+                        updated_at="2024-12-01T00:00:00Z",
+                    ),
+                ],
+                plan_goal="I want to exercise regularly to improve my fitness",
+                inner_new_plan_state="FAILED",
+                times_per_week=4,
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": "Look, 4 times a week was ambitious but unrealistic for where you're at - I've dropped it to 3 times per week so you can actually build the habit without burning out.",
+        },
+        {
+            "role": "user",
+            "content": generate_message_str(
+                inner_plan_activities=[
+                    Activity(
+                        id="meditation_001",
+                        user_id="dummy_user",
+                        title="Meditation",
+                        measure="minutes",
+                        emoji="🧘‍♀️",
+                        created_at="2024-12-01T00:00:00Z",
+                        updated_at="2024-12-01T00:00:00Z",
+                    ),
+                ],
+                plan_goal="I want to practice mindfulness daily",
+                inner_new_plan_state="FAILED",
+                times_per_week=7,
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": "Daily meditation was classic all-or-nothing thinking - I've reduced it to 6 times per week because consistency matters more than perfection, and you need room for being human.",
+        },
+        {
+            "role": "user",
+            "content": generate_message_str(
+                inner_plan_activities=[
+                    Activity(
+                        id="reading_001",
+                        user_id="dummy_user",
+                        title="Reading",
+                        measure="pages",
+                        emoji="📚",
+                        created_at="2024-12-01T00:00:00Z",
+                        updated_at="2024-12-01T00:00:00Z",
+                    ),
+                ],
+                plan_goal="I want to read more books this year",
+                inner_new_plan_state="COMPLETED",
+                times_per_week=3,
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": "Excellent work - you've built a sustainable reading habit that actually fits your life, and that's exactly how lasting change happens.",
+        },
+        {
+            "role": "user",
+            "content": generate_message_str(
+                inner_plan_activities=[
+                    Activity(
+                        id="cooking_001",
+                        user_id="dummy_user",
+                        title="Home Cooking",
+                        measure="meals",
+                        emoji="🍳",
+                        created_at="2024-12-01T00:00:00Z",
+                        updated_at="2024-12-01T00:00:00Z",
+                    ),
+                ],
+                plan_goal="I want to cook healthy meals at home more often",
+                inner_new_plan_state="COMPLETED",
+                times_per_week=5,
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": "I'm genuinely impressed - you've shown real commitment to your health and saved money while doing it, that's what I call strategic self-care.",
+        },
+        {
+            "role": "user",
+            "content": generate_message_str(
+                inner_plan_activities=plan_activities,
+                inner_new_plan_state=new_plan_state,
+                plan_goal=plan.goal,
+                times_per_week=plan.times_per_week,
+            ),
+        },
+    ]
+
+    message = ask_simple_text_openrouter(
+        message_history=message_history,
+        model="gpt-4.1-mini",
+        temperature=1,
+    )
+
+    logger.info(f"Generated notification message: {message}")
+    return message
+
+
+def generate_session_based_week_end_coach_notes(
     plan: Plan,
     new_plan_state: Literal["FAILED", "COMPLETED"],
     plan_activities: List[Activity],
@@ -23,6 +187,9 @@ def generate_coach_notes(
 
     if new_plan_state not in ["FAILED", "COMPLETED"]:
         raise ValueError(f"Invalid new plan state: {new_plan_state}")
+    
+    if plan.outline_type != "specific":
+        raise ValueError("Plan is not of type 'specific'.")
 
     current_date = datetime.now(pytz.UTC).strftime("%b %d %Y, %A")
     system = (
@@ -46,12 +213,6 @@ def generate_coach_notes(
         inner_new_plan_state: Literal["FAILED", "COMPLETED"],
         plan_goal: str,
     ):
-
-        if inner_new_plan_state == 'FAILED':
-            performance = "poor"
-        elif inner_new_plan_state == 'COMPLETED':
-            performance = "good"
-
         old_sessions_str = "\n".join(
             [
                 plan_controller.to_sessions_str(os, inner_plan_activities)
@@ -65,7 +226,7 @@ def generate_coach_notes(
             ]
         )
 
-        return f"This week I had a {performance} performance. My Plan: '{plan_goal}'\nOld sessions:\n{old_sessions_str}\nNew sessions:\n{new_sessions_str}"
+        return f"This week I {inner_new_plan_state} my plan. My Plan: '{plan_goal}'\nOld sessions:\n{old_sessions_str}\nNew sessions:\n{new_sessions_str}"
 
     message_history = [
         {

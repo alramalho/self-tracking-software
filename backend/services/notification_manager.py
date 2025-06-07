@@ -104,15 +104,15 @@ class NotificationManager:
 
         is_push = False
         if user.pwa_subscription_endpoint:
-            notification.sent_at = datetime.now(UTC).isoformat()
             if push_notify:
+                notification.sent_at = datetime.now(UTC).isoformat()
                 await self.send_push_notification(user.id, title=title, body=body)
-            is_push = True
+                is_push = True
 
-        if notification.type == "engagement":
+        if notification.type == "coach":
             posthog.capture(
                 distinct_id=user.id,
-                event="engagement-notification-sent",
+                event="coach-notification-sent",
                 properties={
                     "notification_id": notification.id,
                     "title": title,
