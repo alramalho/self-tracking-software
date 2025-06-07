@@ -28,7 +28,7 @@ from copy import copy
 from ai.assistant.coach_notification_generator import (
     generate_notification_message,
     generate_times_per_week_based_week_end_coach_notes,
-    generate_session_based_week_end_coach_notes
+    generate_session_based_week_end_coach_notes,
 )
 import threading
 
@@ -914,22 +914,22 @@ class PlanController:
         )
 
     def process_state_transition(self, plan: Plan, user: User, new_state: PlanState):
+        activities = self.activities_gateway.get_all_activites_by_ids(
+            plan.activity_ids
+        )
         if new_state == "FAILED":
             if plan.outline_type == "times_per_week":
-                plan.times_per_week = max(1, plan.times_per_week - 1)
-                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+                plan.coach_suggested_times_per_week = max(1, plan.times_per_week - 1)
+                plan.suggested_by_coach_at = datetime.now(UTC).isoformat()
 
                 plan.coach_notes = generate_times_per_week_based_week_end_coach_notes(
                     plan, new_state, activities
                 )
-                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+                plan.suggested_by_coach_at = datetime.now(UTC).isoformat()
 
             if plan.outline_type == "specific":
-                activities = self.activities_gateway.get_all_activites_by_ids(
-                    plan.activity_ids
-                )
                 old_sessions = copy(plan.sessions)
-                plan.sessions = self.generate_sessions(
+                plan.suggested_sessions = self.generate_sessions(
                     goal=plan.goal,
                     finishing_date=plan.finishing_date,
                     activities=activities,
@@ -941,18 +941,21 @@ class PlanController:
                     ),
                 )
                 plan.coach_notes = generate_session_based_week_end_coach_notes(
-                    plan, new_state, activities, old_sessions, plan.sessions
+                    plan, new_state, activities, old_sessions, plan.suggested_sessions
                 )
-                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+                plan.suggested_by_coach_at = datetime.now(UTC).isoformat()
 
-            self.update_plan(plan)
 
         elif new_state == "COMPLETED":
 
-            if plan.outline_type == "specific":
-                activities = self.activities_gateway.get_all_activites_by_ids(
-                    plan.activity_ids
+            if plan.outline_type == "times_per_week":
+                plan.coach_notes = generate_times_per_week_based_week_end_coach_notes(
+                    plan, new_state, activities
                 )
+                plan.suggested_by_coach_at = datetime.now(UTC).isoformat()
+
+            if plan.outline_type == "specific":
+
                 old_sessions = copy(plan.sessions)
                 new_sessions = self.generate_sessions(
                     goal=plan.goal,
@@ -965,20 +968,30 @@ class PlanController:
                         "You may leave the plan as is"
                     ),
                 )
-                
+
                 # Keep old sessions up to and including today, use new sessions from tomorrow onwards
                 today = datetime.now(UTC).date()
-                past_sessions = [s for s in old_sessions if datetime.fromisoformat(s.date).date() <= today] 
-                future_sessions = [s for s in new_sessions if datetime.fromisoformat(s.date).date() > today]
+                past_sessions = [
+                    s
+                    for s in old_sessions
+                    if datetime.fromisoformat(s.date).date() <= today
+                ]
+                future_sessions = [
+                    s
+                    for s in new_sessions
+                    if datetime.fromisoformat(s.date).date() > today
+                ]
                 plan.sessions = past_sessions + future_sessions
-                
+
                 plan.coach_notes = generate_times_per_week_based_week_end_coach_notes(
                     plan, new_state, activities, old_sessions, plan.sessions
                 )
-                plan.updated_by_coach_at = datetime.now(UTC).isoformat()
+                plan.suggested_by_coach_at = datetime.now(UTC).isoformat()
 
                 self.update_plan(plan)
-
+            
+            
+        self.update_plan(plan)
     def recalculate_current_week_state(self, plan: Plan, user: User) -> Plan:
 
         (
@@ -1074,6 +1087,9 @@ class PlanController:
                 user_id=user.id,
                 message=message,
                 type="coach",
+                related_data={
+                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg",
+                },  
             ),
             push_notify=push_notify,
         )

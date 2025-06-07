@@ -181,12 +181,14 @@ export interface Plan {
   plan_group_id?: string;
   milestones?: PlanMilestone[];
   sessions: PlanSession[];
+  coach_suggested_sessions: PlanSession[];
   notes?: string;
   duration_type?: "habit" | "lifestyle" | "custom";
   outline_type?: "specific" | "times_per_week";
   times_per_week?: number;
+  coach_suggested_times_per_week?: number;
   created_at: string;
-  updated_by_coach_at?: string;
+  suggested_by_coach_at?: string;
   coach_notes?: string;
   current_week?: PlanCurrentWeek
 }
@@ -196,18 +198,21 @@ export interface ApiPlan {
   user_id: string;
   plan_group_id?: string;
   goal: string;
+  
   emoji?: string;
   finishing_date?: string;
   activity_ids?: string[];
   sessions: ApiPlanSession[];
+  coach_suggested_sessions: ApiPlanSession[];
   created_at: string;
   deleted_at?: string;
   duration_type?: "habit" | "lifestyle" | "custom";
   outline_type?: "specific" | "times_per_week";
   times_per_week?: number;
+  coach_suggested_times_per_week?: number;
   notes?: string;
   milestones?: PlanMilestone[];
-  updated_by_coach_at?: string;
+  suggested_by_coach_at?: string;
   coach_notes?: string;
   current_week?: PlanCurrentWeek
 }
@@ -359,6 +364,12 @@ export function convertApiPlanToPlan(
       activity_name: planActivities.find((a) => a.id === session.activity_id)
         ?.title,
     })),
+    coach_suggested_sessions: plan.coach_suggested_sessions.map((session) => ({
+      ...session,
+      date: parseISO(session.date),
+      activity_name: planActivities.find((a) => a.id === session.activity_id)
+        ?.title,
+    })),
   } as Plan;
 }
 
@@ -369,6 +380,10 @@ export function convertPlanToApiPlan(plan: Plan): ApiPlan {
       ? format(plan.finishing_date, "yyyy-MM-dd")
       : undefined,
     sessions: plan.sessions.map((session) => ({
+      ...session,
+      date: format(session.date, "yyyy-MM-dd"),
+    })),
+    coach_suggested_sessions: plan.coach_suggested_sessions.map((session) => ({
       ...session,
       date: format(session.date, "yyyy-MM-dd"),
     })),

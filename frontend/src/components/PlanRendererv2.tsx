@@ -19,7 +19,15 @@ import {
   convertApiPlanToPlan,
 } from "@/contexts/UserPlanContext";
 import { BarChart } from "@/components/charts/bar";
-import { BadgeCheck, BadgeCheckIcon, Loader2, PlusSquare } from "lucide-react";
+import {
+  ArrowBigRight,
+  BadgeCheck,
+  BadgeCheckIcon,
+  Check,
+  Loader2,
+  PlusSquare,
+  X,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
   SmallActivityEntryCard,
@@ -53,6 +61,7 @@ import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { MessageBubble } from "./MessageBubble";
+import { toast } from "react-hot-toast";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -73,12 +82,91 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   >([]);
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
+  const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<string | null>(null);
+  const [loadingStates, setLoadingStates] = useState({
+    acceptingSessions: false,
+    decliningSessions: false,
+    acceptingTimesPerWeek: false,
+    decliningTimesPerWeek: false,
+  });
 
   const { plansProgress } = usePlanProgress();
   const planProgress = plansProgress.find((p) => p.plan.id === selectedPlan.id);
   const currentWeekRef = useRef<HTMLDivElement>(null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const planActivities = userData?.activities.filter((a) =>
+    selectedPlan.activity_ids?.includes(a.id)
+  );
+
+  // Reusable functions for handling coach suggestions
+  const handleAcceptSuggestion = async (suggestionType: 'sessions' | 'times_per_week') => {
+    const loadingKey = suggestionType === 'sessions' ? 'acceptingSessions' : 'acceptingTimesPerWeek';
+    
+    try {
+      setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
+      
+      let updateData: any = {
+        suggested_by_coach_at: null,
+        coach_notes: null,
+      };
+
+      if (suggestionType === 'sessions') {
+        updateData = {
+          ...updateData,
+          sessions: selectedPlan.coach_suggested_sessions,
+          coach_suggested_sessions: null,
+        };
+      } else if (suggestionType === 'times_per_week') {
+        updateData = {
+          ...updateData,
+          times_per_week: selectedPlan.coach_suggested_times_per_week,
+          coach_suggested_times_per_week: null,
+        };
+      }
+
+      await api.post(`/plans/${selectedPlan.id}/update`, {
+        data: updateData,
+      });
+      currentUserDataQuery.refetch();
+      toast.success(suggestionType === 'sessions' ? "Schedule updated successfully!" : "Plan updated successfully!");
+    } catch (error) {
+      console.error("Failed to accept suggestion:", error);
+      toast.error(suggestionType === 'sessions' ? "Failed to update schedule" : "Failed to update plan");
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
+
+  const handleDeclineSuggestion = async (suggestionType: 'sessions' | 'times_per_week') => {
+    const loadingKey = suggestionType === 'sessions' ? 'decliningSessions' : 'decliningTimesPerWeek';
+    
+    try {
+      setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
+      
+      let updateData: any = {
+        suggested_by_coach_at: null,
+        coach_notes: null,
+      };
+
+      if (suggestionType === 'sessions') {
+        updateData.coach_suggested_sessions = null;
+      } else if (suggestionType === 'times_per_week') {
+        updateData.coach_suggested_times_per_week = null;
+      }
+
+      await api.post(`/plans/${selectedPlan.id}/update`, {
+        data: updateData,
+      });
+      currentUserDataQuery.refetch();
+      toast.success("Suggestion declined");
+    } catch (error) {
+      console.error("Failed to decline suggestion:", error);
+      toast.error("Failed to decline suggestion");
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
 
   // Auto-scroll to current week when weeks data loads
   useEffect(() => {
@@ -196,12 +284,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   // Filter weeks to show current and next week, or all weeks based on showAllWeeks state
   const weeksToDisplay = useMemo(() => {
     if (!planProgress?.weeks) return [];
-    
+
     if (showAllWeeks) {
       return planProgress.weeks;
     }
 
-    const currentWeekIndex = planProgress.weeks.findIndex(week => 
+    const currentWeekIndex = planProgress.weeks.findIndex((week) =>
       isSameWeek(week.startDate, new Date(), { weekStartsOn: 0 })
     );
 
@@ -361,7 +449,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             {showAllWeeks ? "Show Current + Next" : "Show All Weeks"}
           </Button>
         </div>
-        {selectedPlan.updated_by_coach_at && (
+        {selectedPlan.suggested_by_coach_at && (
           <div className="flex flex-row items-center justify-center gap-2 my-4">
             <BadgeCheck className="h-5 w-5 text-green-500" />
             <span className="text-sm text-gray-500 text-center">
@@ -369,7 +457,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               <span className="font-semibold">
                 {formatDistance(
                   new Date(),
-                  parseISO(selectedPlan.updated_by_coach_at)
+                  parseISO(selectedPlan.suggested_by_coach_at)
                 )}{" "}
                 ago
               </span>
@@ -397,16 +485,157 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             </div>
           </MessageBubble>
         )}
+        {selectedPlan.coach_suggested_sessions &&
+          selectedPlan.coach_suggested_sessions.length > 0 && (
+            <div className="flex flex-col justify-start gap-4 p-4 bg-white rounded-xl border border-gray-100">
+              <div className="flex flex-col gap-3">
+                <div className="text-center">
+                  <span className="text-lg font-semibold text-gray-800 mb-2 block">
+                    New Schedule Suggestion
+                  </span>
+                  <span className="text-xs text-gray-400 font-medium">
+                    UPDATED SESSIONS
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+                  {selectedPlan.coach_suggested_sessions.map((session, index) => {
+                    const activity = planActivities?.find(a => a.id === session.activity_id);
+                    if (!activity) return null;
+                    
+                    const sessionId = `coach-session-${session.activity_id}-${index}`;
+                    const isSelected = selectedSuggestedSession === sessionId;
+                    
+                    return (
+                      <SmallActivityEntryCard
+                        key={sessionId}
+                        entry={{
+                          date: parseISO(session.date),
+                          activity_id: session.activity_id,
+                          quantity: session.quantity,
+                          description: session.descriptive_guide,
+                        }}
+                        activity={activity}
+                        selected={isSelected}
+                        onClick={(clickedSessionId) => {
+                          setSelectedSuggestedSession(
+                            clickedSessionId === selectedSuggestedSession ? null : clickedSessionId
+                          );
+                        }}
+                        className="bg-blue-50 border-2 border-blue-200 hover:bg-blue-100"
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <div className="flex flex-row gap-3 justify-center mt-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-10 text-sm font-medium border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                  disabled={loadingStates.decliningSessions || loadingStates.acceptingSessions}
+                  onClick={async () => {
+                    await handleDeclineSuggestion('sessions');
+                  }}
+                >
+                  {loadingStates.decliningSessions ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <X className="h-4 w-4 mr-2" />
+                  )}
+                  Decline
+                </Button>
+                <Button 
+                  className="flex-1 h-10 text-sm font-medium bg-green-600 hover:bg-green-700"
+                  disabled={loadingStates.acceptingSessions || loadingStates.decliningSessions}
+                  onClick={async () => {
+                    await handleAcceptSuggestion('sessions');
+                  }}
+                >
+                  {loadingStates.acceptingSessions ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Accept
+                </Button>
+              </div>
+            </div>
+          )}
+        {selectedPlan.coach_suggested_times_per_week && (
+          <div className="flex flex-col justify-start gap-4 p-4 bg-white rounded-xl border border-gray-100">
+            <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
+              <div className="flex flex-col items-center text-center flex-shrink-0">
+                <span className="text-4xl md:text-5xl font-light text-gray-800">
+                  {selectedPlan.times_per_week}
+                </span>
+                <span className="text-xs text-gray-400 font-medium mt-1">
+                  CURRENT
+                </span>
+              </div>
+              
+              <div className="flex items-center flex-shrink-0">
+                <div className="w-8 md:w-16 h-px bg-gray-300"></div>
+                <ArrowBigRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
+                <div className="w-8 md:w-16 h-px bg-gray-300"></div>
+              </div>
+              
+              <div className="flex flex-col items-center text-center flex-shrink-0">
+                <span className="text-4xl md:text-5xl font-light text-green-600">
+                  {selectedPlan.coach_suggested_times_per_week}
+                </span>
+                <span className="text-xs text-gray-400 font-medium mt-1">
+                  SUGGESTED
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex flex-row gap-3 justify-center mt-2">
+              <Button 
+                variant="outline" 
+                className="flex-1 h-10 text-sm font-medium border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                disabled={loadingStates.decliningTimesPerWeek || loadingStates.acceptingTimesPerWeek}
+                onClick={async () => {
+                  await handleDeclineSuggestion('times_per_week');
+                }}
+              >
+                {loadingStates.decliningTimesPerWeek ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <X className="h-4 w-4 mr-2" />
+                )}
+                Decline
+              </Button>
+              <Button 
+                className="flex-1 h-10 text-sm font-medium bg-green-600 hover:bg-green-700"
+                disabled={loadingStates.acceptingTimesPerWeek || loadingStates.decliningTimesPerWeek}
+                onClick={async () => {
+                  await handleAcceptSuggestion('times_per_week');
+                }}
+              >
+                {loadingStates.acceptingTimesPerWeek ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
+                Accept
+              </Button>
+            </div>
+          </div>
+        )}
         {weeksToDisplay.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
             weekStartsOn: 0,
           });
-          const actualWeekIndex = planProgress?.weeks.findIndex(w => w.startDate.getTime() === week.startDate.getTime()) ?? index;
+          const actualWeekIndex =
+            planProgress?.weeks.findIndex(
+              (w) => w.startDate.getTime() === week.startDate.getTime()
+            ) ?? index;
           return (
             <div
               key={actualWeekIndex}
               ref={isCurrentWeek ? currentWeekRef : null}
-              className="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-white p-2"
+              className="flex flex-col gap-2 p-3 rounded-lg bg-white p-2"
             >
               <PlanWeekDisplay
                 title={
