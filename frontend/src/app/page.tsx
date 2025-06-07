@@ -100,7 +100,7 @@ const HomePage: React.FC = () => {
 
   const unreadNotifications =
     notificationsData.data?.notifications?.filter(
-      (n) => n.status !== "concluded" && n.type !== "engagement" && n.type !== "coach"
+      (n) => n.status !== "concluded" && n.type !== "engagement"
     ) || [];
   const unreadNotificationsCount = unreadNotifications.length;
 
