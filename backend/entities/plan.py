@@ -53,15 +53,17 @@ class Plan(BaseModel):
     emoji: str | None = None
     finishing_date: Optional[str] = None
     sessions: List[PlanSession] = []
+    coach_suggested_sessions: List[PlanSession] = []
     created_at: str
     deleted_at: Optional[str] = None
     activity_ids: List[str] = []
     duration_type: Optional[Literal["habit", "lifestyle", "custom"]] = None
     outline_type: Optional[Literal["specific", "times_per_week"]] = "specific"
     times_per_week: Optional[int] = None
+    coach_suggested_times_per_week: Optional[int] = None
     notes: Optional[str] = None
     coach_notes: Optional[str] = None
-    updated_by_coach_at: Optional[str] = None
+    suggested_by_coach_at: Optional[str] = None
     current_week: PlanCurrentWeek = PlanCurrentWeek(
         state="ON_TRACK", state_last_calculated_at=None
     )
@@ -84,7 +86,7 @@ class Plan(BaseModel):
         activity_ids: Optional[List[str]] = None,
         milestones: Optional[List[PlanMilestone]] = None,
         current_week: Optional[PlanCurrentWeek] = None,
-        updated_by_coach_at: Optional[str] = None,
+        suggested_by_coach_at: Optional[str] = None,
         coach_notes: Optional[str] = None,
     ) -> "Plan":
         return cls(
@@ -101,7 +103,7 @@ class Plan(BaseModel):
             outline_type=outline_type,
             times_per_week=times_per_week,
             activity_ids=activity_ids,
-            updated_by_coach_at=updated_by_coach_at,
+            suggested_by_coach_at=suggested_by_coach_at,
             milestones=milestones,
             current_week=current_week or PlanCurrentWeek(
                 state="ON_TRACK", state_last_calculated_at=datetime.now(UTC).isoformat()
