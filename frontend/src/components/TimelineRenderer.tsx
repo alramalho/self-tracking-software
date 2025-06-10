@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   useUserPlan,
   ActivityEntry,
@@ -41,7 +41,9 @@ function isInCurrentWeek(date: string) {
   });
 }
 
-const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
+const TimelineRenderer: React.FC<{ 
+  onOpenSearch: () => void;
+}> = ({
   onOpenSearch,
 }) => {
   const { useTimelineDataQuery, useCurrentUserDataQuery } = useUserPlan();
@@ -61,6 +63,14 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
     "partner-section-collapsed",
     false
   );
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  // Focus timeline when it loads to enable scroll
+  useEffect(() => {
+    if (timelineDataQuery.isFetched && timelineRef.current) {
+      timelineRef.current.focus();
+    }
+  }, [timelineDataQuery.isFetched]);
 
   if (!timelineDataQuery.isFetched && !timelineData) {
     return (
@@ -315,7 +325,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div ref={timelineRef} tabIndex={0} className="grid grid-cols-1 sm:grid-cols-2 gap-4 outline-none">
       <h2 className="text-lg font-semibold mt-4">
         Friend&apos;s last activities
       </h2>
