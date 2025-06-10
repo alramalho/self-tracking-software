@@ -3,6 +3,8 @@ import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { differenceInCalendarDays } from "date-fns";
 import { InsightsBanner } from "@/components/InsightsBanner";
+import { useApiWithAuth } from "@/api";
+import { toast } from "react-hot-toast";
 
 interface DailyCheckinContextType {
   show: (initialMessage?: string) => void;
@@ -12,6 +14,9 @@ interface DailyCheckinContextType {
   markAsSubmitted: () => void;
   checkinMessage: string | undefined;
   buildCheckinMessage: () => { message: string; id: string };
+  logIndividualMetric: (metricId: string, rating: number) => Promise<void>;
+  skipMetric: (metricId: string) => void;
+  skippedMetrics: Set<string>;
 }
 
 const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
@@ -37,6 +42,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
   );
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [skippedMetrics, setSkippedMetrics] = useState<Set<string>>(new Set());
   const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
@@ -46,6 +52,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
     undefined
   );
   const user = userData?.user;
+  const api = useApiWithAuth();
 
   useEffect(() => {
     if (user) {
@@ -127,6 +134,40 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
   const shouldShowNotification = hasCheckedInToday && !isDismissed;
 
+  const logIndividualMetric = async (metricId: string, rating: number): Promise<void> => {
+    try {
+      await api.post("/log-metric", {
+        metric_id: metricId,
+        rating: rating,
+        date: new Date().toISOString(),
+      });
+      
+      // Refresh metrics data
+      await metricsAndEntriesQuery.refetch();
+      toast.success("Metric logged successfully!");
+    } catch (error) {
+      console.error("Error logging individual metric:", error);
+      toast.error("Failed to log metric");
+      throw error;
+    }
+  };
+
+  const skipMetric = (metricId: string) => {
+    setSkippedMetrics(prev => new Set([...Array.from(prev), metricId]));
+  };
+
+  // Reset skipped metrics at the start of a new day
+  useEffect(() => {
+    const now = new Date();
+    const lastReset = localStorage.getItem('last-skip-reset');
+    const today = now.toDateString();
+    
+    if (lastReset !== today) {
+      setSkippedMetrics(new Set());
+      localStorage.setItem('last-skip-reset', today);
+    }
+  }, []);
+
   return (
     <DailyCheckinContext.Provider
       value={{
@@ -140,6 +181,9 @@ export const DailyCheckinPopoverProvider: React.FC<{
         markAsSubmitted,
         checkinMessage,
         buildCheckinMessage,
+        logIndividualMetric,
+        skipMetric,
+        skippedMetrics,
       }}
     >
       {children}

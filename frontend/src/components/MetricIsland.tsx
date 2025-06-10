@@ -1,0 +1,118 @@
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { MetricRatingSelector } from "@/components/MetricRatingSelector";
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { Metric } from "@/contexts/UserPlanContext";
+import { CircleCheck, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { PulsatingCirclePill } from "./ui/pulsating-circle-pill";
+
+interface MetricIslandProps {
+  metric: Metric;
+  isLoggedToday: boolean;
+  todaysRating?: number;
+}
+
+export const MetricIsland: React.FC<MetricIslandProps> = ({
+  metric,
+  isLoggedToday,
+  todaysRating,
+}) => {
+  const { logIndividualMetric, skipMetric, skippedMetrics } = useDailyCheckin();
+  const [isLogging, setIsLogging] = useState(false);
+  const isSkipped = skippedMetrics.has(metric.id);
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
+  const currentHour = new Date().getHours();
+  const isAfter2PM = currentHour >= 14;
+
+  const handleRatingSelect = async (rating: number) => {
+    setIsLogging(true);
+    try {
+      await logIndividualMetric(metric.id, rating);
+    } catch (error) {
+      console.error("Failed to log metric:", error);
+    } finally {
+      setIsLogging(false);
+    }
+  };
+
+  const handleSkip = () => {
+    skipMetric(metric.id);
+  };
+
+  if (isSkipped) {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-3xl p-3 flex-1 min-w-0 opacity-50">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-lg">{metric.emoji}</span>
+          <span className="text-sm font-medium text-gray-600">
+            {metric.title}
+          </span>
+          <span className="text-xs text-gray-500">Skipped Today</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-white/60 backdrop-blur-sm ring-gray-200 ${isLoggedToday && "opacity-50"}`}
+    >
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{metric.emoji}</span>
+            <span className="text-sm font-medium text-gray-600">
+              {metric.title}
+            </span>
+            {isAfter2PM && !isLoggedToday && (
+              <div className="flex items-center gap-2 opacity-50">
+                <PulsatingCirclePill variant="yellow" size="sm" />
+                <span className={`text-xs font-semibold ${variants.text}`}>
+                  Missing Check-in
+                </span>
+              </div>
+            )}
+          </div>
+          {isLoggedToday && (
+            <span
+              className={`flex items-center gap-1 ${variants.text} opacity-70`}
+            >
+              <CircleCheck className="w-6 h-6" />
+            </span>
+          )}
+        </div>
+
+        {!isLoggedToday && (
+          <div className="flex flex-row items-center justify-between gap-3 mt-3">
+            <MetricRatingSelector
+              onRatingSelect={handleRatingSelect}
+              loading={isLogging}
+              disabled={isLogging}
+              initialRating={todaysRating}
+            />
+
+            {!isLoggedToday && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSkip}
+                disabled={isLogging}
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 h-auto m-0 shrink-0"
+              >
+                {isLogging ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  "Skip"
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
