@@ -20,7 +20,7 @@ const CollapsibleContent = React.forwardRef<
     )}
     {...props}
   >
-    <div className="pb-4 pt-0">
+    <div className="">
       {children}
     </div>
   </CollapsiblePrimitive.CollapsibleContent>

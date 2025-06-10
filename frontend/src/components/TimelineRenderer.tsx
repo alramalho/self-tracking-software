@@ -175,7 +175,7 @@ const TimelineRenderer: React.FC<{ onOpenSearch: () => void }> = ({
                 </div>
 
                 {/* Expandable detailed content */}
-                <CollapsibleContent className="space-y-0">
+                <CollapsibleContent className="space-y-0 pb-4 pt-0">
                   <div className="space-y-4 pt-4">
                     <p className="text-gray-600 text-sm">
                       Improve your chances of success by finding an accountability partner

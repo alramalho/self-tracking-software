@@ -1088,7 +1088,7 @@ class PlanController:
                 message=message,
                 type="coach",
                 related_data={
-                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg",
+                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/bethsanchez.jpg",
                 },  
             ),
             push_notify=push_notify,

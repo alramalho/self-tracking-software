@@ -82,7 +82,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   >([]);
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
-  const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<string | null>(null);
+  const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<
+    string | null
+  >(null);
   const [loadingStates, setLoadingStates] = useState({
     acceptingSessions: false,
     decliningSessions: false,
@@ -100,24 +102,29 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   );
 
   // Reusable functions for handling coach suggestions
-  const handleAcceptSuggestion = async (suggestionType: 'sessions' | 'times_per_week') => {
-    const loadingKey = suggestionType === 'sessions' ? 'acceptingSessions' : 'acceptingTimesPerWeek';
-    
+  const handleAcceptSuggestion = async (
+    suggestionType: "sessions" | "times_per_week"
+  ) => {
+    const loadingKey =
+      suggestionType === "sessions"
+        ? "acceptingSessions"
+        : "acceptingTimesPerWeek";
+
     try {
-      setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
-      
+      setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
+
       let updateData: any = {
         suggested_by_coach_at: null,
         coach_notes: null,
       };
 
-      if (suggestionType === 'sessions') {
+      if (suggestionType === "sessions") {
         updateData = {
           ...updateData,
           sessions: selectedPlan.coach_suggested_sessions,
           coach_suggested_sessions: null,
         };
-      } else if (suggestionType === 'times_per_week') {
+      } else if (suggestionType === "times_per_week") {
         updateData = {
           ...updateData,
           times_per_week: selectedPlan.coach_suggested_times_per_week,
@@ -129,29 +136,42 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         data: updateData,
       });
       currentUserDataQuery.refetch();
-      toast.success(suggestionType === 'sessions' ? "Schedule updated successfully!" : "Plan updated successfully!");
+      toast.success(
+        suggestionType === "sessions"
+          ? "Schedule updated successfully!"
+          : "Plan updated successfully!"
+      );
     } catch (error) {
       console.error("Failed to accept suggestion:", error);
-      toast.error(suggestionType === 'sessions' ? "Failed to update schedule" : "Failed to update plan");
+      toast.error(
+        suggestionType === "sessions"
+          ? "Failed to update schedule"
+          : "Failed to update plan"
+      );
     } finally {
-      setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));
+      setLoadingStates((prev) => ({ ...prev, [loadingKey]: false }));
     }
   };
 
-  const handleDeclineSuggestion = async (suggestionType: 'sessions' | 'times_per_week') => {
-    const loadingKey = suggestionType === 'sessions' ? 'decliningSessions' : 'decliningTimesPerWeek';
-    
+  const handleDeclineSuggestion = async (
+    suggestionType: "sessions" | "times_per_week"
+  ) => {
+    const loadingKey =
+      suggestionType === "sessions"
+        ? "decliningSessions"
+        : "decliningTimesPerWeek";
+
     try {
-      setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
-      
+      setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
+
       let updateData: any = {
         suggested_by_coach_at: null,
         coach_notes: null,
       };
 
-      if (suggestionType === 'sessions') {
+      if (suggestionType === "sessions") {
         updateData.coach_suggested_sessions = null;
-      } else if (suggestionType === 'times_per_week') {
+      } else if (suggestionType === "times_per_week") {
         updateData.coach_suggested_times_per_week = null;
       }
 
@@ -164,7 +184,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       console.error("Failed to decline suggestion:", error);
       toast.error("Failed to decline suggestion");
     } finally {
-      setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));
+      setLoadingStates((prev) => ({ ...prev, [loadingKey]: false }));
     }
   };
 
@@ -472,14 +492,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 <AvatarFallback>CN</AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-1 flex-1">
-                <span className="text-[12px] text-gray-500 italic">
-                  Ugh, my dad sucks at advice. I got this.
-                </span>
                 <span className={`text-sm italic text-gray-500`}>
                   {selectedPlan.coach_notes}
                 </span>
                 <span className="text-[10px] italic text-gray-400">
-                  Coach Betch Sanchez
+                  Coach Beth
                 </span>
               </div>
             </div>
@@ -497,45 +514,54 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                     UPDATED SESSIONS
                   </span>
                 </div>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-                  {selectedPlan.coach_suggested_sessions.map((session, index) => {
-                    const activity = planActivities?.find(a => a.id === session.activity_id);
-                    if (!activity) return null;
-                    
-                    const sessionId = `coach-session-${session.activity_id}-${index}`;
-                    const isSelected = selectedSuggestedSession === sessionId;
-                    
-                    return (
-                      <SmallActivityEntryCard
-                        key={sessionId}
-                        entry={{
-                          date: parseISO(session.date),
-                          activity_id: session.activity_id,
-                          quantity: session.quantity,
-                          description: session.descriptive_guide,
-                        }}
-                        activity={activity}
-                        selected={isSelected}
-                        onClick={(clickedSessionId) => {
-                          setSelectedSuggestedSession(
-                            clickedSessionId === selectedSuggestedSession ? null : clickedSessionId
-                          );
-                        }}
-                        className="bg-blue-50 border-2 border-blue-200 hover:bg-blue-100"
-                      />
-                    );
-                  })}
+                  {selectedPlan.coach_suggested_sessions.map(
+                    (session, index) => {
+                      const activity = planActivities?.find(
+                        (a) => a.id === session.activity_id
+                      );
+                      if (!activity) return null;
+
+                      const sessionId = `coach-session-${session.activity_id}-${index}`;
+                      const isSelected = selectedSuggestedSession === sessionId;
+
+                      return (
+                        <SmallActivityEntryCard
+                          key={sessionId}
+                          entry={{
+                            date: parseISO(session.date),
+                            activity_id: session.activity_id,
+                            quantity: session.quantity,
+                            description: session.descriptive_guide,
+                          }}
+                          activity={activity}
+                          selected={isSelected}
+                          onClick={(clickedSessionId) => {
+                            setSelectedSuggestedSession(
+                              clickedSessionId === selectedSuggestedSession
+                                ? null
+                                : clickedSessionId
+                            );
+                          }}
+                          className="bg-blue-50 border-2 border-blue-200 hover:bg-blue-100"
+                        />
+                      );
+                    }
+                  )}
                 </div>
               </div>
-              
+
               <div className="flex flex-row gap-3 justify-center mt-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex-1 h-10 text-sm font-medium border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                  disabled={loadingStates.decliningSessions || loadingStates.acceptingSessions}
+                  disabled={
+                    loadingStates.decliningSessions ||
+                    loadingStates.acceptingSessions
+                  }
                   onClick={async () => {
-                    await handleDeclineSuggestion('sessions');
+                    await handleDeclineSuggestion("sessions");
                   }}
                 >
                   {loadingStates.decliningSessions ? (
@@ -545,11 +571,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   )}
                   Decline
                 </Button>
-                <Button 
+                <Button
                   className="flex-1 h-10 text-sm font-medium bg-green-600 hover:bg-green-700"
-                  disabled={loadingStates.acceptingSessions || loadingStates.decliningSessions}
+                  disabled={
+                    loadingStates.acceptingSessions ||
+                    loadingStates.decliningSessions
+                  }
                   onClick={async () => {
-                    await handleAcceptSuggestion('sessions');
+                    await handleAcceptSuggestion("sessions");
                   }}
                 >
                   {loadingStates.acceptingSessions ? (
@@ -573,13 +602,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   CURRENT
                 </span>
               </div>
-              
+
               <div className="flex items-center flex-shrink-0">
                 <div className="w-8 md:w-16 h-px bg-gray-300"></div>
                 <ArrowBigRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
                 <div className="w-8 md:w-16 h-px bg-gray-300"></div>
               </div>
-              
+
               <div className="flex flex-col items-center text-center flex-shrink-0">
                 <span className="text-4xl md:text-5xl font-light text-green-600">
                   {selectedPlan.coach_suggested_times_per_week}
@@ -589,14 +618,17 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 </span>
               </div>
             </div>
-            
+
             <div className="flex flex-row gap-3 justify-center mt-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1 h-10 text-sm font-medium border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                disabled={loadingStates.decliningTimesPerWeek || loadingStates.acceptingTimesPerWeek}
+                disabled={
+                  loadingStates.decliningTimesPerWeek ||
+                  loadingStates.acceptingTimesPerWeek
+                }
                 onClick={async () => {
-                  await handleDeclineSuggestion('times_per_week');
+                  await handleDeclineSuggestion("times_per_week");
                 }}
               >
                 {loadingStates.decliningTimesPerWeek ? (
@@ -606,11 +638,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 )}
                 Decline
               </Button>
-              <Button 
+              <Button
                 className="flex-1 h-10 text-sm font-medium bg-green-600 hover:bg-green-700"
-                disabled={loadingStates.acceptingTimesPerWeek || loadingStates.decliningTimesPerWeek}
+                disabled={
+                  loadingStates.acceptingTimesPerWeek ||
+                  loadingStates.decliningTimesPerWeek
+                }
                 onClick={async () => {
-                  await handleAcceptSuggestion('times_per_week');
+                  await handleAcceptSuggestion("times_per_week");
                 }}
               >
                 {loadingStates.acceptingTimesPerWeek ? (

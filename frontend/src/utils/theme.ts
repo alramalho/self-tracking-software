@@ -21,6 +21,7 @@ export interface ThemeVariants {
   darkText: string;
   text: string;
   ring: string;
+  ringSoft: string;
   ringBright: string;
   border: string;
   fadedText: string;
@@ -39,6 +40,7 @@ export interface ThemeVariants {
       glassBg: string;
     };
     glassBg: string;
+    softGlassBg: string;
   };
   button: {
     solid: string;
@@ -66,6 +68,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     fadedBg: "bg-slate-200/50",
     text: "text-slate-500",
     ring: "ring-gray-500",
+    ringSoft: "ring-gray-200",
     ringBright: "ring-slate-300",
     darkText: "text-slate-800",
     fadedText: "text-slate-300",
@@ -83,6 +86,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
         glassBg: "bg-slate-100/70",
       },
       glassBg: "bg-slate-100/40",
+      softGlassBg: "bg-slate-50/60",
     },
     button: {
       solid: "bg-slate-500 hover:bg-slate-600",
@@ -109,6 +113,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     fadedBg: "bg-blue-200/50",
     text: "text-blue-500",
     ring: "ring-blue-500",
+    ringSoft: "ring-blue-200",
     ringBright: "ring-blue-300",
     darkText: "text-blue-800",
     fadedText: "text-blue-300",
@@ -126,6 +131,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
         glassBg: "bg-blue-100/70",
       },
       glassBg: "bg-blue-100/40",
+      softGlassBg: "bg-blue-50/60",
     },
     button: {
       solid: "bg-blue-500 hover:bg-blue-600",
@@ -152,6 +158,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     fadedBg: "bg-violet-100",
     text: "text-violet-500",
     ring: "ring-violet-500",
+    ringSoft: "ring-violet-200",
     ringBright: "ring-violet-300",
     darkText: "text-violet-800",
     fadedText: "text-violet-300",
@@ -169,6 +176,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
         glassBg: "bg-violet-100/70",
       },
       glassBg: "bg-violet-100/40",
+      softGlassBg: "bg-violet-50/60",
     },
     button: {
       solid: "bg-violet-500 hover:bg-violet-600",
@@ -195,6 +203,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     fadedBg: "bg-amber-100",
     text: "text-amber-500",
     ring: "ring-amber-500",
+    ringSoft: "ring-amber-200",
     ringBright: "ring-amber-300",
     darkText: "text-amber-700",
     fadedText: "text-amber-300",
@@ -212,6 +221,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
         glassBg: "bg-amber-100/70",
       },
       glassBg: "bg-amber-100/40",
+      softGlassBg: "bg-amber-50/60",
     },
     button: {
       solid: "bg-amber-500 hover:bg-amber-600",
@@ -238,6 +248,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     fadedBg: "bg-emerald-100",
     text: "text-emerald-500",
     ring: "ring-emerald-500",
+    ringSoft: "ring-emerald-200",
     ringBright: "ring-emerald-300",
     darkText: "text-emerald-800",
     fadedText: "text-emerald-300",
@@ -255,6 +266,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
         glassBg: "bg-emerald-100/70",
       },
       glassBg: "bg-emerald-100/40",
+      softGlassBg: "bg-emerald-50/60",
     },
     button: {
       solid: "bg-emerald-500 hover:bg-emerald-600",
@@ -281,6 +293,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     fadedBg: "bg-rose-100",
     text: "text-rose-500",
     ring: "ring-rose-500",
+    ringSoft: "ring-rose-200",
     ringBright: "ring-rose-300",
     darkText: "text-rose-800",
     fadedText: "text-rose-300",
@@ -298,6 +311,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
         glassBg: "bg-rose-100/70",
       },
       glassBg: "bg-rose-100/40",
+      softGlassBg: "bg-rose-50/60",
     },
     button: {
       solid: "bg-rose-500 hover:bg-rose-600",

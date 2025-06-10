@@ -138,7 +138,7 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
         </div>
 
         {/* Progress bars - smoothly animate in/out */}
-        <CollapsibleContent>
+        <CollapsibleContent className="pb-4 pt-0">
           <div className="flex flex-col gap-2 mt-4 px-2 w-full">
             {plansProgress
               .filter(({ achievement }) => !achievement.isAchieved)
