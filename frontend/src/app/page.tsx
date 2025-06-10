@@ -167,7 +167,7 @@ const HomePage: React.FC = () => {
     >
       <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
         <div
-          className={`flex justify-between items-center ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4`}
+          className={`flex justify-between items-center bg-gray-100 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm`}
         >
           {isAppInstalled ? (
             <div className="flex flex-row gap-3 items-center text-center">
@@ -180,7 +180,7 @@ const HomePage: React.FC = () => {
             </div>
           ) : (
             <Link href="/download">
-              <Button>Download App</Button>
+              <Button className="rounded-full">Download App</Button>
             </Link>
           )}
           <div className="flex items-center gap-2">
@@ -208,10 +208,9 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Plan Streaks Section */}
         {userData?.plans && userData.plans.length > 0 && (
-          <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsPlansCollapsed((prev) => !prev)}
@@ -227,7 +226,7 @@ const HomePage: React.FC = () => {
                   )}
                 </button>
                 <div className="flex flex-row items-center justify-between gap-2">
-                  <h3 className="text-md font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900">
                     Your Plans
                   </h3>
 
@@ -249,7 +248,6 @@ const HomePage: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-3">
               <PlansProgressDisplay
                 plans={userData.plans.map((p) =>
                   convertApiPlanToPlan(p, userData.activities || [])
@@ -273,7 +271,6 @@ const HomePage: React.FC = () => {
               date={new Date()}
               className={`${isPlansCollapsed ? "h-0" : "h-full"}`}
             /> */}
-            </div>
           </div>
         )}
 
@@ -412,7 +409,7 @@ const HomePage: React.FC = () => {
                   </div>
                 </div>
 
-                <CollapsibleContent className="space-y-0">
+                <CollapsibleContent className="space-y-0 pb-4 pt-0">
                   <div className="space-y-4 pt-4">
                     {userMetrics.slice(0, 3).map((metric, index) => {
                       const weekData = getMetricWeekData(metric.id);

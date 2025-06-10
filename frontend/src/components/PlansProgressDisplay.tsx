@@ -202,11 +202,11 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   }
 
   return (
-    <div className={cn("w-full flex flex-col", className)}>
+    <div className={cn("w-full flex flex-col gap-4", className)}>
       {/* Fire badges section */}
       <Collapsible open={isExpanded}>
-        <CollapsibleContent className="space-y-0">
-          <div className="flex flex-col gap-3 p-2 rounded-lg bg-gray-100/70">
+        <CollapsibleContent className="space-y-0 ring-1 ring-gray-200 rounded-3xl overflow-hidden">
+          <div className="flex flex-col gap-1 py-2 px-4 rounded-lg bg-white/60 backdrop-blur-sm">
             <span className="text-sm font-medium text-gray-700">Streaks</span>
             <div className="flex flex-wrap gap-3">
               {plansProgress.map((planProgressData) => {
@@ -247,208 +247,204 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
       </Collapsible>
 
       {/* Progress bars section */}
-      <div className="flex flex-col gap-0 overflow-visible">
-        {plansProgress.map((planProgressData, index) => {
-          const { plan, weeks, achievement } = planProgressData;
+      {plansProgress.map((planProgressData, index) => {
+        const { plan, weeks, achievement } = planProgressData;
 
-          // Get current week data
-          const currentWeek = weeks.find((week) =>
-            isSameWeek(week.startDate, new Date())
-          );
+        // Get current week data
+        const currentWeek = weeks.find((week) =>
+          isSameWeek(week.startDate, new Date())
+        );
 
-          if (!currentWeek) return null;
+        if (!currentWeek) return null;
 
-          // Calculate weekly progress
-          const totalPlannedActivities =
-            plan.outline_type === "times_per_week"
-              ? (currentWeek.plannedActivities as number)
-              : (currentWeek.plannedActivities as any[])?.length || 0;
+        // Calculate weekly progress
+        const totalPlannedActivities =
+          plan.outline_type === "times_per_week"
+            ? (currentWeek.plannedActivities as number)
+            : (currentWeek.plannedActivities as any[])?.length || 0;
 
-          const uniqueDaysWithActivities = new Set(
-            currentWeek.completedActivities.map((entry) =>
-              format(new Date(entry.date), "yyyy-MM-dd")
-            )
-          );
+        const uniqueDaysWithActivities = new Set(
+          currentWeek.completedActivities.map((entry) =>
+            format(new Date(entry.date), "yyyy-MM-dd")
+          )
+        );
 
-          const totalCompletedActivities = uniqueDaysWithActivities.size;
+        const totalCompletedActivities = uniqueDaysWithActivities.size;
 
-          // Calculate lifestyle achievement progress
-          const lifestyleProgressValue = Math.min(
-            ACHIEVEMENT_WEEKS,
-            achievement.streak
-          );
+        // Calculate lifestyle achievement progress
+        const lifestyleProgressValue = Math.min(
+          ACHIEVEMENT_WEEKS,
+          achievement.streak
+        );
 
-          const isWeekCompleted = checkIsWeekCompleted(
-            currentWeek.startDate,
-            plan,
-            currentWeek.completedActivities
-          );
-          const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
-          const showConfetti = isCurrentWeek && isWeekCompleted;
+        const isWeekCompleted = checkIsWeekCompleted(
+          currentWeek.startDate,
+          plan,
+          currentWeek.completedActivities
+        );
+        const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
+        const showConfetti = isCurrentWeek && isWeekCompleted;
 
-          const shouldShow = index == 0 || isExpanded;
-          const isCoached = index == 0 && userPaidPlanType != "free";
+        const shouldShow = index == 0 || isExpanded;
+        const isCoached = index == 0 && userPaidPlanType != "free";
 
-          return (
-            <Collapsible open={shouldShow} key={plan.id}>
-              <CollapsibleContent className="space-y-0 overflow-visible">
-                <div
-                  className={`flex flex-col gap-2 p-2 rounded-lg transition-all duration-300 ${
-                    (achievement.isAchieved && canDisplayLifestyleAchieved) ||
-                    isCoached
-                      ? cn(
-                          variants.verySoftGrandientBg,
-                          variants.ringBright,
-                          "ring-2 ring-offset-2 ring-offset-white",
-                          "m-1"
-                        )
-                      : "bg-gray-100/60"
-                  } from-gray-50`}
-                >
-                  <div>
-                    <div className="flex items-center gap-2 pr-[5rem]">
-                      <span className="text-xl">{plan.emoji || "📋"}</span>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-md font-semibold text-gray-800">
-                          {plan.goal}
-                        </span>
-                      </div>
+        return (
+          <Collapsible
+            open={shouldShow}
+            key={plan.id}
+          >
+            <CollapsibleContent className="space-y-0 overflow-visible">
+              <div
+                className={`rounded-3xl ring-1 flex flex-col gap-2 p-4 transition-all duration-300 ${
+                  isCoached
+                    ? cn(
+                        variants.card.softGlassBg,
+                        variants.ringSoft,
+                        "backdrop-blur-sm"
+                      )
+                    : "bg-white/60 ring-gray-200"
+                }`}
+              >
+                <div className="px-3">
+                  <div className="flex items-center gap-2 pr-[5rem]">
+                    <span className="text-xl">{plan.emoji || "📋"}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-md font-semibold text-gray-800">
+                        {plan.goal}
+                      </span>
                     </div>
                   </div>
-
                   {isCoached && (
-                    <div className="absolute top-0 right-0 opacity-60">
+                    <div className="absolute top-1 right-1 opacity-40">
                       <div className="flex items-center gap-1 p-2">
-                        <BadgeCheck className={cn("h-4 w-4", variants.text)} />
-                        <span className="text-xs font-medium text-gray-500">
+                        <BadgeCheck className={cn("h-5 w-5", variants.text)} />
+                        {/* <span className="text-xs font-medium text-gray-500">
                           Coached
-                        </span>
+                        </span> */}
                       </div>
                     </div>
                   )}
+                </div>
 
-                  {isCoached && (
-                    <>
-                      <div className="flex flex-col items-center gap-1 p-2">
-                        <MessageBubble direction="left">
-                          <div className="flex items-center gap-2">
-                            <Avatar>
-                              <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/picklerick.jpg" />
-                              <AvatarFallback>CN</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col gap-1 flex-1">
-                              <span
-                                className={`text-sm italic ${
-                                  isGeneratingCoachMessage ||
-                                  !canGenerateNewMessage
-                                    ? "text-gray-400"
-                                    : "text-gray-500"
-                                }`}
-                              >
-                                {lastCoachMessage}
-                              </span>
-                              <span className="text-[10px] italic text-gray-400">
-                                Coach Pickle Rick
-                              </span>
-                            </div>
-                            <button
-                              onClick={generateCoachMessage}
-                              disabled={
+                {isCoached && (
+                  <>
+                    <div className="flex flex-col items-center gap-1 py-2">
+                      <MessageBubble direction="left" className="bg-white/60 backdrop-blur-sm ring-1 ring-white/50 shadow-lg">
+                        <div className="flex items-center gap-2">
+                          <Avatar>
+                            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/bethsanchez.jpg" />
+                            <AvatarFallback>CN</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col gap-1 flex-1">
+                            <span
+                              className={`text-sm italic ${
                                 isGeneratingCoachMessage ||
                                 !canGenerateNewMessage
-                              }
-                              className={cn(
-                                "p-1 rounded-full transition-all duration-200",
-                                canGenerateNewMessage &&
-                                  !isGeneratingCoachMessage
-                                  ? "hover:bg-gray-100 text-gray-600 hover:text-gray-800 cursor-pointer"
-                                  : "text-gray-300 cursor-not-allowed"
-                              )}
-                              title={
-                                !canGenerateNewMessage
-                                  ? "Wait 2 hours between message generations"
-                                  : "Generate new coach message"
-                              }
+                                  ? "text-gray-400"
+                                  : "text-gray-500"
+                              }`}
                             >
-                              <RefreshCw
-                                className={cn(
-                                  "h-4 w-4",
-                                  isGeneratingCoachMessage && "animate-spin"
-                                )}
-                              />
-                            </button>
-                          </div>
-                        </MessageBubble>
-                      </div>
-                      <AnimatePresence>
-                        {isAnimationCompleted && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            transition={{ duration: 0.5, ease: "easeOut" }}
-                          >
-                            <PlanStatus plan={plan} />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </>
-                  )}
-                  {/* Current week progress with animated legend */}
-                  <div className="space-y-2">
-                    <SteppedBarProgress
-                      value={totalCompletedActivities}
-                      maxValue={totalPlannedActivities}
-                      goal={<Flame size={19} className="text-orange-400" />}
-                      onAnimationCompleted={() => setIsAnimationCompleted(true)}
-                      className="w-full"
-                      // celebration={
-                      //   <span className="flex items-center gap-1">
-                      //     🎉
-                      //     <span className="text-xs font-normal text-gray-500 animate-pulse">
-                      //       Week completed
-                      //     </span>
-                      //   </span>
-                      // }
-                    />
-
-                    {/* Lifestyle achievement progress */}
-                    <div className="space-y-1">
-                      <SteppedBarProgress
-                        value={lifestyleProgressValue}
-                        maxValue={ACHIEVEMENT_WEEKS}
-                        goal={<Medal size={19} className="text-amber-400" />}
-                        className={cn("w-full")}
-                        onFullyDone={() => {
-                          setCanDisplayLifestyleAchieved(true);
-                        }}
-                        color={variants.bg}
-                        celebration={
-                          <span className="flex items-center gap-1">
-                            <CircleCheck size={19} className="text-green-500" />
-                            <span className="text-xs font-normal text-gray-500">
-                              Part of your lifestyle!
+                              {lastCoachMessage}
                             </span>
-                          </span>
-                        }
-                      />
-                    </div>
-
-                    {/* Confetti animation for completed weeks */}
-                    <AnimatePresence>
-                      {showConfetti && (
-                        <div className="fixed top-1/2 left-0 w-screen h-screen pointer-events-none z-[101]">
-                          <Confetti mode="boom" particleCount={150} />
+                            <span className="text-[10px] italic text-gray-400">
+                              Coach Beth
+                            </span>
+                          </div>
+                          <button
+                            onClick={generateCoachMessage}
+                            disabled={
+                              isGeneratingCoachMessage || !canGenerateNewMessage
+                            }
+                            className={cn(
+                              "p-1 rounded-full transition-all duration-200",
+                              canGenerateNewMessage && !isGeneratingCoachMessage
+                                ? "hover:bg-white/20 text-gray-600 hover:text-gray-800 cursor-pointer"
+                                : "text-gray-300 cursor-not-allowed"
+                            )}
+                            title={
+                              !canGenerateNewMessage
+                                ? "Wait 2 hours between message generations"
+                                : "Generate new coach message"
+                            }
+                          >
+                            <RefreshCw
+                              className={cn(
+                                "h-4 w-4",
+                                isGeneratingCoachMessage && "animate-spin"
+                              )}
+                            />
+                          </button>
                         </div>
+                      </MessageBubble>
+                    </div>
+                    <AnimatePresence>
+                      {isAnimationCompleted && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 20 }}
+                          transition={{ duration: 0.5, ease: "easeOut" }}
+                        >
+                          <PlanStatus plan={plan} />
+                        </motion.div>
                       )}
                     </AnimatePresence>
+                  </>
+                )}
+                {/* Current week progress with animated legend */}
+                <div className="space-y-2">
+                  <SteppedBarProgress
+                    value={totalCompletedActivities}
+                    maxValue={totalPlannedActivities}
+                    goal={<Flame size={19} className="text-orange-400" />}
+                    onAnimationCompleted={() => setIsAnimationCompleted(true)}
+                    className="w-full"
+                    // celebration={
+                    //   <span className="flex items-center gap-1">
+                    //     🎉
+                    //     <span className="text-xs font-normal text-gray-500 animate-pulse">
+                    //       Week completed
+                    //     </span>
+                    //   </span>
+                    // }
+                  />
+
+                  {/* Lifestyle achievement progress */}
+                  <div className="space-y-1">
+                    <SteppedBarProgress
+                      value={lifestyleProgressValue}
+                      maxValue={ACHIEVEMENT_WEEKS}
+                      goal={<Medal size={19} className="text-amber-400" />}
+                      className={cn("w-full")}
+                      onFullyDone={() => {
+                        setCanDisplayLifestyleAchieved(true);
+                      }}
+                      color={variants.bg}
+                      celebration={
+                        <span className="flex items-center gap-1">
+                          <CircleCheck size={19} className="text-green-500" />
+                          <span className="text-xs font-normal text-gray-500">
+                            Part of your lifestyle!
+                          </span>
+                        </span>
+                      }
+                    />
                   </div>
+
+                  {/* Confetti animation for completed weeks */}
+                  <AnimatePresence>
+                    {showConfetti && (
+                      <div className="fixed top-1/2 left-0 w-screen h-screen pointer-events-none z-[101]">
+                        <Confetti mode="boom" particleCount={150} />
+                      </div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
     </div>
   );
 };
