@@ -138,6 +138,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       id: plan?.id || "",
       user_id: plan?.user_id || "",
       created_at: plan?.created_at || new Date().toISOString(),
+      coach_suggested_sessions: [],
       sessions: [],
     };
 
