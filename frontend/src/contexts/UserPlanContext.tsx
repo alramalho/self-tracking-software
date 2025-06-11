@@ -768,6 +768,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const timelineDataQuery = useTimelineDataQuery();
 
   const refetchUserData = async (notify = true) => {
+    // Invalidate all user data queries to ensure all components re-render
+    await queryClient.invalidateQueries({ queryKey: ["userData"] });
+    
     const refetchPromise = currentUserDataQuery.refetch().then((result) => {
       if (result.error) throw result.error;
       if (!result.data) throw new Error("User data is undefined");
@@ -787,13 +790,20 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refetchAllData = async () => {
     try {
-      const [userData] = await Promise.all([
-        currentUserDataQuery.refetch(),
-        timelineDataQuery.refetch(), 
-        notificationsData.refetch(),
-        messagesData.refetch(),
+      // Invalidate all relevant queries to ensure all components re-render with fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["userData"] }),
+        queryClient.invalidateQueries({ queryKey: ["timelineData"] }),
+        queryClient.invalidateQueries({ queryKey: ["notificationsData"] }),
+        queryClient.invalidateQueries({ queryKey: ["messagesData"] }),
+        queryClient.invalidateQueries({ queryKey: ["recommendedUsers"] }),
+        queryClient.invalidateQueries({ queryKey: ["multipleUsersData"] }),
+        queryClient.invalidateQueries({ queryKey: ["metricsAndEntries"] }),
       ]);
 
+      // Wait for the current user data to be refetched and return it
+      const userData = await currentUserDataQuery.refetch();
+      
       if (userData.error) throw userData.error;
       if (!userData.data) throw new Error("User data is undefined");
       return userData.data;

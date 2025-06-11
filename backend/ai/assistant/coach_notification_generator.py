@@ -487,7 +487,7 @@ def generate_session_based_week_end_coach_notes(
 def generate_notification_message(user: User, plan: Plan):
     from controllers.plan_controller import PlanController
 
-    num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = (
+    _, num_left_days_in_the_week, num_activities_left = (
         PlanController().get_plan_week_stats(plan, user)
     )
 
