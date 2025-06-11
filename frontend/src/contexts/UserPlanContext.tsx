@@ -79,6 +79,7 @@ export interface MetricEntry {
   rating: number;
   date: string;
   created_at: string;
+  description?: string;
 }
 
 export interface User {
