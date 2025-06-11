@@ -332,7 +332,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                       <MessageBubble direction="left" className="bg-white/60 backdrop-blur-sm ring-1 ring-white/50 shadow-lg">
                         <div className="flex items-center gap-2">
                           <Avatar>
-                            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/bethsanchez.jpg" />
+                            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo.png" />
                             <AvatarFallback>CN</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col gap-1 flex-1">
@@ -347,7 +347,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                               {lastCoachMessage}
                             </span>
                             <span className="text-[10px] italic text-gray-400">
-                              Coach Beth
+                              Coach Eli
                             </span>
                           </div>
                           <button
