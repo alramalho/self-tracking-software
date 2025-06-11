@@ -159,6 +159,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     setReactions(response.data.reactions);
   }
 
+  useEffect(() => {
+    setReactions(activityEntryReactions);
+  }, [activityEntryId, activityEntryReactions]);
+
   // Debounced method to process pending reactions
   const processPendingReactions = useCallback(async () => {
     console.log("processing pending reactions");
