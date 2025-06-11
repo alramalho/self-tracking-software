@@ -7,6 +7,7 @@ import TimelineRenderer from "@/components/TimelineRenderer";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import { MetricIsland } from "@/components/MetricIsland";
+import { TodaysNoteSection } from "@/components/TodaysNoteSection";
 
 import {
   Search,
@@ -51,11 +52,13 @@ const HomePage: React.FC = () => {
   const router = useRouter();
   const {
     useCurrentUserDataQuery,
-    hasLoadedUserData,
+    useMetricsAndEntriesQuery,
     notificationsData,
     refetchAllData,
   } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const { data: userData, isFetching: isFetchingUser } =
+    useCurrentUserDataQuery();
+  const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const {
     userMetrics,
     entries,
@@ -66,6 +69,9 @@ const HomePage: React.FC = () => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationsBadgeDisplayed, setNotificationsBadgeDisplayed] =
+    useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [isMetricsCollapsed, setIsMetricsCollapsed] = useLocalStorage<boolean>(
     "metrics-section-collapsed",
     false
@@ -79,7 +85,6 @@ const HomePage: React.FC = () => {
   const { isAppInstalled, clearGeneralNotifications } = useNotifications();
   const { userPaidPlanType } = usePaidPlan();
   const isUserOnFreePlan = userPaidPlanType === "free";
-  
 
   const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
     useState(false);
@@ -99,13 +104,10 @@ const HomePage: React.FC = () => {
     ) || [];
   const unreadNotificationsCount = unreadNotifications.length;
 
+  const { areAllMetricsCompleted } = useDailyCheckin();
+
   useEffect(() => {
-    if (
-      isSignedIn &&
-      hasLoadedUserData &&
-      !onboardingCompleted &&
-      !hasFriends
-    ) {
+    if (isSignedIn && !onboardingCompleted && !hasFriends) {
       router.push("/onboarding");
     }
   }, [userData, isSignedIn]);
@@ -360,6 +362,7 @@ const HomePage: React.FC = () => {
                       </div>
                     );
                   })}
+                  {areAllMetricsCompleted && <TodaysNoteSection />}
                 </div>
 
                 {userMetrics.length > 3 && (

@@ -137,3 +137,54 @@ async def delete_metric(metric_id: str, user: User = Depends(is_clerk_user)):
     except Exception as e:
         logger.error(f"Error deleting metric: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to delete metric")
+
+
+@router.post("/log-todays-note")
+async def log_todays_note(
+    note_data: dict = Body(...), user: User = Depends(is_clerk_user)
+):
+    """Add a note to all of today's metric entries"""
+    try:
+        note = note_data.get("note", "")
+        today = datetime.now().date()
+        
+        # Get all metric entries for today
+        all_entries = metrics_gateway.get_all_metric_entries_by_user_id(user.id)
+        todays_entries = [
+            entry for entry in all_entries 
+            if datetime.fromisoformat(entry.date.replace('Z', '+00:00')).date() == today
+        ]
+        
+        if not todays_entries:
+            raise HTTPException(
+                status_code=404, 
+                detail="No metric entries found for today"
+            )
+        
+        # Update all today's entries with the note
+        updated_entries = []
+        for entry in todays_entries:
+            updated_entry = metrics_gateway.update_metric_entry(
+                entry.id, {"description": note}
+            )
+            updated_entries.append(updated_entry)
+        
+        posthog.capture(
+            distinct_id=user.id,
+            event="log-todays-note",
+            properties={
+                "entries_updated": len(updated_entries),
+                "note_length": len(note)
+            },
+        )
+        
+        return {
+            "message": "Note added to today's entries successfully",
+            "entries_updated": len(updated_entries)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error logging today's note: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to log today's note")

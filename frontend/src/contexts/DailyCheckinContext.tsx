@@ -17,6 +17,8 @@ interface DailyCheckinContextType {
   logIndividualMetric: (metricId: string, rating: number) => Promise<void>;
   skipMetric: (metricId: string) => void;
   skippedMetrics: Set<string>;
+  areAllMetricsCompleted: boolean;
+  logTodaysNote: (note: string) => Promise<void>;
 }
 
 const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
@@ -47,6 +49,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const entries = metricsAndEntriesData?.entries;
+  const metrics = metricsAndEntriesData?.metrics || [];
   const { data: userData } = useCurrentUserDataQuery();
   const [checkinMessage, setCheckinMessage] = useState<string | undefined>(
     undefined
@@ -82,6 +85,28 @@ export const DailyCheckinPopoverProvider: React.FC<{
       id: Object.keys(pool)[randomPick],
     };
   }
+
+  // Check if all metrics are completed (either logged today or skipped)
+  const areAllMetricsCompleted = React.useMemo(() => {
+    if (!metrics.length) return false;
+    
+    const today = new Date().toISOString().split("T")[0];
+    
+    return metrics.every(metric => {
+      // Check if metric is logged today
+      const isLoggedToday = entries?.some(
+        entry => 
+          entry.metric_id === metric.id && 
+          entry.date.split("T")[0] === today
+      );
+      
+      // Check if metric is skipped
+      const isSkipped = skippedMetrics.has(metric.id);
+      
+      return isLoggedToday || isSkipped;
+    });
+  }, [metrics, entries, skippedMetrics]);
+
   // Find the latest entry by date
   const latestEntry =
     entries && entries.length > 0
@@ -152,6 +177,22 @@ export const DailyCheckinPopoverProvider: React.FC<{
     }
   };
 
+  const logTodaysNote = async (note: string): Promise<void> => {
+    try {
+      await api.post("/log-todays-note", {
+        note: note,
+      });
+      
+      // Refresh metrics data to get updated descriptions
+      await metricsAndEntriesQuery.refetch();
+      toast.success("Note added to today's entries!");
+    } catch (error) {
+      console.error("Error logging today's note:", error);
+      toast.error("Failed to add note");
+      throw error;
+    }
+  };
+
   const skipMetric = (metricId: string) => {
     setSkippedMetrics(prev => new Set([...Array.from(prev), metricId]));
   };
@@ -184,6 +225,8 @@ export const DailyCheckinPopoverProvider: React.FC<{
         logIndividualMetric,
         skipMetric,
         skippedMetrics,
+        areAllMetricsCompleted,
+        logTodaysNote,
       }}
     >
       {children}
