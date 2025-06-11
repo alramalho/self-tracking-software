@@ -497,8 +497,9 @@ def generate_notification_message(user: User, plan: Plan):
         logger.debug(
             f"Generating plan details for {plan_state}, {n_days_left}, {n_activities_left}, {date_str}"
         )
+        user_first_name = user.name.split(" ")[0] if " " in user.name else user.name
         return (
-            f"You are assisting the user Morty with the plan {plan.goal}"
+            f"You are assisting the user {user_first_name} with the plan {plan.goal}"
             f"Today is {date_str}, and there are {n_days_left} days till sunday and the"
             f"and the user still got {n_activities_left} activities lefte to do."
             f"Becuase of that, the plan is {plan_state}"
