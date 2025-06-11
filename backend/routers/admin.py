@@ -417,7 +417,7 @@ async def run_daily_job(
             continue
 
         background_tasks.add_task(
-            plans_contoller.process_plan_state_recalculation,
+            plans_contoller.process_plan_coaching,
             user,
             user_coached_plan,
             True,  # push_notify=True

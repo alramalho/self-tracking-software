@@ -1044,7 +1044,7 @@ class PlanController:
 
     async def process_plan_state_recalculation(
         self, user: User, user_coached_plan: Plan, push_notify: bool = False
-    ):
+    ) -> Optional[Notification]:
 
         if len(user.plan_ids) == 0:
             logger.info(f"User {user.username} has no plans - skipping recalculation")
@@ -1097,8 +1097,35 @@ class PlanController:
         logger.info(
             f"Plan state recalculation successful for plan '{user_coached_plan.goal}' of user '{user.username}'"
         )
-        return (user.username, notification.message)
+        return notification
 
+    async def process_plan_coaching(
+            self, user: User, user_coached_plan: Plan, push_notify: bool = False
+        ) -> Optional[Notification]:
+        notification = await self.process_plan_state_recalculation(user, user_coached_plan, push_notify)
+
+        if notification:
+            return notification
+
+        latest_coach_notification = self.notification_manager.get_latest_notification_sent_to_user(user.id, "coach")
+
+        if latest_coach_notification and datetime.fromisoformat(latest_coach_notification.sent_at) < datetime.now(UTC) - timedelta(hours=40):
+            notification = await self.process_plan_state_recalculation(user, user_coached_plan, push_notify)
+            return notification
+
+        message = generate_notification_message(user, user_coached_plan)
+        notification = await self.notification_manager.create_and_process_notification(
+            Notification.new(
+                user_id=user.id,
+                message=message,
+                type="coach",
+                related_data={
+                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo.png",
+                },
+            ),
+            push_notify=push_notify,
+        )
+        return notification
 
 if __name__ == "__main__":
     from shared.logger import create_logger

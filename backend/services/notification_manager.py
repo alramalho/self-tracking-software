@@ -179,6 +179,38 @@ class NotificationManager:
         notifications.sort(key=lambda x: x.created_at)
         return notifications
 
+    def get_latest_notification_sent_to_user(
+        self, user_id: str, type: Optional[str] = None
+    ) -> Optional[Notification]:
+        # Build criteria for query - filter at database level for efficiency
+        criteria = {"user_id": user_id}
+        if type:
+            criteria["type"] = type
+        
+        # Query notifications for the user (and type if specified)
+        notification_data = self.db_gateway.query_by_criteria(criteria)
+        
+        # Convert to Notification objects and filter for sent notifications
+        sent_notifications = []
+        for data in notification_data:
+            notification = Notification(**data)
+            # Only include notifications that have been actually sent (have sent_at timestamp)
+            if notification.sent_at:
+                sent_notifications.append(notification)
+        
+        # If no sent notifications found, return None
+        if not sent_notifications:
+            return None
+        
+        # Sort by sent_at in descending order (latest first)
+        sent_notifications.sort(
+            key=lambda x: datetime.fromisoformat(x.sent_at), 
+            reverse=True
+        )
+        
+        # Return the most recent one
+        return sent_notifications[0]
+
     def get_last_notifications_sent_to_user(
         self, user_id: str, limit: int = 10
     ) -> List[Notification]:

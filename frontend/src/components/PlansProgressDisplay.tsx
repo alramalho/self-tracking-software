@@ -172,7 +172,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
         setLastCoachMessage(initialCoachMessage);
       }
     }
-  }, []);
+  }, [notificationsData]);
 
   // Helper function to check if a streak was achieved this week
   const wasStreakAchievedThisWeek = (planProgressData: any) => {
