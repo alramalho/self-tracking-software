@@ -126,7 +126,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
         </div>
         {hasNote && !wasSkipped && (
           <div className="mt-2 text-xs text-gray-400 italic">
-            "{existingNote || note.trim()}"
+            &quot;{existingNote || note.trim()}&quot;
           </div>
         )}
       </motion.div>
