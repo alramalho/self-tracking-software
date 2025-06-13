@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 from loguru import logger
 import traceback
-from routers.evaluation import evaluation_router
 from routers.clerk import router as clerk_router
 from routers.users import router as users_router
 from routers.activities import router as activities_router
@@ -145,7 +144,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 app.add_middleware(LoggingMiddleware)
 
 app.include_router(clerk_router)
-app.include_router(evaluation_router)
 
 app.include_router(users_router)
 app.include_router(activities_router)

@@ -77,8 +77,11 @@
 /tally/webhook
 /metrics
 /log-metric
+/skip-metric
 /metric-entries
 /metrics/{metric_id}
+/log-todays-note
+/skip-todays-note
 /messages/{message_id}/move-up
 /stripe/webhook
 /health

@@ -80,6 +80,8 @@ export interface MetricEntry {
   date: string;
   created_at: string;
   description?: string;
+  skipped?: boolean;
+  description_skipped?: boolean;
 }
 
 export interface User {

@@ -9,7 +9,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserPlanContext";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 
 interface TodaysNoteSectionProps {
   onSubmitted?: () => void;
@@ -23,15 +23,15 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [wasSkipped, setWasSkipped] = useState(false);
   const [existingNote, setExistingNote] = useState<string>("");
-  const [skippedAt, setSkippedAt] = useLocalStorage<string | null>("todays-metrics-note-skipped", null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const api = useApiWithAuth();
   const { useMetricsAndEntriesQuery } = useUserPlan();
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const entries = metricsAndEntriesData?.entries || [];
+  const { skipTodaysNote } = useDailyCheckin();
 
-  // Check if any of today's entries already have descriptions
+  // Check if any of today's entries already have descriptions or are skipped
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     const todaysEntries = entries.filter(
@@ -43,26 +43,23 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
       entry.description && entry.description.trim() !== ""
     );
     
+    // Check if any entry has description_skipped set to true
+    const entryWithSkippedDescription = todaysEntries.find(entry => 
+      entry.description_skipped === true
+    );
+    
     if (entryWithDescription && entryWithDescription.description) {
       setExistingNote(entryWithDescription.description);
       setIsSubmitted(true);
       setWasSkipped(false);
+    } else if (entryWithSkippedDescription) {
+      setIsSubmitted(true);
+      setWasSkipped(true);
     } else {
-      // Check if user skipped today
-      if (skippedAt === today) {
-        setIsSubmitted(true);
-        setWasSkipped(true);
-      }
+      setIsSubmitted(false);
+      setWasSkipped(false);
     }
-  }, [entries, skippedAt]);
-
-  // Clean up old skipped entries (only keep today's)
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    if (skippedAt && skippedAt !== today) {
-      setSkippedAt(null);
-    }
-  }, [skippedAt, setSkippedAt]);
+  }, [entries]);
 
   const handleSubmit = async () => {
     if (!note.trim()) {
@@ -79,8 +76,6 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
       setExistingNote(note.trim());
       setIsSubmitted(true);
       setWasSkipped(false);
-      // Clear skipped state since we submitted
-      setSkippedAt(null);
       toast.success("Note added to today's entries!");
       onSubmitted?.();
     } catch (error) {
@@ -91,12 +86,16 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
     }
   };
 
-  const handleSkip = () => {
-    const today = new Date().toISOString().split("T")[0];
-    setIsSubmitted(true);
-    setWasSkipped(true);
-    setSkippedAt(today);
-    onSubmitted?.();
+  const handleSkip = async () => {
+    try {
+      await skipTodaysNote();
+      setIsSubmitted(true);
+      setWasSkipped(true);
+      onSubmitted?.();
+    } catch (error) {
+      console.error("Error skipping note:", error);
+      toast.error("Failed to skip note. Please try again.");
+    }
   };
 
   if (isSubmitted) {

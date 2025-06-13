@@ -13,16 +13,18 @@ interface MetricIslandProps {
   metric: Metric;
   isLoggedToday: boolean;
   todaysRating?: number;
+  isSkippedToday?: boolean;
 }
 
 export const MetricIsland: React.FC<MetricIslandProps> = ({
   metric,
   isLoggedToday,
   todaysRating,
+  isSkippedToday = false,
 }) => {
-  const { logIndividualMetric, skipMetric, skippedMetrics } = useDailyCheckin();
+  const { logIndividualMetric, skipMetric } = useDailyCheckin();
   const [isLogging, setIsLogging] = useState(false);
-  const isSkipped = skippedMetrics.has(metric.id);
+  const [isSkipping, setIsSkipping] = useState(false);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const currentHour = new Date().getHours();
@@ -39,11 +41,18 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
     }
   };
 
-  const handleSkip = () => {
-    skipMetric(metric.id);
+  const handleSkip = async () => {
+    setIsSkipping(true);
+    try {
+      await skipMetric(metric.id);
+    } catch (error) {
+      console.error("Failed to skip metric:", error);
+    } finally {
+      setIsSkipping(false);
+    }
   };
 
-  if (isSkipped) {
+  if (isSkippedToday) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-3xl p-3 flex-1 min-w-0 opacity-50">
         <div className="flex items-center gap-2 text-sm">
@@ -68,7 +77,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
             <span className="text-sm font-medium text-gray-600">
               {metric.title}
             </span>
-            {isAfter2PM && !isLoggedToday && (
+            {isAfter2PM && !isLoggedToday && !isSkippedToday && (
               <div className="flex items-center gap-2 opacity-50">
                 <PulsatingCirclePill variant="yellow" size="sm" />
                 <span className={`text-xs font-semibold ${variants.text}`}>
@@ -86,30 +95,28 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
           )}
         </div>
 
-        {!isLoggedToday && (
+        {!isLoggedToday && !isSkippedToday && (
           <div className="flex flex-row items-center justify-between gap-3 mt-3">
             <MetricRatingSelector
               onRatingSelect={handleRatingSelect}
               loading={isLogging}
-              disabled={isLogging}
+              disabled={isLogging || isSkipping}
               initialRating={todaysRating}
             />
 
-            {!isLoggedToday && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSkip}
-                disabled={isLogging}
-                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 h-auto m-0 shrink-0"
-              >
-                {isLogging ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  "Skip"
-                )}
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSkip}
+              disabled={isLogging || isSkipping}
+              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 h-auto m-0 shrink-0"
+            >
+              {isSkipping ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                "Skip"
+              )}
+            </Button>
           </div>
         )}
       </div>
