@@ -157,20 +157,18 @@ const HomePage: React.FC = () => {
         <div
           className={`flex justify-between items-center bg-gray-100 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm`}
         >
-          {isAppInstalled ? (
-            <div className="flex flex-row gap-3 items-center text-center">
-              <span className="mb-2 text-[40px]">🎯</span>
-              <h2 className="text-xl font-bold tracking-tight text-gray-900">
-                <span className={`${variants.text} break-normal text-nowrap`}>
-                  tracking.<span className={`${variants.fadedText}`}>so</span>
-                </span>
-              </h2>
-            </div>
-          ) : (
-            <Link href="/download">
-              <Button className="rounded-full">Download App</Button>
-            </Link>
-          )}
+          <div className="flex flex-row gap-1 items-center text-center">
+            <img
+              src="/icons/icon-transparent.png"
+              alt="Jarvis Logo"
+              className="w-10 h-10"
+            />
+            <h2 className="text-xl font-bold tracking-tight text-gray-900">
+              <span className={`${variants.text} break-normal text-nowrap`}>
+                tracking.<span className={`${variants.fadedText}`}>so</span>
+              </span>
+            </h2>
+          </div>
           <div className="flex items-center gap-2">
             <div className="relative">
               <button
@@ -291,7 +289,8 @@ const HomePage: React.FC = () => {
                         entry.metric_id === metric.id &&
                         entry.date.split("T")[0] === today
                     );
-                    const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
+                    const isLoggedToday =
+                      !!todaysEntry && todaysEntry.rating > 0;
                     const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
                     const todaysRating = todaysEntry?.rating;
 
