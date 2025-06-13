@@ -347,7 +347,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                               {lastCoachMessage}
                             </span>
                             <span className="text-[10px] italic text-gray-400">
-                              Coach Eli
+                              Coach Ted
                             </span>
                           </div>
                           <button
