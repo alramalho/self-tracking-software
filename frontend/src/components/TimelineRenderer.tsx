@@ -65,13 +65,6 @@ const TimelineRenderer: React.FC<{
   );
   const timelineRef = useRef<HTMLDivElement>(null);
 
-  // Focus timeline when it loads to enable scroll
-  useEffect(() => {
-    if (timelineDataQuery.isFetched && timelineRef.current) {
-      timelineRef.current.focus();
-    }
-  }, [timelineDataQuery.isFetched]);
-
   if (!timelineDataQuery.isFetched && !timelineData) {
     return (
       <div className="flex justify-center items-center w-full">
@@ -325,7 +318,7 @@ const TimelineRenderer: React.FC<{
   }
 
   return (
-    <div ref={timelineRef} tabIndex={0} className="grid grid-cols-1 sm:grid-cols-2 gap-4 outline-none">
+    <div ref={timelineRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <h2 className="text-lg font-semibold mt-4">
         Friend&apos;s last activities
       </h2>
