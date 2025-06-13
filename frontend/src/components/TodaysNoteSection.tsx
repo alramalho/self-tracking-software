@@ -104,7 +104,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 0.8, y: 0 }}
+        animate={{ opacity: 0.9, y: 0 }}
         className={`ring-1 rounded-3xl p-4 backdrop-blur-sm ${cn(
           hasNote && !wasSkipped
             ? `${variants.card.softGlassBg} ${variants.ringSoft}` // Use variants for submitted notes

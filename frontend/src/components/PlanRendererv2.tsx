@@ -492,11 +492,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 <AvatarFallback>CN</AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-1 flex-1">
-                <span className={`text-sm italic text-gray-500`}>
+                <span className={`text-sm italic text-gray-600`}>
                   {selectedPlan.coach_notes}
                 </span>
-                <span className="text-[10px] italic text-gray-400">
-                  Coach Eli
+                <span className="text-[10px] italic text-gray-500">
+                  Coach Ted
                 </span>
               </div>
             </div>

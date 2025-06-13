@@ -68,7 +68,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
 
   return (
     <div
-      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-white/60 backdrop-blur-sm ring-gray-200 ${isLoggedToday && "opacity-50"}`}
+      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-gray-50 backdrop-blur-sm ring-gray-200 ${isLoggedToday && "opacity-70"}`}
     >
       <div>
         <div className="flex items-center justify-between">
