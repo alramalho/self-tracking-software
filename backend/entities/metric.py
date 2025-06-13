@@ -35,9 +35,11 @@ class MetricEntry(BaseModel):
     created_at: str
     updated_at: str
     description: Optional[str] = None
+    skipped: Optional[bool] = False
+    description_skipped: Optional[bool] = False
 
     @classmethod
-    def new(cls, user_id: str, metric_id: str, rating: int, date: str = None, description: Optional[str] = None, id: Optional[str] = None):
+    def new(cls, user_id: str, metric_id: str, rating: int, date: str = None, description: Optional[str] = None, id: Optional[str] = None, skipped: Optional[bool] = False, description_skipped: Optional[bool] = False):
         now = datetime.now().isoformat()
         return cls(
             id=id or str(ObjectId()),
@@ -48,4 +50,6 @@ class MetricEntry(BaseModel):
             created_at=now,
             updated_at=now,
             description=description,
+            skipped=skipped,
+            description_skipped=description_skipped,
         )

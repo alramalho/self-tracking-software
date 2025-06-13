@@ -295,7 +295,8 @@ const HomePage: React.FC = () => {
                         entry.metric_id === metric.id &&
                         entry.date.split("T")[0] === today
                     );
-                    const isLoggedToday = !!todaysEntry;
+                    const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
+                    const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
                     const todaysRating = todaysEntry?.rating;
 
                     const weekData = getMetricWeekData(metric.id);
@@ -311,6 +312,7 @@ const HomePage: React.FC = () => {
                           metric={metric}
                           isLoggedToday={isLoggedToday}
                           todaysRating={todaysRating}
+                          isSkippedToday={isSkippedToday}
                         />
                         <CollapsibleContent>
                           <div

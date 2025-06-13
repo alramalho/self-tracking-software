@@ -15,10 +15,10 @@ interface DailyCheckinContextType {
   checkinMessage: string | undefined;
   buildCheckinMessage: () => { message: string; id: string };
   logIndividualMetric: (metricId: string, rating: number) => Promise<void>;
-  skipMetric: (metricId: string) => void;
-  skippedMetrics: Set<string>;
+  skipMetric: (metricId: string) => Promise<void>;
   areAllMetricsCompleted: boolean;
   logTodaysNote: (note: string) => Promise<void>;
+  skipTodaysNote: () => Promise<void>;
 }
 
 const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
@@ -28,9 +28,7 @@ const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
 export const useDailyCheckin = () => {
   const context = useContext(DailyCheckinContext);
   if (!context) {
-    throw new Error(
-      "useDailyCheckinPopover must be used within a DailyCheckinPopoverProvider"
-    );
+    throw new Error("useDailyCheckin must be used within a DailyCheckinProvider");
   }
   return context;
 };
@@ -44,7 +42,6 @@ export const DailyCheckinPopoverProvider: React.FC<{
   );
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [skippedMetrics, setSkippedMetrics] = useState<Set<string>>(new Set());
   const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
@@ -72,12 +69,6 @@ export const DailyCheckinPopoverProvider: React.FC<{
     } else {
       pool["How was your day?"] = `Hey ${user?.username}! How was your day?`;
     }
-    // pool[
-    //   "How are you feeling today?"
-    // ] = `Hi ${user?.username}, how are you feeling today?`;
-    // pool[
-    //   "Tell me about your day"
-    // ] = `hi ${user?.username}, care to tell me about your day?`;
 
     const randomPick = Math.floor(Math.random() * Object.keys(pool).length);
     return {
@@ -93,19 +84,16 @@ export const DailyCheckinPopoverProvider: React.FC<{
     const today = new Date().toISOString().split("T")[0];
     
     return metrics.every(metric => {
-      // Check if metric is logged today
-      const isLoggedToday = entries?.some(
+      // Check if metric is logged or skipped today
+      const todaysEntry = entries?.find(
         entry => 
           entry.metric_id === metric.id && 
           entry.date.split("T")[0] === today
       );
       
-      // Check if metric is skipped
-      const isSkipped = skippedMetrics.has(metric.id);
-      
-      return isLoggedToday || isSkipped;
+      return todaysEntry && (todaysEntry.rating > 0 || todaysEntry.skipped);
     });
-  }, [metrics, entries, skippedMetrics]);
+  }, [metrics, entries]);
 
   // Find the latest entry by date
   const latestEntry =
@@ -193,21 +181,36 @@ export const DailyCheckinPopoverProvider: React.FC<{
     }
   };
 
-  const skipMetric = (metricId: string) => {
-    setSkippedMetrics(prev => new Set([...Array.from(prev), metricId]));
+  const skipMetric = async (metricId: string): Promise<void> => {
+    try {
+      await api.post("/skip-metric", {
+        metric_id: metricId,
+        date: new Date().toISOString(),
+      });
+      
+      // Refresh metrics data
+      await metricsAndEntriesQuery.refetch();
+      toast.success("Metric skipped successfully!");
+    } catch (error) {
+      console.error("Error skipping metric:", error);
+      toast.error("Failed to skip metric");
+      throw error;
+    }
   };
 
-  // Reset skipped metrics at the start of a new day
-  useEffect(() => {
-    const now = new Date();
-    const lastReset = localStorage.getItem('last-skip-reset');
-    const today = now.toDateString();
-    
-    if (lastReset !== today) {
-      setSkippedMetrics(new Set());
-      localStorage.setItem('last-skip-reset', today);
+  const skipTodaysNote = async (): Promise<void> => {
+    try {
+      await api.post("/skip-todays-note");
+      
+      // Refresh metrics data
+      await metricsAndEntriesQuery.refetch();
+      toast.success("Today's note skipped successfully!");
+    } catch (error) {
+      console.error("Error skipping today's note:", error);
+      toast.error("Failed to skip today's note");
+      throw error;
     }
-  }, []);
+  };
 
   return (
     <DailyCheckinContext.Provider
@@ -224,17 +227,12 @@ export const DailyCheckinPopoverProvider: React.FC<{
         buildCheckinMessage,
         logIndividualMetric,
         skipMetric,
-        skippedMetrics,
         areAllMetricsCompleted,
         logTodaysNote,
+        skipTodaysNote,
       }}
     >
       {children}
-      {/* <DailyCheckinBanner
-        open={showDailyCheckinPopover}
-        onClose={() => setShowDailyCheckinPopover(false)}
-        initialMessage={initialMessage}
-      /> */}
       <InsightsBanner
         open={showDailyCheckinPopover}
         onClose={() => setShowDailyCheckinPopover(false)}
