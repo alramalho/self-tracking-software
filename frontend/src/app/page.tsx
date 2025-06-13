@@ -20,7 +20,6 @@ import {
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
-// import PlansAchievements from "@/components/PlansAchievements";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import {
   Collapsible,
@@ -42,9 +41,6 @@ import Link from "next/link";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
-import { endOfWeek, format, startOfWeek } from "date-fns";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 
 const HomePage: React.FC = () => {
