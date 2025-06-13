@@ -203,7 +203,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
               className="shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
             >
               <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-                {["friend_request", "plan_invitation", "info"].includes(
+                {["friend_request", "plan_invitation", "info", "coach"].includes(
                   notification.type
                 ) &&
                   hasPictureData(notification) && (
