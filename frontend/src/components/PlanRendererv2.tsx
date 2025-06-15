@@ -496,7 +496,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   {selectedPlan.coach_notes}
                 </span>
                 <span className="text-[10px] italic text-gray-500">
-                  Coach Ted
+                  Coach Oli
                 </span>
               </div>
             </div>
