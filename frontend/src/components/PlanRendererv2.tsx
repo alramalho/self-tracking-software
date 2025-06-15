@@ -662,6 +662,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
             weekStartsOn: 0,
           });
+          const isNextWeek = isSameWeek(
+            week.startDate,
+            addWeeks(new Date(), 1),
+            {
+              weekStartsOn: 0,
+            }
+          );
+          const totalWeeks = planProgress?.weeks.length ?? 0;
           const actualWeekIndex =
             planProgress?.weeks.findIndex(
               (w) => w.startDate.getTime() === week.startDate.getTime()
@@ -676,7 +684,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 title={
                   <div className="flex justify-between items-center w-full">
                     <span className="text-lg font-semibold">
-                      Week {actualWeekIndex + 1} {isCurrentWeek && "(Current)"}
+                      {isCurrentWeek
+                        ? "Current week"
+                        : isNextWeek
+                        ? "Next week"
+                        : `Week ${actualWeekIndex + 1} / ${totalWeeks}`}
                     </span>
                     <span className="text-sm text-gray-500">
                       {format(week.startDate, "d")}-

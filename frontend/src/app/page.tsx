@@ -315,8 +315,11 @@ const HomePage: React.FC = () => {
                             className="my-2 bg-white/60 ring-1 ring-gray-200 rounded-3xl p-4 border border-white/50"
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-500">
-                                {metric.emoji} Overview
+                              <span className="text-sm font-normal">
+                                {metric.emoji} {metric.title}{" "}
+                                <span className="font-semibold italic">
+                                  Week Overview
+                                </span>
                               </span>
                               <span className="text-xs text-gray-500">
                                 Last 7 days
