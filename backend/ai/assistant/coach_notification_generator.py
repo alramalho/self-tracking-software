@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 
-
 def generate_times_per_week_based_week_end_coach_notes(
     plan: Plan,
     new_plan_state: Literal["FAILED", "COMPLETED"],
@@ -20,7 +19,7 @@ def generate_times_per_week_based_week_end_coach_notes(
 ):
     if new_plan_state not in ["FAILED", "COMPLETED"]:
         raise ValueError(f"Invalid new plan state: {new_plan_state}")
-    
+
     if plan.outline_type != "times_per_week":
         raise ValueError("Plan is not of type times per week.")
 
@@ -39,12 +38,14 @@ def generate_times_per_week_based_week_end_coach_notes(
         plan_goal: str,
         times_per_week: int,
     ):
-        if inner_new_plan_state == 'FAILED':
+        if inner_new_plan_state == "FAILED":
             performance = "poor"
-        elif inner_new_plan_state == 'COMPLETED':
+        elif inner_new_plan_state == "COMPLETED":
             performance = "good"
-            
-        activities_str = ", ".join([f"{a.title} (measured in {a.measure})" for a in inner_plan_activities])
+
+        activities_str = ", ".join(
+            [f"{a.title} (measured in {a.measure})" for a in inner_plan_activities]
+        )
         return (
             f"This week I had a {performance} performance. My Plan: '{plan_goal}', consisting "
             f"of doing any of the activities {activities_str} at least {times_per_week} times per week."
@@ -69,7 +70,7 @@ def generate_times_per_week_based_week_end_coach_notes(
                         updated_at="2024-12-01T00:00:00Z",
                     ),
                     Activity(
-                        id="gym_001", 
+                        id="gym_001",
                         user_id="dummy_user",
                         title="Gym Session",
                         measure="session",
@@ -188,7 +189,7 @@ def generate_session_based_week_end_coach_notes(
 
     if new_plan_state not in ["FAILED", "COMPLETED"]:
         raise ValueError(f"Invalid new plan state: {new_plan_state}")
-    
+
     if plan.outline_type != "specific":
         raise ValueError("Plan is not of type 'specific'.")
 
@@ -210,9 +211,9 @@ def generate_session_based_week_end_coach_notes(
         inner_new_plan_state: Literal["FAILED", "COMPLETED"],
         plan_goal: str,
     ):
-        if inner_new_plan_state == 'FAILED':
+        if inner_new_plan_state == "FAILED":
             performance = "poor"
-        elif inner_new_plan_state == 'COMPLETED':
+        elif inner_new_plan_state == "COMPLETED":
             performance = "good"
 
         old_sessions_str = "\n".join(
@@ -247,21 +248,21 @@ def generate_session_based_week_end_coach_notes(
                         quantity=5,
                     ),
                     PlanSession(
-                        date="2024-12-17",  # Tuesday  
+                        date="2024-12-17",  # Tuesday
                         activity_id="gym_001",
                         descriptive_guide="Full body workout",
                         quantity=1,
                     ),
                     PlanSession(
                         date="2024-12-19",  # Thursday
-                        activity_id="running_001", 
+                        activity_id="running_001",
                         descriptive_guide="Increase pace slightly",
                         quantity=6,
                     ),
                     PlanSession(
                         date="2024-12-21",  # Saturday
                         activity_id="gym_001",
-                        descriptive_guide="Focus on compound movements", 
+                        descriptive_guide="Focus on compound movements",
                         quantity=1,
                     ),
                 ],
@@ -274,7 +275,7 @@ def generate_session_based_week_end_coach_notes(
                     ),
                     PlanSession(
                         date="2024-12-18",  # Wednesday
-                        activity_id="gym_001", 
+                        activity_id="gym_001",
                         descriptive_guide="Light workout, basic movements",
                         quantity=1,
                     ),
@@ -296,7 +297,7 @@ def generate_session_based_week_end_coach_notes(
                         updated_at="2024-12-01T00:00:00Z",
                     ),
                     Activity(
-                        id="gym_001", 
+                        id="gym_001",
                         user_id="dummy_user",
                         title="Gym Session",
                         measure="session",
@@ -310,7 +311,7 @@ def generate_session_based_week_end_coach_notes(
             ),
         },
         {
-            "role": "assistant", 
+            "role": "assistant",
             "content": "Reduced from 4 to 3 sessions per week and lowered running distance. Focus on consistency over intensity - building the habit is more important than pushing limits right now.",
         },
         {
@@ -327,7 +328,7 @@ def generate_session_based_week_end_coach_notes(
                     PlanSession(
                         date="2024-12-18",  # Wednesday
                         activity_id="squat_001",
-                        descriptive_guide="High intensity, low reps", 
+                        descriptive_guide="High intensity, low reps",
                         quantity=5,
                     ),
                     PlanSession(
@@ -340,7 +341,7 @@ def generate_session_based_week_end_coach_notes(
                 new_sessions=[
                     PlanSession(
                         date="2024-12-16",  # Monday
-                        activity_id="deadlift_001", 
+                        activity_id="deadlift_001",
                         descriptive_guide="Focus on form, moderate weight",
                         quantity=3,
                     ),
@@ -353,14 +354,14 @@ def generate_session_based_week_end_coach_notes(
                     PlanSession(
                         date="2024-12-20",  # Friday
                         activity_id="bench_001",
-                        descriptive_guide="Build confidence with lighter weight", 
+                        descriptive_guide="Build confidence with lighter weight",
                         quantity=3,
                     ),
                 ],
                 inner_plan_activities=[
                     Activity(
                         id="deadlift_001",
-                        user_id="dummy_user", 
+                        user_id="dummy_user",
                         title="Deadlift",
                         measure="sets",
                         emoji="🏋️‍♂️",
@@ -370,17 +371,17 @@ def generate_session_based_week_end_coach_notes(
                     Activity(
                         id="squat_001",
                         user_id="dummy_user",
-                        title="Squat", 
+                        title="Squat",
                         measure="sets",
                         emoji="🦵",
-                        created_at="2024-12-01T00:00:00Z", 
+                        created_at="2024-12-01T00:00:00Z",
                         updated_at="2024-12-01T00:00:00Z",
                     ),
                     Activity(
                         id="bench_001",
                         user_id="dummy_user",
                         title="Bench Press",
-                        measure="sets", 
+                        measure="sets",
                         emoji="💺",
                         created_at="2024-12-01T00:00:00Z",
                         updated_at="2024-12-01T00:00:00Z",
@@ -464,10 +465,10 @@ def generate_session_based_week_end_coach_notes(
             "content": "Excellent progress! Increased from 3 to 4 sessions per week and added variety with intervals and tempo runs. You've earned this upgrade - time to challenge yourself with more structured training.",
         },
         {
-            "role": "user", 
+            "role": "user",
             "content": generate_message_str(
                 old_sessions=old_sessions,
-                new_sessions=new_sessions, 
+                new_sessions=new_sessions,
                 inner_plan_activities=plan_activities,
                 inner_new_plan_state=new_plan_state,
                 plan_goal=plan.goal,
@@ -523,21 +524,21 @@ def generate_notification_message(user: User, plan: Plan):
             "role": "user",
             "content": generate_plan_details(
                 plan_state="AT_RISK",
-                n_days_left=5,
+                n_days_left=4,
                 n_activities_left=3,
                 date_str="Wednesday",
             ),
         },
         {
             "role": "assistant",
-            "content": "You're cutting it close with 3 tasks in 5 days - manageable but stay focused to finish strong.",
+            "content": "You're cutting it close with 3 activities and 4 days left - manageable but stay focused to finish strong.",
         },
         {
             "role": "user",
             "content": generate_plan_details(
                 plan_state="ON_TRACK",
                 date_str="Monday",
-                n_days_left=7,
+                n_days_left=6,
                 n_activities_left=3,
             ),
         },
@@ -548,28 +549,41 @@ def generate_notification_message(user: User, plan: Plan):
         {
             "role": "user",
             "content": generate_plan_details(
-                plan_state="FAILED",
-                date_str="Monday",
-                n_days_left=2,
-                n_activities_left=3,
-            ),
-        },
-        {
-            "role": "assistant",
-            "content": "This plan was too ambitious - I'm adjusting it to something more achievable for you.",
-        },
-        {
-            "role": "user",
-            "content": generate_plan_details(
                 plan_state="COMPLETED",
-                date_str="Satuday",
-                n_days_left=2,
+                date_str="Saturday",
+                n_days_left=0,
                 n_activities_left=0,
             ),
         },
         {
             "role": "assistant",
             "content": "Well done - you've shown real commitment and follow-through, excellent work!",
+        },
+        {
+            "role": "user",
+            "content": generate_plan_details(
+                plan_state="ON_TRACK",
+                date_str="Friday",
+                n_days_left=1,
+                n_activities_left=1,
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": "Just one activity left to do, and you still got the rest of the day today and tomorrow. You've got this!",
+        },
+        {
+            "role": "user",
+            "content": generate_plan_details(
+                plan_state="FAILED",
+                date_str="Saturday",
+                n_days_left=0,
+                n_activities_left=3,
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": "This plan was too ambitious - I'm adjusting it to something more achievable for you.",
         },
         {
             "role": "user",
