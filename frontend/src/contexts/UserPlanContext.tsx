@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
 import { parseISO, format, addMinutes, differenceInDays } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
+import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
@@ -419,7 +420,7 @@ export const hasCachedUserData = () => {
 export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { isSignedIn, isLoaded } = useSession();
+  const { isSignedIn, isLoaded, isOnline } = useOfflineAuth();
   const router = useRouter();
   const { signOut } = useClerk();
   const api = useApiWithAuth();
@@ -448,6 +449,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchUserData = async ({
     username,
   }: { username?: string } = {}): Promise<UserDataEntry> => {
+    // If offline, we can't fetch new data, so throw an error
+    // This will cause TanStack Query to use cached data if available
+    if (!isOnline) {
+      throw new Error("Offline - using cached data");
+    }
+    
     try {
       const startTime = performance.now();
       const result = await smallRetryMechanism(
@@ -660,7 +667,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const useUserDataQuery = (username: string) => {
-    const { isSignedIn, isLoaded } = useSession();
     const currentUserQuery = useCurrentUserDataQuery();
 
     return useQuery({
