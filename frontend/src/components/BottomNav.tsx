@@ -70,7 +70,7 @@ const BottomNav = () => {
 
   return (
     <>
-      <FloatingActionMenu />
+      {/* <FloatingActionMenu /> */}
       <nav className={cn(
         "box-border bg-transparent backdrop-blur-xl z-[50]",
         isDesktop 

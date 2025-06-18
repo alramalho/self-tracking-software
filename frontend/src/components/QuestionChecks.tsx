@@ -2,6 +2,7 @@ import React, { forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export interface QuestionCheckItem {
+  icon?: React.ReactNode | string;
   title: string;
   description?: string;
 }
@@ -11,7 +12,7 @@ export type QuestionsChecks = Record<string, QuestionCheckItem>;
 interface QuestionChecksProps {
   questionsChecks: QuestionsChecks;
   checkedItems: Record<string, boolean>;
-  questionPrefix: string;
+  questionPrefix?: string;
   onItemClick: () => void;
 }
 
@@ -27,7 +28,7 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
 
     return (
       <div ref={ref} className="space-y-3 mt-12 px-4">
-        <p className="text-sm text-gray-500 mb-6">{questionPrefix}</p>
+        {questionPrefix && <p className="text-sm text-gray-500 mb-6">{questionPrefix}</p>}
         <div className="space-y-3">
           {Object.entries(questionsChecks).map(([key, item], index) => (
             <AnimatePresence key={key}>
@@ -78,7 +79,7 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
                               exit={{ scale: 0, opacity: 0 }}
                               transition={{ duration: 0.2 }}
                             >
-                              {getNumberEmoji(index + 1)}
+                              {item.icon ?? getNumberEmoji(index + 1)}
                             </motion.span>
                           )}
                         </AnimatePresence>

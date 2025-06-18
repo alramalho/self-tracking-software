@@ -16,6 +16,8 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import GenericLoader from "./GenericLoader";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
+import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function GeneralInitializer({
   children,
@@ -23,7 +25,8 @@ export default function GeneralInitializer({
   children: React.ReactNode;
 }) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useSession();
-  const { useCurrentUserDataQuery, hasLoadedUserData, isWaitingForData } = useUserPlan();
+  const { useCurrentUserDataQuery, hasLoadedUserData, isWaitingForData } =
+    useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const { isAppInstalled, isPushGranted } = useNotifications();
@@ -31,14 +34,21 @@ export default function GeneralInitializer({
   const [showBugDialog, setShowBugDialog] = useState(false);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const pathname = usePathname();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   // Determine if there is any cached data to potentially display on initial load.
   const [initialCacheExists] = useState(() => hasCachedUserData());
-  
+
   const email = userData?.user?.email || "";
 
   useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && userData?.user && !hasRanPosthogIdentify) {
+    if (
+      isSignedIn &&
+      hasLoadedUserData &&
+      userData?.user &&
+      !hasRanPosthogIdentify
+    ) {
       posthog.identify(userData?.user.id, {
         email: userData?.user.email,
         name: userData?.user.name,
@@ -49,14 +59,21 @@ export default function GeneralInitializer({
       });
       setHasRanPosthogIdentify(true);
     }
-  }, [isSignedIn, hasLoadedUserData, userData, hasRanPosthogIdentify, isAppInstalled, isPushGranted]);
+  }, [
+    isSignedIn,
+    hasLoadedUserData,
+    userData,
+    hasRanPosthogIdentify,
+    isAppInstalled,
+    isPushGranted,
+  ]);
 
   const reportBug = async (text: string, email: string) => {
     await toast.promise(
-      fetch('/api/report-bug', {
-        method: 'POST',
+      fetch("/api/report-bug", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, text }),
       }),
@@ -68,8 +85,10 @@ export default function GeneralInitializer({
     );
   };
 
-
-  if (!isClerkLoaded || (isSignedIn && isWaitingForData && !initialCacheExists)) {
+  if (
+    !isClerkLoaded ||
+    (isSignedIn && isWaitingForData && !initialCacheExists)
+  ) {
     return (
       <>
         {showBugDialog && (
@@ -83,20 +102,32 @@ export default function GeneralInitializer({
           />
         )}
         <div className="fixed inset-0 flex items-center justify-center">
-          <GenericLoader 
-            onReportBug={() => setShowBugDialog(true)}
-          />
+          <GenericLoader onReportBug={() => setShowBugDialog(true)} />
         </div>
       </>
     );
   }
-
+  const isOnboardingPage = pathname.startsWith("/onboarding");
 
   return (
     <>
-      {children}
-      {isSignedIn && <BottomNav />}
-      
+      {isOnboardingPage ? (
+        children
+      ) : (
+        <>
+          <div
+            className={cn(
+              "absolute inset-0 overflow-auto",
+              isSignedIn && !isDesktop ? "pb-[4.7rem]" : "",
+              isSignedIn && isDesktop ? "left-0" : ""
+            )}
+          >
+            {children}
+          </div>
+          {isSignedIn && <BottomNav />}
+        </>
+      )}
+
       {/* Show a mini loader if user is signed in and main user data is actively loading, 
           even if we are showing children due to initially existing cache. */}
       {isSignedIn && isWaitingForData && (
