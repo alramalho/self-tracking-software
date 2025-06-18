@@ -26,7 +26,6 @@ export const useOfflineAuth = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [cachedSession, setCachedSession] =
     useLocalStorage<CachedSessionState | null>("clerk-session-cache", null);
-  const [hasShownOfflineToast, setHasShownOfflineToast] = useState(false);
 
   // Track the last cached values to avoid unnecessary writes
   const lastCachedRef = useRef<{
@@ -41,7 +40,6 @@ export const useOfflineAuth = () => {
 
       const handleOnline = () => {
         setIsOnline(true);
-        setHasShownOfflineToast(false); // Reset toast flag when back online
       };
       const handleOffline = () => setIsOnline(false);
 
@@ -98,22 +96,6 @@ export const useOfflineAuth = () => {
       }
     }
   }, [isOnline, isClerkLoaded, isSignedIn, session?.user?.id]); // Removed setCachedSession from deps
-
-  // Show offline toast when going offline with valid cached session
-  useEffect(() => {
-    if (
-      !isOnline &&
-      !hasShownOfflineToast &&
-      isSessionCacheValid(cachedSession) &&
-      hasCachedUserData()
-    ) {
-      toast("You're offline. Using cached data.", {
-        icon: "📱",
-        duration: 3000,
-      });
-      setHasShownOfflineToast(true);
-    }
-  }, [isOnline, hasShownOfflineToast, cachedSession]);
 
   // Determine effective auth state
   const effectiveIsSignedIn = isOnline
