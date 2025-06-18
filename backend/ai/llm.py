@@ -168,6 +168,8 @@ async def ask_schema_async(
 ) -> T:
     start_time = time.time()
 
+    logger.info(f"Asking schema {text}")
+
     agent: Agent[None, T] = Agent(
         get_model(model),
         result_type=pymodel,

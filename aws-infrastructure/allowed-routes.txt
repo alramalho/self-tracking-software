@@ -67,6 +67,7 @@
 /ai/get-plan-extractions
 /ai/log-dynamic-ui-attempt-error
 /ai/log-dynamic-ui-skip
+/onboarding/check-plan-goal
 /send-notification
 /regenerate-image-url
 /send-notification-to-all-users

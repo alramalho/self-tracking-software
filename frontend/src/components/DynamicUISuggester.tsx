@@ -36,6 +36,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   initialMessage?: string;
   questionPrefix?: string;
   questionsChecks?: QuestionsChecks;
+  headerIcon?: React.ReactNode;
   submitButtonText?: string;
   onSubmit: (text: string) => Promise<T | void>;
   shouldRenderChildren?: boolean;
@@ -55,11 +56,12 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
 export function DynamicUISuggester<T extends BaseExtractionResponse>({
   id,
   initialMessage,
-  questionPrefix = "Please mention:",
+  questionPrefix,
   questionsChecks,
   submitButtonText = "Send",
   onSubmit,
   renderChildren,
+  headerIcon,
   renderIntermediateComponents,
   shouldRenderChildren = true,
   onAccept,
@@ -199,8 +201,8 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
       );
       setExtractedData(null);
     },
-    onError: () => {
-      console.error("Error submitting data");
+    onError: (error) => {
+      console.error("Error submitting data:", error);
       setIsLoading(false);
     },
   });
@@ -264,7 +266,13 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
             className="relative"
           >
-            <ScanFace size={100} className={`${variants.text}`} />
+            {headerIcon && !message? (
+              <div className="flex items-center justify-center w-[100px] h-[100px]">
+                {headerIcon}
+              </div>
+            ) : (
+              <ScanFace size={100} className={`${variants.text}`} />
+            )}
             {wave && (
               <motion.span
                 className="absolute bottom-[9px] left-[-40px] text-5xl"
@@ -284,7 +292,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, x: -10 }}
                 transition={{ duration: 0.3, layout: true }}
-                className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md max-w-[250px] text-sm border border-gray-200 dark:border-gray-700 flex-shrink"
+                className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md max-w-[250px] text-sm border border-gray-200 dark:border-gray-700 flex-shrink relative"
               >
                 <Remark>{message}</Remark>
               </motion.div>
@@ -357,9 +365,14 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         <div className="px-4">
           <Button
             variant={allQuestionsChecked ? "outline" : "default"}
-            className={`w-full ${allQuestionsChecked ? "bg-white" : ""}`}
+            className={`w-full rounded-xl ${allQuestionsChecked ? "bg-white" : ""}`}
             onClick={() => submitMutation.mutateAsync(text)}
-            disabled={(!canSubmitEmpty && !text) || isRecording || isLoading || isSubmitting}
+            disabled={
+              (!canSubmitEmpty && !text) ||
+              isRecording ||
+              isLoading ||
+              isSubmitting
+            }
             loading={isLoading}
           >
             {submitButtonText ?? "Send"} {allQuestionsChecked ? "again" : ""}

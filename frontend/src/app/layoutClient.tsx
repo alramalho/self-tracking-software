@@ -62,15 +62,7 @@ export default function ClientLayout({
                         isSignedIn && isDesktop ? "ml-64" : ""
                       )}
                     >
-                      <div
-                        className={cn(
-                          "absolute inset-0 overflow-auto",
-                          isSignedIn && !isDesktop ? "pb-[4.7rem]" : "",
-                          isSignedIn && isDesktop ? "left-0" : ""
-                        )}
-                      >
-                        <GeneralInitializer>{children}</GeneralInitializer>
-                      </div>
+                      <GeneralInitializer>{children}</GeneralInitializer>
                     </main>
                     <SonnerToaster position="top-center" />
                     <Toaster
