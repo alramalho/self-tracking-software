@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { openDB, IDBPDatabase } from 'idb';
+import { WifiOff } from 'lucide-react';
 
 const DB_NAME = 'offline-actions-db';
 const STORE_NAME = 'actionQueue';
@@ -164,7 +165,9 @@ export const OfflineActionQueueProvider = ({ children }: { children: ReactNode }
       attempts: 0,
     };
     await db.put(STORE_NAME, action);
-    toast(metadata.title ? `${metadata.title} queued. Will sync when online.` : 'Action queued. Will sync when online.');
+    toast(metadata.title ? `${metadata.title} queued. Will sync when online.` : 'Action queued. Will sync when online.', {
+      icon: <WifiOff className="h-4 w-4" />,
+    });
   }, [actionHandlers]);
 
   useEffect(() => {
