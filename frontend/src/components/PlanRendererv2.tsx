@@ -23,8 +23,12 @@ import {
   ArrowBigRight,
   BadgeCheck,
   BadgeCheckIcon,
+  ChartArea,
   Check,
+  LayoutDashboard,
   Loader2,
+  Maximize2,
+  Minimize2,
   PlusSquare,
   X,
 } from "lucide-react";
@@ -62,6 +66,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { MessageBubble } from "./MessageBubble";
 import { toast } from "react-hot-toast";
+import { PlanStatus } from "./PlansProgressDisplay";
 
 interface PlanRendererv2Props {
   selectedPlan: ApiPlan;
@@ -439,7 +444,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     <div>
       <div className="flex flex-row items-center justify-start gap-2 mb-8">
         <span className="text-4xl">{selectedPlan.emoji}</span>
-        <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
+        <div className="flex flex-col">
+          <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
+          <span className="text-sm text-gray-500">
+            {selectedPlan.outline_type === "times_per_week"
+              ? `${selectedPlan.times_per_week} times per week`
+              : `custom plan`}
+          </span>
+        </div>
       </div>
       {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
         <div className="mb-8">
@@ -454,209 +466,228 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       )}
 
-      <div className="flex flex-col gap-2 mt-2 bg-gray-50 ring-2 ring-gray-200 rounded-lg p-2">
-        <div className="flex flex-row items-center justify-between my-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-row items-center justify-between mb-2">
           <div className="flex flex-row items-center justify-start gap-2">
-            <span className="text-4xl">🗓️</span>
-            <h2 className="text-xl font-semibold mt-2">Weeks Overview</h2>
+            <ChartArea className={`h-10 w-10 -mt-1 ${variants.text}`} />
+            <h2 className="text-xl font-semibold">Coach Overview</h2>
           </div>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => setShowAllWeeks(!showAllWeeks)}
-            className="text-sm"
+            className="text-xs flex flex-row items-center gap-1"
           >
+            {showAllWeeks ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
             {showAllWeeks ? "Show Current + Next" : "Show All Weeks"}
           </Button>
         </div>
-        {selectedPlan.suggested_by_coach_at && (
-          <div className="flex flex-row items-center justify-center gap-2 my-4">
-            <BadgeCheck className="h-5 w-5 text-green-500" />
-            <span className="text-sm text-gray-500 text-center">
-              Last updated by coach{" "}
-              <span className="font-semibold">
-                {formatDistance(
-                  new Date(),
-                  parseISO(selectedPlan.suggested_by_coach_at)
-                )}{" "}
-                ago
-              </span>
-            </span>
-          </div>
-        )}
-        {selectedPlan.coach_notes && (
-          <MessageBubble direction="left">
-            <div className="flex flex-col items-start gap-2">
-              <Avatar>
-                <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo.png" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col gap-1 flex-1">
-                <span className={`text-sm italic text-gray-600`}>
-                  {selectedPlan.coach_notes}
-                </span>
-                <span className="text-[10px] italic text-gray-500">
-                  Coach Oli
-                </span>
+        {(selectedPlan.coach_notes ||
+          selectedPlan.coach_suggested_sessions?.length > 0 ||
+          selectedPlan.coach_suggested_times_per_week) && (
+          <MessageBubble
+            direction="left"
+            className={cn(
+              variants.card.softGlassBg,
+              variants.ringSoft,
+              "backdrop-blur-sm ring-1"
+            )}
+          >
+            <div className="flex flex-col items-start gap-4">
+              <div className="flex flex-row items-center gap-2 justify-between w-full">
+                <Avatar>
+                  <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+                  <AvatarFallback>CN</AvatarFallback>
+                </Avatar>
+                <PlanStatus
+                  plan={convertApiPlanToPlan(selectedPlan, activities)}
+                />
               </div>
+
+              {selectedPlan.coach_notes && (
+                <div className="flex flex-col gap-1 flex-1">
+                  <span className={`text-sm italic text-gray-600`}>
+                    {selectedPlan.coach_notes}
+                  </span>
+                  <span className="text-[10px] italic text-gray-500">
+                    Coach Oli,{" "}
+                    {selectedPlan.suggested_by_coach_at &&
+                      formatDistance(
+                        parseISO(selectedPlan.suggested_by_coach_at),
+                        new Date(),
+                        { addSuffix: true }
+                      )}
+                  </span>
+                </div>
+              )}
+
+              {selectedPlan.coach_suggested_sessions &&
+                selectedPlan.coach_suggested_sessions.length > 0 && (
+                  <div className="flex flex-col justify-start gap-4 w-full">
+                    <div className="flex flex-col gap-3">
+                      <div className="text-center">
+                        <span className="text-lg font-semibold text-gray-800 mb-2 block">
+                          New Schedule Suggestion
+                        </span>
+                        <span className="text-xs text-gray-400 font-medium">
+                          UPDATED SESSIONS
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+                        {selectedPlan.coach_suggested_sessions.map(
+                          (session, index) => {
+                            const activity = planActivities?.find(
+                              (a) => a.id === session.activity_id
+                            );
+                            if (!activity) return null;
+
+                            const sessionId = `coach-session-${session.activity_id}-${index}`;
+                            const isSelected =
+                              selectedSuggestedSession === sessionId;
+
+                            return (
+                              <SmallActivityEntryCard
+                                key={sessionId}
+                                entry={{
+                                  date: parseISO(session.date),
+                                  activity_id: session.activity_id,
+                                  quantity: session.quantity,
+                                  description: session.descriptive_guide,
+                                }}
+                                activity={activity}
+                                selected={isSelected}
+                                onClick={(clickedSessionId) => {
+                                  setSelectedSuggestedSession(
+                                    clickedSessionId ===
+                                      selectedSuggestedSession
+                                      ? null
+                                      : clickedSessionId
+                                  );
+                                }}
+                                className={`border-2 ${variants.veryFadedBg} ${variants.border}`}
+                              />
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-row gap-3 justify-center">
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
+                        disabled={
+                          loadingStates.decliningSessions ||
+                          loadingStates.acceptingSessions
+                        }
+                        onClick={async () => {
+                          await handleDeclineSuggestion("sessions");
+                        }}
+                      >
+                        {loadingStates.decliningSessions ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4 mr-2" />
+                        )}
+                        Decline
+                      </Button>
+                      <Button
+                        className={`flex-1 h-10 text-sm font-medium ${variants.bg}`}
+                        disabled={
+                          loadingStates.acceptingSessions ||
+                          loadingStates.decliningSessions
+                        }
+                        onClick={async () => {
+                          await handleAcceptSuggestion("sessions");
+                        }}
+                      >
+                        {loadingStates.acceptingSessions ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Accept
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+              {selectedPlan.coach_suggested_times_per_week && (
+                <div className="flex flex-col justify-start gap-4 w-full">
+                  <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
+                    <div className="flex flex-col items-center text-center flex-shrink-0">
+                      <span className="text-4xl md:text-5xl font-light text-gray-800">
+                        {selectedPlan.times_per_week}
+                      </span>
+                      <span className="text-xs text-gray-400 font-medium mt-1">
+                        CURRENT
+                      </span>
+                    </div>
+
+                    <div className="flex items-center flex-shrink-0">
+                      <div className="w-8 md:w-16 h-px bg-gray-300"></div>
+                      <ArrowBigRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
+                      <div className="w-8 md:w-16 h-px bg-gray-300"></div>
+                    </div>
+
+                    <div className="flex flex-col items-center text-center flex-shrink-0">
+                      <span
+                        className={`text-4xl md:text-5xl font-light ${variants.text}`}
+                      >
+                        {selectedPlan.coach_suggested_times_per_week}
+                      </span>
+                      <span className="text-xs text-gray-400 font-medium mt-1">
+                        SUGGESTED
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row gap-3 justify-center">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
+                      disabled={
+                        loadingStates.decliningTimesPerWeek ||
+                        loadingStates.acceptingTimesPerWeek
+                      }
+                      onClick={async () => {
+                        await handleDeclineSuggestion("times_per_week");
+                      }}
+                    >
+                      {loadingStates.decliningTimesPerWeek ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4 mr-2" />
+                      )}
+                      Decline
+                    </Button>
+                    <Button
+                      className={`flex-1 h-10 text-sm font-medium ${variants.bg}`}
+                      disabled={
+                        loadingStates.acceptingTimesPerWeek ||
+                        loadingStates.decliningTimesPerWeek
+                      }
+                      onClick={async () => {
+                        await handleAcceptSuggestion("times_per_week");
+                      }}
+                    >
+                      {loadingStates.acceptingTimesPerWeek ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4 mr-2" />
+                      )}
+                      Accept
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </MessageBubble>
-        )}
-        {selectedPlan.coach_suggested_sessions &&
-          selectedPlan.coach_suggested_sessions.length > 0 && (
-            <div className="flex flex-col justify-start gap-4 p-4 bg-white rounded-xl border border-gray-100">
-              <div className="flex flex-col gap-3">
-                <div className="text-center">
-                  <span className="text-lg font-semibold text-gray-800 mb-2 block">
-                    New Schedule Suggestion
-                  </span>
-                  <span className="text-xs text-gray-400 font-medium">
-                    UPDATED SESSIONS
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-                  {selectedPlan.coach_suggested_sessions.map(
-                    (session, index) => {
-                      const activity = planActivities?.find(
-                        (a) => a.id === session.activity_id
-                      );
-                      if (!activity) return null;
-
-                      const sessionId = `coach-session-${session.activity_id}-${index}`;
-                      const isSelected = selectedSuggestedSession === sessionId;
-
-                      return (
-                        <SmallActivityEntryCard
-                          key={sessionId}
-                          entry={{
-                            date: parseISO(session.date),
-                            activity_id: session.activity_id,
-                            quantity: session.quantity,
-                            description: session.descriptive_guide,
-                          }}
-                          activity={activity}
-                          selected={isSelected}
-                          onClick={(clickedSessionId) => {
-                            setSelectedSuggestedSession(
-                              clickedSessionId === selectedSuggestedSession
-                                ? null
-                                : clickedSessionId
-                            );
-                          }}
-                          className="bg-blue-50 border-2 border-blue-200 hover:bg-blue-100"
-                        />
-                      );
-                    }
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-row gap-3 justify-center mt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 h-10 text-sm font-medium border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                  disabled={
-                    loadingStates.decliningSessions ||
-                    loadingStates.acceptingSessions
-                  }
-                  onClick={async () => {
-                    await handleDeclineSuggestion("sessions");
-                  }}
-                >
-                  {loadingStates.decliningSessions ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <X className="h-4 w-4 mr-2" />
-                  )}
-                  Decline
-                </Button>
-                <Button
-                  className="flex-1 h-10 text-sm font-medium bg-green-600 hover:bg-green-700"
-                  disabled={
-                    loadingStates.acceptingSessions ||
-                    loadingStates.decliningSessions
-                  }
-                  onClick={async () => {
-                    await handleAcceptSuggestion("sessions");
-                  }}
-                >
-                  {loadingStates.acceptingSessions ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4 mr-2" />
-                  )}
-                  Accept
-                </Button>
-              </div>
-            </div>
-          )}
-        {selectedPlan.coach_suggested_times_per_week && (
-          <div className="flex flex-col justify-start gap-4 p-4 bg-white rounded-xl border border-gray-100">
-            <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
-              <div className="flex flex-col items-center text-center flex-shrink-0">
-                <span className="text-4xl md:text-5xl font-light text-gray-800">
-                  {selectedPlan.times_per_week}
-                </span>
-                <span className="text-xs text-gray-400 font-medium mt-1">
-                  CURRENT
-                </span>
-              </div>
-
-              <div className="flex items-center flex-shrink-0">
-                <div className="w-8 md:w-16 h-px bg-gray-300"></div>
-                <ArrowBigRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
-                <div className="w-8 md:w-16 h-px bg-gray-300"></div>
-              </div>
-
-              <div className="flex flex-col items-center text-center flex-shrink-0">
-                <span className="text-4xl md:text-5xl font-light text-green-600">
-                  {selectedPlan.coach_suggested_times_per_week}
-                </span>
-                <span className="text-xs text-gray-400 font-medium mt-1">
-                  SUGGESTED
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-row gap-3 justify-center mt-2">
-              <Button
-                variant="outline"
-                className="flex-1 h-10 text-sm font-medium border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                disabled={
-                  loadingStates.decliningTimesPerWeek ||
-                  loadingStates.acceptingTimesPerWeek
-                }
-                onClick={async () => {
-                  await handleDeclineSuggestion("times_per_week");
-                }}
-              >
-                {loadingStates.decliningTimesPerWeek ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <X className="h-4 w-4 mr-2" />
-                )}
-                Decline
-              </Button>
-              <Button
-                className="flex-1 h-10 text-sm font-medium bg-green-600 hover:bg-green-700"
-                disabled={
-                  loadingStates.acceptingTimesPerWeek ||
-                  loadingStates.decliningTimesPerWeek
-                }
-                onClick={async () => {
-                  await handleAcceptSuggestion("times_per_week");
-                }}
-              >
-                {loadingStates.acceptingTimesPerWeek ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4 mr-2" />
-                )}
-                Accept
-              </Button>
-            </div>
-          </div>
         )}
         {weeksToDisplay.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
@@ -678,7 +709,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             <div
               key={actualWeekIndex}
               ref={isCurrentWeek ? currentWeekRef : null}
-              className="flex flex-col gap-2 p-3 rounded-lg bg-white p-2"
+              className="flex flex-col gap-2 p-3 rounded-2xl bg-white p-2 border border-gray-200"
             >
               <PlanWeekDisplay
                 title={
@@ -704,32 +735,28 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         })}
       </div>
 
-      <div className="flex flex-row justify-between items-center my-4">
-        <span className="text-sm text-gray-500">Time range</span>
-        <Select
-          value={timeRange}
-          onValueChange={(value: "recent" | "all") => setTimeRange(value)}
-        >
-          <div className="bg-white font-semibold text-gray-800">
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Since 30 days ago</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </div>
-        </Select>
+      <div className="flex flex-row items-center justify-start gap-2 mb-2 mt-6">
+        <span className="text-4xl">🎯</span>
+        <h2 className="text-xl font-semibold mt-2">Full Activities Overview</h2>
       </div>
-
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
-        <div className="flex flex-row items-center justify-start gap-2 mb-2">
-          <span className="text-4xl">🎯</span>
-          <h2 className="text-xl font-semibold mt-2">
-            Full Activities Overview
-          </h2>
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 mt-4">
+        <div className="flex flex-row justify-between items-center my-4">
+          <span className="text-sm text-gray-500">Time range</span>
+          <Select
+            value={timeRange}
+            onValueChange={(value: "recent" | "all") => setTimeRange(value)}
+          >
+            <div className="bg-white font-semibold text-gray-800">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Since 30 days ago</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </div>
+          </Select>
         </div>
-
         {/* {selectedPlan.outline_type === "times_per_week" && (
           <WeeklySessionsChecklist
             plan={selectedPlan}

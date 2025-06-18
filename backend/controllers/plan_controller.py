@@ -1088,7 +1088,7 @@ class PlanController:
                 message=message,
                 type="coach",
                 related_data={
-                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo.png",
+                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
                 },  
             ),
             push_notify=push_notify,
@@ -1120,7 +1120,7 @@ class PlanController:
                 message=message,
                 type="coach",
                 related_data={
-                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo.png",
+                    "picture": "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
                 },
             ),
             push_notify=push_notify,
@@ -1129,7 +1129,14 @@ class PlanController:
 
 if __name__ == "__main__":
     from shared.logger import create_logger
+    from gateways.users import UsersGateway
 
     create_logger(level="INFO")
     plan_controller = PlanController()
-    print(plan_controller.get_readable_plans("670fb420158ba86def604e67"))
+    user_gateway = UsersGateway()
+    user = user_gateway.get_user_by_id("670fb420158ba86def604e67")
+    plan = plan_controller.get_plan(user.plan_ids[0])
+    num_planned_activities_this_week, num_left_days_in_the_week, num_activities_left = plan_controller.get_plan_week_stats(plan, user)
+    print(f"Num planned activities this week: {num_planned_activities_this_week}")
+    print(f"Num left days in the week: {num_left_days_in_the_week}")
+    print(f"Num activities left: {num_activities_left}")
