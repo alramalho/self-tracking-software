@@ -68,6 +68,7 @@
 /ai/log-dynamic-ui-attempt-error
 /ai/log-dynamic-ui-skip
 /onboarding/check-plan-goal
+/onboarding/generate-plan-activities
 /send-notification
 /regenerate-image-url
 /send-notification-to-all-users

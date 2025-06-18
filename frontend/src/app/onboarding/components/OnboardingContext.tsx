@@ -36,6 +36,7 @@ interface OnboardingContextValue {
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
   isStepCompleted: (stepId: string) => boolean;
+  updateOnboardingState: (updates: object) => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -134,7 +135,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         ...newState,
         ...updates,
       };
-      
+
       if (newState.currentStep < totalSteps) {
         newState.currentStep = newState.currentStep + 1;
       }
@@ -163,6 +164,9 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     planType,
     setPlanGoal,
     setPlanActivities,
+    updateOnboardingState: (updates: object) => {
+      setOnboardingState(({ ...onboardingState, ...updates }));
+    },
     setPlanType,
   };
 

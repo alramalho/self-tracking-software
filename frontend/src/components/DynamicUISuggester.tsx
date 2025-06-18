@@ -333,12 +333,12 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             questionsChecks={questionsChecks}
             checkedItems={checkedItems}
             questionPrefix={questionPrefix}
-            onItemClick={() => {
-              setMessage(
-                "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below"
-              );
-              setShowMessage(true);
-            }}
+            // onItemClick={() => {
+            //   setMessage(
+            //     "These checkboxes are not to be checked manually! They get auto-filled as you type or dictate your answer below"
+            //   );
+            //   setShowMessage(true);
+            // }}
           />
         )}
 
