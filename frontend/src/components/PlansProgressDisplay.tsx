@@ -67,6 +67,7 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
 
   return (
     <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
+      <span className="text-xs text-gray-400/80">This week</span>
       <div className="flex items-center gap-2">
         {config.icon}
         <span
@@ -75,6 +76,7 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
           {config.message}
         </span>
       </div>
+
       {["COMPLETED", "FAILED"].includes(plan?.current_week?.state) && (
         <Link
           href={`/plans?selectedPlan=${plan.id}`}
@@ -289,10 +291,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
         const isCoached = index == 0 && userPaidPlanType != "free";
 
         return (
-          <Collapsible
-            open={shouldShow}
-            key={plan.id}
-          >
+          <Collapsible open={shouldShow} key={plan.id}>
             <CollapsibleContent className="space-y-0 overflow-visible">
               <div
                 className={`rounded-3xl ring-1 flex flex-col gap-2 p-4 transition-all duration-300 ${
@@ -329,7 +328,10 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                 {isCoached && (
                   <>
                     <div className="flex flex-col items-center gap-1 py-2">
-                      <MessageBubble direction="left" className="bg-white/60 backdrop-blur-sm ring-1 ring-white/50 shadow-lg">
+                      <MessageBubble
+                        direction="left"
+                        className="bg-white/60 backdrop-blur-sm ring-1 ring-white/50 shadow-lg"
+                      >
                         <div className="flex items-center gap-2">
                           <Avatar>
                             <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo.png" />
