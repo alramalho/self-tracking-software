@@ -13,7 +13,7 @@ interface QuestionChecksProps {
   questionsChecks: QuestionsChecks;
   checkedItems: Record<string, boolean>;
   questionPrefix?: string;
-  onItemClick: () => void;
+  onItemClick?: () => void;
 }
 
 // Helper function to get number emoji based on index

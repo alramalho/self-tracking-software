@@ -8,7 +8,6 @@ import { useApiWithAuth } from "@/api";
 import { useOnboarding } from "../OnboardingContext";
 import { AlertCircle, Crosshair, Goal } from "lucide-react";
 
-// Interface for plan extraction response
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
   goal: string;
 }

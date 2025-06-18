@@ -12,10 +12,12 @@ from entities.user import User
 from entities.message import Message
 from gateways.database.dynamodb import DynamoDBGateway
 from ai.assistant.memory import DatabaseMemory
-from bson import ObjectId
+from entities.activity import Activity
 from auth.clerk import is_clerk_user
+from typing import Optional
 from loguru import logger
 import traceback
+
 
 router = APIRouter(prefix="/onboarding")
 
@@ -95,6 +97,24 @@ async def analyse_question_checks(
     return all_questions_answered, question_results, message_response.message
 
 
+def get_conversation(user: User, message: str):
+    # Initialize memory and assistant
+    memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
+
+    memory.write(
+        Message.new(
+            text=message,
+            sender_name=user.name,
+            sender_id=user.id,
+            recipient_name="Jarvis",
+            recipient_id="0",
+            emotions=[],
+        )
+    )
+
+    return memory, memory.read_all_as_str(max_age_in_minutes=30)
+
+
 @router.post("/check-plan-goal")
 async def get_plan_goal(request: Request, user: User = Depends(is_clerk_user)):
     try:
@@ -102,27 +122,7 @@ async def get_plan_goal(request: Request, user: User = Depends(is_clerk_user)):
         message = body["message"]
         question_checks = body["question_checks"]
 
-        # Initialize memory and assistant
-        memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
-
-        memory.write(
-            Message.new(
-                text=message,
-                sender_name=user.name,
-                sender_id=user.id,
-                recipient_name="Jarvis",
-                recipient_id="0",
-                emotions=[],
-            )
-        )
-
-        conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
-        print(conversation_history)
-
-        # Log the extraction request
-        logger.info(
-            f"Extracting plan for user {user.id} from message: {message[:50]}..."
-        )
+        memory, conversation_history = get_conversation(user, message)
 
         result = {}
 
@@ -133,6 +133,18 @@ async def get_plan_goal(request: Request, user: User = Depends(is_clerk_user)):
 
         if not all_questions_answered:
             result["message"] = message_response
+
+            memory.write(
+                Message.new(
+                    text=message_response,
+                    sender_name="Jarvis",
+                    sender_id="0",
+                    recipient_name=user.name,
+                    recipient_id=user.id,
+                    emotions=[],
+                )
+            )
+
         else:
             result["goal"] = message
 
@@ -140,5 +152,85 @@ async def get_plan_goal(request: Request, user: User = Depends(is_clerk_user)):
 
     except Exception as e:
         logger.error(f"Error extracting plan: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ExtractedActivity(BaseModel):
+    id: Optional[str] = Field(
+        ...,
+        description="The id of the activity, if known. If it is a new activity, the id will be created by the system, so do not include it.",
+    )
+    reasoning: str = Field(
+        ...,
+        description="Your step by step reasoning on which activity details are most suitable.",
+    )
+    title: str = Field(..., description="The title of the activity")
+    emoji: str = Field(..., description="The emoji of the activity")
+    measure: str = Field(
+        ...,
+        description=(
+            "The unit of measurement to measure the activity. Note this should be as atomic as possible "
+            "(e.g. 'marathons' or 'books' wouldn't be valid, but 'pages' or 'minutes' would be valid). For example, for 'reading' the measure could be 'pages',"
+            "for 'running' the measure could be 'kilometers' or 'gym' could 'minutes' or 'sessions'."
+            "note that for example 'sessions per week' would not be valid, as it is not a unit of single activity measurement,"
+            "but rather a frequency of the activity."
+        ),
+    )
+
+
+@router.post("/generate-plan-activities")
+async def generate_plan_activities(
+    request: Request, user: User = Depends(is_clerk_user)
+):
+    try:
+        body = await request.json()
+        message = body["message"]
+        plan_goal = body["plan_goal"]
+        # question_checks = body["question_checks"]
+
+        memory, conversation_history = get_conversation(user, message)
+
+        # result = {}
+
+        # all_questions_answered, question_results, message_response = (
+        #     await analyse_question_checks(question_checks, conversation_history)
+        # )
+        result = {}
+        result["question_checks"] = {}
+
+        class ExtractionSchema(BaseModel):
+            reasoning: str = Field(
+                ...,
+                description="Your step by step reasoning on which activity details are most suitable.",
+            )
+            activities: List[ExtractedActivity] = Field(
+                ...,
+                description="List of activities to be extracted. ",
+            )
+
+        response = await ask_schema_async(
+            text=f"Extract activities based on the conversation history: {conversation_history}",
+            system=(
+                f"You are an AI that is helping the user create activities for the plan '{plan_goal}' the tracking.so app."
+                "You goal is to extract activities based conversation history."
+                "You should give priority to the activities included in the conversation history, but you may fill in the informational gaps, if any."
+            ),
+            pymodel=ExtractionSchema,
+        )
+
+        result["activities"] = [
+            Activity.new(
+                user_id=user.id,
+                emoji=activity.emoji,
+                title=activity.title,
+                measure=activity.measure,
+            )
+            for activity in response.activities
+        ]
+
+        return result
+
+    except Exception as e:
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))

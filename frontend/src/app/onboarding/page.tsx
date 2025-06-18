@@ -19,20 +19,66 @@ import {
 import { useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PlanTypeSelector } from "./components/steps/PlanTypeSelector";
+import { motion } from "framer-motion";
+import { PlanActivitySetter } from "./components/steps/PlanActivitySetter";
+
+// Motion variants for fade in and slide up animation
+export const fadeUpVariants = {
+  hidden: {
+    opacity: 0,
+    y: 10 
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: 0.2,
+      duration: 0.8,
+      ease: "easeOut"
+    }
+  }
+};
+
+// Animation wrapper that applies fade up animation
+const FadeUpWrapper = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible" 
+      variants={fadeUpVariants}
+      className="w-full h-full"
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Higher-order component to wrap step components with motion
+const withFadeUpAnimation = (Component: React.ComponentType) => {
+  return () => (
+    <FadeUpWrapper>
+      <Component />
+    </FadeUpWrapper>
+  );
+};
 
 // Define your onboarding steps
 const onboardingSteps: OnboardingStep[] = [
   {
     id: "welcome",
-    component: WelcomeStep,
+    component: withFadeUpAnimation(WelcomeStep),
   },
   {
     id: "plan-goal-setter",
-    component: PlanGoalSetter,
+    component: withFadeUpAnimation(PlanGoalSetter),
   },
   {
     id: "plan-type-selector",
-    component: PlanTypeSelector,
+    component: withFadeUpAnimation(PlanTypeSelector),
+  },
+  {
+    id: "plan-type-selector",
+    component: withFadeUpAnimation(PlanActivitySetter),
   },
 ];
 
