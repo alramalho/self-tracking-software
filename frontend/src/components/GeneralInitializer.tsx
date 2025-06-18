@@ -2,17 +2,13 @@
 
 import { useEffect, useState } from "react";
 import posthog from "posthog-js";
-import { useUserPlan, hasCachedUserData } from "@/contexts/UserPlanContext";
-import { useSession } from "@clerk/nextjs";
+import { useUserPlan } from "@/contexts/UserPlanContext";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import BottomNav from "./BottomNav";
 import { Loader2 } from "lucide-react";
-import Link from "next/link";
 import FeedbackForm from "./FeedbackForm";
 import { toast } from "react-hot-toast";
-import { useApiWithAuth } from "@/api";
-import { usePathname } from "next/navigation";
-import { useUpgrade } from "@/contexts/UpgradeContext";
 import GenericLoader from "./GenericLoader";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
@@ -22,7 +18,7 @@ export default function GeneralInitializer({
 }: {
   children: React.ReactNode;
 }) {
-  const { isSignedIn, isLoaded: isClerkLoaded } = useSession();
+  const { isSignedIn, isLoaded, isOnline, hasValidCache } = useOfflineAuth();
   const { useCurrentUserDataQuery, hasLoadedUserData, isWaitingForData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
@@ -32,9 +28,6 @@ export default function GeneralInitializer({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
-  // Determine if there is any cached data to potentially display on initial load.
-  const [initialCacheExists] = useState(() => hasCachedUserData());
-  
   const email = userData?.user?.email || "";
 
   useEffect(() => {
@@ -68,8 +61,10 @@ export default function GeneralInitializer({
     );
   };
 
-
-  if (!isClerkLoaded || (isSignedIn && isWaitingForData && !initialCacheExists)) {
+  // Show loading screen if:
+  // 1. Auth isn't loaded yet
+  // 2. User is signed in but waiting for data AND no valid cache exists
+  if (isOnline && !isLoaded || (isSignedIn && isWaitingForData && !hasValidCache)) {
     return (
       <>
         {showBugDialog && (
@@ -91,9 +86,15 @@ export default function GeneralInitializer({
     );
   }
 
-
   return (
     <>
+      {/* Offline indicator */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 bg-gray-500 text-white text-center py-2 text-sm z-50">
+          📱 You&apos;re offline - you may still log activities
+        </div>
+      )}
+      
       {children}
       {isSignedIn && <BottomNav />}
       
