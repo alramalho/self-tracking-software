@@ -522,7 +522,7 @@ const ProfilePage: React.FC = () => {
                           )}
                           {plan.outline_type == "specific" && (
                             <span className="text-sm text-gray-500">
-                              {plan.times_per_week} AI coached plan
+                              Custom plan
                             </span>
                           )}
                         </div>

@@ -40,7 +40,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { motion } from "framer-motion";
 
-const PlanStatus = ({ plan }: { plan: Plan }) => {
+export const PlanStatus = ({ plan }: { plan: Plan }) => {
   if (!plan?.current_week?.state) {
     return null;
   }
@@ -66,37 +66,23 @@ const PlanStatus = ({ plan }: { plan: Plan }) => {
   const config = statusConfig[plan.current_week.state];
 
   return (
-    <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
-      <span className="text-xs text-gray-400/80">This week</span>
-      <div className="flex items-center gap-2">
-        {config.icon}
-        <span
-          className={`text-sm font-medium italic text-gray-500 uppercase animate-pulse`}
-        >
-          {config.message}
-        </span>
-      </div>
-
-      {["COMPLETED", "FAILED"].includes(plan?.current_week?.state) && (
-        <Link
-          href={`/plans?selectedPlan=${plan.id}`}
-          className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors p-1 px-3"
-        >
-          Coach notes <MoveRight className="h-4 w-4 inline" />
-        </Link>
-      )}
+    <div className="flex items-center gap-2">
+      {config.icon}
+      <span
+        className={`text-sm font-medium italic text-gray-500 uppercase animate-pulse`}
+      >
+        {config.message}
+      </span>
     </div>
   );
 };
 
 interface PlansProgressDisplayProps {
-  plans: Plan[];
   isExpanded: boolean;
   className?: string;
 }
 
 export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
-  plans,
   isExpanded,
   className,
 }) => {
@@ -191,17 +177,6 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
       currentWeek.completedActivities.length > 0
     );
   };
-
-  function getSessionId(session: PlanSession) {
-    return `${session.date}-${session.activity_id}`;
-  }
-
-  function getSessionById(
-    plan: Plan,
-    sessionId: string
-  ): PlanSession | undefined {
-    return plan.sessions.find((session) => getSessionId(session) === sessionId);
-  }
 
   return (
     <div className={cn("w-full flex flex-col gap-4", className)}>
@@ -334,7 +309,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                       >
                         <div className="flex items-center gap-2">
                           <Avatar>
-                            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo.png" />
+                            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
                             <AvatarFallback>CN</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col gap-1 flex-1">
@@ -387,7 +362,23 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                           exit={{ opacity: 0, y: 20 }}
                           transition={{ duration: 0.5, ease: "easeOut" }}
                         >
-                          <PlanStatus plan={plan} />
+                          <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
+                            <span className="text-xs text-gray-400/80">
+                              This week
+                            </span>
+                            <PlanStatus plan={plan} />
+                            {["COMPLETED", "FAILED"].includes(
+                              plan?.current_week?.state || ""
+                            ) && (
+                              <Link
+                                href={`/plans?selectedPlan=${plan.id}`}
+                                className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors p-1 px-3"
+                              >
+                                Coach notes{" "}
+                                <MoveRight className="h-4 w-4 inline" />
+                              </Link>
+                            )}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>

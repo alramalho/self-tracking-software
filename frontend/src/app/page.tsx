@@ -235,9 +235,6 @@ const HomePage: React.FC = () => {
             </div>
 
             <PlansProgressDisplay
-              plans={userData.plans.map((p) =>
-                convertApiPlanToPlan(p, userData.activities || [])
-              )}
               isExpanded={!isPlansCollapsed}
             />
           </div>

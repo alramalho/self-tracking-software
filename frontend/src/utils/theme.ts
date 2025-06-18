@@ -14,6 +14,7 @@ export interface ThemeVariants {
   raw: ThemeColor; // Raw color name
   hex: string;
   bg: string;
+  veryFadedBg: string;
   fadedBg: string;
   hardGradientBg: string;
   softGradientBg: string;
@@ -24,6 +25,7 @@ export interface ThemeVariants {
   ringSoft: string;
   ringBright: string;
   border: string;
+  brightBorder: string;
   fadedText: string;
   veryFadedText: string;
   primary: string;
@@ -65,6 +67,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
       "bg-gradient-to-r from-gray-100/20 to-slate-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-slate-50/60 backdrop-blur-sm",
+    veryFadedBg: "bg-slate-50",
     fadedBg: "bg-slate-200/50",
     text: "text-slate-500",
     ring: "ring-gray-500",
@@ -73,6 +76,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     darkText: "text-slate-800",
     fadedText: "text-slate-300",
     veryFadedText: "text-slate-200",
+    brightBorder: "border-slate-200",
     border: "border-slate-400",
     primary: "bg-slate-500",
     secondary: "bg-slate-400",
@@ -111,6 +115,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-blue-50/60 backdrop-blur-sm",
     fadedBg: "bg-blue-200/50",
+    veryFadedBg: "bg-blue-50",
     text: "text-blue-500",
     ring: "ring-blue-500",
     ringSoft: "ring-blue-200",
@@ -118,6 +123,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     darkText: "text-blue-800",
     fadedText: "text-blue-300",
     veryFadedText: "text-blue-200",
+    brightBorder: "border-blue-200",
     border: "border-blue-400",
     primary: "bg-blue-500",
     secondary: "bg-blue-400",
@@ -156,6 +162,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-violet-50/60 backdrop-blur-sm",
     fadedBg: "bg-violet-100",
+    veryFadedBg: "bg-violet-50",
     text: "text-violet-500",
     ring: "ring-violet-500",
     ringSoft: "ring-violet-200",
@@ -163,6 +170,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     darkText: "text-violet-800",
     fadedText: "text-violet-300",
     veryFadedText: "text-violet-200",
+    brightBorder: "border-violet-200",
     border: "border-violet-500",
     primary: "bg-violet-500",
     secondary: "bg-violet-400",
@@ -201,6 +209,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-amber-50/60 backdrop-blur-sm",
     fadedBg: "bg-amber-100",
+    veryFadedBg: "bg-amber-50",
     text: "text-amber-500",
     ring: "ring-amber-500",
     ringSoft: "ring-amber-200",
@@ -208,6 +217,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     darkText: "text-amber-700",
     fadedText: "text-amber-300",
     veryFadedText: "text-amber-200",
+    brightBorder: "border-amber-200",
     border: "border-amber-400",
     primary: "bg-amber-500",
     secondary: "bg-amber-400",
@@ -246,6 +256,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-emerald-50/60 backdrop-blur-sm",
     fadedBg: "bg-emerald-100",
+    veryFadedBg: "bg-emerald-50",
     text: "text-emerald-500",
     ring: "ring-emerald-500",
     ringSoft: "ring-emerald-200",
@@ -253,6 +264,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     darkText: "text-emerald-800",
     fadedText: "text-emerald-300",
     veryFadedText: "text-emerald-200",
+    brightBorder: "border-emerald-200",
     border: "border-emerald-400",
     primary: "bg-emerald-500",
     secondary: "bg-emerald-400",
@@ -291,6 +303,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-rose-50/60 backdrop-blur-sm",
     fadedBg: "bg-rose-100",
+    veryFadedBg: "bg-rose-50",
     text: "text-rose-500",
     ring: "ring-rose-500",
     ringSoft: "ring-rose-200",
@@ -298,6 +311,7 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     darkText: "text-rose-800",
     fadedText: "text-rose-300",
     veryFadedText: "text-rose-200",
+    brightBorder: "border-rose-200",
     border: "border-rose-400",
     primary: "bg-rose-500",
     secondary: "bg-rose-400",
