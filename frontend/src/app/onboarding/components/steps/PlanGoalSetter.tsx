@@ -6,7 +6,7 @@ import {
 import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
 import { useOnboarding } from "../OnboardingContext";
-import { AlertCircle, Crosshair } from "lucide-react";
+import { AlertCircle, Crosshair, Goal } from "lucide-react";
 
 // Interface for plan extraction response
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
@@ -14,10 +14,9 @@ interface PlanGoalSetterResponse extends BaseExtractionResponse {
 }
 
 export function PlanGoalSetter() {
-  const { setPlanGoal, completeStep } = useOnboarding();
+  const {completeStep } = useOnboarding();
   const api = useApiWithAuth();
   const [text, setText] = useState("");
-  const [allAnswered, setAllAnswered] = useState(false);
   const questionChecks = {
     "Does the message mention a goal that is concrete and measurable?": {
       icon: <AlertCircle className="w-6 h-6 text-blue-500" />,
@@ -43,7 +42,7 @@ export function PlanGoalSetter() {
 
       if (allAnswered) {
         setTimeout(() => {
-          completeStep("plan-goal-setter");
+          completeStep("plan-goal-setter", { goal: text });
         }, 1000);
       }
       return response.data;
@@ -59,9 +58,9 @@ export function PlanGoalSetter() {
     <>
       <DynamicUISuggester<PlanGoalSetterResponse>
         id="plan-creator"
-        headerIcon={<Crosshair className="w-[20rem] h-[20rem] text-blue-500" />}
-        title="Let's get started by creating your plan"
-        initialMessage="What's your main goal?"
+        headerIcon={<Goal className="w-[10rem] h-[10rem] text-blue-600" />}
+        title="Let's start by creating you a goal"
+        initialMessage="What would you like to achieve?"
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
         shouldRenderChildren={false}

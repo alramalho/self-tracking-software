@@ -25,7 +25,7 @@ interface OnboardingContextValue {
   nextStep: () => void;
   prevStep: () => void;
   goToStep: (step: number) => void;
-  completeStep: (stepId: string) => void;
+  completeStep: (stepId: string, updates: object) => void;
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
@@ -69,30 +69,28 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planType: null as string | null,
     }
   );
+  const { currentStep, completedSteps, planGoal, planActivities, planType } =
+    onboardingState;
 
   const setCurrentStep = (step: number) => {
-    setOnboardingState((prev) => ({ ...prev, currentStep: step }));
+    setOnboardingState({ ...onboardingState, currentStep: step });
   };
 
   const setCompletedSteps = (steps: string[]) => {
-    console.log({ steps });
-    setOnboardingState((prev) => ({ ...prev, completedSteps: steps }));
+    setOnboardingState({ ...onboardingState, completedSteps: steps });
   };
 
   const setPlanGoal = (goal: string) => {
-    setOnboardingState((prev) => ({ ...prev, planGoal: goal }));
+    setOnboardingState(prevState => ({ ...prevState, planGoal: goal }));
   };
 
   const setPlanActivities = (activities: Activity[]) => {
-    setOnboardingState((prev) => ({ ...prev, planActivities: activities }));
+    setOnboardingState(prevState => ({ ...prevState, planActivities: activities }));
   };
 
   const setPlanType = (type: string) => {
-    setOnboardingState((prev) => ({ ...prev, planType: type }));
+    setOnboardingState(prevState => ({ ...prevState, planType: type }));
   };
-
-  const { currentStep, completedSteps, planGoal, planActivities, planType } =
-    onboardingState;
 
   const posthog = usePostHog();
   const totalSteps = steps.length;
@@ -124,7 +122,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   );
 
   const completeStep = useCallback(
-    (stepId: string, options: { skipped?: boolean } = {}) => {
+    (stepId: string, updates: object = {}) => {
       let newState = onboardingState;
       if (!completedSteps.includes(stepId)) {
         newState = {
@@ -132,11 +130,16 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
           completedSteps: [...onboardingState.completedSteps, stepId],
         };
       }
+      newState = {
+        ...newState,
+        ...updates,
+      };
+      
       if (newState.currentStep < totalSteps) {
         newState.currentStep = newState.currentStep + 1;
       }
       setOnboardingState(newState);
-      posthog?.capture(`onboarding-${stepId}-completed`, options);
+      posthog?.capture(`onboarding-${stepId}-completed`);
     },
     [completedSteps, nextStep, posthog]
   );
