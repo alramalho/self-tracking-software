@@ -303,11 +303,11 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         <div>
           {title && (
             <>
-              <h2 className="text-lg font-medium text-center">{title}</h2>
+              <h2 className="text-2xl font-semibold text-center">{title}</h2>
             </>
           )}
 
-          <p className="text-center text-2xl font-semibold mt-2">
+          <p className="text-center text-md text-gray-600 mt-2">
             {initialMessage}
           </p>
         </div>

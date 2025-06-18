@@ -10,13 +10,10 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
 
     try {
       const item = window.localStorage.getItem(key);
-      // Deep clone the parsed JSON to avoid reference issues
-      return item
-        ? JSON.parse(JSON.stringify(JSON.parse(item)))
-        : JSON.parse(JSON.stringify(initialValue));
+      return item ? JSON.parse(item) : initialValue;
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
-      return JSON.parse(JSON.stringify(initialValue));
+      return initialValue;
     }
   });
 
@@ -28,12 +25,10 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       const valueToStore =
         value instanceof Function ? value(storedValue) : value;
 
-      // Deep clone before storing to avoid reference issues
-      const clonedValue = JSON.parse(JSON.stringify(valueToStore));
-      setStoredValue(clonedValue);
+      setStoredValue(valueToStore);
 
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(key, JSON.stringify(clonedValue));
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
       console.warn(`Error setting localStorage key "${key}":`, error);

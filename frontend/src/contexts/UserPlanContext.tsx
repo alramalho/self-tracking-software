@@ -173,6 +173,9 @@ interface PlanCurrentWeek {
   state: "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED";
   state_last_calculated_at?: string;
 }
+
+export type PlanType = "times_per_week" | "specific";
+
 export interface Plan {
   id?: string;
   user_id?: string;
@@ -187,7 +190,7 @@ export interface Plan {
   coach_suggested_sessions: PlanSession[];
   notes?: string;
   duration_type?: "habit" | "lifestyle" | "custom";
-  outline_type?: "specific" | "times_per_week";
+  outline_type?: PlanType;
   times_per_week?: number;
   coach_suggested_times_per_week?: number;
   created_at: string;
