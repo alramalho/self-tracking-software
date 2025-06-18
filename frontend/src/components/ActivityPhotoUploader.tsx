@@ -99,8 +99,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   // const [isPublic, setIsPublic] = useState(false); // Unused
   const [isProcessingOrUploading, setIsProcessingOrUploading] = useState(false);
   const [description, setDescription] = useState("");
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
+  const { refetchUserData } = useUserPlan();
   const { addToNotificationCount } = useNotifications();
   const api = useOfflineAwareApi();
 
@@ -206,7 +205,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
       if (response && response.__queued__) {
         onSuccess();
       } else {
-        currentUserDataQuery.refetch();
+        refetchUserData(false);
         toast.success(
           serializablePhotoData
             ? "Activity logged with photo successfully!"
