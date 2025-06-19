@@ -21,6 +21,7 @@ import { ActivityCard } from "@/components/ActivityCard";
 import ActivityItem from "@/components/plan-configuration/ActivityItem";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 const PlanCard = ({
   plan,
@@ -28,12 +29,14 @@ const PlanCard = ({
   label,
   isSelected,
   onSelect,
+  index,
 }: {
   plan: ApiPlan;
   icon: React.ReactNode;
   label: React.ReactNode;
   isSelected: boolean;
   onSelect: () => void;
+  index: number;
 }) => {
   const getWeeksCount = () => {
     if (!plan.finishing_date) return 0;
@@ -60,7 +63,18 @@ const PlanCard = ({
   const weeksCount = getWeeksCount();
 
   return (
-    <button
+    <motion.button
+      initial={{ opacity: 0, scale: 0.8, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ 
+        duration: 0.5, 
+        delay: index * 0.1,
+        type: "spring",
+        stiffness: 300,
+        damping: 25
+      }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onSelect}
       className={`w-full p-6 rounded-3xl border-2 transition-all duration-200 text-left ${
         isSelected
@@ -69,34 +83,57 @@ const PlanCard = ({
       }`}
     >
       <div className="flex items-start gap-4">
-        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-          isSelected ? "bg-blue-200" : "bg-gray-100"
-        }`}>
-          <div className={`text-2xl ${isSelected ? "text-white" : "text-gray-600"}`}>
+        <motion.div 
+          className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+            isSelected ? "bg-blue-200" : "bg-gray-100"
+          }`}
+          animate={isSelected ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.div 
+            className={`text-2xl ${isSelected ? "text-white" : "text-gray-600"}`}
+            animate={isSelected ? { rotate: [0, 10, -10, 0] } : { rotate: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             {icon}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
         <div className="flex-1">
-          <div className={`font-semibold text-lg ${
-            isSelected ? "text-blue-900" : "text-gray-900"
-          }`}>
+          <motion.div 
+            className={`font-semibold text-lg ${
+              isSelected ? "text-blue-900" : "text-gray-900"
+            }`}
+            animate={{ opacity: 1 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 + 0.2 }}
+          >
             {label}
-          </div>
-          <div className={`text-sm mt-1 ${
-            isSelected ? "text-blue-700" : "text-gray-600"
-          }`}>
+          </motion.div>
+          <motion.div 
+            className={`text-sm mt-1 ${
+              isSelected ? "text-blue-700" : "text-gray-600"
+            }`}
+            animate={{ opacity: 1 }}
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 + 0.3 }}
+          >
             {getFrequencyDescription()}
-          </div>
+          </motion.div>
           {weeksCount > 0 && (
-            <div className={`text-sm mt-1 ${
-              isSelected ? "text-blue-600" : "text-gray-500"
-            }`}>
+            <motion.div 
+              className={`text-sm mt-1 ${
+                isSelected ? "text-blue-600" : "text-gray-500"
+              }`}
+              animate={{ opacity: 1 }}
+              initial={{ opacity: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 + 0.4 }}
+            >
               {weeksCount} {weeksCount === 1 ? "week" : "weeks"} duration
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
-    </button>
+    </motion.button>
   );
 };
 
@@ -225,59 +262,151 @@ export const PlanGenerator = () => {
     <div className="w-full max-w-md space-y-8">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-1">
-          {isLoading ? (
-            <>
-              <div className="relative w-20 h-20">
-                <div className="absolute inset-0 rounded-full bg-blue-100 animate-pulse"></div>
-                <div className="absolute inset-2 rounded-full bg-blue-200 animate-ping"></div>
-                <div className="absolute inset-4 rounded-full bg-blue-400 animate-pulse"></div>
-                <div className="absolute inset-6 rounded-full bg-blue-600"></div>
-              </div>
-              <h2 className="text-2xl mt-2 font-bold tracking-tight text-gray-900 animate-pulse">
-                <span>Generating your plan</span>
-              </h2>
-              <p className="text-gray-600 mb-6">
-                This may take up to 1 minute.
-              </p>
-              <div className="w-full max-w-xs mt-4">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <CheckCheck className="w-20 h-20 mx-auto text-green-600" />
-              <h2 className="text-2xl mt-2 font-bold tracking-tight text-gray-900">
-                Your personalized plans are ready!
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Choose the plan that fits your schedule:
-              </p>
+          <AnimatePresence mode="wait">
+            {isLoading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col items-center"
+              >
+                <motion.div 
+                  className="relative w-20 h-20"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  <motion.div 
+                    className="absolute inset-0 rounded-full bg-blue-100"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                  <motion.div 
+                    className="absolute inset-2 rounded-full bg-blue-200"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                  />
+                  <motion.div 
+                    className="absolute inset-4 rounded-full bg-blue-400"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                  />
+                  <div className="absolute inset-6 rounded-full bg-blue-600"></div>
+                </motion.div>
+                
+                <motion.h2 
+                  className="text-2xl mt-2 font-bold tracking-tight text-gray-900"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                  <motion.span
+                    animate={{ opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    Generating your plan
+                  </motion.span>
+                </motion.h2>
+                
+                <motion.p 
+                  className="text-gray-600 mb-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                >
+                  This may take up to 1 minute.
+                </motion.p>
+                
+                <motion.div 
+                  className="w-full max-w-xs mt-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                >
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <motion.div 
+                      className="bg-blue-600 h-2 rounded-full"
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    />
+                  </div>
+                </motion.div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ 
+                  duration: 0.6,
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 25
+                }}
+                className="flex flex-col items-center w-full"
+              >
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ 
+                    duration: 0.6, 
+                    delay: 0.2,
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 15
+                  }}
+                >
+                  <CheckCheck className="w-20 h-20 mx-auto text-green-600" />
+                </motion.div>
+                
+                <motion.h2 
+                  className="text-2xl mt-2 font-bold tracking-tight text-gray-900"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                >
+                  Your personalized plans are ready!
+                </motion.h2>
+                
+                <motion.p 
+                  className="text-gray-600 mb-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.6 }}
+                >
+                  Choose the plan that fits your schedule:
+                </motion.p>
 
-              {generatedPlans && generatedPlans.length > 1 && (
-                <div className="space-y-4 w-full">
-                  <PlanCard
-                    plan={generatedPlans[0]}
-                    icon={generatedPlans[0].emoji}
-                    label="Moderate Plan"
-                    isSelected={selectedPlan?.id === generatedPlans[0].id}
-                    onSelect={() => handlePlanSelect(generatedPlans[0])}
-                  />
-                  <PlanCard
-                    plan={generatedPlans[1]}
-                    icon="🔥"
-                    label="Intense Plan"
-                    isSelected={selectedPlan?.id === generatedPlans[1].id}
-                    onSelect={() => handlePlanSelect(generatedPlans[1])}
-                  />
-                </div>
-              )}
-            </>
-          )}
+                {generatedPlans && generatedPlans.length > 1 && (
+                  <motion.div 
+                    className="space-y-4 w-full"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.8 }}
+                  >
+                    <PlanCard
+                      plan={generatedPlans[0]}
+                      icon={generatedPlans[0].emoji}
+                      label="Moderate Plan"
+                      isSelected={selectedPlan?.id === generatedPlans[0].id}
+                      onSelect={() => handlePlanSelect(generatedPlans[0])}
+                      index={0}
+                    />
+                    <PlanCard
+                      plan={generatedPlans[1]}
+                      icon="🔥"
+                      label="Intense Plan"
+                      isSelected={selectedPlan?.id === generatedPlans[1].id}
+                      onSelect={() => handlePlanSelect(generatedPlans[1])}
+                      index={1}
+                    />
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>

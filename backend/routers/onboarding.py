@@ -343,7 +343,7 @@ async def generate_plan_route(request: Request, user: User = Depends(is_clerk_us
                 plan_activities=plan_activities,
                 plan_progress=plan_progress,
                 weeks=8,
-                sessions_per_week="4/5",
+                sessions_per_week="4 - 5",
                 guidelines=guidelines,
                 emoji=emoji,
             ),
