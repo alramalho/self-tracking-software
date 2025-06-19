@@ -15,7 +15,9 @@ from ai.assistant.memory import DatabaseMemory
 from entities.activity import Activity
 from auth.clerk import is_clerk_user
 from typing import Optional
+from entities.plan import PlanSession
 from loguru import logger
+from controllers.plan_controller import PlanController
 import traceback
 
 
@@ -25,6 +27,7 @@ activities_gateway = ActivitiesGateway()
 notification_manager = NotificationManager()
 messages_gateway = MessagesGateway()
 users_gateway = UsersGateway()
+plan_controller = PlanController()
 
 
 class QuestionAnalysisSchema(BaseModel):
@@ -228,6 +231,128 @@ async def generate_plan_activities(
             )
             for activity in response.activities
         ]
+
+        return result
+
+    except Exception as e:
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+from ai.assistant.plan_creation_assistant_simple import (
+    PlanCreationAssistant as PlanCreationAssistantSimple,
+)
+from bson import ObjectId
+from datetime import datetime, timedelta, UTC
+from entities.plan import Plan
+
+
+async def extract_guidelines_and_emoji(plan_goal: str) -> Tuple[str, str]:
+    class GuidelinesSchema(BaseModel):
+        guidelines: str = Field(
+            ...,
+            description=("The listified guidelines"),
+        )
+        emoji: str = Field(
+            ...,
+            description="The emoji of the plan, based on the goal. It should be a single emoji.",
+        )
+
+    guidelines_response = await ask_schema_async(
+        text=f"Extract guidelines for the plan '{plan_goal}'",
+        system=(
+            "You are an AI that is helping the user create a plan for the tracking.so app."
+            "You must act as a professional plan creator. You specialize in the area of the given plan, and you must create"
+            "a set of guidelines that are to be followed to create a progressive plan from the user standpoint."
+            "The guidelines should include any of tips, requirements, caveats, or points to consider when creating an activity plan."
+            "The guidelines should also include an instruction set on how to propely the duration of the plan."
+            "The guidelines should not be generic, but specifically adapted to the nature of the plan provided"
+            "The guidelines should be created in a listified format."
+            "The guidelines should not include timeframes (total weeks or sessions per week), as that will be provided by the user."
+        ),
+        pymodel=GuidelinesSchema,
+    )
+    return guidelines_response.guidelines, guidelines_response.emoji
+
+
+async def generate_plan(
+    user: User,
+    plan_goal: str,
+    plan_activities: List[Activity],
+    plan_progress: str,
+    weeks: int,
+    sessions_per_week: str,
+    guidelines: str,
+    emoji: str,
+):
+    plan_controller = PlanController()
+
+    finishing_date = (datetime.now(UTC) + timedelta(days=7 * weeks)).isoformat()
+    generated_sessions = await plan_controller.generate_sessions(
+        goal=plan_goal,
+        finishing_date=finishing_date,
+        activities=plan_activities,
+        edit_description=(
+            f"The user provided guidelines for the plan: {guidelines}\n"
+            f"The plan should span across {weeks} weeks, with approximately {sessions_per_week} sessions per week."
+            f"The user provided plan progress (how advanced along is he): {plan_progress}\n"
+            f"You must use as the basis for your output."
+        ),
+    )
+
+    return Plan.new(
+        user_id=user.id,
+        goal=plan_goal,
+        emoji=emoji,
+        finishing_date=finishing_date,
+        activity_ids=[a.id for a in plan_activities],
+        sessions=generated_sessions,
+        outline_type="specific",
+    )
+
+
+import asyncio
+
+
+@router.post("/generate-plans")
+async def generate_plan_route(request: Request, user: User = Depends(is_clerk_user)):
+    try:
+        body = await request.json()
+        plan_goal = body["plan_goal"]
+        plan_activities = [
+            Activity.model_validate(activity) for activity in body["plan_activities"]
+        ]
+        plan_progress = body["plan_progress"]
+
+        guidelines, emoji = await extract_guidelines_and_emoji(plan_goal)
+
+        intermediary_plan, intense_plan = await asyncio.gather(
+            generate_plan(
+                user=user,
+                plan_goal=plan_goal,
+                plan_activities=plan_activities,
+                plan_progress=plan_progress,
+                weeks=12,
+                sessions_per_week="3",
+                guidelines=guidelines,
+                emoji=emoji,
+            ),
+            generate_plan(
+                user=user,
+                plan_goal=plan_goal,
+                plan_activities=plan_activities,
+                plan_progress=plan_progress,
+                weeks=8,
+                sessions_per_week="4/5",
+                guidelines=guidelines,
+                emoji=emoji,
+            ),
+        )
+
+        result = {}
+        result["message"] = "Here are two plans for you to choose from"
+        result["plans"] = [intermediary_plan, intense_plan]
+        result["activities"] = plan_activities
 
         return result
 

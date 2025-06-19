@@ -402,7 +402,7 @@ async def update_plan(
 @router.post("/generate-sessions")
 async def generate_sessions(data: GenerateSessionsRequest, user: User = Depends(is_clerk_user)):
     try:
-        sessions = plan_controller.generate_sessions(
+        sessions = await plan_controller.generate_sessions(
             goal=data.goal,
             finishing_date=data.finishing_date.split("T")[0] if data.finishing_date else None,
             activities=data.activities,

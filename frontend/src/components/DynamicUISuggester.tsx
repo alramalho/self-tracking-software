@@ -33,11 +33,13 @@ export interface BaseExtractionResponse {
 
 export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   id: string;
+  initialValue?: string;
   initialMessage?: string;
   questionPrefix?: string;
   questionsChecks?: QuestionsChecks;
   headerIcon?: React.ReactNode;
   submitButtonText?: string;
+  emptySubmitButtonText?: string;
   onSubmit: (text: string) => Promise<T | void>;
   shouldRenderChildren?: boolean;
   renderIntermediateComponents?: () => React.ReactNode;
@@ -55,10 +57,12 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
 
 export function DynamicUISuggester<T extends BaseExtractionResponse>({
   id,
+  initialValue,
   initialMessage,
   questionPrefix,
   questionsChecks,
   submitButtonText = "Send",
+  emptySubmitButtonText,
   onSubmit,
   renderChildren,
   headerIcon,
@@ -74,7 +78,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   onSkip,
   canSubmitEmpty = false,
 }: DynamicUISuggesterProps<T>) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialValue || "");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
   const [rejectionFeedback, setRejectionFeedback] = useState("");
   const [extractedData, setExtractedData] = useState<T | null>(null);
@@ -375,7 +379,8 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             }
             loading={isLoading}
           >
-            {submitButtonText ?? "Send"} {allQuestionsChecked ? "again" : ""}
+            {text.length > 0 ? submitButtonText : emptySubmitButtonText ?? submitButtonText ?? "Send"}
+            {allQuestionsChecked ? "again" : ""}
           </Button>
         </div>
 
