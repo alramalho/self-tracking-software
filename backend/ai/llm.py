@@ -180,6 +180,8 @@ async def ask_schema_async(
 
     elapsed_time = (time.time() - start_time) * 1000
     # logger.debug(f"Elapsed time for '{model}' ask_schema_async call: {elapsed_time:.2f} ms")
+
+    logger.info(f"Asked schema {text} with model {model} and got result {result.data}")
     return result.data
 
 

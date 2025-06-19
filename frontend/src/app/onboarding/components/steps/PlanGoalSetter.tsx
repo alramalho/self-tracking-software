@@ -13,9 +13,9 @@ interface PlanGoalSetterResponse extends BaseExtractionResponse {
 }
 
 export function PlanGoalSetter() {
-  const {completeStep } = useOnboarding();
+  const { completeStep, planGoal } = useOnboarding();
   const api = useApiWithAuth();
-  const [text, setText] = useState("");
+  const [text, setText] = useState(planGoal);
   const questionChecks = {
     "Does the message mention a goal that is concrete and measurable?": {
       icon: <AlertCircle className="w-6 h-6 text-blue-500" />,
@@ -37,11 +37,16 @@ export function PlanGoalSetter() {
         question_checks: Object.keys(questionChecks),
       });
 
-      const allAnswered = Object.values(response.data.question_checks).every(Boolean);
+      const allAnswered = Object.values(response.data.question_checks).every(
+        Boolean
+      );
 
       if (allAnswered) {
         setTimeout(() => {
-          completeStep("plan-goal-setter", { goal: text });
+          completeStep("plan-goal-setter", {
+            planGoal: text,
+            planType: "specific",
+          });
         }, 1000);
       }
       return response.data;
@@ -52,11 +57,11 @@ export function PlanGoalSetter() {
     }
   };
 
-
   return (
     <>
       <DynamicUISuggester<PlanGoalSetterResponse>
         id="plan-creator"
+        initialValue={planGoal || undefined}
         headerIcon={<Goal className="w-[10rem] h-[10rem] text-blue-600" />}
         title="Let's start by creating you a goal"
         initialMessage="What would you like to achieve?"

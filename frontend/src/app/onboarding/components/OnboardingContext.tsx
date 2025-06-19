@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import posthog from "posthog-js";
 import { usePostHog } from "posthog-js/react";
@@ -29,12 +29,16 @@ interface OnboardingContextValue {
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
+  plans: ApiPlan[] | null;
+  selectedPlan: ApiPlan | null;
   planGoal: string | null;
   planActivities: Activity[];
   planType: string | null;
+  planProgress: string | null;
   setPlanGoal: (goal: string) => void;
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
+  setSelectedPlan: (plan: ApiPlan) => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
 }
@@ -65,13 +69,24 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     {
       currentStep: initialStep,
       completedSteps: [] as string[],
+      plans: null as ApiPlan[] | null,
+      selectedPlan: null as ApiPlan | null,
       planGoal: null as string | null,
       planActivities: [] as Activity[],
+      planProgress: null as string | null,
       planType: null as string | null,
     }
   );
-  const { currentStep, completedSteps, planGoal, planActivities, planType } =
-    onboardingState;
+  const {
+    currentStep,
+    completedSteps,
+    planGoal,
+    planActivities,
+    planType,
+    planProgress,
+    plans,
+    selectedPlan,
+  } = onboardingState;
 
   const setCurrentStep = (step: number) => {
     setOnboardingState({ ...onboardingState, currentStep: step });
@@ -82,15 +97,22 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   };
 
   const setPlanGoal = (goal: string) => {
-    setOnboardingState(prevState => ({ ...prevState, planGoal: goal }));
+    setOnboardingState((prevState) => ({ ...prevState, planGoal: goal }));
   };
 
   const setPlanActivities = (activities: Activity[]) => {
-    setOnboardingState(prevState => ({ ...prevState, planActivities: activities }));
+    setOnboardingState((prevState) => ({
+      ...prevState,
+      planActivities: activities,
+    }));
   };
 
   const setPlanType = (type: string) => {
-    setOnboardingState(prevState => ({ ...prevState, planType: type }));
+    setOnboardingState((prevState) => ({ ...prevState, planType: type }));
+  };
+
+  const setSelectedPlan = (plan: ApiPlan) => {
+    setOnboardingState((prevState) => ({ ...prevState, selectedPlan: plan }));
   };
 
   const posthog = usePostHog();
@@ -159,15 +181,19 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     isFirstStep,
     isLastStep,
     progress,
+    plans,
+    selectedPlan,
     planGoal,
     planActivities,
     planType,
+    planProgress,
     setPlanGoal,
     setPlanActivities,
     updateOnboardingState: (updates: object) => {
-      setOnboardingState(({ ...onboardingState, ...updates }));
+      setOnboardingState({ ...onboardingState, ...updates });
     },
     setPlanType,
+    setSelectedPlan,
   };
 
   return (

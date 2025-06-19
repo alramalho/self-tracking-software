@@ -19,8 +19,10 @@ import {
 import { useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PlanTypeSelector } from "./components/steps/PlanTypeSelector";
+import { PlanProgressInitiator } from "./components/steps/PlanProgressInitiator";
 import { motion } from "framer-motion";
 import { PlanActivitySetter } from "./components/steps/PlanActivitySetter";
+import { PlanGenerator } from "./components/steps/PlanGenerator";
 
 // Motion variants for fade in and slide up animation
 export const fadeUpVariants = {
@@ -72,13 +74,21 @@ const onboardingSteps: OnboardingStep[] = [
     id: "plan-goal-setter",
     component: withFadeUpAnimation(PlanGoalSetter),
   },
-  {
-    id: "plan-type-selector",
-    component: withFadeUpAnimation(PlanTypeSelector),
-  },
+  // {
+  //   id: "plan-type-selector",
+  //   component: withFadeUpAnimation(PlanTypeSelector),
+  // },
   {
     id: "plan-type-selector",
     component: withFadeUpAnimation(PlanActivitySetter),
+  },
+  {
+    id: "plan-progress-initiator",
+    component: withFadeUpAnimation(PlanProgressInitiator),
+  },
+  {
+    id: "plan-generator",
+    component: withFadeUpAnimation(PlanGenerator),
   },
 ];
 

@@ -6,7 +6,7 @@ import {
 import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
 import { useOnboarding } from "../OnboardingContext";
-import { AlertCircle, Crosshair, Goal, Volleyball } from "lucide-react";
+import { AlertCircle, BicepsFlexed, Crosshair, Goal, Volleyball } from "lucide-react";
 import { Activity } from "@/contexts/UserPlanContext";
 
 interface PlanActivitySetterResponse extends BaseExtractionResponse {
@@ -80,13 +80,16 @@ export function PlanActivitySetter() {
     <>
       <DynamicUISuggester<PlanActivitySetterResponse>
         id="plan-creator"
-        headerIcon={<Volleyball className="w-[10rem] h-[10rem] text-blue-600" />}
+        headerIcon={<BicepsFlexed className="w-[10rem] h-[10rem] text-blue-600" />}
         title="Which activities would like to include?"
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
+        canSubmitEmpty={true}
+        emptySubmitButtonText="Suggest"
         onAccept={handleAccept}
         renderChildren={renderExtractedData}
         placeholder="For example 'reading' --> 'pages' or more generically 'working out' –-> 'sessions'"
+        creationMessage="Here's the activities? Can I go ahead and create them?"
       />
     </>
   );

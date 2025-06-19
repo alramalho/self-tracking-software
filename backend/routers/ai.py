@@ -1026,7 +1026,6 @@ async def get_plan_extractions(request: Request, user: User = Depends(is_clerk_u
         )
 
         conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
-        print(conversation_history)
         plan_creator = PlanCreationAssistantSimple(user=user, memory=memory)
 
         # Log the extraction request

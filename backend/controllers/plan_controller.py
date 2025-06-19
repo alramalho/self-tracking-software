@@ -6,7 +6,7 @@ from entities.plan import (
 from entities.plan_group import PlanGroupMember
 from entities.activity import Activity, ActivityEntry
 from entities.plan_invitation import PlanInvitation
-from ai.llm import ask_schema
+from ai.llm import ask_schema, ask_schema_async
 from gateways.database.dynamodb import DynamoDBGateway
 from typing import List, Optional, Dict, Any, Tuple, Literal
 from gateways.plan_groups import PlanGroupsGateway
@@ -30,6 +30,7 @@ from ai.assistant.coach_notification_generator import (
     generate_times_per_week_based_week_end_coach_notes,
     generate_session_based_week_end_coach_notes,
 )
+import traceback
 import threading
 
 
@@ -734,7 +735,7 @@ class PlanController:
 
         return f"–{activity.title} ({session.quantity} {activity.measure}) in {readable_date}"
 
-    def generate_sessions(
+    async def generate_sessions(
         self,
         goal: str,
         finishing_date: Optional[str] = None,
@@ -805,7 +806,7 @@ class PlanController:
             week_number: int
             reasoning: str = Field(
                 ...,
-                description="A step by step thinking on how intense the week should be given the amount of weeks left to achieve the goal.",
+                description="A step by step thinking outlining the week's outlook given current and leftover progess. Must be deep and reflective.",
             )
             sessions: List[GeneratedSession] = Field(
                 ...,
@@ -822,11 +823,16 @@ class PlanController:
                 description="List of weeks with their sessions.",
             )
 
-        response = ask_schema(
-            user_prompt,
-            system_prompt,
-            GenerateSessionsResponse,
-        )
+        try:
+            response = await ask_schema_async(
+                text=user_prompt,
+                system=system_prompt,
+                pymodel=GenerateSessionsResponse,
+            )
+        except Exception as e:
+            logger.error(f"Error generating sessions: {e}")
+            logger.error(traceback.format_exc())
+            raise e
 
         # Convert generated sessions to PlanSession objects
         sessions = []
