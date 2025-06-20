@@ -15,6 +15,8 @@ import React, {
 export interface OnboardingStep {
   id: string;
   component: React.ComponentType;
+  next?: string;
+  previous?: string;
 }
 
 interface OnboardingContextValue {
@@ -132,16 +134,40 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0;
 
   const nextStep = useCallback(() => {
+    const currentStepData = steps[currentStep];
+    
+    // Check if current step has a custom next step defined
+    if (currentStepData?.next) {
+      const nextStepIndex = steps.findIndex(step => step.id === currentStepData.next);
+      if (nextStepIndex !== -1) {
+        setCurrentStep(nextStepIndex);
+        return;
+      }
+    }
+    
+    // Default behavior: go to next sequential step
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     }
-  }, [currentStep, totalSteps]);
+  }, [currentStep, totalSteps, steps]);
 
   const prevStep = useCallback(() => {
+    const currentStepData = steps[currentStep];
+    
+    // Check if current step has a custom previous step defined
+    if (currentStepData?.previous) {
+      const prevStepIndex = steps.findIndex(step => step.id === currentStepData.previous);
+      if (prevStepIndex !== -1) {
+        setCurrentStep(prevStepIndex);
+        return;
+      }
+    }
+    
+    // Default behavior: go to previous sequential step
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
-  }, [currentStep]);
+  }, [currentStep, steps]);
 
   const goToStep = useCallback(
     (step: number) => {

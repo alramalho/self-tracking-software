@@ -1,9 +1,7 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useClipboard } from "@/hooks/useClipboard";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { useShare } from "@/hooks/useShare";
 import {
   Apple,
   ArrowRight,
@@ -15,23 +13,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
+import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 
 const DownloadComponent = () => {
+  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [copied, copyToClipboard] = useClipboard();
-  const { share, isSupported: isShareSupported } = useShare();
+
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  const handleCopyLink = async (link: string) => {
-    if (isShareSupported) {
-      const success = await share(link);
-      if (!success) throw new Error("Failed to share");
-    } else {
-      const success = await copyToClipboard(link);
-      if (!success) throw new Error("Failed to copy");
-      toast.success("Link copied to clipboard");
-    }
-  };
 
   if (isDesktop)
     return (
@@ -48,7 +37,7 @@ const DownloadComponent = () => {
         </span>
         <Button
           className="w-fit mx-auto"
-          onClick={() => handleCopyLink(`https://app.tracking.so/download`)}
+          onClick={() => shareOrCopyLink(`https://app.tracking.so/download`)}
         >
           {isShareSupported ? "Share" : "Copy"} link
         </Button>

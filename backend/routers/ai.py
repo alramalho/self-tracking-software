@@ -589,7 +589,7 @@ async def analyse_question_checks(
                 Generate an appropriate short message to the user.
                 If there are unanswered questions, kindly ask for those specific pieces of information.
                 If all questions are answered, thank the user.""",
-        system="You are an AI that is helping the user to create a profil and plan for the tracking.so app.",
+        system="",
         pymodel=MessageGenerationSchema,
     )
 
@@ -875,20 +875,8 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
                 description="The user's age as a single integer, if mentioned.",
             )
 
-        memory = DatabaseMemory(DynamoDBGateway("messages"), user.id)
 
-        memory.write(
-            Message.new(
-                text=message,
-                sender_name=user.name,
-                sender_id=user.id,
-                recipient_name="Jarvis",
-                recipient_id="0",
-                emotions=[],
-            )
-        )
-
-        conversation_history = memory.read_all_as_str(max_age_in_minutes=30)
+        conversation_history = f"{user.name} (just now): {message}"
 
         # Create parallel tasks for profile generation and question checks
         profile_task = ask_schema_async(
@@ -916,17 +904,6 @@ async def update_profile(request: Request, user: User = Depends(is_clerk_user)):
             pass
 
         updated_user = users_gateway.update_fields(user.id, updates)
-
-        # Write AI response to memory
-        memory.write(
-            Message.new(
-                text=message,
-                sender_name="Jarvis",
-                sender_id="0",
-                recipient_name=user.name,
-                recipient_id=user.id,
-            )
-        )
 
         return {
             "message": message,

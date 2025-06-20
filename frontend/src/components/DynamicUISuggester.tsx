@@ -380,7 +380,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             loading={isLoading}
           >
             {text.length > 0 ? submitButtonText : emptySubmitButtonText ?? submitButtonText ?? "Send"}
-            {allQuestionsChecked ? "again" : ""}
+            {allQuestionsChecked ? " again" : ""}
           </Button>
         </div>
 
