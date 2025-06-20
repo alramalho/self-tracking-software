@@ -25,7 +25,7 @@ interface OnboardingContextValue {
   nextStep: () => void;
   prevStep: () => void;
   goToStep: (step: number) => void;
-  completeStep: (stepId: string, updates: object) => void;
+  completeStep: (stepId: string, updates?: object) => void;
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
@@ -153,7 +153,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   );
 
   const completeStep = useCallback(
-    (stepId: string, updates: object = {}) => {
+    (stepId: string, updates?: object) => {
       let newState = onboardingState;
       if (!completedSteps.includes(stepId)) {
         newState = {
@@ -163,7 +163,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       }
       newState = {
         ...newState,
-        ...updates,
+        ...(updates || {}),
       };
 
       if (newState.currentStep < totalSteps) {

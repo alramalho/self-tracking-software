@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
-import { NextButton } from "../../page";
 
 export const WelcomeStep = () => {
   const { completeStep } = useOnboarding();
@@ -33,7 +32,14 @@ export const WelcomeStep = () => {
         </p>
       </div>
       <div className="mx-auto w-fit">
-        <NextButton name="Start" onClick={handleGetStarted} />
+        <Button
+          size="lg"
+          className="w-full rounded-xl"
+          onClick={handleGetStarted}
+        >
+          Start
+          <ArrowRight size={20} className="ml-2" />
+        </Button>
       </div>
     </div>
   );

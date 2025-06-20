@@ -12,13 +12,8 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
-import { NextButton } from "../../page";
-import { Textarea } from "@/components/ui/textarea";
-import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import { useEffect, useState, useRef } from "react";
 import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
-import { ActivityCard } from "@/components/ActivityCard";
-import ActivityItem from "@/components/plan-configuration/ActivityItem";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";

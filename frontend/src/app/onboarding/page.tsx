@@ -10,15 +10,11 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { WelcomeStep } from "./components/steps/WelcomeStep";
 import { PlanGoalSetter } from "./components/steps/PlanGoalSetter";
 import {
-  ArrowRight,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { PlanTypeSelector } from "./components/steps/PlanTypeSelector";
+import { useMemo } from "react";
 import { PlanProgressInitiator } from "./components/steps/PlanProgressInitiator";
 import { motion } from "framer-motion";
 import { PlanActivitySetter } from "./components/steps/PlanActivitySetter";
@@ -27,7 +23,7 @@ import { PartnerTypeSelector } from "./components/steps/NotificationsSelector";
 import { NotificationsSelector } from "./components/steps/PartnerSelector";
 
 // Motion variants for fade in and slide up animation
-export const fadeUpVariants = {
+const fadeUpVariants = {
   hidden: {
     opacity: 0,
     y: 10 
@@ -59,11 +55,13 @@ const FadeUpWrapper = ({ children }: { children: React.ReactNode }) => {
 
 // Higher-order component to wrap step components with motion
 const withFadeUpAnimation = (Component: React.ComponentType) => {
-  return () => (
+  const WrappedComponent = () => (
     <FadeUpWrapper>
       <Component />
     </FadeUpWrapper>
   );
+  WrappedComponent.displayName = `withFadeUpAnimation(${Component.displayName || Component.name})`;
+  return WrappedComponent;
 };
 
 // Define your onboarding steps
@@ -102,27 +100,6 @@ const onboardingSteps: OnboardingStep[] = [
   },
 ];
 
-export const NextButton = ({
-  name,
-  onClick,
-  disabled,
-}: {
-  name: string;
-  onClick: () => void;
-  disabled: boolean;
-}) => {
-  return (
-    <Button
-      size="lg"
-      className="w-full rounded-xl"
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {name}
-      <ArrowRight size={20} className="ml-2" />
-    </Button>
-  );
-};
 
 // Component that renders the current step
 const OnboardingStepRenderer = () => {

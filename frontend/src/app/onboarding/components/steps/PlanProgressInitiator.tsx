@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CalendarDays, Route, UserRoundPlus } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
-import { NextButton } from "../../page";
 import { Textarea } from "@/components/ui/textarea";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import { useState } from "react";
