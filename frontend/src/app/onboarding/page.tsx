@@ -19,8 +19,8 @@ import { PlanProgressInitiator } from "./components/steps/PlanProgressInitiator"
 import { motion } from "framer-motion";
 import { PlanActivitySetter } from "./components/steps/PlanActivitySetter";
 import { PlanGenerator } from "./components/steps/PlanGenerator";
-import { PartnerTypeSelector } from "./components/steps/NotificationsSelector";
-import { NotificationsSelector } from "./components/steps/PartnerSelector";
+import { PartnerTypeSelector } from "./components/steps/PartnerSelector";
+import { NotificationsSelector } from "./components/steps/NotificationsSelector";
 
 // Motion variants for fade in and slide up animation
 const fadeUpVariants = {
