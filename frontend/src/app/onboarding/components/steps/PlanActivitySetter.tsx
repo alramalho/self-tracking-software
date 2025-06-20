@@ -74,7 +74,7 @@ export function PlanActivitySetter() {
   };
 
   const handleAccept = async (data: PlanActivitySetterResponse): Promise<void> => {
-    completeStep("plan-activity-setter", { planActivities: data.activities ?? [] });
+    completeStep("plan-activity-selector", { planActivities: data.activities ?? [] });
   };
   return (
     <>

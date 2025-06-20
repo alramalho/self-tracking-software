@@ -34,11 +34,13 @@ interface OnboardingContextValue {
   planGoal: string | null;
   planActivities: Activity[];
   planType: string | null;
+  partnerType: "human" | "ai" | null;
   planProgress: string | null;
   setPlanGoal: (goal: string) => void;
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
   setSelectedPlan: (plan: ApiPlan) => void;
+  setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
 }
@@ -55,7 +57,7 @@ export const useOnboarding = () => {
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
-  steps: OnboardingStep[];
+  steps: OnboardingStep[];  
   initialStep?: number;
 }
 
@@ -75,6 +77,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planActivities: [] as Activity[],
       planProgress: null as string | null,
       planType: null as string | null,
+      partnerType: null as "human" | "ai" | null,
     }
   );
   const {
@@ -85,6 +88,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     planType,
     planProgress,
     plans,
+    partnerType,
     selectedPlan,
   } = onboardingState;
 
@@ -113,6 +117,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   const setSelectedPlan = (plan: ApiPlan) => {
     setOnboardingState((prevState) => ({ ...prevState, selectedPlan: plan }));
+  };
+
+  const setPartnerType = (type: "human" | "ai") => {
+    setOnboardingState((prevState) => ({ ...prevState, partnerType: type }));
   };
 
   const posthog = usePostHog();
@@ -184,6 +192,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     plans,
     selectedPlan,
     planGoal,
+    partnerType,
     planActivities,
     planType,
     planProgress,
@@ -194,6 +203,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     },
     setPlanType,
     setSelectedPlan,
+    setPartnerType,
   };
 
   return (

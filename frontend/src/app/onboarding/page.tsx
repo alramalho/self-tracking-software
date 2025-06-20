@@ -23,6 +23,8 @@ import { PlanProgressInitiator } from "./components/steps/PlanProgressInitiator"
 import { motion } from "framer-motion";
 import { PlanActivitySetter } from "./components/steps/PlanActivitySetter";
 import { PlanGenerator } from "./components/steps/PlanGenerator";
+import { PartnerTypeSelector } from "./components/steps/NotificationsSelector";
+import { NotificationsSelector } from "./components/steps/PartnerSelector";
 
 // Motion variants for fade in and slide up animation
 export const fadeUpVariants = {
@@ -79,7 +81,7 @@ const onboardingSteps: OnboardingStep[] = [
   //   component: withFadeUpAnimation(PlanTypeSelector),
   // },
   {
-    id: "plan-type-selector",
+    id: "plan-activity-selector",
     component: withFadeUpAnimation(PlanActivitySetter),
   },
   {
@@ -89,6 +91,14 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: "plan-generator",
     component: withFadeUpAnimation(PlanGenerator),
+  },
+  {
+    id: "partner-selection",
+    component: withFadeUpAnimation(PartnerTypeSelector),
+  },
+  {
+    id: "notifications-selector",
+    component: withFadeUpAnimation(NotificationsSelector),
   },
 ];
 
