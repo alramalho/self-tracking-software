@@ -62,7 +62,6 @@ class User(BaseModel):
             id=id or str(ObjectId()),
             email=email,
             created_at=datetime.now(UTC).isoformat(),
-            last_active_at=datetime.now(UTC).isoformat(),
             clerk_id=clerk_id,
             picture=picture,
             name=name,
