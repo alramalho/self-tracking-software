@@ -140,7 +140,7 @@ const LookingForApPage: React.FC = () => {
                   showFriendRequest={false}
                   showScore={false}
                   showStreaks={true}
-                  className="max-w-sm mx-auto"
+                  className="max-w-sm mx-auto bg-white/50"
                 />
               </div>
             )}

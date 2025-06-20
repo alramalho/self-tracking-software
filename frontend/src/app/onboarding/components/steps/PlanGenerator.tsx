@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
 import { useEffect, useState, useRef } from "react";
-import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,7 +48,7 @@ const PlanCard = ({
       const sessionsPerWeek = plan.sessions.length / weeksCount;
       const minSessions = Math.floor(sessionsPerWeek);
       const maxSessions = Math.ceil(sessionsPerWeek);
-      return minSessions === maxSessions 
+      return minSessions === maxSessions
         ? `${minSessions} times per week`
         : `${minSessions}-${maxSessions} times per week`;
     }
@@ -61,12 +61,12 @@ const PlanCard = ({
     <motion.button
       initial={{ opacity: 0, scale: 0.8, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ 
-        duration: 0.5, 
+      transition={{
+        duration: 0.5,
         delay: index * 0.1,
         type: "spring",
         stiffness: 300,
-        damping: 25
+        damping: 25,
       }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
@@ -78,15 +78,17 @@ const PlanCard = ({
       }`}
     >
       <div className="flex items-start gap-4">
-        <motion.div 
+        <motion.div
           className={`w-12 h-12 rounded-lg flex items-center justify-center ${
             isSelected ? "bg-blue-200" : "bg-gray-100"
           }`}
           animate={isSelected ? { scale: [1, 1.1, 1] } : { scale: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <motion.div 
-            className={`text-2xl ${isSelected ? "text-white" : "text-gray-600"}`}
+          <motion.div
+            className={`text-2xl ${
+              isSelected ? "text-white" : "text-gray-600"
+            }`}
             animate={isSelected ? { rotate: [0, 10, -10, 0] } : { rotate: 0 }}
             transition={{ duration: 0.5 }}
           >
@@ -94,7 +96,7 @@ const PlanCard = ({
           </motion.div>
         </motion.div>
         <div className="flex-1">
-          <motion.div 
+          <motion.div
             className={`font-semibold text-lg ${
               isSelected ? "text-blue-900" : "text-gray-900"
             }`}
@@ -104,7 +106,7 @@ const PlanCard = ({
           >
             {label}
           </motion.div>
-          <motion.div 
+          <motion.div
             className={`text-sm mt-1 ${
               isSelected ? "text-blue-700" : "text-gray-600"
             }`}
@@ -115,7 +117,7 @@ const PlanCard = ({
             {getFrequencyDescription()}
           </motion.div>
           {weeksCount > 0 && (
-            <motion.div 
+            <motion.div
               className={`text-sm mt-1 ${
                 isSelected ? "text-blue-600" : "text-gray-500"
               }`}
@@ -153,6 +155,20 @@ export const PlanGenerator = () => {
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const api = useApiWithAuth();
 
+  // const createPlan = async (plan: ApiPlan) => {
+  //   try {
+  //     const response = await api.post("/create-plan", {
+  //       ...plan,
+  //     });
+  //     const createdPlan = response.data.plan;
+  //     setSelectedPlan(createdPlan);
+  //     refetchUserData();
+  //   } catch (error) {
+  //     console.error("Plan creation error:", error);
+  //     toast.error("Failed to create plan. Please try again.");
+  //   }
+  // };
+
   const handlePlanSelect = (plan: ApiPlan) => {
     setSelectedPlan(plan);
     completeStep("plan-generator", {
@@ -165,18 +181,19 @@ export const PlanGenerator = () => {
     const startTime = Date.now();
     const targetProgress = 99;
     const duration = 60000;
-    
+
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
     }
-    
+
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const timeRatio = elapsed / duration;
-      
+
       // Logarithmic progress: fast at start, slows down towards target
-      const logarithmicProgress = targetProgress * (1 - Math.exp(-timeRatio * 3));
-      
+      const logarithmicProgress =
+        targetProgress * (1 - Math.exp(-timeRatio * 3));
+
       if (logarithmicProgress >= targetProgress || elapsed >= duration) {
         setProgress(targetProgress);
         if (progressIntervalRef.current) {
@@ -202,14 +219,18 @@ export const PlanGenerator = () => {
       setIsLoading(true);
       setProgress(0);
       startProgressAnimation();
-      const response = await api.post("/onboarding/generate-plans", {
-        plan_goal: planGoal,
-        plan_activities: planActivities,
-        plan_type: planType,
-        plan_progress: planProgress,
-      }, {
-        timeout: 180000 // 3 minutes in milliseconds
-      });
+      const response = await api.post(
+        "/onboarding/generate-plans",
+        {
+          plan_goal: planGoal,
+          plan_activities: planActivities,
+          plan_type: planType,
+          plan_progress: planProgress,
+        },
+        {
+          timeout: 180000, // 3 minutes in milliseconds
+        }
+      );
 
       if (response.data.plans) {
         setGeneratedPlans(response.data.plans);
@@ -268,30 +289,30 @@ export const PlanGenerator = () => {
                 transition={{ duration: 0.3 }}
                 className="flex flex-col items-center"
               >
-                <motion.div 
+                <motion.div
                   className="relative w-20 h-20"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 >
-                  <motion.div 
+                  <motion.div
                     className="absolute inset-0 rounded-full bg-blue-100"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   />
-                  <motion.div 
+                  <motion.div
                     className="absolute inset-2 rounded-full bg-blue-200"
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 1.2, repeat: Infinity }}
                   />
-                  <motion.div 
+                  <motion.div
                     className="absolute inset-4 rounded-full bg-blue-400"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
                   />
                   <div className="absolute inset-6 rounded-full bg-blue-600"></div>
                 </motion.div>
-                
-                <motion.h2 
+
+                <motion.h2
                   className="text-2xl mt-2 font-bold tracking-tight text-gray-900"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -304,8 +325,8 @@ export const PlanGenerator = () => {
                     Generating your plan
                   </motion.span>
                 </motion.h2>
-                
-                <motion.p 
+
+                <motion.p
                   className="text-gray-600 mb-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -313,15 +334,15 @@ export const PlanGenerator = () => {
                 >
                   This may take up to a few minutes.
                 </motion.p>
-                
-                <motion.div 
+
+                <motion.div
                   className="w-full max-w-xs mt-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
                 >
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <motion.div 
+                    <motion.div
                       className="bg-blue-600 h-2 rounded-full"
                       initial={{ width: "0%" }}
                       animate={{ width: `${progress}%` }}
@@ -335,29 +356,29 @@ export const PlanGenerator = () => {
                 key="success"
                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ 
+                transition={{
                   duration: 0.6,
                   type: "spring",
                   stiffness: 300,
-                  damping: 25
+                  damping: 25,
                 }}
                 className="flex flex-col items-center w-full"
               >
                 <motion.div
                   initial={{ scale: 0, rotate: -180 }}
                   animate={{ scale: 1, rotate: 0 }}
-                  transition={{ 
-                    duration: 0.6, 
+                  transition={{
+                    duration: 0.6,
                     delay: 0.2,
                     type: "spring",
                     stiffness: 400,
-                    damping: 15
+                    damping: 15,
                   }}
                 >
                   <CheckCheck className="w-20 h-20 mx-auto text-green-600" />
                 </motion.div>
-                
-                <motion.h2 
+
+                <motion.h2
                   className="text-2xl mt-2 font-bold tracking-tight text-gray-900"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -365,8 +386,8 @@ export const PlanGenerator = () => {
                 >
                   Your personalized plans are ready!
                 </motion.h2>
-                
-                <motion.p 
+
+                <motion.p
                   className="text-gray-600 mb-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -376,7 +397,7 @@ export const PlanGenerator = () => {
                 </motion.p>
 
                 {generatedPlans && generatedPlans.length > 1 && (
-                  <motion.div 
+                  <motion.div
                     className="space-y-4 w-full"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}

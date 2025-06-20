@@ -3,6 +3,7 @@ import { useApiWithAuth } from "@/api";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { DynamicUISuggester } from "./DynamicUISuggester";
+import { UserRoundPen } from "lucide-react";
 
 export function ProfileSetupDynamicUI({
   onSubmit,
@@ -12,14 +13,10 @@ export function ProfileSetupDynamicUI({
   submitButtonText?: string;
 }) {
   const questionsChecks = {
-    "What does the user do or likes to do." : {
-      title: "Who you are",
-      description: "Like your age, occupation, or anything that you find relevant for the coach to know.",
+    "A description of the user." : {
+      title: "Your details",
+      description: "Like your age, occupation, or anything that you find relevant.",
     },
-    // "Does the user share any thoughts about their goals, aspirations or interests?": {
-    //   title: "What do you want to achieve",
-    //   description: "Your vision or goals with the app.",
-    // },
   };
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
   const api = useApiWithAuth();
@@ -48,9 +45,10 @@ export function ProfileSetupDynamicUI({
         message: string;
       }>
         id="profile-setup"
-        questionPrefix="I'd like to know"
-        initialMessage="Tell me a bit about yourself."
-        placeholder="Voice messages are better suited for this step"
+        headerIcon={<UserRoundPen className="w-20 h-20 text-blue-600" />}
+        title="Set up your profile description"
+        placeholder="For example, I'm a 25-year-old male software engineer who loves to code and build things."
+        questionPrefix="You should include"
         questionsChecks={questionsChecks}
         onSubmit={async (text) => {
           const response = await api.post(

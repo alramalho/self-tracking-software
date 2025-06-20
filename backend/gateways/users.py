@@ -35,7 +35,7 @@ class UsersGateway:
 
     def get_all_users(self) -> list[User]:
         users = [User(**data) for data in self.db_gateway.scan()]
-        return [user for user in users if not user.deleted_at]
+        return [user for user in users if not user.deleted_at and not user.email.startswith("alexandre.ramalho.1998+")]
     
     def get_all_paid_users(self) -> list[User]:
         users = [User(**data) for data in self.db_gateway.query("plan_type", "plus")]

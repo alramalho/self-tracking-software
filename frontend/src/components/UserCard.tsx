@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getThemeVariants } from "@/utils/theme";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDistanceToNow } from "date-fns";
+import { differenceInDays, formatDistanceToNow } from "date-fns";
 import PlanStreak from "@/components/PlanStreak";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
 import { motion } from "framer-motion";
@@ -58,6 +58,10 @@ const UserCard: React.FC<UserCardProps> = ({
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
+  
+  const isOlderThan30Days = (date: string) => {
+    return differenceInDays(new Date(), new Date(date)) > 30;
+  };
 
   const handleSendFriendRequest = async () => {
     try {
@@ -163,7 +167,7 @@ const UserCard: React.FC<UserCardProps> = ({
 
   return (
     <div
-      className={`bg-white/50 border rounded-lg overflow-hidden relative ${className}`}
+      className={`border rounded-2xl overflow-hidden relative ${className}`}
     >
       <ProfileImageArea />
 
@@ -177,7 +181,7 @@ const UserCard: React.FC<UserCardProps> = ({
           )}
 
           <div className="flex items-center text-sm text-gray-600">
-            {!user.last_active_at ? (
+            {!user.last_active_at || isOlderThan30Days(user.last_active_at) ? (
               <>
                 <div
                   className="flex items-center gap-1 relative"
@@ -234,7 +238,7 @@ const UserCard: React.FC<UserCardProps> = ({
 
           {/* Show plans with streaks inline */}
           {plans.length > 0 && (
-            <div className="mt-3 p-3 bg-gray-100/70 rounded-lg">
+            <div className="mt-3 p-3 bg-gray-400/10 rounded-lg">
               <p className="text-gray-500 text-xs mb-2">Working on</p>
               <div className="space-y-2">
                 {plans.slice(0, 3).map((planItem) => (
@@ -254,6 +258,7 @@ const UserCard: React.FC<UserCardProps> = ({
                         </span>
                       </div>
                       {showStreaks && activities.length > 0 && (
+                        // just working for current user bc this component gets activities from current user 
                         <PlanStreak
                           plan={planItem}
                         />

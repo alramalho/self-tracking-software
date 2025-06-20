@@ -6,8 +6,7 @@ import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import Divider from "./Divider";
-import { useClipboard } from "@/hooks/useClipboard";
-import { useShare } from "@/hooks/useShare";
+import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 
 interface InviteButtonProps {
   planId: string;
@@ -21,8 +20,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
-  const [copied, copyToClipboard] = useClipboard();
-  const { share, isSupported: isShareSupported } = useShare();
+  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
 
   const handleUserSelect = (user: UserSearchResult) => {
     if (!invitees.some((invitee) => invitee.user_id === user.user_id)) {
@@ -64,14 +62,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     toast.promise(
       (async () => {
         const link = await generateCopyLink();
-
-        if (isShareSupported) {
-          const success = await share(link);
-          if (!success) throw new Error("Failed to share");
-        } else {
-          const success = await copyToClipboard(link);
-          if (!success) throw new Error("Failed to copy");
-        }
+        await shareOrCopyLink(link);
 
         onInviteSuccess();
         setIsSearchOpen(false);

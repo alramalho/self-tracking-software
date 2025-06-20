@@ -32,8 +32,6 @@ import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import Divider from "@/components/Divider";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
-import { useShare } from "@/hooks/useShare";
-import { useClipboard } from "@/hooks/useClipboard";
 import { twMerge } from "tailwind-merge";
 import { PlanBadge } from "@/components/PlanBadge";
 import ProfileSettingsPopover, {
@@ -46,6 +44,7 @@ import { isPlanExpired } from "@/components/PlansRenderer";
 import StreakDetailsPopover from "@/components/profile/PlanProgresPopover";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import { cn } from "@/lib/utils";
+import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
@@ -91,13 +90,14 @@ const ProfilePage: React.FC = () => {
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
     string | null
   >(null);
-  const userInformalName = profileData?.user?.name?.includes(" ") ? profileData.user.name.split(" ")[0] : profileData?.user?.username;
+  const userInformalName = profileData?.user?.name?.includes(" ")
+    ? profileData.user.name.split(" ")[0]
+    : profileData?.user?.username;
 
   const { plansProgress } = usePlanProgress();
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
-  const { share, isSupported: isShareSupported } = useShare();
-  const [_, copyToClipboard] = useClipboard();
+  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
   const profilePaidPlanType = profileData?.user?.plan_type;
   const themeColors = useThemeColors();
@@ -357,20 +357,11 @@ const ProfilePage: React.FC = () => {
                     variant="ghost"
                     size="icon"
                     className="border-none"
-                    onClick={async () => {
-                      try {
-                        const link = `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`;
-                        if (isShareSupported) {
-                          const success = await share(link);
-                          if (!success) throw new Error("Failed to share");
-                        } else {
-                          const success = await copyToClipboard(link);
-                          if (!success) throw new Error("Failed to copy");
-                        }
-                      } catch (error) {
-                        console.error("Failed to copy link to clipboard");
-                      }
-                    }}
+                    onClick={() =>
+                      shareOrCopyLink(
+                        `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`
+                      )
+                    }
                   >
                     <UserPlus size={24} />
                   </Button>
@@ -533,10 +524,7 @@ const ProfilePage: React.FC = () => {
                           <Medal size={32} className="text-yellow-500" />
                           <span className="text-sm text-gray-500">
                             Part of {userInformalName}&apos;s lifestyle for{" "}
-                            {
-                              planProgress?.achievement.streak
-                            }{" "}
-                            weeks
+                            {planProgress?.achievement.streak} weeks
                           </span>
                         </div>
                       )}

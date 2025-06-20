@@ -14,10 +14,18 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { useRouter } from "next/navigation";
-import { Bell, Loader2, PersonStandingIcon, ScanFace, Search, Send, UserPlus, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Bell,
+  Loader2,
+  PersonStandingIcon,
+  ScanFace,
+  Search,
+  Send,
+  UserPlus,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
-import { useShare } from "@/hooks/useShare";
-import { useClipboard } from "@/hooks/useClipboard";
 import { toast } from "react-hot-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "./ui/button";
@@ -29,8 +37,13 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { AccountabilityStepCard } from "./AccountabilityStepCard";
 import { WeekMetricBarChart } from "./WeekMetricBarChart";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -41,28 +54,23 @@ function isInCurrentWeek(date: string) {
   });
 }
 
-const TimelineRenderer: React.FC<{ 
+const TimelineRenderer: React.FC<{
   onOpenSearch: () => void;
-}> = ({
-  onOpenSearch,
-}) => {
+}> = ({ onOpenSearch }) => {
   const { useTimelineDataQuery, useCurrentUserDataQuery } = useUserPlan();
   const timelineDataQuery = useTimelineDataQuery();
   const timelineData = timelineDataQuery.data;
   const { data: userData } = useCurrentUserDataQuery();
   const router = useRouter();
-  const { isSupported: isShareSupported, share } = useShare();
-  const [copied, copyToClipboard] = useClipboard();
+  const { shareOrCopyReferralLink } = useShareOrCopy();
   const { isAppInstalled, isPushGranted, requestPermission } =
     useNotifications();
   const { setShowUpgradePopover } = useUpgrade();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { userPaidPlanType } = usePaidPlan();
   const isUserOnFreePlan = userPaidPlanType === "free";
-  const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] = useLocalStorage<boolean>(
-    "partner-section-collapsed",
-    false
-  );
+  const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] =
+    useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   if (!timelineDataQuery.isFetched && !timelineData) {
@@ -74,22 +82,6 @@ const TimelineRenderer: React.FC<{
     );
   }
 
-  const handleShareReferralLink = async () => {
-    const link = `https://app.tracking.so/join/${userData?.user?.username}`;
-
-    try {
-      if (isShareSupported) {
-        const success = await share(link);
-        if (!success) throw new Error("Failed to share");
-      } else {
-        const success = await copyToClipboard(link);
-        if (!success) throw new Error("Failed to copy");
-      }
-    } catch (error) {
-      console.error("Error sharing referral link:", error);
-      toast.error("Failed to share referral link. Maybe you cancelled it?");
-    }
-  };
 
   if (!userData?.user?.friend_ids?.length) {
     const demoMetrics: Array<{
@@ -141,14 +133,19 @@ const TimelineRenderer: React.FC<{
         <div className="mt-6 grid grid-cols-1 gap-6">
           {/* Find your Accountability Partner Card */}
           <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
-            <Collapsible open={!isPartnerSectionCollapsed} onOpenChange={(open) => setIsPartnerSectionCollapsed(!open)}>
+            <Collapsible
+              open={!isPartnerSectionCollapsed}
+              onOpenChange={(open) => setIsPartnerSectionCollapsed(!open)}
+            >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <CollapsibleTrigger asChild>
                     <button
                       className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
                       aria-label={
-                        isPartnerSectionCollapsed ? "Expand partner section" : "Collapse partner section"
+                        isPartnerSectionCollapsed
+                          ? "Expand partner section"
+                          : "Collapse partner section"
                       }
                     >
                       {isPartnerSectionCollapsed ? (
@@ -171,7 +168,9 @@ const TimelineRenderer: React.FC<{
                   <div className="flex items-center gap-3">
                     <UserPlus size={20} className="text-blue-500" />
                     <div className="text-sm text-gray-600">
-                      <span className="font-medium">Improve your success rate by </span>
+                      <span className="font-medium">
+                        Improve your success rate by{" "}
+                      </span>
                       <span className="font-bold text-blue-600">95%</span>
                     </div>
                   </div>
@@ -181,12 +180,13 @@ const TimelineRenderer: React.FC<{
                 <CollapsibleContent className="space-y-0 pb-4 pt-0">
                   <div className="space-y-4 pt-4">
                     <p className="text-gray-600 text-sm">
-                      Improve your chances of success by finding an accountability partner
+                      Improve your chances of success by finding an
+                      accountability partner
                     </p>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button
-                        onClick={handleShareReferralLink}
+                        onClick={shareOrCopyReferralLink}
                         className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                       >
                         <Send size={16} className="mr-2" />
