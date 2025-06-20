@@ -202,12 +202,13 @@ export const PlanGenerator = () => {
       setIsLoading(true);
       setProgress(0);
       startProgressAnimation();
-      
       const response = await api.post("/onboarding/generate-plans", {
         plan_goal: planGoal,
         plan_activities: planActivities,
         plan_type: planType,
         plan_progress: planProgress,
+      }, {
+        timeout: 180000 // 3 minutes in milliseconds
       });
 
       if (response.data.plans) {
@@ -221,10 +222,10 @@ export const PlanGenerator = () => {
           plans: response.data.plans,
         });
       } else {
-        throw new Error("Failed to generate plan. Plan not returned");
+        throw new Error("Failed to generate plans. Plan not returned");
       }
     } catch (error) {
-      toast.error("Failed to generate plan. Please try again.");
+      toast.error("Failed to generate plans. Please try again.");
       console.error(error);
       stopProgressAnimation();
     } finally {
