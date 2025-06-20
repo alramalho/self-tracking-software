@@ -33,7 +33,7 @@ interface NotificationsContextType {
     icon?: string,
     url?: string
   ) => Promise<void>;
-  requestPermission: () => Promise<void>;
+  requestPermission: () => Promise<boolean | undefined>;
   isAppInstalled: boolean;
   isPushGranted: boolean;
   setIsPushGranted: (isPushGranted: boolean) => void;
@@ -194,7 +194,7 @@ export const NotificationsProvider = ({
     }
   };
 
-  const requestPermission = async () => {
+  const requestPermission = async (): Promise<boolean | undefined> => {
     try {
       if (isPwaSupported) {
         const notificationPermissionResult = await Notification.requestPermission();
@@ -233,6 +233,7 @@ export const NotificationsProvider = ({
             "Notification permission was not granted. State: " + notificationPermissionResult
           );
         }
+        return granted
       } else {
         console.log("You need to install this web page to use notifications");
       }

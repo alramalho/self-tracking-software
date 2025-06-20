@@ -9,7 +9,7 @@ export const PlanTypeSelector = () => {
   const { completeStep, setPlanType, planType } = useOnboarding();
 
   const handlePlanSelect = (selectedType: PlanType) => {
-    completeStep("planType", { planType: selectedType });
+    completeStep("plan-type-selection", { planType: selectedType });
   };
 
   const planOptions = [
