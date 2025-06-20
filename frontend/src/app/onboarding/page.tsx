@@ -19,6 +19,7 @@ import { PartnerTypeSelector } from "./components/steps/PartnerSelector";
 import { NotificationsSelector } from "./components/steps/NotificationsSelector";
 import { HumanPartnerFinder } from "./components/steps/HumanPartnerFinder";
 import { useNotifications } from "@/hooks/useNotifications";
+import { AIPartnerFinder } from "./components/steps/AIPartnerFinder";
 
 // Motion variants for fade in and slide up animation
 const fadeUpVariants = {
@@ -73,6 +74,7 @@ const OnboardingStepRenderer = () => {
     prevStep,
     nextStep,
     isStepCompleted,
+    steps,
   } = useOnboarding();
 
   const isStepCompletedCallback = useMemo(() => {
@@ -81,10 +83,12 @@ const OnboardingStepRenderer = () => {
     return result;
   }, [currentStepData?.id, isStepCompleted]);
 
+  const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+
   return (
     <OnboardingContainer name={currentStepData?.id || "error"}>
       <ProgressBar
-        current={currentStep + 1}
+        current={currentStepIndex + 1}
         max={totalSteps}
         className="fixed top-0 left-0 rounded-none"
       />
@@ -98,7 +102,7 @@ const OnboardingStepRenderer = () => {
           className="absolute top-2 right-2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
         />
       )}
-
+      
       {!currentStepData ? (
         <div className="flex flex-col items-center justify-center h-full">
           <X size={48} className="text-red-500 mb-4" />
@@ -153,6 +157,11 @@ export default function OnboardingPage() {
     {
       id: "human-partner-finder",
       component: withFadeUpAnimation(HumanPartnerFinder),
+      previous: "partner-selection",
+    },
+    {
+      id: "ai-partner-finder",
+      component: withFadeUpAnimation(AIPartnerFinder),
       previous: "partner-selection",
     },
   ];

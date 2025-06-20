@@ -121,3 +121,16 @@ export const usePlanProgress = () => {
   }
   return context;
 };
+
+// Export a function to create plan progress data independently (for demos)
+export const createPlanProgressData = (
+  plan: Plan,
+  activities: Activity[],
+  activityEntries: ActivityEntry[]
+): PlanProgressData => {
+  return {
+    plan,
+    achievement: calculatePlanAchievement(plan, activities, activityEntries),
+    weeks: getPlanWeeks(plan, activities, activityEntries),
+  };
+};

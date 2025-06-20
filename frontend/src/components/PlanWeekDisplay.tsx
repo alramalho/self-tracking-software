@@ -14,7 +14,7 @@ import {
   PlanSession,
   useUserPlan,
 } from "@/contexts/UserPlanContext";
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { usePlanProgress, PlanProgressData } from "@/contexts/PlanProgressContext";
 import {
   isWeekCompleted as checkIsWeekCompleted,
   getCompletedOn,
@@ -31,6 +31,7 @@ interface PlanWeekDisplayProps {
   title?: string | React.ReactNode;
   date: Date;
   className?: string;
+  planProgress?: PlanProgressData; // Optional plan progress data for demo mode
 }
 
 export const MiniActivityCard = ({ activity, className }: { activity: Activity, className?: string }) => {
@@ -47,11 +48,15 @@ export const PlanWeekDisplay = ({
   title,
   date,
   className,
+  planProgress: providedPlanProgress,
 }: PlanWeekDisplayProps) => {
-  const { plansProgress } = usePlanProgress();
+  // Only use hooks if no plan progress is provided
+  const { plansProgress } = providedPlanProgress ? { plansProgress: [] } : usePlanProgress();
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const planProgress = plansProgress.find((p) => p.plan.id === plan.id);
+  
+  // Use provided plan progress if available, otherwise find from hook
+  const planProgress = providedPlanProgress || plansProgress.find((p) => p.plan.id === plan.id);
   const week = planProgress?.weeks.find((w) => isSameWeek(w.startDate, date));
 
   const [animatedCompletedActivities, setAnimatedCompletedActivities] =
@@ -68,7 +73,7 @@ export const PlanWeekDisplay = ({
     plan.outline_type === "times_per_week"
       ? (week?.plannedActivities as number)
       : (week?.plannedActivities as PlanSession[])?.length || 0;
-
+      
   const uniqueDaysWithActivities = new Set(
     week?.completedActivities.map((entry) =>
       format(new Date(entry.date), "yyyy-MM-dd")
@@ -86,22 +91,22 @@ export const PlanWeekDisplay = ({
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
 
-  // Helper function to check if a streak was achieved this week
-  const wasStreakAchievedThisWeek = (planProgressData: any) => {
-    const currentWeek = planProgressData.weeks?.find((week: any) =>
-      isSameWeek(week.startDate, new Date())
-    );
+  // // Helper function to check if a streak was achieved this week
+  // const wasStreakAchievedThisWeek = (planProgressData: any) => {
+  //   const currentWeek = planProgressData.weeks?.find((week: any) =>
+  //     isSameWeek(week.startDate, new Date())
+  //   );
 
-    if (!currentWeek || !currentWeek.completedActivities?.length) {
-      return false;
-    }
+  //   if (!currentWeek || !currentWeek.completedActivities?.length) {
+  //     return false;
+  //   }
 
-    // Check if this week has completed activities and the streak is > 0
-    return (
-      planProgressData.achievement.streak > 0 &&
-      currentWeek.completedActivities.length > 0
-    );
-  };
+  //   // Check if this week has completed activities and the streak is > 0
+  //   return (
+  //     planProgressData.achievement.streak > 0 &&
+  //     currentWeek.completedActivities.length > 0
+  //   );
+  // };
   
   useEffect(() => {
     if (inView) {

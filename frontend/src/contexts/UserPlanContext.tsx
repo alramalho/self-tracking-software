@@ -364,13 +364,13 @@ export function convertApiPlanToPlan(
     finishing_date: plan.finishing_date
       ? parseISO(plan.finishing_date)
       : undefined,
-    sessions: plan.sessions.map((session) => ({
+    sessions: plan?.sessions?.map((session) => ({
       ...session,
       date: parseISO(session.date),
       activity_name: planActivities.find((a) => a.id === session.activity_id)
         ?.title,
     })),
-    coach_suggested_sessions: plan.coach_suggested_sessions.map((session) => ({
+    coach_suggested_sessions: plan?.coach_suggested_sessions?.map((session) => ({
       ...session,
       date: parseISO(session.date),
       activity_name: planActivities.find((a) => a.id === session.activity_id)
@@ -389,7 +389,7 @@ export function convertPlanToApiPlan(plan: Plan): ApiPlan {
       ...session,
       date: format(session.date, "yyyy-MM-dd"),
     })),
-    coach_suggested_sessions: plan.coach_suggested_sessions.map((session) => ({
+    coach_suggested_sessions: plan.coach_suggested_sessions?.map((session) => ({
       ...session,
       date: format(session.date, "yyyy-MM-dd"),
     })),

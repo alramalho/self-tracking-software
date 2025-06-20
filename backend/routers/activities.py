@@ -141,7 +141,7 @@ async def log_activity(
         if user.plan_type != "free" and len(user.plan_ids) > 0:
             plan = plan_controller.get_plan(user.plan_ids[0])
             if activity_id in plan.activity_ids:
-                # Run state transition processing in a separate thread to avoid blocking
+                # Run state transition processing in a sePparate thread to avoid blocking
                 logger.info(f"Processing plan state transition for plan {plan.id}")
                 thread = threading.Thread(
                     target=plan_controller.process_plan_state_recalculation,
