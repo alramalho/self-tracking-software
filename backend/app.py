@@ -161,6 +161,7 @@ app.include_router(stripe_router)
 origins = [
     "https://tracking.so",
     "https://app.tracking.so",
+    "https://app.tracking.so/",
 ]
 
 if ENVIRONMENT == "dev":
