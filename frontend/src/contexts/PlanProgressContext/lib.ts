@@ -321,6 +321,7 @@ export function getPlanWeeks(
   userActivityEntries: ActivityEntry[],
   startDate?: Date
 ): PlanWeek[] {
+  console.log({ plan, userActivities, userActivityEntries, startDate });
   const weeks: PlanWeek[] = [];
   let weekStart = startOfWeek(startDate ?? new Date(), { weekStartsOn: 0 });
   const planEndDate = new Date(

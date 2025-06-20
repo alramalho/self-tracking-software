@@ -20,14 +20,14 @@ export interface OnboardingStep {
 }
 
 interface OnboardingContextValue {
-  currentStep: number;
+  currentStep: string;
   totalSteps: number;
   steps: OnboardingStep[];
   currentStepData: OnboardingStep | null;
   nextStep: () => void;
   prevStep: () => void;
-  goToStep: (step: number) => void;
-  completeStep: (stepId: string, updates?: object) => void;
+  goToStep: (stepId: string) => void;
+  completeStep: (stepId: string, updates?: object, options?: { nextStep?: string }) => void;
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
@@ -60,18 +60,18 @@ export const useOnboarding = () => {
 interface OnboardingProviderProps {
   children: React.ReactNode;
   steps: OnboardingStep[];  
-  initialStep?: number;
+  initialStepId?: string;
 }
 
 export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   children,
   steps,
-  initialStep = 0,
+  initialStepId,
 }) => {
   const [onboardingState, setOnboardingState] = useLocalStorage(
     "onboarding-state",
     {
-      currentStep: initialStep,
+      currentStep: initialStepId || steps[0]?.id || "",
       completedSteps: [] as string[],
       plans: null as ApiPlan[] | null,
       selectedPlan: null as ApiPlan | null,
@@ -94,8 +94,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     selectedPlan,
   } = onboardingState;
 
-  const setCurrentStep = (step: number) => {
-    setOnboardingState({ ...onboardingState, currentStep: step });
+  const setCurrentStep = (stepId: string) => {
+    setOnboardingState({ ...onboardingState, currentStep: stepId });
   };
 
   const setCompletedSteps = (steps: string[]) => {
@@ -127,59 +127,74 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   const posthog = usePostHog();
   const totalSteps = steps.length;
-
-  const currentStepData = steps[currentStep] || null;
-  const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === totalSteps - 1;
-  const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0;
+  
+  const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+  const currentStepData = steps.find(step => step.id === currentStep) || null;
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === totalSteps - 1;
+  const progress = totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0;
 
   const nextStep = useCallback(() => {
-    const currentStepData = steps[currentStep];
+    const currentStepData = steps.find(step => step.id === currentStep);
     
     // Check if current step has a custom next step defined
     if (currentStepData?.next) {
-      const nextStepIndex = steps.findIndex(step => step.id === currentStepData.next);
-      if (nextStepIndex !== -1) {
-        setCurrentStep(nextStepIndex);
-        return;
-      }
+      setCurrentStep(currentStepData.next);
+      return;
     }
     
     // Default behavior: go to next sequential step
-    if (currentStep < totalSteps - 1) {
-      setCurrentStep(currentStep + 1);
+    const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+    if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
+      const nextStepId = steps[currentStepIndex + 1]?.id;
+      if (nextStepId) {
+        setCurrentStep(nextStepId);
+      }
     }
   }, [currentStep, totalSteps, steps]);
 
   const prevStep = useCallback(() => {
-    const currentStepData = steps[currentStep];
+    const currentStepData = steps.find(step => step.id === currentStep);
+
+    console.log({
+      currentStep,
+      currentStepData,
+    });
     
     // Check if current step has a custom previous step defined
     if (currentStepData?.previous) {
-      const prevStepIndex = steps.findIndex(step => step.id === currentStepData.previous);
-      if (prevStepIndex !== -1) {
-        setCurrentStep(prevStepIndex);
-        return;
-      }
+      setCurrentStep(currentStepData.previous);
+      return;
     }
     
     // Default behavior: go to previous sequential step
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+    console.log({
+      currentStepIndex,
+    });
+    if (currentStepIndex > 0 && currentStepIndex !== -1) {
+      const prevStepId = steps[currentStepIndex - 1]?.id;
+      console.log({
+        prevStepId,
+      });
+      if (prevStepId) {
+        setCurrentStep(prevStepId);
+      }
     }
   }, [currentStep, steps]);
 
   const goToStep = useCallback(
-    (step: number) => {
-      if (step >= 0 && step < totalSteps) {
-        setCurrentStep(step);
+    (stepId: string) => {
+      const stepExists = steps.some(step => step.id === stepId);
+      if (stepExists) {
+        setCurrentStep(stepId);
       }
     },
-    [totalSteps]
+    [steps]
   );
 
   const completeStep = useCallback(
-    (stepId: string, updates?: object) => {
+    (stepId: string, updates?: object, options?: { nextStep?: string }) => {
       let newState = onboardingState;
       if (!completedSteps.includes(stepId)) {
         newState = {
@@ -192,13 +207,30 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         ...(updates || {}),
       };
 
-      if (newState.currentStep < totalSteps) {
-        newState.currentStep = newState.currentStep + 1;
+      // Priority 1: If options.nextStep is provided, go to that specific step
+      if (options?.nextStep) {
+        newState.currentStep = options.nextStep;
+      } else {
+        // Priority 2: Check if the completed step has a custom next step defined
+        const completedStepData = steps.find(step => step.id === stepId);
+        if (completedStepData?.next) {
+          newState.currentStep = completedStepData.next;
+        } else {
+          // Priority 3: Default behavior - go to next sequential step
+          const currentStepIndex = steps.findIndex(step => step.id === stepId);
+          if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
+            const nextStepId = steps[currentStepIndex + 1]?.id;
+            if (nextStepId) {
+              newState.currentStep = nextStepId;
+            }
+          }
+        }
       }
+      
       setOnboardingState(newState);
       posthog?.capture(`onboarding-${stepId}-completed`);
     },
-    [completedSteps, nextStep, posthog]
+    [completedSteps, steps, totalSteps, posthog]
   );
   const contextValue: OnboardingContextValue = {
     currentStep,

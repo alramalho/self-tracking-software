@@ -59,7 +59,7 @@ export const PartnerTypeSelector = () => {
   const { completeStep, partnerType, setPartnerType } = useOnboarding();
 
   const handlePlanSelect = (selectedType: "human" | "ai") => {
-    completeStep("partner-selection", { partnerType: selectedType });
+    completeStep("partner-selection", { partnerType: selectedType }, { nextStep: `${selectedType}-partner-finder` });
   };
 
   return (
