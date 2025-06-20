@@ -247,11 +247,28 @@ from datetime import datetime, timedelta, UTC
 from entities.plan import Plan
 
 
-async def extract_guidelines_and_emoji(plan_goal: str) -> Tuple[str, str]:
+class GuidelineTimeframeSchema(BaseModel):
+    number_of_weeks: int = Field(
+        ...,
+        description="The number of weeks of the plan.",
+    )
+    sessions_per_week: str = Field(
+        ...,
+        description="The number (or range of numbers) of sessions per week of the plan. (e.g 3, or 4-5)",
+    )
+
+async def extract_guidelines_and_emoji(plan_goal: str, plan_progress: str) -> Tuple[str, GuidelineTimeframeSchema, str]:
+
     class GuidelinesSchema(BaseModel):
         guidelines: str = Field(
             ...,
             description=("The listified guidelines"),
+        )
+        timeframe_guidelines: List[GuidelineTimeframeSchema] = Field(
+            ...,
+            description=(
+                "The timeframe guidelines as explained above. Must be a list of two elements."
+            ),
         )
         emoji: str = Field(
             ...,
@@ -259,7 +276,7 @@ async def extract_guidelines_and_emoji(plan_goal: str) -> Tuple[str, str]:
         )
 
     guidelines_response = await ask_schema_async(
-        text=f"Extract guidelines for the plan '{plan_goal}'",
+        text=f"Extract guidelines for creating a plan with the goal of '{plan_goal}' for someone who reported the progress of '{plan_progress}'",
         system=(
             "You are an AI that is helping the user create a plan for the tracking.so app."
             "You must act as a professional plan creator. You specialize in the area of the given plan, and you must create"
@@ -268,11 +285,12 @@ async def extract_guidelines_and_emoji(plan_goal: str) -> Tuple[str, str]:
             "The guidelines should also include an instruction set on how to propely the duration of the plan."
             "The guidelines should not be generic, but specifically adapted to the nature of the plan provided"
             "The guidelines should be created in a listified format."
-            "The guidelines should not include timeframes (total weeks or sessions per week), as that will be provided by the user."
+            "The guidelines should present a timeframe range with total weeks AND sessions per week, for two ends of a plan intensity spectrum"
+            "(Example 12 weeks, 3 sessions per week and 8 weeks, 4 to 5 sessions per week. Always two options, one more relaxed, followed by one more intense)"
         ),
         pymodel=GuidelinesSchema,
     )
-    return guidelines_response.guidelines, guidelines_response.emoji
+    return guidelines_response.guidelines, guidelines_response.timeframe_guidelines, guidelines_response.emoji
 
 
 async def generate_plan(
@@ -313,7 +331,6 @@ async def generate_plan(
 
 import asyncio
 
-
 @router.post("/generate-plans")
 async def generate_plan_route(request: Request, user: User = Depends(is_clerk_user)):
     try:
@@ -324,16 +341,16 @@ async def generate_plan_route(request: Request, user: User = Depends(is_clerk_us
         ]
         plan_progress = body["plan_progress"]
 
-        guidelines, emoji = await extract_guidelines_and_emoji(plan_goal)
+        guidelines, timeframe_guidelines, emoji = await extract_guidelines_and_emoji(plan_goal, plan_progress)
 
-        intermediary_plan, intense_plan = await asyncio.gather(
+        plan_1, plan_2 = await asyncio.gather(
             generate_plan(
                 user=user,
                 plan_goal=plan_goal,
                 plan_activities=plan_activities,
                 plan_progress=plan_progress,
-                weeks=12,
-                sessions_per_week="3",
+                weeks=timeframe_guidelines[0].number_of_weeks,
+                sessions_per_week=timeframe_guidelines[0].sessions_per_week,
                 guidelines=guidelines,
                 emoji=emoji,
             ),
@@ -342,8 +359,8 @@ async def generate_plan_route(request: Request, user: User = Depends(is_clerk_us
                 plan_goal=plan_goal,
                 plan_activities=plan_activities,
                 plan_progress=plan_progress,
-                weeks=8,
-                sessions_per_week="4 - 5",
+                weeks=timeframe_guidelines[1].number_of_weeks,
+                sessions_per_week=timeframe_guidelines[1].sessions_per_week,
                 guidelines=guidelines,
                 emoji=emoji,
             ),
@@ -351,7 +368,11 @@ async def generate_plan_route(request: Request, user: User = Depends(is_clerk_us
 
         result = {}
         result["message"] = "Here are two plans for you to choose from"
-        result["plans"] = [intermediary_plan, intense_plan]
+        result["plans"] = sorted(
+            [plan_1, plan_2], 
+            key=lambda x: (datetime.fromisoformat(x.finishing_date) - datetime.fromisoformat(x.created_at)).total_seconds() / len(x.sessions),
+            reverse=True
+        )
         result["activities"] = plan_activities
 
         return result

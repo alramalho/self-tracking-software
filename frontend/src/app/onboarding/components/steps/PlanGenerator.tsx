@@ -315,7 +315,7 @@ export const PlanGenerator = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
-                  This may take up to 1 minute.
+                  This may take up to a few minutes.
                 </motion.p>
                 
                 <motion.div 
