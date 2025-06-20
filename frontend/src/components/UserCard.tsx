@@ -58,16 +58,7 @@ const UserCard: React.FC<UserCardProps> = ({
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
-  const lastActivity: Activity | undefined =
-    activityEntries.length > 0
-      ? activities.find(
-          (a) =>
-            a.id ===
-            activityEntries.sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-            )[0]?.activity_id
-        )
-      : undefined;
+
   const handleSendFriendRequest = async () => {
     try {
       setIsSendingRequest(true);
@@ -186,7 +177,7 @@ const UserCard: React.FC<UserCardProps> = ({
           )}
 
           <div className="flex items-center text-sm text-gray-600">
-            {!lastActivity ? (
+            {!user.last_active_at ? (
               <>
                 <div
                   className="flex items-center gap-1 relative"
@@ -228,8 +219,6 @@ const UserCard: React.FC<UserCardProps> = ({
                     new Date(user.last_active_at || user.created_at!),
                     { addSuffix: true }
                   )}{" "}
-                  {lastActivity &&
-                    `(${lastActivity.emoji} ${lastActivity.title})`}
                 </span>
               </>
             )}
