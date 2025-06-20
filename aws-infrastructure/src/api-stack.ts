@@ -255,6 +255,17 @@ export class ApiStack extends cdk.Stack {
       path: "/health",
     });
 
+    // Increase target group timeout for long-running requests like plan generation
+    this.fargateService.targetGroup.setAttribute(
+      "deregistration_delay.timeout_seconds",
+      "300"
+    );
+    // Set the target group timeout to 5 minutes (300 seconds) for long AI operations
+    this.fargateService.loadBalancer.setAttribute(
+      "idle_timeout.timeout_seconds",
+      "300"
+    );
+
     // Set up autoscaling
     const scaling = this.fargateService.service.autoScaleTaskCount({
       minCapacity: 1,
