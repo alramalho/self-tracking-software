@@ -248,23 +248,13 @@ export class ApiStack extends cdk.Stack {
           publicLoadBalancer: true, // Expose the service to the internet
           certificate: certificate, // Use the imported certificate if available
           redirectHTTP: true, // Redirect HTTP to HTTPS if we have a certificate
+          idleTimeout: cdk.Duration.seconds(180),
         }
       );
 
     this.fargateService.targetGroup.configureHealthCheck({
       path: "/health",
     });
-
-    // Increase target group timeout for long-running requests like plan generation
-    this.fargateService.targetGroup.setAttribute(
-      "deregistration_delay.timeout_seconds",
-      "300"
-    );
-    // Set the target group timeout to 5 minutes (300 seconds) for long AI operations
-    this.fargateService.loadBalancer.setAttribute(
-      "idle_timeout.timeout_seconds",
-      "300"
-    );
 
     // Set up autoscaling
     const scaling = this.fargateService.service.autoScaleTaskCount({
