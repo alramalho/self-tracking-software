@@ -1,167 +1,99 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Ban, CalendarDays, Sparkles, Check } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import { CalendarDays, PersonStanding, UserRoundPlus } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
-import { PlanType } from "@/contexts/UserPlanContext";
-import { useNotifications } from "@/hooks/useNotifications";
-import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast";
 
-export const NotificationsSelector = () => {
-  const { completeStep } = useOnboarding();
-  const { requestPermission, isPushGranted } = useNotifications();
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+const OptionCard = ({
+  isSelected,
+  onClick,
+  icon,
+  title,
+  description,
+}: {
+  isSelected: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full p-6 rounded-xl border-2 transition-all duration-200 text-left ${
+        isSelected
+          ? "border-blue-500 bg-blue-50 shadow-md"
+          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+      }`}
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+            isSelected ? "bg-blue-100" : "bg-gray-100"
+          }`}
+        >
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h3
+            className={`text-lg font-semibold ${
+              isSelected ? "text-blue-900" : "text-gray-900"
+            }`}
+          >
+            {title}
+          </h3>
+          <p
+            className={`text-sm mt-1 ${
+              isSelected ? "text-blue-700" : "text-gray-600"
+            }`}
+          >
+            {description}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+};
 
-  const handleSuccessTransition = () => {
-    setIsTransitioning(true);
-    
-    // Start the success animation
-    setTimeout(() => {
-      setIsSuccess(true);
-    }, 100);
+export const PartnerTypeSelector = () => {
+  const { completeStep, partnerType, setPartnerType } = useOnboarding();
 
-    // Complete the step after 2 seconds
-    setTimeout(() => {
-      completeStep("notifications-selection", {});
-    }, 2000);
+  const handlePlanSelect = (selectedType: "human" | "ai") => {
+    completeStep("partner-selection", { partnerType: selectedType });
   };
-
-  async function handleRequestPermission() {
-    console.log("requesting permission");
-    const result = await requestPermission();
-    console.log("result", result);
-    if (result) {
-      handleSuccessTransition();
-    } else {
-      toast.error("Failed to set notifications permission");
-    }
-  }
-
-  useEffect(() => {
-    if (isPushGranted) {
-      handleSuccessTransition();
-    } else {
-      requestPermission();
-    }
-  }, []);
 
   return (
     <div className="w-full max-w-lg space-y-8">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-2">
-          <motion.div
-            animate={isTransitioning ? { scale: 1.1 } : { scale: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <AnimatePresence mode="wait">
-              {isSuccess ? (
-                <motion.div
-                  key="success"
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 300, 
-                    damping: 20,
-                    delay: 0.1 
-                  }}
-                >
-                  <Check className="w-20 h-20 text-green-500" />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="blocked"
-                  initial={{ scale: 1 }}
-                  exit={{ scale: 0, rotate: 180 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Ban className="w-20 h-20 text-red-500" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-          
-          <motion.h2 
-            className="text-2xl mt-2 font-bold tracking-tight"
-            animate={{ 
-              color: isSuccess ? '#16a34a' : '#111827'
-            }}
-            transition={{ duration: 0.5 }}
-          >
-            <AnimatePresence mode="wait">
-              {isSuccess ? (
-                <motion.span
-                  key="success-text"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  Thank you!
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="blocked-text"
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  Notifications are required
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.h2>
+          <PersonStanding className="w-20 h-20 text-blue-600" />
+          <h2 className="text-2xl mt-2 font-bold tracking-tight text-gray-900">
+            Let&apos;s get you a partner.
+          </h2>
         </div>
-        
-        <AnimatePresence>
-          {!isSuccess && (
-            <motion.div
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <p className="text-md text-gray-600">
-                Notifications allow us to provide out-of-app outreach.
-                As our app relies on accountability and coaching, this is a necessity
-                for the efficacy of the journey.
-              </p>
-              <p className="text-md text-gray-400 mt-2">
-                (You will be able to disable them after a while)
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <p className="text-md text-gray-600">
+          Research shows having a partner significantly improves success rates, which is why this is an important step in your journey.
+        </p>
+        <p className="text-lg font-semibold text-gray-600">
+          You have two options:
+        </p>
+      </div>
 
-        <AnimatePresence>
-          {isSuccess && (
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              className="text-md text-green-600"
-            >
-              Notifications have been enabled successfully!
-            </motion.p>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {!isSuccess && (
-            <motion.div
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Button 
-                size="lg" 
-                className="rounded-2xl" 
-                onClick={handleRequestPermission}
-                disabled={isTransitioning}
-              >
-                Try Again
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className="space-y-4">
+        <OptionCard
+          isSelected={partnerType === "human"}
+          onClick={() => handlePlanSelect("human")}
+          icon={<UserRoundPlus className="w-6 h-6" />}
+          title="Person"
+          description="Find me a human partner"
+        />
+        <OptionCard
+          isSelected={partnerType === "ai"}
+          onClick={() => handlePlanSelect("ai")}
+          icon={<img src="/images/jarvis_logo_transparent.png" className="w-9 h-9" />}
+          title="AI"
+          description="I want personalized AI coaching"
+        />
       </div>
     </div>
   );
