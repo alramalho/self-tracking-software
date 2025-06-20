@@ -69,7 +69,6 @@
 /ai/log-dynamic-ui-skip
 /onboarding/check-plan-goal
 /onboarding/generate-plan-activities
-/onboarding/generate-plans-stream
 /onboarding/generate-plans
 /send-notification
 /regenerate-image-url
