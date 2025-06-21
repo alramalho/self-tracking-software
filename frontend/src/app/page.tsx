@@ -8,6 +8,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import { MetricIsland } from "@/components/MetricIsland";
 import { TodaysNoteSection } from "@/components/TodaysNoteSection";
+import { MetricWeeklyView } from "@/components/MetricWeeklyView";
 
 import {
   Search,
@@ -307,54 +308,14 @@ const HomePage: React.FC = () => {
                           isSkippedToday={isSkippedToday}
                         />
                         <CollapsibleContent>
-                          <div
-                            key={metric.id}
-                            className="my-2 bg-white/60 ring-1 ring-gray-200 rounded-3xl p-4 border border-white/50"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-normal">
-                                {metric.emoji} {metric.title}{" "}
-                                <span className="font-semibold italic">
-                                  Week Overview
-                                </span>
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                Last 7 days
-                              </span>
-                            </div>
-                            {hasAnyData ? (
-                              <WeekMetricBarChart
-                                data={weekData}
-                                color={getMetricColor(index)}
-                              />
-                            ) : (
-                              <div className="py-2 text-center">
-                                <p className="text-sm text-gray-500">
-                                  No data this week. Start logging above!
-                                </p>
-                              </div>
-                            )}
-                            {positiveCorrelations.length > 0 && (
-                              <div className="text-xs text-gray-600 mt-3">
-                                {positiveCorrelations
-                                  .slice(0, 2)
-                                  .map((correlation, i) => (
-                                    <span key={correlation.activity.id}>
-                                      <span className="text-green-600">
-                                        {formatCorrelationString(correlation)}
-                                      </span>
-                                      {i <
-                                      Math.min(
-                                        positiveCorrelations.length - 1,
-                                        1
-                                      )
-                                        ? " and "
-                                        : ` boost your ${metric.title.toLowerCase()}`}
-                                    </span>
-                                  ))}
-                              </div>
-                            )}
-                          </div>
+                          <MetricWeeklyView
+                            metric={metric}
+                            weekData={weekData}
+                            color={getMetricColor(index)}
+                            hasAnyData={hasAnyData}
+                            positiveCorrelations={positiveCorrelations}
+                            formatCorrelationString={formatCorrelationString}
+                          />
                         </CollapsibleContent>
                       </div>
                     );
