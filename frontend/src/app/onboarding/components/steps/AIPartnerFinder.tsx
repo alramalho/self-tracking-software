@@ -20,6 +20,7 @@ import { PlanProgressCard } from "@/components/PlanProgressCard";
 import { CoachOverviewCard } from "@/components/CoachOverviewCard";
 import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
 import { createPlanProgressData } from "@/contexts/PlanProgressContext";
+import { useUpgrade } from "@/contexts/UpgradeContext";
 
 const CardItem = ({
   icon,
@@ -68,6 +69,8 @@ export const AIPartnerFinder = () => {
   const [metricAnalysisPopoverDemoOpen, setMetricAnalysisPopoverDemoOpen] =
     useState(false);
 
+  const { setShowUpgradePopover } = useUpgrade();
+
   const dummyWeeks = [
     {
       startDate: new Date(),
@@ -101,7 +104,7 @@ export const AIPartnerFinder = () => {
   };
   const dummyCoachPlanWithSuggestions = {
     ...dummyCoachPlan,
-    coach_notes: 
+    coach_notes:
       "Great progress reading 5 days last week! Let's adjust to 5 days per week for now - " +
       "this feels more achievable while we work towards daily reading. What do you think?",
     coach_suggested_times_per_week: 5,
@@ -155,7 +158,7 @@ export const AIPartnerFinder = () => {
 
   return (
     <div className="w-full max-w-lg space-y-2">
-      <div className="flex flex-col items-center gap-4 text-center">
+      <div className="flex flex-col items-center gap-4 text-center pt-16">
         <div className="flex flex-col items-center gap-2">
           <img
             src="/images/jarvis_logo_blue_transparent.png"
@@ -167,7 +170,9 @@ export const AIPartnerFinder = () => {
           </h2>
         </div>
         <p className="text-md text-gray-600">
-          Throught the app, Oli will help you achieve your goals by:
+          Oli is designed to help you stay on track and motivated.
+          <br />
+          Here&apos;s some things he can do:
         </p>
       </div>
       <div className="space-y-0">
@@ -191,6 +196,13 @@ export const AIPartnerFinder = () => {
           onClick={() => setMetricAnalysisPopoverDemoOpen(true)}
         />
       </div>
+      <p className="text-md text-gray-600 w-full text-center">
+        And many more features to come!
+      </p>
+
+      <Button size="lg"className="w-full mt-8 rounded-xl" onClick={() => setShowUpgradePopover(true)}>
+        Start trial <MoveRight className="ml-3 w-4 h-4" />
+      </Button>
 
       <AppleLikePopover
         onClose={() => setPlanStatePopoverDemoOpen(false)}
@@ -247,7 +259,8 @@ export const AIPartnerFinder = () => {
       >
         <div className="flex flex-col gap-4 pt-3 ">
           <p className="text-md text-gray-600 font-semibold text-center">
-            And if you're falling short, Oli can suggest adjustments to your plan.
+            And if you're falling short, Oli can suggest adjustments to your
+            plan.
           </p>
           <div className="text-left">
             <CoachOverviewCard

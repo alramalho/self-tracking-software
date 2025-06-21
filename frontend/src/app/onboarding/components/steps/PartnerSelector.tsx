@@ -15,12 +15,12 @@ const OptionCard = ({
   onClick: () => void;
   icon: React.ReactNode;
   title: string;
-  description: string;
+  description: string | React.ReactNode;
 }) => {
   return (
     <button
       onClick={onClick}
-      className={`w-full p-6 rounded-xl border-2 transition-all duration-200 text-left ${
+      className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
         isSelected
           ? "border-blue-500 bg-blue-50 shadow-md"
           : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
@@ -59,7 +59,11 @@ export const PartnerTypeSelector = () => {
   const { completeStep, partnerType, setPartnerType } = useOnboarding();
 
   const handlePlanSelect = (selectedType: "human" | "ai") => {
-    completeStep("partner-selection", { partnerType: selectedType }, { nextStep: `${selectedType}-partner-finder` });
+    completeStep(
+      "partner-selection",
+      { partnerType: selectedType },
+      { nextStep: `${selectedType}-partner-finder` }
+    );
   };
 
   return (
@@ -72,7 +76,8 @@ export const PartnerTypeSelector = () => {
           </h2>
         </div>
         <p className="text-md text-gray-600">
-          Research shows having a partner significantly improves success rates, which is why this is an important step in your journey.
+          Research shows having a partner significantly improves success rates,
+          which is why this is an important step in your journey.
         </p>
         <p className="text-lg font-semibold text-gray-600">
           You have two options:
@@ -85,14 +90,29 @@ export const PartnerTypeSelector = () => {
           onClick={() => handlePlanSelect("human")}
           icon={<UserRoundPlus className="w-6 h-6" />}
           title="Person"
-          description="Find me a human partner"
+          description={
+            <>
+              <p>Find me a human partner</p>
+              <p className="opacity-70 mt-2">Free Forever</p>
+            </>
+          }
         />
         <OptionCard
           isSelected={partnerType === "ai"}
           onClick={() => handlePlanSelect("ai")}
-          icon={<img src="/images/jarvis_logo_transparent.png" className="w-9 h-9" />}
+          icon={
+            <img
+              src="/images/jarvis_logo_transparent.png"
+              className="w-9 h-9"
+            />
+          }
           title="AI"
-          description="I want personalized AI coaching"
+          description={
+            <>
+              <p>I want personalized AI coaching</p>
+              <p className="opacity-70 mt-2">Free Trial</p>
+            </>
+          }
         />
       </div>
     </div>
