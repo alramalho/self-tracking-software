@@ -14,6 +14,7 @@ interface MetricIslandProps {
   isLoggedToday: boolean;
   todaysRating?: number;
   isSkippedToday?: boolean;
+  className?: string;
 }
 
 export const MetricIsland: React.FC<MetricIslandProps> = ({
@@ -21,6 +22,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
   isLoggedToday,
   todaysRating,
   isSkippedToday = false,
+  className,
 }) => {
   const { logIndividualMetric, skipMetric } = useDailyCheckin();
   const [isLogging, setIsLogging] = useState(false);
@@ -68,7 +70,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
 
   return (
     <div
-      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-gray-50 backdrop-blur-sm ring-gray-200 ${isLoggedToday && "opacity-70"}`}
+      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-gray-50 backdrop-blur-sm ring-gray-200 ${isLoggedToday && "opacity-70"} ${className}`}
     >
       <div>
         <div className="flex items-center justify-between">
