@@ -18,10 +18,10 @@ interface UpgradePopoverProps {
   onClose: () => void;
 }
 
-const PLUS_MONTHLY = 7.99;
-const PLUS_YEARLY = 71.99;
-const PLUS_DISCOUNTED_MONTHLY = 4.99;
-const PLUS_DISCOUNTED_YEARLY = 44.99;
+const PLUS_MONTHLY = 13.99;
+const PLUS_DISCOUNTED_MONTHLY = 9.89;
+const PLUS_YEARLY = 83.99;
+const PLUS_DISCOUNTED_YEARLY = 59.88;
 
 const YEARLY_DISCOUNT_PERCENT = Math.round(
   (Math.abs(PLUS_DISCOUNTED_YEARLY - 12 * PLUS_DISCOUNTED_MONTHLY) /
@@ -144,7 +144,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
 };
 
 const Rocket = () => {
-  const launchDate = "2025-04-11T00:00:00";
+  const launchDate = "2025-06-30T00:00:00";
 
   if (launchDate < new Date().toISOString()) {
     return null;
@@ -167,13 +167,16 @@ const Rocket = () => {
         </picture>
       </div>
       <h2 className="text-xl font-bold">
-        we&apos;re just launching... <br /> so here&apos;s a{" "}
+        We&apos;re running a launch campaign until
+      </h2>
+      <CountdownTimer targetDate={launchDate} />
+      <h2 className="text-xl font-bold text-gray-700 pt-5">
+        Here&apos;s a <br />
         <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
           {FIXED_DISCOUNT_PERCENT}%
         </span>{" "}
-        discount for your early support
+        discount for early supporters
       </h2>
-      <CountdownTimer targetDate={launchDate} />
       <span className="text-sm text-gray-500 mt-1">
         and maybe some day we can go full time :)
       </span>
@@ -220,41 +223,24 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   const getPeriod = () => (isYearly ? "yearly" : "monthly");
 
   const paymentLink = isYearly
-    ? "https://buy.stripe.com/00g1722gZ8IV5Ta7sA"
-    : "https://buy.stripe.com/cN24jef3LgbnchyaEK";
+    ? "https://buy.stripe.com/eVq14n82ng7ReYmbcfcfK0a"
+    : "https://buy.stripe.com/bJe28rbez4p9dUi0xBcfK09";
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       <div className="space-y-8 pt-6 pb-12">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">
-            support the <span className="italic">open source</span> community of
-            <div >
-              <div className="inline-block mx-2 translate-y-1">
-                <picture>
-                  <source
-                    srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
-                    type="image/webp"
-                  />
-                  <img
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
-                    alt="🔥"
-                    width="32"
-                    height="32"
-                  />
-                </picture>
-              </div>
-              <span className="text-2xl font-bold text-gray-500">
-                tracking.so
-              </span>
-            </div>
-          </h1>
-          {/* <p className="text-gray-500 font-cursive text-2xl font-extralight">Become an open source supporter 🔥</p> */}
-        </div>
-
         <div className="grid gap-4">
           <Rocket />
 
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <span className="text-md text-gray-500">Monthly</span>
+            <Switch checked={isYearly} onCheckedChange={setIsYearly} />
+            <span className="text-md text-gray-500">Yearly</span>
+            <span className="text-sm text-green-500 ml-1">
+              get {Math.round(12 * (1 - PLUS_YEARLY / (12 * PLUS_MONTHLY)))}{" "}
+              months free
+            </span>
+          </div>
           <Card className="p-6 relative overflow-hidden ring-2 ring-blue-500/50 rounded-2xl bg-gradient-to-br from-white to-blue-100">
             <div className="space-y-2">
               <div className="flex flex-row items-center justify-between gap-2">
@@ -262,7 +248,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                   <span className="text-blue-500 text-3xl font-cursive mr-1">
                     Plus
                   </span>{" "}
-                  Plan
+                  {isYearly ? "Annual" : "Monthly"} Plan
                 </h3>
                 <div>
                   {/* {isYearly && (
@@ -287,12 +273,16 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 <span className="text-gray-500">/ {getPeriod()}</span>
               </div>
               {isYearly && (
-                <p className="text-sm text-gray-500">
+                <p className="text-md text-gray-500">
                   {isYearly ? (
                     <span>
-                      €{(PLUS_DISCOUNTED_YEARLY / 12).toFixed(2)} a month{" "}
+                      That&apos;s{" "}
+                      <span className="font-bold">
+                        €{(PLUS_DISCOUNTED_YEARLY / 12).toFixed(2)}
+                      </span>{" "}
+                      a month{" "}
                       <span className="text-green-500">
-                        {YEARLY_DISCOUNT_PERCENT}% off!
+                        – {YEARLY_DISCOUNT_PERCENT}% off!
                       </span>
                     </span>
                   ) : (
@@ -325,20 +315,10 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               </p>
             </div>
           </Card>
-
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-md text-gray-500">Monthly</span>
-            <Switch checked={isYearly} onCheckedChange={setIsYearly} />
-            <span className="text-md text-gray-500">Yearly</span>
-            <span className="text-sm text-green-500 ml-1">
-              get {Math.round(12 * (1 - PLUS_YEARLY / (12 * PLUS_MONTHLY)))}{" "}
-              months free
-            </span>
-          </div>
         </div>
 
         <Divider className="my-6 mt-24" />
-        <FAQ />
+        {/* <FAQ /> */}
       </div>
     </AppleLikePopover>
   );
