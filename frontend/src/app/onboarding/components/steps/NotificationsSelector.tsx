@@ -27,7 +27,7 @@ const NotificationsSelector = () => {
 
     // Complete the step after 2 seconds
     setTimeout(() => {
-      completeStep("notifications-selection", {});
+      completeStep("notifications-selection", {next: "partner-selection"});
     }, 2000);
   };
 
