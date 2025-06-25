@@ -776,7 +776,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refetchUserData = async (notify = true) => {
     // Invalidate all user data queries to ensure all components re-render
-    await queryClient.invalidateQueries({ queryKey: ["userData"] });
+    await queryClient.refetchQueries({ queryKey: ["userData"] });
     
     const refetchPromise = currentUserDataQuery.refetch().then((result) => {
       if (result.error) throw result.error;
@@ -799,13 +799,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       // Invalidate all relevant queries to ensure all components re-render with fresh data
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["userData"] }),
-        queryClient.invalidateQueries({ queryKey: ["timelineData"] }),
-        queryClient.invalidateQueries({ queryKey: ["notificationsData"] }),
-        queryClient.invalidateQueries({ queryKey: ["messagesData"] }),
-        queryClient.invalidateQueries({ queryKey: ["recommendedUsers"] }),
-        queryClient.invalidateQueries({ queryKey: ["multipleUsersData"] }),
-        queryClient.invalidateQueries({ queryKey: ["metricsAndEntries"] }),
+        queryClient.refetchQueries({ queryKey: ["userData"] }),
+        queryClient.refetchQueries({ queryKey: ["timelineData"] }),
+        queryClient.refetchQueries({ queryKey: ["notificationsData"] }),
+        queryClient.refetchQueries({ queryKey: ["messagesData"] }),
+        queryClient.refetchQueries({ queryKey: ["recommendedUsers"] }),
+        queryClient.refetchQueries({ queryKey: ["multipleUsersData"] }),
+        queryClient.refetchQueries({ queryKey: ["metricsAndEntries"] }),
       ]);
 
       // Wait for the current user data to be refetched and return it
