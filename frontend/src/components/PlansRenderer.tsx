@@ -220,7 +220,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
     );
   }
 
-  const { planGroups = [] } = userData;
+  const { planGroups = [] } = userData || {};
 
   const getPlanGroup = (planId: string): PlanGroup | undefined => {
     return planGroups.find((group) => group.plan_ids.includes(planId));

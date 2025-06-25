@@ -35,7 +35,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const api = isDemo ? null : useApiWithAuth();
+  const api = useApiWithAuth();
   const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<string | null>(null);
   const [loadingStates, setLoadingStates] = useState({
     acceptingSessions: false,

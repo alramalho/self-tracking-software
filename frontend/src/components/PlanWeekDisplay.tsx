@@ -50,8 +50,8 @@ export const PlanWeekDisplay = ({
   className,
   planProgress: providedPlanProgress,
 }: PlanWeekDisplayProps) => {
-  // Only use hooks if no plan progress is provided
-  const { plansProgress } = providedPlanProgress ? { plansProgress: [] } : usePlanProgress();
+  // Always call hooks to maintain consistent order
+  const { plansProgress } = usePlanProgress();
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   

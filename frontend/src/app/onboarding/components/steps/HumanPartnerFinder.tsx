@@ -105,7 +105,7 @@ const FriendRequestCard = ({
         </p>
 
         {request.message && (
-          <p className="text-xs text-gray-400 truncate mt-2">"{request.message}"</p>
+          <p className="text-xs text-gray-400 truncate mt-2">&quot;{request.message}&quot;</p>
         )}
       </div>
 

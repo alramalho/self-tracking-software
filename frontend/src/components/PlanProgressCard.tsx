@@ -92,14 +92,14 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { notificationsData } = isDemo ? { notificationsData: null } : useUserPlan();
+  const { notificationsData } = useUserPlan();
 
   const [isAnimationCompleted, setIsAnimationCompleted] = useState<boolean>(false);
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
     isDemo ? "Great progress this week! You're building a consistent habit. Keep it up!" : undefined
   );
   const [isGeneratingCoachMessage, setIsGeneratingCoachMessage] = useState(false);
-  const api = isDemo ? null : useApiWithAuth();
+  const api = useApiWithAuth();
   const [lastTimeCoachMessageWasGenerated, setLastTimeCoachMessageWasGenerated] = useLocalStorage<Date | undefined>(
     "last-coach-message-generated-at",
     undefined
