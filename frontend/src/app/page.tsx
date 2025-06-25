@@ -45,17 +45,14 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 
 const HomePage: React.FC = () => {
-  const { isSignedIn } = useSession();
   const router = useRouter();
   const {
     useCurrentUserDataQuery,
-    useMetricsAndEntriesQuery,
     notificationsData,
     refetchAllData,
   } = useUserPlan();
-  const { data: userData, isFetching: isFetchingUser } =
+  const { data: userData } =
     useCurrentUserDataQuery();
-  const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const {
     userMetrics,
     entries,
@@ -66,9 +63,6 @@ const HomePage: React.FC = () => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notificationsBadgeDisplayed, setNotificationsBadgeDisplayed] =
-    useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [isMetricsCollapsed, setIsMetricsCollapsed] = useLocalStorage<boolean>(
     "metrics-section-collapsed",
     false
@@ -79,21 +73,11 @@ const HomePage: React.FC = () => {
   );
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { isAppInstalled, clearGeneralNotifications } = useNotifications();
+  const { clearGeneralNotifications } = useNotifications();
   const { userPaidPlanType } = usePaidPlan();
   const isUserOnFreePlan = userPaidPlanType === "free";
-
   const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
     useState(false);
-
-  const [onboardingCompleted] = useLocalStorage<boolean>(
-    "onboarding-completed",
-    false
-  );
-
-  const hasFriends =
-    userData?.user?.friend_ids?.length &&
-    userData?.user?.friend_ids?.length > 0;
 
   const unreadNotifications =
     notificationsData.data?.notifications?.filter(
@@ -102,12 +86,6 @@ const HomePage: React.FC = () => {
   const unreadNotificationsCount = unreadNotifications.length;
 
   const { areAllMetricsCompleted } = useDailyCheckin();
-
-  useEffect(() => {
-    if (isSignedIn && !onboardingCompleted && !hasFriends) {
-      router.push("/onboarding");
-    }
-  }, [userData, isSignedIn]);
 
   const handleUserClick = (user: UserSearchResult) => {
     router.push(`/profile/${user.username}`);
