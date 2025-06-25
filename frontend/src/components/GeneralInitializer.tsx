@@ -7,17 +7,16 @@ import { useSession } from "@clerk/nextjs";
 import { useNotifications } from "@/hooks/useNotifications";
 import BottomNav from "./BottomNav";
 import { Loader2 } from "lucide-react";
-import Link from "next/link";
 import FeedbackForm from "./FeedbackForm";
 import { toast } from "react-hot-toast";
-import { useApiWithAuth } from "@/api";
-import { usePathname } from "next/navigation";
-import { useUpgrade } from "@/contexts/UpgradeContext";
+import { usePathname, useRouter } from "next/navigation";
 import GenericLoader from "./GenericLoader";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useOnboarding } from "@/app/onboarding/components/OnboardingContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 export default function GeneralInitializer({
   children,
@@ -36,11 +35,23 @@ export default function GeneralInitializer({
   const variants = getThemeVariants(themeColors.raw);
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-
-  // Determine if there is any cached data to potentially display on initial load.
   const [initialCacheExists] = useState(() => hasCachedUserData());
+  const hasFriends =
+    userData?.user?.friend_ids?.length &&
+    userData?.user?.friend_ids?.length > 0;
+  const { userPaidPlanType } = usePaidPlan();
+  const router = useRouter();
+
+  const onboardingNecessary =
+    !isWaitingForData && !hasFriends && userPaidPlanType === "free";
 
   const email = userData?.user?.email || "";
+
+  useEffect(() => {
+    if (onboardingNecessary) {
+      router.push("/onboarding");
+    }
+  }, [onboardingNecessary]);
 
   useEffect(() => {
     if (

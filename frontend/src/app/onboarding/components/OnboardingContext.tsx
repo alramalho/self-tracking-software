@@ -1,7 +1,8 @@
 "use client";
 
-import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import posthog from "posthog-js";
 import { usePostHog } from "posthog-js/react";
 import React, {
@@ -27,7 +28,11 @@ interface OnboardingContextValue {
   nextStep: () => void;
   prevStep: () => void;
   goToStep: (stepId: string) => void;
-  completeStep: (stepId: string, updates?: object, options?: { nextStep?: string }) => void;
+  completeStep: (
+    stepId: string,
+    updates?: object,
+    options?: { nextStep?: string }
+  ) => void;
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
@@ -45,6 +50,7 @@ interface OnboardingContextValue {
   setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
+  onboardingNecessry: boolean;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -59,7 +65,7 @@ export const useOnboarding = () => {
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
-  steps: OnboardingStep[];  
+  steps: OnboardingStep[];
   initialStepId?: string;
 }
 
@@ -127,24 +133,26 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   const posthog = usePostHog();
   const totalSteps = steps.length;
-  
-  const currentStepIndex = steps.findIndex(step => step.id === currentStep);
-  const currentStepData = steps.find(step => step.id === currentStep) || null;
+
+  const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
+  const currentStepData = steps.find((step) => step.id === currentStep) || null;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
-  const progress = totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0;
+  const progress =
+    totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0;
 
+  const { useCurrentUserDataQuery, isWaitingForData } = useUserPlan();
   const nextStep = useCallback(() => {
-    const currentStepData = steps.find(step => step.id === currentStep);
-    
+    const currentStepData = steps.find((step) => step.id === currentStep);
+
     // Check if current step has a custom next step defined
     if (currentStepData?.next) {
       setCurrentStep(currentStepData.next);
       return;
     }
-    
+
     // Default behavior: go to next sequential step
-    const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+    const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
     if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
       const nextStepId = steps[currentStepIndex + 1]?.id;
       if (nextStepId) {
@@ -154,21 +162,21 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   }, [currentStep, totalSteps, steps]);
 
   const prevStep = useCallback(() => {
-    const currentStepData = steps.find(step => step.id === currentStep);
+    const currentStepData = steps.find((step) => step.id === currentStep);
 
     console.log({
       currentStep,
       currentStepData,
     });
-    
+
     // Check if current step has a custom previous step defined
     if (currentStepData?.previous) {
       setCurrentStep(currentStepData.previous);
       return;
     }
-    
+
     // Default behavior: go to previous sequential step
-    const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+    const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
     console.log({
       currentStepIndex,
     });
@@ -185,7 +193,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   const goToStep = useCallback(
     (stepId: string) => {
-      const stepExists = steps.some(step => step.id === stepId);
+      const stepExists = steps.some((step) => step.id === stepId);
       if (stepExists) {
         setCurrentStep(stepId);
       }
@@ -212,12 +220,14 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         newState.currentStep = options.nextStep;
       } else {
         // Priority 2: Check if the completed step has a custom next step defined
-        const completedStepData = steps.find(step => step.id === stepId);
+        const completedStepData = steps.find((step) => step.id === stepId);
         if (completedStepData?.next) {
           newState.currentStep = completedStepData.next;
         } else {
           // Priority 3: Default behavior - go to next sequential step
-          const currentStepIndex = steps.findIndex(step => step.id === stepId);
+          const currentStepIndex = steps.findIndex(
+            (step) => step.id === stepId
+          );
           if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
             const nextStepId = steps[currentStepIndex + 1]?.id;
             if (nextStepId) {
@@ -226,7 +236,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
           }
         }
       }
-      
+
       setOnboardingState(newState);
       posthog?.capture(`onboarding-${stepId}-completed`);
     },
