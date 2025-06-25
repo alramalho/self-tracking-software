@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   DynamicUISuggester,
   BaseExtractionResponse,
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
 import { useOnboarding } from "../OnboardingContext";
 import { AlertCircle, Crosshair, Goal } from "lucide-react";
+import { all } from "axios";
 
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
   goal: string;
@@ -16,6 +17,7 @@ export function PlanGoalSetter() {
   const { completeStep, planGoal } = useOnboarding();
   const api = useApiWithAuth();
   const [text, setText] = useState(planGoal);
+  const [allAnswered, setAllAnswered] = useState(false);
   const questionChecks = {
     "Does the message mention a goal that is concrete and measurable?": {
       icon: <AlertCircle className="w-6 h-6 text-blue-500" />,
@@ -37,24 +39,56 @@ export function PlanGoalSetter() {
         question_checks: Object.keys(questionChecks),
       });
 
-      const allAnswered = Object.values(response.data.question_checks).every(
-        Boolean
+      setAllAnswered(
+        Object.values(response.data.question_checks).every(Boolean)
       );
 
-      if (allAnswered) {
-        setTimeout(() => {
-          completeStep("plan-goal-setter", {
-            planGoal: text,
-            planType: "specific",
-          });
-        }, 1000);
-      }
       return response.data;
     } catch (error) {
       console.error("Error extracting plan:", error);
       toast.error("Failed to process plan. Please try again.");
       throw error;
     }
+  };
+  
+  useEffect(() => {
+    console.log({allAnswered})
+  }, [allAnswered]);
+
+  const renderExtractedData = (data: PlanGoalSetterResponse) => {
+
+    console.log("renderExtractedData")
+    console.log({allAnswered})
+    console.log({data})
+
+    if (!allAnswered) {
+      return null;
+    }
+
+    return (
+      <div className="space-y-4">
+        {data.goal && (
+          <div className="border border-gray-200 rounded-md p-3 bg-white">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Goal
+            </h3>
+            <div className="space-y-2">
+              <span className="text-lg">🎯{" "}</span>
+              <span className="flex-1 text-gray-900 italic">
+                {data.goal}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const handleAccept = async (data: PlanGoalSetterResponse): Promise<void> => {
+    completeStep("plan-goal-setter", {
+      planGoal: data.goal,
+      planType: "specific",
+    });
   };
 
   return (
@@ -67,8 +101,10 @@ export function PlanGoalSetter() {
         initialMessage="What would you like to achieve?"
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
-        shouldRenderChildren={false}
+        onAccept={handleAccept}
+        renderChildren={renderExtractedData}
         placeholder="For example, 'I want to read 12 books this year'"
+        creationMessage="Do you want to accept this goal?"
       />
     </>
   );

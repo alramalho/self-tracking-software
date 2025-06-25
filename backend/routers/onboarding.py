@@ -118,6 +118,27 @@ def get_conversation(user: User, message: str):
     return memory, memory.read_all_as_str(max_age_in_minutes=30)
 
 
+async def paraphrapse_user_goal(goal: str):
+    class Schema(BaseModel):
+        paraphrased_goal: str
+
+    response = await ask_schema_async(
+        text=f"Paraphrase my goal, if needed '{goal}' ",
+        system=(
+            "You are a plan coach, and your task is to paraphrase goals in a way that"
+            "they are short, concrete and tangible. They just include the achievable, not the timeframe or any other details."
+            "For example: 'I want to read 12 books this year' instead of 'i want to read more'"
+            "and instead of a large text explaining why the user wants to read more."
+            "More good examples are 'I want to run 10km in under 1 hour' or 'I want to have B1 german by end of year'"
+            "instead of 'i want to learn german' or 'i want to run more"
+            "If the goal is already well phrased, just output the very same goal."
+        ),
+        pymodel=Schema,
+    )
+    
+    return response.paraphrased_goal
+
+
 @router.post("/check-plan-goal")
 async def get_plan_goal(request: Request, user: User = Depends(is_clerk_user)):
     try:
@@ -125,31 +146,22 @@ async def get_plan_goal(request: Request, user: User = Depends(is_clerk_user)):
         message = body["message"]
         question_checks = body["question_checks"]
 
-        memory, conversation_history = get_conversation(user, message)
+        conversation_history = f"{user.name} (just now): {message}"
 
         result = {}
 
-        all_questions_answered, question_results, message_response = (
-            await analyse_question_checks(question_checks, conversation_history)
+        (all_questions_answered, question_results, message_response), paraphrapsed_goal = await asyncio.gather(
+            analyse_question_checks(question_checks, conversation_history),
+            paraphrapse_user_goal(message),
         )
+
+        result = {}
         result["question_checks"] = question_results
 
         if not all_questions_answered:
             result["message"] = message_response
-
-            memory.write(
-                Message.new(
-                    text=message_response,
-                    sender_name="Jarvis",
-                    sender_id="0",
-                    recipient_name=user.name,
-                    recipient_id=user.id,
-                    emotions=[],
-                )
-            )
-
         else:
-            result["goal"] = message
+            result["goal"] = paraphrapsed_goal
 
         return result
 
@@ -257,7 +269,10 @@ class GuidelineTimeframeSchema(BaseModel):
         description="The number (or range of numbers) of sessions per week of the plan. (e.g 3, or 4-5)",
     )
 
-async def extract_guidelines_and_emoji(plan_goal: str, plan_progress: str) -> Tuple[str, GuidelineTimeframeSchema, str]:
+
+async def extract_guidelines_and_emoji(
+    plan_goal: str, plan_progress: str
+) -> Tuple[str, GuidelineTimeframeSchema, str]:
 
     class GuidelinesSchema(BaseModel):
         guidelines: str = Field(
@@ -290,7 +305,11 @@ async def extract_guidelines_and_emoji(plan_goal: str, plan_progress: str) -> Tu
         ),
         pymodel=GuidelinesSchema,
     )
-    return guidelines_response.guidelines, guidelines_response.timeframe_guidelines, guidelines_response.emoji
+    return (
+        guidelines_response.guidelines,
+        guidelines_response.timeframe_guidelines,
+        guidelines_response.emoji,
+    )
 
 
 async def generate_plan(
@@ -331,6 +350,7 @@ async def generate_plan(
 
 import asyncio
 
+
 @router.post("/generate-plans")
 async def generate_plan_route(request: Request, user: User = Depends(is_clerk_user)):
     try:
@@ -341,7 +361,9 @@ async def generate_plan_route(request: Request, user: User = Depends(is_clerk_us
         ]
         plan_progress = body["plan_progress"]
 
-        guidelines, timeframe_guidelines, emoji = await extract_guidelines_and_emoji(plan_goal, plan_progress)
+        guidelines, timeframe_guidelines, emoji = await extract_guidelines_and_emoji(
+            plan_goal, plan_progress
+        )
 
         plan_1, plan_2 = await asyncio.gather(
             generate_plan(
@@ -369,9 +391,13 @@ async def generate_plan_route(request: Request, user: User = Depends(is_clerk_us
         result = {}
         result["message"] = "Here are two plans for you to choose from"
         result["plans"] = sorted(
-            [plan_1, plan_2], 
-            key=lambda x: (datetime.fromisoformat(x.finishing_date) - datetime.fromisoformat(x.created_at)).total_seconds() / len(x.sessions),
-            reverse=True
+            [plan_1, plan_2],
+            key=lambda x: (
+                datetime.fromisoformat(x.finishing_date)
+                - datetime.fromisoformat(x.created_at)
+            ).total_seconds()
+            / len(x.sessions),
+            reverse=True,
         )
         result["activities"] = plan_activities
 
