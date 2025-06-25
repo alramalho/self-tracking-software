@@ -299,7 +299,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 
                   {tier.isPopular && (
                     <div className="space-y-2">
-                      <div className="text-sm font-medium text-gray-700">What's included:</div>
+                      <div className="text-sm font-medium text-gray-700">What&apos;s included:</div>
                       <div className="grid grid-cols-1 gap-1">
                         {planFeatures.slice(0, 3).map((feature, index) => (
                           <div key={index} className="flex items-center gap-2 text-sm">

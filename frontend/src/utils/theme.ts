@@ -17,7 +17,6 @@ export interface ThemeVariants {
   veryFadedBg: string;
   fadedBg: string;
   hardGradientBg: string;
-  mediumGradientBg: string;
   softGradientBg: string;
   verySoftGrandientBg: string;
   darkText: string;
@@ -64,7 +63,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#64748b",
     bg: "bg-slate-500",
     hardGradientBg: "bg-gradient-to-r from-slate-500 to-slate-600",
-    mediumGradientBg: "bg-gradient-to-r from-slate-500 to-slate-600",
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20 to-slate-50 backdrop-blur-sm",
     verySoftGrandientBg:
@@ -206,7 +204,6 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
     hex: "#f59e0b",
     bg: "bg-amber-500",
     hardGradientBg: "bg-gradient-to-r from-amber-500 to-amber-600",
-    mediumGradientBg: "bg-gradient-to-r from-amber-50 to-amber-100",
     softGradientBg:
       "bg-gradient-to-r from-gray-100/20 to-amber-50 backdrop-blur-sm",
     verySoftGrandientBg:
