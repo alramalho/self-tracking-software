@@ -17,6 +17,7 @@ import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { withFadeUpAnimation } from "../../lib";
 
 const PlanCard = ({
   plan,
@@ -134,7 +135,8 @@ const PlanCard = ({
   );
 };
 
-export const PlanGenerator = () => {
+
+const PlanGenerator = () => {
   const {
     planGoal,
     plans,
@@ -429,3 +431,5 @@ export const PlanGenerator = () => {
     </div>
   );
 };
+
+export default withFadeUpAnimation(PlanGenerator);

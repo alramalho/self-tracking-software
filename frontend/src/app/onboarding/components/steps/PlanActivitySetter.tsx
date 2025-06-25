@@ -8,12 +8,13 @@ import { useApiWithAuth } from "@/api";
 import { useOnboarding } from "../OnboardingContext";
 import { AlertCircle, BicepsFlexed, Crosshair, Goal, Volleyball } from "lucide-react";
 import { Activity } from "@/contexts/UserPlanContext";
+import { withFadeUpAnimation } from "../../lib";
 
 interface PlanActivitySetterResponse extends BaseExtractionResponse {
   activities?: Activity[];
 }
 
-export function PlanActivitySetter() {
+function PlanActivitySetter() {
   const { planGoal, completeStep } = useOnboarding();
   const api = useApiWithAuth();
   const [text, setText] = useState("");
@@ -94,3 +95,5 @@ export function PlanActivitySetter() {
     </>
   );
 }
+
+export default withFadeUpAnimation(PlanActivitySetter);

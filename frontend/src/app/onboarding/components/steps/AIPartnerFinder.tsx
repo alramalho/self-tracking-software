@@ -24,6 +24,7 @@ import { createPlanProgressData } from "@/contexts/PlanProgressContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { MetricIsland } from "@/components/MetricIsland";
 import { MetricWeeklyView } from "@/components/MetricWeeklyView";
+import { withFadeUpAnimation } from "../../lib";
 
 const CardItem = ({
   icon,
@@ -63,7 +64,7 @@ const CardItem = ({
   );
 };
 
-export const AIPartnerFinder = () => {
+const AIPartnerFinder = () => {
   const { completeStep, setPlanType, planType } = useOnboarding();
   const [planStatePopoverDemoOpen, setPlanStatePopoverDemoOpen] =
     useState(false);
@@ -344,3 +345,5 @@ export const AIPartnerFinder = () => {
     </div>
   );
 };
+ 
+export default withFadeUpAnimation(AIPartnerFinder);

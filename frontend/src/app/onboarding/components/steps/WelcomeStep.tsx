@@ -3,8 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
+import { withFadeUpAnimation } from "../../lib";
 
-export const WelcomeStep = () => {
+const WelcomeStep = () => {
   const { completeStep } = useOnboarding();
 
   const handleGetStarted = () => {
@@ -44,3 +45,5 @@ export const WelcomeStep = () => {
     </div>
   );
 };
+
+export default withFadeUpAnimation(WelcomeStep);

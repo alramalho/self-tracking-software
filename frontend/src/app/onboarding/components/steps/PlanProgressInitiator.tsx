@@ -6,8 +6,9 @@ import { useOnboarding } from "../OnboardingContext";
 import { Textarea } from "@/components/ui/textarea";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import { useState } from "react";
+import { withFadeUpAnimation } from "../../lib";
 
-export const PlanProgressInitiator = () => {
+const PlanProgressInitiator = () => {
   const { completeStep, planProgress } = useOnboarding();
   const [text, setText] = useState<string>(planProgress ?? "");
 
@@ -50,3 +51,5 @@ export const PlanProgressInitiator = () => {
     </div>
   );
 };
+
+export default withFadeUpAnimation(PlanProgressInitiator);

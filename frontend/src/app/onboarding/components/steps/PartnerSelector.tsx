@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { CalendarDays, PersonStanding, UserRoundPlus } from "lucide-react";
+import { PersonStanding, UserRoundPlus } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
+import { withFadeUpAnimation } from "../../lib";
 
 const OptionCard = ({
   isSelected,
@@ -55,7 +56,7 @@ const OptionCard = ({
   );
 };
 
-export const PartnerTypeSelector = () => {
+const PartnerTypeSelector = () => {
   const { completeStep, partnerType, setPartnerType } = useOnboarding();
 
   const handlePlanSelect = (selectedType: "human" | "ai") => {
@@ -116,3 +117,5 @@ export const PartnerTypeSelector = () => {
     </div>
   );
 };
+
+export default withFadeUpAnimation(PartnerTypeSelector);

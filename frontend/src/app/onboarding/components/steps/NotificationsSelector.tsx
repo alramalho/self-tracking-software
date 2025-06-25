@@ -8,8 +8,9 @@ import { PlanType } from "@/contexts/UserPlanContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { withFadeUpAnimation } from "../../lib";
 
-export const NotificationsSelector = () => {
+const NotificationsSelector = () => {
   const { completeStep } = useOnboarding();
   const { requestPermission, isPushGranted } = useNotifications();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -181,3 +182,5 @@ export const NotificationsSelector = () => {
     </>
   );
 };
+
+export default withFadeUpAnimation(NotificationsSelector);
