@@ -19,26 +19,73 @@ interface UpgradePopoverProps {
 }
 
 const PLUS_MONTHLY = 13.99;
-const PLUS_DISCOUNTED_MONTHLY = 9.89;
+const PLUS_QUARTERLY = 29.99;
 const PLUS_YEARLY = 83.99;
-const PLUS_DISCOUNTED_YEARLY = 59.88;
 
-const YEARLY_DISCOUNT_PERCENT = Math.round(
-  (Math.abs(PLUS_DISCOUNTED_YEARLY - 12 * PLUS_DISCOUNTED_MONTHLY) /
-    (12 * PLUS_DISCOUNTED_MONTHLY)) *
-    100
-);
+// Calculate savings
+const QUARTERLY_MONTHLY_EQUIVALENT = PLUS_MONTHLY * 3;
+const YEARLY_MONTHLY_EQUIVALENT = PLUS_MONTHLY * 12; 
 
-const FIXED_DISCOUNT_PERCENT = Math.round(
-  (Math.abs(PLUS_MONTHLY - PLUS_DISCOUNTED_MONTHLY) / PLUS_MONTHLY) * 100
-);
+const QUARTERLY_SAVINGS = Math.round(((QUARTERLY_MONTHLY_EQUIVALENT - PLUS_QUARTERLY) / QUARTERLY_MONTHLY_EQUIVALENT) * 100);
+const YEARLY_SAVINGS = Math.round(((YEARLY_MONTHLY_EQUIVALENT - PLUS_YEARLY) / YEARLY_MONTHLY_EQUIVALENT) * 100);
 
-// const PLUS_DISCOUNTED_MONTHLY = Number(
-//   (PLUS_DISCOUNTED_MONTHLY * (1 - PLUS_DISCOUNT_PERCENT / 100)).toFixed(2)
-// );
-// const PLUS_DISCOUNTED_YEARLY = Number(
-//   (PLUS_DISCOUNTED_YEARLY * (1 - PLUS_DISCOUNT_PERCENT / 100)).toFixed(2)
-// );
+// Calculate equivalent monthly prices
+const QUARTERLY_MONTHLY_PRICE = Math.floor((PLUS_QUARTERLY / 3) * 100) / 100;
+const YEARLY_MONTHLY_PRICE = Math.floor((PLUS_YEARLY / 12) * 100) / 100;
+
+interface PricingTier {
+  id: 'monthly' | 'quarterly' | 'yearly';
+  title: string;
+  subtitle: string;
+  price: number;
+  period: string;
+  equivalentMonthly?: number;
+  savings?: number;
+  badge?: string;
+  badgeColor?: string;
+  positioning: string;
+  paymentLink: string;
+  isPopular?: boolean;
+}
+
+const pricingTiers: PricingTier[] = [
+  {
+    id: 'monthly',
+    title: 'Monthly',
+    subtitle: 'Flexible Plan',
+    price: PLUS_MONTHLY,
+    period: 'month',
+    positioning: 'Try it risk-free',
+    paymentLink: 'https://buy.stripe.com/14A00j6Yjg7R17wfsvcfK0d',
+  },
+  {
+    id: 'quarterly',
+    title: 'Quarterly',
+    subtitle: 'Most Popular',
+    price: PLUS_QUARTERLY,
+    period: '3 months',
+    equivalentMonthly: QUARTERLY_MONTHLY_PRICE,
+    savings: QUARTERLY_SAVINGS,
+    badge: 'Most Popular',
+    badgeColor: 'bg-purple-500',
+    positioning: 'Build lasting habits',
+    paymentLink: 'https://buy.stripe.com/9B64gzdmH7Bl17wa8bcfK0b',
+    isPopular: true,
+  },
+  {
+    id: 'yearly',
+    title: 'Yearly',
+    subtitle: 'Best Value',
+    price: PLUS_YEARLY,
+    period: 'year',
+    equivalentMonthly: YEARLY_MONTHLY_PRICE,
+    savings: YEARLY_SAVINGS,
+    badge: `Save ${YEARLY_SAVINGS}%`,
+    badgeColor: 'bg-green-500',
+    positioning: 'Commit to real transformation',
+    paymentLink: 'https://buy.stripe.com/fZu6oHbez6xh9E2fsvcfK0c',
+  },
+];
 
 export const Coffee = () => {
   return (
@@ -173,7 +220,7 @@ const Rocket = () => {
       <h2 className="text-xl font-bold text-gray-700 pt-5">
         Here&apos;s a <br />
         <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
-          {FIXED_DISCOUNT_PERCENT}%
+          {YEARLY_SAVINGS}%
         </span>{" "}
         discount for early supporters
       </h2>
@@ -188,134 +235,123 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   open,
   onClose,
 }) => {
-  const [isYearly, setIsYearly] = useState(false);
-
   const planFeatures: FeatureItem[] = [
     { emoji: "✔️", title: <span>Unlimited plans & activities</span> },
-    { emoji: "🔒", title: <span>Activity privacy</span> },
+    // { emoji: "🔒", title: <span>Activity privacy</span> },
+    { emoji: "🦾", title: <span>Personalized AI coaching</span> },
     { emoji: "📊", title: <span>Enhanced Analytics</span> },
     {
       emoji: "🎨",
       title: <span>Customizable color themes and reactions</span>,
     },
-    { emoji: "🦾", title: <span>Personalized AI coaching</span> },
   ];
-
-  // const peoplePlanFeatures: FeatureItem[] = [
-  //   { emoji: "✔️", title: <span>everything in plus plan</span> },
-  //   {
-  //     emoji: "✔️",
-  //     title: (
-  //       <span>
-  //         AI personal coach{" "}
-  //         <Badge className="bg-purple-500 text-white">BETA</Badge>
-  //       </span>
-  //     ),
-  //   },
-  //   { emoji: "✔️", title: <span>access to BETA features and voting</span> },
-  //   {
-  //     emoji: "✔️",
-  //     title: <span>custom and unlimited metrics / insights</span>,
-  //   },
-  //   { emoji: "🔥", title: <span>exclusive open source supporter badge</span> },
-  // ];
-
-  const getPeriod = () => (isYearly ? "yearly" : "monthly");
-
-  const paymentLink = isYearly
-    ? "https://buy.stripe.com/eVq14n82ng7ReYmbcfcfK0a"
-    : "https://buy.stripe.com/bJe28rbez4p9dUi0xBcfK09";
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       <div className="space-y-8 pt-6 pb-12">
-        <div className="grid gap-4">
-          <Rocket />
+        <div className="grid gap-6">
+          {/* <Rocket /> */}
 
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <span className="text-md text-gray-500">Monthly</span>
-            <Switch checked={isYearly} onCheckedChange={setIsYearly} />
-            <span className="text-md text-gray-500">Yearly</span>
-            <span className="text-sm text-green-500 ml-1">
-              get {Math.round(12 * (1 - PLUS_YEARLY / (12 * PLUS_MONTHLY)))}{" "}
-              months free
-            </span>
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold">Choose Your Plan</h2>
+            <p className="text-gray-600">Select the plan that fits your journey</p>
           </div>
-          <Card className="p-6 relative overflow-hidden ring-2 ring-blue-500/50 rounded-2xl bg-gradient-to-br from-white to-blue-100">
-            <div className="space-y-2">
-              <div className="flex flex-row items-center justify-between gap-2">
-                <h3 className="text-xl font-semibold">
-                  <span className="text-blue-500 text-3xl font-cursive mr-1">
-                    Plus
-                  </span>{" "}
-                  {isYearly ? "Annual" : "Monthly"} Plan
-                </h3>
-                <div>
-                  {/* {isYearly && (
-                    <Badge className="ml-2 bg-green-500 text-white">
-                      Save {YEARLY_DISCOUNT_PERCENT}%
-                    </Badge>
-                  )} */}
-                  <Badge className="ml-2 bg-purple-500 text-white">
-                    Save {FIXED_DISCOUNT_PERCENT}%
-                  </Badge>
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-medium text-gray-500 line-through">
-                  {isYearly ? `€${PLUS_YEARLY}` : `€${PLUS_MONTHLY}`}
-                </span>
-                <span className="text-3xl font-bold">
-                  {isYearly
-                    ? `€${PLUS_DISCOUNTED_YEARLY}`
-                    : `€${PLUS_DISCOUNTED_MONTHLY}`}
-                </span>
-                <span className="text-gray-500">/ {getPeriod()}</span>
-              </div>
-              {isYearly && (
-                <p className="text-md text-gray-500">
-                  {isYearly ? (
-                    <span>
-                      That&apos;s{" "}
-                      <span className="font-bold">
-                        €{(PLUS_DISCOUNTED_YEARLY / 12).toFixed(2)}
-                      </span>{" "}
-                      a month{" "}
-                      <span className="text-green-500">
-                        – {YEARLY_DISCOUNT_PERCENT}% off!
-                      </span>
-                    </span>
-                  ) : (
-                    `€${PLUS_DISCOUNTED_MONTHLY} a month `
-                  )}
-                </p>
-              )}
-            </div>
-            <div className="mt-6 space-y-3">
-              {planFeatures.map((feature, index) => (
-                <div
-                  key={`slack-feature-${index}`}
-                  className="flex items-center gap-2"
-                >
-                  <span>{feature.emoji}</span>
-                  <span>{feature.title}</span>
-                </div>
-              ))}
-            </div>
-            {/* <Coffee /> */}
 
-            <Link href={paymentLink} target="_blank">
-              <Button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 rounded-xl">
-                Try free
-              </Button>
-            </Link>
-            <div className="w-full">
-              <p className="text-sm text-gray-500 mx-auto w-fit mt-1">
-                and help maintaining the app running!
-              </p>
+          <div className="grid gap-4">
+            {pricingTiers.map((tier) => (
+              <Card 
+                key={tier.id}
+                className={`p-6 relative overflow-hidden rounded-2xl transition-all duration-200 hover:shadow-lg ${
+                  tier.isPopular 
+                    ? 'ring-2 ring-purple-500/50 bg-gradient-to-br from-white to-purple-50' 
+                    : 'bg-white hover:bg-gray-50'
+                }`}
+              >
+                <div className="space-y-4">
+                  <div className="flex flex-row items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">{tier.title}</h3>
+                      <p className="text-sm text-gray-600">{tier.positioning}</p>
+                    </div>
+                    {tier.badge && (
+                      <Badge className={`${tier.badgeColor} text-white`}>
+                        {tier.badge}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">€{tier.price}</span>
+                      <span className="text-gray-500">/ {tier.period}</span>
+                    </div>
+                    {tier.equivalentMonthly && (
+                      <p className="text-sm text-gray-600">
+                        €{tier.equivalentMonthly} per month
+                        {tier.savings && (
+                          <span className="text-green-600 font-medium ml-1">
+                            • Save {tier.savings}%
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {tier.isPopular && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-700">What's included:</div>
+                      <div className="grid grid-cols-1 gap-1">
+                        {planFeatures.slice(0, 3).map((feature, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm">
+                            <span className="text-xs">{feature.emoji}</span>
+                            <span className="text-gray-600">{feature.title}</span>
+                          </div>
+                        ))}
+                        <div className="text-xs text-gray-500 mt-1">+ 2 more features</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Link href={tier.paymentLink} target="_blank" className="block">
+                    <Button 
+                      className={`w-full rounded-xl ${
+                        tier.isPopular 
+                          ? 'bg-purple-500 hover:bg-purple-600' 
+                          : 'bg-blue-500 hover:bg-blue-600'
+                      }`}
+                    >
+                      {tier.id === 'monthly' ? 'Start Free Trial' : 
+                       tier.id === 'quarterly' ? 'Get Started' : 'Best Value'}
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <div className="text-sm text-gray-500 space-y-1">
+              <p>All plans include:</p>
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+                   <div className="flex items-center gap-1">
+                    <span className="text-xs">·</span>
+                    <span className="text-xs">Free trial</span>
+                  </div>
+                {planFeatures.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-1">
+                    <span className="text-xs">{feature.emoji}</span>
+                    <span className="text-xs">{feature.title}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </Card>
+          </div>
         </div>
+
+
+                
+        <h4 className="text-center text-8xl font-bold">🎯</h4>
+        <h4 className="text-center text-xl font-bold">thank you for your support! perhaps one day we can go full time :)</h4>
 
         <Divider className="my-6 mt-24" />
         {/* <FAQ /> */}

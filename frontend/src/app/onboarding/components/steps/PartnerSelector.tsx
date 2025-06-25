@@ -93,7 +93,6 @@ export const PartnerTypeSelector = () => {
           description={
             <>
               <p>Find me a human partner</p>
-              <p className="opacity-70 mt-2">Free Forever</p>
             </>
           }
         />
@@ -110,7 +109,6 @@ export const PartnerTypeSelector = () => {
           description={
             <>
               <p>I want personalized AI coaching</p>
-              <p className="opacity-70 mt-2">Free Trial</p>
             </>
           }
         />
