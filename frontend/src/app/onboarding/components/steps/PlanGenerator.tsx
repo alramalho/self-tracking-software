@@ -182,7 +182,7 @@ const PlanGenerator = () => {
   const startProgressAnimation = () => {
     const startTime = Date.now();
     const targetProgress = 99;
-    const duration = 60000;
+    const duration = 90000;
 
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
