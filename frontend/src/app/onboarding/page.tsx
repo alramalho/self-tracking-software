@@ -102,7 +102,6 @@ export default function OnboardingPage() {
     {
       id: "partner-selection",
       component: PartnerTypeSelector,
-      next: isPushGranted ? "human-partner-finder" : "notifications-selector",
     },
     {
       id: "notifications-selector",

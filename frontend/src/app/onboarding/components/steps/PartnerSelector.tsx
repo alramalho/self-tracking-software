@@ -4,6 +4,7 @@ import React from "react";
 import { PersonStanding, UserRoundPlus } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
 import { withFadeUpAnimation } from "../../lib";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const OptionCard = ({
   isSelected,
@@ -58,12 +59,13 @@ const OptionCard = ({
 
 const PartnerTypeSelector = () => {
   const { completeStep, partnerType, setPartnerType } = useOnboarding();
+  const { isPushGranted } = useNotifications();
 
   const handlePlanSelect = (selectedType: "human" | "ai") => {
     completeStep(
       "partner-selection",
       { partnerType: selectedType },
-      { nextStep: `${selectedType}-partner-finder` }
+      { nextStep: isPushGranted ? `${selectedType}-partner-finder` : "notifications-selector" }
     );
   };
 
