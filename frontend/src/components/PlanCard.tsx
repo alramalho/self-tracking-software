@@ -120,9 +120,9 @@ const PlanCard: React.FC<PlanCardProps> = ({
             isSelected
               ? twMerge(
                   variants.ringBright,
-                  variants.softGradientBg
+                  variants.veryFadedBg
                 )
-              : cn("ring-gray-300", isCoached ? cn(variants.verySoftGrandientBg): " bg-white")
+              : cn("ring-gray-300 bg-white")
           } sm:aspect-square w-full relative`}
         >
           {plan.emoji && (

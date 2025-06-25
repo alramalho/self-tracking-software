@@ -58,7 +58,7 @@ export default function ClientLayout({
                   <NotificationsProvider>
                     <main
                       className={cn(
-                        "relative h-[100dvh] [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f8f8f8_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4",
+                        "relative h-[100dvh] [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4",
                         isSignedIn && isDesktop ? "ml-64" : ""
                       )}
                     >

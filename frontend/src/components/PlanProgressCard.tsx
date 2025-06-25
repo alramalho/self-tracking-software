@@ -196,8 +196,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
             `rounded-3xl ring-1 flex flex-col gap-2 p-4 transition-all duration-300`,
             isCoached
               ? cn(
-                  variants.card.softGlassBg,
-                  variants.ringSoft,
+                  variants.veryFadedBg,
+                  variants.ringBright,
                   "backdrop-blur-sm"
                 )
               : "bg-white/60 ring-gray-200",
