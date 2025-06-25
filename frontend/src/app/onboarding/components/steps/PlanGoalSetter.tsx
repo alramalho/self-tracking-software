@@ -57,10 +57,6 @@ function PlanGoalSetter() {
 
   const renderExtractedData = (data: PlanGoalSetterResponse) => {
 
-    console.log("renderExtractedData")
-    console.log({allAnswered})
-    console.log({data})
-
     if (!allAnswered) {
       return null;
     }
@@ -103,6 +99,7 @@ function PlanGoalSetter() {
         onSubmit={handleSubmit}
         onAccept={handleAccept}
         renderChildren={renderExtractedData}
+        shouldRenderChildren={allAnswered}
         placeholder="For example, 'I want to read 12 books this year'"
         creationMessage="Do you want to accept this goal?"
       />
