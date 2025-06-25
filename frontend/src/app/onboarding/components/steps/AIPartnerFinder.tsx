@@ -75,6 +75,8 @@ const AIPartnerFinder = () => {
 
   const { setShowUpgradePopover } = useUpgrade();
 
+
+
   const dummyWeeks = [
     {
       startDate: new Date(),
@@ -206,7 +208,7 @@ const AIPartnerFinder = () => {
           onClick={() => setMetricAnalysisPopoverDemoOpen(true)}
         />
       </div>
-      <p className="text-md text-gray-600 w-full text-center">
+      <p className="text-md text-gray-600 w-full text-center py-2">
         And many more features to come!
       </p>
 
@@ -302,7 +304,7 @@ const AIPartnerFinder = () => {
               className="bg-white"
             />
             <p className="text-md text-gray-600 mt-3">
-              You can also find a weekly view of your metrics
+              You can then find both a weekly view of your metrics as well as a correlation analysis.
             </p>
             <MetricWeeklyView
               metric={dummyMetric}
@@ -337,7 +339,7 @@ const AIPartnerFinder = () => {
               className="bg-white"
             />
             <p className="text-md text-gray-600 mt-3">
-              Or an even more detailed view on the<br/> <ScanFace className="w-5 h-5 inline-block mb-1" /> Insights page!
+              Or an even more in-depth view on the<br/> <ScanFace className="w-5 h-5 inline-block mb-1" /> Insights page!
             </p>
           </div>
         </div>
