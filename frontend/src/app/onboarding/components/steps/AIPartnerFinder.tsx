@@ -168,7 +168,7 @@ const AIPartnerFinder = () => {
 
   return (
     <div className="w-full max-w-lg space-y-2">
-      <div className="flex flex-col items-center gap-4 text-center pt-16">
+      <div className="flex flex-col items-center gap-4 text-center pt-0">
         <div className="flex flex-col items-center gap-2">
           <img
             src="/images/jarvis_logo_blue_transparent.png"
