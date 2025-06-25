@@ -7,13 +7,13 @@ import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
 import { useOnboarding } from "../OnboardingContext";
 import { AlertCircle, Crosshair, Goal } from "lucide-react";
-import { all } from "axios";
+import { withFadeUpAnimation } from "../../lib";
 
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
   goal: string;
 }
 
-export function PlanGoalSetter() {
+function PlanGoalSetter() {
   const { completeStep, planGoal } = useOnboarding();
   const api = useApiWithAuth();
   const [text, setText] = useState(planGoal);
@@ -109,3 +109,5 @@ export function PlanGoalSetter() {
     </>
   );
 }
+
+export default withFadeUpAnimation(PlanGoalSetter);

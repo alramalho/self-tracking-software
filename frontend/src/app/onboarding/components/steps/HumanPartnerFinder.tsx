@@ -10,10 +10,6 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { useOnboarding } from "../OnboardingContext";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { useShare } from "@/hooks/useShare";
-import { useClipboard } from "@/hooks/useClipboard";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
@@ -24,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { useQuery } from "@tanstack/react-query";
+import { withFadeUpAnimation } from "../../lib";
 
 const OptionCard = ({
   isSelected,
@@ -139,7 +136,7 @@ const FriendRequestCard = ({
   );
 };
 
-export const HumanPartnerFinder = () => {
+const HumanPartnerFinder = () => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
   const currentUserQuery = useCurrentUserDataQuery();
@@ -348,3 +345,5 @@ export const HumanPartnerFinder = () => {
     </>
   );
 };
+
+export default withFadeUpAnimation(HumanPartnerFinder);
