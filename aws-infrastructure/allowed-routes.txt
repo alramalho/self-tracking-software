@@ -9,7 +9,7 @@
 /search-users/{username}
 /user/friend-count
 /get-recommended-users
-/user/{username}
+/user/{username_or_id}
 /send-friend-request/{recipient_id}
 /accept-friend-request/{request_id}
 /reject-friend-request/{request_id}

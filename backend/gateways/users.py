@@ -13,6 +13,7 @@ import asyncio
 from entities.recommendation import Recommendation
 from gateways.recommendations import RecommendationsGateway
 from pydantic import BaseModel
+from typing import Optional
 
 class UserDoesNotExistException(Exception):
     pass
@@ -227,8 +228,8 @@ class UsersGateway:
             user.plan_ids.remove(plan_id)
         return self.update_user(user)
 
-    def send_friend_request(self, sender_id: str, recipient_id: str) -> FriendRequest:
-        friend_request = FriendRequest.new(sender_id, recipient_id)
+    def send_friend_request(self, sender_id: str, recipient_id: str, message: Optional[str] = None) -> FriendRequest:
+        friend_request = FriendRequest.new(sender_id=sender_id, recipient_id=recipient_id, message=message)
         created_request = self.friend_request_gateway.create_friend_request(
             friend_request
         )
