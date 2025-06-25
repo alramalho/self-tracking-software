@@ -47,8 +47,8 @@ const UserCard: React.FC<UserCardProps> = ({
   className = "",
 }) => {
   const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData, isLoading: isLoadingUser } =
-    useCurrentUserDataQuery();
+  const currentUserQuery = useCurrentUserDataQuery();
+  const { data: userData, isLoading: isLoadingUser } = currentUserQuery;
   const currentUser = userData?.user;
   const isOwnUser = currentUser?.id === user.id;
   const [isSendingRequest, setIsSendingRequest] = useState(false);
@@ -58,6 +58,7 @@ const UserCard: React.FC<UserCardProps> = ({
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
+  const [sentFriendRequest, setSentFriendRequest] = useState(false);
   
   const isOlderThan30Days = (date: string) => {
     return differenceInDays(new Date(), new Date(date)) > 30;
@@ -80,6 +81,9 @@ const UserCard: React.FC<UserCardProps> = ({
       }
 
       await api.post(`/send-friend-request/${user.id}`, payload);
+
+      currentUserQuery.refetch();
+      setSentFriendRequest(true);
       toast.success("Friend request sent successfully!");
       setMessage(""); // Clear message after sending
     } catch (error) {
@@ -306,12 +310,12 @@ const UserCard: React.FC<UserCardProps> = ({
             {/* Send friend request button */}
             <Button
               loading={isSendingRequest}
-              disabled={isSendingRequest}
+              disabled={isSendingRequest || sentFriendRequest}
               className={`w-full rounded-xl p-5 ${variants.button.glass}`}
               onClick={handleSendFriendRequest}
             >
               <Send className="mr-2" />
-              Send Friend Request
+              {sentFriendRequest ? "Friend Request Sent" : "Send Friend Request"}
             </Button>
           </>
         )}

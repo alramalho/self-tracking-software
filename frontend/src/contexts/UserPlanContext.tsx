@@ -118,8 +118,9 @@ export interface User {
   last_active_at?: string;
 }
 
-interface FriendRequest {
+export interface FriendRequest {
   id: string;
+  message?: string;
   sender_id: string;
   recipient_id: string;
   status: "pending" | "accepted" | "rejected";

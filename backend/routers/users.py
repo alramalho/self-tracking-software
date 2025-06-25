@@ -284,12 +284,16 @@ async def get_recommended_users(user: User = Depends(is_clerk_user)):
     }
 
 
-@router.get("/user/{username}")
-async def get_user_profile(username: str, current_user: User = Depends(is_clerk_user)):
-    if username.lower() == current_user.username.lower():
+@router.get("/user/{username_or_id}")
+async def get_user_profile(username_or_id: str, current_user: User = Depends(is_clerk_user)):
+    if username_or_id.lower() == current_user.username.lower():
         return current_user
 
-    user = users_gateway.get_user_by_safely("username", username)
+    user = users_gateway.get_user_by_safely("username", username_or_id)
+
+    if not user:
+        user = users_gateway.get_user_by_safely("id", username_or_id)
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -319,7 +323,7 @@ async def send_friend_request(
             }
 
         friend_request = users_gateway.send_friend_request(
-            current_user.id, recipient_id
+            current_user.id, recipient_id, message
         )
         notification = await notification_manager.create_and_process_notification(
             Notification.new(
