@@ -349,7 +349,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const hasImage = imageUrl && !hasImageExpired;
 
   return (
-    <div className="bg-white/50 backdrop-blur-sm border rounded-lg overflow-hidden relative">
+    <div className="bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden relative">
       {hasImage && (
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">

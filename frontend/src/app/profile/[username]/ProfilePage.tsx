@@ -82,10 +82,11 @@ const ProfilePage: React.FC = () => {
   const profileDataQuery = useUserDataQuery(username);
   const { isSuccess: isProfileDataSuccesfullyLoaded, data: profileData } =
     profileDataQuery;
-  const { activityEntries, activities } = profileData || {
+  const { activityEntries, activities, plans } = profileData || {
     activityEntries: [],
     activities: [],
   };
+  const profileActivePlans = plans?.filter((p) => !isPlanExpired(p));
   const api = useApiWithAuth();
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
     string | null
@@ -188,15 +189,16 @@ const ProfilePage: React.FC = () => {
 
   const activitiesNotInPlans = useMemo(() => {
     const planActivityIds = new Set(
-      profileData?.plans?.flatMap((plan) => plan.activity_ids) || []
+      profileActivePlans?.flatMap((plan) => plan.activity_ids) || []
     );
 
-    // Filter activities that are not in plans AND have at least one activity entry
-    return activities.filter(
+    const activitiesNotInPlans = activities.filter(
       (activity) =>
         !planActivityIds.has(activity.id) &&
         activityEntries.some((entry) => entry.activity_id === activity.id)
     );
+
+    return activitiesNotInPlans;
   }, [profileData?.plans, activities, activityEntries]);
 
   const handleTimeRangeChange = (value: TimeRange) => {
@@ -252,7 +254,7 @@ const ProfilePage: React.FC = () => {
     <div className="flex flex-col items-center min-h-screen p-2">
       <div className="w-full max-w-3xl">
         <div
-          className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-lg bg-white/60 backdrop-blur-sm`}
+          className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-2xl bg-white/60 backdrop-blur-sm`}
         >
           {!isOnesOwnProfile && (
             <button
@@ -482,8 +484,27 @@ const ProfilePage: React.FC = () => {
           </TabsList>
           <TabsContent value="plans">
             <div className="space-y-4 mt-4">
-              {profileData?.plans
-                .filter((p) => !isPlanExpired(p))
+              {profileData?.plans && profileData?.plans.length > 0 && (
+                <div className="flex flex-row gap-4 justify-between items-center">
+                  <span className="text-sm text-gray-500">Time range</span>
+                  <div className="flex self-center">
+                    <select
+                      className="p-2 border rounded-md font-medium text-gray-800"
+                      value={timeRange}
+                      onChange={(e) =>
+                        handleTimeRangeChange(
+                          e.target.value as "60 Days" | "120 Days" | "180 Days"
+                        )
+                      }
+                    >
+                      <option value="60 Days">Since 60 days ago</option>
+                      <option value="120 Days">Since 120 days ago</option>
+                      <option value="180 Days">Since 180 days ago</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+              {profileActivePlans && profileActivePlans.length > 0 && profileActivePlans
                 .map((plan) => {
                   const planProgress = plansProgress.find(
                     (p) => p.plan.id === plan.id
@@ -491,7 +512,7 @@ const ProfilePage: React.FC = () => {
                   return (
                     <div
                       key={plan.id}
-                      className={`p-4 ring-2 rounded-lg ${
+                      className={`p-4 ring-2 rounded-2xl ${
                         planProgress?.achievement.isAchieved
                           ? cn(
                               "ring-offset-2 ring-offset-white",
@@ -540,27 +561,7 @@ const ProfilePage: React.FC = () => {
                     </div>
                   );
                 })}
-              {profileData?.plans && profileData?.plans.length > 0 && (
-                <div className="flex flex-row gap-4 justify-between items-center">
-                  <span className="text-sm text-gray-500">Time range</span>
-                  <div className="flex self-center">
-                    <select
-                      className="p-2 border rounded-md font-medium text-gray-800"
-                      value={timeRange}
-                      onChange={(e) =>
-                        handleTimeRangeChange(
-                          e.target.value as "60 Days" | "120 Days" | "180 Days"
-                        )
-                      }
-                    >
-                      <option value="60 Days">Since 60 days ago</option>
-                      <option value="120 Days">Since 120 days ago</option>
-                      <option value="180 Days">Since 180 days ago</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-              {(!profileData?.plans || profileData?.plans.length === 0) && (
+              {(!profileActivePlans || profileActivePlans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
                   {isOnesOwnProfile
                     ? "You haven't created any plans yet."

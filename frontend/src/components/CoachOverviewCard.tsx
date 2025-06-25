@@ -150,8 +150,8 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
     <MessageBubble
       direction="left"
       className={cn(
-        variants.card.softGlassBg,
-        variants.ringSoft,
+        variants.veryFadedBg,
+        variants.ringBright,
         "backdrop-blur-sm ring-1",
         className
       )}
