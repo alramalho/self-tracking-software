@@ -50,7 +50,6 @@ interface OnboardingContextValue {
   setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
-  onboardingNecessry: boolean;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
