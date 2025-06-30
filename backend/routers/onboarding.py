@@ -300,7 +300,7 @@ async def extract_guidelines_and_emoji(
             "The guidelines should also include an instruction set on how to propely the duration of the plan."
             "The guidelines should not be generic, but specifically adapted to the nature of the plan provided"
             "The guidelines should be created in a listified format."
-            "The guidelines should present a timeframe range with total weeks AND sessions per week, for two plans of different intensities."
+            "The guidelines should present a timeframe range with total weeks AND sessions per week, for two plans of different intensities. The total weeks should be a range of 8 to 16 weeks."
             "(Example 12 weeks, 3 sessions per week and 8 weeks, 4 to 5 sessions per week. Always two options, one more relaxed, followed by one more intense"
             "The intense options tend to have more sessions per week."
         ),
