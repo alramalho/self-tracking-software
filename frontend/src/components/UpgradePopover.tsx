@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { FAQ } from "./FAQ";
 import Divider from "./Divider";
 import Link from "next/link";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface FeatureItem {
   emoji: string;
@@ -18,25 +19,40 @@ interface UpgradePopoverProps {
   onClose: () => void;
 }
 
-const PLUS_MONTHLY = 13.99;
-const PLUS_QUARTERLY = 29.99;
-const PLUS_YEARLY = 83.99;
+const OG_MONTHLY = 13.99;
+const OG_QUARTERLY = 29.99;
+const OG_YEARLY = 83.99;
+
+const PLUS_MONTHLY = 8.99;
+const PLUS_QUARTERLY = 20.99;
+const PLUS_YEARLY = 59.99;
 
 // Calculate savings
 const QUARTERLY_MONTHLY_EQUIVALENT = PLUS_MONTHLY * 3;
-const YEARLY_MONTHLY_EQUIVALENT = PLUS_MONTHLY * 12; 
+const YEARLY_MONTHLY_EQUIVALENT = PLUS_MONTHLY * 12;
 
-const QUARTERLY_SAVINGS = Math.round(((QUARTERLY_MONTHLY_EQUIVALENT - PLUS_QUARTERLY) / QUARTERLY_MONTHLY_EQUIVALENT) * 100);
-const YEARLY_SAVINGS = Math.round(((YEARLY_MONTHLY_EQUIVALENT - PLUS_YEARLY) / YEARLY_MONTHLY_EQUIVALENT) * 100);
+const QUARTERLY_SAVINGS = Math.round(
+  ((QUARTERLY_MONTHLY_EQUIVALENT - PLUS_QUARTERLY) /
+    QUARTERLY_MONTHLY_EQUIVALENT) *
+    100
+);
+const YEARLY_SAVINGS = Math.round(
+  ((YEARLY_MONTHLY_EQUIVALENT - PLUS_YEARLY) / YEARLY_MONTHLY_EQUIVALENT) * 100
+);
+const YEARLY_OG_SAVINGS = Math.round(
+  ((OG_YEARLY - PLUS_YEARLY) / OG_YEARLY) * 100
+);
 
 // Calculate equivalent monthly prices
 const QUARTERLY_MONTHLY_PRICE = Math.floor((PLUS_QUARTERLY / 3) * 100) / 100;
 const YEARLY_MONTHLY_PRICE = Math.floor((PLUS_YEARLY / 12) * 100) / 100;
 
 interface PricingTier {
-  id: 'monthly' | 'quarterly' | 'yearly';
+  id: "monthly" | "quarterly" | "yearly";
   title: string;
   subtitle: string;
+  ogPrice: number;
+  ogMonthlyEquivalent: number;
   price: number;
   period: string;
   equivalentMonthly?: number;
@@ -50,40 +66,46 @@ interface PricingTier {
 
 const pricingTiers: PricingTier[] = [
   {
-    id: 'monthly',
-    title: 'Monthly',
-    subtitle: 'Flexible Plan',
+    id: "monthly",
+    title: "Monthly",
+    subtitle: "Flexible Plan",
+    ogPrice: OG_MONTHLY,
+    ogMonthlyEquivalent: OG_MONTHLY,
     price: PLUS_MONTHLY,
-    period: 'month',
-    positioning: 'Try it risk-free',
-    paymentLink: 'https://buy.stripe.com/14A00j6Yjg7R17wfsvcfK0d',
+    period: "month",
+    positioning: "Try it out",
+    paymentLink: "https://buy.stripe.com/fZu28reqL7BlaI6eorcfK0e",
   },
   {
-    id: 'quarterly',
-    title: 'Quarterly',
-    subtitle: 'Most Popular',
+    id: "quarterly",
+    title: "Quarterly",
+    subtitle: "Most Popular",
+    ogPrice: OG_QUARTERLY,
+    ogMonthlyEquivalent: Math.floor((OG_QUARTERLY / 3) * 100) / 100,
     price: PLUS_QUARTERLY,
-    period: '3 months',
+    period: "3 months",
     equivalentMonthly: QUARTERLY_MONTHLY_PRICE,
     savings: QUARTERLY_SAVINGS,
-    badge: 'Most Popular',
-    badgeColor: 'bg-purple-500',
-    positioning: 'Build lasting habits',
-    paymentLink: 'https://buy.stripe.com/9B64gzdmH7Bl17wa8bcfK0b',
+    badge: "Most Popular",
+    badgeColor: "bg-purple-500",
+    positioning: "Commit to real transformation",
+    paymentLink: "https://buy.stripe.com/eVqeVd2I32h16rQgwzcfK0f",
     isPopular: true,
   },
   {
-    id: 'yearly',
-    title: 'Yearly',
-    subtitle: 'Best Value',
+    id: "yearly",
+    title: "Yearly",
+    subtitle: "Best Value",
+    ogPrice: OG_YEARLY,
+    ogMonthlyEquivalent: Math.floor((OG_YEARLY / 12) * 100) / 100,
     price: PLUS_YEARLY,
-    period: 'year',
+    period: "year",
     equivalentMonthly: YEARLY_MONTHLY_PRICE,
     savings: YEARLY_SAVINGS,
     badge: `Save ${YEARLY_SAVINGS}%`,
-    badgeColor: 'bg-green-500',
-    positioning: 'Commit to real transformation',
-    paymentLink: 'https://buy.stripe.com/fZu6oHbez6xh9E2fsvcfK0c',
+    badgeColor: "bg-green-500",
+    positioning: "Best long term value",
+    paymentLink: "https://buy.stripe.com/8x2aEX1DZ8Fp9E24NRcfK0g",
   },
 ];
 
@@ -190,8 +212,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
   );
 };
 
-const Rocket = () => {
-  const launchDate = "2025-06-30T00:00:00";
+const RocketSection = () => {
+  const launchDate = "2025-07-30T00:00:00";
 
   if (launchDate < new Date().toISOString()) {
     return null;
@@ -213,20 +235,18 @@ const Rocket = () => {
           />
         </picture>
       </div>
-      <h2 className="text-xl font-bold">
-        We&apos;re running a launch campaign until
-      </h2>
+      <div className="text-center space-y-2 pb-6">
+        <h2 className="text-2xl font-bold">Launching discount!</h2>
+        <h2 className="text-lg font-normal text-gray-700 pt-5">
+          We&apos;re just lauching this open source project, so we&apos;re
+          offering an up to{" "}
+          <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
+            {YEARLY_OG_SAVINGS}%{" "}
+          </span>
+          discount to thank you for your early support!
+        </h2>
+      </div>
       <CountdownTimer targetDate={launchDate} />
-      <h2 className="text-xl font-bold text-gray-700 pt-5">
-        Here&apos;s a <br />
-        <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
-          {YEARLY_SAVINGS}%
-        </span>{" "}
-        discount for early supporters
-      </h2>
-      <span className="text-sm text-gray-500 mt-1">
-        and maybe some day we can go full time :)
-      </span>
     </div>
   );
 };
@@ -235,6 +255,10 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   open,
   onClose,
 }) => {
+  const [selectedTier, setSelectedTier] = useState<
+    "monthly" | "quarterly" | "yearly"
+  >("quarterly");
+
   const planFeatures: FeatureItem[] = [
     { emoji: "✔️", title: <span>Unlimited plans & activities</span> },
     // { emoji: "🔒", title: <span>Activity privacy</span> },
@@ -246,115 +270,152 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
     },
   ];
 
+  const currentTier = pricingTiers.find((tier) => tier.id === selectedTier)!;
+
   return (
     <AppleLikePopover open={open} onClose={onClose}>
       <div className="space-y-8 pt-6 pb-12">
         <div className="grid gap-6">
-          {/* <Rocket /> */}
+          <RocketSection />
 
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">Choose Your Plan</h2>
-            <p className="text-gray-600">Select the plan that fits your journey</p>
-          </div>
-
-          <div className="grid gap-4">
+          {/* Pricing Tier Switch */}
+          <div className="bg-gray-100 rounded-2xl p-1 grid grid-cols-3 gap-1">
             {pricingTiers.map((tier) => (
-              <Card 
+              <button
                 key={tier.id}
-                className={`p-6 relative overflow-hidden rounded-2xl transition-all duration-200 hover:shadow-lg ${
-                  tier.isPopular 
-                    ? 'ring-2 ring-purple-500/50 bg-gradient-to-br from-white to-purple-50' 
-                    : 'bg-white hover:bg-gray-50'
+                onClick={() => setSelectedTier(tier.id)}
+                className={`relative py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  selectedTier === tier.id
+                    ? "bg-white shadow-sm text-gray-900"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                <div className="space-y-4">
-                  <div className="flex flex-row items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">{tier.title}</h3>
-                      <p className="text-sm text-gray-600">{tier.positioning}</p>
-                    </div>
-                    {tier.badge && (
-                      <Badge className={`${tier.badgeColor} text-white`}>
-                        {tier.badge}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold">€{tier.price}</span>
-                      <span className="text-gray-500">/ {tier.period}</span>
-                    </div>
-                    {tier.equivalentMonthly && (
-                      <p className="text-sm text-gray-600">
-                        €{tier.equivalentMonthly} per month
-                        {tier.savings && (
-                          <span className="text-green-600 font-medium ml-1">
-                            • Save {tier.savings}%
-                          </span>
-                        )}
-                      </p>
-                    )}
-                  </div>
-
-                  {tier.isPopular && (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium text-gray-700">What&apos;s included:</div>
-                      <div className="grid grid-cols-1 gap-1">
-                        {planFeatures.slice(0, 3).map((feature, index) => (
-                          <div key={index} className="flex items-center gap-2 text-sm">
-                            <span className="text-xs">{feature.emoji}</span>
-                            <span className="text-gray-600">{feature.title}</span>
-                          </div>
-                        ))}
-                        <div className="text-xs text-gray-500 mt-1">+ 2 more features</div>
-                      </div>
-                    </div>
+                <div className="flex flex-col items-center gap-1">
+                  <span>{tier.title}</span>
+                  {tier.savings && (
+                    <span className="text-xs text-green-600 font-medium">
+                      Save {tier.savings}%
+                    </span>
                   )}
-
-                  <Link href={tier.paymentLink} target="_blank" className="block">
-                    <Button 
-                      className={`w-full rounded-xl ${
-                        tier.isPopular 
-                          ? 'bg-purple-500 hover:bg-purple-600' 
-                          : 'bg-blue-500 hover:bg-blue-600'
-                      }`}
-                    >
-                      {tier.id === 'monthly' ? 'Start Free Trial' : 
-                       tier.id === 'quarterly' ? 'Get Started' : 'Best Value'}
-                    </Button>
-                  </Link>
                 </div>
-              </Card>
+              </button>
             ))}
           </div>
 
+          {/* Selected Pricing Card */}
+          <Card className="p-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-white to-purple-50 ring-2 ring-purple-500/50">
+            <div className="space-y-4">
+              <div className="flex flex-row items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">{currentTier.title}</h3>
+                  <p className="text-sm text-gray-500">
+                    {currentTier.positioning}
+                  </p>
+                </div>
+                {currentTier.badge && (
+                  <Badge className={`${currentTier.badgeColor} text-white`}>
+                    {currentTier.badge}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-normal line-through text-gray-500">
+                    €{currentTier.ogMonthlyEquivalent}
+                  </span>
+                  <span className="text-gray-500">/ month</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold">
+                    €{currentTier.equivalentMonthly || currentTier.price}
+                  </span>
+                  <span className="text-gray-500">/ month</span>
+                </div>
+                {currentTier.equivalentMonthly && (
+                  <p className="text-sm text-gray-600">
+                    €{currentTier.price} per {currentTier.period}
+                    {currentTier.savings && (
+                      <span className="text-green-600 font-medium ml-1">
+                        • Save {currentTier.savings}%
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-gray-700">
+                  What&apos;s included:
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {planFeatures.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <span className="text-sm">{feature.emoji}</span>
+                      <span className="text-gray-600">{feature.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Link
+                href={currentTier.paymentLink}
+                target="_blank"
+                className="block"
+              >
+                <Button className="w-full rounded-xl bg-purple-500 hover:bg-purple-600 text-lg py-6">
+                  Start Free Trial
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
           <div className="text-center">
             <div className="text-sm text-gray-500 space-y-1">
-              <p>All plans include:</p>
-              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-                   <div className="flex items-center gap-1">
-                    <span className="text-xs">·</span>
-                    <span className="text-xs">Free trial</span>
-                  </div>
-                {planFeatures.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-1">
-                    <span className="text-xs">{feature.emoji}</span>
-                    <span className="text-xs">{feature.title}</span>
-                  </div>
-                ))}
-              </div>
+              <p>
+                All plans include a free trial and full access to all features
+              </p>
             </div>
           </div>
         </div>
 
-
-                
-        <h4 className="text-center text-8xl font-bold">🎯</h4>
-        <h4 className="text-center text-xl font-bold">thank you for your support! perhaps one day we can go full time :)</h4>
-
         <Divider className="my-6 mt-24" />
         {/* <FAQ /> */}
+        <div className="flex flex-row gap-4 items-start justify-center bg-gray-200/80 p-7 rounded-2xl">
+          <Avatar className="w-10 h-10 ring-2 ring-blue-500 ring-offset-2 ring-offset-white">
+            <AvatarImage
+              src={
+                "https://images.clerk.dev/oauth_google/img_2nWIRuxpfaqd2hVzjtFkClrFSn7"
+              }
+              alt={"Alex"}
+            />
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="text-xl font-bold font-cursive">
+              Hello 👋<br/> I&apos;m Alex, the founder.
+            </span>
+            <div className="text-sm text-gray-500 space-y-4 mt-2">
+              <p>
+                First of all, thank you for making it this far!
+              </p>
+              <p>
+                I believe that social networks should be transparent and actually
+                helpful for their users. I&apos;m working part time on this open source project and
+                would love to see it grow, so that one day I might focus my full
+                time and energy on it. 
+              </p>
+              <p>
+                If you have any ideas or feedback, just let me know!
+              </p>
+              <p>
+                Best, Alex
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </AppleLikePopover>
   );
