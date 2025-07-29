@@ -90,7 +90,9 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           <Input
             type="number"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            onChange={(e) => setQuantity(Math.floor(Number(e.target.value)).toString())}
+            step="1"
+            min="0"
           />
         </div>
         <div>
