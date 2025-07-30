@@ -4,8 +4,8 @@ import toast from 'react-hot-toast';
 import { ApiPlan } from '@/contexts/UserPlanContext';
 
 interface PlanTimesPerWeekUpdateBannerProps {
-  times_per_week: number;
-  old_times_per_week: number;
+  timesPerWeek: number;
+  old_timesPerWeek: number;
   plan?: ApiPlan;
   onAccept: () => Promise<void>;
   onReject: () => Promise<void>;
@@ -13,8 +13,8 @@ interface PlanTimesPerWeekUpdateBannerProps {
 }
 
 const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> = ({
-  times_per_week,
-  old_times_per_week,
+  timesPerWeek,
+  old_timesPerWeek,
   plan,
   onAccept,
   onReject,
@@ -54,7 +54,7 @@ const PlanTimesPerWeekUpdateBanner: React.FC<PlanTimesPerWeekUpdateBannerProps> 
       <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3">
         <span className="text-2xl">{plan.emoji || '📅'}</span>
         <p className="text-sm text-gray-700">
-          Update &quot;{plan.goal}&quot; from {old_times_per_week} to {times_per_week} times per week?
+          Update &quot;{plan.goal}&quot; from {old_timesPerWeek} to {timesPerWeek} times per week?
         </p>
       </div>
       <div className="flex ml-4">

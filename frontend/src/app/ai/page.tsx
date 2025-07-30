@@ -192,7 +192,7 @@
 
 //   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 //   const emotionLoadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-//   const referredUsers = userData?.user?.referred_user_ids.length || 0;
+//   const referredUsers = userData?.user?.referred_userIds.length || 0;
 //   const [copied, copyToClipboard] = useClipboard();
 //   const { share, isSupported: isShareSupported } = useShare();
 
@@ -514,7 +514,7 @@
 //             .slice(0, 1)
 //             .map((message) => ({
 //               role:
-//                 message.sender_id === userData?.user?.id ? "user" : "assistant",
+//                 message.senderId === userData?.user?.id ? "user" : "assistant",
 //               content: message.text,
 //             }))
 //             .forEach((message) => {

@@ -5,7 +5,7 @@ import { useUserPlan } from "@/contexts/UserPlanContext";
 
 export interface PlanSession {
   date: string;
-  activity_id: string;
+  activityId: string;
   descriptive_guide: string;
   quantity: number;
 }
@@ -78,11 +78,11 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               <h4 className="text-sm font-medium text-gray-700">Sessions to be removed:</h4>
               <div className="space-y-2">
                 {old_sessions.map((session) => {
-                  const activity = userData?.activities.find((a) => a.id === session.activity_id);
+                  const activity = userData?.activities.find((a) => a.id === session.activityId);
                   const formattedDate = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                   return (
                     <div
-                      key={session.date + session.activity_id}
+                      key={session.date + session.activityId}
                       className="flex items-center space-x-2 text-sm text-gray-600 pl-4 border-l-2 border-red-200 bg-red-50/50 p-2 rounded-r-md"
                     >
                       <span className="text-lg">{activity?.emoji}</span>
@@ -101,11 +101,11 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               <h4 className="text-sm font-medium text-gray-700">Sessions to be added:</h4>
               <div className="space-y-2">
                 {sessions.map((session) => {
-                  const activity = userData?.activities.find((a) => a.id === session.activity_id);
+                  const activity = userData?.activities.find((a) => a.id === session.activityId);
                   const formattedDate = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                   return (
                     <div
-                      key={session.date + session.activity_id}
+                      key={session.date + session.activityId}
                       className="flex items-center space-x-2 text-sm text-gray-600 pl-4 border-l-2 border-green-200 bg-green-50/50 p-2 rounded-r-md"
                     >
                       <span className="text-lg">{activity?.emoji}</span>

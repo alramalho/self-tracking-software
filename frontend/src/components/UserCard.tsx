@@ -68,9 +68,9 @@ const UserCard: React.FC<UserCardProps> = ({
     try {
       setIsSendingRequest(true);
       posthog.capture("ap_friend_request_sent", {
-        sent_from_user_id: currentUser?.id,
+        sent_from_userId: currentUser?.id,
         sent_from_user_username: currentUser?.username,
-        sent_to_user_id: user.id,
+        sent_to_userId: user.id,
         sent_to_user_username: user.username,
         message: message || undefined,
       });
@@ -224,7 +224,7 @@ const UserCard: React.FC<UserCardProps> = ({
                 <span>
                   Last active{" "}
                   {formatDistanceToNow(
-                    new Date(user.last_active_at || user.created_at!),
+                    new Date(user.last_active_at || user.createdAt!),
                     { addSuffix: true }
                   )}{" "}
                 </span>

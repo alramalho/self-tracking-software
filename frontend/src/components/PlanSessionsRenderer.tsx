@@ -36,9 +36,9 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
       count: session.quantity,
     }));
 
-    if (plan.finishing_date) {
+    if (plan.finishingDate) {
       sessions.push({
-        date: format(plan.finishing_date, "yyyy/MM/dd"),
+        date: format(plan.finishingDate, "yyyy/MM/dd"),
         count: -1,
       });
     }
@@ -55,7 +55,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
 
     const intensities = sessionsOnDate.map(session => {
       const activityIndex = activities.findIndex(
-        (a) => a.id === session.activity_id
+        (a) => a.id === session.activityId
       );
 
       const quantities = plan.sessions.map((s) => s.quantity);
@@ -95,7 +95,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
           <ul className="list-none space-y-4">
             {sessionsOnDate.map((session, index) => {
               const activity = activities.find(
-                (a) => a.id === session.activity_id
+                (a) => a.id === session.activityId
               );
               if (!activity) return null;
 
@@ -127,7 +127,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
       <BaseHeatmapRenderer
         activities={activities}
         startDate={getDefaultStartDate()}
-        endDate={plan.finishing_date}
+        endDate={plan.finishingDate}
         heatmapData={formatSessionsForHeatMap()}
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}

@@ -45,7 +45,7 @@ export function useMetrics() {
     windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
 
     return activityEntries.some((entry) => {
-      if (entry.activity_id !== activityId) return false;
+      if (entry.activityId !== activityId) return false;
       const entryDate = new Date(entry.date);
       return entryDate >= windowStart && entryDate <= targetDate;
     });
@@ -54,7 +54,7 @@ export function useMetrics() {
   // Calculate correlations for a metric
   const calculateMetricCorrelations = (metricId: string): MetricCorrelation[] => {
     const metricEntries = entries
-      .filter((entry) => entry.metric_id === metricId)
+      .filter((entry) => entry.metricId === metricId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const correlations = activities
@@ -91,7 +91,7 @@ export function useMetrics() {
 
   // Get correlations for a metric
   const getMetricCorrelations = (metricId: string): MetricCorrelation[] => {
-    const count = entries.filter((e) => e.metric_id === metricId).length;
+    const count = entries.filter((e) => e.metricId === metricId).length;
     
     if (count < MINIMUM_ENTRIES) {
       return [];
@@ -125,7 +125,7 @@ export function useMetrics() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const metricEntries = entries
-      .filter((entry) => entry.metric_id === metricId)
+      .filter((entry) => entry.metricId === metricId)
       .filter((entry) => new Date(entry.date) >= sevenDaysAgo)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 

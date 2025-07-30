@@ -1,0 +1,527 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+        
+
+model User {
+  id                              String             @id @default(cuid())
+  name                            String?
+  profile                         String?
+  picture                         String?
+  age                             Int?
+  username                        String?            @unique
+  timezone                        String?            @default("Europe/Berlin")
+  clerkId                         String?            @unique
+  language                        String?            @default("English")
+  planType                        PlanType           @default(FREE)
+  lastActiveAt                    DateTime?
+  email                           String             @unique
+  createdAt                       DateTime           @default(now())
+  deleted                         Boolean            @default(false)
+  deletedAt                       DateTime?
+  isPwaInstalled                  Boolean            @default(false)
+  isPwaNotificationsEnabled       Boolean            @default(false)
+  lookingForAp                    Boolean?           @default(false)
+  pwaSubscriptionEndpoint         String?
+  pwaSubscriptionKey              String?
+  pwaSubscriptionAuthToken        String?
+  unactivatedEmailSentAt          DateTime?
+  themeBaseColor                  ThemeColor         @default(BLUE)
+  defaultActivityVisibility       ActivityVisibility @default(PUBLIC)
+  recommendationsOutdated         Boolean            @default(false)
+  recommendationsLastCalculatedAt DateTime?
+
+  // Daily checkin settings
+  dailyCheckinDays String[]          @default([])
+  dailyCheckinTime DailyCheckinTime?
+
+  // Stripe settings
+  stripeCustomerId         String?
+  stripeSubscriptionId     String?
+  stripeSubscriptionStatus String?
+
+  // Relations
+  activities              Activity[]
+  activityEntries         ActivityEntry[]
+  metrics                 Metric[]
+  metricEntries           MetricEntry[]
+  moodReports             MoodReport[]
+  plans                   Plan[]
+  messages                Message[]         @relation("MessageSender")
+  receivedMessages        Message[]         @relation("MessageRecipient")
+  notifications           Notification[]
+  friendRequestsSent      FriendRequest[]   @relation("FriendRequestSender")
+  friendRequestsReceived  FriendRequest[]   @relation("FriendRequestRecipient")
+  planInvitationsSent     PlanInvitation[]  @relation("PlanInvitationSender")
+  planInvitationsReceived PlanInvitation[]  @relation("PlanInvitationRecipient")
+  planGroupMemberships    PlanGroupMember[]
+  recommendations         Recommendation[]
+  comments                Comment[]
+  reactions               Reaction[]
+
+  // Many-to-many relationships
+  friends       User[]  @relation("UserFriends")
+  friendOf      User[]  @relation("UserFriends")
+  referredUsers User[]  @relation("UserReferrals")
+  referredBy    User?   @relation("UserReferrals", fields: [referredById], references: [id])
+  referredById  String?
+
+  @@map("users")
+}
+
+model Activity {
+  id              String              @id @default(cuid())
+  userId          String
+  title           String
+  measure         String
+  emoji           String
+  createdAt       DateTime            @default(now())
+  privacySettings ActivityVisibility?
+  colorHex        String?
+  deletedAt       DateTime?
+
+  // Relations
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries           ActivityEntry[]
+  planSessions      PlanSession[]
+  planActivities    PlanActivity[]
+  milestoneCriteria PlanMilestoneCriteria[]
+
+  @@map("activities")
+}
+
+model ActivityEntry {
+  id          String    @id @default(cuid())
+  activityId  String
+  userId      String
+  quantity    Int
+  date        String // YYYY-MM-DD format
+  createdAt   DateTime  @default(now())
+  description String?
+  deletedAt   DateTime?
+  timezone    String?
+
+  // Image info
+  imageS3Path    String?
+  imageUrl       String?
+  imageExpiresAt DateTime?
+  imageCreatedAt DateTime?
+  imageIsPublic  Boolean   @default(false)
+
+  // Relations
+  activity  Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions Reaction[]
+  comments  Comment[]
+
+  @@map("activity_entries")
+}
+
+model Reaction {
+  id              String   @id @default(cuid())
+  activityEntryId String
+  userId          String
+  emoji           String
+  createdAt       DateTime @default(now())
+
+  // Relations
+  activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityEntryId, userId, emoji])
+  @@map("reactions")
+}
+
+model Comment {
+  id              String    @id @default(cuid())
+  activityEntryId String
+  userId          String
+  username        String
+  text            String
+  createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
+  picture         String?
+
+  // Relations
+  activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Metric {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  emoji     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries MetricEntry[]
+
+  @@map("metrics")
+}
+
+model MetricEntry {
+  id                 String   @id @default(cuid())
+  userId             String
+  metricId           String
+  rating             Int
+  date               String // YYYY-MM-DD format
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  description        String?
+  skipped            Boolean  @default(false)
+  descriptionSkipped Boolean  @default(false)
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metric Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@map("metric_entries")
+}
+
+model MoodReport {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String // YYYY-MM-DD format
+  score     String // 0-10 rating as string
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mood_reports")
+}
+
+model Plan {
+  id                         String            @id @default(cuid())
+  userId                     String
+  planGroupId                String?
+  goal                       String
+  emoji                      String?
+  finishingDate              String?           // YYYY-MM-DD format
+  createdAt                  DateTime          @default(now())
+  deletedAt                  DateTime?
+  durationType               PlanDurationType?
+  outlineType                PlanOutlineType   @default(SPECIFIC)
+  timesPerWeek               Int?
+  coachSuggestedTimesPerWeek Int?
+  notes                      String?
+  coachNotes                 String?
+  suggestedByCoachAt         DateTime?
+
+  // Current week state
+  currentWeekState             PlanState @default(ON_TRACK)
+  currentWeekStateCalculatedAt DateTime?
+
+  // Relations
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planGroup              PlanGroup?       @relation(fields: [planGroupId], references: [id])
+  sessions               PlanSession[]
+  coachSuggestedSessions PlanSession[]    @relation("CoachSuggestedSessions")
+  activities             PlanActivity[]
+  invitations            PlanInvitation[]
+  milestones             PlanMilestone[]
+
+  @@map("plans")
+}
+
+model PlanActivity {
+  id         String   @id @default(cuid())
+  planId     String
+  activityId String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  plan     Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, activityId])
+  @@map("plan_activities")
+}
+
+model PlanSession {
+  id               String   @id @default(cuid())
+  planId           String
+  activityId       String
+  date             String // YYYY-MM-DD format
+  descriptiveGuide String   @default("")
+  quantity         Int
+  isCoachSuggested Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  // Relations
+  plan               Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  coachSuggestedPlan Plan?    @relation("CoachSuggestedSessions", fields: [planId], references: [id], map: "plan_sessions_coach_plan_fkey")
+  activity           Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("plan_sessions")
+}
+
+model PlanMilestone {
+  id          String   @id @default(cuid())
+  planId      String
+  date        String // YYYY-MM-DD format
+  description String
+  progress    Int? // 0-100 percentage
+  createdAt   DateTime @default(now())
+
+  // Relations
+  plan     Plan                         @relation(fields: [planId], references: [id], onDelete: Cascade)
+  criteria PlanMilestoneCriteria[]
+  groups   PlanMilestoneCriteriaGroup[]
+
+  @@map("plan_milestones")
+}
+
+model PlanMilestoneCriteria {
+  id          String   @id @default(cuid())
+  milestoneId String
+  groupId     String?
+  activityId  String
+  quantity    Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  milestone PlanMilestone               @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  group     PlanMilestoneCriteriaGroup? @relation(fields: [groupId], references: [id])
+  activity  Activity                    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("plan_milestone_criteria")
+}
+
+model PlanMilestoneCriteriaGroup {
+  id          String           @id @default(cuid())
+  milestoneId String
+  junction    CriteriaJunction @default(AND)
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  milestone PlanMilestone           @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  criteria  PlanMilestoneCriteria[]
+
+  @@map("plan_milestone_criteria_groups")
+}
+
+model PlanGroup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Relations
+  plans   Plan[]
+  members PlanGroupMember[]
+
+  @@map("plan_groups")
+}
+
+model PlanGroupMember {
+  id          String   @id @default(cuid())
+  planGroupId String
+  userId      String
+  username    String
+  name        String
+  picture     String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  planGroup PlanGroup @relation(fields: [planGroupId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([planGroupId, userId])
+  @@map("plan_group_members")
+}
+
+model PlanInvitation {
+  id          String           @id @default(cuid())
+  planId      String
+  senderId    String
+  recipientId String
+  status      InvitationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime?        @updatedAt
+
+  // Relations
+  plan      Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sender    User @relation("PlanInvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("PlanInvitationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("plan_invitations")
+}
+
+model FriendRequest {
+  id          String           @id @default(cuid())
+  senderId    String
+  recipientId String
+  status      InvitationStatus @default(PENDING)
+  message     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime?        @updatedAt
+
+  // Relations
+  sender    User @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("FriendRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("friend_requests")
+}
+
+model Message {
+  id            String   @id @default(cuid())
+  senderId      String
+  senderName    String
+  recipientId   String
+  recipientName String
+  text          String
+  createdAt     DateTime @default(now())
+
+  // Relations
+  sender    User             @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User             @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  emotions  MessageEmotion[]
+
+  @@map("messages")
+}
+
+model MessageEmotion {
+  id        String @id @default(cuid())
+  messageId String
+  name      String
+  score     Float
+  color     String
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_emotions")
+}
+
+model Notification {
+  id           String                  @id @default(cuid())
+  userId       String
+  message      String
+  createdAt    DateTime                @default(now())
+  sentAt       DateTime?
+  processedAt  DateTime?
+  openedAt     DateTime?
+  concludedAt  DateTime?
+  scheduledFor DateTime?
+  recurrence   NotificationRecurrence?
+  awsCronjobId String?
+  promptTag    String?
+  status       NotificationStatus      @default(PENDING)
+  type         NotificationType        @default(INFO)
+  relatedId    String?
+  relatedData  Json?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Recommendation {
+  id                       String                   @id @default(cuid())
+  userId                   String
+  recommendationObjectType RecommendationObjectType @default(USER)
+  recommendationObjectId   String
+  score                    Float
+  metadata                 Json                     @default("{}")
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("recommendations")
+}
+
+// Enums
+enum PlanType {
+  FREE
+  PLUS
+}
+
+enum ThemeColor {
+  RANDOM
+  SLATE
+  BLUE
+  VIOLET
+  AMBER
+  EMERALD
+  ROSE
+}
+
+enum ActivityVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS
+}
+
+enum DailyCheckinTime {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+enum PlanDurationType {
+  HABIT
+  LIFESTYLE
+  CUSTOM
+}
+
+enum PlanOutlineType {
+  SPECIFIC
+  TIMES_PER_WEEK
+}
+
+enum PlanState {
+  ON_TRACK
+  AT_RISK
+  FAILED
+  COMPLETED
+}
+
+enum CriteriaJunction {
+  AND
+  OR
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationRecurrence {
+  DAILY
+  WEEKLY
+}
+
+enum NotificationStatus {
+  PENDING
+  PROCESSED
+  OPENED
+  CONCLUDED
+}
+
+enum NotificationType {
+  FRIEND_REQUEST
+  PLAN_INVITATION
+  ENGAGEMENT
+  INFO
+  METRIC_CHECKIN
+  COACH
+}
+
+enum RecommendationObjectType {
+  USER
+}

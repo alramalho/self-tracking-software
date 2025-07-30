@@ -28,8 +28,8 @@ const LogPage: React.FC = () => {
   
   // Sort activities by entry count
   const sortedActivities = [...activities].sort((a, b) => {
-    const aEntryCount = activityEntries.filter(entry => entry.activity_id === a.id).length;
-    const bEntryCount = activityEntries.filter(entry => entry.activity_id === b.id).length;
+    const aEntryCount = activityEntries.filter(entry => entry.activityId === a.id).length;
+    const bEntryCount = activityEntries.filter(entry => entry.activityId === b.id).length;
     return bEntryCount - aEntryCount; // Sort in descending order (most entries first)
   });
   

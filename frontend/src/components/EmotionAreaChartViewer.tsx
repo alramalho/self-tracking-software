@@ -92,11 +92,11 @@ export function EmotionAreaChartViewer({
   const chartData: DailyChartData[] = Object.entries(
     messages
       .filter(
-        (msg) => msg.emotions && msg.emotions.length > 0 && msg.created_at
+        (msg) => msg.emotions && msg.emotions.length > 0 && msg.createdAt
       )
       .reduce((acc: { [key: string]: number[] }, message) => {
         // Format the date to YYYY-MM-DD to group by day
-        const dateKey = format(parseISO(message.created_at), "yyyy-MM-dd");
+        const dateKey = format(parseISO(message.createdAt), "yyyy-MM-dd");
 
         let positiveCount = 0;
         let negativeCount = 0;

@@ -96,7 +96,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const planActivities = userData?.activities.filter((a) =>
-    selectedPlan.activity_ids?.includes(a.id)
+    selectedPlan.activityIds?.includes(a.id)
   );
 
 
@@ -122,16 +122,16 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   }, [timeRange, selectedPlan.sessions]);
 
   const memberUsernames = useMemo(() => {
-    if (!selectedPlan.plan_group_id || !userData?.user?.username) return [];
+    if (!selectedPlan.planGroupId || !userData?.user?.username) return [];
 
     const group = userData?.planGroups.find(
-      (group) => group.id === selectedPlan.plan_group_id
+      (group) => group.id === selectedPlan.planGroupId
     );
 
     return (group?.members || [])
       .map((member) => member.username)
       .filter((username) => username !== userData?.user?.username);
-  }, [selectedPlan.plan_group_id, userData]);
+  }, [selectedPlan.planGroupId, userData]);
 
   const { data: membersData } = useMultipleUsersDataQuery(memberUsernames);
 
@@ -149,11 +149,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   }, [userData]);
 
   const { planGroupMembers, memberPlans } = useMemo(() => {
-    if (!selectedPlan.plan_group_id)
+    if (!selectedPlan.planGroupId)
       return { planGroupMembers: [], memberPlans: new Map() };
 
     const group = userData?.planGroups.find(
-      (group) => group.id === selectedPlan.plan_group_id
+      (group) => group.id === selectedPlan.planGroupId
     );
 
     group?.members?.forEach((member) => {
@@ -166,7 +166,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     group?.members?.forEach((member) => {
       const memberData = getMemberData(member.username);
       const memberPlan = memberData?.plans.find(
-        (p) => p.plan_group_id === selectedPlan.plan_group_id
+        (p) => p.planGroupId === selectedPlan.planGroupId
       );
       if (memberPlan) {
         memberPlans.set(member.username, memberPlan);
@@ -181,9 +181,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   const getCompletedSessionsForPlan = useCallback(
     (plan: ApiPlan, startDate?: Date, endDate?: Date) => {
-      const userId = plan.user_id;
+      const userId = plan.userId;
       const username = planGroupMembers.find(
-        (m) => m.user_id === userId
+        (m) => m.userId === userId
       )?.username;
       if (!username) return [];
 
@@ -191,7 +191,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       if (!memberData) return [];
 
       let completedEntries = memberData.activityEntries.filter((entry) =>
-        plan.activity_ids?.includes(entry.activity_id)
+        plan.activityIds?.includes(entry.activityId)
       );
 
       if (startDate && endDate) {
@@ -238,7 +238,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   useEffect(() => {
     const calculateSessionData = () => {
       setLoading(true);
-      if (!selectedPlan || !selectedPlan.plan_group_id) {
+      if (!selectedPlan || !selectedPlan.planGroupId) {
         setLoading(false);
         return;
       }
@@ -247,7 +247,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         .map((member) => {
           const memberData = getMemberData(member.username);
           return memberData?.plans.find(
-            (p) => p.plan_group_id === selectedPlan.plan_group_id
+            (p) => p.planGroupId === selectedPlan.planGroupId
           );
         })
         .filter((p): p is ApiPlan => p !== undefined);
@@ -287,8 +287,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
         weeklyData[weekKey] = { planned: 0 };
 
-        if (selectedPlan.outline_type === "times_per_week") {
-          weeklyData[weekKey].planned = selectedPlan.times_per_week || 0;
+        if (selectedPlan.outlineType === "timesPerWeek") {
+          weeklyData[weekKey].planned = selectedPlan.timesPerWeek || 0;
         } else {
           const plannedThisWeek = selectedPlan.sessions.filter((session) => {
             const sessionDate = parseISO(session.date);
@@ -299,7 +299,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
         groupPlans.forEach((plan) => {
           const member = planGroupMembers.find(
-            (m) => m.user_id === plan.user_id
+            (m) => m.userId === plan.userId
           );
           if (!member) return;
 
@@ -355,8 +355,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <div className="flex flex-col">
           <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
           <span className="text-sm text-gray-500">
-            {selectedPlan.outline_type === "times_per_week"
-              ? `${selectedPlan.times_per_week} times per week`
+            {selectedPlan.outlineType === "timesPerWeek"
+              ? `${selectedPlan.timesPerWeek} times per week`
               : `custom plan`}
           </span>
         </div>
@@ -467,17 +467,17 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             </div>
           </Select>
         </div>
-        {/* {selectedPlan.outline_type === "times_per_week" && (
+        {/* {selectedPlan.outlineType === "timesPerWeek" && (
           <WeeklySessionsChecklist
             plan={selectedPlan}
             activityEntries={activityEntries}
           />
         )} */}
 
-        {/* {selectedPlan.outline_type === "specific" &&
+        {/* {selectedPlan.outlineType === "specific" &&
           areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />} */}
         {/* 
-        {selectedPlan.outline_type === "specific" && (
+        {selectedPlan.outlineType === "specific" && (
           <>
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-gray-800">This week</h2>
@@ -499,7 +499,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 })
                 .map((session) => {
                   const activity = activities.find(
-                    (a) => a.id === session.activity_id
+                    (a) => a.id === session.activityId
                   );
                   const completed = isSessionCompleted(
                     session,
@@ -515,7 +515,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
                   return (
                     <SmallActivityEntryCard
-                      key={`${session.date}-${session.activity_id}`}
+                      key={`${session.date}-${session.activityId}`}
                       entry={session as Entry}
                       activity={activity}
                       completed={completed}
@@ -527,7 +527,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </>
         )} */}
         <div className="mt-4">
-          {selectedPlan.outline_type === "specific" && (
+          {selectedPlan.outlineType === "specific" && (
             <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
               <span className="text-xs text-gray-500">Completed</span>
               <Switch
@@ -543,11 +543,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               plan={convertApiPlanToPlan(
                 selectedPlan,
                 activities.filter((a) =>
-                  selectedPlan.activity_ids?.includes(a.id)
+                  selectedPlan.activityIds?.includes(a.id)
                 )
               )}
               activities={activities.filter((a) =>
-                selectedPlan.activity_ids?.includes(a.id)
+                selectedPlan.activityIds?.includes(a.id)
               )}
               startDate={getStartDate()}
             />
@@ -621,7 +621,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <div className="flex flex-row flex-wrap gap-6">
             {planGroupMembers.map((member) => (
               <div
-                key={member.user_id}
+                key={member.userId}
                 className="flex flex-row flex-nowrap gap-2 items-center"
               >
                 <Link href={`/profile/${member.username}`}>

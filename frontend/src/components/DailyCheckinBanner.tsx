@@ -107,8 +107,8 @@ export function DailyCheckinBanner({
 
   const logMetricMutation = useMutation({
     mutationFn: async (entry: MetricEntry) => {
-      const response = await api.post("/log-metric", {
-        metric_id: entry.metric_id,
+      const response = await api.post("/metrics/log-metric", {
+        metric_id: entry.metricId,
         rating: entry.rating,
         date: entry.date,
       });
@@ -119,11 +119,11 @@ export function DailyCheckinBanner({
   const logActivityMutation = useMutation({
     mutationFn: async (entry: ActivityEntry) => {
       const formData = new FormData();
-      formData.append("activity_id", entry.activity_id);
+      formData.append("activityId", entry.activityId);
       formData.append("iso_date_string", entry.date);
       formData.append("quantity", entry.quantity.toString());
 
-      const response = await api.post("/log-activity", formData);
+      const response = await api.post("/activities/log-activity", formData);
       return response.data;
     },
   });
@@ -200,7 +200,7 @@ export function DailyCheckinBanner({
               <div className="flex flex-col gap-2">
                 {data.metric_entries?.map((m) => {
                   const respectiveMetric = metrics?.find(
-                    (metric) => metric.id === m.metric_id
+                    (metric) => metric.id === m.metricId
                   );
                   return (
                     <div key={m.id}>
@@ -223,7 +223,7 @@ export function DailyCheckinBanner({
               <div className="flex flex-col gap-2">
                 {data.activity_entries?.map((a) => {
                   const respectiveActivity = activities?.find(
-                    (activity) => activity.id === a.activity_id
+                    (activity) => activity.id === a.activityId
                   );
                   return (
                     <div key={a.id}>

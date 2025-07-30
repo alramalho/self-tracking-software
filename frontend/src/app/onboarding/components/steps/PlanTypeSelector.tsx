@@ -14,7 +14,7 @@ export const PlanTypeSelector = () => {
 
   const planOptions = [
     {
-      id: "times_per_week" as const,
+      id: "timesPerWeek" as const,
       title: "Times per Week",
       description: "Set how many times per week you want to do activities",
       icon: CalendarDays,

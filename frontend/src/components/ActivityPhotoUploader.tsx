@@ -160,7 +160,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     setIsProcessingOrUploading(true);
 
     const basePayload = {
-      activity_id: activityData.activityId,
+      activityId: activityData.activityId,
       iso_date_string: activityData.date.toISOString(),
       quantity: activityData.quantity.toString(), // Ensure quantity is string for FormData
       description: description || "", // Ensure description is at least an empty string for FormData
@@ -196,7 +196,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
     }
 
     try {
-      const response = await api.post("/log-activity", dataToSend, { headers: headersConfig }, {
+      const response = await api.post("/activities/log-activity", dataToSend, { headers: headersConfig }, {
         title: serializablePhotoData ? "Log with photo" : "Log activity",
         successMessage: serializablePhotoData ? "Activity with photo synced!" : "Activity synced!",
         errorMessage: serializablePhotoData ? "Failed to sync photo." : "Failed to sync activity."

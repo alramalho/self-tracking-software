@@ -46,7 +46,7 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
   const messagesByDate: { [key: string]: Message[] } = {};
 
   messages.forEach((message) => {
-    const date = new Date(message.created_at);
+    const date = new Date(message.createdAt);
     const dateKey = new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -65,10 +65,10 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
   });
 
   function getMessageRole(message: Message) {
-    if (message.sender_id === userData?.user?.id) {
+    if (message.senderId === userData?.user?.id) {
       return "user";
     }
-    if (message.sender_id === "-1") {
+    if (message.senderId === "-1") {
       return "system";
     }
     return "assistant";
@@ -82,8 +82,8 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
           {dateMessages
             .sort(
               (a, b) =>
-                new Date(a.created_at).getTime() -
-                new Date(b.created_at).getTime()
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
             )
             .map((message) => {
               const role = getMessageRole(message);

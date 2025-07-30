@@ -135,24 +135,24 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
         )}
 
         {/* Plan Type */}
-        {data.plan?.outline_type && (
+        {data.plan?.outlineType && (
           <div className="border border-gray-200 rounded-md p-3 bg-white">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Plan Type</h3>
             <p className="text-gray-900">
-            {data.plan?.outline_type === "specific"
+            {data.plan?.outlineType === "specific"
               ? "Specific Dates"
               : "Times Per Week"}
             </p>
-            {data.plan?.outline_type === "times_per_week" && (
+            {data.plan?.outlineType === "timesPerWeek" && (
               <p className="text-gray-900">
-                {data.plan?.times_per_week} times per week
+                {data.plan?.timesPerWeek} times per week
               </p>
             )}
           </div>
         )}
 
         {/* Sessions */}
-        {data.plan?.outline_type === "specific" && data.plan?.sessions && (
+        {data.plan?.outlineType === "specific" && data.plan?.sessions && (
           <div className="border border-gray-200 rounded-md p-3 bg-white">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Sessions</h3>
             {typeof data.plan.sessions === "number" ? (
@@ -163,7 +163,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
               <div className="space-y-2">
                 {data.plan.sessions.map((session, idx) => {
                   const activity = data.activities?.find(
-                    (a) => a.id === session.activity_id
+                    (a) => a.id === session.activityId
                   );
                   return (
                     <div key={idx} className="text-gray-900">

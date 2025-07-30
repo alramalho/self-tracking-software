@@ -15,9 +15,9 @@ export function usePlanGeneration() {
   const generateSessions = async (
     config: PlanGenerationConfig
   ): Promise<ApiPlan["sessions"]> => {
-    const response = await api.post("/generate-sessions", {
+    const response = await api.post("/plans/generate-sessions", {
       goal: config.goal,
-      finishing_date: config.finishingDate,
+      finishingDate: config.finishingDate,
       activities: config.activities,
       description: config.description,
       existing_plan: config.existingPlan,

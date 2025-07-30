@@ -23,14 +23,14 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
 
   const handleUserSelect = (user: UserSearchResult) => {
-    if (!invitees.some((invitee) => invitee.user_id === user.user_id)) {
+    if (!invitees.some((invitee) => invitee.userId === user.userId)) {
       setInvitees([...invitees, user]);
     }
   };
 
   const removeInvitee = (userIdToRemove: string) => {
     setInvitees(
-      invitees.filter((invitee) => invitee.user_id !== userIdToRemove)
+      invitees.filter((invitee) => invitee.userId !== userIdToRemove)
     );
   };
 
@@ -45,7 +45,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     try {
       await Promise.all(
         invitees.map((invitee) =>
-          api.post(`/invite-to-plan/${planId}/${invitee.user_id}`)
+          api.post(`/invite-to-plan/${planId}/${invitee.userId}`)
         )
       );
       toast.success("Invitations sent successfully!");

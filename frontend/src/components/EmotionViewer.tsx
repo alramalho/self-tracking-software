@@ -119,9 +119,9 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
 
   const dateRange = useMemo(() => {
     const dates = messages
-      .filter((msg) => msg.created_at)
+      .filter((msg) => msg.createdAt)
       .filter((msg) => msg.emotions && msg.emotions.length > 0)
-      .map((msg) => new Date(msg.created_at!).getTime());
+      .map((msg) => new Date(msg.createdAt!).getTime());
 
     if (dates.length === 0) {
       const now = new Date().getTime();
@@ -144,8 +144,8 @@ export function EmotionViewer({ messages }: EmotionViewerProps) {
 
   const filteredMessages = useMemo(() => {
     return messages.filter((message) => {
-      if (!message.created_at) return false;
-      const messageDate = new Date(message.created_at).getTime();
+      if (!message.createdAt) return false;
+      const messageDate = new Date(message.createdAt).getTime();
       return messageDate >= selectedRange[0] && messageDate <= selectedRange[1];
     });
   }, [messages, selectedRange]);

@@ -15,7 +15,7 @@ interface ActivityEntry {
   id: string;
   quantity: number;
   date: string;
-  activity_id: string;
+  activityId: string;
   description?: string;
 }
 

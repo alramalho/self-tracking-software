@@ -185,13 +185,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                       @{comment.username}
                     </span>
                     <span className="text-xs text-gray-400">
-                      {getFormattedDate(comment.created_at)}
+                      {getFormattedDate(comment.createdAt)}
                     </span>
                   </div>
                   <p className="text-sm break-words whitespace-pre-wrap">{comment.text}</p>
                 </div>
                 
-                {userData?.user?.id === comment.user_id && (
+                {userData?.user?.id === comment.userId && (
                   <button 
                     onClick={() => handleDeleteComment(comment.id)}
                     className="text-gray-400 hover:text-gray-600"

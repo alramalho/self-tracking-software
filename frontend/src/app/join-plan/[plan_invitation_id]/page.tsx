@@ -9,9 +9,9 @@ type Props = {
 export const dynamic = 'force-dynamic'
 
 // we can't improve actual types as this component must be server side and dont rely on client side apis (like createContext)
-function countAverageSessionsPerWeek(plan: {sessions: any[], finishing_date: string}): number {
+function countAverageSessionsPerWeek(plan: {sessions: any[], finishingDate: string}): number {
   const totalSessions = plan.sessions.length;
-  const totalWeeks = differenceInWeeks(plan.finishing_date || new Date(), new Date());
+  const totalWeeks = differenceInWeeks(plan.finishingDate || new Date(), new Date());
   return Math.round(totalSessions / totalWeeks);
 }
 

@@ -73,15 +73,15 @@ export default function AISettings() {
     <div className="flex flex-col gap-4 mb-12">
       <h1 className="text-2xl font-bold my-4">AI Settings</h1>
       <div className="flex flex-col flex-nowrap gap-4">
-        {user?.daily_checkin_settings != undefined ? (
+        {user?.dailyCheckinSettings != undefined ? (
           <Card
             emoji="☀️"
             title="Recurrent Checkin"
             content={
               <>
                 <ul className="list-disc list-inside">
-                  <li>{formatList(user.daily_checkin_settings.days)}</li>
-                  <li>In the {capitalize(user.daily_checkin_settings.time)}</li>
+                  <li>{formatList(user.dailyCheckinSettings.days)}</li>
+                  <li>In the {capitalize(user.dailyCheckinSettings.time)}</li>
                 </ul>
               </>
             }

@@ -32,7 +32,7 @@ export const countTimesPerWeekPlanCompletedWeekSessions = (
   date: Date
 ) => {
   const completedSessionsThisWeek = userActivityEntries
-    .filter((entry) => plan.activity_ids?.includes(entry.activity_id) ?? false)
+    .filter((entry) => plan.activityIds?.includes(entry.activityId) ?? false)
     .filter((entry) => {
       const entryDate = parseISO(entry.date);
       return (
@@ -60,7 +60,7 @@ export const getCompletedOn = (
   const plannedSessionsThisWeek = plan.sessions
     .filter((s) => {
       return (
-        s.activity_id === session.activity_id &&
+        s.activityId === session.activityId &&
         s.date >= weekStart &&
         s.date <= weekEnd
       );
@@ -70,7 +70,7 @@ export const getCompletedOn = (
   const completedSessionsThisWeek = userActivityEntries
     .filter(
       (entry) =>
-        entry.activity_id === session.activity_id &&
+        entry.activityId === session.activityId &&
         parseISO(entry.date) >= weekStart &&
         parseISO(entry.date) <= weekEnd
     )
@@ -96,7 +96,7 @@ export const isSessionCompleted = (
   const plannedSessionsThisWeek = plan.sessions
     .filter((s) => {
       return (
-        s.activity_id === session.activity_id &&
+        s.activityId === session.activityId &&
         s.date >= weekStart &&
         s.date <= weekEnd
       );
@@ -106,7 +106,7 @@ export const isSessionCompleted = (
   const completedSessionsThisWeek = userActivityEntries
     .filter(
       (entry) =>
-        entry.activity_id === session.activity_id &&
+        entry.activityId === session.activityId &&
         parseISO(entry.date) >= weekStart &&
         parseISO(entry.date) <= weekEnd
     )
@@ -126,7 +126,7 @@ export const isWeekCompleted = (
   const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
   const weekStart = startOfWeek(weekStartDate, { weekStartsOn: 0 });
 
-  if (plan.outline_type === "times_per_week") {
+  if (plan.outlineType === "timesPerWeek") {
     const entriesThisWeek = planActivityEntries.filter((entry) => {
       const entryDate = new Date(entry.date);
       return isAfter(entryDate, weekStart) && isBefore(entryDate, weekEndDate);
@@ -137,7 +137,7 @@ export const isWeekCompleted = (
     );
 
     const isCompleted =
-      uniqueDaysWithActivities.size >= (plan.times_per_week || 0);
+      uniqueDaysWithActivities.size >= (plan.timesPerWeek || 0);
 
     return isCompleted;
   } else {
@@ -159,7 +159,7 @@ export const isWeekCompleted = (
 
       const completedSessionsThisWeek = planActivityEntries.filter(
         (entry) =>
-          entry.activity_id === session.activity_id &&
+          entry.activityId === session.activityId &&
           isAfter(new Date(entry.date), weekStart) &&
           isBefore(new Date(entry.date), weekEnd)
       );
@@ -178,7 +178,7 @@ export const calculatePlanAchievement = (
   initialDate?: Date
 ): PlanAchievementResult => {
   const planActivityEntries = activityEntries.filter(
-    (entry) => plan.activity_ids?.includes(entry.activity_id) ?? false
+    (entry) => plan.activityIds?.includes(entry.activityId) ?? false
   );
 
   if (planActivityEntries.length === 0) {
@@ -256,14 +256,14 @@ export function getPlanWeek(
   const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
   const weekEnd = endOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
 
-  // Filter to have available only the activities present in the plan.activity_ids
+  // Filter to have available only the activities present in the plan.activityIds
   const planActivities = userActivities.filter(
-    (activity) => plan.activity_ids?.includes(activity.id) ?? false
+    (activity) => plan.activityIds?.includes(activity.id) ?? false
   );
 
   // Filter to have only the activity entries that are within that week date range and are part of the plan
   const planActivityEntriesThisWeek = userActivityEntries.filter((entry) => {
-    const isInPlan = plan.activity_ids?.includes(entry.activity_id) ?? false;
+    const isInPlan = plan.activityIds?.includes(entry.activityId) ?? false;
     const isInWeek =
       isAfter(entry.date, weekStart) && isBefore(entry.date, weekEnd);
     return isInPlan && isInWeek;
@@ -275,9 +275,9 @@ export function getPlanWeek(
   // Check whether the plan is times per week or scheduled sessions
   let plannedActivities: number | PlanSession[];
 
-  if (plan.outline_type === "times_per_week") {
+  if (plan.outlineType === "timesPerWeek") {
     // If times per week, return the plan activities (not entries!)
-    plannedActivities = plan.times_per_week ?? 0;
+    plannedActivities = plan.timesPerWeek ?? 0;
   } else {
     // If scheduled, return the plan.sessions for this specific week
     const sessionsThisWeek = plan.sessions.filter((session) => {
@@ -289,7 +289,7 @@ export function getPlanWeek(
 
   let weekActivities: Activity[];
 
-  if (plan.outline_type === "times_per_week") {
+  if (plan.outlineType === "timesPerWeek") {
     weekActivities = planActivities;
   } else {
     const sessionsThisWeek = plan.sessions.filter((session) => {
@@ -298,7 +298,7 @@ export function getPlanWeek(
     });
 
     const activityIdsThisWeek = Array.from(
-      new Set(sessionsThisWeek.map((session) => session.activity_id))
+      new Set(sessionsThisWeek.map((session) => session.activityId))
     );
 
     weekActivities = planActivities.filter((activity) =>
@@ -325,7 +325,7 @@ export function getPlanWeeks(
   const weeks: PlanWeek[] = [];
   let weekStart = startOfWeek(startDate ?? new Date(), { weekStartsOn: 0 });
   const planEndDate = new Date(
-    plan.finishing_date || addWeeks(weekStart, ACHIEVEMENT_WEEKS)
+    plan.finishingDate || addWeeks(weekStart, ACHIEVEMENT_WEEKS)
   );
   while (isBefore(weekStart, planEndDate)) {
     weeks.push(

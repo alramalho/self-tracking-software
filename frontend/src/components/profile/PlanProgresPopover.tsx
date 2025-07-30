@@ -77,7 +77,7 @@ const PlanProgressPopover: React.FC<PlanProgressPopoverProps> = ({
               completedWeeks === 0 &&
               incompleteWeeks === 0 &&
               !activityEntries.some((entry) =>
-                plan.activity_ids?.includes(entry.activity_id)
+                plan.activityIds?.includes(entry.activityId)
               )
             ) {
               return null;

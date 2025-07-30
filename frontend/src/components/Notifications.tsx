@@ -45,12 +45,12 @@ const Notifications: React.FC<NotificationsProps> = () => {
           });
           skipToast = true;
           if (
-            notification.related_data &&
-            notification.related_data.message_id &&
-            notification.related_data.message_text
+            notification.relatedData &&
+            notification.relatedData.message_id &&
+            notification.relatedData.message_text
           ) {
             router.push(
-              `/ai?assistantType=activity-extraction&messageId=${notification.related_data.message_id}&messageText=${notification.related_data.message_text}`
+              `/ai?assistantType=activity-extraction&messageId=${notification.relatedData.message_id}&messageText=${notification.relatedData.message_text}`
             );
           } else {
             toast.error(
@@ -60,11 +60,11 @@ const Notifications: React.FC<NotificationsProps> = () => {
         }
         await concludeNotification(skipToast);
       } else if (notification.type === "plan_invitation") {
-        router.push(`/join-plan/${notification.related_id}`);
+        router.push(`/join-plan/${notification.relatedId}`);
       } else if (notification.type === "friend_request") {
         await api.post(
           `/${action}-${notification.type.replace("_", "-")}/${
-            notification.related_id
+            notification.relatedId
           }`
         );
         await concludeNotification();
@@ -139,15 +139,15 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   const hasPictureData = (notification: Notification) => {
-    return notification.related_data && notification.related_data.picture;
+    return notification.relatedData && notification.relatedData.picture;
   };
   const hasUsernameData = (notification: Notification) => {
-    return notification.related_data && notification.related_data.username;
+    return notification.relatedData && notification.relatedData.username;
   };
 
   const handleClearAll = async () => {
     const clearPromise = async () => {
-      await api.post("/clear-all-notifications");
+      await api.post("/notifications/clear-all-notifications");
       notificationsData.refetch();
     };
 
@@ -174,7 +174,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
       {/* {latestEngagementNotification && (
         <AINotification
           message={latestEngagementNotification.message}
-          createdAt={latestEngagementNotification.created_at}
+          createdAt={latestEngagementNotification.createdAt}
           onDismiss={(e) => {
             e.stopPropagation();
             handleNotificationAction(latestEngagementNotification, "dismiss");
@@ -208,27 +208,27 @@ const Notifications: React.FC<NotificationsProps> = () => {
                 ) &&
                   hasPictureData(notification) && (
                     <Link
-                      href={`/profile/${notification.related_data!.username}`}
+                      href={`/profile/${notification.relatedData!.username}`}
                     >
                       <Avatar>
                         <AvatarImage
-                          src={notification.related_data!.picture}
-                          alt={notification.related_data!.name || ""}
+                          src={notification.relatedData!.picture}
+                          alt={notification.relatedData!.name || ""}
                         />
                         <AvatarFallback>
-                          {(notification.related_data!.name || "U")[0]}
+                          {(notification.relatedData!.name || "U")[0]}
                         </AvatarFallback>
                       </Avatar>
                     </Link>
                   )}
                 {hasUsernameData(notification) ? (
                   <Link
-                    href={`/profile/${notification.related_data!.username}`}
+                    href={`/profile/${notification.relatedData!.username}`}
                   >
                     <div className="markdown text-sm text-gray-700">
                       <Remark>{notification.message}</Remark>
                       <div className="text-xs text-gray-500 mt-1">
-                        {formatTimeAgo(notification.created_at)}
+                        {formatTimeAgo(notification.createdAt)}
                       </div>
                     </div>
                   </Link>
@@ -236,7 +236,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
                   <div className="markdown text-sm text-gray-700">
                     <Remark>{notification.message}</Remark>
                     <div className="text-xs text-gray-500 mt-1">
-                      {formatTimeAgo(notification.created_at)}
+                      {formatTimeAgo(notification.createdAt)}
                     </div>
                   </div>
                 )}

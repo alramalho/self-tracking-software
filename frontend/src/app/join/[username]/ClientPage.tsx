@@ -32,7 +32,7 @@ export default function ClientPage() {
   const searchParams = useSearchParams();
   const referrer = searchParams.get("referrer");
 
-  const areFriends = currentUser?.user?.friend_ids?.includes(
+  const areFriends = currentUser?.user?.friendIds?.includes(
     inviterData?.user?.id || ""
   );
 

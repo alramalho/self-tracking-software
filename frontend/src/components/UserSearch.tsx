@@ -11,7 +11,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import Link from "next/link";
 
 export interface UserSearchResult {
-  user_id: string;
+  userId: string;
   username: string;
   name: string;
   picture?: string;
@@ -69,9 +69,9 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <div className="mb-4 flex flex-wrap gap-2">
         {selectedUsers.map((user) => (
           <Avatar
-            key={user.user_id}
+            key={user.userId}
             className="cursor-pointer relative"
-            onClick={() => onUserRemove && onUserRemove(user.user_id)}
+            onClick={() => onUserRemove && onUserRemove(user.userId)}
           >
             <AvatarImage
               src={user.picture || "/default-avatar.png"}
@@ -98,7 +98,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <ul className="mt-2">
         {searchResults.map((user) => (
           <li
-            key={user.user_id}
+            key={user.userId}
             className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
             onClick={() => onUserClick(user)}
           >
@@ -116,8 +116,8 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <Button
         variant="outline"
         onClick={async () => {
-          if (!userData?.user?.looking_for_ap) {
-            await api.post("/update-user", {
+          if (!userData?.user?.lookingForAp) {
+            await api.post("/users/update-user", {
               looking_for_ap: true,
             });
             currentUserDataQuery.refetch();

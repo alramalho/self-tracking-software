@@ -45,7 +45,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
     
     // Check if any entry has description_skipped set to true
     const entryWithSkippedDescription = todaysEntries.find(entry => 
-      entry.description_skipped === true
+      entry.descriptionSkipped === true
     );
     
     if (entryWithDescription && entryWithDescription.description) {
@@ -69,7 +69,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
 
     setIsSubmitting(true);
     try {
-      await api.post("/log-todays-note", {
+      await api.post("/metrics/log-todays-note", {
         note: note.trim(),
       });
 

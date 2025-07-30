@@ -85,7 +85,7 @@ const UsernameStep: React.FC<UsernameStepProps> = ({
           className="w-full"
           onClick={() => {
             if (username.trim()) {
-              api.post("/update-user", { username });
+              api.post("/users/update-user", { username });
               userDataQuery.refetch();
             }
             onNext();

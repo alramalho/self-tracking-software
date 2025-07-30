@@ -34,7 +34,7 @@ export function MetricRaters({
     const today = new Date().toISOString().split("T")[0];
     return entries.some(
       (entry) =>
-        entry.metric_id === metric.id && entry.date.split("T")[0] === today
+        entry.metricId === metric.id && entry.date.split("T")[0] === today
     );
   };
 
@@ -50,7 +50,7 @@ export function MetricRaters({
     try {
       // Submit all ratings in sequence with the same description
       for (const [metricId, ratingData] of Object.entries(ratings)) {
-        await api.post("/log-metric", {
+        await api.post("/metrics/log-metric", {
           metric_id: metricId,
           rating: ratingData.rating,
           description,

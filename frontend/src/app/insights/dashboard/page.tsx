@@ -176,33 +176,33 @@ export default function InsightsDashboardPage() {
               thisWeekEntries={[
                 {
                   id: "demo1",
-                  metric_id: "demo",
+                  metricId: "demo",
                   rating: 8,
                   date: "2024-03-09",
-                  created_at: "2024-03-09T00:00:00Z",
+                  createdAt: "2024-03-09T00:00:00Z",
                 },
                 {
                   id: "demo2",
-                  metric_id: "demo",
+                  metricId: "demo",
                   rating: 7,
                   date: "2024-03-07",
-                  created_at: "2024-03-07T00:00:00Z",
+                  createdAt: "2024-03-07T00:00:00Z",
                 },
               ]}
               lastWeekEntries={[
                 {
                   id: "demo3",
-                  metric_id: "demo",
+                  metricId: "demo",
                   rating: 6,
                   date: "2024-03-03",
-                  created_at: "2024-03-03T00:00:00Z",
+                  createdAt: "2024-03-03T00:00:00Z",
                 },
                 {
                   id: "demo4",
-                  metric_id: "demo",
+                  metricId: "demo",
                   rating: 7,
                   date: "2024-03-01",
-                  created_at: "2024-03-01T00:00:00Z",
+                  createdAt: "2024-03-01T00:00:00Z",
                 },
               ]}
               onHelpClick={() => setTrendHelpMetricId("demo")}
@@ -288,7 +288,7 @@ export default function InsightsDashboardPage() {
   // Find the metric with the most entries
   const metricEntryCounts = userMetrics.map((metric) => ({
     metric,
-    count: entries.filter((entry) => entry.metric_id === metric.id).length,
+    count: entries.filter((entry) => entry.metricId === metric.id).length,
   }));
 
   const renderProgressUI = (targetEntries: number, specificMetric?: Metric) => {
@@ -296,7 +296,7 @@ export default function InsightsDashboardPage() {
       ? [
           {
             metric: specificMetric,
-            count: entries.filter((e) => e.metric_id === specificMetric.id)
+            count: entries.filter((e) => e.metricId === specificMetric.id)
               .length,
           },
         ]
@@ -386,7 +386,7 @@ export default function InsightsDashboardPage() {
     return activityEntries.some((entry) => {
       const entryDate = new Date(entry.date);
       return (
-        entry.activity_id === activityId &&
+        entry.activityId === activityId &&
         entryDate >= windowStart &&
         entryDate <= targetDate
       );
@@ -396,7 +396,7 @@ export default function InsightsDashboardPage() {
   // Calculate correlations for a metric
   const calculateMetricCorrelations = (metricId: string) => {
     const metricEntries = entries
-      .filter((entry) => entry.metric_id === metricId)
+      .filter((entry) => entry.metricId === metricId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const correlations = activities
@@ -483,7 +483,7 @@ export default function InsightsDashboardPage() {
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
     const metricEntries = entries
-      .filter((entry) => entry.metric_id === metricId)
+      .filter((entry) => entry.metricId === metricId)
       .filter((entry) => new Date(entry.date) >= fourteenDaysAgo)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -532,7 +532,7 @@ export default function InsightsDashboardPage() {
         <div className="space-y-4">
           {userMetrics.map((metric) => {
             const count = entries.filter(
-              (e) => e.metric_id === metric.id
+              (e) => e.metricId === metric.id
             ).length;
             const correlations =
               count >= MINIMUM_ENTRIES
@@ -549,7 +549,7 @@ export default function InsightsDashboardPage() {
             const hasCorrelations = correlations.length > 0;
             const chartData = prepareChartData(metric.id);
             const trend = calculateMetricTrend(
-              entries.filter((e) => e.metric_id === metric.id)
+              entries.filter((e) => e.metricId === metric.id)
             );
 
             // Calculate weekly averages for display
@@ -559,7 +559,7 @@ export default function InsightsDashboardPage() {
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
             const recentEntries = entries
-              .filter((e) => e.metric_id === metric.id)
+              .filter((e) => e.metricId === metric.id)
               .filter((entry) => new Date(entry.date) >= twoWeeksAgo)
               .sort(
                 (a, b) =>
