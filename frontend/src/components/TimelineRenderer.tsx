@@ -83,7 +83,7 @@ const TimelineRenderer: React.FC<{
   }
 
 
-  if (!userData?.user?.friend_ids?.length) {
+  if (!userData?.user?.friendIds?.length) {
     const demoMetrics: Array<{
       emoji: string;
       name: string;
@@ -329,10 +329,10 @@ const TimelineRenderer: React.FC<{
         sortedEntries.map((entry: TaggedActivityEntry) => {
           const activity: Activity | undefined =
             timelineData?.recommendedActivities?.find(
-              (a: Activity) => a.id === entry.activity_id
+              (a: Activity) => a.id === entry.activityId
             );
           const user: User | undefined = timelineData?.recommendedUsers?.find(
-            (u: User) => u.id === activity?.user_id
+            (u: User) => u.id === activity?.userId
           );
           if (!activity) return null;
 
@@ -372,12 +372,12 @@ const TimelineRenderer: React.FC<{
                   router.push(`/profile/${user?.username}`);
                 }}
               />
-              {entry.is_week_finisher && isInCurrentWeek(entry.date) && (
+              {entry.isWeekFinisher && isInCurrentWeek(entry.date) && (
                 <WeeklyCompletionCard
                   key={`${entry.id}-completion`}
                   small
                   username={user?.name}
-                  planName={entry.plan_finished_name}
+                  planName={entry.planFinishedName}
                 />
               )}
             </React.Fragment>

@@ -25,9 +25,9 @@ export const ApSearchComponent: React.FC = () => {
     const variants = getThemeVariants(themeColors.raw);
 
   const userScores = recommendations
-    .filter((rec) => rec.recommendation_object_type === "user")
+    .filter((rec) => rec.recommendationObjectType === "user")
     .reduce((acc, rec) => {
-      acc[rec.recommendation_object_id] = rec.score;
+      acc[rec.recommendationObjectId] = rec.score;
       return acc;
     }, {} as Record<string, number>);
 
@@ -77,14 +77,14 @@ export const ApSearchComponent: React.FC = () => {
 
           {recommendations.map((recommendation) => {
             const user = recommendedUsers.find(
-              (user) => user.id === recommendation.recommendation_object_id
+              (user) => user.id === recommendation.recommendationObjectId
             );
             if (!user) {
               return null;
             }
             const plan = recommendationsData?.plans.find((plan) => {
-              if (user.plan_ids.length > 0) {
-                return user.plan_ids[0] === plan.id;
+              if (user.planIds.length > 0) {
+                return user.planIds[0] === plan.id;
               }
               return false;
             });
@@ -96,7 +96,7 @@ export const ApSearchComponent: React.FC = () => {
                 plan={plan}
                 plans={
                   recommendationsData?.plans.filter((p) =>
-                    user.plan_ids.includes(p.id)
+                    user.planIds.includes(p.id)
                   ) || []
                 }
                 showFriendRequest={true}

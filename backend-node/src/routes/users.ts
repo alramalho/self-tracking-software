@@ -1,0 +1,925 @@
+import { Router, Request, Response } from "express";
+import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
+import { userService } from "../services/userService";
+import { notificationService } from "../services/notificationService";
+import { logger } from "../utils/logger";
+import { prisma } from "../utils/prisma";
+import { sesService } from "../services/sesService";
+import { TelegramService } from "../services/telegramService";
+import {
+  TimezoneUpdateSchema,
+  ThemeUpdateSchema,
+  DailyCheckinSettingsSchema,
+  FeedbackSchema,
+  FriendRequestSchema,
+} from "../types/user";
+
+export const usersRouter = Router();
+const telegramService = new TelegramService();
+
+// Health check
+usersRouter.get("/user-health", (_req: Request, res: Response) => {
+  res.json({ status: "ok" });
+});
+
+// Get current user
+usersRouter.get(
+  "/user",
+  requireAuth,
+  (req: AuthenticatedRequest, res: Response) => {
+    res.json(req.user);
+  }
+);
+
+// Load users data
+usersRouter.get(
+  "/load-users-data",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { usernames } = req.query;
+      const results: any = {};
+
+      // If no usernames provided, return current user data
+      if (!usernames) {
+        const userData = await userService.loadSingleUserData(
+          req.user!.id,
+          req.user!.id
+        );
+        return res.json({ current: userData });
+      }
+
+      // Otherwise load data for specified usernames
+      const usernamesList = (usernames as string).split(",");
+
+      for (const username of usernamesList) {
+        const user = await userService.getUserByUsername(
+          username.toLowerCase()
+        );
+        if (!user) continue;
+
+        const userData = await userService.loadSingleUserData(
+          user.id,
+          req.user!.id
+        );
+        results[username] = userData;
+      }
+
+      res.json(results);
+    } catch (error) {
+      logger.error("Failed to load multiple users data:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to load user data" },
+      });
+    }
+  }
+);
+
+// Get user friends
+usersRouter.get(
+  "/friends/:username",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { username } = req.params;
+      let user;
+
+      if (username.toLowerCase() === req.user!.username?.toLowerCase()) {
+        user = req.user!;
+      } else {
+        user = await userService.getUserByUsername(username.toLowerCase());
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            error: { message: "User not found" },
+          });
+        }
+      }
+
+      const friends = await userService.getUserFriends(user.id);
+
+      res.json({
+        friends: friends.map((friend) => ({
+          picture: friend.picture,
+          username: friend.username,
+          name: friend.name,
+        })),
+      });
+    } catch (error) {
+      logger.error("Failed to get user friends:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to get user friends" },
+      });
+    }
+  }
+);
+
+// Check username availability
+usersRouter.get(
+  "/check-username/:username",
+  async (req: Request, res: Response) => {
+    try {
+      const { username } = req.params;
+      const user = await userService.getUserByUsername(username);
+      res.json({ exists: user !== null });
+    } catch (error) {
+      logger.error("Failed to check username:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to check username" },
+      });
+    }
+  }
+);
+
+// Update user
+usersRouter.post(
+  "/update-user",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userData = req.body;
+      const updatedUser = await userService.updateUser(req.user!.id, userData);
+      res.json({
+        message: "User updated successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      logger.error("Failed to update user:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to update user" },
+      });
+    }
+  }
+);
+
+// Search users
+usersRouter.get(
+  "/search-users/:username",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { username } = req.params;
+
+      if (req.user!.username?.toLowerCase() === username.toLowerCase()) {
+        return res.json([]);
+      }
+
+      let results = await userService.searchUsers(req.user!.id, username);
+
+      if (results.length === 0) {
+        // If no results, return all users (up to 5)
+        const allUsers = await userService.getAllUsers();
+        results = allUsers
+          .filter((u) => u.id !== req.user!.id)
+          .slice(0, 5)
+          .map((u) => ({
+            userId: u.id,
+            username: u.username!,
+            name: u.name,
+            picture: u.picture,
+          }));
+      }
+
+      res.json(results);
+    } catch (error) {
+      logger.error("Failed to search users:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to search users" },
+      });
+    }
+  }
+);
+
+// Get friend count
+usersRouter.get(
+  "/user/friend-count",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const friendCount = await userService.getFriendCount(req.user!.id);
+      res.json({ friendCount });
+    } catch (error) {
+      logger.error("Failed to get friend count:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to get friend count" },
+      });
+    }
+  }
+);
+
+// Get recommended users
+usersRouter.get(
+  "/get-recommended-users",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const recommendations = await userService.getRecommendedUsers(
+        req.user!.id
+      );
+      res.json(recommendations);
+    } catch (error) {
+      logger.error("Failed to get recommended users:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to get recommended users" },
+      });
+    }
+  }
+);
+
+// Get user profile
+usersRouter.get(
+  "/user/:username_or_id",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { username_or_id } = req.params;
+
+      if (username_or_id.toLowerCase() === req.user!.username?.toLowerCase()) {
+        return res.json(req.user);
+      }
+
+      let user = await userService.getUserByUsername(username_or_id);
+
+      if (!user) {
+        user = await userService.getUserById(username_or_id);
+      }
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: { message: "User not found" },
+        });
+      }
+
+      // Remove sensitive information
+      const { email, clerkId, ...userProfile } = user;
+
+      res.json(userProfile);
+    } catch (error) {
+      logger.error("Failed to get user profile:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to get user profile" },
+      });
+    }
+  }
+);
+
+// Send friend request
+usersRouter.post(
+  "/send-friend-request/:recipientId",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { recipientId } = req.params;
+      const body = FriendRequestSchema.parse(req.body);
+
+      const friendRequest = await userService.sendFriendRequest(
+        req.user!.id,
+        recipientId,
+        body.message
+      );
+
+      // Create notification for recipient
+      const notification =
+        await notificationService.createAndProcessNotification({
+          userId: recipientId,
+          message: `${req.user!.name} sent you a friend request${body.message ? ` with the message: ${body.message}` : ""}`,
+          type: "FRIEND_REQUEST",
+          relatedId: friendRequest.id,
+          relatedData: {
+            id: req.user!.id,
+            name: req.user!.name,
+            username: req.user!.username,
+            picture: req.user!.picture,
+          },
+        });
+
+      res.json({
+        message: "Friend request sent successfully",
+        request: friendRequest,
+        notification,
+      });
+    } catch (error) {
+      logger.error("Failed to send friend request:", error);
+      res.status(400).json({
+        success: false,
+        error: {
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to send friend request",
+        },
+      });
+    }
+  }
+);
+
+// Accept friend request
+usersRouter.post(
+  "/accept-friend-request/:request_id",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { request_id } = req.params;
+
+      const { sender, recipient } =
+        await userService.acceptFriendRequest(request_id);
+
+      // Send notification to sender
+      try {
+        await notificationService.createAndProcessNotification({
+          userId: sender.id,
+          message: `${req.user!.name} accepted your friend request. You can now see their activities!`,
+          type: "INFO",
+          relatedId: request_id,
+          relatedData: {
+            id: req.user!.id,
+            name: req.user!.name,
+            username: req.user!.username,
+            picture: req.user!.picture,
+          },
+        });
+      } catch (notificationError) {
+        logger.error("Failed to send notification:", notificationError);
+      }
+
+      res.json({
+        message: "Friend request accepted",
+        recipient,
+      });
+    } catch (error) {
+      logger.error("Failed to accept friend request:", error);
+      res.status(400).json({
+        success: false,
+        error: { message: "Failed to accept friend request" },
+      });
+    }
+  }
+);
+
+// Reject friend request
+usersRouter.post(
+  "/reject-friend-request/:request_id",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { request_id } = req.params;
+
+      const sender = await userService.rejectFriendRequest(request_id);
+
+      // Send notification to sender
+      try {
+        await notificationService.createAndProcessNotification({
+          userId: sender.id,
+          message: `${req.user!.name} rejected your friend request.`,
+          type: "INFO",
+          relatedId: request_id,
+          relatedData: {
+            id: sender.id,
+            name: sender.name,
+            username: sender.username,
+            picture: sender.picture,
+          },
+        });
+      } catch (notificationError) {
+        logger.error("Failed to send notification:", notificationError);
+      }
+
+      res.json({
+        message: "Friend request rejected",
+        sender,
+      });
+    } catch (error) {
+      logger.error("Failed to reject friend request:", error);
+      res.status(400).json({
+        success: false,
+        error: { message: "Failed to reject friend request" },
+      });
+    }
+  }
+);
+
+// Get timeline data
+usersRouter.get(
+  "/timeline",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const timelineData = await userService.getTimelineData(req.user!.id);
+      res.json(timelineData);
+    } catch (error) {
+      logger.error("Failed to get timeline data:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "An error occurred while fetching timeline data" },
+      });
+    }
+  }
+);
+
+// Report feedback
+usersRouter.post(
+  "/report-feedback",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const feedback = FeedbackSchema.parse(req.body);
+
+      // Send email notification using SES
+      const adminEmail = process.env.ADMIN_EMAIL || "admin@tracking.so";
+      try {
+        await sesService.sendEmail({
+          to: [adminEmail],
+          subject: `New ${feedback.type} feedback from ${req.user!.username}`,
+          textBody: `
+Feedback received from user: ${req.user!.username} (${req.user!.email})
+Type: ${feedback.type}
+Email: ${feedback.email}
+Message: ${feedback.text}
+
+User ID: ${req.user!.id}
+Timestamp: ${new Date().toISOString()}
+          `,
+          htmlBody: `
+<h2>New ${feedback.type} Feedback</h2>
+<p><strong>User:</strong> ${req.user!.username} (${req.user!.email})</p>
+<p><strong>Type:</strong> ${feedback.type}</p>
+<p><strong>Contact Email:</strong> ${feedback.email}</p>
+<p><strong>Message:</strong></p>
+<blockquote>${feedback.text}</blockquote>
+<hr>
+<p><small>User ID: ${req.user!.id}<br>
+Timestamp: ${new Date().toISOString()}</small></p>
+          `,
+        });
+        logger.info("Feedback email sent successfully");
+      } catch (emailError) {
+        logger.error("Failed to send feedback email:", emailError);
+      }
+
+      // Send Telegram notification for bug reports
+      if (feedback.type === "bug_report") {
+        telegramService.sendMessage(
+          `🐛 **New Bug Report**\n\n` +
+            `**User:** ${req.user!.username} (${req.user!.email})\n` +
+            `**Contact:** ${feedback.email}\n` +
+            `**Message:** ${feedback.text}\n` +
+            `**UTC Time:** ${new Date().toISOString()}`
+        );
+      }
+
+      // TODO: Implement PostHog tracking when PostHog is set up
+
+      logger.info("Feedback received:", {
+        userId: req.user!.id,
+        username: req.user!.username,
+        type: feedback.type,
+        email: feedback.email,
+      });
+
+      res.json({ status: "success" });
+    } catch (error) {
+      logger.error("Failed to send feedback:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to send feedback" },
+      });
+    }
+  }
+);
+
+usersRouter.get(
+  "/all-users",
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const users = await userService.getAllUsers();
+      res.json({ usernames: users.map((user) => user.username) });
+    } catch (error) {
+      logger.error("Failed to get all users:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to get all users" },
+      });
+    }
+  }
+);
+
+// Get user profile (public endpoint)
+usersRouter.get(
+  "/get-user-profile/:username_or_id",
+  async (req: Request, res: Response) => {
+    try {
+      const { username_or_id } = req.params;
+
+      let user = await userService.getUserByUsername(username_or_id);
+      if (!user) {
+        user = await userService.getUserById(username_or_id);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            error: { message: `User '${username_or_id}' not found` },
+          });
+        }
+      }
+
+      // Fetch user plans and recent activities
+      const [userPlans, userActivities] = await Promise.all([
+        prisma.plan.findMany({
+          where: {
+            userId: user.id,
+            deletedAt: null,
+          },
+          include: {
+            activities: {
+              include: {
+                activity: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        }),
+        prisma.activity.findMany({
+          where: {
+            userId: user.id,
+            deletedAt: null,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 10, // Get latest 10 activities
+        }),
+      ]);
+
+      // Transform plans to include activity details
+      const transformedPlans = userPlans.map((plan) => ({
+        id: plan.id,
+        goal: plan.goal,
+        emoji: plan.emoji,
+        durationType: plan.durationType,
+        finishingDate: plan.finishingDate,
+        createdAt: plan.createdAt,
+        activities: plan.activities.map((pa) => ({
+          id: pa.activity.id,
+          title: pa.activity.title,
+          emoji: pa.activity.emoji,
+          measure: pa.activity.measure,
+        })),
+      }));
+
+      const userData = {
+        user: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          picture: user.picture,
+        },
+        plans: transformedPlans,
+        activities: userActivities.map((activity) => ({
+          id: activity.id,
+          title: activity.title,
+          emoji: activity.emoji,
+          measure: activity.measure,
+          createdAt: activity.createdAt,
+        })),
+      };
+
+      res.json(userData);
+    } catch (error) {
+      logger.error("Failed to fetch user profile:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Internal Server Error" },
+      });
+    }
+  }
+);
+
+// Handle referral
+usersRouter.post(
+  "/handle-referral/:referrer_username",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { referrer_username } = req.params;
+
+      await userService.handleReferral(referrer_username, req.user!.id);
+
+      // Send notification to referrer
+      const referrer = await userService.getUserByUsername(referrer_username);
+      if (referrer) {
+        await notificationService.createAndProcessNotification({
+          userId: referrer.id,
+          message: `${req.user!.name} joined tracking.so through your invite!`,
+          type: "INFO",
+          relatedId: req.user!.id,
+          relatedData: {
+            id: req.user!.id,
+            name: req.user!.name,
+            username: req.user!.username,
+            picture: req.user!.picture,
+          },
+        });
+      }
+
+      res.json({ message: "Referral handled successfully" });
+    } catch (error) {
+      logger.error("Failed to handle referral:", error);
+      res.status(400).json({
+        success: false,
+        error: {
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to handle referral",
+        },
+      });
+    }
+  }
+);
+
+// Load messages
+usersRouter.get(
+  "/load-messages",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { limit = 50, before } = req.query;
+
+      // Build where clause for pagination
+      const whereClause: any = {
+        OR: [{ senderId: userId }, { recipientId: userId }],
+      };
+
+      // Add before cursor for pagination
+      if (before && typeof before === "string") {
+        whereClause.createdAt = {
+          lt: new Date(before),
+        };
+      }
+
+      // Fetch messages with pagination
+      const messages = await prisma.message.findMany({
+        where: whereClause,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              picture: true,
+            },
+          },
+          recipient: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              picture: true,
+            },
+          },
+          emotions: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: parseInt(limit as string) || 50,
+      });
+
+      // Transform messages for frontend
+      const transformedMessages = messages.map((message) => ({
+        id: message.id,
+        text: message.text,
+        createdAt: message.createdAt,
+        sender: {
+          id: message.sender.id,
+          username: message.sender.username,
+          name: message.sender.name,
+          picture: message.sender.picture,
+        },
+        recipient: {
+          id: message.recipient.id,
+          username: message.recipient.username,
+          name: message.recipient.name,
+          picture: message.recipient.picture,
+        },
+        emotions: message.emotions,
+        isSentByMe: message.senderId === userId,
+      }));
+
+      res.json({
+        messages: transformedMessages,
+        hasMore: messages.length === (parseInt(limit as string) || 50),
+      });
+    } catch (error) {
+      logger.error("Failed to load messages:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to load messages" },
+      });
+    }
+  }
+);
+
+// Update timezone
+usersRouter.post(
+  "/update-timezone",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { timezone } = TimezoneUpdateSchema.parse(req.body);
+
+      // Validate timezone against common IANA timezone identifiers
+      const validTimezones = [
+        "UTC",
+        "GMT",
+        // Americas
+        "America/New_York",
+        "America/Chicago",
+        "America/Denver",
+        "America/Los_Angeles",
+        "America/Toronto",
+        "America/Vancouver",
+        "America/Mexico_City",
+        "America/Sao_Paulo",
+        "America/Buenos_Aires",
+        "America/Lima",
+        "America/Bogota",
+        "America/Caracas",
+        // Europe
+        "Europe/London",
+        "Europe/Berlin",
+        "Europe/Paris",
+        "Europe/Rome",
+        "Europe/Madrid",
+        "Europe/Amsterdam",
+        "Europe/Stockholm",
+        "Europe/Vienna",
+        "Europe/Zurich",
+        "Europe/Prague",
+        "Europe/Warsaw",
+        "Europe/Budapest",
+        "Europe/Athens",
+        "Europe/Helsinki",
+        "Europe/Oslo",
+        "Europe/Copenhagen",
+        "Europe/Brussels",
+        "Europe/Lisbon",
+        "Europe/Dublin",
+        "Europe/Moscow",
+        "Europe/Kiev",
+        // Asia
+        "Asia/Tokyo",
+        "Asia/Shanghai",
+        "Asia/Hong_Kong",
+        "Asia/Singapore",
+        "Asia/Seoul",
+        "Asia/Jakarta",
+        "Asia/Bangkok",
+        "Asia/Manila",
+        "Asia/Kuala_Lumpur",
+        "Asia/Taipei",
+        "Asia/Mumbai",
+        "Asia/Kolkata",
+        "Asia/Dubai",
+        "Asia/Karachi",
+        "Asia/Dhaka",
+        "Asia/Istanbul",
+        "Asia/Tehran",
+        "Asia/Jerusalem",
+        "Asia/Riyadh",
+        "Asia/Baghdad",
+        // Australia/Oceania
+        "Australia/Sydney",
+        "Australia/Melbourne",
+        "Australia/Brisbane",
+        "Australia/Perth",
+        "Australia/Adelaide",
+        "Pacific/Auckland",
+        // Africa
+        "Africa/Cairo",
+        "Africa/Lagos",
+        "Africa/Johannesburg",
+        "Africa/Nairobi",
+        "Africa/Casablanca",
+        "Africa/Tunis",
+        "Africa/Algiers",
+      ];
+
+      if (!validTimezones.includes(timezone)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: `Invalid timezone. Must be a valid IANA timezone identifier.`,
+          },
+        });
+      }
+
+      const updatedUser = await userService.updateUser(req.user!.id, {
+        timezone,
+      });
+
+      res.json({
+        message: "Timezone updated successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      logger.error("Failed to update timezone:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to update timezone" },
+      });
+    }
+  }
+);
+
+// Update theme
+usersRouter.post(
+  "/update-theme",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { theme_base_color } = ThemeUpdateSchema.parse(req.body);
+
+      const updatedUser = await userService.updateUser(req.user!.id, {
+        themeBaseColor: theme_base_color,
+      });
+
+      res.json({
+        message: "Theme updated successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      logger.error("Failed to update theme:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to update theme" },
+      });
+    }
+  }
+);
+
+// Get user plan type
+usersRouter.get(
+  "/user/:username/get-user-plan-type",
+  async (req: Request, res: Response) => {
+    try {
+      const { username } = req.params;
+      const user = await userService.getUserByUsername(username);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: { message: "User not found" },
+        });
+      }
+
+      res.json({ plan_type: user.planType });
+    } catch (error) {
+      logger.error("Failed to get user plan type:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to get user plan type" },
+      });
+    }
+  }
+);
+
+// Update daily checkin settings
+usersRouter.post(
+  "/user/daily-checkin-settings",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const settings = DailyCheckinSettingsSchema.parse(req.body);
+
+      const updatedUser = await userService.updateUser(req.user!.id, {
+        dailyCheckinDays: settings.days,
+        dailyCheckinTime: settings.time || null,
+      });
+
+      res.json({
+        message: "Daily checkin settings updated successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      logger.error("Failed to update daily checkin settings:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to update daily checkin settings" },
+      });
+    }
+  }
+);
+
+export default usersRouter;

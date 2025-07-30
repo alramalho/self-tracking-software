@@ -24,7 +24,7 @@ export interface Activity {
   title: string;
   measure: string;
   emoji?: string;
-  user_id?: string;
+  userId?: string;
   privacy_settings?: VisibilityType;
   color_hex?: string;
 }
@@ -33,22 +33,22 @@ export interface ImageInfo {
   s3_path?: string;
   url?: string;
   expires_at?: string;
-  created_at?: string;
+  createdAt?: string;
   is_public?: boolean;
 }
 
 export interface Comment {
   id: string;
-  user_id: string;
+  userId: string;
   username: string;
   text: string;
-  created_at: string;
+  createdAt: string;
   picture?: string;
 }
 
 export interface ActivityEntry {
   id: string;
-  activity_id: string;
+  activityId: string;
   quantity: number;
   date: string;
   image?: ImageInfo;
@@ -62,7 +62,7 @@ export interface CompletedSession extends Omit<ActivityEntry, "id" | "image"> {}
 
 export interface MoodReport {
   id: string;
-  user_id: string;
+  userId: string;
   date: string;
   score: string;
 }
@@ -75,13 +75,13 @@ export interface Metric {
 
 export interface MetricEntry {
   id: string;
-  metric_id: string;
+  metricId: string;
   rating: number;
   date: string;
-  created_at: string;
+  createdAt: string;
   description?: string;
   skipped?: boolean;
-  description_skipped?: boolean;
+  descriptionSkipped?: boolean;
 }
 
 export interface User {
@@ -89,8 +89,8 @@ export interface User {
   name?: string;
   age?: number;
   profile?: string;
-  plan_type: "free" | "plus";
-  daily_checkin_settings?: {
+  planType: "FREE" | "PLUS";
+  dailyCheckinSettings?: {
     days: (
       | "MON"
       | "TUE"
@@ -104,32 +104,32 @@ export interface User {
     time: "MORNING" | "AFTERNOON" | "EVENING";
   };
   picture?: string;
-  looking_for_ap?: boolean;
+  lookingForAp?: boolean;
   username?: string;
   email: string;
-  plan_ids: string[];
-  friend_ids: string[];
-  referred_user_ids: string[];
-  pending_friend_requests: string[];
+  planIds: string[];
+  friendIds: string[];
+  referredUserIds: string[];
+  pendingFriendRequests: string[];
   timezone?: string;
   theme_base_color?: ThemeColor;
-  default_activity_visibility: VisibilityType;
-  created_at?: string;
+  defaultActivityVisibility: VisibilityType;
+  createdAt?: string;
   last_active_at?: string;
 }
 
 export interface FriendRequest {
   id: string;
   message?: string;
-  sender_id: string;
-  recipient_id: string;
+  senderId: string;
+  recipientId: string;
   status: "pending" | "accepted" | "rejected";
-  created_at: string;
-  updated_at?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface PlanGroupMember {
-  user_id: string;
+  userId: string;
   username: string;
   name: string;
   picture: string;
@@ -142,7 +142,7 @@ export interface PlanGroup {
 }
 
 export interface PlanMilestoneCriteria {
-  activity_id: string;
+  activityId: string;
   quantity: number;
 }
 
@@ -162,85 +162,85 @@ export interface ApiPlanSession {
   date: string;
   descriptive_guide: string;
   quantity: number;
-  activity_id: string;
+  activityId: string;
 }
 
 export interface PlanSession extends Omit<ApiPlanSession, "date"> {
   date: Date
-  activity_name?: string
+  activityName?: string
 }
 
 interface PlanCurrentWeek {
   state: "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED";
-  state_last_calculated_at?: string;
+  stateLastCalculatedAt?: string;
 }
 
-export type PlanType = "times_per_week" | "specific";
+export type PlanType = "timesPerWeek" | "specific";
 
 export interface Plan {
   id?: string;
-  user_id?: string;
+  userId?: string;
   emoji?: string;
   goal: string;
   state: "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED";
-  finishing_date?: Date;
-  activity_ids?: string[];
-  plan_group_id?: string;
+  finishingDate?: Date;
+  activityIds?: string[];
+  planGroupId?: string;
   milestones?: PlanMilestone[];
   sessions: PlanSession[];
-  coach_suggested_sessions: PlanSession[];
+  coachSuggestedSessions: PlanSession[];
   notes?: string;
-  duration_type?: "habit" | "lifestyle" | "custom";
-  outline_type?: PlanType;
-  times_per_week?: number;
-  coach_suggested_times_per_week?: number;
-  created_at: string;
-  suggested_by_coach_at?: string;
-  coach_notes?: string;
-  current_week?: PlanCurrentWeek
+  durationType?: "habit" | "lifestyle" | "custom";
+  outlineType?: PlanType;
+  timesPerWeek?: number;
+  coachSuggestedTimesPerWeek?: number;
+  createdAt: string;
+  suggestedByCoachAt?: string;
+  coachNotes?: string;
+  currentWeek?: PlanCurrentWeek
 }
 
 export interface ApiPlan {
   id: string;
-  user_id: string;
-  plan_group_id?: string;
+  userId: string;
+  planGroupId?: string;
   goal: string;
   
   emoji?: string;
-  finishing_date?: string;
-  activity_ids?: string[];
+  finishingDate?: string;
+  activityIds?: string[];
   sessions: ApiPlanSession[];
-  coach_suggested_sessions: ApiPlanSession[];
-  created_at: string;
+  coachSuggestedSessions: ApiPlanSession[];
+  createdAt: string;
   deleted_at?: string;
-  duration_type?: "habit" | "lifestyle" | "custom";
-  outline_type?: "specific" | "times_per_week";
-  times_per_week?: number;
-  coach_suggested_times_per_week?: number;
+  durationType?: "habit" | "lifestyle" | "custom";
+  outlineType?: "specific" | "timesPerWeek";
+  timesPerWeek?: number;
+  coachSuggestedTimesPerWeek?: number;
   notes?: string;
   milestones?: PlanMilestone[];
-  suggested_by_coach_at?: string;
-  coach_notes?: string;
-  current_week?: PlanCurrentWeek
+  suggestedByCoachAt?: string;
+  coachNotes?: string;
+  currentWeek?: PlanCurrentWeek
 }
 
 export interface Notification {
   id: string;
-  user_id: string;
+  userId: string;
   message: string;
-  created_at: string;
-  processed_at: string | null;
-  opened_at: string | null;
-  concluded_at: string | null;
+  createdAt: string;
+  processedAt: string | null;
+  openedAt: string | null;
+  concludedAt: string | null;
   status: "pending" | "processed" | "opened" | "concluded";
   type: "friend_request" | "plan_invitation" | "engagement" | "info" | "coach";
-  related_id: string | null;
-  related_data: Record<string, string> | null;
+  relatedId: string | null;
+  relatedData: Record<string, string> | null;
 }
 
 export type Recommendation = {
-  recommendation_object_id: string;
-  recommendation_object_type: "user" | "plan";
+  recommendationObjectId: string;
+  recommendationObjectType: "user" | "plan";
   score: number;
 };
 
@@ -251,16 +251,16 @@ export type Emotion = {
 };
 export interface Message {
   id: string;
-  sender_id: string;
-  recipient_id: string;
+  senderId: string;
+  recipientId: string;
   text: string;
-  created_at: string;
+  createdAt: string;
   emotions: Emotion[];
 }
 
 export interface UserDataEntry {
   user: User | null;
-  user_friends?: { picture: string; name: string; username: string }[];
+  userFriends?: { picture: string; name: string; username: string }[];
   plans: ApiPlan[];
   planGroups: PlanGroup[];
   activities: Activity[];
@@ -272,8 +272,8 @@ export interface UserDataEntry {
 }
 
 export interface TaggedActivityEntry extends ActivityEntry {
-  is_week_finisher: boolean;
-  plan_finished_name?: string;
+  isWeekFinisher: boolean;
+  planFinishedName?: string;
 }
 
 export interface TimelineData {
@@ -362,19 +362,19 @@ export function convertApiPlanToPlan(
 ): Plan {
   return {
     ...plan,
-    finishing_date: plan.finishing_date
-      ? parseISO(plan.finishing_date)
+    finishingDate: plan.finishingDate
+      ? parseISO(plan.finishingDate)
       : undefined,
     sessions: plan?.sessions?.map((session) => ({
       ...session,
       date: parseISO(session.date),
-      activity_name: planActivities.find((a) => a.id === session.activity_id)
+      activityName: planActivities.find((a) => a.id === session.activityId)
         ?.title,
     })),
-    coach_suggested_sessions: plan?.coach_suggested_sessions?.map((session) => ({
+    coachSuggestedSessions: plan?.coachSuggestedSessions?.map((session) => ({
       ...session,
       date: parseISO(session.date),
-      activity_name: planActivities.find((a) => a.id === session.activity_id)
+      activityName: planActivities.find((a) => a.id === session.activityId)
         ?.title,
     })),
   } as Plan;
@@ -383,14 +383,14 @@ export function convertApiPlanToPlan(
 export function convertPlanToApiPlan(plan: Plan): ApiPlan {
   return {
     ...plan,
-    finishing_date: plan.finishing_date
-      ? format(plan.finishing_date, "yyyy-MM-dd")
+    finishingDate: plan.finishingDate
+      ? format(plan.finishingDate, "yyyy-MM-dd")
       : undefined,
     sessions: plan.sessions.map((session) => ({
       ...session,
       date: format(session.date, "yyyy-MM-dd"),
     })),
-    coach_suggested_sessions: plan.coach_suggested_sessions?.map((session) => ({
+    coachSuggestedSessions: plan.coachSuggestedSessions?.map((session) => ({
       ...session,
       date: format(session.date, "yyyy-MM-dd"),
     })),
@@ -456,7 +456,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const startTime = performance.now();
       const result = await smallRetryMechanism(
         async () => {
-          const response = await api.get("/load-users-data", {
+          const response = await api.get("/users/load-users-data", {
             params: username ? { usernames: username } : undefined,
           });
 
@@ -498,15 +498,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
             if (posthog) {
               posthog.capture("load-user-data", {
                 $set: {
-                  created_at: userData.user?.created_at
-                    ? new Date(userData.user.created_at).toISOString()
+                  createdAt: userData.user?.createdAt
+                    ? new Date(userData.user.createdAt).toISOString()
                     : undefined,
                   email: userData.user?.email,
                   name: userData.user?.name,
                   username: userData.user?.username,
                   plans_count: transformedData.plans.length,
                   plan_groups_count: transformedData.planGroups.length,
-                  referral_count: userData.user?.referred_user_ids?.length || 0,
+                  referral_count: userData.user?.referred_userIds?.length || 0,
                   activities_count: transformedData.activities.length,
                   activity_entries_count:
                     transformedData.activityEntries.length,
@@ -542,7 +542,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       const startTime = performance.now();
       const result = await smallRetryMechanism(
         async () => {
-          const response = await api.get("/timeline");
+          const response = await api.get("/users/timeline");
 
           return {
             recommendedUsers: response.data.recommended_users,
@@ -590,7 +590,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
         async () => {
           const [metricsResponse, entriesResponse] = await Promise.all([
             api.get("/metrics"),
-            api.get("/metric-entries"),
+            api.get("/metrics/metric-entries"),
           ]);
 
           const endTime = performance.now();
@@ -641,7 +641,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       queryKey: ["recommendedUsers"],
       queryFn: async () => {
         const startTime = performance.now();
-        const response = await api.get("/get-recommended-users");
+        const response = await api.get("/users/get-recommended-users");
         const endTime = performance.now();
         const latencySeconds = (endTime - startTime) / 1000;
         const latencyProperties: Properties = {
@@ -700,7 +700,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       queryKey: ["multipleUsersData", usernames.sort().join(",")],
       queryFn: async () => {
         try {
-          const response = await api.get("/load-users-data", {
+          const response = await api.get("/users/load-users-data", {
             params: { usernames: usernames.join(",") },
           });
           const transformedData: Record<string, UserDataEntry> = {};
@@ -743,7 +743,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["messagesData"],
     queryFn: async () => {
       try {
-        const response = await api.get("/load-messages");
+        const response = await api.get("/users/load-messages");
         return response.data;
       } catch (err) {
         handleAuthError(err);
@@ -759,7 +759,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["notificationsData"],
     queryFn: async () => {
       try {
-        const response = await api.get("/load-notifications");
+        const response = await api.get("/notifications/load-notifications");
         return response.data;
       } catch (err) {
         handleAuthError(err);
@@ -835,7 +835,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return entries.some(
       (entry) =>
-        entry.metric_id === metricId && entry.date.split("T")[0] === today
+        entry.metricId === metricId && entry.date.split("T")[0] === today
     );
   };
 
@@ -850,7 +850,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       (metric) =>
         !entries.some(
           (entry) =>
-            entry.metric_id === metric.id && entry.date.split("T")[0] === today
+            entry.metricId === metric.id && entry.date.split("T")[0] === today
         )
     );
   };
@@ -860,7 +860,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const response = await api.post("/update-timezone", { timezone });
+      const response = await api.post("/users/update-timezone", { timezone });
       currentUserDataQuery.refetch();
       console.log("timezone updated to", timezone);
       return response.data;
@@ -900,7 +900,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isSignedIn) return;
 
     try {
-      await api.post("/update-theme", { theme_base_color: color });
+      await api.post("/users/update-theme", { theme_base_color: color });
       await currentUserDataQuery.refetch();
     } catch (err) {
       handleAuthError(err);
@@ -937,6 +937,33 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const currentTheme =
     currentUserDataQuery.data?.user?.theme_base_color || "blue";
 
+    // useEffect(() => {
+    //   console.log('currentUserDataQuery.isPending:', currentUserDataQuery.isPending);
+    //   console.log('currentUserDataQuery.isFetching:', currentUserDataQuery.isFetching);
+    //   console.log('timelineDataQuery.isPending:', timelineDataQuery.isPending);
+    //   console.log('timelineDataQuery.isFetching:', timelineDataQuery.isFetching);
+    //   console.log('notificationsData.isPending:', notificationsData.isPending);
+    //   console.log('notificationsData.isFetching:', notificationsData.isFetching);
+    //   console.log('messagesData.isPending:', messagesData.isPending);
+    //   console.log('messagesData.isFetching:', messagesData.isFetching);
+    //   console.log('isWaitingForData:', currentUserDataQuery.isPending ||
+    //     currentUserDataQuery.isFetching ||
+    //     timelineDataQuery.isPending ||
+    //     timelineDataQuery.isFetching ||
+    //     notificationsData.isPending ||
+    //     notificationsData.isFetching ||
+    //     messagesData.isPending ||
+    //     messagesData.isFetching);
+    // }, [
+    //   currentUserDataQuery.isPending,
+    //   currentUserDataQuery.isFetching,
+    //   timelineDataQuery.isPending,
+    //   timelineDataQuery.isFetching,
+    //   notificationsData.isPending,
+    //   notificationsData.isFetching,
+    //   messagesData.isPending,
+    //   messagesData.isFetching
+    // ]);
   const context = {
     useCurrentUserDataQuery,
     useUserDataQuery,

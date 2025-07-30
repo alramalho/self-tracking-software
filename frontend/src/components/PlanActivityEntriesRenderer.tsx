@@ -21,13 +21,13 @@ const PlanActivityEntriesRenderer: React.FC<
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
 
   const planActivities = useMemo(
-    () => activities.filter((a) => plan.activity_ids?.includes(a.id)),
-    [activities, plan.activity_ids]
+    () => activities.filter((a) => plan.activityIds?.includes(a.id)),
+    [activities, plan.activityIds]
   );
   const planActivityEntries = useMemo(
     () =>
       activityEntries.filter((e) =>
-        planActivities.some((a) => a.id === e.activity_id)
+        planActivities.some((a) => a.id === e.activityId)
       ),
     [activityEntries, planActivities]
   );
@@ -81,11 +81,11 @@ const PlanActivityEntriesRenderer: React.FC<
 
     const intensities = entriesOnDate.map((entry) => {
       const activityIndex = planActivities.findIndex(
-        (a) => a.id === entry.activity_id
+        (a) => a.id === entry.activityId
       );
 
       const quantities = planActivityEntries
-        .filter((e) => e.activity_id === entry.activity_id)
+        .filter((e) => e.activityId === entry.activityId)
         .map((e) => e.quantity);
       const minQuantity = Math.min(...quantities);
       const maxQuantity = Math.max(...quantities);
@@ -125,7 +125,7 @@ const PlanActivityEntriesRenderer: React.FC<
           <ul className="list-none space-y-4">
             {entriesOnDate.map((entry, index) => {
               const activity = activities.find(
-                (a) => a.id === entry.activity_id
+                (a) => a.id === entry.activityId
               );
               if (!activity) return null;
 
@@ -152,7 +152,7 @@ const PlanActivityEntriesRenderer: React.FC<
       <BaseHeatmapRenderer
         activities={planActivities}
         startDate={getDefaultStartDate()}
-        endDate={plan.finishing_date}
+        endDate={plan.finishingDate}
         heatmapData={formatEntriesForHeatMap()}
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}

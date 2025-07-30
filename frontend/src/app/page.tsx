@@ -262,7 +262,7 @@ const HomePage: React.FC = () => {
                     const today = new Date().toISOString().split("T")[0];
                     const todaysEntry = entries.find(
                       (entry: MetricEntry) =>
-                        entry.metric_id === metric.id &&
+                        entry.metricId === metric.id &&
                         entry.date.split("T")[0] === today
                     );
                     const isLoggedToday =

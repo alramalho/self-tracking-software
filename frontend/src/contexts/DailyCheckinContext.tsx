@@ -87,7 +87,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
       // Check if metric is logged or skipped today
       const todaysEntry = entries?.find(
         entry => 
-          entry.metric_id === metric.id && 
+          entry.metricId === metric.id && 
           entry.date.split("T")[0] === today
       );
       
@@ -149,7 +149,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
   const logIndividualMetric = async (metricId: string, rating: number): Promise<void> => {
     try {
-      await api.post("/log-metric", {
+      await api.post("/metrics/log-metric", {
         metric_id: metricId,
         rating: rating,
         date: new Date().toISOString(),
@@ -167,7 +167,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
   const logTodaysNote = async (note: string): Promise<void> => {
     try {
-      await api.post("/log-todays-note", {
+      await api.post("/metrics/log-todays-note", {
         note: note,
       });
       
@@ -183,7 +183,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
   const skipMetric = async (metricId: string): Promise<void> => {
     try {
-      await api.post("/skip-metric", {
+      await api.post("/metrics/skip-metric", {
         metric_id: metricId,
         date: new Date().toISOString(),
       });
@@ -200,7 +200,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
   const skipTodaysNote = async (): Promise<void> => {
     try {
-      await api.post("/skip-todays-note");
+      await api.post("/metrics/skip-todays-note");
       
       // Refresh metrics data
       await metricsAndEntriesQuery.refetch();

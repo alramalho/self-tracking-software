@@ -41,8 +41,8 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     activityIds: Set<string>
   ): boolean => {
     // Base case: if it's a simple criterion
-    if ('activity_id' in criterion) {
-      return activityIds.has(criterion.activity_id);
+    if ('activityId' in criterion) {
+      return activityIds.has(criterion.activityId);
     }
     
     // Recursive case: if it's a group, check all sub-criteria
@@ -224,7 +224,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
           const currentCriteria = milestone.criteria || [];
           return {
             ...milestone,
-            criteria: [...currentCriteria, { activity_id: defaultActivityId, quantity: 1 }]
+            criteria: [...currentCriteria, { activityId: defaultActivityId, quantity: 1 }]
           };
         }
         return milestone;
@@ -386,9 +386,9 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                           </Select>
                         )}
                         <Select
-                          value={(criterion as PlanMilestoneCriteria).activity_id}
+                          value={(criterion as PlanMilestoneCriteria).activityId}
                           onValueChange={(value) =>
-                            updateCriteria(milestoneIndex, criteriaIndex, "activity_id", value)
+                            updateCriteria(milestoneIndex, criteriaIndex, "activityId", value)
                           }
                         >
                           <SelectTrigger className="flex-1">
@@ -431,7 +431,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                         </div>
                         <span className="text-sm text-gray-500">
                           {activities.find(
-                            (a) => a.id === (criterion as PlanMilestoneCriteria).activity_id
+                            (a) => a.id === (criterion as PlanMilestoneCriteria).activityId
                           )?.measure || "units"}
                         </span>
                         <Button

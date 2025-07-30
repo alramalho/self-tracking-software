@@ -68,7 +68,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const planProgress = plans.map((plan): PlanProgressData => {
       const convertedPlan = convertApiPlanToPlan(plan, activities);
-      const planStartDate = convertedPlan.outline_type === "specific" 
+      const planStartDate = convertedPlan.outlineType === "specific" 
         ? (convertedPlan.sessions.length > 0 
             ? convertedPlan.sessions.sort((a, b) => a.date.getTime() - b.date.getTime())[0].date
             : new Date())

@@ -37,7 +37,7 @@ const NameStep: React.FC<NameStepProps> = ({
           className="w-full"
           onClick={() => {
             if (!isNewPlan) {
-              api.post("/update-user", { name });
+              api.post("/users/update-user", { name });
               userDataQuery.refetch();
             }
             onNext();

@@ -100,7 +100,7 @@ const ProfilePage: React.FC = () => {
   const [endDate, setEndDate] = useState(new Date());
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
   const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
-  const profilePaidPlanType = profileData?.user?.plan_type;
+  const profilePaidPlanType = profileData?.user?.planType;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const redirectTo = searchParams.get("redirectTo");
@@ -169,7 +169,7 @@ const ProfilePage: React.FC = () => {
     if (profileData && profileData.user) {
       const request = currentUserReceivedFriendRequests?.find(
         (req) =>
-          req.sender_id === profileData.user?.id && req.status === "pending"
+          req.senderId === profileData.user?.id && req.status === "pending"
       );
       if (request) {
         await toast.promise(
@@ -189,13 +189,13 @@ const ProfilePage: React.FC = () => {
 
   const activitiesNotInPlans = useMemo(() => {
     const planActivityIds = new Set(
-      profileActivePlans?.flatMap((plan) => plan.activity_ids) || []
+      profileActivePlans?.flatMap((plan) => plan.activityIds) || []
     );
 
     const activitiesNotInPlans = activities.filter(
       (activity) =>
         !planActivityIds.has(activity.id) &&
-        activityEntries.some((entry) => entry.activity_id === activity.id)
+        activityEntries.some((entry) => entry.activityId === activity.id)
     );
 
     return activitiesNotInPlans;
@@ -221,7 +221,7 @@ const ProfilePage: React.FC = () => {
   const hasPendingReceivedFriendRequest = () => {
     return currentUserReceivedFriendRequests?.some(
       (request) =>
-        request.sender_id === profileData?.user?.id &&
+        request.senderId === profileData?.user?.id &&
         request.status === "pending"
     );
   };
@@ -229,13 +229,13 @@ const ProfilePage: React.FC = () => {
   const hasPendingSentFriendRequest = () => {
     return currentUserSentFriendRequests?.some(
       (request) =>
-        request.recipient_id === profileData?.user?.id &&
+        request.recipientId === profileData?.user?.id &&
         request.status === "pending"
     );
   };
 
   const isFriend = () => {
-    return currentUser?.friend_ids?.includes(profileData?.user?.id || "");
+    return currentUser?.friendIds?.includes(profileData?.user?.id || "");
   };
 
   if (!isProfileDataSuccesfullyLoaded) {
@@ -347,7 +347,7 @@ const ProfilePage: React.FC = () => {
               <Link href={`/friends/${getUsername(user ?? null)}`}>
                 <div className="text-center">
                   <p className="text-2xl font-bold">
-                    {user?.friend_ids?.length || 0}
+                    {user?.friendIds?.length || 0}
                   </p>
                   <p className="text-sm text-gray-500">Friends</p>
                 </div>
@@ -527,12 +527,12 @@ const ProfilePage: React.FC = () => {
                         <span className="text-4xl">{plan.emoji}</span>
                         <div className="flex flex-col gap-0">
                           <h3 className="text-lg font-semibold">{plan.goal}</h3>
-                          {plan.outline_type == "times_per_week" && (
+                          {plan.outlineType == "timesPerWeek" && (
                             <span className="text-sm text-gray-500">
-                              {plan.times_per_week} times per week
+                              {plan.timesPerWeek} times per week
                             </span>
                           )}
-                          {plan.outline_type == "specific" && (
+                          {plan.outlineType == "specific" && (
                             <span className="text-sm text-gray-500">
                               Custom plan
                             </span>
@@ -576,7 +576,7 @@ const ProfilePage: React.FC = () => {
                     activityEntries={activityEntries.filter((entry) =>
                       activitiesNotInPlans
                         .map((a) => a.id)
-                        .includes(entry.activity_id)
+                        .includes(entry.activityId)
                     )}
                     timeRange={timeRange}
                     endDate={endDate}
@@ -595,7 +595,7 @@ const ProfilePage: React.FC = () => {
                   )
                   .map((entry) => {
                     const activity = activities.find(
-                      (a) => a.id === entry.activity_id
+                      (a) => a.id === entry.activityId
                     );
                     return (
                       <ActivityEntryPhotoCard

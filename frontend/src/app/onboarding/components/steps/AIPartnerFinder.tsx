@@ -98,23 +98,23 @@ const AIPartnerFinder = () => {
     id: "demo-coach-plan",
     goal: "Read 30 minutes daily",
     emoji: "📚",
-    outline_type: "times_per_week",
-    times_per_week: 7,
-    activity_ids: ["reading-activity"],
-    coach_notes:
+    outlineType: "timesPerWeek",
+    timesPerWeek: 7,
+    activityIds: ["reading-activity"],
+    coachNotes:
       "You're making great progress! I've noticed you're more consistent on weekdays. Let's try to maintain momentum on weekends too.",
-    suggested_by_coach_at: new Date().toISOString(),
-    current_week: {
+    suggestedByCoachAt: new Date().toISOString(),
+    currentWeek: {
       state: "ON_TRACK",
     },
   };
   const dummyCoachPlanWithSuggestions = {
     ...dummyCoachPlan,
-    coach_notes:
+    coachNotes:
       "Great progress reading 5 days last week! Let's adjust to 5 days per week for now - " +
       "this feels more achievable while we work towards daily reading. What do you think?",
-    coach_suggested_times_per_week: 5,
-    suggested_by_coach_at: new Date().toISOString(),
+    coachSuggestedTimesPerWeek: 5,
+    suggestedByCoachAt: new Date().toISOString(),
   };
 
   const dummyActivities = [
@@ -130,24 +130,24 @@ const AIPartnerFinder = () => {
   const dummyActivityEntries = [
     {
       id: "1",
-      activity_id: "reading-activity",
+      activityId: "reading-activity",
       date: new Date().toISOString(),
       quantity: 30,
-      user_id: "demo-user",
+      userId: "demo-user",
     },
     {
       id: "2",
-      activity_id: "reading-activity",
+      activityId: "reading-activity",
       date: new Date(Date.now() - 86400000).toISOString(),
       quantity: 30,
-      user_id: "demo-user",
+      userId: "demo-user",
     },
     {
       id: "3",
-      activity_id: "reading-activity",
+      activityId: "reading-activity",
       date: new Date(Date.now() - 2 * 86400000).toISOString(),
       quantity: 30,
-      user_id: "demo-user",
+      userId: "demo-user",
     },
   ];
 

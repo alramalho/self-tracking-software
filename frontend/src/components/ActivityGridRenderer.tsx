@@ -23,7 +23,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   const getActivityEntriesData = () => {
     const result = activityEntries
       .filter((entry) =>
-        activities.map((a) => a.id).includes(entry.activity_id)
+        activities.map((a) => a.id).includes(entry.activityId)
       )
       .map((entry) => ({
         date: entry.date.replaceAll("-", "/"),
@@ -35,7 +35,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   const getIntensityForDate = (date: string) => {
     const entriesOnDate = activityEntries.filter(
       (e: ActivityEntry) =>
-        activities.map((a) => a.id).includes(e.activity_id) &&
+        activities.map((a) => a.id).includes(e.activityId) &&
         isSameDay(parseISO(e.date), date)
     );
 
@@ -43,14 +43,14 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
 
     const intensities = entriesOnDate
       .map((entry) => {
-        const activity = activities.find((a) => a.id === entry.activity_id);
+        const activity = activities.find((a) => a.id === entry.activityId);
         if (!activity) return null;
 
         const activityIndex = activities.findIndex(
-          (a) => a.id === entry.activity_id
+          (a) => a.id === entry.activityId
         );
         const activitySpecificEntries = activityEntries.filter(
-          (e: ActivityEntry) => e.activity_id === entry.activity_id
+          (e: ActivityEntry) => e.activityId === entry.activityId
         );
 
         const quantities = activitySpecificEntries.map((e) => e.quantity);
@@ -80,7 +80,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
 
     const entriesOnDate = activityEntries.filter(
       (entry) =>
-        activities.map((a) => a.id).includes(entry.activity_id) &&
+        activities.map((a) => a.id).includes(entry.activityId) &&
         isSameDay(parseISO(entry.date), focusedDate)
     );
 
@@ -97,7 +97,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
           <ul className="list-none space-y-4">
             {entriesOnDate.map((entry, index) => {
               const activity = activities.find(
-                (a) => a.id === entry.activity_id
+                (a) => a.id === entry.activityId
               );
               if (!activity) return null;
 

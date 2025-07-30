@@ -88,7 +88,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
   const [lookingForAp, setLookingForAp] = useState(
-    currentUserData?.user?.looking_for_ap || false
+    currentUserData?.user?.lookingForAp || false
   );
   const themeColors = useThemeColors();
   const themeVariants = getThemeVariants(themeColors.raw);
@@ -187,7 +187,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           checked={lookingForAp}
                           onCheckedChange={async (checked) => {
                             setLookingForAp(checked);
-                            await api.post("/update-user", {
+                            await api.post("/users/update-user", {
                               looking_for_ap: checked,
                             });
                             toast.success("Profile updated");

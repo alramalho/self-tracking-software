@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import posthog from "posthog-js";
 import { useUserPlan, hasCachedUserData } from "@/contexts/UserPlanContext";
 import { useSession } from "@clerk/nextjs";
@@ -37,21 +37,27 @@ export default function GeneralInitializer({
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [initialCacheExists] = useState(() => hasCachedUserData());
   const hasFriends =
-    userData?.user?.friend_ids?.length &&
-    userData?.user?.friend_ids?.length > 0;
+    userData?.user?.friendIds?.length &&
+    userData?.user?.friendIds?.length > 0;
   const { userPaidPlanType } = usePaidPlan();
   const router = useRouter();
 
-  const onboardingNecessary =
-    !isWaitingForData && !hasFriends && userPaidPlanType === "free";
+  const onboardingNecessary = useMemo(
+    () => !isWaitingForData && !hasFriends && userPaidPlanType?.toLowerCase() === "free",
+    [isWaitingForData, hasFriends, userPaidPlanType]
+  );
 
   const email = userData?.user?.email || "";
 
   useEffect(() => {
+    console.log("isWaitingForData", isWaitingForData);
+    console.log("hasFriends", hasFriends);
+    console.log("userPaidPlanType", userPaidPlanType);
+    console.log("onboardingNecessary", onboardingNecessary);
     if (onboardingNecessary) {
       router.push("/onboarding");
     }
-  }, [onboardingNecessary]);
+  }, [onboardingNecessary, isWaitingForData, hasFriends, userPaidPlanType]);
 
   useEffect(() => {
     if (
@@ -65,7 +71,7 @@ export default function GeneralInitializer({
         name: userData?.user.name,
         username: userData?.user.username,
         is_app_installed: isAppInstalled,
-        is_looking_for_ap: userData?.user.looking_for_ap,
+        is_looking_for_ap: userData?.user.lookingForAp,
         is_push_granted: isPushGranted,
       });
       setHasRanPosthogIdentify(true);

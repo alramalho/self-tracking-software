@@ -322,7 +322,7 @@ function AccountabilityPartnerStep({
       requestNotificationPermission();
     }
     try {
-      api.post("/update-user", { looking_for_ap: lookingForAP });
+      api.post("/users/update-user", { looking_for_ap: lookingForAP });
     } catch (error) {
       console.error("Error updating user:", error);
       toast.error("Failed to save your preferences. Please try again later.");
@@ -392,7 +392,7 @@ export default function OnboardingPage() {
         setStep(3);
       } else if (!userData?.activityEntries?.length) {
         setStep(4);
-      } else if (!userData?.user?.looking_for_ap) {
+      } else if (!userData?.user?.lookingForAp) {
         setStep(5);
       } else {
         onFinish(true);

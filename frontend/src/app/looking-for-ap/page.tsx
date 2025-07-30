@@ -28,11 +28,11 @@ const LookingForApPage: React.FC = () => {
   const variants = getThemeVariants(themeColors.raw);
 
   const hasPlans =
-    userData?.user?.plan_ids &&
-    userData?.user?.plan_ids.length &&
-    userData?.user?.plan_ids.length > 0;
+    userData?.user?.planIds &&
+    userData?.user?.planIds.length &&
+    userData?.user?.planIds.length > 0;
 
-  if (hasPlans && userData?.user?.looking_for_ap && isPushGranted) {
+  if (hasPlans && userData?.user?.lookingForAp && isPushGranted) {
     router.push("/ap-search");
   }
   
@@ -114,7 +114,7 @@ const LookingForApPage: React.FC = () => {
               <Button
                 variant={userProfile ? "outline" : "default"}
                 onClick={async () => {
-                  await api.post("/update-user", {
+                  await api.post("/users/update-user", {
                     looking_for_ap: true,
                   });
                   currentUserDataQuery.refetch();

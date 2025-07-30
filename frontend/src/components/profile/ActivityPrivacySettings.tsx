@@ -40,10 +40,10 @@ export default function ActivityPrivacySettings({
   const { data: userData } = currendUserDataQuery;
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedValue, setSelectedValue] = React.useState<VisibilityType>(
-    (userData?.user?.default_activity_visibility as VisibilityType) || "public"
+    (userData?.user?.defaultActivityVisibility as VisibilityType) || "public"
   );
   const hasChanges =
-    selectedValue !== userData?.user?.default_activity_visibility;
+    selectedValue !== userData?.user?.defaultActivityVisibility;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -53,8 +53,8 @@ export default function ActivityPrivacySettings({
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      await api.post("/update-user", {
-        default_activity_visibility: selectedValue,
+      await api.post("/users/update-user", {
+        defaultActivityVisibility: selectedValue,
       });
       currendUserDataQuery.refetch();
       toast.success("Privacy settings updated");
@@ -68,12 +68,12 @@ export default function ActivityPrivacySettings({
 
   // Update selected value when user data changes
   React.useEffect(() => {
-    if (userData?.user?.default_activity_visibility) {
+    if (userData?.user?.defaultActivityVisibility) {
       setSelectedValue(
-        userData.user.default_activity_visibility as VisibilityType
+        userData.user.defaultActivityVisibility as VisibilityType
       );
     }
-  }, [userData?.user?.default_activity_visibility]);
+  }, [userData?.user?.defaultActivityVisibility]);
 
   return (
     <div className="p-6 space-y-6">

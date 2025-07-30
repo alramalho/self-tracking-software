@@ -60,7 +60,7 @@ export const ActivityCard = ({
         </span>
         {activity.privacy_settings &&
           activity.privacy_settings !==
-            userData?.user?.default_activity_visibility && (
+            userData?.user?.defaultActivityVisibility && (
             <span className="text-[10px] text-left flex items-center gap-1 mt-2 text-gray-400">
               {getActivityPrivacySettingIcon(activity.privacy_settings)}
               {toReadablePrivacySetting(activity.privacy_settings)}

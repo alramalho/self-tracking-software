@@ -35,7 +35,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 
 export const PlanStatus = ({ plan }: { plan: Plan }) => {
-  if (!plan?.current_week?.state) {
+  if (!plan?.currentWeek?.state) {
     return null;
   }
   const statusConfig = {
@@ -57,7 +57,7 @@ export const PlanStatus = ({ plan }: { plan: Plan }) => {
     },
   };
 
-  const config = statusConfig[plan.current_week.state];
+  const config = statusConfig[plan.currentWeek.state];
 
   return (
     <div className="flex items-center gap-2">
@@ -165,7 +165,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   // Calculate weekly progress
   const totalPlannedActivities =
-    plan.outline_type === "times_per_week"
+    plan.outlineType === "timesPerWeek"
       ? (currentWeek.plannedActivities as number)
       : (currentWeek.plannedActivities as any[])?.length || 0;
 
@@ -285,7 +285,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                       <span className="text-xs text-gray-400/80">This week</span>
                       <PlanStatus plan={plan} />
                       {["COMPLETED", "FAILED"].includes(
-                        plan?.current_week?.state || ""
+                        plan?.currentWeek?.state || ""
                       ) && (
                         <Link
                           href={`/plans?selectedPlan=${plan.id}`}

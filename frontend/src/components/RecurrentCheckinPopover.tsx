@@ -31,14 +31,14 @@ const RecurrentCheckinPopover: React.FC<RecurrentCheckinPopoverProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const [isSaving, setIsSaving] = React.useState(false);
 
-  type DayType = NonNullable<User['daily_checkin_settings']>['days'][number];
-  type TimeType = NonNullable<User['daily_checkin_settings']>['time'];
+  type DayType = NonNullable<User['dailyCheckinSettings']>['days'][number];
+  type TimeType = NonNullable<User['dailyCheckinSettings']>['time'];
   
   const [selectedDays, setSelectedDays] = React.useState<DayType[]>(
-    userData?.user?.daily_checkin_settings?.days || []
+    userData?.user?.dailyCheckinSettings?.days || []
   );
   const [selectedTimes, setSelectedTimes] = React.useState<TimeType | null>(
-    userData?.user?.daily_checkin_settings?.time || null
+    userData?.user?.dailyCheckinSettings?.time || null
   );
 
   const days = {

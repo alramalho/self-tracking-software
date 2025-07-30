@@ -35,8 +35,8 @@ const PlanCard = ({
   index: number;
 }) => {
   const getWeeksCount = () => {
-    if (!plan.finishing_date) return 0;
-    const finishDate = new Date(plan.finishing_date);
+    if (!plan.finishingDate) return 0;
+    const finishDate = new Date(plan.finishingDate);
     const today = new Date();
     const diffTime = Math.abs(finishDate.getTime() - today.getTime());
     const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));

@@ -11,8 +11,8 @@ import Number from "../Number";
 import { Textarea } from "@/components/ui/textarea";
 
 interface OutlineStepProps {
-  outlineType: "specific" | "times_per_week" | undefined;
-  setOutlineType: (type: "specific" | "times_per_week") => void;
+  outlineType: "specific" | "timesPerWeek" | undefined;
+  setOutlineType: (type: "specific" | "timesPerWeek") => void;
   timesPerWeek: number;
   setTimesPerWeek: (times: number) => void;
   title: string;
@@ -52,10 +52,10 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
       sessions: sessions.map((session) => ({
         ...session,
         date: parseISO(session.date),
-        activity_name: activities.find((a) => a.id === session.activity_id)
+        activityName: activities.find((a) => a.id === session.activityId)
           ?.title,
       })),
-      finishing_date: finishingDate ? parseISO(finishingDate) : undefined,
+      finishingDate: finishingDate ? parseISO(finishingDate) : undefined,
       goal: title,
     } as Plan;
   };
@@ -75,8 +75,8 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
           <OutlineOption
             title="✅ Weekly Count Goal"
             description="A simple, self-serve plan with just a number of sessions per week"
-            selected={outlineType === "times_per_week"}
-            onClick={() => setOutlineType("times_per_week")}
+            selected={outlineType === "timesPerWeek"}
+            onClick={() => setOutlineType("timesPerWeek")}
           />
           <OutlineOption
             title="📆 Specific Schedule"
@@ -87,7 +87,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
         </div>
       </div>
 
-      {outlineType === "times_per_week" && (
+      {outlineType === "timesPerWeek" && (
         <div className="space-y-4">
           <Label>How many times per week?</Label>
           <NumberInput

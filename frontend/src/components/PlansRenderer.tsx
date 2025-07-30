@@ -32,8 +32,8 @@ import { parseISO, format, addMonths, isBefore } from "date-fns";
 
 // Helper function to check if a plan is expired
 export const isPlanExpired = (plan: ApiPlan): boolean => {
-  if (!plan.finishing_date) return false;
-  const finishingDate = parseISO(plan.finishing_date);
+  if (!plan.finishingDate) return false;
+  const finishingDate = parseISO(plan.finishingDate);
   return isBefore(finishingDate, new Date());
 };
 
@@ -193,7 +193,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
       const oneMonthLater = format(addMonths(new Date(), 1), "yyyy-MM-dd");
       await api.post(`/plans/${planId}/update`, {
         data: {
-          finishing_date: oneMonthLater,
+          finishingDate: oneMonthLater,
         },
       });
       await refetchUserData(false);

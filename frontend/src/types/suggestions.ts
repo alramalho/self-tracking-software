@@ -9,7 +9,7 @@ export interface SuggestionBase {
   type: string;
   data: any;
   metadata?: Record<string, any>;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface ActivitySuggestionData extends SuggestionBase {
@@ -59,7 +59,7 @@ export interface PlanActivitySuggestionData extends SuggestionBase {
 export interface PlanTypeSuggestionData extends SuggestionBase {
   type: "plan_type";
   data: {
-    plan_type: "specific" | "times_per_week";
+    plan_type: "specific" | "timesPerWeek";
   };
 }
 
@@ -68,10 +68,10 @@ export interface PlanSessionsSuggestionData extends SuggestionBase {
   data: {
     sessions: Array<{
       date: string;
-      activity_id: string;
-      activity_name: string;
+      activityId: string;
+      activityName: string;
       quantity: number;
-      created_at?: string;
+      createdAt?: string;
     }>;
   };
 }
@@ -84,9 +84,9 @@ export interface PlanMilestoneSuggestionData extends SuggestionBase {
 }
 
 export interface PlanFinishingDateSuggestionData extends SuggestionBase {
-  type: "plan_finishing_date";
+  type: "plan_finishingDate";
   data: {
-    finishing_date: string; // YYYY-MM-DD format
+    finishingDate: string; // YYYY-MM-DD format
     explanation?: string; // Optional explanation for the suggested date
   };
 }

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 export interface Entry {
   date: Date;
-  activity_id: string;
+  activityId: string;
   quantity: number;
   description?: string;
 }
@@ -59,14 +59,14 @@ export const SmallActivityEntryCard = ({
   return (
     <>
       <div
-        key={`${entry.date}-${entry.activity_id}`}
+        key={`${entry.date}-${entry.activityId}`}
         className={cn(
           `relative flex flex-col items-center justify-center rounded-lg bg-gray-100 p-2 transition-all duration-200 ${
             onClick ? "cursor-pointer bg-gray-100 hover:bg-opacity-80" : ""
           } ${selected ? "ring-2 ring-gray-300 ring-offset-2" : ""}`,
           className
         )}
-        onClick={() => onClick?.(`${entry.date}-${entry.activity_id}`)}
+        onClick={() => onClick?.(`${entry.date}-${entry.activityId}`)}
       >
         {completed && (
           <div className="absolute top-2 right-2">

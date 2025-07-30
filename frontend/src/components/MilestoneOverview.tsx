@@ -22,7 +22,7 @@ interface MilestoneProgress {
   is_completed: boolean;
   criteria_progress: Array<{
     type: "criterion" | "group";
-    activity_id?: string;
+    activityId?: string;
     quantity?: number;
     current_quantity?: number;
     progress: number;
@@ -152,7 +152,7 @@ export function MilestoneOverview({
   const renderCriteriaOrGroup = (criterionProgress: any, level = 0) => {
     if (criterionProgress.type === "criterion") {
       const activity = userData?.activities?.find(
-        (a) => a.id === criterionProgress.activity_id
+        (a) => a.id === criterionProgress.activityId
       );
       if (!activity) return null;
 
@@ -217,9 +217,9 @@ export function MilestoneOverview({
             </p>
           </div>
           <span className="text-4xl">
-            {nextMilestone.criteria_progress?.[0]?.activity_id
+            {nextMilestone.criteria_progress?.[0]?.activityId
               ? userData?.activities?.find(
-                  (a) => a.id === nextMilestone.criteria_progress[0].activity_id
+                  (a) => a.id === nextMilestone.criteria_progress[0].activityId
                 )?.emoji
               : "📍"}
           </span>

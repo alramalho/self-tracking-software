@@ -24,6 +24,29 @@
                 "-s"
             ],
             "justMyCode": false
+        },
+        {
+            "name": "Node.js: Backend",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend-node/src/index.ts",
+            "cwd": "${workspaceFolder}/backend-node",
+            "runtimeExecutable": "tsx",
+            "runtimeArgs": [
+                "watch"
+            ],
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/backend-node/**"
+            ],
+            "restart": true,
+            "console": "integratedTerminal",
+            "outputCapture": "std"
         }
     ],
     "inputs": [

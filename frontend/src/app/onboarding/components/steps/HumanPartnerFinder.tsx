@@ -163,8 +163,8 @@ const HumanPartnerFinder = () => {
 
   // Get all user IDs from friend requests
   const allUserIds = [
-    ...pendingSentFriendRequests.map((req) => req.recipient_id),
-    ...pendingReceivedFriendRequests.map((req) => req.sender_id),
+    ...pendingSentFriendRequests.map((req) => req.recipientId),
+    ...pendingReceivedFriendRequests.map((req) => req.senderId),
   ];
 
   // Load user data for friend requests
@@ -291,7 +291,7 @@ const HumanPartnerFinder = () => {
 
               {/* Received Friend Requests */}
               {pendingReceivedFriendRequests.map((request) => {
-                const user = usersData?.[request.sender_id] || null;
+                const user = usersData?.[request.senderId] || null;
                 return (
                   <FriendRequestCard
                     key={request.id}
@@ -306,7 +306,7 @@ const HumanPartnerFinder = () => {
 
               {/* Sent Friend Requests */}
               {pendingSentFriendRequests.map((request) => {
-                const user = usersData?.[request.recipient_id] || null;
+                const user = usersData?.[request.recipientId] || null;
                 return (
                   <FriendRequestCard
                     key={request.id}

@@ -48,21 +48,21 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   // Initialize state from plan if editing, otherwise use defaults
   const [description, setDescription] = useState(plan?.notes || "");
   const [selectedEmoji, setSelectedEmoji] = useState(plan?.emoji || "");
-  const [currentFinishingDate, setCurrentFinishingDate] = useState(plan?.finishing_date);
+  const [currentFinishingDate, setCurrentFinishingDate] = useState(plan?.finishingDate);
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedSessions, setGeneratedSessions] = useState<ApiPlan["sessions"]>();
   const [goal, setGoal] = useState(plan?.goal || "");
   const [planNotes, setPlanNotes] = useState("");
   const [milestones, setMilestones] = useState<PlanMilestone[]>(plan?.milestones || []);
   const [planDuration, setPlanDuration] = useState<PlanDurationType>({
-    type: plan?.duration_type,
-    date: plan?.finishing_date,
+    type: plan?.durationType,
+    date: plan?.finishingDate,
   });
-  const [outlineType, setOutlineType] = useState<Plan["outline_type"]>(plan?.outline_type);
-  const [timesPerWeek, setTimesPerWeek] = useState(plan?.times_per_week || 0);
+  const [outlineType, setOutlineType] = useState<Plan["outlineType"]>(plan?.outlineType);
+  const [timesPerWeek, setTimesPerWeek] = useState(plan?.timesPerWeek || 0);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedActivities, setSelectedActivities] = useState<Activity[]>(
-    plan ? userData?.activities?.filter(a => plan.activity_ids?.includes(a.id)) || [] : []
+    plan ? userData?.activities?.filter(a => plan.activityIds?.includes(a.id)) || [] : []
   );
 
   const { generateSessions } = usePlanGeneration();
@@ -80,7 +80,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       case 5:
         if (!outlineType) return false;
         if (outlineType === "specific") return !!generatedSessions;
-        if (outlineType === "times_per_week") return timesPerWeek > 0;
+        if (outlineType === "timesPerWeek") return timesPerWeek > 0;
         return false;
       default:
         return true;
@@ -129,16 +129,16 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     const basePlan: ApiPlan = {
       goal,
       emoji: selectedEmoji,
-      finishing_date: currentFinishingDate,
+      finishingDate: currentFinishingDate,
       notes: planNotes,
-      duration_type: planDuration.type,
-      outline_type: outlineType,
+      durationType: planDuration.type,
+      outlineType: outlineType,
       milestones: milestones,
-      activity_ids: selectedActivities.map((a) => a.id),
+      activityIds: selectedActivities.map((a) => a.id),
       id: plan?.id || "",
-      user_id: plan?.user_id || "",
-      created_at: plan?.created_at || new Date().toISOString(),
-      coach_suggested_sessions: [],
+      userId: plan?.userId || "",
+      createdAt: plan?.createdAt || new Date().toISOString(),
+      coachSuggestedSessions: [],
       sessions: [],
     };
 
@@ -147,10 +147,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         ...basePlan,
         sessions: generatedSessions || [],
       };
-    } else if (outlineType === "times_per_week") {
+    } else if (outlineType === "timesPerWeek") {
       return {
         ...basePlan,
-        times_per_week: timesPerWeek,
+        timesPerWeek: timesPerWeek,
       };
     }
     return basePlan;
@@ -164,8 +164,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     milestones,
     selectedActivities,
     plan?.id,
-    plan?.user_id,
-    plan?.created_at,
+    plan?.userId,
+    plan?.createdAt,
     generatedSessions,
     timesPerWeek,
   ]);
@@ -175,15 +175,15 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     const planToBeSaved = createPlanToConfirm();
     const currentActivityIds = new Set(selectedActivities.map(a => a.id));
-    const originalActivityIds = new Set(plan.activity_ids);
+    const originalActivityIds = new Set(plan.activityIds);
 
     return (
       planToBeSaved.goal !== plan.goal ||
       planToBeSaved.emoji !== plan.emoji ||
-      planToBeSaved.finishing_date !== plan.finishing_date ||
-      planToBeSaved.duration_type !== plan.duration_type ||
-      planToBeSaved.outline_type !== plan.outline_type ||
-      planToBeSaved.times_per_week !== plan.times_per_week ||
+      planToBeSaved.finishingDate !== plan.finishingDate ||
+      planToBeSaved.durationType !== plan.durationType ||
+      planToBeSaved.outlineType !== plan.outlineType ||
+      planToBeSaved.timesPerWeek !== plan.timesPerWeek ||
       JSON.stringify(planToBeSaved.milestones) !== JSON.stringify(plan.milestones) ||
       JSON.stringify(planToBeSaved.sessions) !== JSON.stringify(plan.sessions) ||
       currentActivityIds.size !== originalActivityIds.size ||
@@ -202,7 +202,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     if (!hasRequiredFields) return false;
 
     if (outlineType === "specific" && !generatedSessions) return false;
-    if (outlineType === "times_per_week" && !timesPerWeek) return false;
+    if (outlineType === "timesPerWeek" && !timesPerWeek) return false;
 
     return true;
   }, [
@@ -234,7 +234,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
       // Check criteria
       for (const criterion of milestone.criteria || []) {
-        if ('activity_id' in criterion && criterion.quantity <= 0) {
+        if ('activityId' in criterion && criterion.quantity <= 0) {
           toast.error("All milestone criteria must have a quantity greater than 0");
           return false;
         }
@@ -291,7 +291,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     if (!hasBasicInfo) return false;
 
     // Only allow generation for specific outline type
-    if (!outlineType || outlineType === "times_per_week") {
+    if (!outlineType || outlineType === "timesPerWeek") {
       return false;
     }
 

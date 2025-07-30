@@ -71,7 +71,7 @@ const PlanActivitiesSnippet: React.FC<{
 );
 
 const PlanTypeSnippet: React.FC<{
-  planType: "specific" | "times_per_week";
+  planType: "specific" | "timesPerWeek";
 }> = ({ planType }) => {
   const emoji = planType === "specific" ? "📆" : "✅";
 
@@ -89,8 +89,8 @@ const PlanSessionsSnippet: React.FC<{
   sessions:
     | Array<{
         date: string;
-        activity_id: string;
-        activity_name: string;
+        activityId: string;
+        activityName: string;
         quantity: number;
       }>
     | number;
@@ -109,12 +109,12 @@ const PlanSessionsSnippet: React.FC<{
       <div className="space-y-2">
         {sessions.map((session, idx) => {
           const activity = activities?.find(
-            (a) => a.id === session.activity_id
+            (a) => a.id === session.activityId
           );
           return (
             <div key={idx} className="text-sm border-l-2 border-orange-200 pl-2">
               <span>
-                {activity?.emoji} {session.activity_name}
+                {activity?.emoji} {session.activityName}
               </span>
               <span className="text-gray-500 ml-2">
                 ({session.quantity} {activity?.measure})
@@ -136,7 +136,7 @@ const PlanMilestonesSnippet: React.FC<{
     description: string;
     date: string;
     criteria?: Array<{
-      activity_id: string;
+      activityId: string;
       quantity: number;
     }>;
     progress?: number;
@@ -168,7 +168,7 @@ const PlanMilestonesSnippet: React.FC<{
                 {milestone.criteria.map((c, i) => {
                   console.log({ activities });
                   const activity = activities?.find(
-                    (a) => a.id === c.activity_id
+                    (a) => a.id === c.activityId
                   );
                   console.log({ c });
                   console.log({ activity });
@@ -192,14 +192,14 @@ const PlanMilestonesSnippet: React.FC<{
 );
 
 const PlanFinishingDateSnippet: React.FC<{
-  finishing_date: string;
+  finishingDate: string;
   explanation?: string;
-}> = ({ finishing_date, explanation }) => (
+}> = ({ finishingDate, explanation }) => (
   <div className="border-l-4 border-indigo-500 pl-3">
     <h3 className="font-medium text-sm text-gray-500">Finishing Date</h3>
     <div className="flex flex-col">
       <p className="text-gray-900">
-        <span className="text-xl">🎯</span> {formatDate(finishing_date)}
+        <span className="text-xl">🎯</span> {formatDate(finishingDate)}
       </p>
       {explanation && (
         <p className="text-sm text-gray-600 mt-1 italic">{explanation}</p>
@@ -216,12 +216,12 @@ export interface CompletePlan {
     emoji: string;
     measure: string;
   }>;
-  planType: "specific" | "times_per_week";
+  planType: "specific" | "timesPerWeek";
   sessions:
     | Array<{
         date: string;
-        activity_id: string;
-        activity_name: string;
+        activityId: string;
+        activityName: string;
         quantity: number;
       }>
     | number;
@@ -229,13 +229,13 @@ export interface CompletePlan {
     description: string;
     date: string;
     criteria?: Array<{
-      activity_id: string;
+      activityId: string;
       quantity: number;
     }>;
     progress?: number;
   }>;
-  finishing_date?: string;
-  created_at?: string;
+  finishingDate?: string;
+  createdAt?: string;
 }
 
 interface PlanBuildingContainerProps {
@@ -354,7 +354,7 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
 
   const finishingDateSuggestion = useMemo(
     () =>
-      suggestions.filter((s) => s.type === "plan_finishing_date").pop() as
+      suggestions.filter((s) => s.type === "plan_finishingDate").pop() as
         | PlanFinishingDateSuggestionData
         | undefined,
     [suggestions]
@@ -385,14 +385,14 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
           date: new Date(m.date).toISOString(),
           progress: m.progress,
           criteria: m.criteria
-            ?.filter((c) => "activity_id" in c)
+            ?.filter((c) => "activityId" in c)
             .map((c) => ({
-              activity_id: (c as any).activity_id,
+              activityId: (c as any).activityId,
               quantity: (c as any).quantity,
             })),
         })),
-        finishing_date: finishingDateSuggestion?.data.finishing_date,
-        created_at: new Date().toISOString(),
+        finishingDate: finishingDateSuggestion?.data.finishingDate,
+        createdAt: new Date().toISOString(),
       });
       setCachedData(null);
       toast.success("Plan created successfully");
@@ -418,7 +418,7 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
 
       {finishingDateSuggestion && (
         <PlanFinishingDateSnippet
-          finishing_date={finishingDateSuggestion.data.finishing_date}
+          finishingDate={finishingDateSuggestion.data.finishingDate}
           explanation={finishingDateSuggestion.data.explanation}
         />
       )}
@@ -436,9 +436,9 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
             date: new Date(m.date).toISOString(),
             progress: m.progress,
             criteria: m.criteria
-              ?.filter((c) => "activity_id" in c)
+              ?.filter((c) => "activityId" in c)
               .map((c) => ({
-                activity_id: (c as any).activity_id,
+                activityId: (c as any).activityId,
                 quantity: (c as any).quantity,
               })),
           }))}

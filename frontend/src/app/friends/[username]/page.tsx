@@ -36,8 +36,8 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
   >({
     queryKey: ["friends", params.username],
     queryFn: async () => {
-      if (userData?.user_friends) {
-        return userData.user_friends;
+      if (userData?.userFriends) {
+        return userData.userFriends;
       }
       const response = await api.get(`/friends/${params.username}`);
       userDataQuery.refetch();
