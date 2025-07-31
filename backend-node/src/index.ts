@@ -8,15 +8,13 @@ console.log("loaded env");
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import morgan from "morgan";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
-import { loggingMiddleware } from "./middleware/loggingMiddleware";
 import { prisma } from "./utils/prisma";
-import { logger } from "./utils/logger";
+import { logger, morganMiddleware } from "./utils/logger";
 
 // Import routes
 import { usersRouter } from "./routes/users";
@@ -74,22 +72,19 @@ app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Logging middleware
-app.use(morgan("combined"));
-app.use(loggingMiddleware);
+app.use(morganMiddleware);
 
 // Apply rate limiting
 app.use(limiter);
 
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   logger.info("Health check");
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 // Test exception endpoint (for testing error handling)
-app.get("/exception", (req, res) => {
+app.get("/exception", (_req, _res) => {
   throw new Error("Test exception");
 });
 
