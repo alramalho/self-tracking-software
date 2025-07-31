@@ -78,7 +78,7 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
           {colorPalettes.map((palette) => {
             const isSelected = currentTheme === palette.color;
             const isLocked =
-              userPaidPlanType === "free" &&
+              userPaidPlanType === "FREE" &&
               (palette.color === "random" || palette.color !== "blue");
             return (
               <div
@@ -147,7 +147,7 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
             );
           })}
         </div>
-        {userPaidPlanType === "free" && (
+        {userPaidPlanType === "FREE" && (
           <Button
             className="w-full mt-6"
             onClick={() => setShowUpgradePopover(true)}

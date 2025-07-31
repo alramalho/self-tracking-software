@@ -48,7 +48,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
 
       try {
         setIsLoading(true);
-        const response = await api.get(`/search-users/${searchTerm}`);
+        const response = await api.get(`users/search-users/${searchTerm}`);
         setSearchResults(response.data);
       } catch (error) {
         console.error("Error searching users:", error);
@@ -84,7 +84,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <div className="relative">
         <Input
           type="text"
-          placeholder="Search users..."
+          placeholder="🔍 Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="bg-white"
@@ -113,7 +113,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
           </li>
         ))}
       </ul>
-      <Button
+      {/* <Button
         variant="outline"
         onClick={async () => {
           if (!userData?.user?.lookingForAp) {
@@ -127,7 +127,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
         className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.hardGradientBg}`}
       >
         Find me an Accountability Partner 🤝
-      </Button>
+      </Button> */}
     </div>
   );
 };

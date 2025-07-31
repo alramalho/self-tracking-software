@@ -483,16 +483,16 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <Avatar
                 className={twMerge(
                   "w-8 h-8",
-                  userPlanType !== "free" &&
+                  userPlanType !== "FREE" &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  userPlanType !== "free" && variants.ring
+                  userPlanType !== "FREE" && variants.ring
                 )}
                 onClick={onAvatarClick}
               >
                 <AvatarImage src={userPicture} alt={userName || ""} />
                 <AvatarFallback>{(userName || "U")[0]}</AvatarFallback>
               </Avatar>
-              {userPlanType && userPlanType !== "free" && (
+              {userPlanType && userPlanType !== "FREE" && (
                 <div className="absolute -bottom-[6px] -right-[6px]">
                   <PlanBadge planType={userPlanType} size={18} />
                 </div>

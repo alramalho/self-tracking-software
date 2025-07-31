@@ -14,23 +14,40 @@ export interface ConversationMessage {
 
 export class MemoryService {
   
-  async writeMessage(userId: string, message: Omit<ConversationMessage, 'id' | 'createdAt'>): Promise<ConversationMessage> {
+  async writeMessage(message: Omit<ConversationMessage, 'id' | 'createdAt'>): Promise<ConversationMessage> {
     try {
-      // For now, we'll use a simple message storage in the database
-      // This could be extended to use DynamoDB like the Python version
-      const savedMessage = await prisma.$queryRaw`
-        INSERT INTO conversation_messages (
-          userId, text, sender_name, senderId, recipient_name, recipientId, emotions, createdAt
-        ) VALUES (
-          ${userId}, ${message.text}, ${message.senderName}, ${message.senderId}, 
-          ${message.recipientName}, ${message.recipientId}, ${JSON.stringify(message.emotions || [])}, NOW()
-        ) RETURNING *
-      ` as any[];
+      const savedMessage = await prisma.message.create({
+        data: {
+          senderId: message.senderId,
+          senderName: message.senderName,
+          recipientId: message.recipientId,
+          recipientName: message.recipientName,
+          text: message.text,
+          emotions: message.emotions ? {
+            create: message.emotions.map((emotion: any) => ({
+              name: emotion.name,
+              score: emotion.score,
+              color: emotion.color,
+            }))
+          } : undefined,
+        },
+        include: {
+          emotions: true,
+        },
+      });
 
-      return savedMessage[0];
+      return {
+        id: savedMessage.id,
+        text: savedMessage.text,
+        senderName: savedMessage.senderName,
+        senderId: savedMessage.senderId,
+        recipientName: savedMessage.recipientName,
+        recipientId: savedMessage.recipientId,
+        createdAt: savedMessage.createdAt,
+        emotions: savedMessage.emotions,
+      };
     } catch (error) {
-      // If the table doesn't exist, we'll just log and continue without memory
-      logger.warn('Conversation messages table not available, continuing without memory storage:', error);
+      logger.warn('Could not save message, continuing without memory storage:', error);
       return {
         id: 'temp-' + Date.now(),
         text: message.text,
@@ -46,13 +63,24 @@ export class MemoryService {
 
   async readConversationHistory(userId: string, maxAgeMinutes: number = 30, maxMessages: number = 50): Promise<string> {
     try {
-      const messages = await prisma.$queryRaw`
-        SELECT * FROM conversation_messages 
-        WHERE userId = ${userId} 
-        AND createdAt > NOW() - INTERVAL '${maxAgeMinutes} minutes'
-        ORDER BY createdAt DESC 
-        LIMIT ${maxMessages}
-      ` as ConversationMessage[];
+      const messages = await prisma.message.findMany({
+        where: {
+          OR: [
+            { senderId: userId },
+            { recipientId: userId }
+          ],
+          createdAt: {
+            gte: new Date(Date.now() - maxAgeMinutes * 60 * 1000)
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: maxMessages,
+        include: {
+          emotions: true
+        }
+      });
 
       // Format messages as conversation history
       return messages
@@ -67,13 +95,24 @@ export class MemoryService {
 
   async readAllAsString(userId: string, maxMessages: number = 4, maxAgeMinutes: number = 30): Promise<string> {
     try {
-      const messages = await prisma.$queryRaw`
-        SELECT * FROM conversation_messages 
-        WHERE userId = ${userId} 
-        AND createdAt > NOW() - INTERVAL '${maxAgeMinutes} minutes'
-        ORDER BY createdAt DESC 
-        LIMIT ${maxMessages}
-      ` as ConversationMessage[];
+      const messages = await prisma.message.findMany({
+        where: {
+          OR: [
+            { senderId: userId },
+            { recipientId: userId }
+          ],
+          createdAt: {
+            gte: new Date(Date.now() - maxAgeMinutes * 60 * 1000)
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: maxMessages,
+        include: {
+          emotions: true
+        }
+      });
 
       // Format messages as conversation history
       return messages
@@ -88,15 +127,34 @@ export class MemoryService {
 
   async getLatestAIMessage(userId: string): Promise<ConversationMessage | null> {
     try {
-      const messages = await prisma.$queryRaw`
-        SELECT * FROM conversation_messages 
-        WHERE userId = ${userId} 
-        AND sender_name = 'Jarvis'
-        ORDER BY createdAt DESC 
-        LIMIT 1
-      ` as ConversationMessage[];
+      const message = await prisma.message.findFirst({
+        where: {
+          OR: [
+            { senderId: userId },
+            { recipientId: userId }
+          ],
+          senderName: 'Jarvis'
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        include: {
+          emotions: true
+        }
+      });
 
-      return messages[0] || null;
+      if (!message) return null;
+
+      return {
+        id: message.id,
+        text: message.text,
+        senderName: message.senderName,
+        senderId: message.senderId,
+        recipientName: message.recipientName,
+        recipientId: message.recipientId,
+        createdAt: message.createdAt,
+        emotions: message.emotions,
+      };
     } catch (error) {
       logger.warn('Could not get latest AI message:', error);
       return null;

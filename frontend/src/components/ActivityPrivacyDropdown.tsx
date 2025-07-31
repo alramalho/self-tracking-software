@@ -38,7 +38,7 @@ const ActivityPrivacyDropdown: React.FC<ActivityPrivacyDropdownProps> = ({
   const [isOpen, setIsOpen] = React.useState(false);
 
   const handleOptionClick = (option: VisibilityType) => {
-    const isLocked = userPaidPlanType === "free" && (option === "friends" || option === "private");
+    const isLocked = userPaidPlanType === "FREE" && (option === "friends" || option === "private");
     setIsOpen(false);
     if (isLocked) {
       setTimeout(() => setShowUpgradePopover(true), 100);
@@ -54,7 +54,7 @@ const ActivityPrivacyDropdown: React.FC<ActivityPrivacyDropdownProps> = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         {["public", "private", "friends"].map((option) => {
-          const isLocked = userPaidPlanType === "free" && (option === "friends" || option === "private");
+          const isLocked = userPaidPlanType === "FREE" && (option === "friends" || option === "private");
           return (
             <DropdownMenuItem
               key={option}

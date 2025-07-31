@@ -89,7 +89,7 @@ export default function ActivityPrivacySettings({
         value={selectedValue}
         onValueChange={(value: string) => {
           const isOptionLocked =
-            userPaidPlanType === "free" &&
+            userPaidPlanType === "FREE" &&
             (value === "friends" || value === "private");
           if (!isOptionLocked) {
             setSelectedValue(value as VisibilityType);
@@ -100,7 +100,7 @@ export default function ActivityPrivacySettings({
         {visibilityOptions.map((option) => {
           const radioId = `radio-${option.value}`;
           const isLocked =
-            userPaidPlanType === "free" &&
+            userPaidPlanType === "FREE" &&
             (option.value === "friends" || option.value === "private");
           return (
             <label
@@ -151,7 +151,7 @@ export default function ActivityPrivacySettings({
           );
         })}
       </RadioGroup.Root>
-      {userPaidPlanType === "free" ? (
+      {userPaidPlanType === "FREE" ? (
         <div className="text-sm text-gray-500">
           Private and friends-only options are only available to supporters.{" "}
           <span

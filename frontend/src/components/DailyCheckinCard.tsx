@@ -64,7 +64,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     );
 
   if (
-    (!shouldShowNotification && userPaidPlanType !== "free") ||
+    (!shouldShowNotification && userPaidPlanType !== "FREE") ||
     !message ||
     !messageId
   )

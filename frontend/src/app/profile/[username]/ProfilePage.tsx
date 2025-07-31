@@ -153,7 +153,7 @@ const ProfilePage: React.FC = () => {
     if (profileData && profileData.user) {
       await toast.promise(
         (async () => {
-          await api.post(`/send-friend-request/${profileData!.user!.id}`);
+          await api.post(`/users/send-friend-request/${profileData!.user!.id}`);
           await currentUserQuery.refetch();
         })(),
         {
@@ -269,15 +269,15 @@ const ProfilePage: React.FC = () => {
               <Avatar
                 className={twMerge(
                   "w-20 h-20",
-                  profilePaidPlanType !== "free" &&
+                  profilePaidPlanType !== "FREE" &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  profilePaidPlanType === "plus" && variants.ring
+                  profilePaidPlanType === "PLUS" && variants.ring
                 )}
               >
                 <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
                 <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
               </Avatar>
-              {profilePaidPlanType && profilePaidPlanType !== "free" && (
+              {profilePaidPlanType && profilePaidPlanType !== "FREE" && (
                 <div className="absolute -bottom-1 -right-1">
                   <PlanBadge planType={profilePaidPlanType} size={28} />
                 </div>
@@ -412,7 +412,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {isOnesOwnProfile && userPaidPlanType == "plus" && (
+                {isOnesOwnProfile && userPaidPlanType === "PLUS" && (
                   <>
                     <div
                       onClick={() => setShowUpgradePopover(true)}

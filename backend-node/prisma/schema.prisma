@@ -444,6 +444,7 @@ model Recommendation {
   @@map("recommendations")
 }
 
+
 // Enums
 enum PlanType {
   FREE

@@ -30,7 +30,7 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const api = useApiWithAuth();
   const { userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "free";
+  const isUserOnFreePlan = userPaidPlanType === "FREE";
   const { setShowUpgradePopover } = useUpgrade();
   
   const requestNotificationPermission = async () => {

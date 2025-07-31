@@ -306,13 +306,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <span
                         className={twMerge(
                           "text-xl font-cursive flex items-center gap-2",
-                          userPaidPlanType === "free"
+                          userPaidPlanType === "FREE"
                             ? "text-gray-500"
                             : themeVariants.text
                         )}
                       >
-                        On {capitalize(userPaidPlanType || "free")} Plan
-                        {userPaidPlanType === "free" && (
+                        On {capitalize(userPaidPlanType || "FREE")} Plan
+                        {userPaidPlanType === "FREE" && (
                           <SquareArrowUp
                             onClick={() => setShowUpgradePopover(true)}
                             size={20}
@@ -322,7 +322,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </span>
                     </div>
                     <div className="flex flex-col gap-3">
-                      {userPaidPlanType !== "free" && (
+                      {userPaidPlanType !== "FREE" && (
                         <Button
                           variant="ghost"
                           className="w-full flex items-center justify-start px-0 gap-2"

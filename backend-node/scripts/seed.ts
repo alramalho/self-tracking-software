@@ -1,11 +1,12 @@
-import { PrismaClient } from '@prisma/client';
+import { ActivityEntry, MetricEntry, PrismaClient, User } from '@prisma/client';
 import { logger } from '../src/utils/logger.js';
 
 const prisma = new PrismaClient();
 
 // Helper function to check if we're in development
-const isDevelopment = () => process.env.NODE_ENV === 'development'
+const isDevelopment = () => true//() => process.env.NODE_ENV === 'development'
 
+console.log('NODE_ENV', process.env.NODE_ENV);
 async function deleteAllData() {
   if (!isDevelopment()) {
     logger.error('This script is only available in the development environment.');
@@ -45,14 +46,6 @@ async function deleteAllData() {
     await prisma.recommendation.deleteMany({});
     await prisma.moodReport.deleteMany({});
     
-    // Clear user relationships first
-    await prisma.user.updateMany({
-      data: {
-        friends: { set: [] },
-        referredById: null
-      }
-    });
-    
     await prisma.user.deleteMany({});
 
     logger.info('Successfully cleaned all data from database');
@@ -72,7 +65,7 @@ async function generateDummyData() {
         id: 'user_alex_seed_001',
         name: 'Alex',
         email: 'alexandre.ramalho.1998@gmail.com',
-        clerkId: 'user_2kUW1zytLj9ERvDqVDDFCvIp5Un',
+        clerkId: 'user_30bDMTLDj4WYYD4h7VpYoQm9gAD',
         picture: 'https://lh3.googleusercontent.com/a/ACg8ocLI9cioxfK2XKVtsArYggis7j9dB7-B7JiwkzMWFsKPeVBQdXlG=s1000-c',
         username: 'alex'
       },
@@ -105,7 +98,7 @@ async function generateDummyData() {
     ];
 
     // Create users
-    const users = [];
+    const users: User[] = [];
     for (const data of userData) {
       const user = await prisma.user.create({ data });
       users.push(user);
@@ -171,8 +164,8 @@ async function generateDummyData() {
     const now = new Date();
     const baseDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000); // 60 days ago
 
-    const activityEntries = [];
-    const metricEntries = [];
+    const activityEntries: ActivityEntry[] = [];
+    const metricEntries: MetricEntry[] = [];
 
     for (let i = 0; i < 20; i++) {
       // Space out entries roughly 3 days apart
