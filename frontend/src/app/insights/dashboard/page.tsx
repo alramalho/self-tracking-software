@@ -57,7 +57,7 @@ export default function InsightsDashboardPage() {
   const hasLoadedMetricsAndEntries =
     metricsAndEntriesQuery.isSuccess && !!metricsAndEntriesData;
   const { userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "free";
+  const isUserOnFreePlan = userPaidPlanType === "FREE";
 
   if (isUserOnFreePlan) {
     router.push("/insights/onboarding")
@@ -263,7 +263,7 @@ export default function InsightsDashboardPage() {
         <div className="px-4 pb-10">
           <Button
             className={`w-full ${
-              userPaidPlanType === "free"
+              userPaidPlanType === "FREE"
                 ? "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
                 : ""
             }`}
@@ -271,14 +271,14 @@ export default function InsightsDashboardPage() {
               setAIMessage(
                 "Great! Let's get started with a checkin. Just tell me how your day went!"
               );
-              if (userPaidPlanType === "free") {
+              if (userPaidPlanType === "FREE") {
                 setShowUpgradePopover(true);
               } else {
                 addDefaultMetrics();
               }
             }}
           >
-            {userPaidPlanType === "free" ? "Try the coaching freely" : "Start"}
+            {userPaidPlanType === "FREE" ? "Try the coaching freely" : "Start"}
           </Button>
         </div>
       </div>

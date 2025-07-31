@@ -15,7 +15,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { useOnboarding } from "@/app/onboarding/components/OnboardingContext";
+import { useOnboardingCompleted } from "@/app/onboarding/components/OnboardingContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 export default function GeneralInitializer({
@@ -41,19 +41,16 @@ export default function GeneralInitializer({
     userData?.user?.friendIds?.length > 0;
   const { userPaidPlanType } = usePaidPlan();
   const router = useRouter();
+  const { isOnboardingCompleted } = useOnboardingCompleted();
 
   const onboardingNecessary = useMemo(
-    () => !isWaitingForData && !hasFriends && userPaidPlanType?.toLowerCase() === "free",
-    [isWaitingForData, hasFriends, userPaidPlanType]
+    () => !isWaitingForData && !hasFriends && userPaidPlanType?.toLowerCase() === "FREE" && !isOnboardingCompleted,
+    [isWaitingForData, hasFriends, userPaidPlanType, isOnboardingCompleted]
   );
 
   const email = userData?.user?.email || "";
 
   useEffect(() => {
-    console.log("isWaitingForData", isWaitingForData);
-    console.log("hasFriends", hasFriends);
-    console.log("userPaidPlanType", userPaidPlanType);
-    console.log("onboardingNecessary", onboardingNecessary);
     if (onboardingNecessary) {
       router.push("/onboarding");
     }

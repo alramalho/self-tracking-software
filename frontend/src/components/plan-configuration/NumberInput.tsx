@@ -42,7 +42,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
       >
-        <Plus data-testid="plus" className="h-4 w-4" />
+        <Plus data-testid="PLUS" className="h-4 w-4" />
         <span className="sr-only">Increase</span>
       </Button>
     </div>

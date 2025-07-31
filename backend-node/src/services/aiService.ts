@@ -38,7 +38,6 @@ export class AIService {
         prompt,
         system: systemPrompt,
         schema,
-        maxTokens: 1500,
         temperature: 0.3, // Lower temperature for structured responses
       });
 
@@ -356,20 +355,19 @@ export class AIService {
     questions: Record<string, string>
   ): Promise<{
     all_answered: boolean;
-    results: Record<
-      string,
-      {
-        answered: boolean;
-        reasoning: string;
-        confidence: number;
-      }
-    >;
+    results: Array<{
+      question: string;
+      answered: boolean;
+      reasoning: string;
+      confidence: number;
+    }>;
     follow_up_message: string;
   }> {
     const schema = z.object({
       all_answered: z.boolean(),
-      results: z.record(
+      results: z.array(
         z.object({
+          question: z.string(),
           answered: z.boolean(),
           reasoning: z.string(),
           confidence: z.number().min(0).max(1),

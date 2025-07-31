@@ -87,7 +87,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
         const { plan, weeks, achievement } = planProgressData;
 
         const shouldShow = index == 0 || isExpanded;
-        const isCoached = index == 0 && userPaidPlanType != "free";
+        const isCoached = index == 0 && userPaidPlanType != "FREE";
 
         return (
           <PlanProgressCard

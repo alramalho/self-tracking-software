@@ -141,7 +141,7 @@ export class UserService {
     });
 
     if (existingRequest) {
-      throw new Error("Friend request already sent");
+      return existingRequest;
     }
 
     return prisma.friendRequest.create({
@@ -245,7 +245,14 @@ export class UserService {
       sentFriendRequests,
       receivedFriendRequests,
     ] = await Promise.all([
-      this.getUserById(userId),
+      prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          friends: true,
+          friendRequestsSent: true,
+          friendRequestsReceived: true,
+        },
+      }),
       prisma.activity.findMany({
         where: { userId, deletedAt: null },
       }),
@@ -263,6 +270,7 @@ export class UserService {
               activity: true,
             },
           },
+          sessions: true,
         },
       }),
       userId === currentUserId ? this.getPendingSentFriendRequests(userId) : [],

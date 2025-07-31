@@ -75,7 +75,7 @@ const HomePage: React.FC = () => {
   const variants = getThemeVariants(themeColors.raw);
   const { clearGeneralNotifications } = useNotifications();
   const { userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "free";
+  const isUserOnFreePlan = userPaidPlanType === "FREE";
   const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
     useState(false);
 

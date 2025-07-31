@@ -106,7 +106,7 @@ router.post(
 
       // Store AI and user messages in memory for context
       if (ai_message) {
-        await memoryService.writeMessage(req.user!.id, {
+        await memoryService.writeMessage({
           text: ai_message,
           senderName: "Jarvis",
           senderId: "0",
@@ -115,7 +115,7 @@ router.post(
         });
       }
 
-      await memoryService.writeMessage(req.user!.id, {
+      await memoryService.writeMessage({
         text: message,
         senderName: req.user!.name || req.user!.username || "User",
         senderId: req.user!.id,
@@ -194,7 +194,7 @@ router.post(
       );
 
       // Store AI and user messages in memory for context
-      await memoryService.writeMessage(req.user!.id, {
+      await memoryService.writeMessage({
         text: ai_message,
         senderName: "Jarvis",
         senderId: "0",
@@ -202,7 +202,7 @@ router.post(
         recipientId: req.user!.id,
       });
 
-      await memoryService.writeMessage(req.user!.id, {
+      await memoryService.writeMessage({
         text: message,
         senderName: req.user!.name || req.user!.username || "User",
         senderId: req.user!.id,
@@ -228,7 +228,7 @@ router.post(
       ]);
 
       // Store AI response message
-      await memoryService.writeMessage(req.user!.id, {
+      await memoryService.writeMessage({
         text: questionAnalysis.follow_up_message,
         senderName: "Jarvis",
         senderId: "0",
@@ -282,7 +282,7 @@ router.post(
       logger.info(`Plan extraction requested for user ${req.user!.id}`);
 
       // Store user message in memory for context
-      await memoryService.writeMessage(req.user!.id, {
+      await memoryService.writeMessage({
         text: message,
         senderName: req.user!.name || req.user!.username || "User",
         senderId: req.user!.id,
@@ -318,7 +318,7 @@ router.post(
         );
 
         // Store AI response in memory
-        await memoryService.writeMessage(req.user!.id, {
+        await memoryService.writeMessage({
           text: planResult.ai_response,
           senderName: "Jarvis",
           senderId: "0",

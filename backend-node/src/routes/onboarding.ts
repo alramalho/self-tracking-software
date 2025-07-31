@@ -20,7 +20,7 @@ router.post('/check-plan-goal', requireAuth, async (req: AuthenticatedRequest, r
     logger.info(`Plan goal check for user ${req.user!.id}`);
 
     // Store user message in memory
-    await memoryService.writeMessage(req.user!.id, {
+    await memoryService.writeMessage({
       text: message,
       senderName: req.user!.name || req.user!.username || 'User',
       senderId: req.user!.id,
@@ -61,14 +61,14 @@ router.post('/generate-plan-activities', requireAuth, async (req: AuthenticatedR
   try {
     const { message, plan_goal } = req.body;
 
-    if (!message || !plan_goal) {
+    if (message == null || plan_goal == undefined) {
       return res.status(400).json({ error: 'message and plan_goal are required' });
     }
 
     logger.info(`Generating plan activities for user ${req.user!.id}`);
 
     // Store user message in memory
-    await memoryService.writeMessage(req.user!.id, {
+    await memoryService.writeMessage({
       text: message,
       senderName: req.user!.name || req.user!.username || 'User',
       senderId: req.user!.id,
@@ -200,7 +200,7 @@ async function extractGuidelinesAndEmoji(planGoal: string, planProgress: string)
   Provide timeframe ranges with total weeks (8-16) and sessions per week for two intensities:
   1. Relaxed option (fewer sessions per week)
   2. Intense option (more sessions per week)
-  Format as JSON with guidelines, timeframes array, and emoji.`;
+  Format as JSON with guidelines, timeframes array, and one single emoji.`;
 
   const prompt = `Create guidelines for a plan with goal '${planGoal}' for someone with progress '${planProgress}'`;
   
@@ -213,7 +213,7 @@ async function extractGuidelinesAndEmoji(planGoal: string, planProgress: string)
           weeks: z.number(),
           sessions_per_week: z.string(),
         })),
-        emoji: z.string(),
+        emoji: z.string().length(1),
       }),
       systemPrompt
     );

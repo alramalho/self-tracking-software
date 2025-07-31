@@ -36,14 +36,14 @@ const CreateNewPlan: React.FC = () => {
           <span
             className={twMerge(
               "text-3xl font-cursive flex items-center gap-2 my-8",
-              userPaidPlanType === "free"
+              userPaidPlanType === "FREE"
                 ? "text-gray-500"
-                : userPaidPlanType === "plus"
+                : userPaidPlanType === "PLUS"
                 ? "text-blue-500"
                 : "text-indigo-500"
             )}
           >
-            On {capitalize(userPaidPlanType || "free")} Plan
+            On {capitalize(userPaidPlanType || "FREE")} Plan
           </span>
           <Button
             className="w-full"

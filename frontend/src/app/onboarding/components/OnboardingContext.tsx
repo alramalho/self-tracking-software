@@ -2,16 +2,14 @@
 
 import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
-import posthog from "posthog-js";
 import { usePostHog } from "posthog-js/react";
 import React, {
   createContext,
   useContext,
-  useState,
   useCallback,
-  useEffect,
 } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export interface OnboardingStep {
   id: string;
@@ -31,7 +29,7 @@ interface OnboardingContextValue {
   completeStep: (
     stepId: string,
     updates?: object,
-    options?: { nextStep?: string }
+    options?: { nextStep?: string; complete?: boolean }
   ) => void;
   isFirstStep: boolean;
   isLastStep: boolean;
@@ -50,6 +48,7 @@ interface OnboardingContextValue {
   setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
+  isOnboardingComplete: boolean;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -68,6 +67,16 @@ interface OnboardingProviderProps {
   initialStepId?: string;
 }
 
+export const useOnboardingCompleted = () => {
+  const [onboardingState] = useLocalStorage("onboarding-state", {
+    isComplete: false,
+  });
+  
+  return {
+    isOnboardingCompleted: onboardingState.isComplete,
+  };
+};
+
 export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   children,
   steps,
@@ -85,6 +94,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planProgress: null as string | null,
       planType: null as string | null,
       partnerType: null as "human" | "ai" | null,
+      isComplete: false as boolean,
     }
   );
   const {
@@ -97,8 +107,9 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     plans,
     partnerType,
     selectedPlan,
+    isComplete,
   } = onboardingState;
-
+  const router = useRouter();
   const setCurrentStep = (stepId: string) => {
     setOnboardingState({ ...onboardingState, currentStep: stepId });
   };
@@ -201,7 +212,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   );
 
   const completeStep = useCallback(
-    (stepId: string, updates?: object, options?: { nextStep?: string }) => {
+    (stepId: string, updates?: object, options?: { nextStep?: string; complete?: boolean }) => {
       let newState = onboardingState;
       if (!completedSteps.includes(stepId)) {
         newState = {
@@ -214,23 +225,31 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         ...(updates || {}),
       };
 
-      // Priority 1: If options.nextStep is provided, go to that specific step
-      if (options?.nextStep) {
-        newState.currentStep = options.nextStep;
+      // Check if this step should mark onboarding as complete
+      if (options?.complete) {
+        newState.isComplete = true;
+        posthog?.capture('onboarding-completed');
+        toast.success("Onboarding completed! ");
+        router.push("/");
       } else {
-        // Priority 2: Check if the completed step has a custom next step defined
-        const completedStepData = steps.find((step) => step.id === stepId);
-        if (completedStepData?.next) {
-          newState.currentStep = completedStepData.next;
+        // Priority 1: If options.nextStep is provided, go to that specific step
+        if (options?.nextStep) {
+          newState.currentStep = options.nextStep;
         } else {
-          // Priority 3: Default behavior - go to next sequential step
-          const currentStepIndex = steps.findIndex(
-            (step) => step.id === stepId
-          );
-          if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
-            const nextStepId = steps[currentStepIndex + 1]?.id;
-            if (nextStepId) {
-              newState.currentStep = nextStepId;
+          // Priority 2: Check if the completed step has a custom next step defined
+          const completedStepData = steps.find((step) => step.id === stepId);
+          if (completedStepData?.next) {
+            newState.currentStep = completedStepData.next;
+          } else {
+            // Priority 3: Default behavior - go to next sequential step
+            const currentStepIndex = steps.findIndex(
+              (step) => step.id === stepId
+            );
+            if (currentStepIndex < totalSteps - 1 && currentStepIndex !== -1) {
+              const nextStepId = steps[currentStepIndex + 1]?.id;
+              if (nextStepId) {
+                newState.currentStep = nextStepId;
+              }
             }
           }
         }
@@ -239,7 +258,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       setOnboardingState(newState);
       posthog?.capture(`onboarding-${stepId}-completed`);
     },
-    [completedSteps, steps, totalSteps, posthog]
+    [completedSteps, steps, totalSteps, posthog, onboardingState]
   );
   const contextValue: OnboardingContextValue = {
     currentStep,
@@ -271,6 +290,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setPlanType,
     setSelectedPlan,
     setPartnerType,
+    isOnboardingComplete: isComplete,
   };
 
   return (
