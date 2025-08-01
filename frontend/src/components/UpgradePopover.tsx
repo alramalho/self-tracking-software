@@ -408,7 +408,8 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 time and energy on it. 
               </p>
               <p>
-                If you have any ideas or feedback, just let me know!
+                Please consider upgrading if you find this project useful, and together let&apos;s make a better internet,
+                where social apps make you feel better, not worse.
               </p>
               <p>
                 Best, Alex
