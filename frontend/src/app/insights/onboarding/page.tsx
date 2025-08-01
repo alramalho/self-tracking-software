@@ -8,7 +8,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ExampleCorrelations } from "@/components/ExampleCorrelations";
+import InsightsDemo from "@/components/InsightsDemo";
 import { useUserPlan } from "@/contexts/UserPlanContext";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
@@ -167,7 +167,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <ExampleCorrelations />
+            <InsightsDemo />
 
             <div className="flex flex-col items-center gap-4">
               <Button

@@ -134,9 +134,7 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
 [] anything not necessary in the exposed routes
 [] ai assistants
 
-
 ## notes to self
-
 ...
 
 ## TESTS
