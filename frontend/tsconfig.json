@@ -19,13 +19,9 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "prisma": ["../prisma/node_modules/@prisma/client/*"]
+      "@prisma/client": ["../prisma/node_modules/@prisma/client"]
     },
-    "types": [
-      "@serwist/next/typings",
-      "../prisma/node_modules/@prisma/client/index.d.ts",
-      "../prisma/node_modules/@prisma/client/runtime/library.d.ts"
-    ],
+    "types": ["@serwist/next/typings"],
     "forceConsistentCasingInFileNames": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
