@@ -1,9 +1,6 @@
 import dotenv from "dotenv";
-console.log("loading env");
-// // Load environment variables FIRST, before any other imports
 dotenv.config({ path: ".env" });
 
-console.log("loaded env");
 
 import express from "express";
 import cors from "cors";

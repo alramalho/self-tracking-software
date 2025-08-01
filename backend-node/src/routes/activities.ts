@@ -1,6 +1,6 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import multer from 'multer';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, AuthenticatedRequest } from '@/middleware/auth';
 import { logger } from '../utils/logger';
 import { prisma } from '../utils/prisma';
 import { notificationService } from '../services/notificationService';
