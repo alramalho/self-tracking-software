@@ -31,11 +31,9 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "./ui/button";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import AINotification from "./AINotification";
-import { useUpgrade } from "@/contexts/UpgradeContext";
 import AppleLikePopover from "./AppleLikePopover";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { AccountabilityStepCard } from "./AccountabilityStepCard";
-import { WeekMetricBarChart } from "./WeekMetricBarChart";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import {
   Collapsible,
@@ -65,10 +63,7 @@ const TimelineRenderer: React.FC<{
   const { shareOrCopyReferralLink } = useShareOrCopy();
   const { isAppInstalled, isPushGranted, requestPermission } =
     useNotifications();
-  const { setShowUpgradePopover } = useUpgrade();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const { userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "FREE";
   const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] =
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -84,41 +79,6 @@ const TimelineRenderer: React.FC<{
 
 
   if (!userData?.user?.friendIds?.length) {
-    const demoMetrics: Array<{
-      emoji: string;
-      name: string;
-      trend: string;
-      data: number[];
-      bgColor:
-        | "yellow"
-        | "blue"
-        | "green"
-        | "rose"
-        | "pink"
-        | "red"
-        | "orange"
-        | "amber"
-        | "purple"
-        | "gray";
-      correlations: string[];
-    }> = [
-      {
-        emoji: "😊",
-        name: "Happiness",
-        trend: "+15%",
-        data: [4, 3, 5, 4, 1, 3, 5],
-        bgColor: "blue",
-        correlations: ["🏃‍♂️ Exercise", "🧘‍♂️ Meditation"],
-      },
-      {
-        emoji: "⚡",
-        name: "Energy",
-        trend: "+8%",
-        data: [3, 4, 3, 5, 4, 3, 4],
-        bgColor: "yellow",
-        correlations: ["☕ Morning routine"],
-      },
-    ];
 
     return (
       <>
@@ -215,65 +175,6 @@ const TimelineRenderer: React.FC<{
             </Collapsible>
           </div>
 
-          {/* Expanded AI Coach Card */}
-          {isUserOnFreePlan && (
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <ScanFace size={30} className="text-purple-500" />
-                <div>
-                  <h3 className="text-lg font-semibold">AI Coach & Insights</h3>
-                  <p className="text-gray-600 text-sm">
-                    Get personalized coaching and track your daily metrics
-                  </p>
-                </div>
-              </div>
-
-              {/* Demo Metrics Preview */}
-              <div className="space-y-4 mb-6">
-                <div className="text-sm font-medium text-gray-700 mb-3">
-                  Preview: Track metrics like happiness, energy & productivity
-                </div>
-
-                {demoMetrics.map((metric) => (
-                  <div
-                    key={metric.name}
-                    className="bg-white/60 rounded-lg p-4 border border-white/50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        {metric.emoji} {metric.name}
-                      </span>
-                      <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-                        {metric.trend} this week
-                      </span>
-                    </div>
-                    <WeekMetricBarChart
-                      data={metric.data}
-                      color={metric.bgColor}
-                    />
-                    <div className="text-xs text-gray-600">
-                      {metric.correlations.map((correlation, i) => (
-                        <span key={correlation}>
-                          <span className="text-green-600">{correlation}</span>
-                          {i < metric.correlations.length - 1
-                            ? " and "
-                            : " boost your " + metric.name.toLowerCase()}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                onClick={() => setShowUpgradePopover(true)}
-                className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-              >
-                <ScanFace size={16} className="mr-2" />
-                Try AI Coaching Free
-              </Button>
-            </div>
-          )}
         </div>
       </>
     );

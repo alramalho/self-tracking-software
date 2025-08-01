@@ -16,7 +16,7 @@ export const ExampleCorrelations = () => {
 
         <div className="space-y-4">
           <CorrelationEntry 
-            title="💪 Gym"
+            title="🏃‍♂️ Exercise"
             pearsonValue={0.65}
           />
 
