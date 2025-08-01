@@ -183,27 +183,27 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
   }, [targetDate]);
 
   return (
-    <div className="grid grid-cols-4 gap-1 w-full">
-      <div className="flex flex-col">
-        <div className="text-2xl font-bold bg-gray-100 rounded-lg p-2">
+    <div className="flex justify-center gap-1 w-full">
+      <div className="flex flex-col items-center">
+        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.days}
         </div>
         <div className="text-xs text-gray-500">days</div>
       </div>
-      <div className="flex flex-col">
-        <div className="text-2xl font-bold bg-gray-100 rounded-lg p-2">
+      <div className="flex flex-col items-center">
+        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.hours}
         </div>
         <div className="text-xs text-gray-500">hours</div>
       </div>
-      <div className="flex flex-col">
-        <div className="text-2xl font-bold bg-gray-100 rounded-lg p-2">
+      <div className="flex flex-col items-center">
+        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.minutes}
         </div>
         <div className="text-xs text-gray-500">minutes</div>
       </div>
-      <div className="flex flex-col">
-        <div className="text-2xl font-bold bg-gray-100 rounded-lg p-2">
+      <div className="flex flex-col items-center">
+        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.seconds}
         </div>
         <div className="text-xs text-gray-500">seconds</div>
@@ -213,15 +213,31 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
 };
 
 const RocketSection = () => {
-  const launchDate = "2025-07-30T00:00:00";
+  const getNextLaunchDate = () => {
+    const originalDate = new Date("2025-07-05T00:00:00");
+    const now = new Date();
 
-  if (launchDate < new Date().toISOString()) {
-    return null;
-  }
+    if (now <= originalDate) {
+      return originalDate.toISOString();
+    }
+
+    const daysPassed = Math.floor(
+      (now.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const cycles = Math.floor(daysPassed / 12);
+    const nextCycle = cycles + 1;
+
+    const nextLaunchDate = new Date(originalDate);
+    nextLaunchDate.setDate(originalDate.getDate() + nextCycle * 12);
+
+    return nextLaunchDate.toISOString();
+  };
+
+  const launchDate = getNextLaunchDate();
 
   return (
     <div className="text-center bg-white/70 space-y-2 border-2 border-gray-200 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center">
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center gap-2">
         <picture>
           <source
             srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.webp"
@@ -230,20 +246,19 @@ const RocketSection = () => {
           <img
             src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.gif"
             alt="🚀"
-            width="72"
-            height="72"
+            width="52"
+            height="52"
           />
         </picture>
+        <h2 className="text-xl font-bold">Launching discount!</h2>
       </div>
-      <div className="text-center space-y-2 pb-6">
-        <h2 className="text-2xl font-bold">Launching discount!</h2>
-        <h2 className="text-lg font-normal text-gray-700 pt-5">
-          We&apos;re just lauching this open source project, so we&apos;re
-          offering an up to{" "}
+      <div className="text-center space-y-2 pb-4">
+        <h2 className="text-md font-normal text-gray-700 pt-2">
+          We&apos;re offering a{" "}
           <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
             {YEARLY_OG_SAVINGS}%{" "}
           </span>
-          discount to thank you for your early support!
+          discount for early supporters until our launch date!
         </h2>
       </div>
       <CountdownTimer targetDate={launchDate} />
@@ -378,6 +393,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               <p>
                 All plans include a free trial and full access to all features
               </p>
+              <p>Cancel anytime, no strings attached.</p>
             </div>
           </div>
         </div>
@@ -385,35 +401,34 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
         <Divider className="my-6 mt-24" />
         {/* <FAQ /> */}
         <div className="flex flex-row gap-4 items-start justify-center bg-gray-200/80 p-7 rounded-2xl">
-          <Avatar className="w-10 h-10 ring-2 ring-blue-500 ring-offset-2 ring-offset-white">
-            <AvatarImage
-              src={
-                "https://images.clerk.dev/oauth_google/img_2nWIRuxpfaqd2hVzjtFkClrFSn7"
-              }
-              alt={"Alex"}
-            />
-          </Avatar>
           <div className="flex flex-col">
-            <span className="text-xl font-bold font-cursive">
-              Hello 👋<br/> I&apos;m Alex, the founder.
-            </span>
-            <div className="text-sm text-gray-500 space-y-4 mt-2">
+            <div className="flex flex-row gap-4 items-center">
+              <Avatar className="w-10 h-10 ring-2 ring-blue-500 ring-offset-2 ring-offset-white">
+                <AvatarImage
+                  src={
+                    "https://images.clerk.dev/oauth_google/img_2nWIRuxpfaqd2hVzjtFkClrFSn7"
+                  }
+                  alt={"Alex"}
+                />
+              </Avatar>
+              <span className="text-xl font-bold font-cursive">
+                Hello 👋
+                <br />
+                I&apos;m Alex, the founder.
+              </span>
+            </div>
+            <div className="text-sm text-gray-500 space-y-4 mt-4">
+              <p>First of all, thank you for considering upgrading</p>
               <p>
-                First of all, thank you for making it this far!
+                I believe that social networks should be transparent and
+                actually helpful for their users. That&apos;s why I&apos;m working (part time) in
+                this open source project. 
               </p>
               <p>
-                I believe that social networks should be transparent and actually
-                helpful for their users. I&apos;m working part time on this open source project and
-                would love to see it grow, so that one day I might focus my full
-                time and energy on it. 
+                Together <span className="line-through">we can</span> we will make a better internet, where social apps
+                make you feel better, not worse.
               </p>
-              <p>
-                Please consider upgrading if you find this project useful, and together let&apos;s make a better internet,
-                where social apps make you feel better, not worse.
-              </p>
-              <p>
-                Best, Alex
-              </p>
+              <p>Alex</p>
             </div>
           </div>
         </div>

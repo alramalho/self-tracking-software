@@ -92,7 +92,7 @@ const TimelineRenderer: React.FC<{
         /> */}
         <div className="mt-6 grid grid-cols-1 gap-6">
           {/* Find your Accountability Partner Card */}
-          <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
+          <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-2xl bg-white/60 shadow-sm p-4">
             <Collapsible
               open={!isPartnerSectionCollapsed}
               onOpenChange={(open) => setIsPartnerSectionCollapsed(!open)}
