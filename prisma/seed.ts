@@ -1,5 +1,4 @@
-import { ActivityEntry, MetricEntry, PrismaClient, User } from '@prisma/client';
-import { logger } from '../src/utils/logger.js';
+import { ActivityEntry, MetricEntry, PrismaClient, User, } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -9,11 +8,11 @@ const isDevelopment = () => true//() => process.env.NODE_ENV === 'development'
 console.log('NODE_ENV', process.env.NODE_ENV);
 async function deleteAllData() {
   if (!isDevelopment()) {
-    logger.error('This script is only available in the development environment.');
+    console.error('This script is only available in the development environment.');
     return;
   }
 
-  logger.info('Cleaning all data from database...');
+  console.info('Cleaning all data from database...');
 
   try {
     // Delete in order of dependencies (children first, parents last)
@@ -48,15 +47,15 @@ async function deleteAllData() {
     
     await prisma.user.deleteMany({});
 
-    logger.info('Successfully cleaned all data from database');
+    console.info('Successfully cleaned all data from database');
   } catch (error) {
-    logger.error('Error deleting data:', error);
+    console.error('Error deleting data:', error);
     throw error;
   }
 }
 
 async function generateDummyData() {
-  logger.info('Generating dummy data...');
+  console.info('Generating dummy data...');
 
   try {
     // Create 5 users with predefined IDs for consistency
@@ -443,7 +442,7 @@ async function generateDummyData() {
     });
 
     // Print final state
-    logger.info('\nFinal state:');
+    console.info('\nFinal state:');
     for (const user of users) {
       const userData = await prisma.user.findUnique({
         where: { id: user.id },
@@ -477,8 +476,8 @@ async function generateDummyData() {
 
       if (!userData) continue;
 
-      logger.info(`\nUser: ${userData.name} (username: ${userData.username})`);
-      logger.info(`Friends: ${userData.friends.map(f => f.name).join(', ')}`);
+      console.info(`\nUser: ${userData.name} (username: ${userData.username})`);
+      console.info(`Friends: ${userData.friends.map(f => f.name).join(', ')}`);
       
       const pendingPlanInvitations = await prisma.planInvitation.count({
         where: { recipientId: userData.id, status: 'PENDING' }
@@ -487,44 +486,44 @@ async function generateDummyData() {
         where: { recipientId: userData.id, status: 'PENDING' }
       });
       
-      logger.info(`Pending Plan Invitations: ${pendingPlanInvitations}`);
-      logger.info(`Pending Friend Requests: ${pendingFriendRequests}`);
+      console.info(`Pending Plan Invitations: ${pendingPlanInvitations}`);
+      console.info(`Pending Friend Requests: ${pendingFriendRequests}`);
       
-      logger.info('Activities:');
+      console.info('Activities:');
       for (const activity of userData.activities) {
-        logger.info(`- ${activity.title}`);
+        console.info(`- ${activity.title}`);
         for (const entry of activity.entries) {
-          logger.info(`  * ${entry.date}: ${entry.quantity} ${activity.measure}`);
+          console.info(`  * ${entry.date}: ${entry.quantity} ${activity.measure}`);
         }
       }
 
-      logger.info('Plans:');
+      console.info('Plans:');
       for (const plan of userData.plans) {
-        logger.info(`- ${plan.goal} (Finishing date: ${plan.finishingDate})`);
+        console.info(`- ${plan.goal} (Finishing date: ${plan.finishingDate})`);
         if (plan.planGroup) {
-          logger.info(`  Members: ${plan.planGroup.members.map(m => m.name).join(', ')}`);
+          console.info(`  Members: ${plan.planGroup.members.map(m => m.name).join(', ')}`);
         }
-        logger.info(`  Sessions: ${plan.sessions.length}`);
+        console.info(`  Sessions: ${plan.sessions.length}`);
       }
 
-      logger.info('Notifications:');
+      console.info('Notifications:');
       for (const notification of userData.notifications) {
-        logger.info(`- Type: ${notification.type}`);
-        logger.info(`  Message: ${notification.message}`);
-        logger.info(`  Status: ${notification.status}`);
+        console.info(`- Type: ${notification.type}`);
+        console.info(`  Message: ${notification.message}`);
+        console.info(`  Status: ${notification.status}`);
       }
     }
 
-    logger.info('Done! 🎉');
+    console.info('Done! 🎉');
   } catch (error) {
-    logger.error('Error generating dummy data:', error);
+    console.error('Error generating dummy data:', error);
     throw error;
   }
 }
 
 async function main() {
   if (!isDevelopment()) {
-    logger.error('This script is only available in the development environment.');
+    console.error('This script is only available in the development environment.');
     process.exit(1);
   }
 
@@ -532,7 +531,7 @@ async function main() {
     await deleteAllData();
     await generateDummyData();
   } catch (error) {
-    logger.error('Error running seed script:', error);
+    console.error('Error running seed script:', error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

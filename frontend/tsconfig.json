@@ -18,10 +18,15 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "prisma": ["../prisma/node_modules/@prisma/client/*"]
     },
-    "forceConsistentCasingInFileNames": true,
-    "types": ["@serwist/next/typings"]
+    "types": [
+      "@serwist/next/typings",
+      "../prisma/node_modules/@prisma/client/index.d.ts",
+      "../prisma/node_modules/@prisma/client/runtime/library.d.ts"
+    ],
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]

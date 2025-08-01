@@ -125,7 +125,8 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
     [x] Error handler improvement to extract user context from authenticated requests
     [x] Messages loading functionality implementation
     [x] Timezone validation against IANA timezone identifiers
-[] Adapt all plances where we use api (via useApiWithAuth) in frontend to use new endpoints that adhere more to REST standards 
+[] Adapt legacy data layer UserPlanContext that relied on previous models to instead use prisma types
+    - [] adapt everywhere
 
 # leaving out
 [] axiom
