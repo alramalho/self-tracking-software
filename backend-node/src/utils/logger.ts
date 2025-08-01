@@ -1,6 +1,7 @@
 import { createLogger, format, transports } from "winston";
 import chalk from "chalk";
 import morgan from "morgan";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 const { combine, timestamp, errors, json, printf } = format;
 
@@ -70,8 +71,10 @@ if (process.env.NODE_ENV !== "production") {
 
 function colorHttp(message: string): string {
   const parts = message.split(" ");
-  const method = parts[1];
-  const status = parts[3];
+  const method = parts[0];
+  const url = parts[1];
+  const status = parts[2];
+  const remaining = parts.slice(3).join(" ");
 
   const methodColors: Record<string, any> = {
     GET: chalk.green,
@@ -82,9 +85,11 @@ function colorHttp(message: string): string {
   };
 
   const coloredMethod = (methodColors[method] || chalk.cyan)(method);
+  const coloredUrl = (chalk.gray)(url);
+  const coloredRemaining = (chalk.gray)(remaining);
   const statusCode = parseInt(status);
   const coloredStatus =
-    statusCode >= 500
+    statusCode >= 500 || statusCode == 0
       ? chalk.red(status)
       : statusCode >= 400
         ? chalk.yellow(status)
@@ -94,15 +99,33 @@ function colorHttp(message: string): string {
             ? chalk.green(status)
             : status;
 
-  return message.replace(method, coloredMethod).replace(status, coloredStatus);
+  return message
+    .replace(method, coloredMethod)
+    .replace(url, coloredUrl)
+    .replace(status, coloredStatus)
+    .replace(remaining, coloredRemaining);
 }
 
-export const morganMiddleware = morgan(
-  ":remote-addr :method :url :status :res[content-length] - :response-time ms",
-  {
-    stream: {
-      write: (message: string) => logger.info(colorHttp(message)),
-    },
+morgan.token("userId", function (req: AuthenticatedRequest) {
+  return req.user ? req.user.id : "anonymous";
+});
+
+export const morganMiddleware = morgan((tokens, req, res) => {
+  const status = parseInt(tokens.status?.(req, res) ?? "0");
+  const method = tokens.method?.(req, res) ?? "UNKNOWN";
+  const url = tokens.url?.(req, res) ?? "";
+  const responseTime = tokens["response-time"]?.(req, res);
+  const userId = tokens.userId?.(req, res);
+
+  const message = `${method} ${url} ${status} ${responseTime} ms - ${userId}`;
+
+  if (status >= 500) {
+    logger.error(colorHttp(message));
+  } else if (status >= 400 && status < 500) {
+    logger.warn(colorHttp(message));
+  } else {
+    logger.info(colorHttp(message));
   }
-);
+  return null;
+});
 export default logger;
