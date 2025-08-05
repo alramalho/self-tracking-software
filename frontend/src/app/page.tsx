@@ -44,6 +44,7 @@ import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 import { ScanFace } from "lucide-react";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { getUser } from "./actions";
+import { isToday } from "date-fns";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
@@ -298,7 +299,7 @@ const HomePage: React.FC = () => {
                     const todaysEntry = entries.find(
                       (entry: MetricEntry) =>
                         entry.metricId === metric.id &&
-                        entry.date.split("T")[0] === today
+                        isToday(entry.date)
                     );
                     const isLoggedToday =
                       !!todaysEntry && todaysEntry.rating > 0;

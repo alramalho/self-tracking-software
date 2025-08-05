@@ -4,16 +4,17 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { parseISO, startOfWeek, endOfWeek } from "date-fns";
-import { Activity, ApiPlan } from "@/contexts/UserGlobalContext";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/PlanProgressContext/lib";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 
 interface WeeklySessionsChecklistProps {
-  plan: ApiPlan;
+  plan: CompletePlan;
   activityEntries: any[];
 }
 
+// NOT BEING USED ATM
 export function WeeklySessionsChecklist({
   plan,
   activityEntries,
@@ -53,7 +54,7 @@ export function WeeklySessionsChecklist({
   }, [inView, completedSessionsThisWeek, plan.timesPerWeek]);
 
   // Only show for timesPerWeek plans
-  if (plan.outlineType !== "timesPerWeek" || !plan.timesPerWeek) {
+  if (plan.outlineType !== "TIMES_PER_WEEK" || !plan.timesPerWeek) {
     return null;
   }
 

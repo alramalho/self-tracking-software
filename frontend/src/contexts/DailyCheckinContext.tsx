@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays, isToday } from "date-fns";
 import { InsightsBanner } from "@/components/InsightsBanner";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
@@ -88,7 +88,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
       const todaysEntry = entries?.find(
         entry => 
           entry.metricId === metric.id && 
-          entry.date.split("T")[0] === today
+          isToday(entry.date)
       );
       
       return todaysEntry && (todaysEntry.rating > 0 || todaysEntry.skipped);

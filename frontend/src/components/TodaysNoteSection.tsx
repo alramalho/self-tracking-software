@@ -10,6 +10,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { isToday } from "date-fns";
 
 interface TodaysNoteSectionProps {
   onSubmitted?: () => void;
@@ -35,7 +36,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     const todaysEntries = entries.filter(
-      entry => entry.date.split("T")[0] === today
+      entry => isToday(entry.date)
     );
     
     // Check if any entry has a description

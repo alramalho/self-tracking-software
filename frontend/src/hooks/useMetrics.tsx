@@ -1,4 +1,5 @@
 import { useUserPlan, Activity, MetricEntry } from "@/contexts/UserGlobalContext";
+import { isSameDay } from "date-fns";
 
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 const MINIMUM_ENTRIES = 7;
@@ -38,7 +39,7 @@ export function useMetrics() {
   // Check if activity happened within window
   const activityHappenedWithinWindow = (
     activityId: string,
-    date: string
+    date: Date
   ): boolean => {
     const targetDate = new Date(date);
     const windowStart = new Date(targetDate);
@@ -134,10 +135,9 @@ export function useMetrics() {
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
       
       const entryForDay = metricEntries.find(
-        (entry) => entry.date.split('T')[0] === dateStr
+        (entry) => isSameDay(entry.date, date)
       );
       
       weekData.push(entryForDay ? entryForDay.rating : 0);
