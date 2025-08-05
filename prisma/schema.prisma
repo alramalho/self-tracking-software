@@ -53,10 +53,10 @@ model User {
   plans                   Plan[]
   messages                Message[]
   notifications           Notification[]
-  friendRequestsSent      FriendRequest[]   @relation("FriendRequestSender")
-  friendRequestsReceived  FriendRequest[]   @relation("FriendRequestRecipient")
-  planInvitationsSent     PlanInvitation[]  @relation("PlanInvitationSender")
-  planInvitationsReceived PlanInvitation[]  @relation("PlanInvitationRecipient")
+  friendRequestsSent      FriendRequest[]  @relation("FriendRequestSender")
+  friendRequestsReceived  FriendRequest[]  @relation("FriendRequestRecipient")
+  planInvitationsSent     PlanInvitation[] @relation("PlanInvitationSender")
+  planInvitationsReceived PlanInvitation[] @relation("PlanInvitationRecipient")
   planGroupMemberships    PlanGroup[]
   recommendations         Recommendation[]
   reactionsSent           Reaction[]
@@ -83,10 +83,10 @@ model Activity {
   deletedAt       DateTime?
 
   // Relations
-  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entries               ActivityEntry[]
-  planSessions          PlanSession[] // sessions on which activity is mentioned
-  plans                 Plan[]
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries      ActivityEntry[]
+  planSessions PlanSession[] // sessions on which activity is mentioned
+  plans        Plan[]
 
   @@map("activities")
 }
@@ -96,7 +96,7 @@ model ActivityEntry {
   activityId  String
   userId      String
   quantity    Int
-  date        DateTime @db.Date
+  date        DateTime  @db.Date
   createdAt   DateTime  @default(now())
   description String?
   deletedAt   DateTime?
@@ -202,7 +202,7 @@ model Plan {
   planGroupId                String?
   goal                       String
   emoji                      String?
-  finishingDate              DateTime? @db.Date
+  finishingDate              DateTime?         @db.Date
   createdAt                  DateTime          @default(now())
   deletedAt                  DateTime?
   durationType               PlanDurationType?
@@ -218,12 +218,12 @@ model Plan {
   currentWeekStateCalculatedAt DateTime?
 
   // Relations
-  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  planGroup              PlanGroup?       @relation(fields: [planGroupId], references: [id])
-  sessions               PlanSession[]
-  activities             Activity[]
-  invitations            PlanInvitation[]
-  milestones             PlanMilestone[]
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planGroup   PlanGroup?       @relation(fields: [planGroupId], references: [id])
+  sessions    PlanSession[]
+  activities  Activity[]
+  invitations PlanInvitation[]
+  milestones  PlanMilestone[]
 
   @@map("plans")
 }
@@ -239,8 +239,8 @@ model PlanSession {
   createdAt        DateTime @default(now())
 
   // Relations
-  plan               Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-  activity           Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  plan     Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
   @@map("plan_sessions")
 }
@@ -250,8 +250,8 @@ model PlanMilestone {
   planId      String
   date        DateTime @db.Date
   description String
-  progress    Int? 
-  criteria    Json?    // Much simpler structure
+  progress    Int?
+  criteria    Json? 
   createdAt   DateTime @default(now())
 
   plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)

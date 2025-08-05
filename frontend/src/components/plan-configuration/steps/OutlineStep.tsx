@@ -21,7 +21,7 @@ interface OutlineStepProps {
   canGenerate: () => boolean;
   onGenerate: () => void;
   activities: Activity[];
-  finishingDate?: string;
+  finishingDate?: Date;
   description: string;
   setDescription: (description: string) => void;
 }
@@ -52,11 +52,11 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
     return {
       sessions: sessions.map((session) => ({
         ...session,
-        date: parseISO(session.date),
+        date: session.date,
         activityName: activities.find((a) => a.id === session.activityId)
           ?.title,
       })),
-      finishingDate: finishingDate ? parseISO(finishingDate) : undefined,
+      finishingDate: finishingDate ? finishingDate : undefined,
       goal: title,
     };
   };

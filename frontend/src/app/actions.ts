@@ -355,6 +355,45 @@ export async function getTimelineData() {
   }
 }
 
+
+export async function modifyManualMilestone(milestoneId: string, delta: number) {
+  const user = await validateUser();
+
+  try {
+    // Get the milestone to ensure it belongs to the user
+    const milestone = await prisma.planMilestone.findFirst({
+      where: {
+        id: milestoneId,
+        plan: {
+          userId: user.id,
+        },
+      },
+    });
+
+    if (!milestone) {
+      throw new Error("Milestone not found");
+    }
+
+    // Calculate new progress value
+    const currentProgress = milestone.progress || 0;
+    const newProgress = Math.min(Math.max(currentProgress + delta, 0), 100);
+
+    // Update the milestone
+    const updatedMilestone = await prisma.planMilestone.update({
+      where: { id: milestoneId },
+      data: { progress: newProgress },
+    });
+
+    return { success: true, milestone: updatedMilestone };
+  } catch (error) {
+    console.error("Error modifying manual milestone:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update milestone",
+    };
+  }
+}
+
 export async function upsertPlan(planData: any) {
   const user = await validateUser();
 
@@ -462,7 +501,7 @@ export async function upsertPlan(planData: any) {
               milestones: {
                 create: planData.milestones.map((milestone: any) => ({
                   description: milestone.description,
-                  targetDate: milestone.targetDate,
+                  date: milestone.date,
                   criteria: milestone.criteria,
                 })),
               },

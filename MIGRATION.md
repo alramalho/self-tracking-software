@@ -164,5 +164,15 @@ backend
 [ ] ...
 
 -- plans
-[] create plan 
-[] edit plan
+[x] create plan with
+    [x] date
+    [x] name
+    [x] emoji
+    [x] activities
+    [x] generated sessions
+    [x] times pe week
+    [x] milestones
+[] milestones
+    [] render
+    [] edit (manual)
+    [] edit (automatic)

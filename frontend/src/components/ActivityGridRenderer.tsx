@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Activity, ActivityEntry } from "@/contexts/UserGlobalContext";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 import { isSameDay, format } from "date-fns";
 import { parseISO } from "date-fns";
 import { subDays } from "date-fns";
+import { Activity } from "@prisma/client";
+import { ActivityEntry } from "@prisma/client";
 
 interface ActivityGridRendererProps {
   activities: Activity[];
@@ -26,7 +27,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
         activities.map((a) => a.id).includes(entry.activityId)
       )
       .map((entry) => ({
-        date: entry.date.replaceAll("-", "/"),
+        date: entry.date.toISOString().replaceAll("-", "/"),
         count: entry.quantity,
       }));
     return result;
@@ -36,7 +37,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     const entriesOnDate = activityEntries.filter(
       (e: ActivityEntry) =>
         activities.map((a) => a.id).includes(e.activityId) &&
-        isSameDay(parseISO(e.date), date)
+        isSameDay(e.date, date)
     );
 
     if (entriesOnDate.length === 0) return null;
@@ -81,7 +82,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     const entriesOnDate = activityEntries.filter(
       (entry) =>
         activities.map((a) => a.id).includes(entry.activityId) &&
-        isSameDay(parseISO(entry.date), focusedDate)
+        isSameDay(entry.date, focusedDate)
     );
 
     return (
