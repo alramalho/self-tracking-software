@@ -82,10 +82,6 @@ export interface UserGlobalContextType {
   hasLoadedUserData: boolean;
   messagesData: UseQueryResult<{ messages: MessagesWithRelations[] }>;
   notificationsData: UseQueryResult<{ notifications: Notification[] }>;
-  fetchUserData: (options?: {
-    username?: string;
-    forceUpdate?: boolean;
-  }) => Promise<HydratedUser>;
   refetchUserData: (notify?: boolean) => Promise<HydratedCurrentUser>;
   refetchAllData: () => Promise<HydratedCurrentUser>;
   updateLocalUserData: (
@@ -323,7 +319,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return entries.some(
       (entry) =>
-        entry.metricId === metricId && entry.date.split("T")[0] === today
+        entry.metricId === metricId && entry.date.toISOString().split("T")[0] === today
     );
   };
 
@@ -337,7 +333,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       (metric) =>
         !entries.some(
           (entry) =>
-            entry.metricId === metric.id && entry.date.split("T")[0] === today
+            entry.metricId === metric.id && entry.date.toISOString().split("T")[0] === today
         )
     );
   };

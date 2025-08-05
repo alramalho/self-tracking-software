@@ -69,7 +69,7 @@ interface PlanRendererv2Props {
 }
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
-  const { useCurrentUserDataQuery, useMultipleUsersDataQuery, fetchUserData } =
+  const { useCurrentUserDataQuery, useMultipleUsersDataQuery } =
     useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
@@ -119,10 +119,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
     return (group?.members || [])
       .map((member) => member.username)
-      .filter((username) => username !== userData?.username);
+      .filter((username) => username !== null && username !== undefined && username !== userData?.username);
   }, [selectedPlan.planGroupId, userData]);
 
-  const { data: membersData } = useMultipleUsersDataQuery(memberUsernames);
+  const { data: membersData } = useMultipleUsersDataQuery(memberUsernames as string[]);
 
   const getMemberData = (username: string) => {
     if (username === userData?.username) return userData;
@@ -145,14 +145,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       .map((p) => p.planGroup)
       .find((group) => group?.id === selectedPlan.planGroupId);
 
-    group?.members?.forEach((member) => {
-      if (member.username !== userData?.username) {
-        fetchUserData({ username: member.username });
-      }
-    });
-
     const memberPlans = new Map<string, Plan>();
     group?.members?.forEach((member) => {
+      if (member.username === null || member.username === undefined) return;
+
       const memberData = getMemberData(member.username);
       const memberPlan = memberData?.plans.find(
         (p) => p.planGroupId === selectedPlan.planGroupId
@@ -179,7 +175,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     ) => {
       const userId = plan.userId;
       const username = planGroupMembers.find(
-        (m) => m.userId === userId
+        (m) => m.id === userId
       )?.username;
       if (!username) return [];
 
@@ -192,13 +188,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
       if (startDate && endDate) {
         completedEntries = completedEntries.filter((entry) => {
-          const entryDate = parseISO(entry.date);
+          const entryDate = entry.date;
           return entryDate >= startDate && entryDate <= endDate;
         });
       }
 
       const entriesByDate = completedEntries.reduce((acc, entry) => {
-        const dateKey = format(parseISO(entry.date), "yyyy-MM-dd");
+        const dateKey = format(entry.date, "yyyy-MM-dd");
         if (!acc[dateKey]) {
           acc[dateKey] = entry;
         }
@@ -231,92 +227,92 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     return planProgress.weeks.slice(currentWeekIndex, currentWeekIndex + 2);
   }, [planProgress?.weeks, showAllWeeks]);
 
-  useEffect(() => {
-    const calculateSessionData = () => {
-      setLoading(true);
-      if (!selectedPlan || !selectedPlan.planGroupId) {
-        setLoading(false);
-        return;
-      }
+  // useEffect(() => {
+  //   const calculateSessionData = () => {
+  //     setLoading(true);
+  //     if (!selectedPlan || !selectedPlan.planGroupId) {
+  //       setLoading(false);
+  //       return;
+  //     }
 
-      const groupPlans = selectedPlan.planGroup?.plans || [];
+  //     const groupPlans = selectedPlan.planGroup?.plans || [];
 
-      const allDates = [
-        ...groupPlans.flatMap((plan) => {
-          return plan.sessions.map((s) => parseISO(s.date));
-        }),
-        ...groupPlans.flatMap((plan) =>
-          getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
-        ),
-      ].sort((a, b) => a.getTime() - b.getTime());
+  //     const allDates = [
+  //       ...groupPlans.flatMap((plan) => {
+  //         return plan.sessions.map((s) => parseISO(s.date));
+  //       }),
+  //       ...groupPlans.flatMap((plan) =>
+  //         getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
+  //       ),
+  //     ].sort((a, b) => a.getTime() - b.getTime());
 
-      if (allDates.length === 0) {
-        setLoading(false);
-        return;
-      }
+  //     if (allDates.length === 0) {
+  //       setLoading(false);
+  //       return;
+  //     }
 
-      const startDate =
-        timeRange === "recent"
-          ? subDays(new Date(), 30)
-          : subWeeks(startOfWeek(allDates[0]), 1);
-      const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
-      const weeklyData: {
-        [key: string]: { [username: string]: number; planned: number };
-      } = {};
+  //     const startDate =
+  //       timeRange === "recent"
+  //         ? subDays(new Date(), 30)
+  //         : subWeeks(startOfWeek(allDates[0]), 1);
+  //     const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
+  //     const weeklyData: {
+  //       [key: string]: { [username: string]: number; planned: number };
+  //     } = {};
 
-      let currentWeekStart = startOfWeek(startDate);
-      while (currentWeekStart <= endDate) {
-        const weekKey = format(currentWeekStart, "yyyy-MM-dd");
-        const weekEnd = endOfWeek(currentWeekStart);
+  //     let currentWeekStart = startOfWeek(startDate);
+  //     while (currentWeekStart <= endDate) {
+  //       const weekKey = format(currentWeekStart, "yyyy-MM-dd");
+  //       const weekEnd = endOfWeek(currentWeekStart);
 
-        if (timeRange === "recent" && isBefore(weekEnd, startDate)) {
-          currentWeekStart = addWeeks(currentWeekStart, 1);
-          continue;
-        }
+  //       if (timeRange === "recent" && isBefore(weekEnd, startDate)) {
+  //         currentWeekStart = addWeeks(currentWeekStart, 1);
+  //         continue;
+  //       }
 
-        weeklyData[weekKey] = { planned: 0 };
+  //       weeklyData[weekKey] = { planned: 0 };
 
-        if (selectedPlan.outlineType === "TIMES_PER_WEEK") {
-          weeklyData[weekKey].planned = selectedPlan.timesPerWeek || 0;
-        } else {
-          const plannedThisWeek = selectedPlan.sessions.filter((session) => {
-            const sessionDate = parseISO(session.date);
-            return sessionDate >= currentWeekStart && sessionDate <= weekEnd;
-          }).length;
-          weeklyData[weekKey].planned += plannedThisWeek;
-        }
+  //       if (selectedPlan.outlineType === "TIMES_PER_WEEK") {
+  //         weeklyData[weekKey].planned = selectedPlan.timesPerWeek || 0;
+  //       } else {
+  //         const plannedThisWeek = selectedPlan.sessions.filter((session) => {
+  //           const sessionDate = parseISO(session.date);
+  //           return sessionDate >= currentWeekStart && sessionDate <= weekEnd;
+  //         }).length;
+  //         weeklyData[weekKey].planned += plannedThisWeek;
+  //       }
 
-        groupPlans.forEach((plan) => {
-          const member = planGroupMembers.find((m) => m.userId === plan.userId);
-          if (!member) return;
+  //       groupPlans.forEach((plan) => {
+  //         const member = planGroupMembers.find((m) => m.userId === plan.userId);
+  //         if (!member) return;
 
-          const completedThisWeek = getCompletedSessionsForPlan(
-            plan,
-            currentWeekStart,
-            weekEnd
-          ).length;
-          weeklyData[weekKey][member.username] = completedThisWeek;
-        });
+  //         const completedThisWeek = getCompletedSessionsForPlan(
+  //           plan,
+  //           currentWeekStart,
+  //           weekEnd
+  //         ).length;
+  //         weeklyData[weekKey][member.username] = completedThisWeek;
+  //       });
 
-        currentWeekStart = addWeeks(currentWeekStart, 1);
-      }
+  //       currentWeekStart = addWeeks(currentWeekStart, 1);
+  //     }
 
-      const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
-        week: format(parseISO(week), "MMM d, yyyy"),
-        planned: data.planned,
-        ...Object.fromEntries(
-          planGroupMembers.map((member) => [
-            member.username,
-            data[member.username] || 0,
-          ])
-        ),
-      }));
-      setSessionData(formattedData);
-      setLoading(false);
-    };
+  //     const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
+  //       week: format(parseISO(week), "MMM d, yyyy"),
+  //       planned: data.planned,
+  //       ...Object.fromEntries(
+  //         planGroupMembers.map((member) => [
+  //           member.username,
+  //           data[member.username] || 0,
+  //         ])
+  //       ),
+  //     }));
+  //     setSessionData(formattedData);
+  //     setLoading(false);
+  //   };
 
-    calculateSessionData();
-  }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
+  //   calculateSessionData();
+  // }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
 
   // const areAllWeeklyActivitiesCompleted = useCallback(() => {
   //   const currentWeekStart = startOfWeek(new Date());
@@ -544,7 +540,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       </div>
 
-      {loading ? (
+      {/* {loading ? (
         <div className="flex items-center justify-center mt-4">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading session data...</span>
@@ -593,7 +589,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             />
           </div>
         )
-      )}
+      )} */}
 
       {planGroupMembers && planGroupMembers.length >= 2 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
@@ -601,14 +597,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <div className="flex flex-row flex-wrap gap-6">
             {planGroupMembers.map((member) => (
               <div
-                key={member.userId}
+                key={member.id}
                 className="flex flex-row flex-nowrap gap-2 items-center"
               >
                 <Link href={`/profile/${member.username}`}>
                   <Avatar className="w-12 h-12 text-2xl">
                     <AvatarImage
                       src={member.picture || ""}
-                      alt={member.name || member.username}
+                      alt={member.name || member.username || ""}
                     />
                     <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
                   </Avatar>
