@@ -173,6 +173,6 @@ backend
     [x] times pe week
     [x] milestones
 [] milestones
-    [] render
-    [] edit (manual)
-    [] edit (automatic)
+    [x] render
+    [x] edit (manual)
+    [x] edit (automatic)

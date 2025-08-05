@@ -61,7 +61,11 @@ export async function getCurrentUserData() {
           include: {
             sessions: true,
             activities: true,
-            planGroup: true,
+            planGroup: {
+              include: {
+                members: true,
+              },
+            },
             milestones: true,
           },
           orderBy: { createdAt: "desc" },
@@ -355,8 +359,10 @@ export async function getTimelineData() {
   }
 }
 
-
-export async function modifyManualMilestone(milestoneId: string, delta: number) {
+export async function modifyManualMilestone(
+  milestoneId: string,
+  delta: number
+) {
   const user = await validateUser();
 
   try {
@@ -389,7 +395,8 @@ export async function modifyManualMilestone(milestoneId: string, delta: number) 
     console.error("Error modifying manual milestone:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update milestone",
+      error:
+        error instanceof Error ? error.message : "Failed to update milestone",
     };
   }
 }

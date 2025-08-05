@@ -4,7 +4,6 @@ import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
 import { Plus, PlusSquare, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { Activity, Plan, PlanGroup, PlanSession } from "@prisma/client";
 import {
   DndContext,
   closestCenter,
@@ -31,13 +30,13 @@ import toast from "react-hot-toast";
 import { parseISO, format, addMonths, isBefore } from "date-fns";
 
 // Helper function to check if a plan is expired
-export const isPlanExpired = (plan: Plan): boolean => {
+export const isPlanExpired = (plan: CompletePlan): boolean => {
   if (!plan.finishingDate) return false;
   return isBefore(plan. finishingDate, new Date());
 };
 
 // Function to sort plans with active plans first, then expired plans
-const sortPlansByExpiration = (plans: Plan[]): Plan[] => {
+const sortPlansByExpiration = (plans: CompletePlan[]): CompletePlan[] => {
   // Create a copy to avoid mutating the original array
   return [...plans].sort((a, b) => {
     const aExpired = isPlanExpired(a);
@@ -50,8 +49,8 @@ const sortPlansByExpiration = (plans: Plan[]): Plan[] => {
 };
 
 interface SortablePlanProps {
-  plan: Plan;
-  planGroup?: PlanGroup;
+  plan: CompletePlan;
+  planGroup?: CompletePlan["planGroup"];
   isSelected: boolean;
   currentUserId?: string;
   onSelect: (planId: string) => void;
@@ -158,7 +157,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
     initialSelectedPlanId || null
   );
-  const [orderedPlans, setOrderedPlans] = useState<Plan[]>([]);
+  const [orderedPlans, setOrderedPlans] = useState<CompletePlan[]>([]);
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
@@ -178,7 +177,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   useEffect(() => {
     if (userData?.plans) {
       // Sort plans with active plans first, then expired plans
-      setOrderedPlans(sortPlansByExpiration(userData.plans));
+      setOrderedPlans(sortPlansByExpiration(userData.plans as CompletePlan[]));
     }
   }, [userData?.plans]);
 
@@ -228,7 +227,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
 
   const { plans = [] } = userData || {};
 
-  const getPlanGroup = (planId: string): PlanGroup | undefined => {
+  const getPlanGroup = (planId: string): CompletePlan["planGroup"] | undefined => {
     return plans.find((p) => p.id === planId)?.planGroup || undefined;
   };
 
