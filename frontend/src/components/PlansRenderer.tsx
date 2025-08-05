@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
 import { Plus, PlusSquare, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { ApiPlan, PlanGroup } from "@/contexts/UserPlanContext";
+import { Activity, Plan, PlanGroup, PlanSession } from "@prisma/client";
 import {
   DndContext,
   closestCenter,
@@ -31,19 +31,18 @@ import toast from "react-hot-toast";
 import { parseISO, format, addMonths, isBefore } from "date-fns";
 
 // Helper function to check if a plan is expired
-export const isPlanExpired = (plan: ApiPlan): boolean => {
+export const isPlanExpired = (plan: Plan): boolean => {
   if (!plan.finishingDate) return false;
-  const finishingDate = parseISO(plan.finishingDate);
-  return isBefore(finishingDate, new Date());
+  return isBefore(plan. finishingDate, new Date());
 };
 
 // Function to sort plans with active plans first, then expired plans
-const sortPlansByExpiration = (plans: ApiPlan[]): ApiPlan[] => {
+const sortPlansByExpiration = (plans: Plan[]): Plan[] => {
   // Create a copy to avoid mutating the original array
   return [...plans].sort((a, b) => {
     const aExpired = isPlanExpired(a);
     const bExpired = isPlanExpired(b);
-    
+
     if (aExpired && !bExpired) return 1; // a is expired, b is not, so b comes first
     if (!aExpired && bExpired) return -1; // a is not expired, b is, so a comes first
     return 0; // both are either expired or not expired, maintain original order
@@ -51,7 +50,7 @@ const sortPlansByExpiration = (plans: ApiPlan[]): ApiPlan[] => {
 };
 
 interface SortablePlanProps {
-  plan: ApiPlan;
+  plan: Plan;
   planGroup?: PlanGroup;
   isSelected: boolean;
   currentUserId?: string;
@@ -88,7 +87,7 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   const handleReactivate = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isReactivating) return;
-    
+
     setIsReactivating(true);
     try {
       await onReactivate(plan.id!);
@@ -149,13 +148,17 @@ interface PlansRendererProps {
   initialSelectedPlanId?: string | null;
 }
 
-const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) => {
+const PlansRenderer: React.FC<PlansRendererProps> = ({
+  initialSelectedPlanId,
+}) => {
   const api = useApiWithAuth();
   const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(initialSelectedPlanId || null);
-  const [orderedPlans, setOrderedPlans] = useState<ApiPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
+    initialSelectedPlanId || null
+  );
+  const [orderedPlans, setOrderedPlans] = useState<Plan[]>([]);
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
@@ -180,7 +183,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
   }, [userData?.plans]);
 
   useEffect(() => {
-    if (initialSelectedPlanId && orderedPlans.some(plan => plan.id === initialSelectedPlanId)) {
+    if (
+      initialSelectedPlanId &&
+      orderedPlans.some((plan) => plan.id === initialSelectedPlanId)
+    ) {
       setSelectedPlanId(initialSelectedPlanId);
     } else if (!selectedPlanId && orderedPlans && orderedPlans.length > 0) {
       const firstPlan = orderedPlans[0];
@@ -220,10 +226,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
     );
   }
 
-  const { planGroups = [] } = userData || {};
+  const { plans = [] } = userData || {};
 
   const getPlanGroup = (planId: string): PlanGroup | undefined => {
-    return planGroups.find((group) => group.plan_ids.includes(planId));
+    return plans.find((p) => p.id === planId)?.planGroup || undefined;
   };
 
   const handleInviteSuccess = () => {
@@ -244,7 +250,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (!over || active.id === over.id) {
       return;
     }
@@ -289,7 +295,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
                 plan={plan}
                 planGroup={getPlanGroup(plan.id!)}
                 isSelected={selectedPlanId === plan.id}
-                currentUserId={userData?.user?.id}
+                currentUserId={userData?.id}
                 onSelect={handlePlanSelect}
                 onInviteSuccess={handleInviteSuccess}
                 onPlanRemoved={handlePlanRemoved}
@@ -314,7 +320,9 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
 
       {selectedPlanId && orderedPlans.find((p) => p.id === selectedPlanId) && (
         <PlanRendererv2
-          selectedPlan={orderedPlans.find((p) => p.id === selectedPlanId)!}
+          selectedPlan={
+            orderedPlans.find((p) => p.id === selectedPlanId)! as CompletePlan
+          }
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserGlobalContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import InviteButton from "./InviteButton";
@@ -17,9 +17,9 @@ import ConfirmDialog from "./ConfirmDialog";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { twMerge } from "tailwind-merge";
-import { usePlanEdit } from "@/hooks/usePlanEdit";
 import { PlanEditModal } from "./PlanEditModal";
 import { cn } from "@/lib/utils";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -51,13 +51,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: currentUserData } = currentUserDataQuery;
-  const isCoached = currentUserData?.user?.planIds?.[0] === plan.id;
+  const { isUserPremium } = usePaidPlan()
+  const isCoached = isUserPremium && currentUserData?.plans?.findIndex(p => p.id === plan.id) === 0;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showSettings, setShowSettings] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const api = useApiWithAuth();
-  const { showEditModal, setShowEditModal, handleEditPlan } = usePlanEdit();
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     console.log({ isCoached });
@@ -230,7 +231,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
         plan={plan}
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        onConfirm={(updatedPlan) => handleEditPlan(plan, updatedPlan)}
+        onSuccess={() => setShowEditModal(false)}
       />
     </>
   );

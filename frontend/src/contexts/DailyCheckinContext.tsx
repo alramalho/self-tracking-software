@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { differenceInCalendarDays } from "date-fns";
 import { InsightsBanner } from "@/components/InsightsBanner";
 import { useApiWithAuth } from "@/api";
@@ -51,7 +51,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
   const [checkinMessage, setCheckinMessage] = useState<string | undefined>(
     undefined
   );
-  const user = userData?.user;
+  const user = userData;
   const api = useApiWithAuth();
 
   useEffect(() => {

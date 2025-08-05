@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
 import { useEffect, useState, useRef } from "react";
-import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";

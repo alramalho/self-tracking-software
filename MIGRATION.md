@@ -125,8 +125,8 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
     [x] Error handler improvement to extract user context from authenticated requests
     [x] Messages loading functionality implementation
     [x] Timezone validation against IANA timezone identifiers
-[] Adapt legacy data layer UserPlanContext that relied on previous models to instead use prisma types
-    - [] adapt everywhere
+[] Adapt legacy data layer UserGlobalContext that relied on previous models to instead use prisma types (@prisma/client already configured in frontend)
+    - [] list all places where models from UserGlobalContext are being user
 
 # leaving out
 [] axiom
@@ -147,3 +147,22 @@ backend
 [x] signin
 [x] load users data
 [x] onboarding
+[x] adding activity
+[x] editing activity
+[x] uploading activity w/o photo 
+[x] uploading activity w/ photo 
+[x] updating activity
+[x] checking both in timeline
+[ ] reacting
+[ ] comment
+[ ] check both there after refresh
+[ ] 
+-- user profile
+[x] can update settings (like looking for ap)
+...
+-- notifications
+[ ] ...
+
+-- plans
+[] create plan 
+[] edit plan

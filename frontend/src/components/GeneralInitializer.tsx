@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import posthog from "posthog-js";
-import { useUserPlan, hasCachedUserData } from "@/contexts/UserPlanContext";
+import { useUserPlan, hasCachedUserData } from "@/contexts/UserGlobalContext";
 import { useSession } from "@clerk/nextjs";
 import { useNotifications } from "@/hooks/useNotifications";
 import BottomNav from "./BottomNav";
@@ -37,9 +37,9 @@ export default function GeneralInitializer({
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [initialCacheExists] = useState(() => hasCachedUserData());
   const hasFriends =
-    userData?.user?.friendIds?.length &&
-    userData?.user?.friendIds?.length > 0;
-  const { userPaidPlanType } = usePaidPlan();
+    userData?.friendIds?.length &&
+    userData?.friendIds?.length > 0;
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const router = useRouter();
   const { isOnboardingCompleted } = useOnboardingCompleted();
 
@@ -48,7 +48,7 @@ export default function GeneralInitializer({
     [isWaitingForData, hasFriends, userPaidPlanType, isOnboardingCompleted]
   );
 
-  const email = userData?.user?.email || "";
+  const email = userData?.email || "";
 
   useEffect(() => {
     if (onboardingNecessary) {
@@ -60,15 +60,15 @@ export default function GeneralInitializer({
     if (
       isSignedIn &&
       hasLoadedUserData &&
-      userData?.user &&
+      userData &&
       !hasRanPosthogIdentify
     ) {
-      posthog.identify(userData?.user.id, {
-        email: userData?.user.email,
-        name: userData?.user.name,
-        username: userData?.user.username,
+      posthog.identify(userData.id, {
+        email: userData.email,
+        name: userData.name,
+        username: userData.username,
         is_app_installed: isAppInstalled,
-        is_looking_for_ap: userData?.user.lookingForAp,
+        is_looking_for_ap: userData.lookingForAp,
         is_push_granted: isPushGranted,
       });
       setHasRanPosthogIdentify(true);

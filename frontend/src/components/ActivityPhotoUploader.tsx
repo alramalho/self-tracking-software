@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 // import { useApiWithAuth } from "@/api"; // Will be replaced
 import { useOfflineAwareApi } from "@/hooks/useOfflineAwareApi"; // Import the new hook
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "@/components/ui/button";

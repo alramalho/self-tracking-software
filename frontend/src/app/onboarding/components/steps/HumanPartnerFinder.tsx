@@ -15,7 +15,7 @@ import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
 import { ApSearchComponent } from "@/components/ApSearch";
-import { FriendRequest, User, useUserPlan } from "@/contexts/UserPlanContext";
+import { FriendRequest, User, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -142,7 +142,7 @@ const HumanPartnerFinder = () => {
   const { completeStep, } = useOnboarding();
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const hasProfile = userData?.user?.profile !== undefined;
+  const hasProfile = userData?.profile !== undefined;
   const { shareOrCopyReferralLink } = useShareOrCopy();
   const [profileSetupPopupOpen, setProfileSetupPopoverOpen] = useState(false);
   const [apSearchPopupOpen, setApSearchPopupOpen] = useState(false);

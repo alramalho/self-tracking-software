@@ -2,12 +2,10 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import {
-  Activity,
-  ApiPlan,
-  Plan,
-  PlanMilestone,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
+import { PlanDurationType, PlanOutlineType } from "@prisma/client";
+import { PlanMilestone } from "@prisma/types";
 import { usePlanGeneration } from "@/hooks/usePlanGeneration";
 import toast from "react-hot-toast";
 import Divider from "../Divider";
@@ -18,23 +16,22 @@ import ActivitiesStep from "./steps/ActivitiesStep";
 import EmojiStep from "./steps/EmojiStep";
 import GoalStep from "./steps/GoalStep";
 import DurationStep from "./steps/DurationStep";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { upsertPlan } from "@/app/actions";
 
 interface PlanConfigurationFormProps {
-  onConfirm: (plan: ApiPlan) => Promise<void>;
+  onSuccess?: () => void;
+  onFailure?: (error: string) => void;
   onClose?: () => void;
   title: string;
   isEdit?: boolean;
-  plan?: ApiPlan;
+  plan?: CompletePlan;
   scrollToMilestones?: boolean;
 }
 
-interface PlanDurationType {
-  type: "custom" | "habit" | "lifestyle" | undefined;
-  date?: string;
-}
-
 const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
-  onConfirm,
+  onSuccess,
+  onFailure,
   plan,
   onClose,
   title,
@@ -50,19 +47,16 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState(plan?.emoji || "");
   const [currentFinishingDate, setCurrentFinishingDate] = useState(plan?.finishingDate);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedSessions, setGeneratedSessions] = useState<ApiPlan["sessions"]>();
+  const [generatedSessions, setGeneratedSessions] = useState<CompletePlan["sessions"]>();
   const [goal, setGoal] = useState(plan?.goal || "");
   const [planNotes, setPlanNotes] = useState("");
   const [milestones, setMilestones] = useState<PlanMilestone[]>(plan?.milestones || []);
-  const [planDuration, setPlanDuration] = useState<PlanDurationType>({
-    type: plan?.durationType,
-    date: plan?.finishingDate,
-  });
-  const [outlineType, setOutlineType] = useState<Plan["outlineType"]>(plan?.outlineType);
+  const [planDuration, setPlanDuration] = useState<PlanDurationType>(plan?.durationType || "CUSTOM");
+  const [outlineType, setOutlineType] = useState<PlanOutlineType>(plan?.outlineType || "SPECIFIC");
   const [timesPerWeek, setTimesPerWeek] = useState(plan?.timesPerWeek || 0);
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedActivities, setSelectedActivities] = useState<Activity[]>(
-    plan ? userData?.activities?.filter(a => plan.activityIds?.includes(a.id)) || [] : []
+  const [selectedActivities, setSelectedActivities] = useState<CompletePlan["activities"]>(
+    plan ? userData?.activities?.filter(a => plan.activities.map(p => p.id).includes(a.id)) || [] : []
   );
 
   const { generateSessions } = usePlanGeneration();
@@ -70,7 +64,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const canProgressToNextStep = useCallback((step: number) => {
     switch (step) {
       case 1:
-        return !!planDuration.type;
+        return !!planDuration;
       case 2:
         return !!goal.trim();
       case 3:
@@ -79,8 +73,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         return selectedActivities.length > 0;
       case 5:
         if (!outlineType) return false;
-        if (outlineType === "specific") return !!generatedSessions;
-        if (outlineType === "timesPerWeek") return timesPerWeek > 0;
+        if (outlineType === "SPECIFIC") return !!generatedSessions;
+        if (outlineType === "TIMES_PER_WEEK") return timesPerWeek > 0;
         return false;
       default:
         return true;
@@ -113,7 +107,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     try {
       const sessions = await generateSessions({
         goal,
-        finishingDate: currentFinishingDate?.split("T")[0],
+        finishingDate: currentFinishingDate?.toISOString(),
         activities: selectedActivities,
         description,
         existingPlan: isEdit ? plan : undefined,
@@ -125,29 +119,28 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     }
   };
 
-  const createPlanToConfirm = useCallback((): ApiPlan => {
-    const basePlan: ApiPlan = {
+  const createPlanToConfirm = useCallback((): CompletePlan => {
+    const basePlan: any = {
       goal,
       emoji: selectedEmoji,
-      finishingDate: currentFinishingDate,
+      finishingDate: currentFinishingDate || null,
       notes: planNotes,
-      durationType: planDuration.type,
+      durationType: planDuration,
       outlineType: outlineType,
       milestones: milestones,
-      activityIds: selectedActivities.map((a) => a.id),
+      activities: selectedActivities,
       id: plan?.id || "",
       userId: plan?.userId || "",
-      createdAt: plan?.createdAt || new Date().toISOString(),
-      coachSuggestedSessions: [],
+      createdAt: plan?.createdAt || new Date(),
       sessions: [],
     };
 
-    if (outlineType === "specific") {
+    if (outlineType === "SPECIFIC") {
       return {
         ...basePlan,
         sessions: generatedSessions || [],
       };
-    } else if (outlineType === "timesPerWeek") {
+    } else if (outlineType === "TIMES_PER_WEEK") {
       return {
         ...basePlan,
         timesPerWeek: timesPerWeek,
@@ -159,7 +152,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     selectedEmoji,
     currentFinishingDate,
     planNotes,
-    planDuration.type,
+    planDuration,
     outlineType,
     milestones,
     selectedActivities,
@@ -175,7 +168,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     const planToBeSaved = createPlanToConfirm();
     const currentActivityIds = new Set(selectedActivities.map(a => a.id));
-    const originalActivityIds = new Set(plan.activityIds);
+    const originalActivityIds = new Set(plan.activities.map(a => a.id));
 
     return (
       planToBeSaved.goal !== plan.goal ||
@@ -193,7 +186,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
   const isPlanComplete = useCallback(() => {
     const hasRequiredFields = 
-      planDuration.type &&
+      planDuration &&
       goal.trim() !== "" &&
       selectedEmoji &&
       selectedActivities.length > 0 &&
@@ -201,8 +194,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     if (!hasRequiredFields) return false;
 
-    if (outlineType === "specific" && !generatedSessions) return false;
-    if (outlineType === "timesPerWeek" && !timesPerWeek) return false;
+    if (outlineType === "SPECIFIC" && !generatedSessions) return false;
+    if (outlineType === "TIMES_PER_WEEK" && !timesPerWeek) return false;
 
     return true;
   }, [
@@ -233,7 +226,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       }
 
       // Check criteria
-      for (const criterion of milestone.criteria || []) {
+      for (const criterion of milestone.criteria?.items || []) {
         if ('activityId' in criterion && criterion.quantity <= 0) {
           toast.error("All milestone criteria must have a quantity greater than 0");
           return false;
@@ -251,9 +244,21 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     try {
       setIsProcessing(true);
-      await onConfirm(createPlanToConfirm());
+      const planToSave = createPlanToConfirm();
+      const result = await upsertPlan(planToSave);
+      
+      if (result.success) {
+        currentUserDataQuery.refetch();
+        toast.success(isEdit ? "Plan updated successfully" : "Plan created successfully");
+        onSuccess?.();
+      } else {
+        toast.error(result.error || "Failed to save plan");
+        onFailure?.(result.error || "Failed to save plan");
+      }
     } catch (error) {
-      toast.error("Failed to confirm plan");
+      const errorMessage = "Failed to save plan";
+      toast.error(errorMessage);
+      onFailure?.(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -283,7 +288,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const canGeneratePlan = useCallback(() => {
     // Basic requirements for all plan types
     const hasBasicInfo =
-      planDuration.type &&
+      planDuration &&
       goal.trim() !== "" &&
       selectedEmoji &&
       selectedActivities.length > 0;
@@ -291,13 +296,13 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     if (!hasBasicInfo) return false;
 
     // Only allow generation for specific outline type
-    if (!outlineType || outlineType === "timesPerWeek") {
+    if (!outlineType || outlineType === "TIMES_PER_WEEK") {
       return false;
     }
 
     return true;
   }, [
-    planDuration.type,
+    planDuration,
     goal,
     selectedEmoji,
     selectedActivities.length,
@@ -316,7 +321,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         <Step stepNumber={1} isVisible={shouldShowStep(1)} ref={stepRefs.step1}>
           <DurationStep
             planDuration={planDuration}
-            currentFinishingDate={currentFinishingDate}
+            currentFinishingDate={currentFinishingDate || undefined}
             setPlanDuration={setPlanDuration}
             setCurrentFinishingDate={setCurrentFinishingDate}
             setPlanNotes={setPlanNotes}

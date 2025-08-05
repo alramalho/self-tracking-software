@@ -10,7 +10,7 @@ import {
 } from "@/types/suggestions";
 import { toast } from "react-hot-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 
 const PLAN_CREATION_ASSISTANT_MEMORY_IN_MINUTES = 180; // 3 hours
 

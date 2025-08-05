@@ -1,4 +1,4 @@
-import { Emotion } from "@/contexts/UserPlanContext";
+import { Emotion } from "@/contexts/UserGlobalContext";
 import { Loader2 } from "lucide-react";
 import React from "react";
 

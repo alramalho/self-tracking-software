@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { HelpCircle, MessageSquarePlus, Bug, X, ChevronUp } from "lucide-react";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import FeedbackForm from "./FeedbackForm";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
@@ -15,7 +15,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const email = userData?.user?.email || "";
+  const email = userData?.email || "";
   const api = useApiWithAuth();
 
   const reportBug = async (text: string, email: string) => {

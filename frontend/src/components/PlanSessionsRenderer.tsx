@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
-import { Activity, Plan } from "@/contexts/UserPlanContext";
-import { Badge } from "./ui/badge";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
+import { Activity } from "@prisma/client";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 
 interface PlanSessionsRendererProps {
-  plan: Plan;
+  plan: CompletePlan;
   activities: Activity[];
   startDate?: Date;
 }
@@ -25,8 +25,8 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
       return sevenDaysAgo;
     }
     return plan.sessions.reduce((earliest, session) => 
-      session.date < earliest ? session.date : earliest,
-      plan.sessions[0].date
+      new Date(session.date) < earliest ? new Date(session.date) : earliest,
+      new Date(plan.sessions[0].date)
     );
   };
 
@@ -109,7 +109,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
                     </span>
                   </div>
                   <p className="text-sm mt-1 text-gray-600">
-                    {session.descriptive_guide}
+                    {session.descriptiveGuide}
                   </p>
                 </li>
               );
@@ -126,8 +126,8 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
       
       <BaseHeatmapRenderer
         activities={activities}
-        startDate={getDefaultStartDate()}
-        endDate={plan.finishingDate}
+        startDate={new Date(getDefaultStartDate())}
+        endDate={plan.finishingDate ? new Date(plan.finishingDate) : undefined}
         heatmapData={formatSessionsForHeatMap()}
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}

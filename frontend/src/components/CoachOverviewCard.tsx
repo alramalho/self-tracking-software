@@ -8,18 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { PlanStatus } from "./PlanProgressCard";
 import { Button } from "./ui/button";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
-import {
-  ArrowBigRight,
-  Check,
-  Loader2,
-  X,
-} from "lucide-react";
-import { ApiPlan, convertApiPlanToPlan } from "@/contexts/UserPlanContext";
+import { ArrowBigRight, Check, Loader2, X } from "lucide-react";
+import { PlanSession } from "@prisma/client";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { clearCoachSuggestedSessionsInPlan, updatePlan, upgradeCoachSuggestedSessionsToPlanSessions } from "@/app/actions";
 
 interface CoachOverviewCardProps {
-  selectedPlan: ApiPlan;
+  selectedPlan: CompletePlan;
   activities: any[];
   onRefetch?: () => void;
   isDemo?: boolean;
@@ -36,7 +33,12 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const api = useApiWithAuth();
-  const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<string | null>(null);
+  const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<
+    string | null
+  >(null);
+  const coachSuggestedSessions = selectedPlan.sessions.filter(
+    (s) => s.isCoachSuggested
+  );
   const [loadingStates, setLoadingStates] = useState({
     acceptingSessions: false,
     decliningSessions: false,
@@ -45,7 +47,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   });
 
   const planActivities = activities.filter((a) =>
-    selectedPlan.activityIds?.includes(a.id)
+    selectedPlan.activities.map((a) => a.id).includes(a.id)
   );
 
   // Reusable functions for handling coach suggestions
@@ -68,17 +70,19 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       };
 
       if (suggestionType === "sessions") {
-        updateData = {
-          ...updateData,
-          sessions: selectedPlan.coachSuggestedSessions,
-          coachSuggestedSessions: null,
-        };
+        await upgradeCoachSuggestedSessionsToPlanSessions(
+          selectedPlan.id,
+        );
       } else if (suggestionType === "timesPerWeek") {
-        updateData = {
-          ...updateData,
+        await updatePlan(selectedPlan.id, {
           timesPerWeek: selectedPlan.coachSuggestedTimesPerWeek,
           coachSuggestedTimesPerWeek: null,
-        };
+        });
+        // updateData = {
+        //   ...updateData,
+        //   timesPerWeek: selectedPlan.coachSuggestedTimesPerWeek,
+        //   coachSuggestedTimesPerWeek: null,
+        // };
       }
 
       await api.post(`/plans/${selectedPlan.id}/update`, {
@@ -115,20 +119,14 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
     try {
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
 
-      let updateData: any = {
-        suggestedByCoachAt: null,
-        coachNotes: null,
-      };
-
       if (suggestionType === "sessions") {
-        updateData.coachSuggestedSessions = null;
+        clearCoachSuggestedSessionsInPlan(selectedPlan.id);
       } else if (suggestionType === "timesPerWeek") {
-        updateData.coachSuggestedTimesPerWeek = null;
+        await updatePlan(selectedPlan.id, {
+          coachSuggestedTimesPerWeek: null,
+        });
       }
 
-      await api.post(`/plans/${selectedPlan.id}/update`, {
-        data: updateData,
-      });
       onRefetch?.();
       toast.success("Suggestion declined");
     } catch (error) {
@@ -140,9 +138,11 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   };
 
   // Don't render if no coach data to show
-  if (!selectedPlan.coachNotes &&
-      !selectedPlan.coachSuggestedSessions?.length &&
-      !selectedPlan.coachSuggestedTimesPerWeek) {
+  if (
+    !selectedPlan.coachNotes &&
+    !coachSuggestedSessions.length &&
+    !selectedPlan.coachSuggestedTimesPerWeek
+  ) {
     return null;
   }
 
@@ -157,57 +157,61 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       )}
     >
       <div className="flex flex-col items-start gap-4">
-        <div className="flex flex-row items-center gap-2 justify-between w-full">
-          <Avatar>
-            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
-          <PlanStatus
-            plan={convertApiPlanToPlan(selectedPlan, activities)}
-          />
-        </div>
-
         {selectedPlan.coachNotes && (
-          <div className="flex flex-col gap-1 flex-1">
-            <span className={`text-sm italic text-gray-600`}>
-              {selectedPlan.coachNotes}
-            </span>
-            <span className="text-[10px] italic text-gray-500">
-              Coach Oli,{" "}
-              {selectedPlan.suggestedByCoachAt &&
-                formatDistance(
-                  parseISO(selectedPlan.suggestedByCoachAt),
-                  new Date(),
-                  { addSuffix: true }
-                )}
-            </span>
-          </div>
+          <>
+            <div className="flex flex-row items-center gap-2 justify-between w-full">
+              <Avatar>
+                <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+                <AvatarFallback>CN</AvatarFallback>
+              </Avatar>
+              <PlanStatus plan={selectedPlan} />
+            </div>
+            <div className="flex flex-col gap-1 flex-1">
+              <span className={`text-sm italic text-gray-600`}>
+                {selectedPlan.coachNotes}
+              </span>
+              <span className="text-[10px] italic text-gray-500">
+                Coach Oli,{" "}
+                {selectedPlan.suggestedByCoachAt &&
+                  formatDistance(selectedPlan.suggestedByCoachAt, new Date(), {
+                    addSuffix: true,
+                  })}
+              </span>
+            </div>
+          </>
         )}
 
-        {selectedPlan.coachSuggestedSessions &&
-          selectedPlan.coachSuggestedSessions.length > 0 && (
+        {coachSuggestedSessions &&
+          coachSuggestedSessions.length > 0 && (
             <div className="flex flex-col justify-start gap-4 w-full">
               <div className="flex flex-col gap-3">
-                <div className="text-center">
-                  <span className="text-lg font-semibold text-gray-800 mb-2 block">
-                    New Schedule Suggestion
-                  </span>
-                  <span className="text-xs text-gray-400 font-medium">
-                    UPDATED SESSIONS
-                  </span>
+                <div className="flex flex-row gap-2">
+                  {!selectedPlan.coachNotes && (
+                    <Avatar>
+                      <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+                      <AvatarFallback>CN</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className="text-start">
+                    <span className="text-lg font-semibold text-gray-800 block">
+                      New Schedule Suggestion
+                    </span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      UPDATED SESSIONS
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-                  {selectedPlan.coachSuggestedSessions.map(
-                    (session, index) => {
+                  {coachSuggestedSessions.map(
+                    (session: PlanSession, index: number) => {
                       const activity = planActivities?.find(
                         (a) => a.id === session.activityId
                       );
                       if (!activity) return null;
 
                       const sessionId = `coach-session-${session.activityId}-${index}`;
-                      const isSelected =
-                        selectedSuggestedSession === sessionId;
+                      const isSelected = selectedSuggestedSession === sessionId;
 
                       return (
                         <SmallActivityEntryCard
@@ -216,7 +220,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                             date: parseISO(session.date),
                             activityId: session.activityId,
                             quantity: session.quantity,
-                            description: session.descriptive_guide,
+                            description: session.descriptiveGuide,
                           }}
                           activity={activity}
                           selected={isSelected}
@@ -351,4 +355,4 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       </div>
     </MessageBubble>
   );
-}; 
+};

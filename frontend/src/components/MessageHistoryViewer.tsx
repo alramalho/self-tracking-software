@@ -1,5 +1,5 @@
 import React from "react";
-import { Message, useUserPlan } from "@/contexts/UserPlanContext";
+import { Message, useUserPlan } from "@/contexts/UserGlobalContext";
 import { ChatInterface } from "./chat/ChatInterface";
 import { EmotionBadges } from "./chat/EmotionBadges";
 import { Card } from "./ui/card";
@@ -65,7 +65,7 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
   });
 
   function getMessageRole(message: Message) {
-    if (message.senderId === userData?.user?.id) {
+    if (message.senderId === userData?.id) {
       return "user";
     }
     if (message.senderId === "-1") {
@@ -96,7 +96,7 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
                   variant={role === "assistant" ? "received" : "sent"}
                 >
                   <ChatBubbleAvatar
-                    src={role === "user" ? userData?.user?.picture : undefined}
+                    src={role === "user" ? userData?.picture : undefined}
                     fallback={<Eclipse className="w-8 h-8" />}
                   />
                   <div className="flex flex-col gap-2">

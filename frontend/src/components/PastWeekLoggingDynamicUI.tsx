@@ -11,7 +11,7 @@ import {
   ApiPlan,
   PlanMilestone,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { EntryCard } from "./EntryCard";
 import { useMutation } from "@tanstack/react-query";
 import { Description } from "@radix-ui/react-alert-dialog";

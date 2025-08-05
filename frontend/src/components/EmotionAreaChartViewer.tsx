@@ -1,6 +1,6 @@
 "use client";
 
-import { Message } from "@/contexts/UserPlanContext";
+import { Message } from "@/contexts/UserGlobalContext";
 import {
   AreaChart,
   Area,

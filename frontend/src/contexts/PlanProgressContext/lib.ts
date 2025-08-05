@@ -14,10 +14,10 @@ import {
   ActivityEntry,
   ApiPlan,
   PlanSession,
-} from "../UserPlanContext";
+} from "../UserGlobalContext";
 
 import { endOfWeek, startOfWeek } from "date-fns";
-import { Plan } from "../UserPlanContext";
+import { Plan } from "../UserGlobalContext";
 import { PlanAchievementResult, PlanWeek } from ".";
 
 export const ACHIEVEMENT_WEEKS = 9;

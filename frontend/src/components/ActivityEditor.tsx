@@ -9,7 +9,7 @@ import {
   Activity,
   useUserPlan,
   VisibilityType,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import ConfirmDialog from "./ConfirmDialog";
 import { EmojiInput } from "./ui/EmojiInput";
 import ActivityPrivacyDropdown from "./ActivityPrivacyDropdown";
@@ -46,7 +46,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const { data: userData } = currentUserDataQuery;
   const [privacySetting, setPrivacySetting] = useState<VisibilityType>(
     activity?.privacy_settings ||
-      userData?.user?.defaultActivityVisibility ||
+      userData?.defaultActivityVisibility ||
       "public"
   );
   const [colorHex, setColorHex] = useState(activity?.color_hex || "");
@@ -65,12 +65,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       setEmoji(activity.emoji || "");
       setPrivacySetting(
         activity.privacy_settings ||
-          userData?.user?.defaultActivityVisibility ||
+          userData?.defaultActivityVisibility ||
           "public"
       );
       setColorHex(activity.color_hex || "");
     }
-  }, [activity, userData?.user?.defaultActivityVisibility]);
+  }, [activity, userData?.defaultActivityVisibility]);
 
   useEffect(() => {
     console.log({ activity });

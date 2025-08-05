@@ -1,5 +1,5 @@
 import React from "react";
-import { ApiPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan } from "@/contexts/UserGlobalContext";
 import FireBadge from "./FireBadge";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 

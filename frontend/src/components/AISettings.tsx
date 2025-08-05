@@ -2,7 +2,7 @@
 
 import { Plus, Pencil } from "lucide-react";
 import * as React from "react";
-import {  useUserPlan } from "@/contexts/UserPlanContext";
+import {  useUserPlan } from "@/contexts/UserGlobalContext";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import RecurrentCheckinPopover from "./RecurrentCheckinPopover";
@@ -57,7 +57,7 @@ export default function AISettings() {
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const user = userData?.user;
+  const user = userData;
   const [isRecurrentCheckinOpen, setIsRecurrentCheckinOpen] =
     React.useState(false);
   const [isLongTermCheckinOpen, setIsLongTermCheckinOpen] =

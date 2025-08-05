@@ -2,7 +2,7 @@
 
 import React from "react";
 import PlansRenderer from "@/components/PlansRenderer";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useSearchParams } from "next/navigation";
 
 const PlansPage: React.FC = () => {
@@ -15,7 +15,7 @@ const PlansPage: React.FC = () => {
     <div className="container mx-auto p-3 max-w-2xl">
       <h1 className="text-2xl font-bold mb-4">
         Welcome
-        {userData?.user?.name ? `, ${userData.user.name}` : ""}. Here are your
+        {userData?.name ? `, ${userData.name}` : ""}. Here are your
         active plans:
       </h1>
 

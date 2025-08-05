@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 
 interface TodaysNoteSectionProps {

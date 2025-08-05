@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ApiPlan, User, useUserPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan, User, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -19,7 +19,7 @@ export const ApSearchComponent: React.FC = () => {
   const { useRecommendedUsersQuery, useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserQuery;
-  const currentUser = userData?.user;
+  const currentUser = userData;
   const currentPlan = userData?.plans[0];
   const api = useApiWithAuth();
 

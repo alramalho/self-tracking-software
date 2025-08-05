@@ -2,7 +2,7 @@ import React from "react";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import {
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import { ACHIEVEMENT_WEEKS } from "@/contexts/PlanProgressContext/lib";
 import { AlertTriangle, Flame, Medal } from "lucide-react";

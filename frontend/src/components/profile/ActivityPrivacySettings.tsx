@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as RadioGroup from "@radix-ui/react-radio-group";
 import { useApiWithAuth } from "@/api";
-import { useUserPlan, VisibilityType } from "@/contexts/UserPlanContext";
+import { useUserPlan, VisibilityType } from "@/contexts/UserGlobalContext";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,14 +40,14 @@ export default function ActivityPrivacySettings({
   const { data: userData } = currendUserDataQuery;
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedValue, setSelectedValue] = React.useState<VisibilityType>(
-    (userData?.user?.defaultActivityVisibility as VisibilityType) || "public"
+    (userData?.defaultActivityVisibility as VisibilityType) || "public"
   );
   const hasChanges =
-    selectedValue !== userData?.user?.defaultActivityVisibility;
+    selectedValue !== userData?.defaultActivityVisibility;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
   const handleSave = async () => {
@@ -68,12 +68,12 @@ export default function ActivityPrivacySettings({
 
   // Update selected value when user data changes
   React.useEffect(() => {
-    if (userData?.user?.defaultActivityVisibility) {
+    if (userData?.defaultActivityVisibility) {
       setSelectedValue(
         userData.user.defaultActivityVisibility as VisibilityType
       );
     }
-  }, [userData?.user?.defaultActivityVisibility]);
+  }, [userData?.defaultActivityVisibility]);
 
   return (
     <div className="p-6 space-y-6">

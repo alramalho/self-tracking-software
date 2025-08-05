@@ -25,7 +25,7 @@
 // import { useAuth } from "@clerk/nextjs";
 // import { useRouter, useSearchParams } from "next/navigation";
 // import { useApiWithAuth } from "@/api";
-// import { Emotion, useUserPlan } from "@/contexts/UserPlanContext";
+// import { Emotion, useUserPlan } from "@/contexts/UserGlobalContext";
 // import { Button } from "@/components/ui/button";
 // import { useClipboard } from "@/hooks/useClipboard";
 // import { useShare } from "@/hooks/useShare";
@@ -192,7 +192,7 @@
 
 //   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 //   const emotionLoadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-//   const referredUsers = userData?.user?.referred_userIds.length || 0;
+//   const referredUsers = userData?.referred_userIds.length || 0;
 //   const [copied, copyToClipboard] = useClipboard();
 //   const { share, isSupported: isShareSupported } = useShare();
 
@@ -514,7 +514,7 @@
 //             .slice(0, 1)
 //             .map((message) => ({
 //               role:
-//                 message.senderId === userData?.user?.id ? "user" : "assistant",
+//                 message.senderId === userData?.id ? "user" : "assistant",
 //               content: message.text,
 //             }))
 //             .forEach((message) => {

@@ -539,8 +539,11 @@ usersRouter.get(
           },
           include: {
             activities: {
-              include: {
-                activity: true,
+              select: {
+                id: true,
+                title: true,
+                emoji: true,
+                measure: true,
               },
             },
           },
@@ -568,12 +571,7 @@ usersRouter.get(
         durationType: plan.durationType,
         finishingDate: plan.finishingDate,
         createdAt: plan.createdAt,
-        activities: plan.activities.map((pa) => ({
-          id: pa.activity.id,
-          title: pa.activity.title,
-          emoji: pa.activity.emoji,
-          measure: pa.activity.measure,
-        })),
+        activities: plan.activities,
       }));
 
       const userData = {
@@ -672,22 +670,7 @@ usersRouter.get(
       const messages = await prisma.message.findMany({
         where: whereClause,
         include: {
-          sender: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              picture: true,
-            },
-          },
-          recipient: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              picture: true,
-            },
-          },
+          user: true,
           emotions: true,
         },
         orderBy: {
@@ -697,28 +680,28 @@ usersRouter.get(
       });
 
       // Transform messages for frontend
-      const transformedMessages = messages.map((message) => ({
-        id: message.id,
-        text: message.text,
-        createdAt: message.createdAt,
-        sender: {
-          id: message.sender.id,
-          username: message.sender.username,
-          name: message.sender.name,
-          picture: message.sender.picture,
-        },
-        recipient: {
-          id: message.recipient.id,
-          username: message.recipient.username,
-          name: message.recipient.name,
-          picture: message.recipient.picture,
-        },
-        emotions: message.emotions,
-        isSentByMe: message.senderId === userId,
-      }));
+      // const transformedMessages = messages.map((message) => ({
+      //   id: message.id,
+      //   text: message.text,
+      //   createdAt: message.createdAt,
+      //   sender: {
+      //     id: message.sender.id,
+      //     username: message.sender.username,
+      //     name: message.sender.name,
+      //     picture: message.sender.picture,
+      //   },
+      //   recipient: {
+      //     id: message.recipient.id,
+      //     username: message.recipient.username,
+      //     name: message.recipient.name,
+      //     picture: message.recipient.picture,
+      //   },
+      //   emotions: message.emotions,
+      //   isSentByMe: message.senderId === userId,
+      // }));
 
       res.json({
-        messages: transformedMessages,
+        messages,
         hasMore: messages.length === (parseInt(limit as string) || 50),
       });
     } catch (error) {

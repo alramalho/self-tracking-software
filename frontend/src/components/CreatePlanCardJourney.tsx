@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useApiWithAuth } from "@/api";
 import { Loader2 } from "lucide-react";
-import { ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import NotificationStep from "./NotificationStep";
 import toast from "react-hot-toast";
@@ -30,18 +29,16 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
     username: '',
   });
   
-  const [selectedPlan, setSelectedPlan] = useState<ApiPlan | null>(null);
-  const api = useApiWithAuth();
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
 
   useEffect(() => {
-    if (userData?.user?.username) {
-      updateState({ username: userData.user.username });
+    if (userData?.username) {
+      updateState({ username: userData.username });
     }
-    if (userData?.user?.name) {
-      updateState({ name: userData.user.name });
+    if (userData?.name) {
+      updateState({ name: userData.name });
     }
   }, [userData]);
 
@@ -61,19 +58,17 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
 
   const { requestPermission, isPushGranted } = useNotifications();
 
-  const createPlan = async (plan: ApiPlan) => {
-    try {
-      const response = await api.post("/create-plan", {
-        ...plan,
-      });
-      const createdPlan = response.data.plan;
-      setSelectedPlan(createdPlan);
-      currentUserDataQuery.refetch();
+  const handlePlanCreated = () => {
+    if (!isPushGranted) {
+      requestPermission();
+    } else {
       setStep(1);
-    } catch (error) {
-      console.error("Plan creation error:", error);
-      toast.error("Failed to create plan. Please try again.");
     }
+  };
+
+  const handlePlanCreationFailure = (error: string) => {
+    console.error("Plan creation error:", error);
+    toast.error("Failed to create plan. Please try again.");
   };
 
   const renderStep = () => {
@@ -81,7 +76,8 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
       case 0:
         return (
           <PlanConfigurationForm
-            onConfirm={createPlan}
+            onSuccess={handlePlanCreated}
+            onFailure={handlePlanCreationFailure}
             title={`${name}'s New Plan`}
           />
         );

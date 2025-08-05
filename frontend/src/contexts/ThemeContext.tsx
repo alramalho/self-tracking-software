@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
-import { useUserPlan } from './UserPlanContext';
+import { useUserPlan } from './UserGlobalContext';
 import { BaseThemeColor, ThemeColor, getThemeVariants } from '@/utils/theme';
 import { getStoredRandomColor, generateAndStoreRandomColor, useRandomColorCountdown } from '@/hooks/useThemeColors';
 

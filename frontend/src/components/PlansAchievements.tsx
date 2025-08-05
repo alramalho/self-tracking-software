@@ -4,7 +4,7 @@ import {
   Activity,
   ActivityEntry,
   convertApiPlanToPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import {
   subWeeks,
   startOfWeek,

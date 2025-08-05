@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { MetricRater } from "@/components/MetricRater";
-import { useUserPlan } from "@/contexts/UserPlanContext";
-import { Metric } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Metric } from "@/contexts/UserGlobalContext";
 import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
 import { useState } from "react";
@@ -21,7 +21,7 @@ export function MetricRaters({
 }) {
   const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const user = userData?.user;
+  const user = userData;
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics || [];
@@ -121,7 +121,7 @@ export function MetricRaters({
               onSubmit={async (description) => {
                 await handleSubmitAllRatings(description);
               }}
-              canSubmitEmpty={true}
+              canSubmit={() => true}
               submitButtonText="Submit"
               wave={false}
             />

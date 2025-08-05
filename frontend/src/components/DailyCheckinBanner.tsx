@@ -8,7 +8,7 @@ import {
   ActivityEntry,
   MetricEntry,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { useState } from "react";
 import { formatDate } from "date-fns";
 import {
@@ -57,7 +57,7 @@ export function DailyCheckinBanner({
   const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserQuery;
-  const user = userData?.user;
+  const user = userData;
   const activities = userData?.activities || [];
   const api = useApiWithAuth();
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();

@@ -2,7 +2,7 @@ import {
   Activity,
   ActivityEntry,
   PlanMilestone,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 
 export interface SuggestionBase {
   id: string;

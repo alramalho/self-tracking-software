@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import CreatePlanCardJourney from "@/components/CreatePlanCardJourney";
 import toast from "react-hot-toast";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { useUpgrade } from "@/contexts/UpgradeContext";
@@ -19,7 +19,7 @@ const CreateNewPlan: React.FC = () => {
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const userPlanCount = userData?.plans?.length || 0;
-  const { maxPlans, userPaidPlanType } = usePaidPlan();
+  const { maxPlans, userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
   if (userPlanCount >= maxPlans) {

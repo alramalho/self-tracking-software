@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { Check, X } from "lucide-react";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 
 export interface PlanSession {
   date: string;

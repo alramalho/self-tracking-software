@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { VisibilityType } from "@/contexts/UserPlanContext";
+import { VisibilityType } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ const ActivityPrivacyDropdown: React.FC<ActivityPrivacyDropdownProps> = ({
   onChange,
   className,
 }) => {
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const [isOpen, setIsOpen] = React.useState(false);
 

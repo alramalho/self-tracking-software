@@ -1,12 +1,13 @@
-import { ApiPlan } from "@/contexts/UserPlanContext";
 import AppleLikePopover from "./AppleLikePopover";
 import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 
 interface PlanEditModalProps {
-  plan: ApiPlan;
+  plan: CompletePlan;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (updatedPlan: ApiPlan) => Promise<void>;
+  onSuccess?: () => void;
+  onFailure?: (error: string) => void;
   scrollToMilestones?: boolean;
 }
 
@@ -14,7 +15,8 @@ export function PlanEditModal({
   plan, 
   isOpen, 
   onClose, 
-  onConfirm,
+  onSuccess,
+  onFailure,
   scrollToMilestones = false,
 }: PlanEditModalProps) {
   return (
@@ -28,7 +30,8 @@ export function PlanEditModal({
         plan={plan}
         title={plan.goal}
         onClose={onClose}
-        onConfirm={onConfirm}
+        onSuccess={onSuccess}
+        onFailure={onFailure}
         scrollToMilestones={scrollToMilestones}
       />
     </AppleLikePopover>

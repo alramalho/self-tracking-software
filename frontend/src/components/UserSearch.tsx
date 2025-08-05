@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import Link from "next/link";
@@ -116,7 +116,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
       {/* <Button
         variant="outline"
         onClick={async () => {
-          if (!userData?.user?.lookingForAp) {
+          if (!userData?.lookingForAp) {
             await api.post("/users/update-user", {
               looking_for_ap: true,
             });
