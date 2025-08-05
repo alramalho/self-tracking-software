@@ -176,3 +176,12 @@ backend
     [x] render
     [x] edit (manual)
     [x] edit (automatic)
+
+
+## missing verticals
+
+[] proper indexing (seems slow)
+[] setting up zero config
+[] deploying
+[] creating local db + new supabase project for prod
+[] data migration

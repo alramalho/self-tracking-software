@@ -40,8 +40,6 @@ import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { Switch } from "./ui/switch";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
-import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
 import { MilestoneOverview } from "./MilestoneOverview";
 import { useApiWithAuth } from "@/api";
 import { PlanEditModal } from "./PlanEditModal";

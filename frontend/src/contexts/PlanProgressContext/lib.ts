@@ -9,15 +9,7 @@ import {
   subDays,
 } from "date-fns";
 
-import {
-  Activity,
-  ActivityEntry,
-  ApiPlan,
-  PlanSession,
-} from "../UserGlobalContext";
-
 import { endOfWeek, startOfWeek } from "date-fns";
-import { Plan } from "../UserGlobalContext";
 import { PlanAchievementResult, PlanWeek } from ".";
 
 export const ACHIEVEMENT_WEEKS = 9;
@@ -27,7 +19,7 @@ export const LIFESTYLE_START_COUNTING_DATE = subDays(
 );
 
 export const countTimesPerWeekPlanCompletedWeekSessions = (
-  plan: ApiPlan,
+  plan: CompletePlan,
   userActivityEntries: ActivityEntry[],
   date: Date
 ) => {
@@ -41,7 +33,7 @@ export const countTimesPerWeekPlanCompletedWeekSessions = (
       );
     })
     .reduce((uniqueDays, entry) => {
-      const dayKey = entry.date.split("T")[0];
+      const dayKey = entry.date.toISOString().split("T")[0];
       uniqueDays.add(dayKey);
       return uniqueDays;
     }, new Set<string>()).size;

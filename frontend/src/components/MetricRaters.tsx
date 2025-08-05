@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
 import { DynamicUISuggester } from "./DynamicUISuggester";
+import { isToday } from "date-fns";
 
 interface MetricRating {
   rating: number;
@@ -34,7 +35,7 @@ export function MetricRaters({
     const today = new Date().toISOString().split("T")[0];
     return entries.some(
       (entry) =>
-        entry.metricId === metric.id && entry.date.split("T")[0] === today
+        entry.metricId === metric.id && isToday(entry.date)
     );
   };
 
