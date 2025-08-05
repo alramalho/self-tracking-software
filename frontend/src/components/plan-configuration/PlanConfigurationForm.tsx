@@ -107,7 +107,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     try {
       const sessions = await generateSessions({
         goal,
-        finishingDate: currentFinishingDate?.toISOString(),
+        finishingDate: currentFinishingDate || undefined,
         activities: selectedActivities,
         description,
         existingPlan: isEdit ? plan : undefined,
@@ -405,7 +405,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             canGenerate={canGeneratePlan}
             onGenerate={handleGenerate}
             activities={selectedActivities}
-            finishingDate={currentFinishingDate}
+            finishingDate={currentFinishingDate || undefined}
             description={description}
             setDescription={setDescription}
           />

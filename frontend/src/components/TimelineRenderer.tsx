@@ -254,7 +254,7 @@ const TimelineRenderer: React.FC<{
                 activityEntryTimezone={entry.timezone || undefined}
                 activityEntryComments={entry.comments || []}
                 activityMeasure={activity.measure}
-                isoDate={entry.date}
+                date={entry.date}
                 description={entry.description || undefined}
                 userPicture={user?.picture || undefined}
                 daysUntilExpiration={daysUntilExpiration}

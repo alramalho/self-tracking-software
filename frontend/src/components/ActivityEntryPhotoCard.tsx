@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Edit, Smile, BadgeCheck } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
-import { useUserPlan, Comment } from "@/contexts/UserGlobalContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import {
@@ -20,29 +20,29 @@ import { PlanBadge } from "./PlanBadge";
 import CommentSection from "./CommentSection";
 import Divider from "./Divider";
 import { Separator } from "./ui/separator";
+import { TimelineData } from "@/app/actions";
 
-const getFormattedDate = (date: string) => {
-  const parsedDate = parseISO(date);
+const getFormattedDate = (date: Date) => {
   const now = new Date();
 
-  if (isToday(parsedDate)) {
-    return `today at ${format(parsedDate, "HH:mm")}`;
+  if (isToday(date)) {
+    return `today at ${format(date, "HH:mm")}`;
   }
 
-  if (isYesterday(parsedDate)) {
-    return `yesterday at ${format(parsedDate, "HH:mm")}`;
+  if (isYesterday(date)) {
+    return `yesterday at ${format(date, "HH:mm")}`;
   }
 
-  const diffInCalendarDays = differenceInCalendarDays(now, parsedDate);
+  const diffInCalendarDays = differenceInCalendarDays(now, date);
 
   if (diffInCalendarDays <= 7) {
-    return `last ${format(parsedDate, "EEEE")} at ${format(
-      parsedDate,
+    return `last ${format(date, "EEEE")} at ${format(
+      date,
       "HH:mm"
     )}`;
   }
 
-  return format(parsedDate, "MMM d HH:mm");
+  return format(date, "MMM d HH:mm");
 };
 interface ActivityEntryPhotoCardProps {
   imageUrl?: string;
@@ -52,8 +52,8 @@ interface ActivityEntryPhotoCardProps {
   activityEmoji: string;
   activityEntryTimezone?: string;
   activityEntryReactions: Record<string, string[]>;
-  activityEntryComments?: Comment[]; // Initial comments if available
-  isoDate: string;
+  activityEntryComments?: TimelineData["recommendedActivityEntries"][number]["comments"]; // Initial comments if available
+  date: Date;
   daysUntilExpiration: number;
   hasImageExpired?: boolean;
   userPicture?: string;
@@ -90,7 +90,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityEntryReactions,
   activityEntryTimezone,
   activityEntryComments,
-  isoDate,
+  date,
   daysUntilExpiration,
   hasImageExpired,
   userPicture,
@@ -123,9 +123,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
   const { isUserPremium } = usePaidPlan();
 
-  const [comments, setComments] = useState<Comment[]>(
-    activityEntryComments || []
-  );
+  const [comments, setComments] = useState<
+    TimelineData["recommendedActivityEntries"][number]["comments"]
+  >(activityEntryComments || []);
   const [showAllComments, setShowAllComments] = useState(false);
 
   useEffect(() => {
@@ -511,7 +511,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>
               <span className="text-xs text-gray-500">
-                {getFormattedDate(isoDate)}{" "}
+                {getFormattedDate(date)}{" "}
                 {activityEntryTimezone && `– 📍 ${activityEntryTimezone}`}
               </span>
             </div>

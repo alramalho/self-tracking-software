@@ -28,9 +28,9 @@ const LookingForApPage: React.FC = () => {
   const variants = getThemeVariants(themeColors.raw);
 
   const hasPlans =
-    userData?.planIds &&
-    userData?.planIds.length &&
-    userData?.planIds.length > 0;
+    userData?.plans &&
+    userData?.plans.length &&
+    userData?.plans.length > 0;
 
   if (hasPlans && userData?.lookingForAp && isPushGranted) {
     router.push("/ap-search");

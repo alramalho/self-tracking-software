@@ -608,7 +608,7 @@ const ProfilePage: React.FC = () => {
                         activityEntryTimezone={entry.timezone || undefined}
                         activityEntryComments={entry.comments}
                         activityMeasure={activity?.measure || ""}
-                        isoDate={entry.date}
+                        date={entry.date}
                         description={entry.description || undefined}
                         daysUntilExpiration={
                           entry.imageExpiresAt
@@ -673,7 +673,7 @@ const ProfilePage: React.FC = () => {
           activityEntry={{
             id: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.id,
             quantity: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.quantity,
-            date: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.date,
+            date: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.date.toISOString(),
             activityId: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.activityId,
             description: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.description || undefined,
           }}

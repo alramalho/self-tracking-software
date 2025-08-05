@@ -1,45 +1,25 @@
-import { cn } from "@/lib/utils";
-import {
-  PlanMilestone,
-  PlanMilestoneCriteria,
-  PlanMilestoneCriteriaGroup,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
-import { useQuery } from "@tanstack/react-query";
-import { useApiWithAuth } from "@/api";
-import { Loader2, Minus, Plus, Pencil } from "lucide-react";
-import { useEffect, useCallback, useState } from "react";
+import { Minus, Plus, Pencil } from "lucide-react";
+import { useState, useMemo } from "react";
 import { Button } from "./ui/button";
 import { toast } from "react-hot-toast";
-
-interface MilestoneProgress {
-  milestone_id: string;
-  description: string;
-  date: string;
-  progress: number;
-  is_completed: boolean;
-  criteria_progress: Array<{
-    type: "criterion" | "group";
-    activityId?: string;
-    quantity?: number;
-    current_quantity?: number;
-    progress: number;
-    junction?: "AND" | "OR";
-    criteria_progress?: Array<any>;
-  }>;
-}
-
-interface NextMilestoneResponse {
-  plan_id: string;
-  next_milestone: MilestoneProgress | null;
-}
+import { modifyManualMilestone } from "@/app/actions";
+import { MilestoneCriteria, PlanMilestone } from "@prisma/types";
+import { Badge } from "./ui/badge";
 
 interface MilestoneOverviewProps {
   planId: string;
   milestones: PlanMilestone[];
   onEdit?: () => void;
+}
+
+interface CriterionProgress {
+  activityId: string;
+  quantity: number;
+  currentQuantity: number;
+  progress: number;
 }
 
 export function MilestoneOverview({
@@ -48,151 +28,133 @@ export function MilestoneOverview({
   onEdit,
 }: MilestoneOverviewProps) {
   const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
   const currentUserDataQuery = useCurrentUserDataQuery();
-  const api = useApiWithAuth();
-  const [optimisticProgress, setOptimisticProgress] = useState<number | null>(
-    null
-  );
+  const {data: userData} = currentUserDataQuery;
+  const plan = userData?.plans.find(p => p.id === planId);
+  const [optimisticProgress, setOptimisticProgress] = useState<number | null>(null);
 
-  const {
-    data: milestoneResponse,
-    isLoading,
-    refetch,
-  } = useQuery<NextMilestoneResponse>({
-    queryKey: ["milestoneProgress", planId],
-    queryFn: async () => {
-      const response = await api.get(
-        `/calculate-plan-milestone-progress/${planId}`
-      );
-      return response.data;
-    },
-    enabled: !!planId && milestones?.length > 0,
-  });
+  // Function to calculate automatic milestone progress
+  const calculateAutoMilestoneProgress = useMemo(() => {
+    return (milestone: PlanMilestone): { progress: number; criteriaProgress: CriterionProgress[] } => {
+      if (!milestone.criteria || !milestone.criteria.items || !userData?.activityEntries) {
+        return { progress: milestone.progress || 0, criteriaProgress: [] };
+      }
 
-  const updateProgress = async (newProgress: number) => {
-    const toastId = toast.loading("Saving progress...");
-    const nextMilestone = milestoneResponse?.next_milestone;
-    if (!nextMilestone) {
-      toast.dismiss(toastId);
-      return;
-    }
+      // Get milestone date range (from beginning of time to milestone date)
+      const milestoneDate = new Date(milestone.date);
+      const startDate = new Date(0);
 
-    try {
-      const milestone = milestones.find(
-        (m) =>
-          m.description === nextMilestone.description &&
-          format(new Date(m.date), "yyyy-MM-dd") ===
-            format(new Date(nextMilestone.date), "yyyy-MM-dd")
-      );
-
-      if (milestone) {
-        milestone.progress = newProgress;
-        await api.post(`/plans/${planId}/update`, {
-          data: { milestones },
+      const criteriaProgress: CriterionProgress[] = milestone.criteria.items.map((item) => {
+        // Find relevant activity entries for this criterion
+        const relevantEntries = userData.activityEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return (
+            entry.activityId === item.activityId &&
+            entryDate >= startDate &&
+            entryDate <= milestoneDate
+          );
         });
-        await currentUserDataQuery.refetch();
-        toast.success("Progress saved", { id: toastId });
-        await refetch();
+
+        const currentQuantity = relevantEntries.reduce((sum, entry) => sum + entry.quantity, 0);
+        const progress = Math.min(100, (currentQuantity / item.quantity) * 100);
+
+        return {
+          activityId: item.activityId,
+          quantity: item.quantity,
+          currentQuantity,
+          progress,
+        };
+      });
+
+      // Calculate overall progress based on junction type
+      const overallProgress = criteriaProgress.length > 0 
+        ? milestone.criteria.junction === "AND"
+          ? Math.min(...criteriaProgress.map(c => c.progress))  // AND: all must be complete
+          : Math.max(...criteriaProgress.map(c => c.progress))  // OR: any can be complete
+        : milestone.progress || 0;
+
+      return { progress: overallProgress, criteriaProgress };
+    };
+  }, [userData?.activityEntries]);
+
+  // Find the current milestone (first non-completed one)
+  const currentMilestone = useMemo(() => {
+    if (!milestones?.length) return null;
+    
+    // Sort milestones by date
+    const sortedMilestones = [...milestones].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Find first non-completed milestone (progress < 100)
+    const nextMilestone = sortedMilestones.find(m => (m.progress || 0) < 100);
+    
+    // If all milestones are completed, return the last one
+    return nextMilestone || sortedMilestones[sortedMilestones.length - 1];
+  }, [milestones]);
+
+  const handleProgressChange = async (delta: number) => {
+    if (!currentMilestone) return;
+
+    const toastId = toast.loading("Updating progress...");
+    
+    try {
+      const result = await modifyManualMilestone(currentMilestone.id, delta);
+      
+      if (result.success) {
+        toast.success("Progress updated", { id: toastId });
+        await currentUserDataQuery.refetch(); // Refresh data
+        setOptimisticProgress(null);
+      } else {
+        toast.error(result.error || "Failed to update progress", { id: toastId });
       }
     } catch (error) {
-      toast.error("Failed to save progress", { id: toastId });
-      await refetch();
-      setOptimisticProgress(null);
+      toast.error("Failed to update progress", { id: toastId });
     }
   };
 
-  // Refetch milestone progress when userData changes
-  useEffect(() => {
-    refetch();
-  }, [userData, refetch]);
-
-  if (!milestones || milestones.length === 0) return null;
-  if (isLoading)
-    return (
-      <div className="flex justify-center">
-        <Loader2 className="w-6 h-6 animate-spin" />
-      </div>
-    );
-  if (!milestoneResponse?.next_milestone) return null;
-
-  const nextMilestone = milestoneResponse.next_milestone;
-  const milestone = milestones.find(
-    (m) =>
-      m.description === nextMilestone.description &&
-      format(new Date(m.date), "yyyy-MM-dd") ===
-        format(new Date(nextMilestone.date), "yyyy-MM-dd")
-  );
-  const serverProgress =
-    nextMilestone.criteria_progress?.length > 0
-      ? nextMilestone.progress
-      : milestone?.progress ?? 0;
-  const progress = optimisticProgress ?? serverProgress;
-  const isComplete = nextMilestone.is_completed || progress >= 100;
-  const isManualProgress = !nextMilestone.criteria_progress?.length;
-
-  const handleProgressChange = (increment: boolean) => {
-    const step = 10;
-    const newProgress = Math.min(
-      Math.max(progress + (increment ? step : -step), 0),
-      100
-    );
-    if (newProgress !== progress) {
-      setOptimisticProgress(newProgress);
+  // Calculate progress for the current milestone
+  const milestoneCalculation = useMemo(() => {
+    if (!currentMilestone) return null;
+    
+    const isManualMilestone = !currentMilestone.criteria;
+    
+    if (isManualMilestone) {
+      return {
+        progress: optimisticProgress ?? (currentMilestone.progress || 0),
+        criteriaProgress: [],
+        isManualMilestone: true,
+      };
+    } else {
+      const autoCalc = calculateAutoMilestoneProgress(currentMilestone);
+      return {
+        progress: autoCalc.progress,
+        criteriaProgress: autoCalc.criteriaProgress,
+        isManualMilestone: false,
+      };
     }
-  };
+  }, [currentMilestone, optimisticProgress, calculateAutoMilestoneProgress]);
 
-  const handleSave = () => {
-    if (optimisticProgress !== null) {
-      updateProgress(optimisticProgress);
-    }
-  };
+  if (!currentMilestone || !milestoneCalculation) return null;
 
-  // Helper function to recursively render criteria and groups
-  const renderCriteriaOrGroup = (criterionProgress: any, level = 0) => {
-    if (criterionProgress.type === "criterion") {
-      const activity = userData?.activities?.find(
-        (a) => a.id === criterionProgress.activityId
-      );
-      if (!activity) return null;
-
-      return (
-        <div
-          className="text-sm text-gray-600"
-          style={{ marginLeft: `${level * 16}px` }}
-        >
-          {activity.emoji} {criterionProgress.quantity} {activity.measure} of{" "}
-          {activity.title}
-          {criterionProgress.current_quantity > 0 &&
-            ` (${criterionProgress.current_quantity} done)`}
-        </div>
-      );
-    }
-
-    if (criterionProgress.type === "group") {
-      return (
-        <div style={{ marginLeft: `${level * 16}px` }}>
-          <div className="text-sm font-medium text-gray-700">
-            {criterionProgress.junction === "AND" ? "All of:" : "Any of:"}
-          </div>
-          <div className="space-y-1">
-            {criterionProgress.criteria_progress.map((c: any, i: number) => (
-              <div key={i}>{renderCriteriaOrGroup(c, level + 1)}</div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
+  const { progress: currentProgress, criteriaProgress, isManualMilestone } = milestoneCalculation;
+  const isComplete = currentProgress >= 100;
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-4">
       <div className="flex flex-row items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <span className="text-4xl">⛳️</span>
-          <h2 className="text-xl font-semibold mt-2">Next Milestone</h2>
+          <h2 className="text-xl font-semibold">Next Milestone</h2>
+          {isManualMilestone ? (
+            <Badge variant="outline" className="text-xs bg-yellow-200 text-yellow-800 border-yellow-800">
+              Manual
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs bg-green-200 text-green-800 border-green-800">
+              Automatic
+            </Badge>
+          )}
         </div>
         {onEdit && (
           <Button
@@ -210,57 +172,41 @@ export function MilestoneOverview({
         <div className="flex items-start justify-between">
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold">
-              {nextMilestone.description || "Untitled Milestone"}
+              {currentMilestone.description || "Untitled Milestone"}
             </h3>
             <p className="text-sm text-gray-500">
-              Due {format(new Date(nextMilestone.date), "MMM d, yyyy")}
+              Due {format(new Date(currentMilestone.date), "MMM d, yyyy")}
             </p>
           </div>
-          <span className="text-4xl">
-            {nextMilestone.criteria_progress?.[0]?.activityId
-              ? userData?.activities?.find(
-                  (a) => a.id === nextMilestone.criteria_progress[0].activityId
-                )?.emoji
-              : "📍"}
-          </span>
+          <span className="text-4xl">📍</span>
         </div>
 
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Progress</span>
-            <span className="font-medium">{Math.round(progress)}%</span>
+            <span className="font-medium">{Math.round(currentProgress)}%</span>
           </div>
           <Progress
-            value={progress}
+            value={currentProgress}
             className="h-2"
             indicatorColor={isComplete ? "bg-green-500" : "bg-blue-500"}
           />
-          {isManualProgress && (
+          {isManualMilestone && (
             <div className="flex items-center justify-between gap-3 mt-2">
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => handleProgressChange(false)}
+                onClick={() => handleProgressChange(-10)}
                 className="h-8 w-8 rounded-full"
-                disabled={progress <= 0}
+                disabled={currentProgress <= 0}
               >
                 <Minus className="h-4 w-4" />
               </Button>
-              {optimisticProgress !== null && optimisticProgress !== serverProgress && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSave}
-                  className="px-3 h-8 text-xs font-medium"
-                >
-                  Save Changes
-                </Button>
-              )}
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => handleProgressChange(true)}
-                disabled={progress >= 100}
+                onClick={() => handleProgressChange(10)}
+                disabled={currentProgress >= 100}
                 className="h-8 w-8 rounded-full"
               >
                 <Plus className="h-4 w-4" />
@@ -269,13 +215,24 @@ export function MilestoneOverview({
           )}
         </div>
 
-        {nextMilestone.criteria_progress?.length > 0 && (
+        {!isManualMilestone && criteriaProgress.length > 0 && (
           <div className="space-y-2">
-            {nextMilestone.criteria_progress?.map(
-              (criterion: any, index: number) => (
-                <div key={index}>{renderCriteriaOrGroup(criterion)}</div>
-              )
-            )}
+            <h4 className="text-sm font-medium text-gray-700">Criteria {currentMilestone.criteria?.junction ? `(${currentMilestone.criteria?.junction})` : ""}:</h4>
+            {criteriaProgress.map((criterion, index) => {
+              const activity = userData?.activities?.find(a => a.id === criterion.activityId);
+              if (!activity) return null;
+
+              return (
+                <div key={index} className="text-sm text-gray-600 flex items-center justify-between">
+                  <span>
+                    {activity.emoji} {criterion.quantity} {activity.measure} of {activity.title}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {criterion.currentQuantity}/{criterion.quantity} ({Math.round(criterion.progress)}%)
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

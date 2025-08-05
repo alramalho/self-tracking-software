@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "../services/aiService";
 import { notificationService } from "../services/notificationService";
+import { z } from "zod";
 
 const router = Router();
 
@@ -259,7 +260,7 @@ router.post(
       // Use AI to generate sessions based on goal and activities
       const sessionsResult = await generatePlanSessions({
         goal,
-        finishingDate: finishingDate,
+        finishingDate,
         activities,
         description,
         existingPlan: existing_plan,
@@ -339,7 +340,7 @@ router.post(
 // Helper function to generate plan sessions using AI
 async function generatePlanSessions(params: {
   goal: string;
-  finishingDate?: string;
+  finishingDate?: Date;
   activities: any[];
   description?: string;
   existingPlan?: any;
@@ -354,28 +355,126 @@ async function generatePlanSessions(params: {
       (endDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
     );
 
-    // Use AI to generate smart session planning
-    const systemPrompt = `You are an expert fitness and wellness coach. Generate a progressive training plan.
-    Create sessions that:
-    - Progress gradually in intensity/quantity
-    - Are realistic and achievable
-    - Consider rest days and recovery
-    - Distribute activities across the timeline
-    ${params.description ? `Additional instructions: ${params.description}` : ""}`;
+    const currentDate =
+      startDate.toISOString().split("T")[0] +
+      ", " +
+      startDate.toLocaleDateString("en-US", { weekday: "long" });
+    const finishingDateStr = endDate.toISOString().split("T")[0];
 
-    const prompt = `Create a ${weeks}-week plan for goal: "${params.goal}"
-    Available activities: ${params.activities.map((a) => `${a.title} (${a.measure})`).join(", ")}
-    ${params.existingPlan ? `Existing plan context: ${JSON.stringify(params.existingPlan)}` : ""}
-    
-    Generate sessions with dates, activity assignments, quantities, and descriptive guides.`;
+    let introduction: string;
+    if (params.existingPlan && params.description) {
+      // Get existing sessions for context (limit to first 10)
+      const existingSessions = params.existingPlan.sessions?.slice(0, 10) || [];
+      const sessionContext = existingSessions
+        .map((s: any) => {
+          const activity = params.activities.find((a) => a.id === s.activityId);
+          const sessionDate = new Date(s.date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            weekday: "long",
+          });
+          return `–${activity?.title || "Unknown"} (${s.quantity} ${activity?.measure || "units"}) on ${sessionDate}`;
+        })
+        .join("\n");
 
-    // For now, generate basic sessions (would use full AI in production)
-    const sessions = generateBasicSessions({
-      activities: params.activities,
-      weeks,
-      startDate,
-      goal: params.goal,
+      introduction = `You are a plan coach assistant. You are coaching with the plan '${params.goal}'
+Your task is to generate an adapted plan based on this edit description: \n-${params.description}\n
+Here are the CURRENT plan next 10 sessions for reference:
+${sessionContext}
+
+You must use this information thoughtfully as the basis for your plan generation. In regards to that:
+The plan has the finishing date of ${finishingDateStr} and today is ${currentDate}.
+Additional requirements:`;
+    } else {
+      introduction = `You will act as a personal coach for the goal of ${params.goal}.\nThe plan has the finishing date of ${finishingDateStr} and today is ${currentDate}.`;
+    }
+
+    const systemPrompt = `${introduction}
+No date should be before today (${currentDate}).
+You must develop a progressive plan over the course of ${weeks} weeks.
+Keep the activities to a minimum.
+The plan should be progressive (intensities or recurrence of activities should increase over time).
+The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
+It is an absolute requirement that all present sessions activity names are contained in the list of activities.
+
+Please only include these activities in plan:
+${params.activities.map((a) => `- ${a.title} (${a.measure})`).join("\n")}`;
+
+    let userPrompt = `Please generate me a plan to achieve the goal of ${params.goal} by ${finishingDateStr}.`;
+    if (params.description) {
+      userPrompt += `\nAdditional description: ${params.description}`;
+    }
+
+    // Define the schema for AI response
+    const { z } = await import("zod");
+    const GeneratedSession = z.object({
+      date: z.string(),
+      activity_name: z
+        .string()
+        .describe(
+          "The name of the activity to be performed. Should have no emoji to match exactly with the activity title."
+        ),
+      quantity: z
+        .number()
+        .describe(
+          "The quantity of the activity to be performed. Directly related to the activity and should be measured in the same way."
+        ),
+      descriptive_guide: z.string(),
     });
+
+    const GeneratedSessionWeek = z.object({
+      week_number: z.number(),
+      reasoning: z
+        .string()
+        .describe(
+          "A step by step thinking outlining the week's outlook given current and leftover progress. Must be deep and reflective."
+        ),
+      sessions: z
+        .array(GeneratedSession)
+        .describe("List of sessions for this week."),
+    });
+
+    const GenerateSessionsResponse = z.object({
+      reasoning: z
+        .string()
+        .describe(
+          "A reflection on what is the goal and how does that affect the sessions progression."
+        ),
+      weeks: z
+        .array(GeneratedSessionWeek)
+        .describe("List of weeks with their sessions."),
+    });
+
+    // Use AI service to generate structured response
+    const response = await aiService.generateStructuredResponse(
+      userPrompt,
+      GenerateSessionsResponse,
+      systemPrompt
+    );
+
+    // Convert generated sessions to the expected format
+    const sessions = [];
+    for (const week of response.weeks) {
+      logger.info(
+        `Week ${week.week_number}. Has ${week.sessions.length} sessions.`
+      );
+      for (const session of week.sessions) {
+        // Find matching activity
+        const activity = params.activities.find(
+          (a) => a.title.toLowerCase() === session.activity_name.toLowerCase()
+        );
+
+        if (activity) {
+          sessions.push({
+            date: session.date,
+            activityId: activity.id,
+            descriptive_guide: session.descriptive_guide,
+            quantity: session.quantity,
+          });
+        }
+      }
+    }
 
     return { sessions };
   } catch (error) {
@@ -384,7 +483,13 @@ async function generatePlanSessions(params: {
     return {
       sessions: generateBasicSessions({
         activities: params.activities,
-        weeks: 8,
+        weeks: Math.ceil(
+          (new Date(
+            params.finishingDate || Date.now() + 8 * 7 * 24 * 60 * 60 * 1000
+          ).getTime() -
+            new Date().getTime()) /
+            (7 * 24 * 60 * 60 * 1000)
+        ),
         startDate: new Date(),
         goal: params.goal,
       }),
