@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { twMerge } from "tailwind-merge";

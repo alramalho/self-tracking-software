@@ -1,4 +1,4 @@
-import { useUserPlan, Activity, MetricEntry } from "@/contexts/UserPlanContext";
+import { useUserPlan, Activity, MetricEntry } from "@/contexts/UserGlobalContext";
 
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 const MINIMUM_ENTRIES = 7;

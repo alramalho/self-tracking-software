@@ -4,7 +4,7 @@ import {
   PlanMilestoneCriteria,
   PlanMilestoneCriteriaGroup,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";

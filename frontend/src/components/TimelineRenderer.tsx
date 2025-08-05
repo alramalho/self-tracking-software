@@ -1,11 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import {
   useUserPlan,
-  ActivityEntry,
-  Activity,
-  User,
-  TaggedActivityEntry,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import {
   differenceInDays,
@@ -25,16 +21,11 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { Activity, User, ActivityEntry, Plan } from "@prisma/client";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { toast } from "react-hot-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "./ui/button";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
-import AINotification from "./AINotification";
-import AppleLikePopover from "./AppleLikePopover";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { AccountabilityStepCard } from "./AccountabilityStepCard";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
 import {
   Collapsible,
   CollapsibleContent,
@@ -42,6 +33,8 @@ import {
 } from "./ui/collapsible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { HydratedUser } from "@/app/actions";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -78,7 +71,7 @@ const TimelineRenderer: React.FC<{
   }
 
 
-  if (!userData?.user?.friendIds?.length) {
+  if (!userData?.friends?.length) {
 
     return (
       <>
@@ -227,45 +220,47 @@ const TimelineRenderer: React.FC<{
       {timelineDataQuery.isFetched &&
         timelineData?.recommendedActivities &&
         timelineData?.recommendedUsers &&
-        sortedEntries.map((entry: TaggedActivityEntry) => {
-          const activity: Activity | undefined =
-            timelineData?.recommendedActivities?.find(
-              (a: Activity) => a.id === entry.activityId
-            );
+        sortedEntries.map((entry) => {
+          const activity = entry.activity;
           const user: User | undefined = timelineData?.recommendedUsers?.find(
             (u: User) => u.id === activity?.userId
           );
           if (!activity) return null;
 
           const daysUntilExpiration =
-            entry.image && entry.image.expires_at
-              ? differenceInDays(new Date(entry.image.expires_at), new Date())
+            entry.imageUrl && entry.imageExpiresAt
+              ? differenceInDays(new Date(entry.imageExpiresAt), new Date())
               : 0;
           const hasImageExpired =
-            !entry.image ||
-            !entry.image.expires_at ||
-            new Date(entry.image.expires_at) < new Date();
+            !entry.imageUrl ||
+            !entry.imageExpiresAt ||
+            new Date(entry.imageExpiresAt) < new Date();
 
           return (
             <React.Fragment key={entry.id}>
               <ActivityEntryPhotoCard
                 key={entry.id}
-                imageUrl={entry.image?.url}
+                imageUrl={entry.imageUrl || undefined}
                 activityEntryId={entry.id}
                 activityTitle={activity.title}
                 activityEmoji={activity.emoji || ""}
                 activityEntryQuantity={entry.quantity}
-                activityEntryReactions={entry.reactions || {}}
-                activityEntryTimezone={entry.timezone}
-                activityEntryComments={entry.comments}
+                activityEntryReactions={entry.reactions.reduce((acc, reaction) => {
+                  if (reaction.user.username) {
+                    acc[reaction.emoji] = [reaction.user.username];
+                  }
+                  return acc;
+                }, {} as Record<string, string[]>)}
+                activityEntryTimezone={entry.timezone || undefined}
+                activityEntryComments={entry.comments || []}
                 activityMeasure={activity.measure}
                 isoDate={entry.date}
-                description={entry.description}
-                userPicture={user?.picture}
+                description={entry.description || undefined}
+                userPicture={user?.picture || undefined}
                 daysUntilExpiration={daysUntilExpiration}
                 hasImageExpired={hasImageExpired}
-                userName={user?.name}
-                userUsername={user?.username}
+                userName={user?.name || undefined}
+                userUsername={user?.username || undefined}
                 onAvatarClick={() => {
                   router.push(`/profile/${user?.username}`);
                 }}
@@ -273,14 +268,14 @@ const TimelineRenderer: React.FC<{
                   router.push(`/profile/${user?.username}`);
                 }}
               />
-              {entry.isWeekFinisher && isInCurrentWeek(entry.date) && (
+              {/* {entry.isWeekFinisher && isInCurrentWeek(entry.date) && (
                 <WeeklyCompletionCard
                   key={`${entry.id}-completion`}
                   small
                   username={user?.name}
                   planName={entry.planFinishedName}
                 />
-              )}
+              )} */}
             </React.Fragment>
           );
         })}

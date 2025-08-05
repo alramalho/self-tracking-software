@@ -5,7 +5,7 @@ import {
 } from "./DynamicUISuggester";
 import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
-import { Activity, ApiPlan, PlanMilestone, useUserPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan, PlanMilestone, useUserPlan } from "@/contexts/UserGlobalContext";
 
 // Interface for plan extraction response
 interface PlanExtractionsResponse extends BaseExtractionResponse {

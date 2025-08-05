@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Activity, ActivityEntry } from "@/contexts/UserPlanContext";
+import { Activity, ActivityEntry } from "@/contexts/UserGlobalContext";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 import { isSameDay, format } from "date-fns";
 import { parseISO } from "date-fns";
@@ -123,7 +123,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
+      <div className="bg-white p-6 rounded-2xl border-2 overflow-x-auto">
         <div className="flex items-center space-x-3 mb-4">
             <span className="text-lg font-semibold text-gray-800">
               Non-plan activities

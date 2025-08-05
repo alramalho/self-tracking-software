@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,7 +7,6 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-        
 
 model User {
   id                              String             @id @default(cuid())
@@ -24,7 +22,6 @@ model User {
   lastActiveAt                    DateTime?
   email                           String             @unique
   createdAt                       DateTime           @default(now())
-  deleted                         Boolean            @default(false)
   deletedAt                       DateTime?
   isPwaInstalled                  Boolean            @default(false)
   isPwaNotificationsEnabled       Boolean            @default(false)
@@ -54,17 +51,15 @@ model User {
   metricEntries           MetricEntry[]
   moodReports             MoodReport[]
   plans                   Plan[]
-  messages                Message[]         @relation("MessageSender")
-  receivedMessages        Message[]         @relation("MessageRecipient")
+  messages                Message[]
   notifications           Notification[]
   friendRequestsSent      FriendRequest[]   @relation("FriendRequestSender")
   friendRequestsReceived  FriendRequest[]   @relation("FriendRequestRecipient")
   planInvitationsSent     PlanInvitation[]  @relation("PlanInvitationSender")
   planInvitationsReceived PlanInvitation[]  @relation("PlanInvitationRecipient")
-  planGroupMemberships    PlanGroupMember[]
+  planGroupMemberships    PlanGroup[]
   recommendations         Recommendation[]
-  comments                Comment[]
-  reactions               Reaction[]
+  reactionsSent           Reaction[]
 
   // Many-to-many relationships
   friends       User[]  @relation("UserFriends")
@@ -88,11 +83,10 @@ model Activity {
   deletedAt       DateTime?
 
   // Relations
-  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entries           ActivityEntry[]
-  planSessions      PlanSession[]
-  planActivities    PlanActivity[]
-  milestoneCriteria PlanMilestoneCriteria[]
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries               ActivityEntry[]
+  planSessions          PlanSession[] // sessions on which activity is mentioned
+  plans                 Plan[]
 
   @@map("activities")
 }
@@ -102,7 +96,7 @@ model ActivityEntry {
   activityId  String
   userId      String
   quantity    Int
-  date        String // YYYY-MM-DD format
+  date        DateTime @db.Date
   createdAt   DateTime  @default(now())
   description String?
   deletedAt   DateTime?
@@ -127,7 +121,7 @@ model ActivityEntry {
 model Reaction {
   id              String   @id @default(cuid())
   activityEntryId String
-  userId          String
+  userId          String // user that added the reaction
   emoji           String
   createdAt       DateTime @default(now())
 
@@ -151,7 +145,6 @@ model Comment {
 
   // Relations
   activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("comments")
 }
@@ -176,7 +169,7 @@ model MetricEntry {
   userId             String
   metricId           String
   rating             Int
-  date               String // YYYY-MM-DD format
+  date               DateTime @db.Date
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   description        String?
@@ -193,7 +186,7 @@ model MetricEntry {
 model MoodReport {
   id        String   @id @default(cuid())
   userId    String
-  date      String // YYYY-MM-DD format
+  date      DateTime @db.Date
   score     String // 0-10 rating as string
   createdAt DateTime @default(now())
 
@@ -209,7 +202,7 @@ model Plan {
   planGroupId                String?
   goal                       String
   emoji                      String?
-  finishingDate              String?           // YYYY-MM-DD format
+  finishingDate              DateTime? @db.Date
   createdAt                  DateTime          @default(now())
   deletedAt                  DateTime?
   durationType               PlanDurationType?
@@ -228,41 +221,25 @@ model Plan {
   user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   planGroup              PlanGroup?       @relation(fields: [planGroupId], references: [id])
   sessions               PlanSession[]
-  coachSuggestedSessions PlanSession[]    @relation("CoachSuggestedSessions")
-  activities             PlanActivity[]
+  activities             Activity[]
   invitations            PlanInvitation[]
   milestones             PlanMilestone[]
 
   @@map("plans")
 }
 
-model PlanActivity {
-  id         String   @id @default(cuid())
-  planId     String
-  activityId String
-  createdAt  DateTime @default(now())
-
-  // Relations
-  plan     Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-
-  @@unique([planId, activityId])
-  @@map("plan_activities")
-}
-
 model PlanSession {
   id               String   @id @default(cuid())
   planId           String
+  isCoachSuggested Boolean  @default(false)
   activityId       String
-  date             String // YYYY-MM-DD format
+  date             DateTime @db.Date
   descriptiveGuide String   @default("")
   quantity         Int
-  isCoachSuggested Boolean  @default(false)
   createdAt        DateTime @default(now())
 
   // Relations
   plan               Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-  coachSuggestedPlan Plan?    @relation("CoachSuggestedSessions", fields: [planId], references: [id], map: "plan_sessions_coach_plan_fkey")
   activity           Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
   @@map("plan_sessions")
@@ -271,46 +248,15 @@ model PlanSession {
 model PlanMilestone {
   id          String   @id @default(cuid())
   planId      String
-  date        String // YYYY-MM-DD format
+  date        DateTime @db.Date
   description String
-  progress    Int? // 0-100 percentage
+  progress    Int? 
+  criteria    Json?    // Much simpler structure
   createdAt   DateTime @default(now())
 
-  // Relations
-  plan     Plan                         @relation(fields: [planId], references: [id], onDelete: Cascade)
-  criteria PlanMilestoneCriteria[]
-  groups   PlanMilestoneCriteriaGroup[]
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@map("plan_milestones")
-}
-
-model PlanMilestoneCriteria {
-  id          String   @id @default(cuid())
-  milestoneId String
-  groupId     String?
-  activityId  String
-  quantity    Int
-  createdAt   DateTime @default(now())
-
-  // Relations
-  milestone PlanMilestone               @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
-  group     PlanMilestoneCriteriaGroup? @relation(fields: [groupId], references: [id])
-  activity  Activity                    @relation(fields: [activityId], references: [id], onDelete: Cascade)
-
-  @@map("plan_milestone_criteria")
-}
-
-model PlanMilestoneCriteriaGroup {
-  id          String           @id @default(cuid())
-  milestoneId String
-  junction    CriteriaJunction @default(AND)
-  createdAt   DateTime         @default(now())
-
-  // Relations
-  milestone PlanMilestone           @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
-  criteria  PlanMilestoneCriteria[]
-
-  @@map("plan_milestone_criteria_groups")
 }
 
 model PlanGroup {
@@ -318,27 +264,10 @@ model PlanGroup {
   createdAt DateTime @default(now())
 
   // Relations
+  members User[]
   plans   Plan[]
-  members PlanGroupMember[]
 
   @@map("plan_groups")
-}
-
-model PlanGroupMember {
-  id          String   @id @default(cuid())
-  planGroupId String
-  userId      String
-  username    String
-  name        String
-  picture     String?
-  createdAt   DateTime @default(now())
-
-  // Relations
-  planGroup PlanGroup @relation(fields: [planGroupId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([planGroupId, userId])
-  @@map("plan_group_members")
 }
 
 model PlanInvitation {
@@ -375,18 +304,15 @@ model FriendRequest {
 }
 
 model Message {
-  id            String   @id @default(cuid())
-  senderId      String
-  senderName    String
-  recipientId   String
-  recipientName String
-  text          String
-  createdAt     DateTime @default(now())
+  id        String      @id @default(cuid())
+  userId    String
+  role      MessageRole
+  content   String
+  createdAt DateTime    @default(now())
 
   // Relations
-  sender    User             @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  recipient User             @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  emotions  MessageEmotion[]
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emotions MessageEmotion[]
 
   @@map("messages")
 }
@@ -443,7 +369,6 @@ model Recommendation {
 
   @@map("recommendations")
 }
-
 
 // Enums
 enum PlanType {
@@ -525,4 +450,9 @@ enum NotificationType {
 
 enum RecommendationObjectType {
   USER
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }

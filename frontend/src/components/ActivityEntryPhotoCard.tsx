@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Edit, Smile, BadgeCheck } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
-import { useUserPlan, Comment } from "@/contexts/UserPlanContext";
+import { useUserPlan, Comment } from "@/contexts/UserGlobalContext";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import {
@@ -109,8 +109,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   );
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const currentUserUsername = userData?.user?.username;
-  const isOwnActivityEntry = userData?.user?.username === userUsername;
+  const currentUserUsername = userData?.username;
+  const isOwnActivityEntry = userData?.username === userUsername;
   const api = useApiWithAuth();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
@@ -121,8 +121,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
 
-  const { useUserPlanType } = usePaidPlan();
-  const { data: userPlanType } = useUserPlanType(userUsername || "");
+  const { isUserPremium } = usePaidPlan();
 
   const [comments, setComments] = useState<Comment[]>(
     activityEntryComments || []
@@ -154,7 +153,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   // todo: use react query
   async function getReactions() {
     const response = await api.get(
-      `/activity-entries/${activityEntryId}/reactions`
+      `/activities/activity-entries/${activityEntryId}/reactions`
     );
     setReactions(response.data.reactions);
   }
@@ -180,7 +179,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       adds.clear(); // Clear pending adds
 
       await toast.promise(
-        api.post(`/activity-entries/${activityEntryId}/reactions`, {
+        api.post(`/activities/activity-entries/${activityEntryId}/reactions`, {
           operation: "add",
           emojis: emojisToAdd,
         }),
@@ -198,7 +197,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       removes.clear(); // Clear pending removes
 
       await toast.promise(
-        api.post(`/activity-entries/${activityEntryId}/reactions`, {
+        api.post(`/activities/activity-entries/${activityEntryId}/reactions`, {
           operation: "remove",
           emojis: emojisToRemove,
         }),
@@ -483,18 +482,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <Avatar
                 className={twMerge(
                   "w-8 h-8",
-                  userPlanType !== "FREE" &&
+                  isUserPremium &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  userPlanType !== "FREE" && variants.ring
+                  isUserPremium && variants.ring
                 )}
                 onClick={onAvatarClick}
               >
                 <AvatarImage src={userPicture} alt={userName || ""} />
                 <AvatarFallback>{(userName || "U")[0]}</AvatarFallback>
               </Avatar>
-              {userPlanType && userPlanType !== "FREE" && (
+              {isUserPremium && (
                 <div className="absolute -bottom-[6px] -right-[6px]">
-                  <PlanBadge planType={userPlanType} size={18} />
+                  <PlanBadge planType={userData?.planType || "FREE"} size={18} />
                 </div>
               )}
             </div>

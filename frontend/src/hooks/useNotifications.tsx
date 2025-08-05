@@ -11,8 +11,8 @@ import React, {
 import { isNotifySupported } from "@/app/swSupport";
 import { useApiWithAuth } from "@/api";
 import { arrayBufferToBase64Async } from "@/lib/utils";
-import { useUserPlan } from "@/contexts/UserPlanContext";
-import type { Notification } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import type { Notification } from "@/contexts/UserGlobalContext";
 import { useSession } from "@clerk/nextjs";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 

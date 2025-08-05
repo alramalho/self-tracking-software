@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Message } from "@/contexts/UserPlanContext";
+import { Message } from "@/contexts/UserGlobalContext";
 import { EmotionPie } from "./EmotionPie";
 import {
   Select,

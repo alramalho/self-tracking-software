@@ -9,7 +9,7 @@ import PullToRefresh from "react-simple-pull-to-refresh";
 import { MetricIsland } from "@/components/MetricIsland";
 import { TodaysNoteSection } from "@/components/TodaysNoteSection";
 import { MetricWeeklyView } from "@/components/MetricWeeklyView";
-
+import { MetricEntry } from "@prisma/client";
 import {
   Search,
   Bell,
@@ -31,9 +31,7 @@ import {
 import { useSession } from "@clerk/nextjs";
 import {
   useUserPlan,
-  MetricEntry,
-  convertApiPlanToPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -45,6 +43,7 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 import { ScanFace } from "lucide-react";
 import { useUpgrade } from "@/contexts/UpgradeContext";
+import { getUser } from "./actions";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
@@ -76,7 +75,7 @@ const HomePage: React.FC = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { clearGeneralNotifications } = useNotifications();
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
   const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
@@ -95,6 +94,16 @@ const HomePage: React.FC = () => {
     router.push(`/profile/${user.username}`);
     setIsSearchOpen(false);
   };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      console.log(`Fetching user ${userData?.id}`);
+      const user = await getUser(userData?.id || "");
+      
+      console.log(`User fetched from prisma! ${user?.id}`);
+    };
+    fetchUser();
+  }, [userData]);
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);

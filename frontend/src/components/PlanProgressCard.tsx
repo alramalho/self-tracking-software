@@ -10,7 +10,7 @@ import {
   Plan,
   Notification,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { AnimatePresence } from "framer-motion";
 import Confetti from "react-confetti-boom";
 import { useThemeColors } from "@/hooks/useThemeColors";

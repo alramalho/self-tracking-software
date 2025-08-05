@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { parseISO, startOfWeek, endOfWeek } from "date-fns";
-import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan } from "@/contexts/UserGlobalContext";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/PlanProgressContext/lib";

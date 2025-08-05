@@ -1,5 +1,5 @@
 import { useApiWithAuth } from "@/api";
-import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan } from "@/contexts/UserGlobalContext";
 
 interface PlanGenerationConfig {
   goal: string;

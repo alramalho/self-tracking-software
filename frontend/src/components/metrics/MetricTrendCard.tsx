@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { MetricEntry } from "@/contexts/UserPlanContext";
+import { MetricEntry } from "@/contexts/UserGlobalContext";
 
 interface MetricTrendCardProps {
   metric: {

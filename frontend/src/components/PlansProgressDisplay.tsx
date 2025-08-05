@@ -18,7 +18,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   isExpanded,
   className,
 }) => {
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { plansProgress } = usePlanProgress();
 
   // Helper function to check if a streak was achieved this week

@@ -2,8 +2,12 @@
   "name": "prisma",
   "version": "0.0.0",
   "private": true,
+  "exports": {
+    "./types": "./types/index.ts"
+  },
   "scripts": {
     "db:generate": "prisma generate",
+    "db:reset": "ts-node reset-db.ts",
     "db:push": "prisma db push",
     "db:seed": "ts-node seed.ts",
     "clean": "rm -rf node_modules"

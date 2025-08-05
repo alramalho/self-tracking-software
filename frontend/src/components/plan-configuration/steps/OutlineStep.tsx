@@ -1,18 +1,19 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plan, ApiPlan, Activity } from "@/contexts/UserPlanContext";
 import { OutlineOption } from "../OutlineOption";
 import NumberInput from "../NumberInput";
-import { Loader2 } from "lucide-react";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { parseISO } from "date-fns";
 import Number from "../Number";
 import { Textarea } from "@/components/ui/textarea";
+import { PlanOutlineType } from "@prisma/client";
+import { Activity, PlanSession } from "@prisma/client";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 
 interface OutlineStepProps {
-  outlineType: "specific" | "timesPerWeek" | undefined;
-  setOutlineType: (type: "specific" | "timesPerWeek") => void;
+  outlineType: PlanOutlineType;
+  setOutlineType: (type: PlanOutlineType) => void;
   timesPerWeek: number;
   setTimesPerWeek: (times: number) => void;
   title: string;
@@ -47,7 +48,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
     setIsGenerating(false);
   };
 
-  const convertToDisplayPlan = (sessions: ApiPlan["sessions"]): Plan => {
+  const convertToDisplayPlan = (sessions: PlanSession[]) => {
     return {
       sessions: sessions.map((session) => ({
         ...session,
@@ -57,7 +58,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
       })),
       finishingDate: finishingDate ? parseISO(finishingDate) : undefined,
       goal: title,
-    } as Plan;
+    };
   };
 
   return (
@@ -75,19 +76,19 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
           <OutlineOption
             title="✅ Weekly Count Goal"
             description="A simple, self-serve plan with just a number of sessions per week"
-            selected={outlineType === "timesPerWeek"}
-            onClick={() => setOutlineType("timesPerWeek")}
+            selected={outlineType === "TIMES_PER_WEEK"}
+            onClick={() => setOutlineType("TIMES_PER_WEEK")}
           />
           <OutlineOption
             title="📆 Specific Schedule"
             description="A more complex AI generated plan with a specific weekly schedule"
-            selected={outlineType === "specific"}
-            onClick={() => setOutlineType("specific")}
+            selected={outlineType === "SPECIFIC"}
+            onClick={() => setOutlineType("SPECIFIC")}
           />
         </div>
       </div>
 
-      {outlineType === "timesPerWeek" && (
+      {outlineType === "TIMES_PER_WEEK" && (
         <div className="space-y-4">
           <Label>How many times per week?</Label>
           <NumberInput
@@ -99,7 +100,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
         </div>
       )}
 
-      {outlineType === "specific" && (
+      {outlineType === "SPECIFIC" && (
         <div className="space-y-4">
           <div>
             <label
@@ -137,12 +138,13 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
               </Button>
             )}
 
+            {/* // note to self, we were fixing update + create plan flows */}
             {generatedSessions && (
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Generated Schedule</h4>
                 <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 p-4">
                   <PlanSessionsRenderer
-                    plan={convertToDisplayPlan(generatedSessions)}
+                    plan={convertToDisplayPlan(generatedSessions) as unknown as CompletePlan}
                     activities={activities}
                   />
                 </div>

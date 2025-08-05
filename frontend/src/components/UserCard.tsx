@@ -5,7 +5,7 @@ import {
   ApiPlan,
   User,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { posthog } from "posthog-js";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
@@ -49,7 +49,7 @@ const UserCard: React.FC<UserCardProps> = ({
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const { data: userData, isLoading: isLoadingUser } = currentUserQuery;
-  const currentUser = userData?.user;
+  const currentUser = userData;
   const isOwnUser = currentUser?.id === user.id;
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [message, setMessage] = useState("");

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   Activity,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { Loader2, Plus } from "lucide-react";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";

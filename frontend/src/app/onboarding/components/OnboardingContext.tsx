@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePostHog } from "posthog-js/react";
 import React, {

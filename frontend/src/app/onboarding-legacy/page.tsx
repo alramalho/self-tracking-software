@@ -18,7 +18,7 @@ import { useApiWithAuth } from "@/api";
 import { PlanCreatorDynamicUI } from "@/components/PlanCreatorDynamicUI";
 import { toast } from "sonner";
 import { toast as hotToast } from "react-hot-toast";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -294,7 +294,7 @@ function AccountabilityPartnerStep({
   const queryClient = useQueryClient();
   const currentUserReceivedFriendRequests =
     currentUserQuery.data?.receivedFriendRequests;
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const currentUserSentFriendRequests =
     currentUserQuery.data?.sentFriendRequests;
   const router = useRouter();
@@ -386,13 +386,13 @@ export default function OnboardingPage() {
     }
 
     if (hasLoadedUserData) {
-      if (!userData?.user?.profile) {
+      if (!userData?.profile) {
         setStep(1);
       } else if (!userData?.plans?.length) {
         setStep(3);
       } else if (!userData?.activityEntries?.length) {
         setStep(4);
-      } else if (!userData?.user?.lookingForAp) {
+      } else if (!userData?.lookingForAp) {
         setStep(5);
       } else {
         onFinish(true);

@@ -107,20 +107,16 @@ router.post(
       // Store AI and user messages in memory for context
       if (ai_message) {
         await memoryService.writeMessage({
-          text: ai_message,
-          senderName: "Jarvis",
-          senderId: "0",
-          recipientName: req.user!.name || req.user!.username || "User",
-          recipientId: req.user!.id,
+          role: "ASSISTANT",
+          content: ai_message,
+          userId: req.user!.id,
         });
       }
 
       await memoryService.writeMessage({
-        text: message,
-        senderName: req.user!.name || req.user!.username || "User",
-        senderId: req.user!.id,
-        recipientName: "Jarvis",
-        recipientId: "0",
+        role: "USER",
+        content: message,
+        userId: req.user!.id,
       });
 
       // Get user context for better AI analysis
@@ -195,19 +191,15 @@ router.post(
 
       // Store AI and user messages in memory for context
       await memoryService.writeMessage({
-        text: ai_message,
-        senderName: "Jarvis",
-        senderId: "0",
-        recipientName: req.user!.name || req.user!.username || "User",
-        recipientId: req.user!.id,
+        content: ai_message,
+        userId: req.user!.id,
+        role: "ASSISTANT",
       });
 
       await memoryService.writeMessage({
-        text: message,
-        senderName: req.user!.name || req.user!.username || "User",
-        senderId: req.user!.id,
-        recipientName: "Jarvis",
-        recipientId: "0",
+        content: message,
+        userId: req.user!.id,
+        role: "USER",
       });
 
       // Get user context for better AI analysis
@@ -229,11 +221,9 @@ router.post(
 
       // Store AI response message
       await memoryService.writeMessage({
-        text: questionAnalysis.follow_up_message,
-        senderName: "Jarvis",
-        senderId: "0",
-        recipientName: req.user!.name || req.user!.username || "User",
-        recipientId: req.user!.id,
+        content: questionAnalysis.follow_up_message,
+        userId: req.user!.id,
+        role: "ASSISTANT",
       });
 
       const response: any = {
@@ -283,11 +273,9 @@ router.post(
 
       // Store user message in memory for context
       await memoryService.writeMessage({
-        text: message,
-        senderName: req.user!.name || req.user!.username || "User",
-        senderId: req.user!.id,
-        recipientName: "Jarvis",
-        recipientId: "0",
+        content: message,
+        userId: req.user!.id,
+        role: "USER",
       });
 
       // Get conversation history for better context
@@ -319,11 +307,9 @@ router.post(
 
         // Store AI response in memory
         await memoryService.writeMessage({
-          text: planResult.ai_response,
-          senderName: "Jarvis",
-          senderId: "0",
-          recipientName: req.user!.name || req.user!.username || "User",
-          recipientId: req.user!.id,
+          content: planResult.ai_response,
+          userId: req.user!.id,
+          role: "ASSISTANT",
         });
 
         response.message = planResult.ai_response;
@@ -388,7 +374,10 @@ router.post(
       });
 
       res.json({
-        message: questionAnalysis.follow_up_message,
+        message: questionAnalysis.all_answered
+          ? `Thank you for the information! ✅ I have updated your profile with '${updates.profile}'. Want to make any changes?`
+          : questionAnalysis.follow_up_message,
+        all_answered: questionAnalysis.all_answered,
         user: updatedUser,
         question_checks: questionAnalysis.results,
         analysis: {

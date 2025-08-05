@@ -9,7 +9,7 @@ import {
   Metric,
   MetricEntry,
   Activity,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { ArrowDown, Loader2 } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
@@ -56,7 +56,7 @@ export default function InsightsDashboardPage() {
   const { setShowUpgradePopover } = useUpgrade();
   const hasLoadedMetricsAndEntries =
     metricsAndEntriesQuery.isSuccess && !!metricsAndEntriesData;
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
 
   if (isUserOnFreePlan) {
@@ -124,7 +124,7 @@ export default function InsightsDashboardPage() {
           <AINotification
             messages={[
               `Hey ${
-                userData?.user?.username ?? "there"
+                userData?.username ?? "there"
               }! Welcome to your insights page.`,
               "Here you can track how your activities affect metrics like happiness, energy and productivity.",
               "You can easily log your day by sending me a voice message about how you felt!",

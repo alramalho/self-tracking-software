@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useClipboard } from "./useClipboard";
 import { useShare } from "./useShare";
 import { toast } from "sonner";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 
 export function useShareOrCopy() {
   const [copied, copyToClipboard] = useClipboard();
@@ -22,7 +22,7 @@ export function useShareOrCopy() {
   };
 
   const shareOrCopyReferralLink = async () => {
-    const link = `https://app.tracking.so/join/${userData?.user?.username}`;
+    const link = `https://app.tracking.so/join/${userData?.username}`;
 
     await shareOrCopyLink(link);
   };

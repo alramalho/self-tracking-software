@@ -1,4 +1,4 @@
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { getThemeVariants, ThemeVariants } from "@/utils/theme";
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "./useLocalStorage";

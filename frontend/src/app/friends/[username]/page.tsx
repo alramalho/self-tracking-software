@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { User, useUserPlan } from "@/contexts/UserPlanContext";
+import { User, useUserPlan } from "@/contexts/UserGlobalContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useApiWithAuth } from "@/api";
@@ -24,7 +24,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
   const router = useRouter();
 
   const isOwnProfile =
-    params.username === selfUserData?.user?.username;
+    params.username === selfuserData?.username;
 
   const handleUserClick = (user: UserSearchResult) => {
     setIsSearchOpen(false);
@@ -36,7 +36,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
   >({
     queryKey: ["friends", params.username],
     queryFn: async () => {
-      if (userData?.userFriends) {
+      if (userDataFriends) {
         return userData.userFriends;
       }
       const response = await api.get(`/friends/${params.username}`);

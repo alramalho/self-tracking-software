@@ -19,7 +19,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@prisma/client": ["../prisma/node_modules/@prisma/client"]
+      "@prisma/client": ["../prisma/node_modules/@prisma/client"],
+      "@prisma/types": ["../prisma/types"]
     },
     "types": ["@serwist/next/typings"],
     "forceConsistentCasingInFileNames": true

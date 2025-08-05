@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Check, X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { ApiPlan } from '@/contexts/UserPlanContext';
+import { ApiPlan } from '@/contexts/UserGlobalContext';
 
 interface PlanTimesPerWeekUpdateBannerProps {
   timesPerWeek: number;

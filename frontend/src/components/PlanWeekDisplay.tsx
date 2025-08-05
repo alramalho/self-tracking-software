@@ -13,7 +13,7 @@ import {
   Plan,
   PlanSession,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { usePlanProgress, PlanProgressData } from "@/contexts/PlanProgressContext";
 import {
   isWeekCompleted as checkIsWeekCompleted,

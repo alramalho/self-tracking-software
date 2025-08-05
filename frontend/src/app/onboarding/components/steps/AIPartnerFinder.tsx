@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
-import { PlanType } from "@/contexts/UserPlanContext";
+import { PlanType } from "@/contexts/UserGlobalContext";
 import { Button } from "@/components/ui/button";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { PlanProgressCard } from "@/components/PlanProgressCard";

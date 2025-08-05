@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Check, X, Loader2 } from 'lucide-react';
 import { useApiWithAuth } from '@/api';
 import toast from 'react-hot-toast';
-import { ActivityEntry } from '@/contexts/UserPlanContext';
-import { Activity } from '@/contexts/UserPlanContext';
+import { ActivityEntry } from '@/contexts/UserGlobalContext';
+import { Activity } from '@/contexts/UserGlobalContext';
 
 interface ActivitySuggestionProps {
   activity: Activity;

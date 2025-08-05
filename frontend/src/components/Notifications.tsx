@@ -1,5 +1,5 @@
 import React from "react";
-import { useUserPlan, Notification } from "@/contexts/UserPlanContext";
+import { useUserPlan, Notification } from "@/contexts/UserGlobalContext";
 import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";

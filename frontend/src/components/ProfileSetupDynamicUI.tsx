@@ -50,6 +50,7 @@ export function ProfileSetupDynamicUI({
         placeholder="For example, I'm a 25-year-old male software engineer who loves to code and build things."
         questionPrefix="You should include"
         questionsChecks={questionsChecks}
+        canSubmit={() => allQuestionsAnswered}
         onSubmit={async (text) => {
           const response = await api.post(
             "/ai/update-user-profile-from-questions",
@@ -65,7 +66,7 @@ export function ProfileSetupDynamicUI({
 
           return response.data;
         }}
-        renderChildren={renderChildrenContent}
+        // renderChildren={renderChildrenContent}
       />
     </div>
   );

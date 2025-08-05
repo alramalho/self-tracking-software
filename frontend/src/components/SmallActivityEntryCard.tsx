@@ -8,7 +8,7 @@ import {
   isSameDay,
 } from "date-fns";
 import { Check } from "lucide-react";
-import { ActivityEntry, Activity } from "@/contexts/UserPlanContext";
+import { ActivityEntry, Activity } from "@/contexts/UserGlobalContext";
 import { cn } from "@/lib/utils";
 
 export interface Entry {
