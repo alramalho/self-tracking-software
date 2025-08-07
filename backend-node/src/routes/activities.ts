@@ -136,17 +136,31 @@ router.post('/log-activity', requireAuth, upload.single('photo'), async (req: Au
 
         logger.info(`Photo uploaded successfully to S3: ${s3Path}`);
 
-        // Create notifications for friends about the photo
-        const friends = await prisma.user.findUnique({
+        // Create notifications for connected users about the photo
+        const userWithConnections = await prisma.user.findUnique({
           where: { id: req.user!.id },
-          include: { friends: true },
+          include: { 
+            connectionsFrom: {
+              where: { status: 'ACCEPTED' },
+              include: { to: true }
+            },
+            connectionsTo: {
+              where: { status: 'ACCEPTED' },
+              include: { from: true }
+            }
+          },
         });
 
-        if (friends?.friends) {
-          for (const friend of friends.friends) {
+        if (userWithConnections) {
+          const connectedUsers = [
+            ...userWithConnections.connectionsFrom.map(conn => conn.to),
+            ...userWithConnections.connectionsTo.map(conn => conn.from)
+          ];
+          
+          for (const connectedUser of connectedUsers) {
             const message = `${req.user!.username} logged ${quantity} ${activity.measure} of ${activity.emoji} ${activity.title} with a photo 📸!`;
             await notificationService.createAndProcessNotification({
-              userId: friend.id,
+              userId: connectedUser.id,
               message,
               type: 'INFO',
               relatedData: {

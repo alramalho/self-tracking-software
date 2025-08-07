@@ -74,44 +74,38 @@ export async function getCurrentUserData() {
         moodReports: {
           orderBy: { createdAt: "desc" },
         },
-        friendRequestsSent: {
-          include: {
-            recipient: {
-              select: { id: true, username: true, name: true, picture: true },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
-        friendRequestsReceived: {
-          include: {
-            sender: {
-              select: { id: true, username: true, name: true, picture: true },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
         notifications: {
           orderBy: { createdAt: "desc" },
         },
-        friends: {
-          select: { id: true, username: true, name: true, picture: true },
+        connectionsFrom: {
+          where: { status: "ACCEPTED" },
+          include: {
+            to: {
+              select: { id: true, username: true, name: true, picture: true },
+            },
+          },
         },
-        friendOf: {
-          select: { id: true, username: true, name: true, picture: true },
+        connectionsTo: {
+          where: { status: "ACCEPTED" },
+          include: {
+            from: {
+              select: { id: true, username: true, name: true, picture: true },
+            },
+          },
         },
       },
     });
 
-    const allFriends = [
-      ...(userData?.friends || []),
-      ...(userData?.friendOf || []),
+    const allConnections = [
+      ...(userData?.connectionsFrom?.map((conn) => conn.to) || []),
+      ...(userData?.connectionsTo?.map((conn) => conn.from) || []),
     ];
 
     if (!userData) {
       throw new Error("User not found");
     }
 
-    return { ...userData, friends: allFriends };
+    return { ...userData, friends: allConnections };
   } catch (error) {
     console.error("Error fetching current user data:", error);
     throw error;
@@ -229,8 +223,21 @@ export async function getUserData(username: string) {
           orderBy: { createdAt: "desc" },
         },
         planGroupMemberships: true,
-        friends: {
-          select: { id: true, username: true, name: true, picture: true },
+        connectionsFrom: {
+          where: { status: "ACCEPTED" },
+          include: {
+            to: {
+              select: { id: true, username: true, name: true, picture: true },
+            },
+          },
+        },
+        connectionsTo: {
+          where: { status: "ACCEPTED" },
+          include: {
+            from: {
+              select: { id: true, username: true, name: true, picture: true },
+            },
+          },
         },
       },
     });
@@ -239,6 +246,11 @@ export async function getUserData(username: string) {
       throw new Error("User not found");
     }
 
+    const allConnections = [
+      ...(userData?.connectionsFrom?.map((conn) => conn.to) || []),
+      ...(userData?.connectionsTo?.map((conn) => conn.from) || []),
+    ];
+
     // Filter activity entries based on privacy settings
     // const filteredActivityEntries = userData.activityEntries.filter(
     //   (ae) =>
@@ -246,7 +258,7 @@ export async function getUserData(username: string) {
     //     ae.activity.privacySettings === null
     // );
 
-    return userData;
+    return { ...userData, friends: allConnections };
   } catch (error) {
     console.error("Error fetching user data:", error);
     throw error;
@@ -308,11 +320,18 @@ export async function getTimelineData() {
     const updatedUser = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        friends: true,
+        connectionsFrom: {
+          where: { status: "ACCEPTED" },
+          include: { to: true },
+        },
+        connectionsTo: {
+          where: { status: "ACCEPTED" },
+          include: { from: true },
+        },
       },
     });
 
-    if (!updatedUser || updatedUser.friends.length === 0) {
+    if (!updatedUser) {
       return {
         recommendedActivityEntries: [],
         recommendedActivities: [],
@@ -320,7 +339,20 @@ export async function getTimelineData() {
       };
     }
 
-    const userIds = [updatedUser.id, ...updatedUser.friends.map((f) => f.id)];
+    const connectedUsers = [
+      ...updatedUser.connectionsFrom.map((conn) => conn.to),
+      ...updatedUser.connectionsTo.map((conn) => conn.from),
+    ];
+
+    if (connectedUsers.length === 0) {
+      return {
+        recommendedActivityEntries: [],
+        recommendedActivities: [],
+        recommendedUsers: [],
+      };
+    }
+
+    const userIds = [updatedUser.id, ...connectedUsers.map((f) => f.id)];
 
     const activityEntries = await prisma.activityEntry.findMany({
       where: {
@@ -359,7 +391,7 @@ export async function getTimelineData() {
     return {
       recommendedActivityEntries: activityEntries,
       recommendedActivities: activities,
-      recommendedUsers: [updatedUser, ...updatedUser.friends],
+      recommendedUsers: [updatedUser, ...connectedUsers],
     };
   } catch (error) {
     console.error("Error fetching timeline data:", error);

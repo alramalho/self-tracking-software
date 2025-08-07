@@ -71,8 +71,8 @@ const ProfilePage: React.FC = () => {
   const searchParams = useSearchParams();
   const username = params.username as string;
   const currentUser = currentUserQuery.data;
-  const currentUserSentFriendRequests = currentUser?.friendRequestsSent;
-  const currentUserReceivedFriendRequests = currentUser?.friendRequestsReceived;
+  const currentUserSentConnectionRequests = currentUser?.connectionsFrom?.filter(conn => conn.status === 'PENDING');
+  const currentUserReceivedConnectionRequests = currentUser?.connectionsTo?.filter(conn => conn.status === 'PENDING');
   const profileDataQuery = useUserDataQuery(username);
   const { isSuccess: isProfileDataSuccesfullyLoaded, data: profileData } =
     profileDataQuery;
@@ -143,37 +143,37 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleSendFriendRequest = async () => {
+  const handleSendConnectionRequest = async () => {
     if (profileData) {
       await toast.promise(
         (async () => {
-          await api.post(`/users/send-friend-request/${profileData!.id}`);
+          await api.post(`/users/send-connection-request/${profileData!.id}`);
           await currentUserQuery.refetch();
         })(),
         {
-          loading: "Sending friend request...",
-          success: "Friend request sent successfully",
-          error: "Failed to send friend request",
+          loading: "Sending connection request...",
+          success: "Connection request sent successfully",
+          error: "Failed to send connection request",
         }
       );
     }
   };
 
-  const handleFriendRequest = async (action: "accept" | "reject") => {
+  const handleConnectionRequest = async (action: "accept" | "reject") => {
     if (profileData) {
-      const request = currentUserReceivedFriendRequests?.find(
-        (req) => req.senderId === profileData.id && req.status === "PENDING"
+      const request = currentUserReceivedConnectionRequests?.find(
+        (req) => req.fromId === profileData.id
       );
       if (request) {
         await toast.promise(
           (async () => {
-            await api.post(`${action}-friend-request/${request.id}`);
+            await api.post(`/users/${action}-connection-request/${request.id}`);
             await currentUserQuery.refetch();
           })(),
           {
-            loading: `${action}ing friend request...`,
-            success: `Friend request ${action}ed`,
-            error: `Failed to ${action} friend request`,
+            loading: `${action}ing connection request...`,
+            success: `Connection request ${action}ed`,
+            error: `Failed to ${action} connection request`,
           }
         );
       }
@@ -206,17 +206,17 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const hasPendingReceivedFriendRequest = () => {
-    return currentUserReceivedFriendRequests?.some(
+  const hasPendingReceivedConnectionRequest = () => {
+    return currentUserReceivedConnectionRequests?.some(
       (request) =>
-        request.senderId === profileData?.id && request.status === "PENDING"
+        request.fromId === profileData?.id
     );
   };
 
-  const hasPendingSentFriendRequest = () => {
-    return currentUserSentFriendRequests?.some(
+  const hasPendingSentConnectionRequest = () => {
+    return currentUserSentConnectionRequests?.some(
       (request) =>
-        request.recipientId === profileData?.id && request.status === "PENDING"
+        request.toId === profileData?.id
     );
   };
 
@@ -286,7 +286,7 @@ const ProfilePage: React.FC = () => {
           <div className="flex flex-col items-center gap-4">
             {!isOnesOwnProfile && !isFriend() && (
               <>
-                {hasPendingReceivedFriendRequest() ? (
+                {hasPendingReceivedConnectionRequest() ? (
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-sm text-muted-foreground">
                       has sent you a friend request
@@ -296,7 +296,7 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-green-600 bg-green-50"
-                        onClick={() => handleFriendRequest("accept")}
+                        onClick={() => handleConnectionRequest("accept")}
                       >
                         <Check className="h-6 w-6" />
                       </Button>
@@ -304,7 +304,7 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-red-600 bg-red-50"
-                        onClick={() => handleFriendRequest("reject")}
+                        onClick={() => handleConnectionRequest("reject")}
                       >
                         <X className="h-6 w-6" />
                       </Button>
@@ -314,10 +314,10 @@ const ProfilePage: React.FC = () => {
                   <Button
                     variant="outline"
                     className="flex items-center space-x-2"
-                    onClick={handleSendFriendRequest}
-                    disabled={hasPendingSentFriendRequest()}
+                    onClick={handleSendConnectionRequest}
+                    disabled={hasPendingSentConnectionRequest()}
                   >
-                    {hasPendingSentFriendRequest() ? (
+                    {hasPendingSentConnectionRequest() ? (
                       <>
                         <Check size={20} />
                         <span>Request Sent</span>

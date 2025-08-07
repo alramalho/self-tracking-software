@@ -39,9 +39,9 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
       if (userData?.friends) {
         return userData.friends;
       }
-      const response = await api.get(`/friends/${params.username}`);
+      const response = await api.get(`/connections/${params.username}`);
       userDataQuery.refetch();
-      return response.data.friends;
+      return response.data.connections;
     },
     enabled: !!params.username,
   });

@@ -4,9 +4,9 @@ import {
   ActivityEntry,
   Plan,
   PlanGroup,
-  FriendRequest,
   MoodReport,
   Recommendation,
+  Connection,
 } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { logger } from "../utils/logger";
@@ -79,7 +79,7 @@ export class UserService {
         id: {
           not: currentUserId,
         },
-        deleted: false,
+        deletedAt: null,
         username: {
           contains: searchTerm.toLowerCase(),
           mode: "insensitive",
@@ -102,132 +102,130 @@ export class UserService {
     }));
   }
 
-  async getUserFriends(userId: string): Promise<User[]> {
+  async getUserConnections(userId: string): Promise<User[]> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        friends: true,
-      },
-    });
-
-    return user?.friends || [];
-  }
-
-  async getFriendCount(userId: string): Promise<number> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        _count: {
-          select: { friends: true },
+        connectionsFrom: {
+          where: { status: "ACCEPTED" },
+          include: { to: true },
+        },
+        connectionsTo: {
+          where: { status: "ACCEPTED" },
+          include: { from: true },
         },
       },
     });
 
-    return user?._count.friends || 0;
+    if (!user) return [];
+
+    return [
+      ...user.connectionsFrom.map((conn) => conn.to),
+      ...user.connectionsTo.map((conn) => conn.from),
+    ];
   }
 
-  async sendFriendRequest(
-    senderId: string,
-    recipientId: string,
-    message?: string
-  ): Promise<FriendRequest> {
-    // Check if request already exists
-    const existingRequest = await prisma.friendRequest.findFirst({
+  async getConnectionCount(userId: string): Promise<number> {
+    const connectionsFrom = await prisma.connection.count({
       where: {
-        senderId,
-        recipientId,
-        status: "PENDING",
+        fromId: userId,
+        status: "ACCEPTED",
       },
     });
 
-    if (existingRequest) {
-      return existingRequest;
+    const connectionsTo = await prisma.connection.count({
+      where: {
+        toId: userId,
+        status: "ACCEPTED",
+      },
+    });
+
+    return connectionsFrom + connectionsTo;
+  }
+
+  async sendConnectionRequest(
+    fromId: string,
+    toId: string,
+    message?: string
+  ): Promise<Connection> {
+    // Check if connection already exists
+    const existingConnection = await prisma.connection.findUnique({
+      where: {
+        fromId_toId: {
+          fromId,
+          toId,
+        },
+      },
+    });
+
+    if (existingConnection) {
+      return existingConnection;
     }
 
-    return prisma.friendRequest.create({
+    return prisma.connection.create({
       data: {
-        senderId,
-        recipientId,
+        fromId,
+        toId,
         message,
         status: "PENDING",
       },
     });
   }
 
-  async acceptFriendRequest(
-    requestId: string
-  ): Promise<{ sender: User; recipient: User }> {
-    return prisma.$transaction(async (tx) => {
-      // Update request status
-      const friendRequest = await tx.friendRequest.update({
-        where: { id: requestId },
-        data: { status: "ACCEPTED" },
-        include: {
-          sender: true,
-          recipient: true,
-        },
-      });
-
-      // Add users as friends (many-to-many relationship)
-      await tx.user.update({
-        where: { id: friendRequest.senderId },
-        data: {
-          friends: {
-            connect: { id: friendRequest.recipientId },
-          },
-        },
-      });
-
-      await tx.user.update({
-        where: { id: friendRequest.recipientId },
-        data: {
-          friends: {
-            connect: { id: friendRequest.senderId },
-          },
-        },
-      });
-
-      return {
-        sender: friendRequest.sender,
-        recipient: friendRequest.recipient,
-      };
+  async acceptConnectionRequest(
+    connectionId: string
+  ): Promise<{ from: User; to: User }> {
+    const connection = await prisma.connection.update({
+      where: { id: connectionId },
+      data: { status: "ACCEPTED" },
+      include: {
+        from: true,
+        to: true,
+      },
     });
+
+    return {
+      from: connection.from,
+      to: connection.to,
+    };
   }
 
-  async rejectFriendRequest(requestId: string): Promise<User> {
-    const friendRequest = await prisma.friendRequest.update({
-      where: { id: requestId },
+  async rejectConnectionRequest(connectionId: string): Promise<User> {
+    const connection = await prisma.connection.update({
+      where: { id: connectionId },
       data: { status: "REJECTED" },
       include: {
-        sender: true,
+        from: true,
       },
     });
 
-    return friendRequest.sender;
+    return connection.from;
   }
 
-  async getPendingSentFriendRequests(userId: string): Promise<FriendRequest[]> {
-    return prisma.friendRequest.findMany({
-      where: {
-        senderId: userId,
-        status: "PENDING",
-      },
-      include: {
-        recipient: true,
-      },
-    });
-  }
-
-  async getPendingReceivedFriendRequests(
+  async getPendingSentConnectionRequests(
     userId: string
-  ): Promise<FriendRequest[]> {
-    return prisma.friendRequest.findMany({
+  ): Promise<Connection[]> {
+    return prisma.connection.findMany({
       where: {
-        recipientId: userId,
+        fromId: userId,
         status: "PENDING",
       },
       include: {
-        sender: true,
+        to: true,
+      },
+    });
+  }
+
+  async getPendingReceivedConnectionRequests(
+    userId: string
+  ): Promise<Connection[]> {
+    return prisma.connection.findMany({
+      where: {
+        toId: userId,
+        status: "PENDING",
+      },
+      include: {
+        from: true,
       },
     });
   }
@@ -236,48 +234,38 @@ export class UserService {
     userId: string,
     currentUserId: string
   ): Promise<any> {
-    const [
-      user,
-      activities,
-      activityEntries,
-      moodReports,
-      plans,
-      sentFriendRequests,
-      receivedFriendRequests,
-    ] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          friends: true,
-          friendRequestsSent: true,
-          friendRequestsReceived: true,
-        },
-      }),
-      prisma.activity.findMany({
-        where: { userId, deletedAt: null },
-      }),
-      prisma.activityEntry.findMany({
-        where: { userId, deletedAt: null },
-      }),
-      prisma.moodReport.findMany({
-        where: { userId },
-      }),
-      prisma.plan.findMany({
-        where: { userId, deletedAt: null },
-        include: {
-          activities: {
-            include: {
-              activity: true,
+    const [user, activities, activityEntries, moodReports, plans] =
+      await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          include: {
+            connectionsFrom: {
+              where: { status: "PENDING" },
+              include: { to: true },
+            },
+            connectionsTo: {
+              where: { status: "PENDING" },
+              include: { from: true },
             },
           },
-          sessions: true,
-        },
-      }),
-      userId === currentUserId ? this.getPendingSentFriendRequests(userId) : [],
-      userId === currentUserId
-        ? this.getPendingReceivedFriendRequests(userId)
-        : [],
-    ]);
+        }),
+        prisma.activity.findMany({
+          where: { userId, deletedAt: null },
+        }),
+        prisma.activityEntry.findMany({
+          where: { userId, deletedAt: null },
+        }),
+        prisma.moodReport.findMany({
+          where: { userId },
+        }),
+        prisma.plan.findMany({
+          where: { userId, deletedAt: null },
+          include: {
+            activities: true,
+            sessions: true,
+          },
+        }),
+      ]);
 
     // Plan groups will need to be fetched based on plan IDs
     const planGroups: PlanGroup[] = [];
@@ -356,11 +344,18 @@ export class UserService {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        friends: true,
+        connectionsFrom: {
+          where: { status: "ACCEPTED" },
+          include: { to: true },
+        },
+        connectionsTo: {
+          where: { status: "ACCEPTED" },
+          include: { from: true },
+        },
       },
     });
 
-    if (!user || user.friends.length === 0) {
+    if (!user) {
       return {
         recommended_activity_entries: [],
         recommended_activities: [],
@@ -368,7 +363,20 @@ export class UserService {
       };
     }
 
-    const userIds = [userId, ...user.friends.map((f) => f.id)];
+    const connectedUsers = [
+      ...user.connectionsFrom.map((conn) => conn.to),
+      ...user.connectionsTo.map((conn) => conn.from),
+    ];
+
+    if (connectedUsers.length === 0) {
+      return {
+        recommended_activity_entries: [],
+        recommended_activities: [],
+        recommended_users: [],
+      };
+    }
+
+    const userIds = [userId, ...connectedUsers.map((f) => f.id)];
 
     const activityEntries = await prisma.activityEntry.findMany({
       where: {
@@ -397,7 +405,7 @@ export class UserService {
     return {
       recommended_activity_entries: activityEntries,
       recommended_activities: activities,
-      recommended_users: [user, ...user.friends],
+      recommended_users: [user, ...connectedUsers],
     };
   }
 

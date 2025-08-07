@@ -37,7 +37,7 @@ async function deleteAllData() {
 
     await prisma.activity.deleteMany({});
 
-    await prisma.friendRequest.deleteMany({});
+    await prisma.connection.deleteMany({});
     await prisma.notification.deleteMany({});
     await prisma.recommendation.deleteMany({});
     await prisma.moodReport.deleteMany({});

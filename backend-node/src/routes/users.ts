@@ -32,53 +32,53 @@ usersRouter.get(
 );
 
 // Load users data
+// usersRouter.get(
+//   "/load-users-data",
+//   requireAuth,
+//   async (req: AuthenticatedRequest, res: Response) => {
+//     try {
+//       const { usernames } = req.query;
+//       const results: any = {};
+
+//       // If no usernames provided, return current user data
+//       if (!usernames) {
+//         const userData = await userService.loadSingleUserData(
+//           req.user!.id,
+//           req.user!.id
+//         );
+//         return res.json({ current: userData });
+//       }
+
+//       // Otherwise load data for specified usernames
+//       const usernamesList = (usernames as string).split(",");
+
+//       for (const username of usernamesList) {
+//         const user = await userService.getUserByUsername(
+//           username.toLowerCase()
+//         );
+//         if (!user) continue;
+
+//         const userData = await userService.loadSingleUserData(
+//           user.id,
+//           req.user!.id
+//         );
+//         results[username] = userData;
+//       }
+
+//       res.json(results);
+//     } catch (error) {
+//       logger.error("Failed to load multiple users data:", error);
+//       res.status(500).json({
+//         success: false,
+//         error: { message: "Failed to load user data" },
+//       });
+//     }
+//   }
+// );
+
+// Get user connections
 usersRouter.get(
-  "/load-users-data",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { usernames } = req.query;
-      const results: any = {};
-
-      // If no usernames provided, return current user data
-      if (!usernames) {
-        const userData = await userService.loadSingleUserData(
-          req.user!.id,
-          req.user!.id
-        );
-        return res.json({ current: userData });
-      }
-
-      // Otherwise load data for specified usernames
-      const usernamesList = (usernames as string).split(",");
-
-      for (const username of usernamesList) {
-        const user = await userService.getUserByUsername(
-          username.toLowerCase()
-        );
-        if (!user) continue;
-
-        const userData = await userService.loadSingleUserData(
-          user.id,
-          req.user!.id
-        );
-        results[username] = userData;
-      }
-
-      res.json(results);
-    } catch (error) {
-      logger.error("Failed to load multiple users data:", error);
-      res.status(500).json({
-        success: false,
-        error: { message: "Failed to load user data" },
-      });
-    }
-  }
-);
-
-// Get user friends
-usersRouter.get(
-  "/friends/:username",
+  "/connections/:username",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -97,20 +97,20 @@ usersRouter.get(
         }
       }
 
-      const friends = await userService.getUserFriends(user.id);
+      const connections = await userService.getUserConnections(user.id);
 
       res.json({
-        friends: friends.map((friend) => ({
-          picture: friend.picture,
-          username: friend.username,
-          name: friend.name,
+        connections: connections.map((connection) => ({
+          picture: connection.picture,
+          username: connection.username,
+          name: connection.name,
         })),
       });
     } catch (error) {
-      logger.error("Failed to get user friends:", error);
+      logger.error("Failed to get user connections:", error);
       res.status(500).json({
         success: false,
-        error: { message: "Failed to get user friends" },
+        error: { message: "Failed to get user connections" },
       });
     }
   }
@@ -195,19 +195,21 @@ usersRouter.get(
   }
 );
 
-// Get friend count
+// Get connection count
 usersRouter.get(
-  "/user/friend-count",
+  "/user/connection-count",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const friendCount = await userService.getFriendCount(req.user!.id);
-      res.json({ friendCount });
+      const connectionCount = await userService.getConnectionCount(
+        req.user!.id
+      );
+      res.json({ connectionCount });
     } catch (error) {
-      logger.error("Failed to get friend count:", error);
+      logger.error("Failed to get connection count:", error);
       res.status(500).json({
         success: false,
-        error: { message: "Failed to get friend count" },
+        error: { message: "Failed to get connection count" },
       });
     }
   }
@@ -272,16 +274,16 @@ usersRouter.get(
   }
 );
 
-// Send friend request
+// Send connection request
 usersRouter.post(
-  "/send-friend-request/:recipientId",
+  "/send-connection-request/:recipientId",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { recipientId } = req.params;
       const body = FriendRequestSchema.parse(req.body);
 
-      const friendRequest = await userService.sendFriendRequest(
+      const connectionRequest = await userService.sendConnectionRequest(
         req.user!.id,
         recipientId,
         body.message
@@ -291,9 +293,9 @@ usersRouter.post(
       const notification =
         await notificationService.createAndProcessNotification({
           userId: recipientId,
-          message: `${req.user!.name} sent you a friend request${body.message ? ` with the message: ${body.message}` : ""}`,
+          message: `${req.user!.name} sent you a connection request${body.message ? ` with the message: ${body.message}` : ""}`,
           type: "FRIEND_REQUEST",
-          relatedId: friendRequest.id,
+          relatedId: connectionRequest.id,
           relatedData: {
             id: req.user!.id,
             name: req.user!.name,
@@ -303,41 +305,41 @@ usersRouter.post(
         });
 
       res.json({
-        message: "Friend request sent successfully",
-        request: friendRequest,
+        message: "Connection request sent successfully",
+        request: connectionRequest,
         notification,
       });
     } catch (error) {
-      logger.error("Failed to send friend request:", error);
+      logger.error("Failed to send connection request:", error);
       res.status(400).json({
         success: false,
         error: {
           message:
             error instanceof Error
               ? error.message
-              : "Failed to send friend request",
+              : "Failed to send connection request",
         },
       });
     }
   }
 );
 
-// Accept friend request
+// Accept connection request
 usersRouter.post(
-  "/accept-friend-request/:request_id",
+  "/accept-connection-request/:request_id",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { request_id } = req.params;
 
-      const { sender, recipient } =
-        await userService.acceptFriendRequest(request_id);
+      const { from, to } =
+        await userService.acceptConnectionRequest(request_id);
 
       // Send notification to sender
       try {
         await notificationService.createAndProcessNotification({
-          userId: sender.id,
-          message: `${req.user!.name} accepted your friend request. You can now see their activities!`,
+          userId: from.id,
+          message: `${req.user!.name} accepted your connection request. You can now see their activities!`,
           type: "INFO",
           relatedId: request_id,
           relatedData: {
@@ -352,34 +354,34 @@ usersRouter.post(
       }
 
       res.json({
-        message: "Friend request accepted",
-        recipient,
+        message: "Connection request accepted",
+        recipient: to,
       });
     } catch (error) {
-      logger.error("Failed to accept friend request:", error);
+      logger.error("Failed to accept connection request:", error);
       res.status(400).json({
         success: false,
-        error: { message: "Failed to accept friend request" },
+        error: { message: "Failed to accept connection request" },
       });
     }
   }
 );
 
-// Reject friend request
+// Reject connection request
 usersRouter.post(
-  "/reject-friend-request/:request_id",
+  "/reject-connection-request/:request_id",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { request_id } = req.params;
 
-      const sender = await userService.rejectFriendRequest(request_id);
+      const sender = await userService.rejectConnectionRequest(request_id);
 
       // Send notification to sender
       try {
         await notificationService.createAndProcessNotification({
           userId: sender.id,
-          message: `${req.user!.name} rejected your friend request.`,
+          message: `${req.user!.name} rejected your connection request.`,
           type: "INFO",
           relatedId: request_id,
           relatedData: {
@@ -394,14 +396,14 @@ usersRouter.post(
       }
 
       res.json({
-        message: "Friend request rejected",
+        message: "Connection request rejected",
         sender,
       });
     } catch (error) {
-      logger.error("Failed to reject friend request:", error);
+      logger.error("Failed to reject connection request:", error);
       res.status(400).json({
         success: false,
-        error: { message: "Failed to reject friend request" },
+        error: { message: "Failed to reject connection request" },
       });
     }
   }
