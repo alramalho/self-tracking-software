@@ -49,19 +49,30 @@ async function generateDummyData() {
       users.push(user);
     }
 
-    // Set up friendships (Alex and E2E are friends, Alice referred by Alex)
-    await prisma.user.update({
-      where: { id: users[0].id }, // Alex
+    // Create connections (replaces the old friendship system)
+    // Alex and E2E are friends (accepted connection)
+    await prisma.connection.create({
       data: {
-        friends: { connect: { id: users[2].id } }, // Connect to E2E
-        referredUsers: { connect: { id: users[1].id } }, // Alice referred by Alex
+        fromId: users[0].id, // Alex
+        toId: users[2].id, // E2E
+        status: "ACCEPTED",
       },
     });
 
-    await prisma.user.update({
-      where: { id: users[2].id }, // E2E
+    // Alex and Alice are friends (accepted connection)
+    await prisma.connection.create({
       data: {
-        friends: { connect: { id: users[0].id } }, // Connect to Alex
+        fromId: users[0].id, // Alex
+        toId: users[1].id, // Alice
+        status: "ACCEPTED",
+      },
+    });
+
+    // Set up referral relationship (Alice referred by Alex)
+    await prisma.user.update({
+      where: { id: users[0].id }, // Alex
+      data: {
+        referredUsers: { connect: { id: users[1].id } }, // Alice referred by Alex
       },
     });
 
@@ -114,7 +125,6 @@ async function generateDummyData() {
       const currentDate = new Date(
         baseDate.getTime() + i * 3 * 24 * 60 * 60 * 1000
       );
-      const dateStr = currentDate.toISOString().split("T")[0]; // YYYY-MM-DD format
 
       // Simulate running on even-numbered entries
       if (i % 2 === 0) {
@@ -123,7 +133,7 @@ async function generateDummyData() {
             activityId: runningActivity.id,
             userId: users[0].id,
             quantity: 5,
-            date: dateStr,
+            date: currentDate,
           },
         });
         activityEntries.push(runEntry);
@@ -136,7 +146,7 @@ async function generateDummyData() {
             activityId: meditationActivity.id,
             userId: users[0].id,
             quantity: 15,
-            date: dateStr,
+            date: currentDate,
           },
         });
         activityEntries.push(meditationEntry);
@@ -153,7 +163,7 @@ async function generateDummyData() {
           userId: users[0].id,
           metricId: happinessMetric.id,
           rating: happinessRating,
-          date: dateStr,
+          date: currentDate,
         },
       });
       metricEntries.push(metricEntry);
@@ -166,7 +176,7 @@ async function generateDummyData() {
         userId: users[0].id,
         goal: "Run a marathon",
         emoji: "🏃",
-        finishingDate: finishingDate.toISOString().split("T")[0],
+        finishingDate: finishingDate,
         activities: {
           connect: { id: runningActivity.id },
         },
@@ -178,9 +188,7 @@ async function generateDummyData() {
         userId: users[1].id,
         goal: "Meditate daily",
         emoji: "🧘",
-        finishingDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        finishingDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
         activities: {
           connect: { id: meditationActivity.id },
         },
@@ -213,7 +221,7 @@ async function generateDummyData() {
         data: {
           planId: marathonPlan.id,
           activityId: runningActivity.id,
-          date: sessionDate.toISOString().split("T")[0],
+          date: sessionDate,
           descriptiveGuide: `Run ${5 + i} km`,
           quantity: 5 + i,
         },
@@ -227,7 +235,7 @@ async function generateDummyData() {
         data: {
           planId: meditationPlan.id,
           activityId: meditationActivity.id,
-          date: sessionDate.toISOString().split("T")[0],
+          date: sessionDate,
           descriptiveGuide: "Meditate for 15 minutes",
           quantity: 15,
         },
@@ -285,28 +293,33 @@ async function generateDummyData() {
       },
     });
 
-    // Create friend requests
-    const friendRequest1 = await prisma.friendRequest.create({
+    // Create pending connection requests (replaces friend requests)
+    const connectionRequest1 = await prisma.connection.create({
       data: {
-        senderId: users[1].id, // Alice
-        recipientId: users[0].id, // Alex
+        fromId: users[1].id, // Alice
+        toId: users[0].id, // Alex
+        status: "PENDING",
+        message:
+          "Hey Alex! Let's connect and track our fitness goals together! 💪",
       },
     });
 
-    const friendRequest2 = await prisma.friendRequest.create({
+    const connectionRequest2 = await prisma.connection.create({
       data: {
-        senderId: users[4].id, // Tomas
-        recipientId: users[0].id, // Alex
+        fromId: users[4].id, // Tomas
+        toId: users[0].id, // Alex
+        status: "PENDING",
+        message: "Hi Alex, I'd love to connect!",
       },
     });
 
-    // Create notifications for friend requests
+    // Create notifications for connection requests
     await prisma.notification.create({
       data: {
-        userId: friendRequest1.recipientId,
-        message: `${users[1].name} sent you a friend request`,
-        type: "FRIEND_REQUEST",
-        relatedId: friendRequest1.id,
+        userId: connectionRequest1.toId,
+        message: `${users[1].name} sent you a connection request`,
+        type: "FRIEND_REQUEST", // Keep the same type for backward compatibility
+        relatedId: connectionRequest1.id,
         relatedData: {
           id: users[1].id,
           name: users[1].name,
@@ -318,10 +331,10 @@ async function generateDummyData() {
 
     await prisma.notification.create({
       data: {
-        userId: friendRequest2.recipientId,
-        message: `${users[4].name} sent you a friend request`,
-        type: "FRIEND_REQUEST",
-        relatedId: friendRequest2.id,
+        userId: connectionRequest2.toId,
+        message: `${users[4].name} sent you a connection request`,
+        type: "FRIEND_REQUEST", // Keep the same type for backward compatibility
+        relatedId: connectionRequest2.id,
         relatedData: {
           id: users[4].id,
           name: users[4].name,
@@ -388,7 +401,15 @@ async function generateDummyData() {
       const userData = await prisma.user.findUnique({
         where: { id: user.id },
         include: {
-          friends: true,
+          // Get connections where user is either sender or receiver with ACCEPTED status
+          connectionsFrom: {
+            where: { status: "ACCEPTED" },
+            include: { to: true },
+          },
+          connectionsTo: {
+            where: { status: "ACCEPTED" },
+            include: { from: true },
+          },
           activities: {
             include: {
               entries: {
@@ -417,20 +438,25 @@ async function generateDummyData() {
 
       if (!userData) continue;
 
+      // Get all friends from both directions
+      const friends = [
+        ...userData.connectionsFrom.map((conn) => conn.to),
+        ...userData.connectionsTo.map((conn) => conn.from),
+      ];
+
       console.info(`\nUser: ${userData.name} (username: ${userData.username})`);
-      console.info(
-        `Friends: ${userData.friends.map((f) => f.name).join(", ")}`
-      );
+      console.info(`Friends: ${friends.map((f) => f.name).join(", ")}`);
 
       const pendingPlanInvitations = await prisma.planInvitation.count({
         where: { recipientId: userData.id, status: "PENDING" },
       });
-      const pendingFriendRequests = await prisma.friendRequest.count({
-        where: { recipientId: userData.id, status: "PENDING" },
+
+      const pendingConnectionRequests = await prisma.connection.count({
+        where: { toId: userData.id, status: "PENDING" },
       });
 
       console.info(`Pending Plan Invitations: ${pendingPlanInvitations}`);
-      console.info(`Pending Friend Requests: ${pendingFriendRequests}`);
+      console.info(`Pending Connection Requests: ${pendingConnectionRequests}`);
 
       console.info("Activities:");
       for (const activity of userData.activities) {

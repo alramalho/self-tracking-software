@@ -53,22 +53,39 @@ model User {
   plans                   Plan[]
   messages                Message[]
   notifications           Notification[]
-  friendRequestsSent      FriendRequest[]  @relation("FriendRequestSender")
-  friendRequestsReceived  FriendRequest[]  @relation("FriendRequestRecipient")
   planInvitationsSent     PlanInvitation[] @relation("PlanInvitationSender")
   planInvitationsReceived PlanInvitation[] @relation("PlanInvitationRecipient")
   planGroupMemberships    PlanGroup[]
   recommendations         Recommendation[]
   reactionsSent           Reaction[]
 
-  // Many-to-many relationships
-  friends       User[]  @relation("UserFriends")
-  friendOf      User[]  @relation("UserFriends")
+  // Connection relationships (replaces friend system)
+  connectionsFrom Connection[] @relation("ConnectionFrom")
+  connectionsTo   Connection[] @relation("ConnectionTo")
+
+  // Referral relationships
   referredUsers User[]  @relation("UserReferrals")
   referredBy    User?   @relation("UserReferrals", fields: [referredById], references: [id])
   referredById  String?
 
   @@map("users")
+}
+
+model Connection {
+  id        String           @id @default(cuid())
+  fromId    String
+  toId      String
+  status    ConnectionStatus @default(PENDING)
+  message   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime?        @updatedAt
+
+  // Relations
+  from User @relation("ConnectionFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   User @relation("ConnectionTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+  @@map("connections")
 }
 
 model Activity {
@@ -287,22 +304,6 @@ model PlanInvitation {
   @@map("plan_invitations")
 }
 
-model FriendRequest {
-  id          String           @id @default(cuid())
-  senderId    String
-  recipientId String
-  status      InvitationStatus @default(PENDING)
-  message     String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime?        @updatedAt
-
-  // Relations
-  sender    User @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
-  recipient User @relation("FriendRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-
-  @@map("friend_requests")
-}
-
 model Message {
   id        String      @id @default(cuid())
   userId    String
@@ -419,6 +420,13 @@ enum PlanState {
 enum CriteriaJunction {
   AND
   OR
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
 }
 
 enum InvitationStatus {
