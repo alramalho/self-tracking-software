@@ -255,9 +255,6 @@ export class UserService {
         prisma.activityEntry.findMany({
           where: { userId, deletedAt: null },
         }),
-        prisma.moodReport.findMany({
-          where: { userId },
-        }),
         prisma.plan.findMany({
           where: { userId, deletedAt: null },
           include: {

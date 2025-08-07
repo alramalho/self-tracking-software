@@ -40,7 +40,6 @@ async function deleteAllData() {
     await prisma.connection.deleteMany({});
     await prisma.notification.deleteMany({});
     await prisma.recommendation.deleteMany({});
-    await prisma.moodReport.deleteMany({});
 
     await prisma.user.deleteMany({});
 
