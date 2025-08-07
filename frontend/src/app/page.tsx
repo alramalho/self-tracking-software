@@ -85,7 +85,7 @@ const HomePage: React.FC = () => {
 
   const unreadNotifications =
     notificationsData.data?.notifications?.filter(
-      (n) => n.status !== "concluded" && n.type !== "engagement"
+      (n) => n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
     ) || [];
   const unreadNotificationsCount = unreadNotifications.length;
 
@@ -99,7 +99,7 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchUser = async () => {
       console.log(`Fetching user ${userData?.id}`);
-      const user = await getUser(userData?.id || "");
+      const user = await getUser();
       
       console.log(`User fetched from prisma! ${user?.id}`);
     };
@@ -373,11 +373,6 @@ const HomePage: React.FC = () => {
           title="Notifications"
           displayIcon={false}
         >
-          {unreadNotificationsCount == 0 && (
-            <div className="flex items-start flex-col justify-between mb-4">
-              <h2 className="text-xl font-semibold">✅ No new notifications</h2>
-            </div>
-          )}
           <Notifications />
         </AppleLikePopover>
 

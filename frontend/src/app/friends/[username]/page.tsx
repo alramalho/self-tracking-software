@@ -24,7 +24,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
   const router = useRouter();
 
   const isOwnProfile =
-    params.username === selfuserData?.username;
+    params.username === selfUserData?.username;
 
   const handleUserClick = (user: UserSearchResult) => {
     setIsSearchOpen(false);
@@ -36,8 +36,8 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
   >({
     queryKey: ["friends", params.username],
     queryFn: async () => {
-      if (userDataFriends) {
-        return userData.userFriends;
+      if (userData?.friends) {
+        return userData.friends;
       }
       const response = await api.get(`/friends/${params.username}`);
       userDataQuery.refetch();

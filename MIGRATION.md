@@ -161,7 +161,8 @@ backend
 [x] can update settings (like looking for ap)
 ...
 -- notifications
-[ ] ...
+[x] can see
+[x] can dismiss
 
 -- plans
 [x] create plan with
@@ -172,11 +173,13 @@ backend
     [x] generated sessions
     [x] times pe week
     [x] milestones
-[] milestones
+[x] milestones
     [x] render
     [x] edit (manual)
     [x] edit (automatic)
-
+-- metrics
+[x] log metric
+[x] check metric logged
 
 ## missing verticals
 
