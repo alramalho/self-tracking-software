@@ -49,7 +49,6 @@ model User {
   activityEntries         ActivityEntry[]
   metrics                 Metric[]
   metricEntries           MetricEntry[]
-  moodReports             MoodReport[]
   plans                   Plan[]
   messages                Message[]
   notifications           Notification[]
@@ -85,6 +84,9 @@ model Connection {
   to   User @relation("ConnectionTo", fields: [toId], references: [id], onDelete: Cascade)
 
   @@unique([fromId, toId])
+  @@index([fromId, status])
+  @@index([toId, status])
+  @@index([status])
   @@map("connections")
 }
 
@@ -105,6 +107,9 @@ model Activity {
   planSessions PlanSession[] // sessions on which activity is mentioned
   plans        Plan[]
 
+  @@index([userId, deletedAt])
+  @@index([deletedAt, privacySettings])
+  @@index([createdAt])
   @@map("activities")
 }
 
@@ -132,6 +137,10 @@ model ActivityEntry {
   reactions Reaction[]
   comments  Comment[]
 
+  @@index([userId, deletedAt])
+  @@index([deletedAt, createdAt])
+  @@index([activityId])
+  @@index([createdAt])
   @@map("activity_entries")
 }
 
@@ -147,6 +156,7 @@ model Reaction {
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([activityEntryId, userId, emoji])
+  @@index([activityEntryId])
   @@map("reactions")
 }
 
@@ -163,6 +173,8 @@ model Comment {
   // Relations
   activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
 
+  @@index([activityEntryId, deletedAt])
+  @@index([createdAt])
   @@map("comments")
 }
 
@@ -178,6 +190,8 @@ model Metric {
   user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   entries MetricEntry[]
 
+  @@index([userId])
+  @@index([createdAt])
   @@map("metrics")
 }
 
@@ -197,21 +211,12 @@ model MetricEntry {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   metric Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([metricId])
+  @@index([createdAt])
   @@map("metric_entries")
 }
 
-model MoodReport {
-  id        String   @id @default(cuid())
-  userId    String
-  date      DateTime @db.Date
-  score     String // 0-10 rating as string
-  createdAt DateTime @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("mood_reports")
-}
 
 model Plan {
   id                         String            @id @default(cuid())
@@ -242,6 +247,9 @@ model Plan {
   invitations PlanInvitation[]
   milestones  PlanMilestone[]
 
+  @@index([userId, deletedAt])
+  @@index([userId, id])
+  @@index([createdAt])
   @@map("plans")
 }
 
@@ -259,6 +267,9 @@ model PlanSession {
   plan     Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
+  @@index([planId])
+  @@index([planId, isCoachSuggested])
+  @@index([activityId])
   @@map("plan_sessions")
 }
 
@@ -273,6 +284,7 @@ model PlanMilestone {
 
   plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
+  @@index([planId])
   @@map("plan_milestones")
 }
 
@@ -315,6 +327,8 @@ model Message {
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   emotions MessageEmotion[]
 
+  @@index([userId])
+  @@index([createdAt])
   @@map("messages")
 }
 
@@ -352,6 +366,8 @@ model Notification {
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([createdAt])
   @@map("notifications")
 }
 
