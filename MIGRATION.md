@@ -183,8 +183,9 @@ backend
 
 ## missing verticals
 
-[] proper indexing (seems slow)
+[x] proper indexing (seems slow)
+[x] creating local db
 [] setting up zero config
+[] new supabase project for prod
 [] deploying
-[] creating local db + new supabase project for prod
 [] data migration

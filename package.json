@@ -12,7 +12,13 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "db:generate": "turbo run db:generate"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@rocicorp/zero-sqlite3"
+    ]
+  },
   "devDependencies": {
+    "supabase": "^2.33.9",
     "turbo": "^2.5.5"
   }
 }

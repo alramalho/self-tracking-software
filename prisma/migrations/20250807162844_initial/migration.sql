@@ -23,6 +23,9 @@ CREATE TYPE "PlanState" AS ENUM ('ON_TRACK', 'AT_RISK', 'FAILED', 'COMPLETED');
 CREATE TYPE "CriteriaJunction" AS ENUM ('AND', 'OR');
 
 -- CreateEnum
+CREATE TYPE "ConnectionStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'BLOCKED');
+
+-- CreateEnum
 CREATE TYPE "InvitationStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED');
 
 -- CreateEnum
@@ -36,6 +39,9 @@ CREATE TYPE "NotificationType" AS ENUM ('FRIEND_REQUEST', 'PLAN_INVITATION', 'EN
 
 -- CreateEnum
 CREATE TYPE "RecommendationObjectType" AS ENUM ('USER');
+
+-- CreateEnum
+CREATE TYPE "MessageRole" AS ENUM ('USER', 'ASSISTANT');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -52,7 +58,6 @@ CREATE TABLE "users" (
     "lastActiveAt" TIMESTAMP(3),
     "email" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deleted" BOOLEAN NOT NULL DEFAULT false,
     "deletedAt" TIMESTAMP(3),
     "isPwaInstalled" BOOLEAN NOT NULL DEFAULT false,
     "isPwaNotificationsEnabled" BOOLEAN NOT NULL DEFAULT false,
@@ -76,6 +81,19 @@ CREATE TABLE "users" (
 );
 
 -- CreateTable
+CREATE TABLE "connections" (
+    "id" TEXT NOT NULL,
+    "fromId" TEXT NOT NULL,
+    "toId" TEXT NOT NULL,
+    "status" "ConnectionStatus" NOT NULL DEFAULT 'PENDING',
+    "message" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3),
+
+    CONSTRAINT "connections_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "activities" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -96,7 +114,7 @@ CREATE TABLE "activity_entries" (
     "activityId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
-    "date" TEXT NOT NULL,
+    "date" DATE NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "description" TEXT,
     "deletedAt" TIMESTAMP(3),
@@ -153,7 +171,7 @@ CREATE TABLE "metric_entries" (
     "userId" TEXT NOT NULL,
     "metricId" TEXT NOT NULL,
     "rating" INTEGER NOT NULL,
-    "date" TEXT NOT NULL,
+    "date" DATE NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "description" TEXT,
@@ -164,24 +182,13 @@ CREATE TABLE "metric_entries" (
 );
 
 -- CreateTable
-CREATE TABLE "mood_reports" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "date" TEXT NOT NULL,
-    "score" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "mood_reports_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "plans" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "planGroupId" TEXT,
     "goal" TEXT NOT NULL,
     "emoji" TEXT,
-    "finishingDate" TEXT,
+    "finishingDate" DATE,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
     "durationType" "PlanDurationType",
@@ -198,24 +205,14 @@ CREATE TABLE "plans" (
 );
 
 -- CreateTable
-CREATE TABLE "plan_activities" (
-    "id" TEXT NOT NULL,
-    "planId" TEXT NOT NULL,
-    "activityId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "plan_activities_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "plan_sessions" (
     "id" TEXT NOT NULL,
     "planId" TEXT NOT NULL,
+    "isCoachSuggested" BOOLEAN NOT NULL DEFAULT false,
     "activityId" TEXT NOT NULL,
-    "date" TEXT NOT NULL,
+    "date" DATE NOT NULL,
     "descriptiveGuide" TEXT NOT NULL DEFAULT '',
     "quantity" INTEGER NOT NULL,
-    "isCoachSuggested" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "plan_sessions_pkey" PRIMARY KEY ("id")
@@ -225,34 +222,13 @@ CREATE TABLE "plan_sessions" (
 CREATE TABLE "plan_milestones" (
     "id" TEXT NOT NULL,
     "planId" TEXT NOT NULL,
-    "date" TEXT NOT NULL,
+    "date" DATE NOT NULL,
     "description" TEXT NOT NULL,
     "progress" INTEGER,
+    "criteria" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "plan_milestones_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "plan_milestone_criteria" (
-    "id" TEXT NOT NULL,
-    "milestoneId" TEXT NOT NULL,
-    "groupId" TEXT,
-    "activityId" TEXT NOT NULL,
-    "quantity" INTEGER NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "plan_milestone_criteria_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "plan_milestone_criteria_groups" (
-    "id" TEXT NOT NULL,
-    "milestoneId" TEXT NOT NULL,
-    "junction" "CriteriaJunction" NOT NULL DEFAULT 'AND',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "plan_milestone_criteria_groups_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -261,19 +237,6 @@ CREATE TABLE "plan_groups" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "plan_groups_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "plan_group_members" (
-    "id" TEXT NOT NULL,
-    "planGroupId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "picture" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "plan_group_members_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -290,26 +253,11 @@ CREATE TABLE "plan_invitations" (
 );
 
 -- CreateTable
-CREATE TABLE "friend_requests" (
-    "id" TEXT NOT NULL,
-    "senderId" TEXT NOT NULL,
-    "recipientId" TEXT NOT NULL,
-    "status" "InvitationStatus" NOT NULL DEFAULT 'PENDING',
-    "message" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3),
-
-    CONSTRAINT "friend_requests_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "messages" (
     "id" TEXT NOT NULL,
-    "senderId" TEXT NOT NULL,
-    "senderName" TEXT NOT NULL,
-    "recipientId" TEXT NOT NULL,
-    "recipientName" TEXT NOT NULL,
-    "text" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "role" "MessageRole" NOT NULL,
+    "content" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
@@ -363,7 +311,13 @@ CREATE TABLE "recommendations" (
 );
 
 -- CreateTable
-CREATE TABLE "_UserFriends" (
+CREATE TABLE "_ActivityToPlan" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "_PlanGroupToUser" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL
 );
@@ -378,22 +332,118 @@ CREATE UNIQUE INDEX "users_clerkId_key" ON "users"("clerkId");
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
+CREATE INDEX "connections_fromId_status_idx" ON "connections"("fromId", "status");
+
+-- CreateIndex
+CREATE INDEX "connections_toId_status_idx" ON "connections"("toId", "status");
+
+-- CreateIndex
+CREATE INDEX "connections_status_idx" ON "connections"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "connections_fromId_toId_key" ON "connections"("fromId", "toId");
+
+-- CreateIndex
+CREATE INDEX "activities_userId_deletedAt_idx" ON "activities"("userId", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "activities_deletedAt_privacySettings_idx" ON "activities"("deletedAt", "privacySettings");
+
+-- CreateIndex
+CREATE INDEX "activities_createdAt_idx" ON "activities"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "activity_entries_userId_deletedAt_idx" ON "activity_entries"("userId", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "activity_entries_deletedAt_createdAt_idx" ON "activity_entries"("deletedAt", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "activity_entries_activityId_idx" ON "activity_entries"("activityId");
+
+-- CreateIndex
+CREATE INDEX "activity_entries_createdAt_idx" ON "activity_entries"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "reactions_activityEntryId_idx" ON "reactions"("activityEntryId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "reactions_activityEntryId_userId_emoji_key" ON "reactions"("activityEntryId", "userId", "emoji");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "plan_activities_planId_activityId_key" ON "plan_activities"("planId", "activityId");
+CREATE INDEX "comments_activityEntryId_deletedAt_idx" ON "comments"("activityEntryId", "deletedAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "plan_group_members_planGroupId_userId_key" ON "plan_group_members"("planGroupId", "userId");
+CREATE INDEX "comments_createdAt_idx" ON "comments"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "_UserFriends_AB_unique" ON "_UserFriends"("A", "B");
+CREATE INDEX "metrics_userId_idx" ON "metrics"("userId");
 
 -- CreateIndex
-CREATE INDEX "_UserFriends_B_index" ON "_UserFriends"("B");
+CREATE INDEX "metrics_createdAt_idx" ON "metrics"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "metric_entries_userId_idx" ON "metric_entries"("userId");
+
+-- CreateIndex
+CREATE INDEX "metric_entries_metricId_idx" ON "metric_entries"("metricId");
+
+-- CreateIndex
+CREATE INDEX "metric_entries_createdAt_idx" ON "metric_entries"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "plans_userId_deletedAt_idx" ON "plans"("userId", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "plans_userId_id_idx" ON "plans"("userId", "id");
+
+-- CreateIndex
+CREATE INDEX "plans_createdAt_idx" ON "plans"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "plan_sessions_planId_idx" ON "plan_sessions"("planId");
+
+-- CreateIndex
+CREATE INDEX "plan_sessions_planId_isCoachSuggested_idx" ON "plan_sessions"("planId", "isCoachSuggested");
+
+-- CreateIndex
+CREATE INDEX "plan_sessions_activityId_idx" ON "plan_sessions"("activityId");
+
+-- CreateIndex
+CREATE INDEX "plan_milestones_planId_idx" ON "plan_milestones"("planId");
+
+-- CreateIndex
+CREATE INDEX "messages_userId_idx" ON "messages"("userId");
+
+-- CreateIndex
+CREATE INDEX "messages_createdAt_idx" ON "messages"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "notifications_userId_idx" ON "notifications"("userId");
+
+-- CreateIndex
+CREATE INDEX "notifications_createdAt_idx" ON "notifications"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_ActivityToPlan_AB_unique" ON "_ActivityToPlan"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_ActivityToPlan_B_index" ON "_ActivityToPlan"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_PlanGroupToUser_AB_unique" ON "_PlanGroupToUser"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_PlanGroupToUser_B_index" ON "_PlanGroupToUser"("B");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_referredById_fkey" FOREIGN KEY ("referredById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "connections" ADD CONSTRAINT "connections_fromId_fkey" FOREIGN KEY ("fromId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "connections" ADD CONSTRAINT "connections_toId_fkey" FOREIGN KEY ("toId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "activities" ADD CONSTRAINT "activities_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -414,9 +464,6 @@ ALTER TABLE "reactions" ADD CONSTRAINT "reactions_userId_fkey" FOREIGN KEY ("use
 ALTER TABLE "comments" ADD CONSTRAINT "comments_activityEntryId_fkey" FOREIGN KEY ("activityEntryId") REFERENCES "activity_entries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "comments" ADD CONSTRAINT "comments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "metrics" ADD CONSTRAINT "metrics_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -426,49 +473,19 @@ ALTER TABLE "metric_entries" ADD CONSTRAINT "metric_entries_userId_fkey" FOREIGN
 ALTER TABLE "metric_entries" ADD CONSTRAINT "metric_entries_metricId_fkey" FOREIGN KEY ("metricId") REFERENCES "metrics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "mood_reports" ADD CONSTRAINT "mood_reports_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "plans" ADD CONSTRAINT "plans_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "plans" ADD CONSTRAINT "plans_planGroupId_fkey" FOREIGN KEY ("planGroupId") REFERENCES "plan_groups"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "plan_activities" ADD CONSTRAINT "plan_activities_planId_fkey" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_activities" ADD CONSTRAINT "plan_activities_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "activities"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "plan_sessions" ADD CONSTRAINT "plan_sessions_planId_fkey" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_sessions" ADD CONSTRAINT "plan_sessions_coach_plan_fkey" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "plan_sessions" ADD CONSTRAINT "plan_sessions_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "activities"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "plan_milestones" ADD CONSTRAINT "plan_milestones_planId_fkey" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_milestone_criteria" ADD CONSTRAINT "plan_milestone_criteria_milestoneId_fkey" FOREIGN KEY ("milestoneId") REFERENCES "plan_milestones"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_milestone_criteria" ADD CONSTRAINT "plan_milestone_criteria_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "plan_milestone_criteria_groups"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_milestone_criteria" ADD CONSTRAINT "plan_milestone_criteria_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "activities"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_milestone_criteria_groups" ADD CONSTRAINT "plan_milestone_criteria_groups_milestoneId_fkey" FOREIGN KEY ("milestoneId") REFERENCES "plan_milestones"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_group_members" ADD CONSTRAINT "plan_group_members_planGroupId_fkey" FOREIGN KEY ("planGroupId") REFERENCES "plan_groups"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "plan_group_members" ADD CONSTRAINT "plan_group_members_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "plan_invitations" ADD CONSTRAINT "plan_invitations_planId_fkey" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -480,16 +497,7 @@ ALTER TABLE "plan_invitations" ADD CONSTRAINT "plan_invitations_senderId_fkey" F
 ALTER TABLE "plan_invitations" ADD CONSTRAINT "plan_invitations_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "friend_requests" ADD CONSTRAINT "friend_requests_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "friend_requests" ADD CONSTRAINT "friend_requests_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "messages" ADD CONSTRAINT "messages_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "messages" ADD CONSTRAINT "messages_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "message_emotions" ADD CONSTRAINT "message_emotions_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -501,7 +509,13 @@ ALTER TABLE "notifications" ADD CONSTRAINT "notifications_userId_fkey" FOREIGN K
 ALTER TABLE "recommendations" ADD CONSTRAINT "recommendations_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "_UserFriends" ADD CONSTRAINT "_UserFriends_A_fkey" FOREIGN KEY ("A") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "_ActivityToPlan" ADD CONSTRAINT "_ActivityToPlan_A_fkey" FOREIGN KEY ("A") REFERENCES "activities"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "_UserFriends" ADD CONSTRAINT "_UserFriends_B_fkey" FOREIGN KEY ("B") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "_ActivityToPlan" ADD CONSTRAINT "_ActivityToPlan_B_fkey" FOREIGN KEY ("B") REFERENCES "plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_PlanGroupToUser" ADD CONSTRAINT "_PlanGroupToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "plan_groups"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_PlanGroupToUser" ADD CONSTRAINT "_PlanGroupToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
