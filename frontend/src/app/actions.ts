@@ -96,14 +96,22 @@ export async function getCurrentUserData() {
         friends: {
           select: { id: true, username: true, name: true, picture: true },
         },
+        friendOf: {
+          select: { id: true, username: true, name: true, picture: true },
+        },
       },
     });
+
+    const allFriends = [
+      ...(userData?.friends || []),
+      ...(userData?.friendOf || []),
+    ];
 
     if (!userData) {
       throw new Error("User not found");
     }
 
-    return userData;
+    return { ...userData, friends: allFriends };
   } catch (error) {
     console.error("Error fetching current user data:", error);
     throw error;
