@@ -11,6 +11,7 @@ import { Remark } from "react-remark";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { formatTimeAgo } from "@/lib/utils";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface NotificationsProps {}
 
@@ -20,6 +21,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
   const api = useApiWithAuth();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const { isPushGranted, requestPermission } = useNotifications();
 
   const handleNotificationAction = async (
     notification: Notification,
@@ -75,6 +77,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
       toast.promise(actionPromise(), {
         loading: `Processing ${notification.type.replace("_", " ")}...`,
         success: `${notification.type
+          .toLowerCase()
           .replace("_", " ")
           .charAt(0)
           .toUpperCase()}${notification.type
@@ -159,15 +162,39 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   // Get the latest engagement notification
-  const latestEngagementNotification =
-    notificationsData?.data?.notifications?.find(
-      (n) => n.type === "engagement"
-    );
+  // const latestEngagementNotification =
+  //   notificationsData?.data?.notifications?.find(
+  //     (n) => n.type === "ENGAGEMENT"
+  //   );
 
   // Filter out engagement notifications from the regular notifications
   const regularNotifications = notificationsData?.data?.notifications?.filter(
-    (n) => n.type !== "engagement"
+    (n) => n.type !== "ENGAGEMENT"
   );
+
+  const unreadNotifications =
+    regularNotifications?.filter((n) => n.status !== "CONCLUDED") || [];
+
+  if (unreadNotifications.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8">
+        <div className="bg-gray-100 p-4 rounded-full mb-4">
+          <Check size={48} className="text-gray-600" />
+        </div>
+        <h2 className="text-xl font-semibold text-gray-700">All up to date!</h2>
+        {!isPushGranted && (
+          <p className="text-gray-500 text-sm">
+            <button className="underline" onClick={requestPermission}>Click here</button> to be notified of new notifications.
+          </p>
+        )}
+        {isPushGranted && (
+          <p className="text-gray-500 text-sm">
+            Come back later to see new notifications.
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -197,55 +224,62 @@ const Notifications: React.FC<NotificationsProps> = () => {
             </button>
           </div>
 
-          {regularNotifications.map((notification) => (
-            <div
-              key={notification.id}
-              className="shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
-            >
-              <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-                {["friend_request", "plan_invitation", "info", "coach"].includes(
-                  notification.type
-                ) &&
-                  hasPictureData(notification) && (
-                    <Link
-                      href={`/profile/${notification.relatedData!.username}`}
-                    >
-                      <Avatar>
-                        <AvatarImage
-                          src={notification.relatedData!.picture}
-                          alt={notification.relatedData!.name || ""}
-                        />
-                        <AvatarFallback>
-                          {(notification.relatedData!.name || "U")[0]}
-                        </AvatarFallback>
-                      </Avatar>
+          {unreadNotifications.map((notification) => {
+            const relatedData = notification.relatedData as {
+              username: string;
+              picture: string;
+              name: string;
+            };
+
+            return (
+              <div
+                key={notification.id}
+                className="shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
+              >
+                <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+                  {[
+                    "friend_request",
+                    "plan_invitation",
+                    "info",
+                    "coach",
+                  ].includes(notification.type) &&
+                    hasPictureData(notification) && (
+                      <Link href={`/profile/${relatedData.username}`}>
+                        <Avatar>
+                          <AvatarImage
+                            src={relatedData.picture}
+                            alt={relatedData.name || ""}
+                          />
+                          <AvatarFallback>
+                            {(relatedData.name || "U")[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Link>
+                    )}
+                  {hasUsernameData(notification) ? (
+                    <Link href={`/profile/${relatedData.username}`}>
+                      <div className="markdown text-sm text-gray-700">
+                        <Remark>{notification.message}</Remark>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {formatTimeAgo(notification.createdAt)}
+                        </div>
+                      </div>
                     </Link>
-                  )}
-                {hasUsernameData(notification) ? (
-                  <Link
-                    href={`/profile/${notification.relatedData!.username}`}
-                  >
+                  ) : (
                     <div className="markdown text-sm text-gray-700">
                       <Remark>{notification.message}</Remark>
                       <div className="text-xs text-gray-500 mt-1">
                         {formatTimeAgo(notification.createdAt)}
                       </div>
                     </div>
-                  </Link>
-                ) : (
-                  <div className="markdown text-sm text-gray-700">
-                    <Remark>{notification.message}</Remark>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {formatTimeAgo(notification.createdAt)}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
+                <div className="flex ml-4">
+                  {renderActionButtons(notification)}
+                </div>
               </div>
-              <div className="flex ml-4">
-                {renderActionButtons(notification)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

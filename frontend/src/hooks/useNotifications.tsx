@@ -12,9 +12,9 @@ import { isNotifySupported } from "@/app/swSupport";
 import { useApiWithAuth } from "@/api";
 import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
-import type { Notification } from "@/contexts/UserGlobalContext";
 import { useSession } from "@clerk/nextjs";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { Notification as PrismaNotification } from "@prisma/client";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -69,7 +69,7 @@ export const NotificationsProvider = ({
   useEffect(() => {
     if (notificationsData.data) {
       const nonConcludedNotificationsCount = notificationsData.data.notifications?.filter(
-        (notification: Notification) => notification.status !== "concluded"
+        (notification: PrismaNotification) => notification.status !== "CONCLUDED"
       ).length || 0;
       
       // Add 1 to the badge count if there's a daily check-in notification
