@@ -584,7 +584,7 @@ usersRouter.get(
           picture: user.picture,
         },
         plans: transformedPlans,
-        activities: userActivities.map((activity) => ({
+        activities: userActivities.map((activity: any) => ({
           id: activity.id,
           title: activity.title,
           emoji: activity.emoji,

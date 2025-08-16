@@ -9,7 +9,7 @@
     "build": "turbo run build",
     "build:client": "turbo run build --filter=!server",
     "start": "turbo run start",
-    "clean": "turbo run clean && rm -rf node_modules",
+    "clean": "rm -rf node_modules && turbo run clean",
     "db:generate": "turbo run db:generate"
   },
   "pnpm": {

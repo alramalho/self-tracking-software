@@ -88,6 +88,7 @@ export interface UserGlobalContextType {
     updater: (data: HydratedCurrentUser) => HydratedCurrentUser
   ) => void;
   currentTheme: ThemeColorType;
+  updateTheme: (color: ThemeColorType) => Promise<void>;
   syncCurrentUserWithProfile: () => void;
   isWaitingForData: boolean;
 }
@@ -428,6 +429,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     notificationsData,
     refetchUserData,
     refetchAllData,
+    updateTheme,
     updateLocalUserData: (
       updater: (data: HydratedCurrentUser) => HydratedCurrentUser
     ) => {
