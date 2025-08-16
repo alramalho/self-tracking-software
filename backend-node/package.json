@@ -28,7 +28,7 @@
     "@aws-sdk/s3-request-presigner": "^3.856.0",
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/express": "^1.7.4",
-    "prisma": "workspace:*",
+    "@prisma/client": "^5.0.0",
     "@types/stripe": "^8.0.416",
     "ai": "^4.3.19",
     "axios": "^1.4.0",
@@ -49,6 +49,7 @@
     "stripe": "^18.3.0",
     "svix": "^1.69.0",
     "uuid": "^9.0.1",
+    "web-push": "^3.6.7",
     "winston": "^3.10.0",
     "zod": "^3.22.0"
   },

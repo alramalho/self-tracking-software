@@ -100,15 +100,19 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
     [x] Telegram notifications for new subscriptions, errors, and unknown products
 [x] analyze backend/routers/notification and create correspondent express equivalent
     [x] implemented PWA status updates for push notifications
-    [x] implemented scheduled notification processing with push notifications
-    [x] implemented notification state management (opened, concluded)
+    [x] implemented notification processing with push notifications
     [x] implemented notification loading with engagement filtering
     [x] implemented clear all notifications functionality
     [x] implemented PWA subscription management
     [x] conversation memory integration for AI notifications
     [x] proper authentication and error handling
     [x] direct Prisma integration with notification model
+    [x] simplified NotificationService without scheduled notification complexity
+    [x] push notification system with web-push integration (mock implementation ready)
+    [x] removed scheduled notification system (redundant with existing /run-hourly-job)
+    [x] cleaned up Prisma schema to remove scheduling fields
     [x] note: PostHog analytics integration is TODO item (low priority)
+    [x] note: web-push package installed in production environment
 [x] create other ncessary services
     [x] telegram_service
     [x] s3Service - full AWS S3 integration with upload, delete, presigned URLs
@@ -189,3 +193,16 @@ backend
 [] new supabase project for prod
 [] deploying
 [] data migration
+
+## Additional packages to install in production
+
+For the notification system to work fully, install this package in the Node.js backend:
+```bash
+npm install web-push @types/web-push
+```
+
+This provides:
+- Web Push API for browser push notifications
+- TypeScript support for web-push
+
+Note: Scheduled notifications are handled by the existing `/run-hourly-job` endpoint, so AWS EventBridge cron integration was removed to avoid duplication.

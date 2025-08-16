@@ -354,9 +354,6 @@ model Notification {
   processedAt  DateTime?
   openedAt     DateTime?
   concludedAt  DateTime?
-  scheduledFor DateTime?
-  recurrence   NotificationRecurrence?
-  awsCronjobId String?
   promptTag    String?
   status       NotificationStatus      @default(PENDING)
   type         NotificationType        @default(INFO)
@@ -449,11 +446,6 @@ enum InvitationStatus {
   PENDING
   ACCEPTED
   REJECTED
-}
-
-enum NotificationRecurrence {
-  DAILY
-  WEEKLY
 }
 
 enum NotificationStatus {
