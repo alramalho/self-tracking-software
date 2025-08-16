@@ -106,13 +106,6 @@ router.post(
         role: "ASSISTANT",
       });
 
-      // TODO: Add PostHog analytics when implemented
-      if (processedNotification.type === "ENGAGEMENT") {
-        logger.info(
-          `Processed engagement notification for user ${notification.user.id}`
-        );
-      }
-
       res.json({ message: "Notification processed and sent successfully" });
     } catch (error) {
       logger.error("Error processing scheduled notification:", error);
@@ -142,11 +135,9 @@ router.post(
       }
 
       if (notification.userId !== req.user!.id) {
-        return res
-          .status(403)
-          .json({
-            error: "Not authorized to mark this notification as opened",
-          });
+        return res.status(403).json({
+          error: "Not authorized to mark this notification as opened",
+        });
       }
 
       const updatedNotification = await prisma.notification.update({
@@ -355,6 +346,93 @@ router.get(
   }
 );
 
+// Create and immediately process notification
+router.post(
+  "/create-and-process-notification",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const {
+        message,
+        type,
+        relatedId,
+        relatedData,
+        promptTag,
+        pushNotify = true,
+      } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const notification =
+        await notificationService.createAndProcessNotification(
+          {
+            userId: req.user!.id,
+            message,
+            type: type || "INFO",
+            relatedId,
+            relatedData,
+            promptTag,
+          },
+          pushNotify
+        );
+
+      logger.info(
+        `Created and processed notification for user ${req.user!.id}`
+      );
+      res.json({
+        message: "Notification created and processed successfully",
+        notification,
+      });
+    } catch (error) {
+      logger.error("Error creating and processing notification:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to create and process notification" });
+    }
+  }
+);
+
+// Get latest notification sent to user (optionally filtered by type)
+router.get(
+  "/latest-sent",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { type } = req.query;
+
+      const notification =
+        await notificationService.getLatestNotificationSentToUser(
+          req.user!.id,
+          type as any
+        );
+
+      res.json({ notification });
+    } catch (error) {
+      logger.error("Error getting latest sent notification:", error);
+      res.status(500).json({ error: "Failed to get latest sent notification" });
+    }
+  }
+);
+
+// Send test push notification
+router.post(
+  "/send-test-push",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await notificationService.sendTestPushNotification(req.user!.id);
+
+      logger.info(`Sent test push notification to user ${req.user!.id}`);
+      res.json({ message: "Test push notification sent successfully" });
+    } catch (error) {
+      logger.error("Error sending test push notification:", error);
+      res.status(500).json({ error: "Failed to send test push notification" });
+    }
+  }
+);
+
 // Health check
 router.get("/health", (_req, res) => {
   res.json({
@@ -364,5 +442,5 @@ router.get("/health", (_req, res) => {
   });
 });
 
-export const notificationsRouter = router;
+export const notificationsRouter: Router = router;
 export default notificationsRouter;

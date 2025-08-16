@@ -138,9 +138,8 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
               </Button>
             )}
 
-            {/* // note to self, we just dropped zero since we dont really need a sync engine, just a nice
-            // use query implementation for immediate reflection across app, which is way easier to implement 
-            // right now we were fixing (again) prisma type resolutions, then we should just solve use query properly */}
+            {/* // note to self, we were in the midst of finishing off the migratino to backend node
+            // scheduling notifiactions arent yet done */}
             {generatedSessions && (
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Generated Schedule</h4>
