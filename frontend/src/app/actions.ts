@@ -71,9 +71,6 @@ export async function getCurrentUserData() {
           orderBy: { createdAt: "desc" },
         },
         planGroupMemberships: true,
-        moodReports: {
-          orderBy: { createdAt: "desc" },
-        },
         notifications: {
           orderBy: { createdAt: "desc" },
         },

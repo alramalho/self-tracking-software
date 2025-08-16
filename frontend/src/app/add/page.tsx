@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import {
-  Activity,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { Loader2, Plus } from "lucide-react";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
@@ -19,7 +17,7 @@ interface ActivityLogData {
 }
 
 const LogPage: React.FC = () => {
-  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery, refetchUserData } = useUserPlan();
+  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();

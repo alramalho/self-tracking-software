@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo } from "react";
 import {
+  CompletePlan,
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { Plan, Activity, ActivityEntry, PlanSession } from "@prisma/client";
@@ -30,8 +31,7 @@ export interface PlanProgressData {
 
 export interface PlanProgressContextType {
   calculatePlanAchievement: (
-    plan: Plan,
-    activities: Activity[],
+    plan: CompletePlan,
     activityEntries: ActivityEntry[],
     initialDate?: Date
   ) => PlanAchievementResult;
@@ -62,7 +62,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     const { plans, activities, activityEntries } = userData;
 
     const planProgress = plans.map((plan): PlanProgressData => {
-      const convertedPlan = plan;
+      // const convertedPlan = plan;
       // const planStartDate = convertedPlan.outlineType === "SPECIFIC" 
       //   ? (convertedPlan.sessions.length > 0 
       //       ? convertedPlan.sessions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date
@@ -70,15 +70,14 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       //   : undefined
       
       return {
-        plan: convertedPlan,
+        plan,
         achievement: calculatePlanAchievement(
-          convertedPlan,
-          activities,
+          plan as CompletePlan,
           activityEntries,
           // planStartDate
         ),
         weeks: getPlanWeeks(
-          convertedPlan,
+          plan as CompletePlan,
           activities,
           activityEntries
         ),
@@ -118,13 +117,13 @@ export const usePlanProgress = () => {
 
 // Export a function to create plan progress data independently (for demos)
 export const createPlanProgressData = (
-  plan: Plan,
+  plan: CompletePlan,
   activities: Activity[],
   activityEntries: ActivityEntry[]
 ): PlanProgressData => {
   return {
     plan,
-    achievement: calculatePlanAchievement(plan, activities, activityEntries),
+    achievement: calculatePlanAchievement(plan, activityEntries),
     weeks: getPlanWeeks(plan, activities, activityEntries),
   };
 };

@@ -230,75 +230,68 @@ export class UserService {
     });
   }
 
-  async loadSingleUserData(
-    userId: string,
-    currentUserId: string
-  ): Promise<any> {
-    const [user, activities, activityEntries, moodReports, plans] =
-      await Promise.all([
-        prisma.user.findUnique({
-          where: { id: userId },
-          include: {
-            connectionsFrom: {
-              where: { status: "PENDING" },
-              include: { to: true },
-            },
-            connectionsTo: {
-              where: { status: "PENDING" },
-              include: { from: true },
-            },
-          },
-        }),
-        prisma.activity.findMany({
-          where: { userId, deletedAt: null },
-        }),
-        prisma.activityEntry.findMany({
-          where: { userId, deletedAt: null },
-        }),
-        prisma.plan.findMany({
-          where: { userId, deletedAt: null },
-          include: {
-            activities: true,
-            sessions: true,
-          },
-        }),
-      ]);
+  // async loadSingleUserData(
+  //   userId: string,
+  //   currentUserId: string
+  // ): Promise<any> {
+  //   const [user, activities, activityEntries, plans] =
+  //     await Promise.all([
+  //       prisma.user.findUnique({
+  //         where: { id: userId },
+  //         include: {
+  //           connectionsFrom: {
+  //             where: { status: "PENDING" },
+  //             include: { to: true },
+  //           },
+  //           connectionsTo: {
+  //             where: { status: "PENDING" },
+  //             include: { from: true },
+  //           },
+  //         },
+  //       }),
+  //       prisma.activity.findMany({
+  //         where: { userId, deletedAt: null },
+  //       }),
+  //       prisma.activityEntry.findMany({
+  //         where: { userId, deletedAt: null },
+  //       }),
+  //       prisma.plan.findMany({
+  //         where: { userId, deletedAt: null },
+  //         include: {
+  //           activities: true,
+  //           sessions: true,
+  //         },
+  //       }),
+  //     ]);
 
-    // Plan groups will need to be fetched based on plan IDs
-    const planGroups: PlanGroup[] = [];
+  //   // Plan groups will need to be fetched based on plan IDs
+  //   const planGroups: PlanGroup[] = [];
 
-    if (!user) {
-      throw new Error("User not found");
-    }
+  //   if (!user) {
+  //     throw new Error("User not found");
+  //   }
 
-    // Generate bio based on plans and activities
-    const generatedBio = this.generateUserBio(plans, activities);
+  //   // Generate bio based on plans and activities
+  //   const generatedBio = this.generateUserBio(plans, activities);
 
-    // Process plans to include activity details
-    const plansWithActivities = plans.map((plan) => ({
-      ...plan,
-      activities: plan.activities.map((pa) => pa.activity),
-    }));
+  //   const result: any = {
+  //     user: {
+  //       ...user,
+  //       generated_bio: generatedBio,
+  //     },
+  //     activities,
+  //     activity_entries: activityEntries,
+  //     plans: plans,
+  //     plan_groups: planGroups,
+  //   };
 
-    const result: any = {
-      user: {
-        ...user,
-        generated_bio: generatedBio,
-      },
-      activities,
-      activity_entries: activityEntries,
-      mood_reports: moodReports,
-      plans: plansWithActivities,
-      plan_groups: planGroups,
-    };
+  //   if (currentUserId === userId) {
+  //     result.sent_friend_requests = sentFriendRequests;
+  //     result.received_friend_requests = receivedFriendRequests;
+  //   }
 
-    if (currentUserId === userId) {
-      result.sent_friend_requests = sentFriendRequests;
-      result.received_friend_requests = receivedFriendRequests;
-    }
-
-    return result;
-  }
+  //   return result;
+  // }
 
   private generateUserBio(plans: any[], activities: Activity[]): string {
     const bioParts: string[] = [];
