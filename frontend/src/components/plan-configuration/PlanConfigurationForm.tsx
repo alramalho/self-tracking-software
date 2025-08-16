@@ -1,13 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import {
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
-import { PlanDurationType, PlanOutlineType } from "@prisma/client";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { PlanDurationType, PlanOutlineType } from "@/zero/schema";
 import { PlanMilestone } from "@prisma/types";
 import { usePlanGeneration } from "@/hooks/usePlanGeneration";
 import toast from "react-hot-toast";
+import { useZ } from "@/hooks/useZ";
 import Divider from "../Divider";
 import Step from "./Step";
 import MilestonesStep from "./steps/MilestonesStep";
@@ -16,7 +15,7 @@ import ActivitiesStep from "./steps/ActivitiesStep";
 import EmojiStep from "./steps/EmojiStep";
 import GoalStep from "./steps/GoalStep";
 import DurationStep from "./steps/DurationStep";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { HydratedCurrentUser } from "@/zero/queries";
 import { upsertPlan } from "@/app/actions";
 
 interface PlanConfigurationFormProps {
@@ -25,7 +24,7 @@ interface PlanConfigurationFormProps {
   onClose?: () => void;
   title: string;
   isEdit?: boolean;
-  plan?: CompletePlan;
+  plan?: HydratedCurrentUser["plans"][number];
   scrollToMilestones?: boolean;
 }
 
@@ -45,53 +44,79 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   // Initialize state from plan if editing, otherwise use defaults
   const [description, setDescription] = useState(plan?.notes || "");
   const [selectedEmoji, setSelectedEmoji] = useState(plan?.emoji || "");
-  const [currentFinishingDate, setCurrentFinishingDate] = useState(plan?.finishingDate);
+  const [currentFinishingDate, setCurrentFinishingDate] = useState<
+    Date | undefined
+  >(plan?.finishingDate ? new Date(plan?.finishingDate) : undefined);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedSessions, setGeneratedSessions] = useState<CompletePlan["sessions"]>();
+  const [generatedSessions, setGeneratedSessions] =
+    useState<HydratedCurrentUser["plans"][number]["sessions"]>();
   const [goal, setGoal] = useState(plan?.goal || "");
   const [planNotes, setPlanNotes] = useState("");
-  const [milestones, setMilestones] = useState<PlanMilestone[]>(plan?.milestones || []);
-  const [planDuration, setPlanDuration] = useState<PlanDurationType>(plan?.durationType || "CUSTOM");
-  const [outlineType, setOutlineType] = useState<PlanOutlineType>(plan?.outlineType || "SPECIFIC");
+  const [milestones, setMilestones] = useState<
+    HydratedCurrentUser["plans"][number]["milestones"]
+  >(plan?.milestones || []);
+  const [planDuration, setPlanDuration] = useState<PlanDurationType>(
+    plan?.durationType || PlanDurationType.CUSTOM
+  );
+  const [outlineType, setOutlineType] = useState<PlanOutlineType>(
+    plan?.outlineType || PlanOutlineType.SPECIFIC
+  );
   const [timesPerWeek, setTimesPerWeek] = useState(plan?.timesPerWeek || 0);
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedActivities, setSelectedActivities] = useState<CompletePlan["activities"]>(
-    plan ? userData?.activities?.filter(a => plan.activities.map(p => p.id).includes(a.id)) || [] : []
+  const [selectedActivities, setSelectedActivities] = useState<
+    HydratedCurrentUser["activities"]
+  >(
+    plan
+      ? userData?.activities?.filter((a) =>
+          plan.activities.map((p) => p.id).includes(a.id)
+        ) || []
+      : []
   );
 
   const { generateSessions } = usePlanGeneration();
 
-  const canProgressToNextStep = useCallback((step: number) => {
-    switch (step) {
-      case 1:
-        return !!planDuration;
-      case 2:
-        return !!goal.trim();
-      case 3:
-        return !!selectedEmoji;
-      case 4:
-        return selectedActivities.length > 0;
-      case 5:
-        if (!outlineType) return false;
-        if (outlineType === "SPECIFIC") return !!generatedSessions;
-        if (outlineType === "TIMES_PER_WEEK") return timesPerWeek > 0;
-        return false;
-      default:
-        return true;
-    }
-  }, [planDuration, goal, selectedEmoji, selectedActivities, outlineType, generatedSessions, timesPerWeek]);
+  const canProgressToNextStep = useCallback(
+    (step: number) => {
+      switch (step) {
+        case 1:
+          return !!planDuration;
+        case 2:
+          return !!goal.trim();
+        case 3:
+          return !!selectedEmoji;
+        case 4:
+          return selectedActivities.length > 0;
+        case 5:
+          if (!outlineType) return false;
+          if (outlineType === "SPECIFIC") return !!generatedSessions;
+          if (outlineType === "TIMES_PER_WEEK") return timesPerWeek > 0;
+          return false;
+        default:
+          return true;
+      }
+    },
+    [
+      planDuration,
+      goal,
+      selectedEmoji,
+      selectedActivities,
+      outlineType,
+      generatedSessions,
+      timesPerWeek,
+    ]
+  );
 
   const handleStepChange = (direction: "next" | "back") => {
     if (currentStep === 6) {
       return; // Already at last step
     }
-    
+
     if (!canProgressToNextStep(currentStep)) {
       toast.error("Please complete the current step before proceeding");
       return;
     }
-    
-    setCurrentStep(prev => {
+
+    setCurrentStep((prev) => {
       const nextStep = prev + 1;
       scrollToStep(nextStep);
       return nextStep;
@@ -107,7 +132,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     try {
       const sessions = await generateSessions({
         goal,
-        finishingDate: currentFinishingDate || undefined,
+        finishingDate: currentFinishingDate
+          ? new Date(currentFinishingDate)
+          : undefined,
         activities: selectedActivities,
         description,
         existingPlan: isEdit ? plan : undefined,
@@ -119,56 +146,57 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     }
   };
 
-  const createPlanToConfirm = useCallback((): CompletePlan => {
-    const basePlan: any = {
-      goal,
-      emoji: selectedEmoji,
-      finishingDate: currentFinishingDate || null,
-      notes: planNotes,
-      durationType: planDuration,
-      outlineType: outlineType,
-      milestones: milestones,
-      activities: selectedActivities,
-      id: plan?.id || "",
-      userId: plan?.userId || "",
-      createdAt: plan?.createdAt || new Date(),
-      sessions: [],
-    };
+  const createPlanToConfirm =
+    useCallback((): HydratedCurrentUser["plans"][number] => {
+      const basePlan: any = {
+        goal,
+        emoji: selectedEmoji,
+        finishingDate: currentFinishingDate || null,
+        notes: planNotes,
+        durationType: planDuration,
+        outlineType: outlineType,
+        milestones: milestones,
+        activities: selectedActivities,
+        id: plan?.id || "",
+        userId: plan?.userId || "",
+        createdAt: plan?.createdAt || new Date(),
+        sessions: [],
+      };
 
-    if (outlineType === "SPECIFIC") {
-      return {
-        ...basePlan,
-        sessions: generatedSessions || [],
-      };
-    } else if (outlineType === "TIMES_PER_WEEK") {
-      return {
-        ...basePlan,
-        timesPerWeek: timesPerWeek,
-      };
-    }
-    return basePlan;
-  }, [
-    goal,
-    selectedEmoji,
-    currentFinishingDate,
-    planNotes,
-    planDuration,
-    outlineType,
-    milestones,
-    selectedActivities,
-    plan?.id,
-    plan?.userId,
-    plan?.createdAt,
-    generatedSessions,
-    timesPerWeek,
-  ]);
+      if (outlineType === "SPECIFIC") {
+        return {
+          ...basePlan,
+          sessions: generatedSessions || [],
+        };
+      } else if (outlineType === "TIMES_PER_WEEK") {
+        return {
+          ...basePlan,
+          timesPerWeek: timesPerWeek,
+        };
+      }
+      return basePlan;
+    }, [
+      goal,
+      selectedEmoji,
+      currentFinishingDate,
+      planNotes,
+      planDuration,
+      outlineType,
+      milestones,
+      selectedActivities,
+      plan?.id,
+      plan?.userId,
+      plan?.createdAt,
+      generatedSessions,
+      timesPerWeek,
+    ]);
 
   const hasMadeAnyChanges = useCallback(() => {
     if (!plan || !userData) return false;
 
     const planToBeSaved = createPlanToConfirm();
-    const currentActivityIds = new Set(selectedActivities.map(a => a.id));
-    const originalActivityIds = new Set(plan.activities.map(a => a.id));
+    const currentActivityIds = new Set(selectedActivities.map((a) => a.id));
+    const originalActivityIds = new Set(plan.activities.map((a) => a.id));
 
     return (
       planToBeSaved.goal !== plan.goal ||
@@ -177,15 +205,17 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       planToBeSaved.durationType !== plan.durationType ||
       planToBeSaved.outlineType !== plan.outlineType ||
       planToBeSaved.timesPerWeek !== plan.timesPerWeek ||
-      JSON.stringify(planToBeSaved.milestones) !== JSON.stringify(plan.milestones) ||
-      JSON.stringify(planToBeSaved.sessions) !== JSON.stringify(plan.sessions) ||
+      JSON.stringify(planToBeSaved.milestones) !==
+        JSON.stringify(plan.milestones) ||
+      JSON.stringify(planToBeSaved.sessions) !==
+        JSON.stringify(plan.sessions) ||
       currentActivityIds.size !== originalActivityIds.size ||
-      Array.from(currentActivityIds).some(id => !originalActivityIds.has(id))
+      Array.from(currentActivityIds).some((id) => !originalActivityIds.has(id))
     );
   }, [createPlanToConfirm, plan, userData, selectedActivities]);
 
   const isPlanComplete = useCallback(() => {
-    const hasRequiredFields = 
+    const hasRequiredFields =
       planDuration &&
       goal.trim() !== "" &&
       selectedEmoji &&
@@ -226,9 +256,11 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       }
 
       // Check criteria
-      for (const criterion of milestone.criteria?.items || []) {
-        if ('activityId' in criterion && criterion.quantity <= 0) {
-          toast.error("All milestone criteria must have a quantity greater than 0");
+      for (const criterion of (milestone.criteria as any)?.items || []) {
+        if ("activityId" in criterion && criterion.quantity <= 0) {
+          toast.error(
+            "All milestone criteria must have a quantity greater than 0"
+          );
           return false;
         }
       }
@@ -246,10 +278,12 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       setIsProcessing(true);
       const planToSave = createPlanToConfirm();
       const result = await upsertPlan(planToSave);
-      
+
       if (result.success) {
         currentUserDataQuery.refetch();
-        toast.success(isEdit ? "Plan updated successfully" : "Plan created successfully");
+        toast.success(
+          isEdit ? "Plan updated successfully" : "Plan created successfully"
+        );
         onSuccess?.();
       } else {
         toast.error(result.error || "Failed to save plan");
@@ -274,7 +308,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   };
 
   const scrollToStep = (stepNumber: number) => {
-    stepRefs[`step${stepNumber}` as keyof typeof stepRefs].current?.scrollIntoView({
+    stepRefs[
+      `step${stepNumber}` as keyof typeof stepRefs
+    ].current?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
@@ -316,7 +352,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   }, [scrollToMilestones, isEdit]);
 
   return (
-    <div data-testid="plan-configuration-form" className="space-y-6 max-w-3xl mx-auto">
+    <div
+      data-testid="plan-configuration-form"
+      className="space-y-6 max-w-3xl mx-auto"
+    >
       <div className="space-y-6 relative">
         <Step stepNumber={1} isVisible={shouldShowStep(1)} ref={stepRefs.step1}>
           <DurationStep
@@ -340,11 +379,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
         <Step stepNumber={2} isVisible={shouldShowStep(2)} ref={stepRefs.step2}>
           <Divider />
-          <GoalStep
-            goal={goal}
-            setGoal={setGoal}
-            isEdit={isEdit}
-          />
+          <GoalStep goal={goal} setGoal={setGoal} isEdit={isEdit} />
           {!isEdit && (
             <div className="flex justify-end mt-4">
               <Button

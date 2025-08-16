@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { useSession } from "@clerk/clerk-react";
 import { CompletePlan } from "@/contexts/UserGlobalContext";
-import { Activity } from "@prisma/client";
+import { Activity } from "@/zero/schema";
 
 interface PlanInvitationData {
   plan: CompletePlan;

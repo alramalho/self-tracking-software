@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
-import { Activity } from "@prisma/client";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { HydratedCurrentUser } from "@/zero/queries";
 
 interface PlanSessionsRendererProps {
-  plan: CompletePlan;
-  activities: Activity[];
+  plan: {
+    sessions: HydratedCurrentUser["plans"][number]["sessions"];
+    finishingDate?: Date | null;
+    goal?: string;
+  };
+  activities: HydratedCurrentUser["activities"];
   startDate?: Date;
 }
 
@@ -19,19 +22,19 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
 
   const getDefaultStartDate = () => {
     if (startDate) return startDate;
-    if (plan.sessions.length === 0) {
+    if (!plan.sessions || plan.sessions.length === 0) {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       return sevenDaysAgo;
     }
-    return plan.sessions.reduce((earliest, session) => 
+    return (plan.sessions || []).reduce((earliest, session) => 
       new Date(session.date) < earliest ? new Date(session.date) : earliest,
-      new Date(plan.sessions[0].date)
+      new Date((plan.sessions || [])[0]?.date || new Date())
     );
   };
 
   const formatSessionsForHeatMap = () => {
-    const sessions = plan.sessions.map((session) => ({
+    const sessions = (plan.sessions || []).map((session) => ({
       date: format(session.date, "yyyy/MM/dd"),
       count: session.quantity,
     }));
@@ -47,8 +50,8 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   };
 
   const getIntensityForDate = (dateStr: string) => {
-    const sessionsOnDate = plan.sessions.filter(
-      (s) => format(s.date, "yyyy-MM-dd") === dateStr
+    const sessionsOnDate = [...(plan.sessions || [])].filter(
+      (s) => format(new Date(s.date), "yyyy-MM-dd") === dateStr
     );
 
     if (sessionsOnDate.length === 0) return null;
@@ -58,7 +61,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
         (a) => a.id === session.activityId
       );
 
-      const quantities = plan.sessions.map((s) => s.quantity);
+      const quantities = (plan.sessions || []).map((s) => s.quantity);
       const minQuantity = Math.min(...quantities);
       const maxQuantity = Math.max(...quantities);
       const intensityLevels = 5;
@@ -77,9 +80,9 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   const renderActivityViewer = () => {
     if (!focusedDate) return null;
 
-    const sessionsOnDate = plan.sessions.filter(
+    const sessionsOnDate = [...(plan.sessions || [])].filter(
       (session) =>
-        format(session.date, "yyyy-MM-dd") === format(focusedDate, "yyyy-MM-dd")
+        format(new Date(session.date), "yyyy-MM-dd") === format(focusedDate, "yyyy-MM-dd")
     );
 
     return (

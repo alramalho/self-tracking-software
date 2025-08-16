@@ -4,7 +4,6 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { parseISO, format } from "date-fns";
 import { useSession } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -15,30 +14,14 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
-  getCurrentUserData,
-  getUserData,
-  getMetricsAndEntries,
-  getMessages,
-  getTimelineData,
-  HydratedCurrentUser,
-  HydratedUser,
-  TimelineData,
-  updateUser,
-} from "@/app/actions";
-import {
   ThemeColor,
   User,
   Metric,
   MetricEntry,
-  Notification,
-  Message,
-  MessageEmotion,
-} from "@prisma/client";
+} from "@/zero/schema";
 import { Plan, PlanMilestone } from "@prisma/types";
-
-type MessagesWithRelations = Message & {
-  emotions: MessageEmotion[];
-};
+import { useZ } from "@/hooks/useZ";
+import { HydratedCurrentUser, HydratedUser, TimelineData, getCurrentUser, getOtherUser, getTimeline, getMessages, getMetricsAndEntries, MessagesWithRelations } from "@/zero/queries";
 
 export type CompletePlan = Omit<HydratedCurrentUser["plans"][number], "milestones"> & {
   milestones: PlanMilestone[];
@@ -81,7 +64,6 @@ export interface UserGlobalContextType {
   useIsMetricLoggedToday: (metricId: string) => boolean;
   hasLoadedUserData: boolean;
   messagesData: UseQueryResult<{ messages: MessagesWithRelations[] }>;
-  notificationsData: UseQueryResult<{ notifications: Notification[] }>;
   refetchUserData: (notify?: boolean) => Promise<HydratedCurrentUser>;
   refetchAllData: () => Promise<HydratedCurrentUser>;
   updateLocalUserData: (
@@ -123,6 +105,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const router = useRouter();
   const { signOut } = useClerk();
   const queryClient = useQueryClient();
+  const z = useZ();
 
   const handleAuthError = useCallback(
     (err: unknown) => {
@@ -146,7 +129,9 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const useCurrentUserDataQuery = () => {
     const query = useQuery({
       queryKey: ["userData", "current"],
-      queryFn: () => getCurrentUserData(),
+      queryFn: async () => {
+        return await getCurrentUser(z);
+      },
       enabled: isLoaded && isSignedIn,
     });
 
@@ -158,62 +143,78 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       queryKey: ["recommendedUsers"],
       queryFn: async () => {
         // Return empty data for now - can be implemented with server actions later
-        return {
+        const result = {
           recommendations: [],
           users: [],
           plans: [],
         };
+        return result;
       },
       enabled: isSignedIn && isLoaded,
       staleTime: 1000 * 60 * 5,
     });
+
     return query;
   };
 
   const useUserDataQuery = (username: string) => {
     const { isSignedIn, isLoaded } = useSession();
-    const currentUserQuery = useCurrentUserDataQuery();
 
-    return useQuery({
+    const query = useQuery({
       queryKey: ["userData", username],
-      queryFn: () => getUserData(username),
+      queryFn: () => {
+        return getOtherUser(z, { username }).then(result => {
+          return result;
+        }).catch(error => {
+          throw error;
+        });
+      },
       enabled: isLoaded && isSignedIn && !!username,
       staleTime: 1000 * 60 * 5,
-      initialData: () => {
-        if (
-          currentUserQuery.data?.username?.toLowerCase() ===
-          username.toLowerCase()
-        ) {
-          return currentUserQuery.data as HydratedUser;
-        }
-        return undefined;
-      },
-    });
-  };
-
-  const useTimelineDataQuery = () => {
-    const query = useQuery({
-      queryKey: ["timelineData"],
-      queryFn: () => getTimelineData(),
-      enabled: isLoaded && isSignedIn,
+      // initialData: () => {
+      //   if (
+      //     currentUserQuery.data?.username?.toLowerCase() ===
+      //     username.toLowerCase()
+      //   ) {
+      //     return currentUserQuery.data as HydratedUser;
+      //   }
+      //   return undefined;
+      // },
     });
 
     return query;
   };
 
-  const useMultipleUsersDataQuery = (usernames: string[]) =>
-    useQuery({
+  const useTimelineDataQuery = () => {
+    const query = useQuery({
+      queryKey: ["timelineData"],
+      queryFn: async () => {
+        if (!currentUserDataQuery.data?.id) {
+          throw new Error("User ID not available");
+        }
+        const result = await getTimeline(z, { userId: currentUserDataQuery.data.id });
+        return result;
+      },
+      enabled: isLoaded && isSignedIn && !!currentUserDataQuery.data?.id,
+    });
+
+    return query;
+  };
+
+  const useMultipleUsersDataQuery = (usernames: string[]) => {
+    const query = useQuery({
       queryKey: ["multipleUsersData", usernames.sort().join(",")],
       queryFn: async () => {
         try {
           const transformedData: Record<string, any> = {};
           // Fetch each user's data individually using server actions
           for (const username of usernames) {
-            const userData = await getUserData(username);
+            const userData = await getOtherUser(z, { username });
             transformedData[username] = userData;
           }
           return transformedData;
         } catch (err) {
+          console.error("[useMultipleUsersDataQuery] Query error:", err);
           handleAuthError(err);
           throw err;
         }
@@ -222,40 +223,32 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       staleTime: 1000 * 60 * 5,
     });
 
+    return query;
+  };
+
+  const currentUserDataQuery = useCurrentUserDataQuery();
+
   const messagesData = useQuery({
     queryKey: ["messagesData"],
     queryFn: async () => {
       try {
-        const result = await getMessages();
+        if (!currentUserDataQuery.data?.id) {
+          throw new Error("User ID not available");
+        }
+        const result = await getMessages(z, { userId: currentUserDataQuery.data.id });
         return result;
       } catch (err) {
+        console.error("[messagesData] Query error:", err);
         handleAuthError(err);
         throw err;
       }
     },
-    enabled: !!isSignedIn && isLoaded,
+    enabled: !!isSignedIn && isLoaded && !!currentUserDataQuery.data?.id,
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
 
-  const notificationsData = useQuery({
-    queryKey: ["notificationsData"],
-    queryFn: async () => {
-      try {
-        // Notifications are already included in getCurrentUserData
-        const userData = await getCurrentUserData();
-        return { notifications: userData.notifications };
-      } catch (err) {
-        handleAuthError(err);
-        throw err;
-      }
-    },
-    enabled: !!isSignedIn && isLoaded,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
-  });
 
-  const currentUserDataQuery = useCurrentUserDataQuery();
   const timelineDataQuery = useTimelineDataQuery();
 
   const refetchUserData = useCallback(
@@ -286,7 +279,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ["userData"] }),
         queryClient.refetchQueries({ queryKey: ["timelineData"] }),
-        queryClient.refetchQueries({ queryKey: ["notificationsData"] }),
         queryClient.refetchQueries({ queryKey: ["messagesData"] }),
         queryClient.refetchQueries({ queryKey: ["recommendedUsers"] }),
         queryClient.refetchQueries({ queryKey: ["multipleUsersData"] }),
@@ -307,8 +299,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const useMetricsAndEntriesQuery = () =>
     useQuery({
       queryKey: ["metricsAndEntries"],
-      queryFn: () => getMetricsAndEntries(),
-      enabled: isLoaded && isSignedIn,
+      queryFn: () => {
+        if (!currentUserDataQuery.data?.id) {
+          throw new Error("User ID not available");
+        }
+        return getMetricsAndEntries(z, { userId: currentUserDataQuery.data.id });
+      },
+      enabled: isLoaded && isSignedIn && !!currentUserDataQuery.data?.id,
       staleTime: 1000 * 60 * 5,
     });
 
@@ -319,7 +316,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return entries.some(
       (entry) =>
-        entry.metricId === metricId && entry.date.toISOString().split("T")[0] === today
+        entry.metricId === metricId && new Date(entry.date).toISOString().split("T")[0] === today
     );
   };
 
@@ -333,7 +330,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       (metric) =>
         !entries.some(
           (entry) =>
-            entry.metricId === metric.id && entry.date.toISOString().split("T")[0] === today
+            entry.metricId === metric.id && new Date(entry.date).toISOString().split("T")[0] === today
         )
     );
   };
@@ -346,9 +343,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       currentUserDataQuery.data &&
       currentUserDataQuery.data.timezone !== currentTimezone
     ) {
-      updateUser({ timezone: currentTimezone }).catch((err) => {
-        console.error("Failed to update timezone on initial load:", err);
-      });
+      // TODO: Implement timezone update using Zero mutators
     }
   }, [isSignedIn, currentUserDataQuery.data]);
 
@@ -360,12 +355,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateTheme = useCallback(
     async (color: ThemeColorType) => {
-      if (!isSignedIn) return;
+      if (!isSignedIn || !currentUserDataQuery.data) return;
 
       try {
         // Convert to the correct enum value
         const themeColor = color.toUpperCase() as ThemeColor;
-        await updateUser({ themeBaseColor: themeColor });
+        // TODO: Implement theme update using Zero mutators
         await currentUserDataQuery.refetch();
       } catch (err) {
         handleAuthError(err);
@@ -425,7 +420,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     hasLoadedUserData:
       currentUserDataQuery.isSuccess && !!currentUserDataQuery.data,
     messagesData,
-    notificationsData,
     refetchUserData,
     refetchAllData,
     updateLocalUserData: (
@@ -450,8 +444,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       currentUserDataQuery.isFetching ||
       timelineDataQuery.isPending ||
       timelineDataQuery.isFetching ||
-      notificationsData.isPending ||
-      notificationsData.isFetching ||
       messagesData.isPending ||
       messagesData.isFetching,
   };

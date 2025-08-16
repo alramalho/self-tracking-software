@@ -1,6 +1,15 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+export function assert(
+  b: unknown,
+  msg: string | (() => string) = "Assertion failed"
+): asserts b {
+  if (!b) {
+    throw new Error(typeof msg === "string" ? msg : msg());
+  }
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -14,7 +23,7 @@ export function capitalizeFirstLetter(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-export function formatTimeAgo(date: string | Date) {
+export function formatTimeAgo(date: string | Date | number) {
   const now = new Date();
   const past = new Date(date);
   const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);

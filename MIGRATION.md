@@ -159,6 +159,9 @@ backend
 [ ] 
 -- user profile
 [x] can update settings (like looking for ap)
+[] can see friend count
+[] can see friend list
+[] can navigate to friend profile
 ...
 -- notifications
 [x] can see
@@ -185,7 +188,7 @@ backend
 
 [x] proper indexing (seems slow)
 [x] creating local db
-[] setting up zero config
+[] setting up rocicorp zero config local
 [] new supabase project for prod
-[] deploying
+[] deploying (sst? + syncer costs 35$)
 [] data migration

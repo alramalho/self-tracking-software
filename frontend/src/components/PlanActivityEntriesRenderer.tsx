@@ -4,12 +4,13 @@ import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 import ActivityEditor from "./ActivityEditor";
 import { isWeekCompleted } from "@/contexts/PlanProgressContext/lib";
 import { CompletePlan } from "@/contexts/UserGlobalContext";
-import { Activity, ActivityEntry } from "@prisma/client";
+import { Activity, ActivityEntry } from "@/zero/schema";
+import { HydratedCurrentUser } from "@/zero/queries";
 
 interface PlanActivityEntriesRendererProps {
-  plan: CompletePlan;
-  activities: Activity[];
-  activityEntries: ActivityEntry[];
+  plan: HydratedCurrentUser["plans"][number];
+  activities: HydratedCurrentUser["activities"];
+  activityEntries: HydratedCurrentUser["activityEntries"];
   startDate?: Date;
   endDate?: Date;
 }

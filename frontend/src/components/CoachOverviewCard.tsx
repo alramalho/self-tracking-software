@@ -9,7 +9,7 @@ import { PlanStatus } from "./PlanProgressCard";
 import { Button } from "./ui/button";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
 import { ArrowBigRight, Check, Loader2, X } from "lucide-react";
-import { PlanSession } from "@prisma/client";
+import { PlanSession } from "@/zero/schema";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import { CompletePlan } from "@/contexts/UserGlobalContext";
@@ -36,7 +36,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<
     string | null
   >(null);
-  const coachSuggestedSessions = selectedPlan.sessions.filter(
+  const coachSuggestedSessions = (selectedPlan.sessions || []).filter(
     (s) => s.isCoachSuggested
   );
   const [loadingStates, setLoadingStates] = useState({

@@ -1,13 +1,13 @@
 import { useApiWithAuth } from "@/api";
 import { CompletePlan } from "@/contexts/UserGlobalContext";
-import { Activity } from "@prisma/client";
+import { HydratedCurrentUser } from "@/zero/queries";
 
 interface PlanGenerationConfig {
   goal: string;
   finishingDate?: Date;
-  activities: Activity[];
+  activities: HydratedCurrentUser["activities"];
   description?: string;
-  existingPlan?: CompletePlan;
+  existingPlan?: HydratedCurrentUser["plans"][number];
 }
 
 export function usePlanGeneration() {

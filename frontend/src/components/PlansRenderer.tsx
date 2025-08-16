@@ -30,13 +30,14 @@ import toast from "react-hot-toast";
 import { parseISO, format, addMonths, isBefore } from "date-fns";
 
 // Helper function to check if a plan is expired
-export const isPlanExpired = (plan: CompletePlan): boolean => {
+export const isPlanExpired = (plan: { finishingDate: Date | number | string | null }): boolean => {
   if (!plan.finishingDate) return false;
-  return isBefore(plan. finishingDate, new Date());
+  const finishingDate = new Date(plan.finishingDate);
+  return isBefore(finishingDate, new Date());
 };
 
 // Function to sort plans with active plans first, then expired plans
-const sortPlansByExpiration = (plans: CompletePlan[]): CompletePlan[] => {
+const sortPlansByExpiration = (plans: { finishingDate: Date | number | string | null }[]): { finishingDate: Date | number | string | null }[] => {
   // Create a copy to avoid mutating the original array
   return [...plans].sort((a, b) => {
     const aExpired = isPlanExpired(a);
@@ -177,7 +178,8 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   useEffect(() => {
     if (userData?.plans) {
       // Sort plans with active plans first, then expired plans
-      setOrderedPlans(sortPlansByExpiration(userData.plans as CompletePlan[]));
+      const plans = userData.plans as unknown as CompletePlan[];
+      setOrderedPlans(sortPlansByExpiration(plans) as CompletePlan[]);
     }
   }, [userData?.plans]);
 
@@ -191,7 +193,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       const firstPlan = orderedPlans[0];
       setSelectedPlanId(firstPlan.id || null);
     }
-  }, [orderedPlans, initialSelectedPlanId]);
+  }, [orderedPlans, initialSelectedPlanId, selectedPlanId]);
 
   const handleReactivatePlan = async (planId: string) => {
     try {

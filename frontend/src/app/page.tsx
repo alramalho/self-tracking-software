@@ -9,7 +9,7 @@ import PullToRefresh from "react-simple-pull-to-refresh";
 import { MetricIsland } from "@/components/MetricIsland";
 import { TodaysNoteSection } from "@/components/TodaysNoteSection";
 import { MetricWeeklyView } from "@/components/MetricWeeklyView";
-import { MetricEntry } from "@prisma/client";
+import { MetricEntry } from "@/zero/schema";
 import {
   Search,
   Bell,
@@ -43,14 +43,13 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 import { ScanFace } from "lucide-react";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import { getUser } from "./actions";
+// import { getUser } from "./actions";
 import { isToday } from "date-fns";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
   const {
     useCurrentUserDataQuery,
-    notificationsData,
     refetchAllData,
   } = useUserPlan();
   const { data: userData } =
@@ -83,10 +82,9 @@ const HomePage: React.FC = () => {
     useState(false);
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
 
-  const unreadNotifications =
-    notificationsData.data?.notifications?.filter(
-      (n) => n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
-    ) || [];
+  const unreadNotifications = userData?.notifications?.filter(
+    (n) => n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
+  ) || [];
   const unreadNotificationsCount = unreadNotifications.length;
 
   const { areAllMetricsCompleted } = useDailyCheckin();
@@ -96,21 +94,19 @@ const HomePage: React.FC = () => {
     setIsSearchOpen(false);
   };
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      console.log(`Fetching user ${userData?.id}`);
-      const user = await getUser();
+  // useEffect(() => {
+  //   const fetchUser = async () => {
+  //     console.log(`Fetching user ${userData?.id}`);
+  //     const user = await getUser();
       
-      console.log(`User fetched from prisma! ${user?.id}`);
-    };
-    fetchUser();
-  }, [userData]);
+  //     console.log(`User fetched from prisma! ${user?.id}`);
+  //   };
+  //   fetchUser();
+  // }, [userData]);
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
     await clearGeneralNotifications();
-    // Optionally refetch notifications to update the UI
-    await notificationsData.refetch();
   };
 
   // Color mapping for metrics

@@ -214,7 +214,7 @@ export const PlanWeekDisplay = ({
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
           <span className="text-sm text-gray-500">Coming up:</span>
           <div className="flex flex-row flex-wrap gap-2">
-            {plan.sessions
+            {(plan.sessions || [])
               .filter((session) => {
                 return isSameWeek(session.date, date);
               })

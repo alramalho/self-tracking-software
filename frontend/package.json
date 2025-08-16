@@ -2,8 +2,10 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently --names \"ZERO,NEXT\" --prefix-colors \"cyan.bold,green.bold\" \"npx zero-cache-dev\" \"next dev\"",
+    "zero": "node server.js",
     "dev:https": "node server.js",
     "check-types": "tsc --noEmit",
     "clean": "rm -rf .next && rm -rf node_modules",

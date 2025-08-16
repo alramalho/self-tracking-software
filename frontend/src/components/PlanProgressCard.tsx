@@ -7,12 +7,11 @@ import {
 } from "@/contexts/PlanProgressContext/lib";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import {
-  Plan,
-  Notification,
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { AnimatePresence } from "framer-motion";
-import Confetti from "react-confetti-boom";
+import { Plan } from "@/zero/schema";
+import { Notification } from "@/zero/schema";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import {
@@ -35,7 +34,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 
 export const PlanStatus = ({ plan }: { plan: Plan }) => {
-  if (!plan?.currentWeek?.state) {
+  if (!plan?.currentWeekState) {
     return null;
   }
   const statusConfig = {
@@ -57,7 +56,7 @@ export const PlanStatus = ({ plan }: { plan: Plan }) => {
     },
   };
 
-  const config = statusConfig[plan.currentWeek.state];
+  const config = statusConfig[plan.currentWeekState];
 
   return (
     <div className="flex items-center gap-2">
@@ -92,7 +91,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { notificationsData } = useUserPlan();
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const userData = useCurrentUserDataQuery();
 
   const [isAnimationCompleted, setIsAnimationCompleted] = useState<boolean>(false);
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
@@ -135,7 +135,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
       setLastCoachMessage(response.data.message);
       setLastTimeCoachMessageWasGenerated(new Date());
-      notificationsData?.refetch();
+      userData?.refetch();
     } catch (error) {
       console.error("Failed to generate coach message:", error);
     } finally {
@@ -145,16 +145,16 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   // Initialize coach message from notifications data
   useEffect(() => {
-    if (!isDemo && notificationsData?.data?.notifications) {
-      const initialCoachMessage = notificationsData?.data?.notifications?.find(
-        (notification: Notification) => notification.type === "coach"
+    if (!isDemo && userData?.data?.notifications) {
+      const initialCoachMessage = userData?.data?.notifications?.find(
+        (notification: Notification) => notification.type === "COACH"
       )?.message;
 
       if (initialCoachMessage) {
         setLastCoachMessage(initialCoachMessage);
       }
     }
-  }, [notificationsData, isDemo]);
+  }, [userData, isDemo]);
 
   // Get current week data
   const currentWeek = weeks.find((week) =>
@@ -165,7 +165,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   // Calculate weekly progress
   const totalPlannedActivities =
-    plan.outlineType === "timesPerWeek"
+    plan.outlineType === "TIMES_PER_WEEK"
       ? (currentWeek.plannedActivities as number)
       : (currentWeek.plannedActivities as any[])?.length || 0;
 
@@ -285,7 +285,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                       <span className="text-xs text-gray-400/80">This week</span>
                       <PlanStatus plan={plan} />
                       {["COMPLETED", "FAILED"].includes(
-                        plan?.currentWeek?.state || ""
+                        plan?.currentWeekState || ""
                       ) && (
                         <Link
                           href={`/plans?selectedPlan=${plan.id}`}

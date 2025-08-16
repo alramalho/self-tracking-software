@@ -3,8 +3,8 @@ import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 import { isSameDay, format } from "date-fns";
 import { parseISO } from "date-fns";
 import { subDays } from "date-fns";
-import { Activity } from "@prisma/client";
-import { ActivityEntry } from "@prisma/client";
+import { Activity } from "@/zero/schema";
+import { ActivityEntry } from "@/zero/schema";
 
 interface ActivityGridRendererProps {
   activities: Activity[];
@@ -27,7 +27,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
         activities.map((a) => a.id).includes(entry.activityId)
       )
       .map((entry) => ({
-        date: entry.date.toISOString().replaceAll("-", "/"),
+        date: new Date(entry.date).toISOString().replaceAll("-", "/"),
         count: entry.quantity,
       }));
     return result;

@@ -27,7 +27,7 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   env: {
-    // Client env variables go here
+    ZERO_AUTH_JWKS_URL: process.env.ZERO_AUTH_JWKS_URL,
   },
 };
 

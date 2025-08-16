@@ -41,6 +41,7 @@ import StreakDetailsPopover from "@/components/profile/PlanProgresPopover";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import { cn } from "@/lib/utils";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
+import { ActivityEntry } from "@/zero/schema";
 
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
@@ -71,14 +72,13 @@ const ProfilePage: React.FC = () => {
   const searchParams = useSearchParams();
   const username = params.username as string;
   const currentUser = currentUserQuery.data;
-  const currentUserSentConnectionRequests = currentUser?.connectionsFrom?.filter(conn => conn.status === 'PENDING');
-  const currentUserReceivedConnectionRequests = currentUser?.connectionsTo?.filter(conn => conn.status === 'PENDING');
   const profileDataQuery = useUserDataQuery(username);
   const { isSuccess: isProfileDataSuccesfullyLoaded, data: profileData } =
     profileDataQuery;
   const { activityEntries, activities, plans } = profileData || {
     activityEntries: [],
     activities: [],
+    plans: [],
   };
   const profileActivePlans = plans?.filter((p) => !isPlanExpired(p));
   const api = useApiWithAuth();
@@ -161,8 +161,8 @@ const ProfilePage: React.FC = () => {
 
   const handleConnectionRequest = async (action: "accept" | "reject") => {
     if (profileData) {
-      const request = currentUserReceivedConnectionRequests?.find(
-        (req) => req.fromId === profileData.id
+      const request = currentUser?.connections?.find(
+        (req) => req.toId === profileData.id
       );
       if (request) {
         await toast.promise(
@@ -207,23 +207,21 @@ const ProfilePage: React.FC = () => {
   };
 
   const hasPendingReceivedConnectionRequest = () => {
-    return currentUserReceivedConnectionRequests?.some(
+    return currentUser?.connections?.some(
       (request) =>
         request.fromId === profileData?.id
     );
   };
 
   const hasPendingSentConnectionRequest = () => {
-    return currentUserSentConnectionRequests?.some(
+    return currentUser?.connections?.some(
       (request) =>
         request.toId === profileData?.id
     );
   };
 
   const isFriend = () => {
-    return currentUser?.friends?.some(
-      (friend) => friend.id === profileData?.id
-    );
+    return currentUser?.friends?.some((friend) => friend.id === profileData?.id);
   };
 
   if (!isProfileDataSuccesfullyLoaded) {
@@ -580,9 +578,9 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="history">
             {activityEntries?.length > 0 ? (
               <div className="space-y-4">
-                {activityEntries
+                {[...activityEntries]
                   .sort(
-                    (a, b) =>
+                    (a: ActivityEntry, b: ActivityEntry) =>
                       new Date(b.date).getTime() - new Date(a.date).getTime()
                   )
                   .map((entry) => {
@@ -598,9 +596,9 @@ const ProfilePage: React.FC = () => {
                         activityEmoji={activity?.emoji || ""}
                         activityEntryQuantity={entry.quantity}
                         activityEntryReactions={entry.reactions.reduce((acc, reaction) => {
-                          if (!acc[reaction.emoji] && reaction.user.username) {
+                          if (!acc[reaction.emoji] && reaction.user &&reaction.user.username) {
                             acc[reaction.emoji] = [reaction.user.username];
-                          } else if (reaction.user.username) {
+                          } else if (reaction.user && reaction.user.username) {
                             acc[reaction.emoji].push(reaction.user.username);
                           }
                           return acc;
@@ -608,12 +606,12 @@ const ProfilePage: React.FC = () => {
                         activityEntryTimezone={entry.timezone || undefined}
                         activityEntryComments={entry.comments}
                         activityMeasure={activity?.measure || ""}
-                        date={entry.date}
+                        date={new Date(entry.date)}
                         description={entry.description || undefined}
                         daysUntilExpiration={
                           entry.imageExpiresAt
                             ? differenceInDays(
-                                parseISO(entry.imageExpiresAt.toISOString()!),
+                                new Date(entry.imageExpiresAt),
                                 new Date()
                               )
                             : -1
@@ -673,7 +671,7 @@ const ProfilePage: React.FC = () => {
           activityEntry={{
             id: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.id,
             quantity: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.quantity,
-            date: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.date.toISOString(),
+            date: new Date(activityEntries.find((entry) => entry.id === showEditActivityEntry)!.date).toISOString(),
             activityId: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.activityId,
             description: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.description || undefined,
           }}

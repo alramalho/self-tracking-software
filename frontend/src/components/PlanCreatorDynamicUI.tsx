@@ -161,7 +161,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
               </p>
             ) : (
               <div className="space-y-2">
-                {data.plan.sessions.map((session, idx) => {
+                {(data.plan.sessions || []).map((session, idx) => {
                   const activity = data.activities?.find(
                     (a) => a.id === session.activityId
                   );

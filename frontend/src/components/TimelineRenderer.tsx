@@ -21,7 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { Activity, User, ActivityEntry, Plan } from "@prisma/client";
+import { Activity, User, ActivityEntry, Plan } from "@/zero/schema";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { toast } from "react-hot-toast";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -34,7 +34,6 @@ import {
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { HydratedUser } from "@/app/actions";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -61,7 +60,7 @@ const TimelineRenderer: React.FC<{
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
 
-  if (!timelineDataQuery.isFetched && !timelineData) {
+  if (!timelineDataQuery.isFetched) {
     return (
       <div className="flex justify-center items-center w-full">
         <Loader2 className="animate-spin text-gray-500" />

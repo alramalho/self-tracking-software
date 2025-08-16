@@ -1,31 +1,34 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { Prisma, ThemeColor } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-export type HydratedCurrentUser = Awaited<
-  ReturnType<typeof getCurrentUserData>
->;
-export type HydratedUser = Awaited<ReturnType<typeof getUserData>>;
-export type TimelineData = Awaited<ReturnType<typeof getTimelineData>>;
+// export type HydratedCurrentUser = Awaited<
+//   ReturnType<typeof getCurrentUserData>
+// >;
+// export type HydratedUser = Awaited<ReturnType<typeof getUserData>>;
+// export type TimelineData = Awaited<ReturnType<typeof getTimelineData>>;
 
-export async function validateUser() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) {
+export async function validateUser(options?: { clerkId: string }) {
+  const clerkId = options?.clerkId;
+  const finalClerkId = clerkId || (await auth()).userId;
+  if (!finalClerkId) {
     throw new Error("User not authenticated");
   }
+
   const user = await prisma.user.findUnique({
-    where: { clerkId },
+    where: { clerkId: finalClerkId },
   });
-  const userId = user?.id;
-  if (!userId) {
+
+  if (!user?.id) {
     throw new Error("User not authenticated");
   }
+
   return user;
 }
 
-export async function getUser() {
-  return await validateUser();
+export async function getUser({ clerkId }: { clerkId: string }) {
+  return await validateUser({ clerkId });
 }
 
 export async function getCurrentUserData() {

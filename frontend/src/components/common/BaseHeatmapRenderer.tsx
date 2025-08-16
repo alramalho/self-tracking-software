@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { format, addDays, isToday, subMonths } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { Activity } from "@prisma/client";
+import { Activity } from "@/zero/schema";
 import { Brush } from "lucide-react";
+import { HydratedCurrentUser } from "@/zero/queries";
 
 export interface HeatmapData {
   date: string;
@@ -11,7 +12,7 @@ export interface HeatmapData {
 }
 
 export interface BaseHeatmapRendererProps {
-  activities: Activity[];
+  activities: HydratedCurrentUser["activities"];
   startDate: Date;
   endDate?: Date;
   heatmapData: HeatmapData[];
@@ -21,7 +22,7 @@ export interface BaseHeatmapRendererProps {
   ) => { activityIndex: number; intensity: number }[] | null;
   noActivityLegend?: boolean;
   getWeekCompletionStatus?: (weekStartDate: Date) => boolean;
-  onEditActivity?: (activity: Activity) => void;
+  onEditActivity?: (activity: HydratedCurrentUser["activities"][number]) => void;
   refreshKey?: number | string;
 }
 

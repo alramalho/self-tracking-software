@@ -2,8 +2,9 @@ import React, { createContext, useContext, useMemo } from "react";
 import {
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
-import { Plan, Activity, ActivityEntry, PlanSession } from "@prisma/client";
+import { Plan, Activity, ActivityEntry, PlanSession } from "@/zero/schema";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
+import { HydratedCurrentUser } from "@/zero/queries";
 
 export interface PlanAchievementResult {
   streak: number;
@@ -30,9 +31,9 @@ export interface PlanProgressData {
 
 export interface PlanProgressContextType {
   calculatePlanAchievement: (
-    plan: Plan,
-    activities: Activity[],
-    activityEntries: ActivityEntry[],
+    plan: HydratedCurrentUser["plans"][number],
+    activities: HydratedCurrentUser["activities"],
+    activityEntries: HydratedCurrentUser["activityEntries"],
     initialDate?: Date
   ) => PlanAchievementResult;
   plansProgress: PlanProgressData[];
@@ -118,9 +119,9 @@ export const usePlanProgress = () => {
 
 // Export a function to create plan progress data independently (for demos)
 export const createPlanProgressData = (
-  plan: Plan,
-  activities: Activity[],
-  activityEntries: ActivityEntry[]
+  plan: HydratedCurrentUser["plans"][number],
+  activities: HydratedCurrentUser["activities"],
+  activityEntries: HydratedCurrentUser["activityEntries"]
 ): PlanProgressData => {
   return {
     plan,

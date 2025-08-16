@@ -18,6 +18,7 @@ import { UpgradeProvider } from "@/contexts/UpgradeContext";
 import { PlanProgressProvider } from "@/contexts/PlanProgressContext";
 import { DailyCheckinPopoverProvider } from "@/contexts/DailyCheckinContext";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { ZeroProviderWrapper } from "@/components/ZeroProviderWrapper";
 
 // Configure QueryClient with longer gcTime to support persistence
 const queryClient = new QueryClient({
@@ -50,36 +51,38 @@ export default function ClientLayout({
       client={queryClient}
       // persistOptions={{ persister: localStoragePersister }}
     >
-      <LoggerProvider>
-        <UserPlanProviderWrapper>
-          <PlanProgressProvider>
-            <ThemeProvider>
-              <UpgradeProvider>
-                <DailyCheckinPopoverProvider>
-                  <NotificationsProvider>
-                    <main
-                      className={cn(
-                        "relative h-[100dvh] [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4",
-                        isSignedIn && isDesktop ? "ml-64" : ""
-                      )}
-                    >
-                      <GeneralInitializer>{children}</GeneralInitializer>
-                    </main>
-                    <SonnerToaster position="top-center" />
-                    <Toaster
-                      position="top-center"
-                      containerStyle={{
-                        bottom: "5rem",
-                        zIndex: 105,
-                      }}
-                    />
-                  </NotificationsProvider>
-                </DailyCheckinPopoverProvider>
-              </UpgradeProvider>
-            </ThemeProvider>
-          </PlanProgressProvider>
-        </UserPlanProviderWrapper>
-      </LoggerProvider>
+      <ZeroProviderWrapper>
+        <LoggerProvider>
+          <UserPlanProviderWrapper>
+            <PlanProgressProvider>
+              <ThemeProvider>
+                <UpgradeProvider>
+                  <DailyCheckinPopoverProvider>
+                    <NotificationsProvider>
+                      <main
+                        className={cn(
+                          "relative h-[100dvh] [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4",
+                          isSignedIn && isDesktop ? "ml-64" : ""
+                        )}
+                      >
+                        <GeneralInitializer>{children}</GeneralInitializer>
+                      </main>
+                      <SonnerToaster position="top-center" />
+                      <Toaster
+                        position="top-center"
+                        containerStyle={{
+                          bottom: "5rem",
+                          zIndex: 105,
+                        }}
+                      />
+                    </NotificationsProvider>
+                  </DailyCheckinPopoverProvider>
+                </UpgradeProvider>
+              </ThemeProvider>
+            </PlanProgressProvider>
+          </UserPlanProviderWrapper>
+        </LoggerProvider>
+      </ZeroProviderWrapper>
     </QueryClientProvider>
   );
 }

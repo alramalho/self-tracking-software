@@ -14,7 +14,7 @@ import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useSession } from "@clerk/nextjs";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
-import { Notification as PrismaNotification } from "@prisma/client";
+import { Notification as NotificationType } from "@/zero/schema";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -48,7 +48,8 @@ export const NotificationsProvider = ({
 }: {
   children: ReactNode;
 }) => {
-  const { notificationsData } = useUserPlan();
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const userData = useCurrentUserDataQuery();
   const { isSignedIn } = useSession();
   const [notificationCount, setNotificationCount] = useState(0);
   const { shouldShowNotification } = useDailyCheckin();
@@ -67,9 +68,9 @@ export const NotificationsProvider = ({
   const api = useApiWithAuth();
 
   useEffect(() => {
-    if (notificationsData.data) {
-      const nonConcludedNotificationsCount = notificationsData.data.notifications?.filter(
-        (notification: PrismaNotification) => notification.status !== "CONCLUDED"
+    if (userData.data) {
+      const nonConcludedNotificationsCount = userData.data.notifications?.filter(
+        (notification: NotificationType) => notification.status !== "CONCLUDED"
       ).length || 0;
       
       // Add 1 to the badge count if there's a daily check-in notification
@@ -79,7 +80,7 @@ export const NotificationsProvider = ({
         navigator.setAppBadge(totalBadgeCount);
       }
     }
-  }, [notificationsData.data, dailyCheckinNotification]);
+  }, [userData.data, dailyCheckinNotification]);
 
   useEffect(() => {
     subscription

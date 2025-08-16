@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import Number from "../Number";
-import { Activity, useUserPlan } from "@/contexts/UserGlobalContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import ActivityItem  from "../ActivityItem";
 import { Plus } from "lucide-react";
 import ActivityEditor from "@/components/ActivityEditor";
+import { HydratedCurrentUser } from "@/zero/queries";
 
 interface ActivitiesStepProps {
-  onActivitiesChange: (activities: Activity[]) => void;
-  initialActivities?: Activity[];
+  onActivitiesChange: (activities: HydratedCurrentUser["activities"]) => void;
+  initialActivities?: HydratedCurrentUser["activities"] ;
 }
 
 const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
@@ -18,14 +19,14 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const [showActivityEditor, setShowActivityEditor] = useState(false);
-  const [selectedActivities, setSelectedActivities] = useState<Activity[]>(initialActivities);
+  const [selectedActivities, setSelectedActivities] = useState<HydratedCurrentUser["activities"]>(initialActivities);
 
   // Update parent component when selected activities change
   useEffect(() => {
     onActivitiesChange(selectedActivities);
   }, [selectedActivities, onActivitiesChange]);
 
-  const handleToggleActivity = (activity: Activity) => {
+  const handleToggleActivity = (activity: HydratedCurrentUser["activities"][number]) => {
     setSelectedActivities((prev) =>
       prev.some((a) => a.id === activity.id)
         ? prev.filter((a) => a.id !== activity.id)

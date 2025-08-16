@@ -60,10 +60,11 @@ import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { CoachOverviewCard } from "./CoachOverviewCard";
-import { Activity, Plan, PlanSession } from "@prisma/client";
+import { Activity, Plan, PlanSession } from "@/zero/schema";
+import { HydratedCurrentUser } from "@/zero/queries";
 
 interface PlanRendererv2Props {
-  selectedPlan: CompletePlan;
+  selectedPlan: HydratedCurrentUser["plans"][number];
 }
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {

@@ -46,7 +46,7 @@ const PlanCard = ({
   const getFrequencyDescription = () => {
     const weeksCount = getWeeksCount();
     if (weeksCount > 0) {
-      const sessionsPerWeek = plan.sessions.length / weeksCount;
+      const sessionsPerWeek = (plan.sessions || []).length / weeksCount;
       const minSessions = Math.floor(sessionsPerWeek);
       const maxSessions = Math.ceil(sessionsPerWeek);
       return minSessions === maxSessions

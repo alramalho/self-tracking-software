@@ -2,6 +2,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator zero {
+  provider       = "prisma-generator-zero"
+  output         = "../frontend/src/zero"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -57,6 +62,7 @@ model User {
   planGroupMemberships    PlanGroup[]
   recommendations         Recommendation[]
   reactionsSent           Reaction[]
+  commentsPosted          Comment[]
 
   // Connection relationships (replaces friend system)
   connectionsFrom Connection[] @relation("ConnectionFrom")
@@ -172,6 +178,7 @@ model Comment {
 
   // Relations
   activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([activityEntryId, deletedAt])
   @@index([createdAt])

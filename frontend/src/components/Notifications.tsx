@@ -1,5 +1,6 @@
 import React from "react";
-import { useUserPlan, Notification } from "@/contexts/UserGlobalContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Notification } from "@/zero/schema";
 import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
@@ -16,7 +17,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 interface NotificationsProps {}
 
 const Notifications: React.FC<NotificationsProps> = () => {
-  const { notificationsData } = useUserPlan();
+  const { useCurrentUserDataQuery } = useUserPlan();
+  const userData = useCurrentUserDataQuery();
   const router = useRouter();
   const api = useApiWithAuth();
   const themeColors = useThemeColors();
@@ -30,15 +32,15 @@ const Notifications: React.FC<NotificationsProps> = () => {
     const concludeNotification = async (skipToast: boolean = false) => {
       await api.post(`/conclude-notification/${notification.id}`);
       if (!skipToast) {
-        notificationsData.refetch();
+        userData.refetch();
       }
     };
 
     let skipToast = false;
     const actionPromise = async () => {
-      if (notification.type === "info") {
+      if (notification.type === "INFO") {
         await concludeNotification();
-      } else if (notification.type === "engagement") {
+      } else if (notification.type === "ENGAGEMENT") {
         if (action === "dismiss") {
           await concludeNotification();
         } else if (action === "respond") {
@@ -48,11 +50,11 @@ const Notifications: React.FC<NotificationsProps> = () => {
           skipToast = true;
           if (
             notification.relatedData &&
-            notification.relatedData.message_id &&
-            notification.relatedData.message_text
+            (notification.relatedData as any).message_id &&
+            (notification.relatedData as any).message_text
           ) {
             router.push(
-              `/ai?assistantType=activity-extraction&messageId=${notification.relatedData.message_id}&messageText=${notification.relatedData.message_text}`
+              `/ai?assistantType=activity-extraction&messageId=${(notification.relatedData as any).message_id}&messageText=${(notification.relatedData as any).message_text}`
             );
           } else {
             toast.error(
@@ -61,9 +63,9 @@ const Notifications: React.FC<NotificationsProps> = () => {
           }
         }
         await concludeNotification(skipToast);
-      } else if (notification.type === "plan_invitation") {
+      } else if (notification.type === "PLAN_INVITATION") {
         router.push(`/join-plan/${notification.relatedId}`);
-      } else if (notification.type === "friend_request") {
+      } else if (notification.type === "FRIEND_REQUEST") {
         await api.post(
           `/${action}-${notification.type.replace("_", "-")}/${
             notification.relatedId
@@ -88,7 +90,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
     } else {
       actionPromise();
     }
-    notificationsData.refetch();
+    userData.refetch();
   };
 
   const renderActionButtons = (notification: Notification) => {
@@ -97,7 +99,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
     const iconSize = 20;
 
     switch (notification.type) {
-      case "friend_request":
+      case "FRIEND_REQUEST":
         return (
           <>
             <button
@@ -116,7 +118,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             </button>
           </>
         );
-      case "plan_invitation":
+      case "PLAN_INVITATION":
         return (
           <button
             onClick={() => handleNotificationAction(notification, "view")}
@@ -142,16 +144,15 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   const hasPictureData = (notification: Notification) => {
-    return notification.relatedData && notification.relatedData.picture;
+    return notification.relatedData && (notification.relatedData as any).picture;
   };
   const hasUsernameData = (notification: Notification) => {
-    return notification.relatedData && notification.relatedData.username;
+    return notification.relatedData && (notification.relatedData as any).username;
   };
 
   const handleClearAll = async () => {
     const clearPromise = async () => {
       await api.post("/notifications/clear-all-notifications");
-      notificationsData.refetch();
     };
 
     toast.promise(clearPromise(), {
@@ -161,14 +162,8 @@ const Notifications: React.FC<NotificationsProps> = () => {
     });
   };
 
-  // Get the latest engagement notification
-  // const latestEngagementNotification =
-  //   notificationsData?.data?.notifications?.find(
-  //     (n) => n.type === "ENGAGEMENT"
-  //   );
-
   // Filter out engagement notifications from the regular notifications
-  const regularNotifications = notificationsData?.data?.notifications?.filter(
+  const regularNotifications = userData?.data?.notifications?.filter(
     (n) => n.type !== "ENGAGEMENT"
   );
 

@@ -4,7 +4,7 @@ import DurationOption from "../DurationOption";
 import { DatePicker } from "@/components/ui/date-picker";
 import { XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlanDurationType } from "@prisma/client";
+import { PlanDurationType } from "@/zero/schema";
 
 interface DurationStepProps {
   planDuration: PlanDurationType;
