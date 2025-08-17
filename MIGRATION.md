@@ -142,7 +142,7 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
 ## notes to self
 ...
 
-## TESTS
+## TESTS (local)
 
 backend
 [X] health
@@ -167,7 +167,7 @@ backend
 -- notifications
 [x] can see
 [x] can dismiss
-
+[] push notify works
 -- plans
 [x] create plan with
     [x] date
@@ -184,14 +184,18 @@ backend
 -- metrics
 [x] log metric
 [x] check metric logged
+-- recommendations
+[] implement plan index (now we don't have planIds array anymore)
+[] can compute recommended users
+[] can see recommended users
 
 ## missing verticals
 
 [x] proper indexing (seems slow)
 [x] creating local db
-[] setting up zero config
 [] new supabase project for prod
 [] deploying
+[] on clean data: test out notifications & recommendation system
 [] data migration
 
 ## Additional packages to install in production

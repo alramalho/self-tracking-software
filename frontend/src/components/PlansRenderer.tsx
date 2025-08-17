@@ -25,7 +25,7 @@ import { CSS } from "@dnd-kit/utilities";
 import PlanCard from "./PlanCard";
 import { useRouter } from "next/navigation";
 import Divider from "./Divider";
-import { useApiWithAuth } from "@/api";
+import { updatePlans } from "@/app/actions";
 import toast from "react-hot-toast";
 import { parseISO, format, addMonths, isBefore } from "date-fns";
 
@@ -35,16 +35,18 @@ export const isPlanExpired = (plan: CompletePlan): boolean => {
   return isBefore(plan. finishingDate, new Date());
 };
 
-// Function to sort plans with active plans first, then expired plans
-const sortPlansByExpiration = (plans: CompletePlan[]): CompletePlan[] => {
-  // Create a copy to avoid mutating the original array
+// Function to sort plans by sortOrder field, with fallback to creation date
+const sortPlansByOrder = (plans: CompletePlan[]): CompletePlan[] => {
   return [...plans].sort((a, b) => {
-    const aExpired = isPlanExpired(a);
-    const bExpired = isPlanExpired(b);
-
-    if (aExpired && !bExpired) return 1; // a is expired, b is not, so b comes first
-    if (!aExpired && bExpired) return -1; // a is not expired, b is, so a comes first
-    return 0; // both are either expired or not expired, maintain original order
+    // If both have sortOrder, use that
+    if (a.sortOrder !== null && b.sortOrder !== null) {
+      return a.sortOrder - b.sortOrder;
+    }
+    // If only one has sortOrder, prioritize it
+    if (a.sortOrder !== null && b.sortOrder === null) return -1;
+    if (a.sortOrder === null && b.sortOrder !== null) return 1;
+    // If neither has sortOrder, fall back to creation date (newest first)
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 };
 
@@ -150,7 +152,6 @@ interface PlansRendererProps {
 const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
 }) => {
-  const api = useApiWithAuth();
   const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
@@ -176,8 +177,8 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
 
   useEffect(() => {
     if (userData?.plans) {
-      // Sort plans with active plans first, then expired plans
-      setOrderedPlans(sortPlansByExpiration(userData.plans as CompletePlan[]));
+      // Sort plans by sortOrder field
+      setOrderedPlans(sortPlansByOrder(userData.plans as CompletePlan[]));
     }
   }, [userData?.plans]);
 
@@ -196,13 +197,17 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const handleReactivatePlan = async (planId: string) => {
     try {
       const oneMonthLater = format(addMonths(new Date(), 1), "yyyy-MM-dd");
-      await api.post(`/plans/${planId}/update`, {
-        data: {
-          finishingDate: oneMonthLater,
-        },
-      });
-      await refetchUserData(false);
-      toast.success("Plan reactivated successfully");
+      const result = await updatePlans([{
+        planId,
+        updates: { finishingDate: oneMonthLater }
+      }]);
+      
+      if (result.success) {
+        await refetchUserData(false);
+        toast.success("Plan reactivated successfully");
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error("Failed to reactivate plan:", error);
       toast.error("Failed to reactivate plan");
@@ -264,14 +269,25 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     setOrderedPlans(items);
 
     try {
-      await api.post("/plans/update-plan-order", {
-        plan_ids: items.map((plan) => plan.id),
-      });
-      currentUserDataQuery.refetch();
-      toast.success("Plan priority updated");
+      // Update sortOrder for each plan based on new positions
+      const updates = items.map((plan, index) => ({
+        planId: plan.id!,
+        updates: { sortOrder: index + 1 },
+      }));
+
+      const result = await updatePlans(updates);
+      
+      if (result.success) {
+        currentUserDataQuery.refetch();
+        toast.success("Plan priority updated");
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       toast.error("Failed to update plan priority");
       console.error("Failed to update plan priority:", error);
+      // Revert the local state change
+      setOrderedPlans(sortPlansByOrder(userData?.plans as CompletePlan[] || []));
     }
   };
 

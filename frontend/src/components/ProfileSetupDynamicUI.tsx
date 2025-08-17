@@ -13,7 +13,7 @@ export function ProfileSetupDynamicUI({
   submitButtonText?: string;
 }) {
   const questionsChecks = {
-    "A description of the user." : {
+    "A description of the user. This will be used for helping other users find you." : {
       title: "Your details",
       description: "Like your age, occupation, or anything that you find relevant.",
     },

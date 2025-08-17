@@ -68,7 +68,7 @@ export async function getCurrentUserData() {
             },
             milestones: true,
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
         },
         planGroupMemberships: true,
         notifications: {
@@ -434,6 +434,45 @@ export async function modifyManualMilestone(
       success: false,
       error:
         error instanceof Error ? error.message : "Failed to update milestone",
+    };
+  }
+}
+
+export async function updatePlans(
+  updates: Array<{ planId: string; updates: Prisma.PlanUpdateInput }>
+) {
+  const user = await validateUser();
+
+  try {
+    // Validate that all plans belong to the authenticated user
+    const planIds = updates.map((update) => update.planId);
+    const userPlans = await prisma.plan.findMany({
+      where: {
+        id: { in: planIds },
+        userId: user.id,
+      },
+    });
+
+    if (userPlans.length !== planIds.length) {
+      throw new Error("Not authorized to update some plans");
+    }
+
+    // Update all plans in a transaction
+    await prisma.$transaction(
+      updates.map((update) =>
+        prisma.plan.update({
+          where: { id: update.planId },
+          data: update.updates,
+        })
+      )
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating plans:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update plans",
     };
   }
 }

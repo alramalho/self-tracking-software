@@ -21,12 +21,14 @@ interface UserSearchProps {
   onUserClick: (user: UserSearchResult) => void;
   selectedUsers?: UserSearchResult[];
   onUserRemove?: (userId: string) => void;
+  apRedirect?: boolean;
 }
 
 const UserSearch: React.FC<UserSearchProps> = ({
   onUserClick,
   selectedUsers = [],
   onUserRemove,
+  apRedirect = true,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -128,6 +130,14 @@ const UserSearch: React.FC<UserSearchProps> = ({
       >
         Find me an Accountability Partner 🤝
       </Button> */}
+      {apRedirect && (
+        <span className="text-sm text-gray-500">
+          Looking for a partner to get started?{" "}
+          <Link href="/looking-for-ap">
+            <span className="text-blue-500">Click here</span>
+          </Link>
+        </span>
+      )}
     </div>
   );
 };
