@@ -418,16 +418,20 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               </span>
             </div>
             <div className="text-sm text-gray-500 space-y-4 mt-4">
-              <p>First of all, thank you for considering upgrading</p>
-              <p>
-                I believe that social networks should be transparent and
-                actually helpful for their users. That&apos;s why I&apos;m working (part time) in
-                this open source project. 
+              <p>Tracking Software is my attempt at creating a better social network, where
+                comparison can be used as leverage to improve your life, not just to make you feel worse.
               </p>
               <p>
-                Together <span className="line-through">we can</span> we will make a better internet, where social apps
+                I truly believe social networks should be fully transparent, and that&apos;s why 
+                , despite not being the best commercial decision, <span className="underline">tracking.so{" "}</span>
+                is <b>the only habit based social network that is fully open source</b>.
+              </p>
+              <p>
+                Together we can make a better internet, where social apps
                 make you feel better, not worse.
               </p>
+              <p>Thank you for considering upgrading.</p>
+
               <p>Alex</p>
             </div>
           </div>
