@@ -22,6 +22,7 @@ async function generateDummyData() {
         name: "Alice",
         email: "alice@example.com",
         username: "alice",
+        lookingForAp: true,
       },
       {
         name: "E2E",
@@ -33,6 +34,7 @@ async function generateDummyData() {
         name: "Charlie",
         email: "charlie@example.com",
         username: "charlie",
+        lookingForAp: true,
       },
       {
         name: "Tomas",
@@ -381,7 +383,6 @@ async function generateDummyData() {
         userId: users[0].id,
         message: "How's your training going? Let's check in on your progress!",
         type: "ENGAGEMENT",
-        recurrence: "DAILY",
       },
     });
 
@@ -391,7 +392,6 @@ async function generateDummyData() {
         message:
           "Time for your weekly reflection! Let's take a moment to look back at your journey. What goals have you accomplished this week? What challenges did you overcome? What have you learned about yourself through tracking your activities and working towards your goals?",
         type: "ENGAGEMENT",
-        recurrence: "WEEKLY",
       },
     });
 

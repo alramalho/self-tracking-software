@@ -8,8 +8,10 @@
   "scripts": {
     "db:generate": "prisma generate",
     "db:reset": "ts-node reset-db.ts",
+    "reset-db": "pnpm db:reset",
     "db:push": "prisma db push",
     "db:seed": "ts-node seed.ts",
+    "seed": "pnpm db:seed",
     "clean": "rm -rf node_modules"
   },
   "dependencies": {

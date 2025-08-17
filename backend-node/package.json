@@ -28,6 +28,7 @@
     "@aws-sdk/s3-request-presigner": "^3.856.0",
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/express": "^1.7.4",
+    "@pinecone-database/pinecone": "^6.1.2",
     "@prisma/client": "^5.0.0",
     "@types/stripe": "^8.0.416",
     "ai": "^4.3.19",

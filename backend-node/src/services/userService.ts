@@ -16,7 +16,7 @@ export class UserService {
   async getAllUsers(): Promise<User[]> {
     return prisma.user.findMany({
       where: {
-        deleted: false,
+        deletedAt: null,
         NOT: {
           email: {
             startsWith: "alexandre.ramalho.1998+",
@@ -29,7 +29,7 @@ export class UserService {
   async getAllPaidUsers(): Promise<User[]> {
     return prisma.user.findMany({
       where: {
-        deleted: false,
+        deletedAt: null,
         planType: "PLUS",
       },
       include: {
@@ -419,14 +419,9 @@ export class UserService {
     });
   }
 
-  async getRecommendedUsers(userId: string): Promise<any> {
-    // TODO: Implement recommendations logic
-    // For now, return empty recommendations
-    return {
-      recommendations: [],
-      users: [],
-      plans: [],
-    };
+  async getRecommendedUsers(userId: string) {
+    const { recommendationsService } = await import("./recommendationsService");
+    return recommendationsService.getRecommendedUsers(userId);
   }
 }
 

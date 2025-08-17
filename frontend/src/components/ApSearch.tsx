@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ApiPlan, User, useUserPlan } from "@/contexts/UserGlobalContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -33,7 +33,7 @@ export const ApSearchComponent: React.FC = () => {
   const variants = getThemeVariants(themeColors.raw);
 
   const userScores = recommendations
-    .filter((rec) => rec.recommendationObjectType === "user")
+    .filter((rec) => rec.recommendationObjectType === "USER")
     .reduce((acc, rec) => {
       acc[rec.recommendationObjectId] = rec.score;
       return acc;
@@ -93,6 +93,7 @@ export const ApSearchComponent: React.FC = () => {
             onUserClick={(user) => {
               handleSendFriendRequest(user.userId);
             }}
+            apRedirect={false}
           />
         </div>
       ) : (
@@ -126,12 +127,17 @@ export const ApSearchComponent: React.FC = () => {
             if (!user) {
               return null;
             }
-            const plan = recommendationsData?.plans.find((plan) => {
-              if (user.planIds.length > 0) {
-                return user.planIds[0] === plan.id;
-              }
-              return false;
-            });
+            const plan = recommendationsData?.plans
+              .filter((plan) => plan.userId === user.id)
+              .sort((a, b) => {
+                // Sort by sortOrder, with nulls last, then by createdAt
+                if (a.sortOrder !== null && b.sortOrder !== null) {
+                  return a.sortOrder - b.sortOrder;
+                }
+                if (a.sortOrder !== null && b.sortOrder === null) return -1;
+                if (a.sortOrder === null && b.sortOrder !== null) return 1;
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              })[0];
             return (
               <UserCard
                 key={user.id}
@@ -140,7 +146,7 @@ export const ApSearchComponent: React.FC = () => {
                 plan={plan}
                 plans={
                   recommendationsData?.plans.filter((p) =>
-                    user.planIds.includes(p.id)
+                    p.userId === user.id
                   ) || []
                 }
                 showFriendRequest={true}

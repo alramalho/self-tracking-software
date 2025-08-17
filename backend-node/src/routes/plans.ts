@@ -3,10 +3,45 @@ import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "../services/aiService";
-import { notificationService } from "../services/notificationService";
-import { z } from "zod";
+import { plansPineconeService } from "../services/pineconeService";
+import { recommendationsService } from "../services/recommendationsService";
 
 const router = Router();
+
+/**
+ * Update plan embedding in Pinecone
+ */
+async function updatePlanEmbedding(
+  planId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const readablePlan = await recommendationsService.getReadablePlan(planId);
+    if (readablePlan) {
+      await plansPineconeService.upsertRecord(readablePlan, planId, {
+        user_id: userId,
+      });
+      logger.info(`Updated plan embedding for plan ${planId}`);
+    }
+  } catch (error) {
+    logger.error(`Failed to update plan embedding for plan ${planId}:`, error);
+    // Don't throw the error to avoid breaking plan operations
+  }
+}
+
+/**
+ * Mark user recommendations as outdated after plan changes
+ */
+async function markUserRecommendationsOutdated(userId: string): Promise<void> {
+  try {
+    await recommendationsService.markRecommendationsOutdated(userId);
+  } catch (error) {
+    logger.error(
+      `Failed to mark recommendations outdated for user ${userId}:`,
+      error
+    );
+  }
+}
 
 // Generate invitation link for external sharing
 router.get(
@@ -82,6 +117,7 @@ router.post(
             durationType: planData.durationType,
             outlineType: planData.outlineType || "SPECIFIC",
             timesPerWeek: planData.timesPerWeek,
+            sortOrder: planData.sortOrder,
 
             // Connect activities directly
             ...(planData.activityIds?.length > 0 && {
@@ -111,6 +147,12 @@ router.post(
 
         return newPlan;
       });
+
+      // Update plan embedding in background
+      updatePlanEmbedding(result.id, req.user!.id);
+
+      // Mark user recommendations as outdated
+      markUserRecommendationsOutdated(req.user!.id);
 
       logger.info(`Created plan ${result.id} for user ${req.user!.id}`);
       res.status(201).json({
@@ -172,7 +214,7 @@ router.get(
           },
           activities: true,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       });
 
       // Transform the data to match expected format
@@ -300,6 +342,12 @@ router.post(
         data,
       });
 
+      // Update plan embedding in background
+      updatePlanEmbedding(planId, req.user!.id);
+
+      // Mark user recommendations as outdated
+      markUserRecommendationsOutdated(req.user!.id);
+
       logger.info(`Updated plan ${planId}`);
       res.json(updatedPlan);
     } catch (error) {
@@ -309,33 +357,180 @@ router.post(
   }
 );
 
-// Update plan order
+// Upsert plan (create or update)
 router.post(
-  "/update-plan-order",
+  "/upsert",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { plan_ids } = req.body;
+      const planData = req.body;
 
-      if (!Array.isArray(plan_ids)) {
-        return res.status(400).json({ error: "plan_ids must be an array" });
+      // If plan has an ID, it's an update operation
+      if (planData.id) {
+        // Verify ownership
+        const existingPlan = await prisma.plan.findUnique({
+          where: { id: planData.id },
+        });
+
+        if (!existingPlan || existingPlan.userId !== req.user!.id) {
+          return res.status(403).json({
+            success: false,
+            error: "Not authorized to update this plan",
+          });
+        }
+
+        // Update the plan
+        const updatedPlan = await prisma.plan.update({
+          where: { id: planData.id },
+          data: {
+            goal: planData.goal,
+            emoji: planData.emoji,
+            finishingDate: planData.finishingDate,
+            notes: planData.notes,
+            durationType: planData.durationType,
+            outlineType: planData.outlineType || "SPECIFIC",
+            timesPerWeek: planData.timesPerWeek,
+            sortOrder: planData.sortOrder,
+            // Connect activities
+            ...(planData.activities?.length > 0 && {
+              activities: {
+                set: [], // Clear existing connections
+                connect: planData.activities.map((activity: any) => ({
+                  id: activity.id,
+                })),
+              },
+            }),
+            // Update milestones if provided
+            ...(planData.milestones && {
+              milestones: {
+                deleteMany: {}, // Clear existing milestones
+                create: planData.milestones.map((milestone: any) => ({
+                  description: milestone.description,
+                  date: milestone.date,
+                  criteria: milestone.criteria,
+                })),
+              },
+            }),
+            // Update sessions if provided
+            ...(planData.sessions && {
+              sessions: {
+                deleteMany: {}, // Clear existing sessions
+                create: planData.sessions.map((session: any) => ({
+                  activityId: session.activityId,
+                  date: session.date,
+                  descriptiveGuide:
+                    session.descriptive_guide || session.descriptiveGuide || "",
+                  quantity: session.quantity,
+                })),
+              },
+            }),
+          },
+          include: {
+            activities: true,
+            sessions: true,
+            milestones: true,
+          },
+        });
+
+        // Update plan embedding in background
+        updatePlanEmbedding(planData.id, req.user!.id);
+
+        // Mark user recommendations as outdated
+        markUserRecommendationsOutdated(req.user!.id);
+
+        logger.info(`Updated plan ${planData.id} for user ${req.user!.id}`);
+        return res.json({ success: true, plan: updatedPlan });
+      } else {
+        // Create new plan using existing create-plan logic
+        const result = await prisma.$transaction(async (tx) => {
+          // Create plan group first
+          const planGroup = await tx.planGroup.create({
+            data: {
+              members: {
+                connect: { id: req.user!.id },
+              },
+            },
+          });
+
+          // Create plan with planGroupId reference
+          const newPlan = await tx.plan.create({
+            data: {
+              userId: req.user!.id,
+              planGroupId: planGroup.id,
+              goal: planData.goal,
+              emoji: planData.emoji,
+              finishingDate: planData.finishingDate,
+              notes: planData.notes,
+              durationType: planData.durationType,
+              outlineType: planData.outlineType || "SPECIFIC",
+              timesPerWeek: planData.timesPerWeek,
+              sortOrder: planData.sortOrder,
+
+              // Connect activities directly
+              ...(planData.activities?.length > 0 && {
+                activities: {
+                  connect: planData.activities.map((activity: any) => ({
+                    id: activity.id,
+                  })),
+                },
+              }),
+
+              // Create milestones directly
+              ...(planData.milestones?.length > 0 && {
+                milestones: {
+                  create: planData.milestones.map((milestone: any) => ({
+                    description: milestone.description,
+                    date: milestone.date,
+                    criteria: milestone.criteria,
+                  })),
+                },
+              }),
+
+              // Create sessions directly
+              ...(planData.sessions?.length > 0 && {
+                sessions: {
+                  create: planData.sessions.map((session: any) => ({
+                    activityId: session.activityId,
+                    date: session.date,
+                    descriptiveGuide:
+                      session.descriptive_guide ||
+                      session.descriptiveGuide ||
+                      "",
+                    quantity: session.quantity,
+                  })),
+                },
+              }),
+            },
+            include: {
+              planGroup: true,
+              activities: true,
+              sessions: true,
+              milestones: true,
+            },
+          });
+
+          return newPlan;
+        });
+
+        // Update plan embedding in background
+        updatePlanEmbedding(result.id, req.user!.id);
+
+        // Mark user recommendations as outdated
+        markUserRecommendationsOutdated(req.user!.id);
+
+        logger.info(`Created plan ${result.id} for user ${req.user!.id}`);
+        return res.json({ success: true, plan: result });
       }
-
-      // Plan order update would need to be implemented based on User model structure
-      // For now, just acknowledge the request
-      const updatedUser = req.user; // Placeholder
-
-      logger.info(`Updated plan order for user ${req.user!.id}`);
-      res.json({
-        message: "Plan order updated successfully",
-        user: updatedUser,
-      });
     } catch (error) {
-      logger.error("Error updating plan order:", error);
-      res.status(500).json({ error: "Failed to update plan order" });
+      logger.error("Error upserting plan:", error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to save plan",
+      });
     }
   }
 );
+
 
 // Helper function to generate plan sessions using AI
 async function generatePlanSessions(params: {

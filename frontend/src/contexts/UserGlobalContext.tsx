@@ -33,14 +33,19 @@ import {
   Notification,
   Message,
   MessageEmotion,
+  Recommendation
 } from "@prisma/client";
 import { Plan, PlanMilestone } from "@prisma/types";
+import { useApiWithAuth } from "@/api";
 
 type MessagesWithRelations = Message & {
   emotions: MessageEmotion[];
 };
 
-export type CompletePlan = Omit<HydratedCurrentUser["plans"][number], "milestones"> & {
+export type CompletePlan = Omit<
+  HydratedCurrentUser["plans"][number],
+  "milestones"
+> & {
   milestones: PlanMilestone[];
 };
 
@@ -54,12 +59,6 @@ export type ThemeColorType =
   | "slate"
   | "random";
 
-
-export type Recommendation = {
-  recommendationObjectId: string;
-  recommendationObjectType: "user" | "plan";
-  score: number;
-};
 
 export interface UserGlobalContextType {
   useCurrentUserDataQuery: () => UseQueryResult<HydratedCurrentUser>;
@@ -124,6 +123,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const router = useRouter();
   const { signOut } = useClerk();
   const queryClient = useQueryClient();
+  const api = useApiWithAuth();
 
   const handleAuthError = useCallback(
     (err: unknown) => {
@@ -143,7 +143,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     [router, queryClient, signOut]
   );
 
-
   const useCurrentUserDataQuery = () => {
     const query = useQuery({
       queryKey: ["userData", "current"],
@@ -158,12 +157,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     const query = useQuery({
       queryKey: ["recommendedUsers"],
       queryFn: async () => {
-        // Return empty data for now - can be implemented with server actions later
-        return {
-          recommendations: [],
-          users: [],
-          plans: [],
-        };
+        const response = await api.get("/users/recommended-users");
+        return response.data;
       },
       enabled: isSignedIn && isLoaded,
       staleTime: 1000 * 60 * 5,
@@ -320,7 +315,8 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return entries.some(
       (entry) =>
-        entry.metricId === metricId && entry.date.toISOString().split("T")[0] === today
+        entry.metricId === metricId &&
+        entry.date.toISOString().split("T")[0] === today
     );
   };
 
@@ -334,11 +330,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       (metric) =>
         !entries.some(
           (entry) =>
-            entry.metricId === metric.id && entry.date.toISOString().split("T")[0] === today
+            entry.metricId === metric.id &&
+            entry.date.toISOString().split("T")[0] === today
         )
     );
   };
-
 
   useEffect(() => {
     const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;

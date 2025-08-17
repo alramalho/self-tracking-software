@@ -234,6 +234,7 @@ model Plan {
   notes                      String?
   coachNotes                 String?
   suggestedByCoachAt         DateTime?
+  sortOrder                  Int?
 
   // Current week state
   currentWeekState             PlanState @default(ON_TRACK)

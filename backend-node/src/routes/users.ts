@@ -217,7 +217,7 @@ usersRouter.get(
 
 // Get recommended users
 usersRouter.get(
-  "/get-recommended-users",
+  "/recommended-users",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
