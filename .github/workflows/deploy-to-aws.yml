@@ -53,8 +53,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'pnpm'
-          cache-dependency-path: 'aws-infrastructure/pnpm-lock.yaml'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
