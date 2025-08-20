@@ -40,7 +40,7 @@ function PlanGoalSetter() {
       });
 
       setAllAnswered(
-        Object.values(response.data.question_checks).every(Boolean)
+        Object.values(response.data.question_checks).every((e: any) => e.answered)
       );
 
       return response.data;

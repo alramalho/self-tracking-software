@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check, X } from 'lucide-react';
 import { useApiWithAuth } from '@/api';
-import { useUserPlan } from '@/contexts/UserPlanContext';
+import { useUserPlan } from '@/contexts/UserGlobalContext';
 import toast from 'react-hot-toast';
 
 interface MetricSuggestionProps {

@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:https": "node server.js",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf .next && rm -rf node_modules",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,6 +14,7 @@
   },
   "dependencies": {
     "@charkour/react-reactions": "^0.11.0",
+    "@clerk/clerk-react": "^5.3.2",
     "@clerk/nextjs": "^5.3.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -36,6 +39,7 @@
     "@radix-ui/react-tabs": "^1.1.1",
     "@radix-ui/react-toast": "^1.2.2",
     "@rive-app/react-canvas-lite": "^4.18.2",
+    "@rocicorp/zero": "^0.22.2025080200",
     "@serwist/next": "^8.4.4",
     "@serwist/precaching": "^8.4.4",
     "@serwist/sw": "^8.4.4",
@@ -57,6 +61,7 @@
     "next-themes": "^0.3.0",
     "posthog-js": "^1.181.0",
     "posthog-node": "^4.2.1",
+    "prisma": "workspace:*",
     "react": "^18",
     "react-confetti-boom": "^1.1.0",
     "react-day-picker": "8.10.1",

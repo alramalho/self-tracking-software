@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import Link from "next/link";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { usePathname } from "next/navigation";
 import FloatingActionMenu from "./FloatingActionMenu";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -42,7 +42,7 @@ const BottomNav = () => {
   const { useCurrentUserDataQuery } = useUserPlan();
   const userDataQuery = useCurrentUserDataQuery();
   const userData = userDataQuery.data;
-  const userUsername = userData?.user?.username;
+  const userUsername = userData?.username;
   const pathname = usePathname();
   const themeColors = useThemeColors();
   const { effectiveTheme } = useTheme();

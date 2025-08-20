@@ -13,7 +13,7 @@ import {
   Plan,
   PlanSession,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { usePlanProgress, PlanProgressData } from "@/contexts/PlanProgressContext";
 import {
   isWeekCompleted as checkIsWeekCompleted,
@@ -70,7 +70,7 @@ export const PlanWeekDisplay = ({
   });
 
   const totalPlannedActivities =
-    plan.outline_type === "times_per_week"
+    plan.outlineType === "timesPerWeek"
       ? (week?.plannedActivities as number)
       : (week?.plannedActivities as PlanSession[])?.length || 0;
       
@@ -199,7 +199,7 @@ export const PlanWeekDisplay = ({
       </div>
 
       {/* coming up section, wherewe either display  */}
-      {plan.outline_type == "times_per_week" && !isWeekCompleted && (
+      {plan.outlineType == "timesPerWeek" && !isWeekCompleted && (
         <div className="flex flex-col items-start justify-center gap-0 mt-4">
           <span className="text-sm text-gray-500">Coming up, any of:</span>
           <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 mt-2">
@@ -210,7 +210,7 @@ export const PlanWeekDisplay = ({
         </div>
       )}
 
-      {plan.outline_type == "specific" && (isCurrentWeek || isFutureWeek) && (
+      {plan.outlineType == "specific" && (isCurrentWeek || isFutureWeek) && (
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
           <span className="text-sm text-gray-500">Coming up:</span>
           <div className="flex flex-row flex-wrap gap-2">
@@ -220,7 +220,7 @@ export const PlanWeekDisplay = ({
               })
               .map((session) => {
                 const activity = userData?.activities.find(
-                  (a) => a.id === session.activity_id
+                  (a) => a.id === session.activityId
                 );
                 const completed = isSessionCompleted(
                   session,
@@ -234,14 +234,14 @@ export const PlanWeekDisplay = ({
                 );
                 if (!activity) return null;
 
-                const sessionId = `${session.date}-${session.activity_id}`;
+                const sessionId = `${session.date}-${session.activityId}`;
                 return (
                   <SmallActivityEntryCard
                     key={sessionId}
                     selected={selectedSession === sessionId}
                     entry={{
                       date: session.date,
-                      activity_id: session.activity_id,
+                      activityId: session.activityId,
                       quantity: session.quantity,
                       description: session.descriptive_guide,
                     }}

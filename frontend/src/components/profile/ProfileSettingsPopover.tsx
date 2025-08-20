@@ -28,7 +28,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import PrivacySettings from "./ActivityPrivacySettings";
 import { motion, AnimatePresence } from "framer-motion";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
 import { Switch } from "../ui/switch";
 import { useApiWithAuth } from "@/api";
@@ -80,7 +80,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const api = useApiWithAuth();
   const previousViewRef = useRef<ActiveView>("main");
 
-  const { userPaidPlanType } = usePaidPlan();
+  const { isUserFree, userPlanType } = usePaidPlan();
   const { signOut } = useClerk();
   const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
@@ -88,7 +88,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
   const [lookingForAp, setLookingForAp] = useState(
-    currentUserData?.user?.looking_for_ap || false
+    currentUserData?.lookingForAp || false
   );
   const themeColors = useThemeColors();
   const themeVariants = getThemeVariants(themeColors.raw);
@@ -187,8 +187,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           checked={lookingForAp}
                           onCheckedChange={async (checked) => {
                             setLookingForAp(checked);
-                            await api.post("/update-user", {
-                              looking_for_ap: checked,
+                            await api.post("/users/update-user", {
+                              lookingForAp: checked,
                             });
                             toast.success("Profile updated");
                             currentUserDataQuery.refetch();
@@ -210,9 +210,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         </span> */}
                       </div>
                       <div className="relative space-y-2 p-3 border rounded-md bg-gray-50 pr-8">
-                        {currentUserData?.user?.profile ? (
+                        {currentUserData?.profile ? (
                           <p className="text-sm text-gray-700 italic">
-                            {currentUserData.user.profile}
+                            {currentUserData.profile}
                           </p>
                         ) : (
                           <p className="text-sm text-gray-500 italic">
@@ -306,13 +306,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <span
                         className={twMerge(
                           "text-xl font-cursive flex items-center gap-2",
-                          userPaidPlanType === "free"
+                          isUserFree
                             ? "text-gray-500"
                             : themeVariants.text
                         )}
                       >
-                        On {capitalize(userPaidPlanType || "free")} Plan
-                        {userPaidPlanType === "free" && (
+                        On {capitalize(userPlanType || "FREE")} Plan
+                        {isUserFree && (
                           <SquareArrowUp
                             onClick={() => setShowUpgradePopover(true)}
                             size={20}
@@ -322,7 +322,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </span>
                     </div>
                     <div className="flex flex-col gap-3">
-                      {userPaidPlanType !== "free" && (
+                      {userPlanType !== "FREE" && (
                         <Button
                           variant="ghost"
                           className="w-full flex items-center justify-start px-0 gap-2"

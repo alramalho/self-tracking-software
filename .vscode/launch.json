@@ -1,41 +1,46 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Python: Module",
-            "type": "python",
-            "request": "launch",
-            "module": "${input:moduleName}",
-            "cwd": "${workspaceFolder}/backend",
-            "args": [
-                "-m ${input:moduleName}"
-            ],
-            "justMyCode": false
-        },
-        {
-            "name": "Python: Pytest",
-            "type": "python",
-            "request": "launch",
-            "module": "pytest",
-            "cwd": "${workspaceFolder}/backend",
-            "args": [
-                "${input:testPath}",
-                "-v",
-                "-s"
-            ],
-            "justMyCode": false
-        }
-    ],
-    "inputs": [
-        {
-            "id": "moduleName",
-            "type": "promptString",
-            "description": "Module Name",
-        },
-        {
-            "id": "testPath",
-            "type": "promptString",
-            "description": "Test path (e.g., tests/test_week_analyser.py::test_conversation_with_no_plans)",
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Module",
+      "type": "python",
+      "request": "launch",
+      "module": "${input:moduleName}",
+      "cwd": "${workspaceFolder}/backend",
+      "args": ["-m ${input:moduleName}"],
+      "justMyCode": false
+    },
+    {
+      "name": "Python: Pytest",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "cwd": "${workspaceFolder}/backend",
+      "args": ["${input:testPath}", "-v", "-s"],
+      "justMyCode": false
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Node API",
+      "cwd": "${workspaceFolder}/backend-node",
+      "runtimeExecutable": "${env:HOME}/.n/bin/yarn",
+      "runtimeArgs": ["dev"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "moduleName",
+      "type": "promptString",
+      "description": "Module Name"
+    },
+    {
+      "id": "testPath",
+      "type": "promptString",
+      "description": "Test path (e.g., tests/test_week_analyser.py::test_conversation_with_no_plans)"
+    }
+  ]
 }

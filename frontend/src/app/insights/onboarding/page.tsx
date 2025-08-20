@@ -8,8 +8,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ExampleCorrelations } from "@/components/ExampleCorrelations";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import InsightsDemo from "@/components/InsightsDemo";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
 import { defaultMetrics } from "../metrics";
@@ -29,8 +29,8 @@ export default function OnboardingPage() {
   const [createdMetricIds, setCreatedMetricIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const api = useApiWithAuth();
-  const { userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "free";
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
+  const isUserOnFreePlan = userPaidPlanType === "FREE";
   const { setShowUpgradePopover } = useUpgrade();
   
   const requestNotificationPermission = async () => {
@@ -167,7 +167,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <ExampleCorrelations />
+            <InsightsDemo />
 
             <div className="flex flex-col items-center gap-4">
               <Button

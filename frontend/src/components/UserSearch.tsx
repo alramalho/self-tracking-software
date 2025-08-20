@@ -5,13 +5,13 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import Link from "next/link";
 
 export interface UserSearchResult {
-  user_id: string;
+  userId: string;
   username: string;
   name: string;
   picture?: string;
@@ -21,12 +21,14 @@ interface UserSearchProps {
   onUserClick: (user: UserSearchResult) => void;
   selectedUsers?: UserSearchResult[];
   onUserRemove?: (userId: string) => void;
+  apRedirect?: boolean;
 }
 
 const UserSearch: React.FC<UserSearchProps> = ({
   onUserClick,
   selectedUsers = [],
   onUserRemove,
+  apRedirect = true,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +50,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
 
       try {
         setIsLoading(true);
-        const response = await api.get(`/search-users/${searchTerm}`);
+        const response = await api.get(`users/search-users/${searchTerm}`);
         setSearchResults(response.data);
       } catch (error) {
         console.error("Error searching users:", error);
@@ -69,9 +71,9 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <div className="mb-4 flex flex-wrap gap-2">
         {selectedUsers.map((user) => (
           <Avatar
-            key={user.user_id}
+            key={user.userId}
             className="cursor-pointer relative"
-            onClick={() => onUserRemove && onUserRemove(user.user_id)}
+            onClick={() => onUserRemove && onUserRemove(user.userId)}
           >
             <AvatarImage
               src={user.picture || "/default-avatar.png"}
@@ -84,7 +86,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <div className="relative">
         <Input
           type="text"
-          placeholder="Search users..."
+          placeholder="🔍 Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="bg-white"
@@ -98,7 +100,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <ul className="mt-2">
         {searchResults.map((user) => (
           <li
-            key={user.user_id}
+            key={user.userId}
             className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
             onClick={() => onUserClick(user)}
           >
@@ -113,11 +115,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
           </li>
         ))}
       </ul>
-      <Button
+      {/* <Button
         variant="outline"
         onClick={async () => {
-          if (!userData?.user?.looking_for_ap) {
-            await api.post("/update-user", {
+          if (!userData?.lookingForAp) {
+            await api.post("/users/update-user", {
               looking_for_ap: true,
             });
             currentUserDataQuery.refetch();
@@ -127,7 +129,15 @@ const UserSearch: React.FC<UserSearchProps> = ({
         className={`w-full mt-2 text-white transition-all duration-200 shadow-md rounded-lg font-medium ${variants.hardGradientBg}`}
       >
         Find me an Accountability Partner 🤝
-      </Button>
+      </Button> */}
+      {apRedirect && (
+        <span className="text-sm text-gray-500">
+          Looking for a partner to get started?{" "}
+          <Link href="/looking-for-ap">
+            <span className="text-blue-500">Click here</span>
+          </Link>
+        </span>
+      )}
     </div>
   );
 };

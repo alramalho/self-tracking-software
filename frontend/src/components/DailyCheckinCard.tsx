@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import AINotification from "./AINotification";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { differenceInDays } from "date-fns";
 import { ScanFace } from "lucide-react";
@@ -36,7 +36,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     : undefined;
 
   const { data: userData } = currentUserDataQuery;
-  const user = userData?.user;
+  const user = userData;
   const {
     show: showDailyCheckinPopover,
     shouldShowNotification,
@@ -44,7 +44,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     dismissCheckin,
     buildCheckinMessage,
   } = useDailyCheckin();
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const [message, setMessage] = useState<string | null>(null);
   const [messageId, setMessageId] = useState<string | null>(null);
 
@@ -64,7 +64,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     );
 
   if (
-    (!shouldShowNotification && userPaidPlanType !== "free") ||
+    (!shouldShowNotification && userPaidPlanType !== "FREE") ||
     !message ||
     !messageId
   )

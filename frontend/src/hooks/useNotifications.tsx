@@ -11,10 +11,10 @@ import React, {
 import { isNotifySupported } from "@/app/swSupport";
 import { useApiWithAuth } from "@/api";
 import { arrayBufferToBase64Async } from "@/lib/utils";
-import { useUserPlan } from "@/contexts/UserPlanContext";
-import type { Notification } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useSession } from "@clerk/nextjs";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { Notification as PrismaNotification } from "@prisma/client";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -69,7 +69,7 @@ export const NotificationsProvider = ({
   useEffect(() => {
     if (notificationsData.data) {
       const nonConcludedNotificationsCount = notificationsData.data.notifications?.filter(
-        (notification: Notification) => notification.status !== "concluded"
+        (notification: PrismaNotification) => notification.status !== "CONCLUDED"
       ).length || 0;
       
       // Add 1 to the badge count if there's a daily check-in notification
@@ -258,7 +258,7 @@ export const NotificationsProvider = ({
       const currentSubscription = await reg.pushManager.getSubscription();
       
       // Get stored endpoint from backend
-      const response = await api.get("/get-pwa-subscription");
+      const response = await api.get("/notifications/get-pwa-subscription");
       const storedEndpoint = response.data.stored_endpoint;
 
       // Request new permission if:
@@ -287,7 +287,7 @@ export const NotificationsProvider = ({
         const auth = await arrayBufferToBase64Async(
           subscription.getKey("auth")!
         );
-        await api.post("/update-pwa-status", {
+        await api.post("/notifications/update-pwa-status", {
           is_pwa_installed: true,
           is_pwa_notifications_enabled: true,
           pwa_subscription_endpoint: subscription.endpoint,
@@ -309,7 +309,7 @@ export const NotificationsProvider = ({
     url?: string
   ) => {
     try {
-      await api.post("/trigger-push-notification", {
+      await api.post("/notifications/trigger-push-notification", {
         title,
         body,
         icon,

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
 import { useOnboarding } from "../OnboardingContext";
 import { AlertCircle, BicepsFlexed, Crosshair, Goal, Volleyball } from "lucide-react";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity } from "@/contexts/UserGlobalContext";
 import { withFadeUpAnimation } from "../../lib";
 
 interface PlanActivitySetterResponse extends BaseExtractionResponse {
@@ -85,7 +85,7 @@ function PlanActivitySetter() {
         title="Which activities would like to include?"
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
-        canSubmitEmpty={true}
+        canSubmit={() => true}
         emptySubmitButtonText="Suggest"
         onAccept={handleAccept}
         renderChildren={renderExtractedData}

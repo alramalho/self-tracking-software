@@ -48,7 +48,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   onReject?: (feedback: string, data: T) => Promise<void>;
   creationMessage?: string;
   placeholder?: string;
-  canSubmitEmpty?: boolean;
+  canSubmit?: () => boolean;
   title?: string;
   description?: string;
   wave?: boolean;
@@ -76,7 +76,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   description,
   wave = false,
   onSkip,
-  canSubmitEmpty = false,
+  canSubmit,
 }: DynamicUISuggesterProps<T>) {
   const [text, setText] = useState(initialValue || "");
   const [rejectionFeedbackOpen, setRejectionFeedbackOpen] = useState(false);
@@ -372,7 +372,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             className={`w-full rounded-xl ${allQuestionsChecked ? "bg-white" : ""}`}
             onClick={() => submitMutation.mutateAsync(text)}
             disabled={
-              (!canSubmitEmpty && !text) ||
+              ((canSubmit && !canSubmit()) && !text) ||
               isRecording ||
               isLoading ||
               isSubmitting

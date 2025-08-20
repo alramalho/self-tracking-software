@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { MetricRater } from "@/components/MetricRater";
-import { useUserPlan } from "@/contexts/UserPlanContext";
-import { Metric } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Metric } from "@/contexts/UserGlobalContext";
 import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
 import Divider from "@/components/Divider";
 import { DynamicUISuggester } from "./DynamicUISuggester";
+import { isToday } from "date-fns";
 
 interface MetricRating {
   rating: number;
@@ -21,7 +22,7 @@ export function MetricRaters({
 }) {
   const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const user = userData?.user;
+  const user = userData;
   const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
   const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
   const metrics = metricsAndEntriesData?.metrics || [];
@@ -34,7 +35,7 @@ export function MetricRaters({
     const today = new Date().toISOString().split("T")[0];
     return entries.some(
       (entry) =>
-        entry.metric_id === metric.id && entry.date.split("T")[0] === today
+        entry.metricId === metric.id && isToday(entry.date)
     );
   };
 
@@ -50,7 +51,7 @@ export function MetricRaters({
     try {
       // Submit all ratings in sequence with the same description
       for (const [metricId, ratingData] of Object.entries(ratings)) {
-        await api.post("/log-metric", {
+        await api.post("/metrics/log-metric", {
           metric_id: metricId,
           rating: ratingData.rating,
           description,
@@ -121,7 +122,7 @@ export function MetricRaters({
               onSubmit={async (description) => {
                 await handleSubmitAllRatings(description);
               }}
-              canSubmitEmpty={true}
+              canSubmit={() => true}
               submitButtonText="Submit"
               wave={false}
             />

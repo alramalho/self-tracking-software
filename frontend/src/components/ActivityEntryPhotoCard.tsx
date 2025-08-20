@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Edit, Smile, BadgeCheck } from "lucide-react";
 import { ReactionBarSelector } from "@charkour/react-reactions";
-import { useUserPlan, Comment } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import {
@@ -20,29 +20,29 @@ import { PlanBadge } from "./PlanBadge";
 import CommentSection from "./CommentSection";
 import Divider from "./Divider";
 import { Separator } from "./ui/separator";
+import { TimelineData } from "@/app/actions";
 
-const getFormattedDate = (date: string) => {
-  const parsedDate = parseISO(date);
+const getFormattedDate = (date: Date) => {
   const now = new Date();
 
-  if (isToday(parsedDate)) {
-    return `today at ${format(parsedDate, "HH:mm")}`;
+  if (isToday(date)) {
+    return `today at ${format(date, "HH:mm")}`;
   }
 
-  if (isYesterday(parsedDate)) {
-    return `yesterday at ${format(parsedDate, "HH:mm")}`;
+  if (isYesterday(date)) {
+    return `yesterday at ${format(date, "HH:mm")}`;
   }
 
-  const diffInCalendarDays = differenceInCalendarDays(now, parsedDate);
+  const diffInCalendarDays = differenceInCalendarDays(now, date);
 
   if (diffInCalendarDays <= 7) {
-    return `last ${format(parsedDate, "EEEE")} at ${format(
-      parsedDate,
+    return `last ${format(date, "EEEE")} at ${format(
+      date,
       "HH:mm"
     )}`;
   }
 
-  return format(parsedDate, "MMM d HH:mm");
+  return format(date, "MMM d HH:mm");
 };
 interface ActivityEntryPhotoCardProps {
   imageUrl?: string;
@@ -52,8 +52,8 @@ interface ActivityEntryPhotoCardProps {
   activityEmoji: string;
   activityEntryTimezone?: string;
   activityEntryReactions: Record<string, string[]>;
-  activityEntryComments?: Comment[]; // Initial comments if available
-  isoDate: string;
+  activityEntryComments?: TimelineData["recommendedActivityEntries"][number]["comments"]; // Initial comments if available
+  date: Date;
   daysUntilExpiration: number;
   hasImageExpired?: boolean;
   userPicture?: string;
@@ -90,7 +90,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activityEntryReactions,
   activityEntryTimezone,
   activityEntryComments,
-  isoDate,
+  date,
   daysUntilExpiration,
   hasImageExpired,
   userPicture,
@@ -109,8 +109,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   );
   const { useCurrentUserDataQuery } = useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const currentUserUsername = userData?.user?.username;
-  const isOwnActivityEntry = userData?.user?.username === userUsername;
+  const currentUserUsername = userData?.username;
+  const isOwnActivityEntry = userData?.username === userUsername;
   const api = useApiWithAuth();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
@@ -121,12 +121,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
 
-  const { useUserPlanType } = usePaidPlan();
-  const { data: userPlanType } = useUserPlanType(userUsername || "");
+  const { isUserPremium } = usePaidPlan();
 
-  const [comments, setComments] = useState<Comment[]>(
-    activityEntryComments || []
-  );
+  const [comments, setComments] = useState<
+    TimelineData["recommendedActivityEntries"][number]["comments"]
+  >(activityEntryComments || []);
   const [showAllComments, setShowAllComments] = useState(false);
 
   useEffect(() => {
@@ -154,7 +153,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   // todo: use react query
   async function getReactions() {
     const response = await api.get(
-      `/activity-entries/${activityEntryId}/reactions`
+      `/activities/activity-entries/${activityEntryId}/reactions`
     );
     setReactions(response.data.reactions);
   }
@@ -180,7 +179,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       adds.clear(); // Clear pending adds
 
       await toast.promise(
-        api.post(`/activity-entries/${activityEntryId}/reactions`, {
+        api.post(`/activities/activity-entries/${activityEntryId}/reactions`, {
           operation: "add",
           emojis: emojisToAdd,
         }),
@@ -198,7 +197,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       removes.clear(); // Clear pending removes
 
       await toast.promise(
-        api.post(`/activity-entries/${activityEntryId}/reactions`, {
+        api.post(`/activities/activity-entries/${activityEntryId}/reactions`, {
           operation: "remove",
           emojis: emojisToRemove,
         }),
@@ -483,18 +482,18 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <Avatar
                 className={twMerge(
                   "w-8 h-8",
-                  userPlanType !== "free" &&
+                  isUserPremium &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  userPlanType !== "free" && variants.ring
+                  isUserPremium && variants.ring
                 )}
                 onClick={onAvatarClick}
               >
                 <AvatarImage src={userPicture} alt={userName || ""} />
                 <AvatarFallback>{(userName || "U")[0]}</AvatarFallback>
               </Avatar>
-              {userPlanType && userPlanType !== "free" && (
+              {isUserPremium && (
                 <div className="absolute -bottom-[6px] -right-[6px]">
-                  <PlanBadge planType={userPlanType} size={18} />
+                  <PlanBadge planType={userData?.planType || "FREE"} size={18} />
                 </div>
               )}
             </div>
@@ -512,7 +511,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {activityTitle} – {activityEntryQuantity} {activityMeasure}
               </span>
               <span className="text-xs text-gray-500">
-                {getFormattedDate(isoDate)}{" "}
+                {getFormattedDate(date)}{" "}
                 {activityEntryTimezone && `– 📍 ${activityEntryTimezone}`}
               </span>
             </div>

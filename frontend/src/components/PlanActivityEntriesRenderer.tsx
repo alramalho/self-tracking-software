@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { format, startOfWeek, endOfWeek, isBefore, isAfter } from "date-fns";
-import { Activity, Plan, ActivityEntry } from "@/contexts/UserPlanContext";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 import ActivityEditor from "./ActivityEditor";
 import { isWeekCompleted } from "@/contexts/PlanProgressContext/lib";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { Activity, ActivityEntry } from "@prisma/client";
 
 interface PlanActivityEntriesRendererProps {
-  plan: Plan;
+  plan: CompletePlan;
   activities: Activity[];
   activityEntries: ActivityEntry[];
   startDate?: Date;
@@ -20,16 +21,8 @@ const PlanActivityEntriesRenderer: React.FC<
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
 
-  const planActivities = useMemo(
-    () => activities.filter((a) => plan.activity_ids?.includes(a.id)),
-    [activities, plan.activity_ids]
-  );
-  const planActivityEntries = useMemo(
-    () =>
-      activityEntries.filter((e) =>
-        planActivities.some((a) => a.id === e.activity_id)
-      ),
-    [activityEntries, planActivities]
+  const planActivityEntries = activityEntries.filter((e) =>
+    plan.activities.map((a) => a.id).includes(e.activityId)
   );
 
   const beginingOfWeekOfFirstActivityEntry = useMemo(() => {
@@ -80,12 +73,12 @@ const PlanActivityEntriesRenderer: React.FC<
     if (entriesOnDate.length === 0) return null;
 
     const intensities = entriesOnDate.map((entry) => {
-      const activityIndex = planActivities.findIndex(
-        (a) => a.id === entry.activity_id
+      const activityIndex = plan.activities.findIndex(
+        (a) => a.id === entry.activityId
       );
 
       const quantities = planActivityEntries
-        .filter((e) => e.activity_id === entry.activity_id)
+        .filter((e) => e.activityId === entry.activityId)
         .map((e) => e.quantity);
       const minQuantity = Math.min(...quantities);
       const maxQuantity = Math.max(...quantities);
@@ -125,7 +118,7 @@ const PlanActivityEntriesRenderer: React.FC<
           <ul className="list-none space-y-4">
             {entriesOnDate.map((entry, index) => {
               const activity = activities.find(
-                (a) => a.id === entry.activity_id
+                (a) => a.id === entry.activityId
               );
               if (!activity) return null;
 
@@ -148,11 +141,11 @@ const PlanActivityEntriesRenderer: React.FC<
   return (
     <div className="px-0">
       <div className="flex justify-center mb-4">{renderActivityViewer()}</div>
-      
+
       <BaseHeatmapRenderer
-        activities={planActivities}
+        activities={plan.activities}
         startDate={getDefaultStartDate()}
-        endDate={plan.finishing_date}
+        endDate={plan.finishingDate ? new Date(plan.finishingDate) : undefined}
         heatmapData={formatEntriesForHeatMap()}
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}

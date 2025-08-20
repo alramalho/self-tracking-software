@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { format, addDays, isToday, subMonths } from "date-fns";
 import HeatMap from "@uiw/react-heat-map";
-import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
 import { Brush } from "lucide-react";
 
 export interface HeatmapData {
@@ -53,13 +54,13 @@ export const getActivityColor = (
   intensityLevel: number,
   activity?: Activity
 ) => {
-  if (activity?.color_hex) {
+  if (activity?.colorHex) {
     // Ensure intensityLevel is within the bounds of our alpha levels array
     const alpha =
       intensityAlphaLevels[
         Math.min(intensityLevel, intensityAlphaLevels.length - 1)
       ];
-    return hexToRgba(activity.color_hex, alpha);
+    return hexToRgba(activity.colorHex, alpha);
   }
   const colorMatrix = getActivityColorMatrix();
   const row = colorMatrix[activityIndex % colorMatrix.length];
@@ -131,14 +132,14 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
           activities.map((activity, index) => (
             <React.Fragment key={index}>
               <div className="flex flex-row gap-0 items-center">
-                {activity.color_hex
+                {activity.colorHex
                   ? intensityAlphaLevels.map((alpha, intensityIdx) => (
                       <div
                         key={intensityIdx}
                         className="w-4 h-4"
                         style={{
                           backgroundColor: hexToRgba(
-                            activity.color_hex!,
+                            activity.colorHex!,
                             alpha
                           ),
                         }}

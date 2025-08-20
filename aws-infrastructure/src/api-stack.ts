@@ -24,8 +24,18 @@ interface ApiStackProps {
   certificateArn: string;
 }
 
+interface FargateDeploymentOptions {
+  serviceName: string;
+  backendPath: string;
+  dockerfilePath: string;
+  environment: Record<string, string>;
+  vpc?: ec2.IVpc;
+  cluster?: ecs.ICluster;
+}
+
 export class ApiStack extends cdk.Stack {
   public fargateService: ecs_patterns.ApplicationLoadBalancedFargateService;
+  public nodeFargateService: ecs_patterns.ApplicationLoadBalancedFargateService;
   // public fastApiLambda: lambda.DockerImageFunction;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
@@ -38,7 +48,90 @@ export class ApiStack extends cdk.Stack {
       `${KEBAB_CASE_PREFIX}-bucket-${props.environment}`
     );
 
-    this.deployFargateBackend(props, s3Bucket);
+    // Deploy Python backend (existing)
+    const pythonEnvConfig = {
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+      OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
+      SHARED_ENCRYPTION_KEY: process.env.SHARED_ENCRYPTION_KEY!,
+      MONGO_DB_CONNECTION_STRING: process.env.MONGO_DB_CONNECTION_STRING!,
+      CLERK_JWT_PUBLIC_KEY: process.env.CLERK_JWT_PUBLIC_KEY!,
+      SVIX_SECRET: process.env.SVIX_SECRET!,
+      PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
+      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
+      ENVIRONMENT: process.env.ENVIRONMENT!,
+      JINA_API_KEY: process.env.JINA_API_KEY!,
+      POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
+      ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
+      OVERRIDE_AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
+      OVERRIDE_AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
+      LOOPS_API_KEY: process.env.LOOPS_API_KEY!,
+      OTEL_ENABLED: process.env.OTEL_ENABLED!,
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
+        process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
+      AXIOM_TOKEN: process.env.AXIOM_TOKEN!,
+      AXIOM_ORG_ID: process.env.AXIOM_ORG_ID!,
+      AXIOM_DATASET: process.env.AXIOM_DATASET!,
+      AXIOM_BATCH_SIZE: process.env.AXIOM_BATCH_SIZE!,
+      TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
+      TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
+      STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
+      STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
+      STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
+    };
+
+    this.fargateService = this.deployFargateBackend(props, s3Bucket, {
+      serviceName: "api",
+      backendPath: "backend",
+      dockerfilePath: "Dockerfile.fargate",
+      environment: pythonEnvConfig,
+    });
+
+    // Deploy Node.js backend (new) - reuse VPC and cluster from Python backend
+    const nodeEnvConfig = {
+      DATABASE_URL: process.env.DATABASE_URL!,
+      DIRECT_URL: process.env.DIRECT_URL!,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+      CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY!,
+      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
+      SVIX_SECRET: process.env.SVIX_SECRET!,
+      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
+      POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
+      ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
+      PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
+      PINECONE_INDEX_HOST: process.env.PINECONE_INDEX_HOST!,
+      POSTGRES_USER: process.env.POSTGRES_USER!,
+      POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD!,
+      POSTGRES_HOST: process.env.POSTGRES_HOST!,
+      POSTGRES_PORT: process.env.POSTGRES_PORT!,
+      POSTGRES_DB: process.env.POSTGRES_DB!,
+      OTEL_ENABLED: process.env.OTEL_ENABLED!,
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
+        process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
+      TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
+      TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
+      STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
+      STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
+      STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
+    };
+
+    this.nodeFargateService = this.deployFargateBackend(props, s3Bucket, {
+      serviceName: "api-node",
+      backendPath: "backend-node",
+      dockerfilePath: "Dockerfile",
+      environment: nodeEnvConfig,
+      vpc: this.fargateService.cluster.vpc,
+      cluster: this.fargateService.cluster,
+    });
+
+    // Setup WAF for the Python API (main API)
+    this.setupWAF(props, this.fargateService.loadBalancer);
+
     // this.deployLambdaBackend(props, s3Bucket);
   }
 
@@ -156,91 +249,65 @@ export class ApiStack extends cdk.Stack {
   //   );
   // }
 
-  private deployFargateBackend(props: ApiStackProps, s3Bucket: s3.IBucket) {
-    // Create VPC for Fargate service
-    const vpc = new ec2.Vpc(this, "VPC", {
-      maxAzs: 2, // Use 2 Availability Zones for redundancy
-      natGateways: 1, // Minimize costs by using just 1 NAT Gateway
-    });
+  private deployFargateBackend(
+    props: ApiStackProps,
+    s3Bucket: s3.IBucket,
+    options: FargateDeploymentOptions
+  ) {
+    // Create or reuse VPC for Fargate service
+    const fargateVpc =
+      options.vpc ||
+      new ec2.Vpc(this, "SharedVPC", {
+        maxAzs: 2, // Use 2 Availability Zones for redundancy
+        natGateways: 1, // Minimize costs by using just 1 NAT Gateway
+      });
 
-    // Create ECS Cluster to run Fargate tasks
-    const cluster = new ecs.Cluster(this, "Cluster", {
-      vpc,
-      clusterName: `${KEBAB_CASE_PREFIX}-cluster-${props.environment}`,
-      containerInsights: true,
-    });
+    // Create or reuse ECS Cluster to run Fargate tasks
+    const fargateCluster =
+      options.cluster ||
+      new ecs.Cluster(this, "SharedCluster", {
+        vpc: fargateVpc,
+        clusterName: `${KEBAB_CASE_PREFIX}-cluster-${props.environment}`,
+        containerInsights: true,
+      });
 
-    const logGroup = new logs.LogGroup(this, "ApiLogGroup", {
-      logGroupName: `/ecs/${KEBAB_CASE_PREFIX}-api-${props.environment}`,
-      retention: logs.RetentionDays.ONE_WEEK,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
+    const logGroup = new logs.LogGroup(
+      this,
+      `ApiLogGroup-${options.serviceName}`,
+      {
+        logGroupName: `/ecs/${KEBAB_CASE_PREFIX}-${options.serviceName}-${props.environment}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }
+    );
 
     let certificate = acm.Certificate.fromCertificateArn(
       this,
-      "ImportedCertificate",
+      `ImportedCertificate-${options.serviceName}`,
       process.env.CERTIFICATE_ARN!
     );
 
-    this.fargateService =
+    const fargateService =
       new ecs_patterns.ApplicationLoadBalancedFargateService(
         this,
-        "ApiService",
+        `ApiService-${options.serviceName}`,
         {
-          cluster,
-          serviceName: `${KEBAB_CASE_PREFIX}-api-${props.environment}`,
+          cluster: fargateCluster,
+          serviceName: `${KEBAB_CASE_PREFIX}-${options.serviceName}-${props.environment}`,
           taskImageOptions: {
             image: ecs.ContainerImage.fromAsset(
-              path.join(__dirname, "..", "..", "backend"),
+              path.join(__dirname, "..", "..", options.backendPath),
               {
-                file: "Dockerfile.fargate", // Use the Fargate-specific Dockerfile
+                file: options.dockerfilePath,
                 platform: ecr_assets.Platform.LINUX_AMD64, // Explicitly specify x86_64 architecture
               }
             ),
             containerPort: 8000,
             logDriver: ecs.LogDrivers.awsLogs({
               logGroup,
-              streamPrefix: "api",
+              streamPrefix: options.serviceName,
             }),
-            environment: {
-              OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
-              OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
-              SHARED_ENCRYPTION_KEY: process.env.SHARED_ENCRYPTION_KEY!,
-              MONGO_DB_CONNECTION_STRING:
-                process.env.MONGO_DB_CONNECTION_STRING!,
-              CLERK_JWT_PUBLIC_KEY: process.env.CLERK_JWT_PUBLIC_KEY!,
-              SVIX_SECRET: process.env.SVIX_SECRET!,
-              PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
-              VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
-              ENVIRONMENT: process.env.ENVIRONMENT!,
-              JINA_API_KEY: process.env.JINA_API_KEY!,
-              POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
-              ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
-              OVERRIDE_AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
-              OVERRIDE_AWS_SECRET_ACCESS_KEY:
-                process.env.AWS_SECRET_ACCESS_KEY!,
-              LOOPS_API_KEY: process.env.LOOPS_API_KEY!,
-
-              // OpenTelemetry Configuration
-              OTEL_ENABLED: process.env.OTEL_ENABLED!,
-              OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
-                process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
-              OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
-                process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
-
-              // Axiom Configuration
-              AXIOM_TOKEN: process.env.AXIOM_TOKEN!,
-              AXIOM_ORG_ID: process.env.AXIOM_ORG_ID!,
-              AXIOM_DATASET: process.env.AXIOM_DATASET!,
-              AXIOM_BATCH_SIZE: process.env.AXIOM_BATCH_SIZE!,
-
-              TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
-              TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
-
-              STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
-              STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
-              STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
-            },
+            environment: options.environment,
           },
           desiredCount: 1, // Start with 1 task
           cpu: 512, // 0.5 vCPU
@@ -252,35 +319,35 @@ export class ApiStack extends cdk.Stack {
         }
       );
 
-    this.fargateService.targetGroup.configureHealthCheck({
+    fargateService.targetGroup.configureHealthCheck({
       path: "/health",
     });
 
     // Set up autoscaling
-    const scaling = this.fargateService.service.autoScaleTaskCount({
+    const scaling = fargateService.service.autoScaleTaskCount({
       minCapacity: 1,
       maxCapacity: 5,
     });
 
     // Scale based on CPU utilization
-    scaling.scaleOnCpuUtilization("CpuScaling", {
+    scaling.scaleOnCpuUtilization(`CpuScaling-${options.serviceName}`, {
       targetUtilizationPercent: 70,
       scaleInCooldown: cdk.Duration.seconds(60),
       scaleOutCooldown: cdk.Duration.seconds(60),
     });
 
     // Scale based on memory utilization
-    scaling.scaleOnMemoryUtilization("MemoryScaling", {
+    scaling.scaleOnMemoryUtilization(`MemoryScaling-${options.serviceName}`, {
       targetUtilizationPercent: 80,
       scaleInCooldown: cdk.Duration.seconds(60),
       scaleOutCooldown: cdk.Duration.seconds(60),
     });
 
     // Grant the task execution role permissions to access S3
-    s3Bucket.grantReadWrite(this.fargateService.taskDefinition.taskRole);
+    s3Bucket.grantReadWrite(fargateService.taskDefinition.taskRole);
 
     // Add SES permissions
-    this.fargateService.taskDefinition.taskRole.addToPrincipalPolicy(
+    fargateService.taskDefinition.taskRole.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "SES:SendRawEmail"],
         resources: ["*"],
@@ -289,14 +356,17 @@ export class ApiStack extends cdk.Stack {
     );
 
     // Determine the API URL based on certificate availability
-    const apiUrl = "https://api.tracking.so";
+    const apiUrl =
+      options.serviceName === "api"
+        ? "https://api.tracking.so"
+        : `https://${options.serviceName}.tracking.so`;
 
     // Create the proxy lambda for cron jobs pointing to Fargate
     const apiCronProxyLambda = new lambda.Function(
       this,
-      "FargateApiCronProxyFunction",
+      `FargateApiCronProxyFunction-${options.serviceName}`,
       {
-        functionName: `${CAMEL_CASE_PREFIX}FargateApiCronProxy${props.environment}`,
+        functionName: `${CAMEL_CASE_PREFIX}Fargate${options.serviceName}CronProxy${props.environment}`,
         runtime: lambda.Runtime.PYTHON_3_10,
         handler: "cron_proxy.lambda_handler",
         timeout: cdk.Duration.seconds(899),
@@ -316,7 +386,7 @@ export class ApiStack extends cdk.Stack {
     // Output the API endpoint URL
     new cdk.CfnOutput(
       this,
-      `${PASCAL_CASE_PREFIX}FargateApiURL${props.environment}`,
+      `${PASCAL_CASE_PREFIX}Fargate${options.serviceName}ApiURL${props.environment}`,
       {
         value: apiUrl,
       }
@@ -325,22 +395,25 @@ export class ApiStack extends cdk.Stack {
     // Output the actual ALB DNS name for manual DNS configuration
     new cdk.CfnOutput(
       this,
-      `${PASCAL_CASE_PREFIX}LoadBalancerDNS${props.environment}`,
+      `${PASCAL_CASE_PREFIX}LoadBalancer${options.serviceName}DNS${props.environment}`,
       {
-        value: this.fargateService.loadBalancer.loadBalancerDnsName,
-        description:
-          "Load Balancer DNS Name - Set your domain's CNAME record to point to this",
+        value: fargateService.loadBalancer.loadBalancerDnsName,
+        description: `Load Balancer DNS Name for ${options.serviceName} - Set your domain's CNAME record to point to this`,
       }
     );
 
     new cdk.CfnOutput(
       this,
-      `${PASCAL_CASE_PREFIX}FargateApiCronProxyARN${props.environment}`,
+      `${PASCAL_CASE_PREFIX}Fargate${options.serviceName}ApiCronProxyARN${props.environment}`,
       {
         value: apiCronProxyLambda.functionArn,
       }
     );
 
+    return fargateService;
+  }
+
+  private setupWAF(props: ApiStackProps, loadBalancer: any) {
     // --- Read Allowed Routes ---
     const allowedRoutesFilePath = path.join(
       __dirname,
@@ -632,7 +705,7 @@ export class ApiStack extends cdk.Stack {
 
     // Associate WAF Web ACL with the Application Load Balancer
     new wafv2.CfnWebACLAssociation(this, "WebAclAssociation", {
-      resourceArn: this.fargateService.loadBalancer.loadBalancerArn,
+      resourceArn: loadBalancer.loadBalancerArn,
       webAclArn: webAcl.attrArn,
     });
   }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import posthog from "posthog-js";
-import { useUserPlan, hasCachedUserData } from "@/contexts/UserPlanContext";
+import { useUserPlan, hasCachedUserData } from "@/contexts/UserGlobalContext";
 import { useSession } from "@clerk/nextjs";
 import { useNotifications } from "@/hooks/useNotifications";
 import BottomNav from "./BottomNav";
@@ -15,7 +15,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { useOnboarding } from "@/app/onboarding/components/OnboardingContext";
+import { useOnboardingCompleted } from "@/app/onboarding/components/OnboardingContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 export default function GeneralInitializer({
@@ -37,35 +37,38 @@ export default function GeneralInitializer({
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [initialCacheExists] = useState(() => hasCachedUserData());
   const hasFriends =
-    userData?.user?.friend_ids?.length &&
-    userData?.user?.friend_ids?.length > 0;
-  const { userPaidPlanType } = usePaidPlan();
+    userData?.friendIds?.length &&
+    userData?.friendIds?.length > 0;
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const router = useRouter();
+  const { isOnboardingCompleted } = useOnboardingCompleted();
 
-  const onboardingNecessary =
-    !isWaitingForData && !hasFriends && userPaidPlanType === "free";
+  const onboardingNecessary = useMemo(
+    () => !isWaitingForData && !hasFriends && userPaidPlanType?.toLowerCase() === "FREE" && !isOnboardingCompleted,
+    [isWaitingForData, hasFriends, userPaidPlanType, isOnboardingCompleted]
+  );
 
-  const email = userData?.user?.email || "";
+  const email = userData?.email || "";
 
   useEffect(() => {
     if (onboardingNecessary) {
       router.push("/onboarding");
     }
-  }, [onboardingNecessary]);
+  }, [onboardingNecessary, isWaitingForData, hasFriends, userPaidPlanType]);
 
   useEffect(() => {
     if (
       isSignedIn &&
       hasLoadedUserData &&
-      userData?.user &&
+      userData &&
       !hasRanPosthogIdentify
     ) {
-      posthog.identify(userData?.user.id, {
-        email: userData?.user.email,
-        name: userData?.user.name,
-        username: userData?.user.username,
+      posthog.identify(userData.id, {
+        email: userData.email,
+        name: userData.name,
+        username: userData.username,
         is_app_installed: isAppInstalled,
-        is_looking_for_ap: userData?.user.looking_for_ap,
+        is_looking_for_ap: userData.lookingForAp,
         is_push_granted: isPushGranted,
       });
       setHasRanPosthogIdentify(true);

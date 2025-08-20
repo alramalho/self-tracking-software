@@ -13,3 +13,5 @@ vapid_private.pem
 vapid_public.pem
 db_data/*
 alex.ipynb
+
+.turbo

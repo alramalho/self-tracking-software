@@ -11,7 +11,7 @@ import {
   ApiPlan,
   PlanMilestone,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { EntryCard } from "./EntryCard";
 import { useMutation } from "@tanstack/react-query";
 import { Description } from "@radix-ui/react-alert-dialog";
@@ -80,7 +80,7 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
   const logActivityMutation = useMutation({
     mutationFn: async (entry: ActivityEntry) => {
       const formData = new FormData();
-      formData.append("activity_id", entry.activity_id);
+      formData.append("activityId", entry.activityId);
       formData.append("iso_date_string", entry.date);
       formData.append("quantity", entry.quantity.toString());
       formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -146,7 +146,7 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
             <div className="flex flex-col gap-2">
               {data.activity_entries?.map((a) => {
                 const respectiveActivity = userData?.activities?.find(
-                  (activity) => activity.id === a.activity_id
+                  (activity) => activity.id === a.activityId
                 );
                 return (
                   <div key={a.id}>

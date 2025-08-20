@@ -2,7 +2,7 @@ import {
   Activity,
   useUserPlan,
   VisibilityType,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { Earth, Edit, Lock, Users } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
@@ -60,7 +60,7 @@ export const ActivityCard = ({
         </span>
         {activity.privacy_settings &&
           activity.privacy_settings !==
-            userData?.user?.default_activity_visibility && (
+            userData?.defaultActivityVisibility && (
             <span className="text-[10px] text-left flex items-center gap-1 mt-2 text-gray-400">
               {getActivityPrivacySettingIcon(activity.privacy_settings)}
               {toReadablePrivacySetting(activity.privacy_settings)}

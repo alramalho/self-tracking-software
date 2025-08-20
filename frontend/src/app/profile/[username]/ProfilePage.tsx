@@ -17,11 +17,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
-import {
-  convertApiPlanToPlan,
-  User,
-  useUserPlan,
-} from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { parseISO, differenceInDays, subDays } from "date-fns";
 import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -74,11 +70,9 @@ const ProfilePage: React.FC = () => {
   const params = useParams();
   const searchParams = useSearchParams();
   const username = params.username as string;
-  const currentUser = currentUserQuery.data?.user;
-  const currentUserSentFriendRequests =
-    currentUserQuery.data?.sentFriendRequests;
-  const currentUserReceivedFriendRequests =
-    currentUserQuery.data?.receivedFriendRequests;
+  const currentUser = currentUserQuery.data;
+  const currentUserSentConnectionRequests = currentUser?.connectionsFrom?.filter(conn => conn.status === 'PENDING');
+  const currentUserReceivedConnectionRequests = currentUser?.connectionsTo?.filter(conn => conn.status === 'PENDING');
   const profileDataQuery = useUserDataQuery(username);
   const { isSuccess: isProfileDataSuccesfullyLoaded, data: profileData } =
     profileDataQuery;
@@ -91,16 +85,16 @@ const ProfilePage: React.FC = () => {
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
     string | null
   >(null);
-  const userInformalName = profileData?.user?.name?.includes(" ")
-    ? profileData.user.name.split(" ")[0]
-    : profileData?.user?.username;
+  const userInformalName = profileData?.name?.includes(" ")
+    ? profileData.name.split(" ")[0]
+    : profileData?.username;
 
   const { plansProgress } = usePlanProgress();
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
-  const isOnesOwnProfile = currentUser?.id === profileData?.user?.id;
-  const profilePaidPlanType = profileData?.user?.plan_type;
+  const isOnesOwnProfile = currentUser?.id === profileData?.id;
+  const profilePaidPlanType = profileData?.planType;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const redirectTo = searchParams.get("redirectTo");
@@ -149,38 +143,37 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleSendFriendRequest = async () => {
-    if (profileData && profileData.user) {
+  const handleSendConnectionRequest = async () => {
+    if (profileData) {
       await toast.promise(
         (async () => {
-          await api.post(`/send-friend-request/${profileData!.user!.id}`);
+          await api.post(`/users/send-connection-request/${profileData!.id}`);
           await currentUserQuery.refetch();
         })(),
         {
-          loading: "Sending friend request...",
-          success: "Friend request sent successfully",
-          error: "Failed to send friend request",
+          loading: "Sending connection request...",
+          success: "Connection request sent successfully",
+          error: "Failed to send connection request",
         }
       );
     }
   };
 
-  const handleFriendRequest = async (action: "accept" | "reject") => {
-    if (profileData && profileData.user) {
-      const request = currentUserReceivedFriendRequests?.find(
-        (req) =>
-          req.sender_id === profileData.user?.id && req.status === "pending"
+  const handleConnectionRequest = async (action: "accept" | "reject") => {
+    if (profileData) {
+      const request = currentUserReceivedConnectionRequests?.find(
+        (req) => req.fromId === profileData.id
       );
       if (request) {
         await toast.promise(
           (async () => {
-            await api.post(`${action}-friend-request/${request.id}`);
+            await api.post(`/users/${action}-connection-request/${request.id}`);
             await currentUserQuery.refetch();
           })(),
           {
-            loading: `${action}ing friend request...`,
-            success: `Friend request ${action}ed`,
-            error: `Failed to ${action} friend request`,
+            loading: `${action}ing connection request...`,
+            success: `Connection request ${action}ed`,
+            error: `Failed to ${action} connection request`,
           }
         );
       }
@@ -188,14 +181,15 @@ const ProfilePage: React.FC = () => {
   };
 
   const activitiesNotInPlans = useMemo(() => {
-    const planActivityIds = new Set(
-      profileActivePlans?.flatMap((plan) => plan.activity_ids) || []
+    const plansActivityIds = new Set(
+      profileActivePlans?.flatMap((plan) => plan.activities.map((a) => a.id)) ||
+        []
     );
 
     const activitiesNotInPlans = activities.filter(
       (activity) =>
-        !planActivityIds.has(activity.id) &&
-        activityEntries.some((entry) => entry.activity_id === activity.id)
+        !plansActivityIds.has(activity.id) &&
+        activityEntries.some((entry) => entry.activityId === activity.id)
     );
 
     return activitiesNotInPlans;
@@ -212,30 +206,24 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const user = profileData?.user;
-
-  const getUsername = (user: User | null) => {
-    return user?.username;
-  };
-
-  const hasPendingReceivedFriendRequest = () => {
-    return currentUserReceivedFriendRequests?.some(
+  const hasPendingReceivedConnectionRequest = () => {
+    return currentUserReceivedConnectionRequests?.some(
       (request) =>
-        request.sender_id === profileData?.user?.id &&
-        request.status === "pending"
+        request.fromId === profileData?.id
     );
   };
 
-  const hasPendingSentFriendRequest = () => {
-    return currentUserSentFriendRequests?.some(
+  const hasPendingSentConnectionRequest = () => {
+    return currentUserSentConnectionRequests?.some(
       (request) =>
-        request.recipient_id === profileData?.user?.id &&
-        request.status === "pending"
+        request.toId === profileData?.id
     );
   };
 
   const isFriend = () => {
-    return currentUser?.friend_ids?.includes(profileData?.user?.id || "");
+    return currentUser?.friends?.some(
+      (friend) => friend.id === profileData?.id
+    );
   };
 
   if (!isProfileDataSuccesfullyLoaded) {
@@ -269,15 +257,18 @@ const ProfilePage: React.FC = () => {
               <Avatar
                 className={twMerge(
                   "w-20 h-20",
-                  profilePaidPlanType !== "free" &&
+                  profilePaidPlanType !== "FREE" &&
                     "ring-2 ring-offset-2 ring-offset-white",
-                  profilePaidPlanType === "plus" && variants.ring
+                  profilePaidPlanType === "PLUS" && variants.ring
                 )}
               >
-                <AvatarImage src={user?.picture || ""} alt={user?.name || ""} />
-                <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
+                <AvatarImage
+                  src={profileData?.picture || ""}
+                  alt={profileData?.name || ""}
+                />
+                <AvatarFallback>{(profileData?.name || "U")[0]}</AvatarFallback>
               </Avatar>
-              {profilePaidPlanType && profilePaidPlanType !== "free" && (
+              {profilePaidPlanType && profilePaidPlanType !== "FREE" && (
                 <div className="absolute -bottom-1 -right-1">
                   <PlanBadge planType={profilePaidPlanType} size={28} />
                 </div>
@@ -285,17 +276,17 @@ const ProfilePage: React.FC = () => {
             </div>
             <div className="flex flex-col items-center">
               <span className="text-sm text-gray-600 mx-auto">
-                {profileData?.user?.name}
+                {profileData?.name}
               </span>
               <span className="text-xs text-gray-400 mx-auto">
-                @{profileData?.user?.username}
+                @{profileData?.username}
               </span>
             </div>
           </div>
           <div className="flex flex-col items-center gap-4">
             {!isOnesOwnProfile && !isFriend() && (
               <>
-                {hasPendingReceivedFriendRequest() ? (
+                {hasPendingReceivedConnectionRequest() ? (
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-sm text-muted-foreground">
                       has sent you a friend request
@@ -305,7 +296,7 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-green-600 bg-green-50"
-                        onClick={() => handleFriendRequest("accept")}
+                        onClick={() => handleConnectionRequest("accept")}
                       >
                         <Check className="h-6 w-6" />
                       </Button>
@@ -313,7 +304,7 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-red-600 bg-red-50"
-                        onClick={() => handleFriendRequest("reject")}
+                        onClick={() => handleConnectionRequest("reject")}
                       >
                         <X className="h-6 w-6" />
                       </Button>
@@ -323,10 +314,10 @@ const ProfilePage: React.FC = () => {
                   <Button
                     variant="outline"
                     className="flex items-center space-x-2"
-                    onClick={handleSendFriendRequest}
-                    disabled={hasPendingSentFriendRequest()}
+                    onClick={handleSendConnectionRequest}
+                    disabled={hasPendingSentConnectionRequest()}
                   >
-                    {hasPendingSentFriendRequest() ? (
+                    {hasPendingSentConnectionRequest() ? (
                       <>
                         <Check size={20} />
                         <span>Request Sent</span>
@@ -344,10 +335,10 @@ const ProfilePage: React.FC = () => {
           </div>
           <div className="flex flex-col items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Link href={`/friends/${getUsername(user ?? null)}`}>
+              <Link href={`/friends/${profileData?.username}`}>
                 <div className="text-center">
                   <p className="text-2xl font-bold">
-                    {user?.friend_ids?.length || 0}
+                    {profileData?.friends?.length || 0}
                   </p>
                   <p className="text-sm text-gray-500">Friends</p>
                 </div>
@@ -361,7 +352,7 @@ const ProfilePage: React.FC = () => {
                     className="border-none"
                     onClick={() =>
                       shareOrCopyLink(
-                        `https://app.tracking.so/join/${currentUserQuery.data?.user?.username}`
+                        `https://app.tracking.so/join/${currentUserQuery.data?.username}`
                       )
                     }
                   >
@@ -412,7 +403,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {isOnesOwnProfile && userPaidPlanType == "plus" && (
+                {isOnesOwnProfile && userPaidPlanType === "PLUS" && (
                   <>
                     <div
                       onClick={() => setShowUpgradePopover(true)}
@@ -504,8 +495,9 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
               )}
-              {profileActivePlans && profileActivePlans.length > 0 && profileActivePlans
-                .map((plan) => {
+              {profileActivePlans &&
+                profileActivePlans.length > 0 &&
+                profileActivePlans.map((plan) => {
                   const planProgress = plansProgress.find(
                     (p) => p.plan.id === plan.id
                   );
@@ -527,12 +519,12 @@ const ProfilePage: React.FC = () => {
                         <span className="text-4xl">{plan.emoji}</span>
                         <div className="flex flex-col gap-0">
                           <h3 className="text-lg font-semibold">{plan.goal}</h3>
-                          {plan.outline_type == "times_per_week" && (
+                          {plan.outlineType == "TIMES_PER_WEEK" && (
                             <span className="text-sm text-gray-500">
-                              {plan.times_per_week} times per week
+                              {plan.timesPerWeek} times per week
                             </span>
                           )}
-                          {plan.outline_type == "specific" && (
+                          {plan.outlineType == "SPECIFIC" && (
                             <span className="text-sm text-gray-500">
                               Custom plan
                             </span>
@@ -550,7 +542,7 @@ const ProfilePage: React.FC = () => {
                         </div>
                       )}
                       <PlanActivityEntriesRenderer
-                        plan={convertApiPlanToPlan(plan, activities)}
+                        plan={plan as any}
                         activities={activities}
                         activityEntries={activityEntries}
                         startDate={subDays(
@@ -565,7 +557,7 @@ const ProfilePage: React.FC = () => {
                 <div className="text-center text-gray-500 py-8">
                   {isOnesOwnProfile
                     ? "You haven't created any plans yet."
-                    : `${user?.name} hasn't got any public plans available.`}
+                    : `${profileData?.name} hasn't got any public plans available.`}
                 </div>
               )}
               {activitiesNotInPlans.length > 0 && (
@@ -576,7 +568,7 @@ const ProfilePage: React.FC = () => {
                     activityEntries={activityEntries.filter((entry) =>
                       activitiesNotInPlans
                         .map((a) => a.id)
-                        .includes(entry.activity_id)
+                        .includes(entry.activityId)
                     )}
                     timeRange={timeRange}
                     endDate={endDate}
@@ -595,37 +587,44 @@ const ProfilePage: React.FC = () => {
                   )
                   .map((entry) => {
                     const activity = activities.find(
-                      (a) => a.id === entry.activity_id
+                      (a) => a.id === entry.activityId
                     );
                     return (
                       <ActivityEntryPhotoCard
                         key={entry.id}
-                        imageUrl={entry.image?.url}
+                        imageUrl={entry.imageUrl || undefined}
                         activityEntryId={entry.id}
                         activityTitle={activity?.title || "Unknown Activity"}
                         activityEmoji={activity?.emoji || ""}
                         activityEntryQuantity={entry.quantity}
-                        activityEntryReactions={entry.reactions || {}}
-                        activityEntryTimezone={entry.timezone}
+                        activityEntryReactions={entry.reactions.reduce((acc, reaction) => {
+                          if (!acc[reaction.emoji] && reaction.user.username) {
+                            acc[reaction.emoji] = [reaction.user.username];
+                          } else if (reaction.user.username) {
+                            acc[reaction.emoji].push(reaction.user.username);
+                          }
+                          return acc;
+                        }, {} as Record<string, string[]>)}
+                        activityEntryTimezone={entry.timezone || undefined}
                         activityEntryComments={entry.comments}
                         activityMeasure={activity?.measure || ""}
-                        isoDate={entry.date}
-                        description={entry.description}
+                        date={entry.date}
+                        description={entry.description || undefined}
                         daysUntilExpiration={
-                          entry.image?.expires_at
+                          entry.imageExpiresAt
                             ? differenceInDays(
-                                parseISO(entry.image.expires_at!),
+                                parseISO(entry.imageExpiresAt.toISOString()!),
                                 new Date()
                               )
                             : -1
                         }
                         hasImageExpired={
-                          !entry.image?.expires_at ||
-                          new Date(entry.image.expires_at!) < new Date()
+                          !entry.imageExpiresAt ||
+                          new Date(entry.imageExpiresAt!) < new Date()
                         }
-                        userPicture={user?.picture}
-                        userName={user?.name}
-                        userUsername={user?.username}
+                        userPicture={profileData?.picture || undefined}
+                        userName={profileData?.name || undefined}
+                        userUsername={profileData?.username || undefined}
                         editable={isOnesOwnProfile}
                         onEditClick={() => {
                           setShowEditActivityEntry(entry.id);
@@ -639,8 +638,8 @@ const ProfilePage: React.FC = () => {
                 {activityEntries?.length === 0
                   ? isOnesOwnProfile
                     ? "You haven't completed any activities yet."
-                    : `${user?.name} hasn't got any public activities.`
-                  : `${user?.name}'s ${activities.length} past activities photos have expired.`}
+                    : `${profileData?.name} hasn't got any public activities.`
+                  : `${profileData?.name}'s ${activities.length} past activities photos have expired.`}
               </div>
             )}
           </TabsContent>
@@ -671,9 +670,13 @@ const ProfilePage: React.FC = () => {
       {showEditActivityEntry && isOnesOwnProfile && (
         <ActivityEntryEditor
           open={!!showEditActivityEntry}
-          activityEntry={
-            activityEntries.find((entry) => entry.id === showEditActivityEntry)!
-          }
+          activityEntry={{
+            id: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.id,
+            quantity: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.quantity,
+            date: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.date.toISOString(),
+            activityId: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.activityId,
+            description: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.description || undefined,
+          }}
           onDelete={() => {
             profileDataQuery.refetch();
           }}

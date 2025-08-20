@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity } from "@/contexts/UserGlobalContext";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";

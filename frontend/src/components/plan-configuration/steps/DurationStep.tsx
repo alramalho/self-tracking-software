@@ -4,18 +4,13 @@ import DurationOption from "../DurationOption";
 import { DatePicker } from "@/components/ui/date-picker";
 import { XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PlanDurationType } from "@prisma/client";
 
 interface DurationStepProps {
-  planDuration: {
-    type: "custom" | "habit" | "lifestyle" | undefined;
-    date?: string;
-  };
-  currentFinishingDate?: string;
-  setPlanDuration: (duration: {
-    type: "custom" | "habit" | "lifestyle" | undefined;
-    date?: string;
-  }) => void;
-  setCurrentFinishingDate: (date?: string) => void;
+  planDuration: PlanDurationType;
+  currentFinishingDate?: Date;
+  setPlanDuration: (duration: PlanDurationType) => void;
+  setCurrentFinishingDate: (date?: Date) => void;
   setPlanNotes: (notes: string) => void;
 }
 
@@ -40,9 +35,9 @@ const DurationStep: React.FC<DurationStepProps> = ({
             type="habit"
             emoji="🌱"
             title="Habit Creation"
-            isSelected={planDuration.type === "habit"}
+            isSelected={planDuration === "HABIT"}
             onSelect={() => {
-              setPlanDuration({ type: "habit", date: currentFinishingDate });
+              setPlanDuration("HABIT");
               setPlanNotes(
                 "This plan is a habit creation plan. In order to consider the habit created, all weeks must be completed."
               );
@@ -53,12 +48,9 @@ const DurationStep: React.FC<DurationStepProps> = ({
             type="lifestyle"
             emoji="🚀"
             title="Lifestyle Improvement"
-            isSelected={planDuration.type === "lifestyle"}
+            isSelected={planDuration === "LIFESTYLE"}
             onSelect={() => {
-              setPlanDuration({
-                type: "lifestyle",
-                date: currentFinishingDate,
-              });
+              setPlanDuration("LIFESTYLE");
               setPlanNotes(
                 "This plan is a lifestyle improvement plan. In order to consider the lifestyle improved, at least 90% of the weeks must be completed."
               );
@@ -69,12 +61,9 @@ const DurationStep: React.FC<DurationStepProps> = ({
             type="custom"
             emoji="⚡️"
             title="Custom"
-            isSelected={planDuration.type === "custom"}
+            isSelected={planDuration === "CUSTOM"}
             onSelect={() => {
-              setPlanDuration({
-                type: "custom",
-                date: currentFinishingDate,
-              });
+              setPlanDuration("CUSTOM");
               setPlanNotes("");
             }}
           />
@@ -100,13 +89,12 @@ const DurationStep: React.FC<DurationStepProps> = ({
               id="date-picker-trigger"
               selected={
                 currentFinishingDate
-                  ? new Date(currentFinishingDate)
+                  ? currentFinishingDate
                   : undefined
               }
               onSelect={(date: Date | undefined) => {
-                const newDate = date?.toISOString();
-                setCurrentFinishingDate(newDate);
-                setPlanDuration({ ...planDuration, date: newDate });
+                setCurrentFinishingDate(date);
+                setPlanDuration(planDuration);
               }}
               disablePastDates={true}
             />
@@ -115,7 +103,7 @@ const DurationStep: React.FC<DurationStepProps> = ({
               size="icon"
               onClick={() => {
                 setCurrentFinishingDate(undefined);
-                setPlanDuration({ ...planDuration, date: undefined });
+                setPlanDuration(planDuration);
               }}
             >
               <XCircle className="w-4 h-4" />

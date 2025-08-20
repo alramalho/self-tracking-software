@@ -4,7 +4,7 @@ import { ChevronRight, Clock } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useRouter } from "next/navigation";
 import { ExampleCorrelations } from "@/components/ExampleCorrelations";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { MetricRaters } from "@/components/MetricRaters";
 import AppleLikePopover from "./AppleLikePopover";
 import { useEffect } from "react";

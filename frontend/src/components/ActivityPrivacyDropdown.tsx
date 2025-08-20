@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { VisibilityType } from "@/contexts/UserPlanContext";
+import { VisibilityType } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { cn } from "@/lib/utils";
@@ -33,12 +33,12 @@ const ActivityPrivacyDropdown: React.FC<ActivityPrivacyDropdownProps> = ({
   onChange,
   className,
 }) => {
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const [isOpen, setIsOpen] = React.useState(false);
 
   const handleOptionClick = (option: VisibilityType) => {
-    const isLocked = userPaidPlanType === "free" && (option === "friends" || option === "private");
+    const isLocked = userPaidPlanType === "FREE" && (option === "friends" || option === "private");
     setIsOpen(false);
     if (isLocked) {
       setTimeout(() => setShowUpgradePopover(true), 100);
@@ -54,7 +54,7 @@ const ActivityPrivacyDropdown: React.FC<ActivityPrivacyDropdownProps> = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         {["public", "private", "friends"].map((option) => {
-          const isLocked = userPaidPlanType === "free" && (option === "friends" || option === "private");
+          const isLocked = userPaidPlanType === "FREE" && (option === "friends" || option === "private");
           return (
             <DropdownMenuItem
               key={option}

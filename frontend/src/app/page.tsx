@@ -9,7 +9,7 @@ import PullToRefresh from "react-simple-pull-to-refresh";
 import { MetricIsland } from "@/components/MetricIsland";
 import { TodaysNoteSection } from "@/components/TodaysNoteSection";
 import { MetricWeeklyView } from "@/components/MetricWeeklyView";
-
+import { MetricEntry } from "@prisma/client";
 import {
   Search,
   Bell,
@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import Notifications from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
-import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
+import InsightsDemo from "@/components/InsightsDemo";
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,9 +31,7 @@ import {
 import { useSession } from "@clerk/nextjs";
 import {
   useUserPlan,
-  MetricEntry,
-  convertApiPlanToPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -43,6 +41,10 @@ import { useMetrics } from "@/hooks/useMetrics";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
+import { ScanFace } from "lucide-react";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { getUser } from "./actions";
+import { isToday } from "date-fns";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
@@ -74,14 +76,16 @@ const HomePage: React.FC = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { clearGeneralNotifications } = useNotifications();
-  const { userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "free";
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
+  const { setShowUpgradePopover } = useUpgrade();
+  const isUserOnFreePlan = userPaidPlanType === "FREE";
   const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
     useState(false);
+  const [showAICoachPopover, setShowAICoachPopover] = useState(false);
 
   const unreadNotifications =
     notificationsData.data?.notifications?.filter(
-      (n) => n.status !== "concluded" && n.type !== "engagement"
+      (n) => n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
     ) || [];
   const unreadNotificationsCount = unreadNotifications.length;
 
@@ -91,6 +95,16 @@ const HomePage: React.FC = () => {
     router.push(`/profile/${user.username}`);
     setIsSearchOpen(false);
   };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      console.log(`Fetching user ${userData?.id}`);
+      const user = await getUser();
+      
+      console.log(`User fetched from prisma! ${user?.id}`);
+    };
+    fetchUser();
+  }, [userData]);
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
@@ -116,6 +130,7 @@ const HomePage: React.FC = () => {
     return colors[index % colors.length];
   };
 
+
   return (
     <PullToRefresh
       onRefresh={async () => {
@@ -134,7 +149,7 @@ const HomePage: React.FC = () => {
     >
       <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
         <div
-          className={`flex justify-between items-center bg-gray-100 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm`}
+          className={`flex justify-between items-center bg-gray-50 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm`}
         >
           <div className="flex flex-row gap-1 items-center text-center">
             <img
@@ -172,6 +187,27 @@ const HomePage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* AI Coach Banner */}
+        {isUserOnFreePlan && (
+          <div 
+            onClick={() => setShowAICoachPopover(true)}
+            className="bg-gradient-to-r from-purple-50 to-blue-50 ring-1 ring-purple-200 backdrop-blur-sm rounded-full py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ScanFace size={24} className="text-purple-500" />
+                <div>
+                  <span className="text-sm font-semibold text-purple-700">AI Coach & Insights</span>
+                  <p className="text-xs text-purple-600">
+                    Get personalized coaching and track daily metrics
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-purple-500" />
+            </div>
+          </div>
+        )}
 
         {userData?.plans && userData.plans.length > 0 && (
           <div>
@@ -262,8 +298,8 @@ const HomePage: React.FC = () => {
                     const today = new Date().toISOString().split("T")[0];
                     const todaysEntry = entries.find(
                       (entry: MetricEntry) =>
-                        entry.metric_id === metric.id &&
-                        entry.date.split("T")[0] === today
+                        entry.metricId === metric.id &&
+                        isToday(entry.date)
                     );
                     const isLoggedToday =
                       !!todaysEntry && todaysEntry.rating > 0;
@@ -337,11 +373,6 @@ const HomePage: React.FC = () => {
           title="Notifications"
           displayIcon={false}
         >
-          {unreadNotificationsCount == 0 && (
-            <div className="flex items-start flex-col justify-between mb-4">
-              <h2 className="text-xl font-semibold">✅ No new notifications</h2>
-            </div>
-          )}
           <Notifications />
         </AppleLikePopover>
 
@@ -353,6 +384,38 @@ const HomePage: React.FC = () => {
             setShowPlanProgressExplainer(false);
           }}
         />
+
+        {/* AI Coach Popover */}
+        <AppleLikePopover
+          onClose={() => setShowAICoachPopover(false)}
+          open={showAICoachPopover}
+          title="AI Coach & Insights"
+        >
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <ScanFace size={30} className="text-purple-500" />
+              <div>
+                <h3 className="text-lg font-semibold">AI Coach & Insights</h3>
+                <p className="text-gray-600 text-sm">
+                  Get personalized coaching and track your daily metrics
+                </p>
+              </div>
+            </div>
+
+            <InsightsDemo showCorrelations={false} className="mb-6" />
+
+            <Button
+              onClick={() => {
+                setShowAICoachPopover(false);
+                setShowUpgradePopover(true);
+              }}
+              className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
+            >
+              <ScanFace size={16} className="mr-2" />
+              Try AI Coaching Free
+            </Button>
+          </div>
+        </AppleLikePopover>
       </div>
     </PullToRefresh>
   );

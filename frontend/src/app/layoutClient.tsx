@@ -7,7 +7,7 @@ import { Toaster as SonnerToaster } from "sonner";
 import { UserPlanProviderWrapper } from "@/components/UserPlanProviderWrapper";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { useEffect, useState } from "react";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import GeneralInitializer from "@/components/GeneralInitializer";
@@ -45,9 +45,10 @@ export default function ClientLayout({
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   return (
-    <PersistQueryClientProvider
+    // <PersistQueryClientProvider
+    <QueryClientProvider
       client={queryClient}
-      persistOptions={{ persister: localStoragePersister }}
+      // persistOptions={{ persister: localStoragePersister }}
     >
       <LoggerProvider>
         <UserPlanProviderWrapper>
@@ -79,6 +80,6 @@ export default function ClientLayout({
           </PlanProgressProvider>
         </UserPlanProviderWrapper>
       </LoggerProvider>
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   );
 }

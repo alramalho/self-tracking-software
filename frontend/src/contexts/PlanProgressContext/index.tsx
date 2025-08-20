@@ -1,13 +1,9 @@
 import React, { createContext, useContext, useMemo } from "react";
 import {
+  CompletePlan,
   useUserPlan,
-  Activity,
-  ActivityEntry,
-  ApiPlan,
-  PlanSession,
-  convertApiPlanToPlan,
-  Plan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
+import { Plan, Activity, ActivityEntry, PlanSession } from "@prisma/client";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
 
 export interface PlanAchievementResult {
@@ -35,8 +31,7 @@ export interface PlanProgressData {
 
 export interface PlanProgressContextType {
   calculatePlanAchievement: (
-    plan: Plan,
-    activities: Activity[],
+    plan: CompletePlan,
     activityEntries: ActivityEntry[],
     initialDate?: Date
   ) => PlanAchievementResult;
@@ -67,29 +62,27 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     const { plans, activities, activityEntries } = userData;
 
     const planProgress = plans.map((plan): PlanProgressData => {
-      const convertedPlan = convertApiPlanToPlan(plan, activities);
-      const planStartDate = convertedPlan.outline_type === "specific" 
-        ? (convertedPlan.sessions.length > 0 
-            ? convertedPlan.sessions.sort((a, b) => a.date.getTime() - b.date.getTime())[0].date
-            : new Date())
-        : undefined
+      // const convertedPlan = plan;
+      // const planStartDate = convertedPlan.outlineType === "SPECIFIC" 
+      //   ? (convertedPlan.sessions.length > 0 
+      //       ? convertedPlan.sessions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date
+      //       : new Date())
+      //   : undefined
       
       return {
-        plan: convertedPlan,
+        plan,
         achievement: calculatePlanAchievement(
-          convertedPlan,
-          activities,
+          plan as CompletePlan,
           activityEntries,
           // planStartDate
         ),
         weeks: getPlanWeeks(
-          convertedPlan,
+          plan as CompletePlan,
           activities,
           activityEntries
         ),
       };
     });
-    console.log("planProgress", planProgress);
     return planProgress;
   }, [userData?.plans, userData?.activities, userData?.activityEntries]);
 
@@ -124,13 +117,13 @@ export const usePlanProgress = () => {
 
 // Export a function to create plan progress data independently (for demos)
 export const createPlanProgressData = (
-  plan: Plan,
+  plan: CompletePlan,
   activities: Activity[],
   activityEntries: ActivityEntry[]
 ): PlanProgressData => {
   return {
     plan,
-    achievement: calculatePlanAchievement(plan, activities, activityEntries),
+    achievement: calculatePlanAchievement(plan, activityEntries),
     weeks: getPlanWeeks(plan, activities, activityEntries),
   };
 };

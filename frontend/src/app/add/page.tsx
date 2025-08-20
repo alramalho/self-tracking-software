@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import {
-  Activity,
-  useUserPlan,
-} from "@/contexts/UserPlanContext";
+import { Activity } from "@prisma/client";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { Loader2, Plus } from "lucide-react";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
@@ -19,7 +17,7 @@ interface ActivityLogData {
 }
 
 const LogPage: React.FC = () => {
-  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery, refetchUserData } = useUserPlan();
+  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
@@ -28,8 +26,8 @@ const LogPage: React.FC = () => {
   
   // Sort activities by entry count
   const sortedActivities = [...activities].sort((a, b) => {
-    const aEntryCount = activityEntries.filter(entry => entry.activity_id === a.id).length;
-    const bEntryCount = activityEntries.filter(entry => entry.activity_id === b.id).length;
+    const aEntryCount = activityEntries.filter(entry => entry.activityId === a.id).length;
+    const bEntryCount = activityEntries.filter(entry => entry.activityId === b.id).length;
     return bEntryCount - aEntryCount; // Sort in descending order (most entries first)
   });
   

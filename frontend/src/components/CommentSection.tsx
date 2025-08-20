@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUserPlan, Comment } from "@/contexts/UserPlanContext";
+import { useUserPlan, Comment } from "@/contexts/UserGlobalContext";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
 import { parseISO, format, isToday, isYesterday, differenceInCalendarDays } from 'date-fns';
@@ -77,7 +77,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     setIsSubmitting(true);
     
     try {
-      const response = await api.post(`/activity-entries/${activityEntryId}/comments`, {
+      const response = await api.post(`/activities/activity-entries/${activityEntryId}/comments`, {
         text: newComment.trim()
       });
       
@@ -100,7 +100,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   const handleDeleteComment = async (commentId: string) => {
     try {
-      await api.delete(`/activity-entries/${activityEntryId}/comments/${commentId}`);
+      await api.delete(`/activities/activity-entries/${activityEntryId}/comments/${commentId}`);
       
       // Remove the comment from the list
       setComments(currentComments => 
@@ -185,13 +185,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                       @{comment.username}
                     </span>
                     <span className="text-xs text-gray-400">
-                      {getFormattedDate(comment.created_at)}
+                      {getFormattedDate(comment.createdAt)}
                     </span>
                   </div>
                   <p className="text-sm break-words whitespace-pre-wrap">{comment.text}</p>
                 </div>
                 
-                {userData?.user?.id === comment.user_id && (
+                {userData?.id === comment.userId && (
                   <button 
                     onClick={() => handleDeleteComment(comment.id)}
                     className="text-gray-400 hover:text-gray-600"

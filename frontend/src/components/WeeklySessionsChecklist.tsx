@@ -4,16 +4,17 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { parseISO, startOfWeek, endOfWeek } from "date-fns";
-import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/PlanProgressContext/lib";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 
 interface WeeklySessionsChecklistProps {
-  plan: ApiPlan;
+  plan: CompletePlan;
   activityEntries: any[];
 }
 
+// NOT BEING USED ATM
 export function WeeklySessionsChecklist({
   plan,
   activityEntries,
@@ -41,7 +42,7 @@ export function WeeklySessionsChecklist({
             return prev + 1;
           }
           clearInterval(timer);
-          if (prev >= (plan.times_per_week || 0)) {
+          if (prev >= (plan.timesPerWeek || 0)) {
             setIsFullyDone(true);
           }
           return prev;
@@ -50,17 +51,17 @@ export function WeeklySessionsChecklist({
 
       return () => clearInterval(timer);
     }
-  }, [inView, completedSessionsThisWeek, plan.times_per_week]);
+  }, [inView, completedSessionsThisWeek, plan.timesPerWeek]);
 
-  // Only show for times_per_week plans
-  if (plan.outline_type !== "times_per_week" || !plan.times_per_week) {
+  // Only show for timesPerWeek plans
+  if (plan.outlineType !== "TIMES_PER_WEEK" || !plan.timesPerWeek) {
     return null;
   }
 
   return (
     <div ref={ref}>
       <div className="flex flex-row gap-2 items-center justify-center mt-7">
-        {Array.from({ length: plan.times_per_week }).map((_, index) => (
+        {Array.from({ length: plan.timesPerWeek }).map((_, index) => (
           <div
             key={index}
             className={cn(
@@ -77,7 +78,7 @@ export function WeeklySessionsChecklist({
         ))}
       </div>
       <p className="text-center mt-4 text-sm text-gray-600">
-        {completedSessionsThisWeek} of {plan.times_per_week} sessions completed
+        {completedSessionsThisWeek} of {plan.timesPerWeek} sessions completed
         this week
       </p>
       <AnimatePresence>

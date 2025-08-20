@@ -8,18 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { PlanStatus } from "./PlanProgressCard";
 import { Button } from "./ui/button";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
-import {
-  ArrowBigRight,
-  Check,
-  Loader2,
-  X,
-} from "lucide-react";
-import { ApiPlan, convertApiPlanToPlan } from "@/contexts/UserPlanContext";
+import { ArrowBigRight, Check, Loader2, X } from "lucide-react";
+import { PlanSession } from "@prisma/client";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { clearCoachSuggestedSessionsInPlan, updatePlan, upgradeCoachSuggestedSessionsToPlanSessions } from "@/app/actions";
 
 interface CoachOverviewCardProps {
-  selectedPlan: ApiPlan;
+  selectedPlan: CompletePlan;
   activities: any[];
   onRefetch?: () => void;
   isDemo?: boolean;
@@ -36,7 +33,12 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const api = useApiWithAuth();
-  const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<string | null>(null);
+  const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<
+    string | null
+  >(null);
+  const coachSuggestedSessions = selectedPlan.sessions.filter(
+    (s) => s.isCoachSuggested
+  );
   const [loadingStates, setLoadingStates] = useState({
     acceptingSessions: false,
     decliningSessions: false,
@@ -45,12 +47,12 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   });
 
   const planActivities = activities.filter((a) =>
-    selectedPlan.activity_ids?.includes(a.id)
+    selectedPlan.activities.map((a) => a.id).includes(a.id)
   );
 
   // Reusable functions for handling coach suggestions
   const handleAcceptSuggestion = async (
-    suggestionType: "sessions" | "times_per_week"
+    suggestionType: "sessions" | "timesPerWeek"
   ) => {
     if (isDemo || !api) return;
 
@@ -63,22 +65,24 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
 
       let updateData: any = {
-        suggested_by_coach_at: null,
-        coach_notes: null,
+        suggestedByCoachAt: null,
+        coachNotes: null,
       };
 
       if (suggestionType === "sessions") {
-        updateData = {
-          ...updateData,
-          sessions: selectedPlan.coach_suggested_sessions,
-          coach_suggested_sessions: null,
-        };
-      } else if (suggestionType === "times_per_week") {
-        updateData = {
-          ...updateData,
-          times_per_week: selectedPlan.coach_suggested_times_per_week,
-          coach_suggested_times_per_week: null,
-        };
+        await upgradeCoachSuggestedSessionsToPlanSessions(
+          selectedPlan.id,
+        );
+      } else if (suggestionType === "timesPerWeek") {
+        await updatePlan(selectedPlan.id, {
+          timesPerWeek: selectedPlan.coachSuggestedTimesPerWeek,
+          coachSuggestedTimesPerWeek: null,
+        });
+        // updateData = {
+        //   ...updateData,
+        //   timesPerWeek: selectedPlan.coachSuggestedTimesPerWeek,
+        //   coachSuggestedTimesPerWeek: null,
+        // };
       }
 
       await api.post(`/plans/${selectedPlan.id}/update`, {
@@ -103,7 +107,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   };
 
   const handleDeclineSuggestion = async (
-    suggestionType: "sessions" | "times_per_week"
+    suggestionType: "sessions" | "timesPerWeek"
   ) => {
     if (isDemo || !api) return;
 
@@ -115,20 +119,14 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
     try {
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
 
-      let updateData: any = {
-        suggested_by_coach_at: null,
-        coach_notes: null,
-      };
-
       if (suggestionType === "sessions") {
-        updateData.coach_suggested_sessions = null;
-      } else if (suggestionType === "times_per_week") {
-        updateData.coach_suggested_times_per_week = null;
+        clearCoachSuggestedSessionsInPlan(selectedPlan.id);
+      } else if (suggestionType === "timesPerWeek") {
+        await updatePlan(selectedPlan.id, {
+          coachSuggestedTimesPerWeek: null,
+        });
       }
 
-      await api.post(`/plans/${selectedPlan.id}/update`, {
-        data: updateData,
-      });
       onRefetch?.();
       toast.success("Suggestion declined");
     } catch (error) {
@@ -140,9 +138,11 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   };
 
   // Don't render if no coach data to show
-  if (!selectedPlan.coach_notes &&
-      !selectedPlan.coach_suggested_sessions?.length &&
-      !selectedPlan.coach_suggested_times_per_week) {
+  if (
+    !selectedPlan.coachNotes &&
+    !coachSuggestedSessions.length &&
+    !selectedPlan.coachSuggestedTimesPerWeek
+  ) {
     return null;
   }
 
@@ -157,66 +157,70 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       )}
     >
       <div className="flex flex-col items-start gap-4">
-        <div className="flex flex-row items-center gap-2 justify-between w-full">
-          <Avatar>
-            <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
-          <PlanStatus
-            plan={convertApiPlanToPlan(selectedPlan, activities)}
-          />
-        </div>
-
-        {selectedPlan.coach_notes && (
-          <div className="flex flex-col gap-1 flex-1">
-            <span className={`text-sm italic text-gray-600`}>
-              {selectedPlan.coach_notes}
-            </span>
-            <span className="text-[10px] italic text-gray-500">
-              Coach Oli,{" "}
-              {selectedPlan.suggested_by_coach_at &&
-                formatDistance(
-                  parseISO(selectedPlan.suggested_by_coach_at),
-                  new Date(),
-                  { addSuffix: true }
-                )}
-            </span>
-          </div>
+        {selectedPlan.coachNotes && (
+          <>
+            <div className="flex flex-row items-center gap-2 justify-between w-full">
+              <Avatar>
+                <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+                <AvatarFallback>CN</AvatarFallback>
+              </Avatar>
+              <PlanStatus plan={selectedPlan} />
+            </div>
+            <div className="flex flex-col gap-1 flex-1">
+              <span className={`text-sm italic text-gray-600`}>
+                {selectedPlan.coachNotes}
+              </span>
+              <span className="text-[10px] italic text-gray-500">
+                Coach Oli,{" "}
+                {selectedPlan.suggestedByCoachAt &&
+                  formatDistance(selectedPlan.suggestedByCoachAt, new Date(), {
+                    addSuffix: true,
+                  })}
+              </span>
+            </div>
+          </>
         )}
 
-        {selectedPlan.coach_suggested_sessions &&
-          selectedPlan.coach_suggested_sessions.length > 0 && (
+        {coachSuggestedSessions &&
+          coachSuggestedSessions.length > 0 && (
             <div className="flex flex-col justify-start gap-4 w-full">
               <div className="flex flex-col gap-3">
-                <div className="text-center">
-                  <span className="text-lg font-semibold text-gray-800 mb-2 block">
-                    New Schedule Suggestion
-                  </span>
-                  <span className="text-xs text-gray-400 font-medium">
-                    UPDATED SESSIONS
-                  </span>
+                <div className="flex flex-row gap-2">
+                  {!selectedPlan.coachNotes && (
+                    <Avatar>
+                      <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+                      <AvatarFallback>CN</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className="text-start">
+                    <span className="text-lg font-semibold text-gray-800 block">
+                      New Schedule Suggestion
+                    </span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      UPDATED SESSIONS
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-                  {selectedPlan.coach_suggested_sessions.map(
-                    (session, index) => {
+                  {coachSuggestedSessions.map(
+                    (session: PlanSession, index: number) => {
                       const activity = planActivities?.find(
-                        (a) => a.id === session.activity_id
+                        (a) => a.id === session.activityId
                       );
                       if (!activity) return null;
 
-                      const sessionId = `coach-session-${session.activity_id}-${index}`;
-                      const isSelected =
-                        selectedSuggestedSession === sessionId;
+                      const sessionId = `coach-session-${session.activityId}-${index}`;
+                      const isSelected = selectedSuggestedSession === sessionId;
 
                       return (
                         <SmallActivityEntryCard
                           key={sessionId}
                           entry={{
                             date: parseISO(session.date),
-                            activity_id: session.activity_id,
+                            activityId: session.activityId,
                             quantity: session.quantity,
-                            description: session.descriptive_guide,
+                            description: session.descriptiveGuide,
                           }}
                           activity={activity}
                           selected={isSelected}
@@ -277,12 +281,12 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
             </div>
           )}
 
-        {selectedPlan.coach_suggested_times_per_week && (
+        {selectedPlan.coachSuggestedTimesPerWeek && (
           <div className="flex flex-col justify-start gap-4 w-full">
             <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
               <div className="flex flex-col items-center text-center flex-shrink-0">
                 <span className="text-4xl md:text-5xl font-light text-gray-800">
-                  {selectedPlan.times_per_week}
+                  {selectedPlan.timesPerWeek}
                 </span>
                 <span className="text-xs text-gray-400 font-medium mt-1">
                   CURRENT
@@ -299,7 +303,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                 <span
                   className={`text-4xl md:text-5xl font-light ${variants.text}`}
                 >
-                  {selectedPlan.coach_suggested_times_per_week}
+                  {selectedPlan.coachSuggestedTimesPerWeek}
                 </span>
                 <span className="text-xs text-gray-400 font-medium mt-1">
                   SUGGESTED
@@ -317,7 +321,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                     loadingStates.acceptingTimesPerWeek
                   }
                   onClick={async () => {
-                    await handleDeclineSuggestion("times_per_week");
+                    await handleDeclineSuggestion("timesPerWeek");
                   }}
                 >
                   {loadingStates.decliningTimesPerWeek ? (
@@ -334,7 +338,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                     loadingStates.decliningTimesPerWeek
                   }
                   onClick={async () => {
-                    await handleAcceptSuggestion("times_per_week");
+                    await handleAcceptSuggestion("timesPerWeek");
                   }}
                 >
                   {loadingStates.acceptingTimesPerWeek ? (
@@ -351,4 +355,4 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       </div>
     </MessageBubble>
   );
-}; 
+};

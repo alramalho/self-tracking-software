@@ -1,0 +1,25 @@
+{
+  "name": "prisma",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./types": "./types/index.ts"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:reset": "ts-node reset-db.ts",
+    "reset-db": "pnpm db:reset",
+    "db:push": "prisma db push",
+    "db:seed": "ts-node seed.ts",
+    "seed": "pnpm db:seed",
+    "clean": "rm -rf node_modules"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0"
+  }
+}
