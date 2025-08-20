@@ -32,7 +32,6 @@ const CreateNewPlan: React.FC = () => {
       >
         <div className="flex flex-col items-start justify-center ">
           <h1 className="text-2xl font-bold mb-8 mt-2">Create New Plan</h1>
-          <p>You have reached the maximum number of plans for your account.</p>
           <span
             className={twMerge(
               "text-3xl font-cursive flex items-center gap-2 my-8",
@@ -43,8 +42,9 @@ const CreateNewPlan: React.FC = () => {
                 : "text-indigo-500"
             )}
           >
-            On {capitalize(userPaidPlanType || "FREE")} Plan
+            On {capitalize(userPaidPlanType || "FREE")} Plansss
           </span>
+          <p>You have reached the maximum number of plans for your account.</p>
           <Button
             className="w-full"
             onClick={() => setShowUpgradePopover(true)}

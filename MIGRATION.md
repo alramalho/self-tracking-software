@@ -185,9 +185,9 @@ backend
 [x] log metric
 [x] check metric logged
 -- recommendations
-[] implement plan index (now we don't have planIds array anymore)
-[] can compute recommended users
-[] can see recommended users
+[x] implement plan index (now we don't have planIds array anymore)
+[x] can compute recommended users
+[x] can see recommended users
 
 ## missing verticals
 

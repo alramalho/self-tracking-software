@@ -138,8 +138,6 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
               </Button>
             )}
 
-            {/* // note to self, we were in the midst of finishing off the migratino to backend node
-            // scheduling notifiactions arent yet done */}
             {generatedSessions && (
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Generated Schedule</h4>
