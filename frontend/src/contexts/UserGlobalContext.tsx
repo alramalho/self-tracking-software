@@ -146,7 +146,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const useCurrentUserDataQuery = () => {
     const query = useQuery({
       queryKey: ["userData", "current"],
-      queryFn: () => getCurrentUserData(),
+      queryFn: () => {
+        console.log("isSignedIn", isSignedIn);
+        console.log("isLoaded", isLoaded);
+        return getCurrentUserData();
+      },
       enabled: isLoaded && isSignedIn,
     });
 
@@ -350,10 +354,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [isSignedIn, currentUserDataQuery.data]);
 
   useEffect(() => {
-    if (!isSignedIn) {
+    if (isLoaded && !isSignedIn) {
+      console.log("🧹 Clearing cache because not signed in");
       queryClient.clear();
+      // Also clear localStorage to prevent persistence issues
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
+      }
     }
-  }, [isSignedIn, queryClient]);
+  }, [isSignedIn, isLoaded, queryClient]);
 
   const updateTheme = useCallback(
     async (color: ThemeColorType) => {
