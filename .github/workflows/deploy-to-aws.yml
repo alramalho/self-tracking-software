@@ -103,6 +103,6 @@ jobs:
           
         run: |
           cd aws-infrastructure
-          pnpm install
-          pnpm bootstrap
-          pnpm deploy
+          yarn install
+          yarn bootstrap
+          yarn deploy
