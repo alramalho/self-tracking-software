@@ -7,6 +7,10 @@ on:
 
 jobs:
 
+  deploy-db:
+    uses: ./.github/workflows/deploy-db.yml
+    secrets: inherit
+
   deploy-backend:
     uses: ./.github/workflows/deploy-backend.yml
     secrets: inherit

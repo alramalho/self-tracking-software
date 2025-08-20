@@ -3,41 +3,41 @@ name: Deploy to Sandbox
 on:
   workflow_call:
 jobs:
-  deploy-dev-cdk:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+  # deploy-dev-cdk:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
+  #     - name: Setup pnpm
+  #       uses: pnpm/action-setup@v4
+  #       with:
+  #         version: latest
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'pnpm'
-          cache-dependency-path: 'aws-infrastructure/pnpm-lock.yaml'
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '18'
+  #         cache: 'pnpm'
+  #         cache-dependency-path: 'aws-infrastructure/pnpm-lock.yaml'
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: eu-central-1
 
-      - name: Deploy CDK to dev
-        env:
-          ENVIRONMENT: dev 
-          CERTIFICATE_ARN: irrelevant
-          # we're only interested in propagating db schema, so env vars for api are irrelevant
-        run: |
-          cd aws-infrastructure
-          pnpm install
-          pnpm bootstrap
-          pnpm deploy-dev-db
+  #     - name: Deploy CDK to dev
+  #       env:
+  #         ENVIRONMENT: dev 
+  #         CERTIFICATE_ARN: irrelevant
+  #         # we're only interested in propagating db schema, so env vars for api are irrelevant
+  #       run: |
+  #         cd aws-infrastructure
+  #         pnpm install
+  #         pnpm bootstrap
+  #         pnpm deploy-dev-db
           
   deploy-prod-cdk:
     runs-on: ubuntu-latest
