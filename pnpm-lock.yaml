@@ -3,6 +3,7 @@ lockfileVersion: '9.0'
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
+  injectWorkspacePackages: true
 
 importers:
 
@@ -366,7 +367,7 @@ importers:
         version: 4.18.0
       prisma:
         specifier: workspace:*
-        version: link:../prisma
+        version: file:prisma(@types/node@20.19.9)(typescript@5.9.2)
       react:
         specifier: ^18
         version: 18.3.1
@@ -5888,6 +5889,9 @@ packages:
     resolution: {integrity: sha512-vtpjW3XuYCSnMsNVBjLMNkTj6OZbudcPPTPYHqX0CJfpcdWciI1dM8uHETwmDxxiqEwCIE6WvXucWUetJgfu/A==}
     engines: {node: '>=16.13'}
     hasBin: true
+
+  prisma@file:prisma:
+    resolution: {directory: prisma, type: directory}
 
   proc-log@5.0.0:
     resolution: {integrity: sha512-Azwzvl90HaF0aCz1JrDdXQykFakSSNPaPoiZ9fm5qJIMHioDZEi7OAdRwSm6rSoPtY3Qutnm3L7ogmg3dc+wbQ==}
@@ -13782,6 +13786,17 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
+  prisma@file:prisma(@types/node@20.19.9)(typescript@5.9.2):
+    dependencies:
+      '@prisma/client': 5.22.0(prisma@5.22.0)
+      prisma: 5.22.0
+      ts-node: 10.9.2(@types/node@20.19.9)(typescript@5.9.2)
+    transitivePeerDependencies:
+      - '@swc/core'
+      - '@swc/wasm'
+      - '@types/node'
+      - typescript
+
   proc-log@5.0.0: {}
 
   process-nextick-args@2.0.1: {}
@@ -14783,7 +14798,6 @@ snapshots:
       typescript: 5.9.2
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
-    optional: true
 
   ts-node@10.9.2(@types/node@24.1.0)(typescript@5.9.2):
     dependencies:
