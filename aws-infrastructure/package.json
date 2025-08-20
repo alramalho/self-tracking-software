@@ -5,15 +5,15 @@
     "aws-infrastructure": "src/main.js"
   },
   "scripts": {
-    "diff": "cdk diff",
-    "bootstrap": "cdk bootstrap",
-    "presynth": "echo '\n️\\0033[43;1m ⚠ Consider running `yarn diff` to check differences ⚠\\0033[0m️\n️' && rm -rf cdk.out",
-    "synth": "cdk synth",
-    "predeploy": "yarn synth",
-    "list": "cdk ls",
-    "deploy": "cdk deploy --require-approval never --all",
-    "deploy-dev-db": "cdk deploy --require-approval never TrackingSoftwareInfrastructureStackdev/DbStack",
-    "deploy-dev-api": "cdk deploy --require-approval never TrackingSoftwareInfrastructureStackdev/ApiStack"
+    "diff": "npx cdk diff",
+    "bootstrap": "npx cdk bootstrap",
+    "presynth": "echo '\n️\\0033[43;1m ⚠ Consider running `pnpm diff` to check differences ⚠\\0033[0m️\n️' && rm -rf cdk.out",
+    "synth": "npx cdk synth",
+    "predeploy": "pnpm synth",
+    "list": "npx cdk ls",
+    "deploy": "npx cdk deploy --require-approval never --all",
+    "deploy-dev-db": "npx cdk deploy --require-approval never TrackingSoftwareInfrastructureStackdev/DbStack",
+    "deploy-dev-api": "npx cdk deploy --require-approval never TrackingSoftwareInfrastructureStackdev/ApiStack"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",
