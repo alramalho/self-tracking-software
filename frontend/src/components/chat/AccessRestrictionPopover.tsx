@@ -5,7 +5,7 @@ import { ReferralProgress } from "./ReferralProgress";
 import { Button } from "../ui/button";
 import { toast } from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 
 interface AccessRestrictionPopoverProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ export const AccessRestrictionPopover: React.FC<
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const email = userData?.user?.email || "";
+  const email = userData?.email || "";
   const [text, setText] = useState("I want to try the AI because");
   
   const requestAccess = async () => {

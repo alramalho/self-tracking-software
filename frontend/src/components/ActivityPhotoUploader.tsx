@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-// import { useApiWithAuth } from "@/api"; // Will be replaced
-import { useOfflineAwareApi } from "@/hooks/useOfflineAwareApi"; // Import the new hook
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useApiWithAuth } from "@/api";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "@/components/ui/button";
@@ -15,15 +14,6 @@ const MAX_FILE_SIZE = 150 * 1024; // 150KB in bytes
 const MAX_WIDTH = 1200; // Max width for the compressed image
 const QUALITY = 0.7; // Initial quality setting for compression
 
-// Helper to convert File to ArrayBuffer
-const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as ArrayBuffer);
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-};
 
 const compressImage = async (file: File): Promise<File> => {
   if (typeof window === 'undefined') return file;
@@ -82,11 +72,6 @@ interface ActivityPhotoUploaderProps {
   open: boolean;
 }
 
-interface SerializablePhotoData {
-  buffer: ArrayBuffer;
-  name: string;
-  type: string;
-}
 
 const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   activityData,
@@ -94,14 +79,13 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   onSuccess,
   open,
 }) => {
-  const [selectedFileForPreview, setSelectedFileForPreview] = useState<File | null>(null);
-  const [serializablePhotoData, setSerializablePhotoData] = useState<SerializablePhotoData | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // const [isPublic, setIsPublic] = useState(false); // Unused
   const [isProcessingOrUploading, setIsProcessingOrUploading] = useState(false);
   const [description, setDescription] = useState("");
   const { refetchUserData } = useUserPlan();
   const { addToNotificationCount } = useNotifications();
-  const api = useOfflineAwareApi();
+  const api = useApiWithAuth();
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -131,13 +115,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         const compressedFile = await compressImage(fileToCompress);
         if (toastId) toast.dismiss(toastId);
 
-        const arrayBuffer = await readFileAsArrayBuffer(compressedFile);
-        setSerializablePhotoData({
-          buffer: arrayBuffer,
-          name: compressedFile.name,
-          type: compressedFile.type,
-        });
-        setSelectedFileForPreview(compressedFile); // Still use File object for preview
+        setSelectedFile(compressedFile);
 
         console.log(
           `Original size: ${originalFile.size / 1024}KB, Compressed size: ${
@@ -148,8 +126,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         if (toastId) toast.dismiss(toastId);
         console.error("Error processing image:", error);
         toast.error("Failed to process image. Please try again.");
-        setSerializablePhotoData(null);
-        setSelectedFileForPreview(null);
+        setSelectedFile(null);
       } finally {
         setIsProcessingOrUploading(false);
       }
@@ -159,66 +136,31 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   const logActivity = async () => {
     setIsProcessingOrUploading(true);
 
-    const basePayload = {
-      activity_id: activityData.activityId,
-      iso_date_string: activityData.date.toISOString(),
-      quantity: activityData.quantity.toString(), // Ensure quantity is string for FormData
-      description: description || "", // Ensure description is at least an empty string for FormData
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      // isPublic can be added here if needed, ensure string conversion
-    };
-
-    let dataToSend: any;
-    let headersConfig = {}; // Default for FormData (let browser set Content-Type)
-
-    if (api.isOnline) {
-      // ONLINE: Always send FormData to /log-activity
-      const formData = new FormData();
-      Object.keys(basePayload).forEach(key => formData.append(key, (basePayload as any)[key]));
-      if (serializablePhotoData) { // Or use selectedFileForPreview if it's always set when serializablePhotoData is
-        const photoFile = new File([serializablePhotoData.buffer], serializablePhotoData.name, { type: serializablePhotoData.type });
-        formData.append("photo", photoFile);
-      }
-      dataToSend = formData;
-      // headersConfig remains {} for FormData
-    } else {
-      // OFFLINE: Send JSON payload for queueing. If photo exists, embed serializable data.
-      dataToSend = { ...basePayload }; // Start with base stringified data
-      if (serializablePhotoData) {
-        dataToSend.photo = {
-          buffer: serializablePhotoData.buffer,
-          name: serializablePhotoData.name,
-          type: serializablePhotoData.type,
-        };
-      }
-      headersConfig = { 'Content-Type': 'application/json' }; // This header is for the addTask internal representation, not for the final API call
-                                                              // The generic handler in useOfflineAwareApi will reconstruct FormData anyway for /log-activity
-    }
-
     try {
-      const response = await api.post("/log-activity", dataToSend, { headers: headersConfig }, {
-        title: serializablePhotoData ? "Log with photo" : "Log activity",
-        successMessage: serializablePhotoData ? "Activity with photo synced!" : "Activity synced!",
-        errorMessage: serializablePhotoData ? "Failed to sync photo." : "Failed to sync activity."
-      });
-
-      if (response && response.__queued__) {
-        onSuccess();
-      } else {
-        refetchUserData(false);
-        toast.success(
-          serializablePhotoData
-            ? "Activity logged with photo successfully!"
-            : "Activity logged successfully!"
-        );
-        addToNotificationCount(1, 'profile');
-        onSuccess();
+      const formData = new FormData();
+      formData.append("activityId", activityData.activityId);
+      formData.append("iso_date_string", activityData.date.toISOString());
+      formData.append("quantity", activityData.quantity.toString());
+      formData.append("description", description || "");
+      formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+      
+      if (selectedFile) {
+        formData.append("photo", selectedFile);
       }
+
+      await api.post("/activities/log-activity", formData);
+
+      refetchUserData(false);
+      toast.success(
+        selectedFile
+          ? "Activity logged with photo successfully!"
+          : "Activity logged successfully!"
+      );
+      addToNotificationCount(1, 'profile');
+      onSuccess();
     } catch (error: any) {
       console.error("Error logging activity:", error);
-      if (!error.isOfflineFormDataError && !error.isOfflinePreconditionError) { 
-         toast.error("Failed to log activity. Please try again.");
-      }
+      toast.error("Failed to log activity. Please try again.");
     } finally {
       setIsProcessingOrUploading(false);
     }
@@ -238,9 +180,9 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
             !isProcessingOrUploading && document.getElementById("photo-input")?.click()
           }
         >
-          {selectedFileForPreview ? (
+          {selectedFile ? (
             <img
-              src={URL.createObjectURL(selectedFileForPreview)}
+              src={URL.createObjectURL(selectedFile)}
               alt="Selected"
               className="max-w-full h-auto mx-auto"
             />
@@ -282,7 +224,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           {isProcessingOrUploading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : null}
-          {serializablePhotoData ? "Upload" : "Log without photo"}
+          {selectedFile ? "Upload" : "Log without photo"}
         </Button>
       </div>
     </AppleLikePopover>

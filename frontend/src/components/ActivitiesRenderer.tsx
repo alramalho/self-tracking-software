@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import HeatMap from "@uiw/react-heat-map";
 import toast from "react-hot-toast";
-import { Activity, ActivityEntry, Plan } from "@/contexts/UserPlanContext";
+import { Activity, ActivityEntry, Plan } from "@/contexts/UserGlobalContext";
 
 interface ActivitiesRendererProps {
   activities: Activity[];
@@ -13,7 +13,7 @@ const ActivitiesRenderer: React.FC<ActivitiesRendererProps> = ({ activities, act
 
   const getActivityEntries = (activityId: string) => {
     return activityEntries
-      .filter((entry) => entry.activity_id === activityId)
+      .filter((entry) => entry.activityId === activityId)
       .map((entry) => ({
         date: entry.date.replaceAll("-", "/").split("T")[0],
         count: entry.quantity,
@@ -52,7 +52,7 @@ const ActivitiesRenderer: React.FC<ActivitiesRendererProps> = ({ activities, act
         const filteredActivityEntries = filterDataByTimeRange(relevantActivityEntries);
 
         return (
-          <div key={activity.id} className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
+          <div key={activity.id} className="bg-white p-6 rounded-xl border-2 overflow-x-auto">
             <div className="flex items-center space-x-3 mb-4">
               <h2 className="text-xl font-semibold text-gray-800">
                 {activity.emoji ? `${activity.emoji} ${activity.title}` : activity.title}

@@ -1,19 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
-import { ApiPlan, User, useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import GenericLoader from "@/components/GenericLoader";
 import { useNotifications } from "@/hooks/useNotifications";
 import UserCard from "@/components/UserCard";
 import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
+import UserSearch from "./UserSearch";
+import toast from "react-hot-toast";
+import { useApiWithAuth } from "@/api";
+import { Info, Bell } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 export const ApSearchComponent: React.FC = () => {
   const { useRecommendedUsersQuery, useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
-  const currentUser = userData?.user;
+  const currentUserQuery = useCurrentUserDataQuery();
+  const { data: userData } = currentUserQuery;
+  const currentUser = userData;
   const currentPlan = userData?.plans[0];
+  const api = useApiWithAuth();
 
   const { data: recommendationsData, isLoading: isLoadingRecommendations } =
     useRecommendedUsersQuery();
@@ -21,15 +29,29 @@ export const ApSearchComponent: React.FC = () => {
   const recommendations = recommendationsData?.recommendations || [];
   const { isPushGranted, requestPermission: requestNotificationPermission } =
     useNotifications();
-    const themeColors = useThemeColors();
-    const variants = getThemeVariants(themeColors.raw);
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
   const userScores = recommendations
-    .filter((rec) => rec.recommendation_object_type === "user")
+    .filter((rec) => rec.recommendationObjectType === "USER")
     .reduce((acc, rec) => {
-      acc[rec.recommendation_object_id] = rec.score;
+      acc[rec.recommendationObjectId] = rec.score;
       return acc;
     }, {} as Record<string, number>);
+
+  const handleSendFriendRequest = async (userId: string) => {
+    await toast.promise(
+      (async () => {
+        await api.post(`/users/send-friend-request/${userId}`);
+        await currentUserQuery.refetch();
+      })(),
+      {
+        loading: "Sending friend request...",
+        success: "Friend request sent successfully",
+        error: "Failed to send friend request",
+      }
+    );
+  };
 
   if (isLoadingRecommendations) {
     return (
@@ -40,27 +62,47 @@ export const ApSearchComponent: React.FC = () => {
   }
   return (
     <>
-      <h1 className="text-2xl font-bold">
-        Recommended Accountability Partners
+      <h1 className="text-2xl font-bold mb-3">
+        Recommended Accountability Partners{" "}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 inline-flex align-text-top">
+              <Info className="h-5 w-5 text-gray-500" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <div className="space-y-2">
+              <p className="text-sm">
+                We calculate your compatibility with other users based on your data and goals.
+              </p>
+              <p className="text-xs text-gray-500">
+                If you think we could do anything better, please let us know!
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
       </h1>
-      <p className="text-gray-400 text-sm mt-2">
-        We calculate your compatibility with other users based on your data and
-        goals.
-        <br />
-        <span className="text-xs">
-          If you think we could do anything better, please let us know!
-        </span>
-      </p>
 
       {recommendations.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-gray-500">No recommended users found</p>
+        <div className="text-center pb-5">
+          <p className="text-gray-500 text-lg text-left">
+            😕 No recommended users found, you may still search for users manually
+          </p>
+          <br/>
+          <UserSearch
+            onUserClick={(user) => {
+              handleSendFriendRequest(user.userId);
+            }}
+            apRedirect={false}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
           {currentUser && (
             <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2 mx-auto w-full text-center text-gray-500">This is how your profile looks</h3>
+              <h3 className="text-lg font-semibold mb-2 mx-auto w-full text-center text-gray-500">
+                This is how your profile looks
+              </h3>
               <UserCard
                 user={currentUser}
                 plan={currentPlan}
@@ -70,24 +112,32 @@ export const ApSearchComponent: React.FC = () => {
                 showFriendRequest={false}
                 showScore={false}
                 showStreaks={false}
-                className={`max-w-sm mx-auto ring-1 ${cn(variants.ringBright, variants.card.softGlassBg )}`}
+                className={`max-w-sm mx-auto ring-1 ${cn(
+                  variants.ringBright,
+                  variants.card.softGlassBg
+                )}`}
               />
             </div>
           )}
 
           {recommendations.map((recommendation) => {
             const user = recommendedUsers.find(
-              (user) => user.id === recommendation.recommendation_object_id
+              (user) => user.id === recommendation.recommendationObjectId
             );
             if (!user) {
               return null;
             }
-            const plan = recommendationsData?.plans.find((plan) => {
-              if (user.plan_ids.length > 0) {
-                return user.plan_ids[0] === plan.id;
-              }
-              return false;
-            });
+            const plan = recommendationsData?.plans
+              .filter((plan) => plan.userId === user.id)
+              .sort((a, b) => {
+                // Sort by sortOrder, with nulls last, then by createdAt
+                if (a.sortOrder !== null && b.sortOrder !== null) {
+                  return a.sortOrder - b.sortOrder;
+                }
+                if (a.sortOrder !== null && b.sortOrder === null) return -1;
+                if (a.sortOrder === null && b.sortOrder !== null) return 1;
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              })[0];
             return (
               <UserCard
                 key={user.id}
@@ -96,7 +146,7 @@ export const ApSearchComponent: React.FC = () => {
                 plan={plan}
                 plans={
                   recommendationsData?.plans.filter((p) =>
-                    user.plan_ids.includes(p.id)
+                    p.userId === user.id
                   ) || []
                 }
                 showFriendRequest={true}
@@ -107,20 +157,6 @@ export const ApSearchComponent: React.FC = () => {
             );
           })}
         </div>
-      )}
-
-      {!isPushGranted && (
-        <p className="text-gray-400 text-sm mt-4 px-4">
-          Nothing of relevance yet?
-          <br />{" "}
-          <span
-            className="underline cursor-pointer"
-            onClick={() => requestNotificationPermission()}
-          >
-            Enable notifications
-          </span>{" "}
-          to be immediately notified when a potential partner is found.
-        </p>
       )}
     </>
   );

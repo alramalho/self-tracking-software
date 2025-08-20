@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { Button } from "@/components/ui/button";
 import {
   ScanFace,
@@ -28,23 +28,23 @@ const LookingForApPage: React.FC = () => {
   const variants = getThemeVariants(themeColors.raw);
 
   const hasPlans =
-    userData?.user?.plan_ids &&
-    userData?.user?.plan_ids.length &&
-    userData?.user?.plan_ids.length > 0;
+    userData?.plans &&
+    userData?.plans.length &&
+    userData?.plans.length > 0;
 
-  if (hasPlans && userData?.user?.looking_for_ap && isPushGranted) {
+  if (hasPlans && userData?.lookingForAp && isPushGranted) {
     router.push("/ap-search");
   }
   
-  const userProfile = userData?.user?.profile;
-  const currentUser = userData?.user;
+  const userProfile = userData?.profile;
+  const currentUser = userData;
   const currentPlan = userData?.plans?.[0]; // Get the first plan if available
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-2xl">
       <div className="flex flex-col items-center gap-2 text-center w-full">
         <ScanFace className={`w-20 h-20 mx-auto ${variants.text}`} />
-        <h1 className="text-2xl font-bold">Hey {userData?.user?.name?.includes(" ") ? userData?.user?.name.split(" ")[0] : "there"}!</h1>
+        <h1 className="text-2xl font-bold">Hey {userData?.name?.includes(" ") ? userData?.name.split(" ")[0] : "there"}!</h1>
         <h1 className="text-xl font-bold">Let&apos;s find you a partner</h1>
         <p className="text-gray-500 text-sm">
           There&apos;s a few things you need to do to get started.
@@ -114,12 +114,12 @@ const LookingForApPage: React.FC = () => {
               <Button
                 variant={userProfile ? "outline" : "default"}
                 onClick={async () => {
-                  await api.post("/update-user", {
-                    looking_for_ap: true,
+                  await api.post("/users/update-user", {  
+                    lookingForAp: true,
                   });
                   currentUserDataQuery.refetch();
                   router.push(
-                    `/profile/${userData?.user?.username}?activeView=editProfile&redirectTo=/looking-for-ap`
+                    `/profile/${userData?.username}?activeView=editProfile&redirectTo=/looking-for-ap`
                   );
                 }}
                 className={userProfile ? "border-green-200 text-green-600" : ""}

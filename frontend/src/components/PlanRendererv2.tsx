@@ -13,11 +13,9 @@ import {
   formatDistance,
 } from "date-fns";
 import {
-  ApiPlan,
+  CompletePlan,
   useUserPlan,
-  UserDataEntry,
-  convertApiPlanToPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { BarChart } from "@/components/charts/bar";
 import {
   ArrowBigRight,
@@ -42,11 +40,8 @@ import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { Switch } from "./ui/switch";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
-import { WeeklySessionsChecklist } from "./WeeklySessionsChecklist";
 import { MilestoneOverview } from "./MilestoneOverview";
 import { useApiWithAuth } from "@/api";
-import { usePlanEdit } from "@/hooks/usePlanEdit";
 import { PlanEditModal } from "./PlanEditModal";
 import {
   Select,
@@ -64,22 +59,20 @@ import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { MessageBubble } from "./MessageBubble";
-import { toast } from "react-hot-toast";
-import { PlanStatus } from "./PlanProgressCard";
 import { CoachOverviewCard } from "./CoachOverviewCard";
+import { Activity, Plan, PlanSession } from "@prisma/client";
 
 interface PlanRendererv2Props {
-  selectedPlan: ApiPlan;
+  selectedPlan: CompletePlan;
 }
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
-  const { useCurrentUserDataQuery, useMultipleUsersDataQuery, fetchUserData } =
+  const { useCurrentUserDataQuery, useMultipleUsersDataQuery } =
     useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
   const [loading, setLoading] = useState(true);
-  const { showEditModal, setShowEditModal, handleEditPlan } = usePlanEdit();
+  const [showEditModal, setShowEditModal] = useState(false);
   const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
   const api = useApiWithAuth();
   const [timeRange, setTimeRange] = useState<"recent" | "all">("recent");
@@ -89,17 +82,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
 
-
   const { plansProgress } = usePlanProgress();
   const planProgress = plansProgress.find((p) => p.plan.id === selectedPlan.id);
   const currentWeekRef = useRef<HTMLDivElement>(null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const planActivities = userData?.activities.filter((a) =>
-    selectedPlan.activity_ids?.includes(a.id)
-  );
-
-
 
   // Auto-scroll to current week when weeks data loads
   useEffect(() => {
@@ -122,21 +109,21 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   }, [timeRange, selectedPlan.sessions]);
 
   const memberUsernames = useMemo(() => {
-    if (!selectedPlan.plan_group_id || !userData?.user?.username) return [];
+    if (!selectedPlan.planGroupId || !userData?.username) return [];
 
-    const group = userData?.planGroups.find(
-      (group) => group.id === selectedPlan.plan_group_id
-    );
+    const group = userData?.plans
+      .map((p) => p.planGroup)
+      .find((group) => group?.id === selectedPlan.planGroupId);
 
     return (group?.members || [])
       .map((member) => member.username)
-      .filter((username) => username !== userData?.user?.username);
-  }, [selectedPlan.plan_group_id, userData]);
+      .filter((username) => username !== null && username !== undefined && username !== userData?.username);
+  }, [selectedPlan.planGroupId, userData]);
 
-  const { data: membersData } = useMultipleUsersDataQuery(memberUsernames);
+  const { data: membersData } = useMultipleUsersDataQuery(memberUsernames as string[]);
 
-  const getMemberData = (username: string): UserDataEntry | undefined => {
-    if (username === userData?.user?.username) return userData;
+  const getMemberData = (username: string) => {
+    if (username === userData?.username) return userData;
     return membersData?.[username];
   };
 
@@ -149,24 +136,20 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   }, [userData]);
 
   const { planGroupMembers, memberPlans } = useMemo(() => {
-    if (!selectedPlan.plan_group_id)
+    if (!selectedPlan.planGroupId)
       return { planGroupMembers: [], memberPlans: new Map() };
 
-    const group = userData?.planGroups.find(
-      (group) => group.id === selectedPlan.plan_group_id
-    );
+    const group = userData?.plans
+      .map((p) => p.planGroup)
+      .find((group) => group?.id === selectedPlan.planGroupId);
 
+    const memberPlans = new Map<string, Plan>();
     group?.members?.forEach((member) => {
-      if (member.username !== userData?.user?.username) {
-        fetchUserData({ username: member.username });
-      }
-    });
+      if (member.username === null || member.username === undefined) return;
 
-    const memberPlans = new Map<string, ApiPlan>();
-    group?.members?.forEach((member) => {
       const memberData = getMemberData(member.username);
       const memberPlan = memberData?.plans.find(
-        (p) => p.plan_group_id === selectedPlan.plan_group_id
+        (p) => p.planGroupId === selectedPlan.planGroupId
       );
       if (memberPlan) {
         memberPlans.set(member.username, memberPlan);
@@ -177,13 +160,20 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       planGroupMembers: group?.members || [],
       memberPlans,
     };
-  }, [selectedPlan, userData?.planGroups, membersData]);
+  }, [selectedPlan, userData?.plans, membersData]);
 
   const getCompletedSessionsForPlan = useCallback(
-    (plan: ApiPlan, startDate?: Date, endDate?: Date) => {
-      const userId = plan.user_id;
+    (
+      plan: Plan & {
+        sessions: PlanSession[];
+        activities: Activity[];
+      },
+      startDate?: Date,
+      endDate?: Date
+    ) => {
+      const userId = plan.userId;
       const username = planGroupMembers.find(
-        (m) => m.user_id === userId
+        (m) => m.id === userId
       )?.username;
       if (!username) return [];
 
@@ -191,18 +181,18 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       if (!memberData) return [];
 
       let completedEntries = memberData.activityEntries.filter((entry) =>
-        plan.activity_ids?.includes(entry.activity_id)
+        plan.activities.map((a) => a.id).includes(entry.activityId)
       );
 
       if (startDate && endDate) {
         completedEntries = completedEntries.filter((entry) => {
-          const entryDate = parseISO(entry.date);
+          const entryDate = entry.date;
           return entryDate >= startDate && entryDate <= endDate;
         });
       }
 
       const entriesByDate = completedEntries.reduce((acc, entry) => {
-        const dateKey = format(parseISO(entry.date), "yyyy-MM-dd");
+        const dateKey = format(entry.date, "yyyy-MM-dd");
         if (!acc[dateKey]) {
           acc[dateKey] = entry;
         }
@@ -235,101 +225,92 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     return planProgress.weeks.slice(currentWeekIndex, currentWeekIndex + 2);
   }, [planProgress?.weeks, showAllWeeks]);
 
-  useEffect(() => {
-    const calculateSessionData = () => {
-      setLoading(true);
-      if (!selectedPlan || !selectedPlan.plan_group_id) {
-        setLoading(false);
-        return;
-      }
+  // useEffect(() => {
+  //   const calculateSessionData = () => {
+  //     setLoading(true);
+  //     if (!selectedPlan || !selectedPlan.planGroupId) {
+  //       setLoading(false);
+  //       return;
+  //     }
 
-      const groupPlans = planGroupMembers
-        .map((member) => {
-          const memberData = getMemberData(member.username);
-          return memberData?.plans.find(
-            (p) => p.plan_group_id === selectedPlan.plan_group_id
-          );
-        })
-        .filter((p): p is ApiPlan => p !== undefined);
+  //     const groupPlans = selectedPlan.planGroup?.plans || [];
 
-      const allDates = [
-        ...groupPlans.flatMap((plan) => {
-          return plan.sessions.map((s) => parseISO(s.date));
-        }),
-        ...groupPlans.flatMap((plan) =>
-          getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
-        ),
-      ].sort((a, b) => a.getTime() - b.getTime());
+  //     const allDates = [
+  //       ...groupPlans.flatMap((plan) => {
+  //         return plan.sessions.map((s) => parseISO(s.date));
+  //       }),
+  //       ...groupPlans.flatMap((plan) =>
+  //         getCompletedSessionsForPlan(plan).map((e) => parseISO(e.date))
+  //       ),
+  //     ].sort((a, b) => a.getTime() - b.getTime());
 
-      if (allDates.length === 0) {
-        setLoading(false);
-        return;
-      }
+  //     if (allDates.length === 0) {
+  //       setLoading(false);
+  //       return;
+  //     }
 
-      const startDate =
-        timeRange === "recent"
-          ? subDays(new Date(), 30)
-          : subWeeks(startOfWeek(allDates[0]), 1);
-      const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
-      const weeklyData: {
-        [key: string]: { [username: string]: number; planned: number };
-      } = {};
+  //     const startDate =
+  //       timeRange === "recent"
+  //         ? subDays(new Date(), 30)
+  //         : subWeeks(startOfWeek(allDates[0]), 1);
+  //     const endDate = addWeeks(endOfWeek(allDates[allDates.length - 1]), 1);
+  //     const weeklyData: {
+  //       [key: string]: { [username: string]: number; planned: number };
+  //     } = {};
 
-      let currentWeekStart = startOfWeek(startDate);
-      while (currentWeekStart <= endDate) {
-        const weekKey = format(currentWeekStart, "yyyy-MM-dd");
-        const weekEnd = endOfWeek(currentWeekStart);
+  //     let currentWeekStart = startOfWeek(startDate);
+  //     while (currentWeekStart <= endDate) {
+  //       const weekKey = format(currentWeekStart, "yyyy-MM-dd");
+  //       const weekEnd = endOfWeek(currentWeekStart);
 
-        if (timeRange === "recent" && isBefore(weekEnd, startDate)) {
-          currentWeekStart = addWeeks(currentWeekStart, 1);
-          continue;
-        }
+  //       if (timeRange === "recent" && isBefore(weekEnd, startDate)) {
+  //         currentWeekStart = addWeeks(currentWeekStart, 1);
+  //         continue;
+  //       }
 
-        weeklyData[weekKey] = { planned: 0 };
+  //       weeklyData[weekKey] = { planned: 0 };
 
-        if (selectedPlan.outline_type === "times_per_week") {
-          weeklyData[weekKey].planned = selectedPlan.times_per_week || 0;
-        } else {
-          const plannedThisWeek = selectedPlan.sessions.filter((session) => {
-            const sessionDate = parseISO(session.date);
-            return sessionDate >= currentWeekStart && sessionDate <= weekEnd;
-          }).length;
-          weeklyData[weekKey].planned += plannedThisWeek;
-        }
+  //       if (selectedPlan.outlineType === "TIMES_PER_WEEK") {
+  //         weeklyData[weekKey].planned = selectedPlan.timesPerWeek || 0;
+  //       } else {
+  //         const plannedThisWeek = selectedPlan.sessions.filter((session) => {
+  //           const sessionDate = parseISO(session.date);
+  //           return sessionDate >= currentWeekStart && sessionDate <= weekEnd;
+  //         }).length;
+  //         weeklyData[weekKey].planned += plannedThisWeek;
+  //       }
 
-        groupPlans.forEach((plan) => {
-          const member = planGroupMembers.find(
-            (m) => m.user_id === plan.user_id
-          );
-          if (!member) return;
+  //       groupPlans.forEach((plan) => {
+  //         const member = planGroupMembers.find((m) => m.userId === plan.userId);
+  //         if (!member) return;
 
-          const completedThisWeek = getCompletedSessionsForPlan(
-            plan,
-            currentWeekStart,
-            weekEnd
-          ).length;
-          weeklyData[weekKey][member.username] = completedThisWeek;
-        });
+  //         const completedThisWeek = getCompletedSessionsForPlan(
+  //           plan,
+  //           currentWeekStart,
+  //           weekEnd
+  //         ).length;
+  //         weeklyData[weekKey][member.username] = completedThisWeek;
+  //       });
 
-        currentWeekStart = addWeeks(currentWeekStart, 1);
-      }
+  //       currentWeekStart = addWeeks(currentWeekStart, 1);
+  //     }
 
-      const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
-        week: format(parseISO(week), "MMM d, yyyy"),
-        planned: data.planned,
-        ...Object.fromEntries(
-          planGroupMembers.map((member) => [
-            member.username,
-            data[member.username] || 0,
-          ])
-        ),
-      }));
-      setSessionData(formattedData);
-      setLoading(false);
-    };
+  //     const formattedData = Object.entries(weeklyData).map(([week, data]) => ({
+  //       week: format(parseISO(week), "MMM d, yyyy"),
+  //       planned: data.planned,
+  //       ...Object.fromEntries(
+  //         planGroupMembers.map((member) => [
+  //           member.username,
+  //           data[member.username] || 0,
+  //         ])
+  //       ),
+  //     }));
+  //     setSessionData(formattedData);
+  //     setLoading(false);
+  //   };
 
-    calculateSessionData();
-  }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
+  //   calculateSessionData();
+  // }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
 
   // const areAllWeeklyActivitiesCompleted = useCallback(() => {
   //   const currentWeekStart = startOfWeek(new Date());
@@ -355,8 +336,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <div className="flex flex-col">
           <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
           <span className="text-sm text-gray-500">
-            {selectedPlan.outline_type === "times_per_week"
-              ? `${selectedPlan.times_per_week} times per week`
+            {selectedPlan.outlineType === "TIMES_PER_WEEK"
+              ? `${selectedPlan.timesPerWeek} times per week`
               : `custom plan`}
           </span>
         </div>
@@ -437,7 +418,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                     </span>
                   </div>
                 }
-                plan={convertApiPlanToPlan(selectedPlan, activities)}
+                plan={selectedPlan}
                 date={week.startDate}
               />
             </div>
@@ -467,17 +448,17 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             </div>
           </Select>
         </div>
-        {/* {selectedPlan.outline_type === "times_per_week" && (
+        {/* {selectedPlan.outlineType === "timesPerWeek" && (
           <WeeklySessionsChecklist
             plan={selectedPlan}
             activityEntries={activityEntries}
           />
         )} */}
 
-        {/* {selectedPlan.outline_type === "specific" &&
+        {/* {selectedPlan.outlineType === "specific" &&
           areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />} */}
         {/* 
-        {selectedPlan.outline_type === "specific" && (
+        {selectedPlan.outlineType === "specific" && (
           <>
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-gray-800">This week</h2>
@@ -499,7 +480,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 })
                 .map((session) => {
                   const activity = activities.find(
-                    (a) => a.id === session.activity_id
+                    (a) => a.id === session.activityId
                   );
                   const completed = isSessionCompleted(
                     session,
@@ -515,7 +496,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
                   return (
                     <SmallActivityEntryCard
-                      key={`${session.date}-${session.activity_id}`}
+                      key={`${session.date}-${session.activityId}`}
                       entry={session as Entry}
                       activity={activity}
                       completed={completed}
@@ -527,7 +508,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </>
         )} */}
         <div className="mt-4">
-          {selectedPlan.outline_type === "specific" && (
+          {selectedPlan.outlineType === "SPECIFIC" && (
             <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
               <span className="text-xs text-gray-500">Completed</span>
               <Switch
@@ -540,20 +521,15 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           )}
           {displayFutureActivities ? (
             <PlanSessionsRenderer
-              plan={convertApiPlanToPlan(
-                selectedPlan,
-                activities.filter((a) =>
-                  selectedPlan.activity_ids?.includes(a.id)
-                )
-              )}
+              plan={selectedPlan}
               activities={activities.filter((a) =>
-                selectedPlan.activity_ids?.includes(a.id)
+                selectedPlan.activities.map((a) => a.id).includes(a.id)
               )}
               startDate={getStartDate()}
             />
           ) : (
             <PlanActivityEntriesRenderer
-              plan={convertApiPlanToPlan(selectedPlan, activities)}
+              plan={selectedPlan}
               activities={activities}
               activityEntries={activityEntries}
               startDate={getStartDate()}
@@ -562,7 +538,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       </div>
 
-      {loading ? (
+      {/* {loading ? (
         <div className="flex items-center justify-center mt-4">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading session data...</span>
@@ -582,23 +558,21 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 ...planGroupMembers
                   .filter(
                     (member) =>
-                      member.username !== userData?.user?.username &&
-                      member.username
+                      member.username !== userData?.username && member.username
                   )
                   .map((member, index) => ({
                     dataKey: member.username,
                     name: `${member.name}'s Sessions`,
                     color: `hsl(var(--chart-${index + 2}))`,
                   })),
-                ...(userData?.user?.username
+                ...(userData?.username
                   ? [
                       {
-                        dataKey: userData.user.username,
+                        dataKey: userData.username,
                         name: "Your Sessions",
                         color: `hsl(var(--chart-${
                           planGroupMembers.filter(
-                            (member) =>
-                              member.username !== userData?.user?.username
+                            (member) => member.username !== userData?.username
                           ).length + 2
                         }))`,
                       },
@@ -613,7 +587,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             />
           </div>
         )
-      )}
+      )} */}
 
       {planGroupMembers && planGroupMembers.length >= 2 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
@@ -621,22 +595,20 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <div className="flex flex-row flex-wrap gap-6">
             {planGroupMembers.map((member) => (
               <div
-                key={member.user_id}
+                key={member.id}
                 className="flex flex-row flex-nowrap gap-2 items-center"
               >
                 <Link href={`/profile/${member.username}`}>
                   <Avatar className="w-12 h-12 text-2xl">
                     <AvatarImage
                       src={member.picture || ""}
-                      alt={member.name || member.username}
+                      alt={member.name || member.username || ""}
                     />
                     <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
                   </Avatar>
                 </Link>
                 <div className="text-lg text-gray-800">
-                  {userData?.user?.username === member.username
-                    ? "You"
-                    : member.name}
+                  {userData?.username === member.username ? "You" : member.name}
                 </div>
               </div>
             ))}
@@ -661,7 +633,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           setShowEditModal(false);
           setOpenedFromMilestone(false);
         }}
-        onConfirm={(updatedPlan) => handleEditPlan(selectedPlan, updatedPlan)}
+        onSuccess={() => {
+          setShowEditModal(false);
+          setOpenedFromMilestone(false);
+        }}
         scrollToMilestones={openedFromMilestone}
       />
     </div>

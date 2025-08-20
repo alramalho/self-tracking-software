@@ -18,7 +18,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   isExpanded,
   className,
 }) => {
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { plansProgress } = usePlanProgress();
 
   // Helper function to check if a streak was achieved this week
@@ -87,7 +87,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
         const { plan, weeks, achievement } = planProgressData;
 
         const shouldShow = index == 0 || isExpanded;
-        const isCoached = index == 0 && userPaidPlanType != "free";
+        const isCoached = index == 0 && userPaidPlanType != "FREE";
 
         return (
           <PlanProgressCard

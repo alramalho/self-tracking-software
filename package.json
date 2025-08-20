@@ -1,0 +1,24 @@
+{
+  "name": "tutorial",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:client": "turbo run dev --filter=!server --parallel",
+    "build": "turbo run build",
+    "build:client": "turbo run build --filter=!server",
+    "start": "turbo run start",
+    "clean": "rm -rf node_modules && turbo run clean",
+    "db:generate": "turbo run db:generate"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@rocicorp/zero-sqlite3"
+    ]
+  },
+  "devDependencies": {
+    "supabase": "^2.33.9",
+    "turbo": "^2.5.5"
+  }
+}

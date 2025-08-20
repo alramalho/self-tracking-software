@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as RadioGroup from "@radix-ui/react-radio-group";
 import { useApiWithAuth } from "@/api";
-import { useUserPlan, VisibilityType } from "@/contexts/UserPlanContext";
+import { useUserPlan, VisibilityType } from "@/contexts/UserGlobalContext";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,21 +40,21 @@ export default function ActivityPrivacySettings({
   const { data: userData } = currendUserDataQuery;
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedValue, setSelectedValue] = React.useState<VisibilityType>(
-    (userData?.user?.default_activity_visibility as VisibilityType) || "public"
+    (userData?.defaultActivityVisibility as VisibilityType) || "public"
   );
   const hasChanges =
-    selectedValue !== userData?.user?.default_activity_visibility;
+    selectedValue !== userData?.defaultActivityVisibility;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      await api.post("/update-user", {
-        default_activity_visibility: selectedValue,
+      await api.post("/users/update-user", {
+        defaultActivityVisibility: selectedValue,
       });
       currendUserDataQuery.refetch();
       toast.success("Privacy settings updated");
@@ -68,12 +68,12 @@ export default function ActivityPrivacySettings({
 
   // Update selected value when user data changes
   React.useEffect(() => {
-    if (userData?.user?.default_activity_visibility) {
+    if (userData?.defaultActivityVisibility) {
       setSelectedValue(
-        userData.user.default_activity_visibility as VisibilityType
+        userData.user.defaultActivityVisibility as VisibilityType
       );
     }
-  }, [userData?.user?.default_activity_visibility]);
+  }, [userData?.defaultActivityVisibility]);
 
   return (
     <div className="p-6 space-y-6">
@@ -89,7 +89,7 @@ export default function ActivityPrivacySettings({
         value={selectedValue}
         onValueChange={(value: string) => {
           const isOptionLocked =
-            userPaidPlanType === "free" &&
+            userPaidPlanType === "FREE" &&
             (value === "friends" || value === "private");
           if (!isOptionLocked) {
             setSelectedValue(value as VisibilityType);
@@ -100,7 +100,7 @@ export default function ActivityPrivacySettings({
         {visibilityOptions.map((option) => {
           const radioId = `radio-${option.value}`;
           const isLocked =
-            userPaidPlanType === "free" &&
+            userPaidPlanType === "FREE" &&
             (option.value === "friends" || option.value === "private");
           return (
             <label
@@ -151,7 +151,7 @@ export default function ActivityPrivacySettings({
           );
         })}
       </RadioGroup.Root>
-      {userPaidPlanType === "free" ? (
+      {userPaidPlanType === "FREE" ? (
         <div className="text-sm text-gray-500">
           Private and friends-only options are only available to supporters.{" "}
           <span

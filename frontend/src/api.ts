@@ -5,7 +5,7 @@ export const useApiWithAuth = () => {
   const { getToken } = useAuth();
 
   const apiClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
+    baseURL: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`,
   });
 
   apiClient.interceptors.request.use(async (config) => {

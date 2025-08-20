@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ThemeColor, getThemeVariants } from "@/utils/theme";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import toast from "react-hot-toast";
 import { useUpgrade } from "@/contexts/UpgradeContext";
@@ -56,7 +56,7 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
   onClose,
 }) => {
   const { currentTheme, updateTheme } = useUserPlan();
-  const { userPaidPlanType } = usePaidPlan();
+  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
   const handleThemeChange = async (color: ThemeColor) => {
@@ -78,7 +78,7 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
           {colorPalettes.map((palette) => {
             const isSelected = currentTheme === palette.color;
             const isLocked =
-              userPaidPlanType === "free" &&
+              userPaidPlanType === "FREE" &&
               (palette.color === "random" || palette.color !== "blue");
             return (
               <div
@@ -147,7 +147,7 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
             );
           })}
         </div>
-        {userPaidPlanType === "free" && (
+        {userPaidPlanType === "FREE" && (
           <Button
             className="w-full mt-6"
             onClick={() => setShowUpgradePopover(true)}

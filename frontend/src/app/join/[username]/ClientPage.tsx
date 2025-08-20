@@ -8,7 +8,7 @@ import {
   Activity,
   ApiPlan,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
@@ -32,7 +32,7 @@ export default function ClientPage() {
   const searchParams = useSearchParams();
   const referrer = searchParams.get("referrer");
 
-  const areFriends = currentUser?.user?.friend_ids?.includes(
+  const areFriends = currentUser?.user?.friendIds?.includes(
     inviterData?.user?.id || ""
   );
 
@@ -78,7 +78,7 @@ export default function ClientPage() {
   const handleSendFriendRequest = async () => {
     try {
       setIsSendingRequest(true);
-      await api.post(`/send-friend-request/${inviterData.user?.id}`);
+      await api.post(`/users/send-friend-request/${inviterData.user?.id}`);
       toast.success("Friend request sent successfully!");
       router.push(`/`);
     } catch (error) {

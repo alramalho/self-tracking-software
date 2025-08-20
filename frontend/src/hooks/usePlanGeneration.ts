@@ -1,12 +1,13 @@
 import { useApiWithAuth } from "@/api";
-import { Activity, ApiPlan } from "@/contexts/UserPlanContext";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
 
 interface PlanGenerationConfig {
   goal: string;
-  finishingDate?: string;
+  finishingDate?: Date;
   activities: Activity[];
   description?: string;
-  existingPlan?: ApiPlan;
+  existingPlan?: CompletePlan;
 }
 
 export function usePlanGeneration() {
@@ -14,10 +15,10 @@ export function usePlanGeneration() {
 
   const generateSessions = async (
     config: PlanGenerationConfig
-  ): Promise<ApiPlan["sessions"]> => {
-    const response = await api.post("/generate-sessions", {
+  ): Promise<CompletePlan["sessions"]> => {
+    const response = await api.post("/plans/generate-sessions", {
       goal: config.goal,
-      finishing_date: config.finishingDate,
+      finishingDate: config.finishingDate,
       activities: config.activities,
       description: config.description,
       existing_plan: config.existingPlan,

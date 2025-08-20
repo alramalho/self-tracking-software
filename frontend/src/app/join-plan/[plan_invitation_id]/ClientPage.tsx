@@ -4,13 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
 import {
-  convertApiPlanToPlan,
-  convertPlanToApiPlan,
-  User,
   useUserPlan,
-  Activity,
-  ApiPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";  
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
@@ -20,9 +15,11 @@ import PlanCard from "@/components/PlanCard";
 import { Badge } from "@/components/ui/badge";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { useSession } from "@clerk/clerk-react";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
 
 interface PlanInvitationData {
-  plan: ApiPlan;
+  plan: CompletePlan;
   plan_activities: Activity[];
   inviter: {
     id: string;
@@ -192,8 +189,8 @@ export default function ClientPage({
         <div className="w-full space-y-6">
           <h1 className="text-2xl font-medium">Plan Overview</h1>
           <PlanSessionsRenderer
-            plan={convertApiPlanToPlan(planData.plan, planData.plan_activities)}
-            activities={planData.plan_activities || []}
+            plan={planData.plan}
+            activities={planData.plan.activities || []}
           />
           <h1 className="text-2xl font-medium">Activity Associations</h1>
           <h2 className="text-lg font-light text-gray-500 mb-4">

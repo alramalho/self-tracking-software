@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Number from "../Number";
-import { Activity, useUserPlan } from "@/contexts/UserPlanContext";
+import { Activity, useUserPlan } from "@/contexts/UserGlobalContext";
 import ActivityItem  from "../ActivityItem";
 import { Plus } from "lucide-react";
 import ActivityEditor from "@/components/ActivityEditor";

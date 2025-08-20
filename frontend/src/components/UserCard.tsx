@@ -5,7 +5,7 @@ import {
   ApiPlan,
   User,
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { posthog } from "posthog-js";
 import { useApiWithAuth } from "@/api";
 import { useRouter } from "next/navigation";
@@ -49,7 +49,7 @@ const UserCard: React.FC<UserCardProps> = ({
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserQuery = useCurrentUserDataQuery();
   const { data: userData, isLoading: isLoadingUser } = currentUserQuery;
-  const currentUser = userData?.user;
+  const currentUser = userData;
   const isOwnUser = currentUser?.id === user.id;
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [message, setMessage] = useState("");
@@ -68,9 +68,9 @@ const UserCard: React.FC<UserCardProps> = ({
     try {
       setIsSendingRequest(true);
       posthog.capture("ap_friend_request_sent", {
-        sent_from_user_id: currentUser?.id,
+        sent_from_userId: currentUser?.id,
         sent_from_user_username: currentUser?.username,
-        sent_to_user_id: user.id,
+        sent_to_userId: user.id,
         sent_to_user_username: user.username,
         message: message || undefined,
       });
@@ -80,7 +80,7 @@ const UserCard: React.FC<UserCardProps> = ({
         payload.message = message.trim();
       }
 
-      await api.post(`/send-friend-request/${user.id}`, payload);
+      await api.post(`/users/send-friend-request/${user.id}`, payload);
 
       currentUserQuery.refetch();
       setSentFriendRequest(true);
@@ -224,7 +224,7 @@ const UserCard: React.FC<UserCardProps> = ({
                 <span>
                   Last active{" "}
                   {formatDistanceToNow(
-                    new Date(user.last_active_at || user.created_at!),
+                    new Date(user.last_active_at || user.createdAt!),
                     { addSuffix: true }
                   )}{" "}
                 </span>

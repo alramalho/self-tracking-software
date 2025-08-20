@@ -2,7 +2,7 @@
 
 import { Plus, Pencil } from "lucide-react";
 import * as React from "react";
-import {  useUserPlan } from "@/contexts/UserPlanContext";
+import {  useUserPlan } from "@/contexts/UserGlobalContext";
 import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import RecurrentCheckinPopover from "./RecurrentCheckinPopover";
@@ -57,7 +57,7 @@ export default function AISettings() {
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const user = userData?.user;
+  const user = userData;
   const [isRecurrentCheckinOpen, setIsRecurrentCheckinOpen] =
     React.useState(false);
   const [isLongTermCheckinOpen, setIsLongTermCheckinOpen] =
@@ -73,15 +73,15 @@ export default function AISettings() {
     <div className="flex flex-col gap-4 mb-12">
       <h1 className="text-2xl font-bold my-4">AI Settings</h1>
       <div className="flex flex-col flex-nowrap gap-4">
-        {user?.daily_checkin_settings != undefined ? (
+        {user?.dailyCheckinSettings != undefined ? (
           <Card
             emoji="☀️"
             title="Recurrent Checkin"
             content={
               <>
                 <ul className="list-disc list-inside">
-                  <li>{formatList(user.daily_checkin_settings.days)}</li>
-                  <li>In the {capitalize(user.daily_checkin_settings.time)}</li>
+                  <li>{formatList(user.dailyCheckinSettings.days)}</li>
+                  <li>In the {capitalize(user.dailyCheckinSettings.time)}</li>
                 </ul>
               </>
             }

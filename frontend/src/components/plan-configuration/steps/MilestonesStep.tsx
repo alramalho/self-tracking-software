@@ -4,18 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Minus, Info, Check } from "lucide-react";
 import Number from "../Number";
-import { ApiPlan, Activity, PlanMilestone, PlanMilestoneCriteria, PlanMilestoneCriteriaGroup } from "@/contexts/UserPlanContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import Divider from "@/components/Divider";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
+import { PlanMilestone, MilestoneCriteria } from "@prisma/types";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 
 interface MilestonesStepProps {
   milestones?: PlanMilestone[];
   setMilestones?: Dispatch<SetStateAction<PlanMilestone[]>>;
-  activities: Activity[];
+  activities: CompletePlan["activities"];
 }
 
 const MilestonesStep: React.FC<MilestonesStepProps> = ({
@@ -35,24 +36,12 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     }
   }>({});
 
-  // Add recursive validation function
+  // Validation function for new criteria structure
   const hasValidActivities = (
-    criterion: PlanMilestoneCriteria | PlanMilestoneCriteriaGroup,
+    criteria: MilestoneCriteria,
     activityIds: Set<string>
   ): boolean => {
-    // Base case: if it's a simple criterion
-    if ('activity_id' in criterion) {
-      return activityIds.has(criterion.activity_id);
-    }
-    
-    // Recursive case: if it's a group, check all sub-criteria
-    if ('criteria' in criterion) {
-      return criterion.criteria.every(subCriterion => 
-        hasValidActivities(subCriterion, activityIds)
-      );
-    }
-    
-    return false;
+    return criteria?.items.every(item => activityIds.has(item.activityId)) ?? false;
   };
 
   useEffect(() => {
@@ -61,7 +50,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     const activityIds = new Set(activities.map(a => a.id));
     
     const cleanedMilestones = milestones.filter(milestone => 
-      !milestone.criteria || (milestone.criteria && milestone.criteria.every(criterion => hasValidActivities(criterion, activityIds)))
+      !milestone.criteria || hasValidActivities(milestone.criteria, activityIds)
     );
 
     if (cleanedMilestones.length !== milestones.length) {
@@ -130,12 +119,12 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     
     // Get previous milestone's total target
     const previousMilestone = milestones[milestoneIndex - 1];
-    const previousTotal = previousMilestone?.criteria?.reduce((sum, c) => 
-      'quantity' in c ? sum + c.quantity : sum, 0) || 0;
+    const previousTotal = previousMilestone?.criteria?.items.reduce((sum, item) => 
+      sum + item.quantity, 0) || 0;
 
     // Get current milestone's total target
-    const currentTotal = (currentMilestone.criteria || []).reduce((sum, c) => 
-      'quantity' in c ? sum + (c.quantity || 0) : sum, 0);
+    const currentTotal = currentMilestone.criteria?.items.reduce((sum, item) => 
+      sum + item.quantity, 0) || 0;
 
     if (milestoneIndex > 0 && currentTotal <= previousTotal) {
       errors[milestoneIndex] = {
@@ -158,14 +147,15 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   const addMilestone = () => {
     const previousMilestone = milestones[milestones.length - 1];
     
-    const newMilestone: PlanMilestone = {
+    const newMilestone: Omit<PlanMilestone, 'id' | 'planId' | 'createdAt'> = {
       date: previousMilestone 
         ? new Date(new Date(previousMilestone.date).setMonth(new Date(previousMilestone.date).getMonth() + 1))
         : new Date(),
       description: "",
       progress: 0,
+      criteria: null
     };
-    setMilestones((prevMilestones) => [...prevMilestones, newMilestone]);
+    setMilestones((prevMilestones) => [...prevMilestones, newMilestone as PlanMilestone]);
   };
 
   // Add helper function to ensure date is always a Date object
@@ -176,7 +166,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   const updateMilestone = (
     index: number,
     field: keyof PlanMilestone,
-    value: string | Date | (PlanMilestoneCriteria | PlanMilestoneCriteriaGroup)[] | number | null
+    value: string | Date | MilestoneCriteria | number | null
   ) => {
     setMilestones((prevMilestones) =>
       prevMilestones.map((milestone, i) =>
@@ -195,24 +185,26 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
   const updateCriteria = (
     milestoneIndex: number,
     criteriaIndex: number,
-    field: keyof PlanMilestoneCriteria,
+    field: 'activityId' | 'quantity',
     value: string | number
   ) => {
     const newMilestones = [...milestones];
     const milestone = newMilestones[milestoneIndex];
     
     if (!milestone.criteria) {
-      milestone.criteria = [];
+      milestone.criteria = { junction: "AND", items: [] };
     }
     
-    const criteria = milestone.criteria[criteriaIndex] as PlanMilestoneCriteria;
-
-    const updatedCriteria = {
-      ...criteria,
+    const updatedItems = [...milestone.criteria.items];
+    updatedItems[criteriaIndex] = {
+      ...updatedItems[criteriaIndex],
       [field]: value,
     };
 
-    milestone.criteria[criteriaIndex] = updatedCriteria;
+    milestone.criteria = {
+      ...milestone.criteria,
+      items: updatedItems
+    };
     setMilestones(newMilestones);
   };
 
@@ -221,10 +213,13 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     setMilestones((prevMilestones) =>
       prevMilestones.map((milestone, i) => {
         if (i === milestoneIndex) {
-          const currentCriteria = milestone.criteria || [];
+          const currentCriteria = milestone.criteria || { junction: "AND", items: [] };
           return {
             ...milestone,
-            criteria: [...currentCriteria, { activity_id: defaultActivityId, quantity: 1 }]
+            criteria: {
+              ...currentCriteria,
+              items: [...currentCriteria.items, { activityId: defaultActivityId, quantity: 1 }]
+            }
           };
         }
         return milestone;
@@ -236,9 +231,13 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     setMilestones((prevMilestones) =>
       prevMilestones.map((milestone, i) => {
         if (i === milestoneIndex && milestone.criteria) {
+          const updatedItems = milestone.criteria.items.filter((_, j) => j !== criteriaIndex);
           return {
             ...milestone,
-            criteria: milestone.criteria.filter((_, j) => j !== criteriaIndex)
+            criteria: updatedItems.length > 0 ? {
+              ...milestone.criteria,
+              items: updatedItems
+            } : null
           };
         }
         return milestone;
@@ -302,41 +301,41 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      if (milestone.criteria?.length) {
+                      if (milestone.criteria?.items.length) {
                         updateMilestone(milestoneIndex, "criteria", null);
                         updateMilestone(milestoneIndex, "progress", 0);
                       }
                     }}
                     className={cn(
                       "flex-1",
-                      !milestone.criteria?.length && cn("border-2", variants.card.selected.border, variants.card.selected.bg),
-                      milestone.criteria?.length && "bg-white"
+                      !milestone.criteria?.items.length && cn("border-2", variants.card.selected.border, variants.card.selected.bg),
+                      milestone.criteria?.items.length && "bg-white"
                     )}
                   >
                     Manual Progress
-                    {!milestone.criteria?.length && <Check className={cn("ml-2 h-4 w-4", variants.text)}/>}
+                    {!milestone.criteria?.items.length && <Check className={cn("ml-2 h-4 w-4", variants.text)}/>}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      if (!milestone.criteria?.length) {
+                      if (!milestone.criteria?.items.length) {
                         updateMilestone(milestoneIndex, "progress", null);
                         addCriteria(milestoneIndex);
                       }
                     }}
                     className={cn(
                       "flex-1",
-                      milestone.criteria?.length && cn("border-2",variants.card.selected.border, variants.card.selected.bg),
-                      !milestone.criteria?.length && "bg-white"
+                      milestone.criteria?.items.length && cn("border-2",variants.card.selected.border, variants.card.selected.bg),
+                      !milestone.criteria?.items.length && "bg-white"
                     )}
                   >
                     Activity Criteria 
-                    {milestone.criteria?.length && <Check className={cn("ml-2 h-4 w-4", variants.text)}/>}
+                    {milestone.criteria?.items.length && <Check className={cn("ml-2 h-4 w-4", variants.text)}/>}
                   </Button>
                 </div>
 
-                {(!milestone.criteria || milestone.criteria.length === 0) ? (
+                {(!milestone.criteria || milestone.criteria.items.length === 0) ? (
                   <div className="flex flex-col items-center gap-2 py-2">
                     <div className="flex items-center gap-3">
                       <Button
@@ -367,13 +366,18 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {milestone.criteria.map((criterion, criteriaIndex) => (
+                    {milestone.criteria.items.map((criterion, criteriaIndex) => (
                       <div key={criteriaIndex} className="flex items-center gap-2">
                         {criteriaIndex > 0 && (
                           <Select
-                            value="OR"
-                            onValueChange={(value) => {
-                              // Handle junction change
+                            value={milestone.criteria?.junction || "AND"}
+                            onValueChange={(value: "AND" | "OR") => {
+                              const newMilestones = [...milestones];
+                              const milestone = newMilestones[milestoneIndex];
+                              if (milestone.criteria) {
+                                milestone.criteria.junction = value;
+                                setMilestones(newMilestones);
+                              }
                             }}
                           >
                             <SelectTrigger className="w-20">
@@ -386,9 +390,9 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                           </Select>
                         )}
                         <Select
-                          value={(criterion as PlanMilestoneCriteria).activity_id}
+                          value={criterion.activityId}
                           onValueChange={(value) =>
-                            updateCriteria(milestoneIndex, criteriaIndex, "activity_id", value)
+                            updateCriteria(milestoneIndex, criteriaIndex, "activityId", value)
                           }
                         >
                           <SelectTrigger className="flex-1">
@@ -409,7 +413,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                               "w-24",
                               validationErrors[milestoneIndex]?.criteria?.[criteriaIndex] && "border-red-500 focus-visible:ring-red-500"
                             )}
-                            value={(criterion as PlanMilestoneCriteria).quantity}
+                            value={criterion.quantity}
                             onChange={(e) =>
                               updateCriteria(
                                 milestoneIndex,
@@ -431,7 +435,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                         </div>
                         <span className="text-sm text-gray-500">
                           {activities.find(
-                            (a) => a.id === (criterion as PlanMilestoneCriteria).activity_id
+                            (a) => a.id === criterion.activityId
                           )?.measure || "units"}
                         </span>
                         <Button

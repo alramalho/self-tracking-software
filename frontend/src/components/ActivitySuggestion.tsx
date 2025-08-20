@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Check, X, Loader2 } from 'lucide-react';
 import { useApiWithAuth } from '@/api';
 import toast from 'react-hot-toast';
-import { ActivityEntry } from '@/contexts/UserPlanContext';
-import { Activity } from '@/contexts/UserPlanContext';
+import { ActivityEntry } from '@/contexts/UserGlobalContext';
+import { Activity } from '@/contexts/UserGlobalContext';
 
 interface ActivitySuggestionProps {
   activity: Activity;
@@ -27,12 +27,12 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
   const handleAccept = async () => {
     try {
       const formData = new FormData();
-      formData.append("activity_id", activity.id);
+      formData.append("activityId", activity.id);
       formData.append("iso_date_string", activityEntry.date);
       formData.append("quantity", activityEntry.quantity.toString());
       formData.append("isPublic", "false");
 
-      await api.post("/log-activity", formData);
+      await api.post("/activities/log-activity", formData);
       
       // Send system message to maintain AI memory
       await api.post("/ai/send-system-message", {

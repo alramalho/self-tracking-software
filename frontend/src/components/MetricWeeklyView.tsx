@@ -1,6 +1,6 @@
 import React from "react";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
-import { Activity } from "@/contexts/UserPlanContext";
+import { Activity } from "@/contexts/UserGlobalContext";
 
 interface Metric {
   id: string;

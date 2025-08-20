@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
 import { useEffect, useState, useRef } from "react";
-import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserPlanContext";
+import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useApiWithAuth } from "@/api";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,8 +35,8 @@ const PlanCard = ({
   index: number;
 }) => {
   const getWeeksCount = () => {
-    if (!plan.finishing_date) return 0;
-    const finishDate = new Date(plan.finishing_date);
+    if (!plan.finishingDate) return 0;
+    const finishDate = new Date(plan.finishingDate);
     const today = new Date();
     const diffTime = Math.abs(finishDate.getTime() - today.getTime());
     const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));

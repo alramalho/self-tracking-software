@@ -194,8 +194,8 @@ test.describe.serial("App", () => {
 
     // Step 5: Configure outline
     await page.getByText("Weekly Count Goal").click();
-    await page.getByTestId("plus").click();
-    await page.getByTestId("plus").click();
+    await page.getByTestId("PLUS").click();
+    await page.getByTestId("PLUS").click();
     await page
       .getByRole("button", { name: "Next", exact: true })
       .and(page.locator("button:not([disabled])"))

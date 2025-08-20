@@ -1,4 +1,5 @@
-import { useUserPlan, Activity, MetricEntry } from "@/contexts/UserPlanContext";
+import { useUserPlan, Activity, MetricEntry } from "@/contexts/UserGlobalContext";
+import { isSameDay } from "date-fns";
 
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
 const MINIMUM_ENTRIES = 7;
@@ -38,14 +39,14 @@ export function useMetrics() {
   // Check if activity happened within window
   const activityHappenedWithinWindow = (
     activityId: string,
-    date: string
+    date: Date
   ): boolean => {
     const targetDate = new Date(date);
     const windowStart = new Date(targetDate);
     windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
 
     return activityEntries.some((entry) => {
-      if (entry.activity_id !== activityId) return false;
+      if (entry.activityId !== activityId) return false;
       const entryDate = new Date(entry.date);
       return entryDate >= windowStart && entryDate <= targetDate;
     });
@@ -54,7 +55,7 @@ export function useMetrics() {
   // Calculate correlations for a metric
   const calculateMetricCorrelations = (metricId: string): MetricCorrelation[] => {
     const metricEntries = entries
-      .filter((entry) => entry.metric_id === metricId)
+      .filter((entry) => entry.metricId === metricId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const correlations = activities
@@ -91,7 +92,7 @@ export function useMetrics() {
 
   // Get correlations for a metric
   const getMetricCorrelations = (metricId: string): MetricCorrelation[] => {
-    const count = entries.filter((e) => e.metric_id === metricId).length;
+    const count = entries.filter((e) => e.metricId === metricId).length;
     
     if (count < MINIMUM_ENTRIES) {
       return [];
@@ -125,7 +126,7 @@ export function useMetrics() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const metricEntries = entries
-      .filter((entry) => entry.metric_id === metricId)
+      .filter((entry) => entry.metricId === metricId)
       .filter((entry) => new Date(entry.date) >= sevenDaysAgo)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -134,10 +135,9 @@ export function useMetrics() {
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
       
       const entryForDay = metricEntries.find(
-        (entry) => entry.date.split('T')[0] === dateStr
+        (entry) => isSameDay(entry.date, date)
       );
       
       weekData.push(entryForDay ? entryForDay.rating : 0);

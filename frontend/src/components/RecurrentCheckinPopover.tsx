@@ -5,7 +5,7 @@ import * as React from "react";
 import { Button } from "./ui/button";
 import AppleLikePopover from "./AppleLikePopover";
 import FeedbackForm from "./FeedbackForm";
-import { User, useUserPlan } from "@/contexts/UserPlanContext";
+import { User, useUserPlan } from "@/contexts/UserGlobalContext";
 import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
 import Link from "next/link";
@@ -24,21 +24,21 @@ const RecurrentCheckinPopover: React.FC<RecurrentCheckinPopoverProps> = ({
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const email = userData?.user?.email || "";
+  const email = userData?.email || "";
   const api = useApiWithAuth();
   const [isFeedbackOpen, setIsFeedbackOpen] = React.useState(false);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [isSaving, setIsSaving] = React.useState(false);
 
-  type DayType = NonNullable<User['daily_checkin_settings']>['days'][number];
-  type TimeType = NonNullable<User['daily_checkin_settings']>['time'];
+  type DayType = NonNullable<User['dailyCheckinSettings']>['days'][number];
+  type TimeType = NonNullable<User['dailyCheckinSettings']>['time'];
   
   const [selectedDays, setSelectedDays] = React.useState<DayType[]>(
-    userData?.user?.daily_checkin_settings?.days || []
+    userData?.dailyCheckinSettings?.days || []
   );
   const [selectedTimes, setSelectedTimes] = React.useState<TimeType | null>(
-    userData?.user?.daily_checkin_settings?.time || null
+    userData?.dailyCheckinSettings?.time || null
   );
 
   const days = {

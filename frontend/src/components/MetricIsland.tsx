@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MetricRatingSelector } from "@/components/MetricRatingSelector";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
-import { Metric } from "@/contexts/UserPlanContext";
+import { Metric } from "@/contexts/UserGlobalContext";
 import { CircleCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";

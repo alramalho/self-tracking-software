@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserGlobalContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import InviteButton from "./InviteButton";
@@ -17,9 +17,9 @@ import ConfirmDialog from "./ConfirmDialog";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { twMerge } from "tailwind-merge";
-import { usePlanEdit } from "@/hooks/usePlanEdit";
 import { PlanEditModal } from "./PlanEditModal";
 import { cn } from "@/lib/utils";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 
 interface PlanCardProps {
   plan: ApiPlan;
@@ -51,13 +51,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: currentUserData } = currentUserDataQuery;
-  const isCoached = currentUserData?.user?.plan_ids?.[0] === plan.id;
+  const { isUserPremium } = usePaidPlan()
+  const isCoached = isUserPremium && currentUserData?.plans?.findIndex(p => p.id === plan.id) === 0;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showSettings, setShowSettings] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const api = useApiWithAuth();
-  const { showEditModal, setShowEditModal, handleEditPlan } = usePlanEdit();
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     console.log({ isCoached });
@@ -129,11 +130,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
             <span className="text-4xl mb-2 text-left">{plan.emoji}</span>
           )}
           <span className="text-md font-medium text-left">{plan.goal}</span>
-          {plan.finishing_date ? (
+          {plan.finishingDate ? (
             <span className="text-xs text-gray-500 text-left mt-1">
               until{" "}
-              {plan.finishing_date
-                ? new Date(plan.finishing_date).toLocaleDateString("en-GB", {
+              {plan.finishingDate
+                ? new Date(plan.finishingDate).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
@@ -148,11 +149,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
           {planGroup && planGroup.members && (
             <div className="flex items-center space-x-1 mt-2">
               {planGroup.members.map((member) => {
-                if (!currentUserId || member.user_id === currentUserId) {
+                if (!currentUserId || member.userId === currentUserId) {
                   return null;
                 }
                 return (
-                  <Avatar key={member.user_id} className="w-6 h-6">
+                  <Avatar key={member.userId} className="w-6 h-6">
                     <AvatarImage
                       src={member.picture || ""}
                       alt={member.name || member.username}
@@ -230,7 +231,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
         plan={plan}
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        onConfirm={(updatedPlan) => handleEditPlan(plan, updatedPlan)}
+        onSuccess={() => setShowEditModal(false)}
       />
     </>
   );

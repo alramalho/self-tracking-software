@@ -6,7 +6,7 @@ import {
   ChatBubbleMessage,
 } from "@/components/ui/chat/chat-bubble";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
-import { useUserPlan } from '@/contexts/UserPlanContext';
+import { useUserPlan } from '@/contexts/UserGlobalContext';
 import { Eclipse } from 'lucide-react';
 
 interface ChatInterfaceProps {
@@ -28,7 +28,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages }) => {
           >
             <ChatBubbleAvatar
               src={
-                message.role === "user" ? userData?.user?.picture : undefined
+                message.role === "user" ? userData?.picture : undefined
               }
               fallback={<Eclipse className="w-8 h-8 bg-transparent" />}
             />

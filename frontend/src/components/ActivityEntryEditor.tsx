@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useApiWithAuth } from "@/api";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Trash2 } from "lucide-react";
@@ -15,7 +15,7 @@ interface ActivityEntry {
   id: string;
   quantity: number;
   date: string;
-  activity_id: string;
+  activityId: string;
   description?: string;
 }
 
@@ -49,7 +49,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
     setIsDeleting(true);
     setShowDeleteConfirm(false);
     try {
-      await api.delete(`/activity-entries/${activityEntry.id}`);
+      await api.delete(`/activities/activity-entries/${activityEntry.id}`);
       onDelete();
       toast.success("Activity entry deleted successfully!");
     } catch (error) {
@@ -64,7 +64,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await api.put(`/activity-entries/${activityEntry.id}`, {
+      await api.put(`/activities/activity-entries/${activityEntry.id}`, {
         quantity: Number(quantity),
         date: new Date(date).toISOString(),
         description,

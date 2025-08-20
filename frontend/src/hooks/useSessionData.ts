@@ -7,7 +7,7 @@ import {
   startOfWeek,
   addWeeks,
 } from "date-fns";
-import { ApiPlan } from "@/contexts/UserPlanContext";
+import { ApiPlan } from "@/contexts/UserGlobalContext";
 
 export function useSessionData(
   selectedPlan: ApiPlan,

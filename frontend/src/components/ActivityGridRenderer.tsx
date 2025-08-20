@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Activity, ActivityEntry } from "@/contexts/UserPlanContext";
 import BaseHeatmapRenderer from "./common/BaseHeatmapRenderer";
 import { isSameDay, format } from "date-fns";
 import { parseISO } from "date-fns";
 import { subDays } from "date-fns";
+import { Activity } from "@prisma/client";
+import { ActivityEntry } from "@prisma/client";
 
 interface ActivityGridRendererProps {
   activities: Activity[];
@@ -23,10 +24,10 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   const getActivityEntriesData = () => {
     const result = activityEntries
       .filter((entry) =>
-        activities.map((a) => a.id).includes(entry.activity_id)
+        activities.map((a) => a.id).includes(entry.activityId)
       )
       .map((entry) => ({
-        date: entry.date.replaceAll("-", "/"),
+        date: entry.date.toISOString().replaceAll("-", "/"),
         count: entry.quantity,
       }));
     return result;
@@ -35,22 +36,22 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   const getIntensityForDate = (date: string) => {
     const entriesOnDate = activityEntries.filter(
       (e: ActivityEntry) =>
-        activities.map((a) => a.id).includes(e.activity_id) &&
-        isSameDay(parseISO(e.date), date)
+        activities.map((a) => a.id).includes(e.activityId) &&
+        isSameDay(e.date, date)
     );
 
     if (entriesOnDate.length === 0) return null;
 
     const intensities = entriesOnDate
       .map((entry) => {
-        const activity = activities.find((a) => a.id === entry.activity_id);
+        const activity = activities.find((a) => a.id === entry.activityId);
         if (!activity) return null;
 
         const activityIndex = activities.findIndex(
-          (a) => a.id === entry.activity_id
+          (a) => a.id === entry.activityId
         );
         const activitySpecificEntries = activityEntries.filter(
-          (e: ActivityEntry) => e.activity_id === entry.activity_id
+          (e: ActivityEntry) => e.activityId === entry.activityId
         );
 
         const quantities = activitySpecificEntries.map((e) => e.quantity);
@@ -80,8 +81,8 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
 
     const entriesOnDate = activityEntries.filter(
       (entry) =>
-        activities.map((a) => a.id).includes(entry.activity_id) &&
-        isSameDay(parseISO(entry.date), focusedDate)
+        activities.map((a) => a.id).includes(entry.activityId) &&
+        isSameDay(entry.date, focusedDate)
     );
 
     return (
@@ -97,7 +98,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
           <ul className="list-none space-y-4">
             {entriesOnDate.map((entry, index) => {
               const activity = activities.find(
-                (a) => a.id === entry.activity_id
+                (a) => a.id === entry.activityId
               );
               if (!activity) return null;
 
@@ -123,7 +124,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-6 rounded-lg border-2 overflow-x-auto">
+      <div className="bg-white p-6 rounded-2xl border-2 overflow-x-auto">
         <div className="flex items-center space-x-3 mb-4">
             <span className="text-lg font-semibold text-gray-800">
               Non-plan activities

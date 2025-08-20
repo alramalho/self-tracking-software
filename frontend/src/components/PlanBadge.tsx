@@ -11,7 +11,7 @@ export const PlanBadge: React.FC<PlanBadgeProps> = ({ planType, size = 16 }) => 
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   
-  if (planType === "free") return null;
+  if (planType === "FREE") return null;
 
   return (
     <svg 

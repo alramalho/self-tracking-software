@@ -2,7 +2,7 @@ import React from "react";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import {
   useUserPlan,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import { ACHIEVEMENT_WEEKS } from "@/contexts/PlanProgressContext/lib";
 import { AlertTriangle, Flame, Medal } from "lucide-react";
@@ -77,7 +77,7 @@ const PlanProgressPopover: React.FC<PlanProgressPopoverProps> = ({
               completedWeeks === 0 &&
               incompleteWeeks === 0 &&
               !activityEntries.some((entry) =>
-                plan.activity_ids?.includes(entry.activity_id)
+                plan.activityIds?.includes(entry.activityId)
               )
             ) {
               return null;

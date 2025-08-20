@@ -1,6 +1,6 @@
 "use client";
 
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { MessageHistoryViewer } from "@/components/MessageHistoryViewer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";

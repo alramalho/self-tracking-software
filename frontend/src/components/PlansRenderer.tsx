@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useUserPlan } from "@/contexts/UserPlanContext";
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
 import { Plus, PlusSquare, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { ApiPlan, PlanGroup } from "@/contexts/UserPlanContext";
 import {
   DndContext,
   closestCenter,
@@ -26,33 +25,34 @@ import { CSS } from "@dnd-kit/utilities";
 import PlanCard from "./PlanCard";
 import { useRouter } from "next/navigation";
 import Divider from "./Divider";
-import { useApiWithAuth } from "@/api";
+import { updatePlans } from "@/app/actions";
 import toast from "react-hot-toast";
 import { parseISO, format, addMonths, isBefore } from "date-fns";
 
 // Helper function to check if a plan is expired
-export const isPlanExpired = (plan: ApiPlan): boolean => {
-  if (!plan.finishing_date) return false;
-  const finishingDate = parseISO(plan.finishing_date);
-  return isBefore(finishingDate, new Date());
+export const isPlanExpired = (plan: CompletePlan): boolean => {
+  if (!plan.finishingDate) return false;
+  return isBefore(plan. finishingDate, new Date());
 };
 
-// Function to sort plans with active plans first, then expired plans
-const sortPlansByExpiration = (plans: ApiPlan[]): ApiPlan[] => {
-  // Create a copy to avoid mutating the original array
+// Function to sort plans by sortOrder field, with fallback to creation date
+const sortPlansByOrder = (plans: CompletePlan[]): CompletePlan[] => {
   return [...plans].sort((a, b) => {
-    const aExpired = isPlanExpired(a);
-    const bExpired = isPlanExpired(b);
-    
-    if (aExpired && !bExpired) return 1; // a is expired, b is not, so b comes first
-    if (!aExpired && bExpired) return -1; // a is not expired, b is, so a comes first
-    return 0; // both are either expired or not expired, maintain original order
+    // If both have sortOrder, use that
+    if (a.sortOrder !== null && b.sortOrder !== null) {
+      return a.sortOrder - b.sortOrder;
+    }
+    // If only one has sortOrder, prioritize it
+    if (a.sortOrder !== null && b.sortOrder === null) return -1;
+    if (a.sortOrder === null && b.sortOrder !== null) return 1;
+    // If neither has sortOrder, fall back to creation date (newest first)
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 };
 
 interface SortablePlanProps {
-  plan: ApiPlan;
-  planGroup?: PlanGroup;
+  plan: CompletePlan;
+  planGroup?: CompletePlan["planGroup"];
   isSelected: boolean;
   currentUserId?: string;
   onSelect: (planId: string) => void;
@@ -88,7 +88,7 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   const handleReactivate = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isReactivating) return;
-    
+
     setIsReactivating(true);
     try {
       await onReactivate(plan.id!);
@@ -149,13 +149,16 @@ interface PlansRendererProps {
   initialSelectedPlanId?: string | null;
 }
 
-const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) => {
-  const api = useApiWithAuth();
+const PlansRenderer: React.FC<PlansRendererProps> = ({
+  initialSelectedPlanId,
+}) => {
   const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(initialSelectedPlanId || null);
-  const [orderedPlans, setOrderedPlans] = useState<ApiPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
+    initialSelectedPlanId || null
+  );
+  const [orderedPlans, setOrderedPlans] = useState<CompletePlan[]>([]);
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
@@ -174,13 +177,16 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
 
   useEffect(() => {
     if (userData?.plans) {
-      // Sort plans with active plans first, then expired plans
-      setOrderedPlans(sortPlansByExpiration(userData.plans));
+      // Sort plans by sortOrder field
+      setOrderedPlans(sortPlansByOrder(userData.plans as CompletePlan[]));
     }
   }, [userData?.plans]);
 
   useEffect(() => {
-    if (initialSelectedPlanId && orderedPlans.some(plan => plan.id === initialSelectedPlanId)) {
+    if (
+      initialSelectedPlanId &&
+      orderedPlans.some((plan) => plan.id === initialSelectedPlanId)
+    ) {
       setSelectedPlanId(initialSelectedPlanId);
     } else if (!selectedPlanId && orderedPlans && orderedPlans.length > 0) {
       const firstPlan = orderedPlans[0];
@@ -191,13 +197,17 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
   const handleReactivatePlan = async (planId: string) => {
     try {
       const oneMonthLater = format(addMonths(new Date(), 1), "yyyy-MM-dd");
-      await api.post(`/plans/${planId}/update`, {
-        data: {
-          finishing_date: oneMonthLater,
-        },
-      });
-      await refetchUserData(false);
-      toast.success("Plan reactivated successfully");
+      const result = await updatePlans([{
+        planId,
+        updates: { finishingDate: oneMonthLater }
+      }]);
+      
+      if (result.success) {
+        await refetchUserData(false);
+        toast.success("Plan reactivated successfully");
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error("Failed to reactivate plan:", error);
       toast.error("Failed to reactivate plan");
@@ -220,10 +230,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
     );
   }
 
-  const { planGroups = [] } = userData || {};
+  const { plans = [] } = userData || {};
 
-  const getPlanGroup = (planId: string): PlanGroup | undefined => {
-    return planGroups.find((group) => group.plan_ids.includes(planId));
+  const getPlanGroup = (planId: string): CompletePlan["planGroup"] | undefined => {
+    return plans.find((p) => p.id === planId)?.planGroup || undefined;
   };
 
   const handleInviteSuccess = () => {
@@ -244,7 +254,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (!over || active.id === over.id) {
       return;
     }
@@ -259,14 +269,25 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
     setOrderedPlans(items);
 
     try {
-      await api.post("/plans/update-plan-order", {
-        plan_ids: items.map((plan) => plan.id),
-      });
-      currentUserDataQuery.refetch();
-      toast.success("Plan priority updated");
+      // Update sortOrder for each plan based on new positions
+      const updates = items.map((plan, index) => ({
+        planId: plan.id!,
+        updates: { sortOrder: index + 1 },
+      }));
+
+      const result = await updatePlans(updates);
+      
+      if (result.success) {
+        currentUserDataQuery.refetch();
+        toast.success("Plan priority updated");
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       toast.error("Failed to update plan priority");
       console.error("Failed to update plan priority:", error);
+      // Revert the local state change
+      setOrderedPlans(sortPlansByOrder(userData?.plans as CompletePlan[] || []));
     }
   };
 
@@ -289,7 +310,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
                 plan={plan}
                 planGroup={getPlanGroup(plan.id!)}
                 isSelected={selectedPlanId === plan.id}
-                currentUserId={userData?.user?.id}
+                currentUserId={userData?.id}
                 onSelect={handlePlanSelect}
                 onInviteSuccess={handleInviteSuccess}
                 onPlanRemoved={handlePlanRemoved}
@@ -314,7 +335,9 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({ initialSelectedPlanId }) 
 
       {selectedPlanId && orderedPlans.find((p) => p.id === selectedPlanId) && (
         <PlanRendererv2
-          selectedPlan={orderedPlans.find((p) => p.id === selectedPlanId)!}
+          selectedPlan={
+            orderedPlans.find((p) => p.id === selectedPlanId)! as CompletePlan
+          }
         />
       )}
     </div>

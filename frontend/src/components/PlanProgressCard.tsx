@@ -6,13 +6,9 @@ import {
   isWeekCompleted as checkIsWeekCompleted,
 } from "@/contexts/PlanProgressContext/lib";
 import { SteppedBarProgress } from "./SteppedBarProgress";
-import {
-  Plan,
-  Notification,
-  useUserPlan,
-} from "@/contexts/UserPlanContext";
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { AnimatePresence } from "framer-motion";
-import Confetti from "react-confetti-boom";
+import { Notification } from "@prisma/client";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import {
@@ -34,8 +30,8 @@ import { useApiWithAuth } from "@/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-export const PlanStatus = ({ plan }: { plan: Plan }) => {
-  if (!plan?.current_week?.state) {
+export const PlanStatus = ({ plan }: { plan: CompletePlan }) => {
+  if (!plan?.currentWeekState) {
     return null;
   }
   const statusConfig = {
@@ -57,7 +53,7 @@ export const PlanStatus = ({ plan }: { plan: Plan }) => {
     },
   };
 
-  const config = statusConfig[plan.current_week.state];
+  const config = statusConfig[plan.currentWeekState];
 
   return (
     <div className="flex items-center gap-2">
@@ -72,7 +68,7 @@ export const PlanStatus = ({ plan }: { plan: Plan }) => {
 };
 
 interface PlanProgressCardProps {
-  plan: Plan;
+  plan: CompletePlan;
   weeks: any[];
   achievement: any;
   isCoached?: boolean;
@@ -94,13 +90,20 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const { notificationsData } = useUserPlan();
 
-  const [isAnimationCompleted, setIsAnimationCompleted] = useState<boolean>(false);
+  const [isAnimationCompleted, setIsAnimationCompleted] =
+    useState<boolean>(false);
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
-    isDemo ? "Great progress this week! You're building a consistent habit. Keep it up!" : undefined
+    isDemo
+      ? "Great progress this week! You're building a consistent habit. Keep it up!"
+      : undefined
   );
-  const [isGeneratingCoachMessage, setIsGeneratingCoachMessage] = useState(false);
+  const [isGeneratingCoachMessage, setIsGeneratingCoachMessage] =
+    useState(false);
   const api = useApiWithAuth();
-  const [lastTimeCoachMessageWasGenerated, setLastTimeCoachMessageWasGenerated] = useLocalStorage<Date | undefined>(
+  const [
+    lastTimeCoachMessageWasGenerated,
+    setLastTimeCoachMessageWasGenerated,
+  ] = useLocalStorage<Date | undefined>(
     "last-coach-message-generated-at",
     undefined
   );
@@ -147,7 +150,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   useEffect(() => {
     if (!isDemo && notificationsData?.data?.notifications) {
       const initialCoachMessage = notificationsData?.data?.notifications?.find(
-        (notification: Notification) => notification.type === "coach"
+        (notification: Notification) => notification.type === "COACH"
       )?.message;
 
       if (initialCoachMessage) {
@@ -165,7 +168,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   // Calculate weekly progress
   const totalPlannedActivities =
-    plan.outline_type === "times_per_week"
+    plan.outlineType === "TIMES_PER_WEEK"
       ? (currentWeek.plannedActivities as number)
       : (currentWeek.plannedActivities as any[])?.length || 0;
 
@@ -178,7 +181,10 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
   // Calculate lifestyle achievement progress
-  const lifestyleProgressValue = Math.min(ACHIEVEMENT_WEEKS, achievement.streak);
+  const lifestyleProgressValue = Math.min(
+    ACHIEVEMENT_WEEKS,
+    achievement.streak
+  );
 
   const isWeekCompleted = checkIsWeekCompleted(
     currentWeek.startDate,
@@ -250,7 +256,9 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                     </div>
                     <button
                       onClick={generateCoachMessage}
-                      disabled={isGeneratingCoachMessage || !canGenerateNewMessage}
+                      disabled={
+                        isGeneratingCoachMessage || !canGenerateNewMessage
+                      }
                       className={cn(
                         "p-1 rounded-full transition-all duration-200",
                         canGenerateNewMessage && !isGeneratingCoachMessage
@@ -282,10 +290,12 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   >
                     <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
-                      <span className="text-xs text-gray-400/80">This week</span>
+                      <span className="text-xs text-gray-400/80">
+                        This week
+                      </span>
                       <PlanStatus plan={plan} />
                       {["COMPLETED", "FAILED"].includes(
-                        plan?.current_week?.state || ""
+                        plan?.currentWeekState || ""
                       ) && (
                         <Link
                           href={`/plans?selectedPlan=${plan.id}`}
@@ -343,4 +353,4 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
       </CollapsibleContent>
     </Collapsible>
   );
-}; 
+};

@@ -1,11 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import {
   useUserPlan,
-  ActivityEntry,
-  Activity,
-  User,
-  TaggedActivityEntry,
-} from "@/contexts/UserPlanContext";
+} from "@/contexts/UserGlobalContext";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import {
   differenceInDays,
@@ -25,18 +21,11 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { Activity, User, ActivityEntry, Plan } from "@prisma/client";
 import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 import { toast } from "react-hot-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "./ui/button";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
-import AINotification from "./AINotification";
-import { useUpgrade } from "@/contexts/UpgradeContext";
-import AppleLikePopover from "./AppleLikePopover";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { AccountabilityStepCard } from "./AccountabilityStepCard";
-import { WeekMetricBarChart } from "./WeekMetricBarChart";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
 import {
   Collapsible,
   CollapsibleContent,
@@ -44,6 +33,8 @@ import {
 } from "./ui/collapsible";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { HydratedUser } from "@/app/actions";
 
 function isInCurrentWeek(date: string) {
   const entryDate = new Date(date);
@@ -65,10 +56,7 @@ const TimelineRenderer: React.FC<{
   const { shareOrCopyReferralLink } = useShareOrCopy();
   const { isAppInstalled, isPushGranted, requestPermission } =
     useNotifications();
-  const { setShowUpgradePopover } = useUpgrade();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const { userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "free";
   const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] =
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -83,42 +71,7 @@ const TimelineRenderer: React.FC<{
   }
 
 
-  if (!userData?.user?.friend_ids?.length) {
-    const demoMetrics: Array<{
-      emoji: string;
-      name: string;
-      trend: string;
-      data: number[];
-      bgColor:
-        | "yellow"
-        | "blue"
-        | "green"
-        | "rose"
-        | "pink"
-        | "red"
-        | "orange"
-        | "amber"
-        | "purple"
-        | "gray";
-      correlations: string[];
-    }> = [
-      {
-        emoji: "😊",
-        name: "Happiness",
-        trend: "+15%",
-        data: [4, 3, 5, 4, 1, 3, 5],
-        bgColor: "blue",
-        correlations: ["🏃‍♂️ Exercise", "🧘‍♂️ Meditation"],
-      },
-      {
-        emoji: "⚡",
-        name: "Energy",
-        trend: "+8%",
-        data: [3, 4, 3, 5, 4, 3, 4],
-        bgColor: "yellow",
-        correlations: ["☕ Morning routine"],
-      },
-    ];
+  if (!userData?.friends?.length) {
 
     return (
       <>
@@ -132,7 +85,7 @@ const TimelineRenderer: React.FC<{
         /> */}
         <div className="mt-6 grid grid-cols-1 gap-6">
           {/* Find your Accountability Partner Card */}
-          <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-lg bg-white/60 shadow-sm p-4">
+          <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-2xl bg-white/60 shadow-sm p-4">
             <Collapsible
               open={!isPartnerSectionCollapsed}
               onOpenChange={(open) => setIsPartnerSectionCollapsed(!open)}
@@ -215,65 +168,6 @@ const TimelineRenderer: React.FC<{
             </Collapsible>
           </div>
 
-          {/* Expanded AI Coach Card */}
-          {isUserOnFreePlan && (
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <ScanFace size={30} className="text-purple-500" />
-                <div>
-                  <h3 className="text-lg font-semibold">AI Coach & Insights</h3>
-                  <p className="text-gray-600 text-sm">
-                    Get personalized coaching and track your daily metrics
-                  </p>
-                </div>
-              </div>
-
-              {/* Demo Metrics Preview */}
-              <div className="space-y-4 mb-6">
-                <div className="text-sm font-medium text-gray-700 mb-3">
-                  Preview: Track metrics like happiness, energy & productivity
-                </div>
-
-                {demoMetrics.map((metric) => (
-                  <div
-                    key={metric.name}
-                    className="bg-white/60 rounded-lg p-4 border border-white/50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        {metric.emoji} {metric.name}
-                      </span>
-                      <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-                        {metric.trend} this week
-                      </span>
-                    </div>
-                    <WeekMetricBarChart
-                      data={metric.data}
-                      color={metric.bgColor}
-                    />
-                    <div className="text-xs text-gray-600">
-                      {metric.correlations.map((correlation, i) => (
-                        <span key={correlation}>
-                          <span className="text-green-600">{correlation}</span>
-                          {i < metric.correlations.length - 1
-                            ? " and "
-                            : " boost your " + metric.name.toLowerCase()}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                onClick={() => setShowUpgradePopover(true)}
-                className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-              >
-                <ScanFace size={16} className="mr-2" />
-                Try AI Coaching Free
-              </Button>
-            </div>
-          )}
         </div>
       </>
     );
@@ -326,45 +220,47 @@ const TimelineRenderer: React.FC<{
       {timelineDataQuery.isFetched &&
         timelineData?.recommendedActivities &&
         timelineData?.recommendedUsers &&
-        sortedEntries.map((entry: TaggedActivityEntry) => {
-          const activity: Activity | undefined =
-            timelineData?.recommendedActivities?.find(
-              (a: Activity) => a.id === entry.activity_id
-            );
+        sortedEntries.map((entry) => {
+          const activity = entry.activity;
           const user: User | undefined = timelineData?.recommendedUsers?.find(
-            (u: User) => u.id === activity?.user_id
+            (u: User) => u.id === activity?.userId
           );
           if (!activity) return null;
 
           const daysUntilExpiration =
-            entry.image && entry.image.expires_at
-              ? differenceInDays(new Date(entry.image.expires_at), new Date())
+            entry.imageUrl && entry.imageExpiresAt
+              ? differenceInDays(new Date(entry.imageExpiresAt), new Date())
               : 0;
           const hasImageExpired =
-            !entry.image ||
-            !entry.image.expires_at ||
-            new Date(entry.image.expires_at) < new Date();
+            !entry.imageUrl ||
+            !entry.imageExpiresAt ||
+            new Date(entry.imageExpiresAt) < new Date();
 
           return (
             <React.Fragment key={entry.id}>
               <ActivityEntryPhotoCard
                 key={entry.id}
-                imageUrl={entry.image?.url}
+                imageUrl={entry.imageUrl || undefined}
                 activityEntryId={entry.id}
                 activityTitle={activity.title}
                 activityEmoji={activity.emoji || ""}
                 activityEntryQuantity={entry.quantity}
-                activityEntryReactions={entry.reactions || {}}
-                activityEntryTimezone={entry.timezone}
-                activityEntryComments={entry.comments}
+                activityEntryReactions={entry.reactions.reduce((acc, reaction) => {
+                  if (reaction.user.username) {
+                    acc[reaction.emoji] = [reaction.user.username];
+                  }
+                  return acc;
+                }, {} as Record<string, string[]>)}
+                activityEntryTimezone={entry.timezone || undefined}
+                activityEntryComments={entry.comments || []}
                 activityMeasure={activity.measure}
-                isoDate={entry.date}
-                description={entry.description}
-                userPicture={user?.picture}
+                date={entry.date}
+                description={entry.description || undefined}
+                userPicture={user?.picture || undefined}
                 daysUntilExpiration={daysUntilExpiration}
                 hasImageExpired={hasImageExpired}
-                userName={user?.name}
-                userUsername={user?.username}
+                userName={user?.name || undefined}
+                userUsername={user?.username || undefined}
                 onAvatarClick={() => {
                   router.push(`/profile/${user?.username}`);
                 }}
@@ -372,14 +268,14 @@ const TimelineRenderer: React.FC<{
                   router.push(`/profile/${user?.username}`);
                 }}
               />
-              {entry.is_week_finisher && isInCurrentWeek(entry.date) && (
+              {/* {entry.isWeekFinisher && isInCurrentWeek(entry.date) && (
                 <WeeklyCompletionCard
                   key={`${entry.id}-completion`}
                   small
                   username={user?.name}
-                  planName={entry.plan_finished_name}
+                  planName={entry.planFinishedName}
                 />
-              )}
+              )} */}
             </React.Fragment>
           );
         })}
