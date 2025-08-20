@@ -7,9 +7,9 @@
   "scripts": {
     "diff": "cdk diff",
     "bootstrap": "cdk bootstrap",
-    "presynth": "echo '\n️\\0033[43;1m ⚠ Consider running `yarn diff` to check differences ⚠\\0033[0m️\n️' && rm -rf cdk.out",
+    "presynth": "echo '\n️\\0033[43;1m ⚠ Consider running `pnpm diff` to check differences ⚠\\0033[0m️\n️' && rm -rf cdk.out",
     "synth": "cdk synth",
-    "predeploy": "yarn synth",
+    "predeploy": "pnpm synth",
     "list": "cdk ls",
     "deploy": "cdk deploy --require-approval never --all",
     "deploy-dev-db": "cdk deploy --require-approval never TrackingSoftwareInfrastructureStackdev/DbStack",
