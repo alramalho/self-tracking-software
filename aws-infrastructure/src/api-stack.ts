@@ -122,8 +122,8 @@ export class ApiStack extends cdk.Stack {
 
     this.nodeFargateService = this.deployFargateBackend(props, s3Bucket, {
       serviceName: "api-node",
-      backendPath: "backend-node",
-      dockerfilePath: "Dockerfile",
+      backendPath: ".",
+      dockerfilePath: "backend-node/Dockerfile",
       environment: nodeEnvConfig,
       vpc: this.fargateService.cluster.vpc,
       cluster: this.fargateService.cluster,

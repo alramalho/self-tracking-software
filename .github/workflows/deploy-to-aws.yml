@@ -101,6 +101,7 @@ jobs:
           POSTGRES_DB: ${{ vars.POSTGRES_DB }}
           
           
+          # note to self: we were finishing the deploy to remote 
         run: |
           cd aws-infrastructure
           pnpm install

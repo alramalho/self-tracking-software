@@ -17,7 +17,10 @@ export class PineconeService {
   private indexHost: string;
   private index: any;
 
-  constructor(config: PineconeConfig, private namespace: string) {
+  constructor(
+    config: PineconeConfig,
+    private namespace: string
+  ) {
     this.pc = new Pinecone({ apiKey: config.apiKey });
     this.indexHost = config.indexHost;
     this.index = this.pc.Index(config.indexHost);
@@ -36,7 +39,9 @@ export class PineconeService {
         namespace: this.namespace,
         records: [{ id: identifier, text, ...metadata }],
       });
-      logger.info(`Upserted record ${identifier} to namespace ${this.namespace}`);
+      logger.info(
+        `Upserted record ${identifier} to namespace ${this.namespace}`
+      );
     } catch (error) {
       logger.error(`Failed to upsert record ${identifier}:`, error);
       throw error;
@@ -93,7 +98,9 @@ export class PineconeService {
         namespace: this.namespace,
         id: identifier,
       });
-      logger.info(`Deleted record ${identifier} from namespace ${this.namespace}`);
+      logger.info(
+        `Deleted record ${identifier} from namespace ${this.namespace}`
+      );
     } catch (error) {
       logger.error(`Failed to delete record ${identifier}:`, error);
       throw error;
@@ -145,7 +152,13 @@ if (!pineconeConfig.apiKey || !pineconeConfig.indexHost) {
   );
 }
 
-export const usersPineconeService = new PineconeService(pineconeConfig, "users");
-export const plansPineconeService = new PineconeService(pineconeConfig, "plans");
+export const usersPineconeService = new PineconeService(
+  pineconeConfig,
+  "users"
+);
+export const plansPineconeService = new PineconeService(
+  pineconeConfig,
+  "plans"
+);
 
 export default PineconeService;

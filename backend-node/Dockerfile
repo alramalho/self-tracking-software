@@ -1,27 +1,45 @@
-# Use Node.js 20 LTS
-FROM node:20-alpine
+FROM node:20-alpine AS builder
+
+# Install pnpm
+RUN npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
 
+# Copy workspace package files from root
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install ALL dependencies (including dev deps for building)
+RUN pnpm install --frozen-lockfile --no-cache
+
+# Copy backend-node source code
+COPY backend-node/ ./backend-node/
+
+# Build TypeScript from workspace root
+RUN pnpm --filter backend-node run build
+
+# Production stage
+FROM node:20-alpine AS production
+
+# Install pnpm
+RUN npm install -g pnpm
+
+WORKDIR /app
+
 # Copy package files
-COPY package*.json ./
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install only production dependencies
+RUN pnpm install --frozen-lockfile --prod --no-cache
 
-# Copy source code
-COPY . .
+# Copy built application from builder stage
+COPY --from=builder /app/backend-node/dist ./backend-node/dist
+COPY --from=builder /app/backend-node/package.json ./backend-node/
 
-# Build TypeScript
-RUN npm run build
+WORKDIR /app/backend-node
 
-# Expose port 8000 (to match existing setup)
+# Expose port 8000
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
-
 # Start the application
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]

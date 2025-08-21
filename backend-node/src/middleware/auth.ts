@@ -1,9 +1,8 @@
-import { Request, Response, NextFunction } from "express";
-import { requireAuth as clerkRequireAuth } from '@clerk/express'
+import { requireAuth as clerkRequireAuth, getAuth } from "@clerk/express";
 import { User } from "@prisma/client";
+import { NextFunction, Request, RequestHandler, Response } from "express";
 import { userService } from "../services/userService";
 import { logger } from "../utils/logger";
-import { getAuth } from "@clerk/express";
 
 // Type for authenticated requests
 export interface AuthenticatedRequest extends Request {
@@ -49,4 +48,7 @@ export function loadUserFromClerk(
 }
 
 // Combined middleware: Clerk auth + user loading
-export const requireAuth = [clerkRequireAuth(), loadUserFromClerk];
+export const requireAuth: RequestHandler[] = [
+  clerkRequireAuth(),
+  loadUserFromClerk,
+];
