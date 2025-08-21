@@ -256,7 +256,7 @@ export class ApiStack extends cdk.Stack {
     // Create or reuse VPC for Fargate service
     const fargateVpc =
       options.vpc ||
-      new ec2.Vpc(this, "SharedVPC", {
+      new ec2.Vpc(this, `SharedVPC-${options.serviceName}`, {
         maxAzs: 2, // Use 2 Availability Zones for redundancy
         natGateways: 1, // Minimize costs by using just 1 NAT Gateway
       });
@@ -266,7 +266,9 @@ export class ApiStack extends cdk.Stack {
       options.cluster ||
       new ecs.Cluster(this, `Cluster-${options.serviceName}`, {
         vpc: fargateVpc,
-        clusterName: options.clusterName || `${KEBAB_CASE_PREFIX}-cluster-${props.environment}`,
+        clusterName:
+          options.clusterName ||
+          `${KEBAB_CASE_PREFIX}-cluster-${props.environment}`,
         containerInsights: true,
       });
 
