@@ -104,6 +104,7 @@ jobs:
           # note to self: we were finishing the deploy to remote 
         run: |
           cd aws-infrastructure
-          pnpm install
+          rm -rf cdk.out # withtout this is was recursively copying
+          pnpm install 
           pnpm run bootstrap
           pnpm run deploy
