@@ -6,6 +6,7 @@
     "./types": "./types/index.ts"
   },
   "scripts": {
+    "build": "prisma generate",
     "db:generate": "prisma generate",
     "db:reset": "ts-node reset-db.ts",
     "reset-db": "pnpm db:reset",
