@@ -82,7 +82,7 @@ export class ApiStack extends cdk.Stack {
     };
 
     this.fargateService = this.deployFargateBackend(props, s3Bucket, {
-      serviceName: "api",
+      serviceName: "api-python",
       backendPath: "backend",
       dockerfilePath: "Dockerfile.fargate",
       environment: pythonEnvConfig,
