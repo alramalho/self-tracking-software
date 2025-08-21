@@ -1,7 +1,8 @@
 FROM node:20-alpine AS builder
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and OpenSSL for Prisma
+RUN npm install -g pnpm 
+RUN apk add --no-cache openssl
 
 # Set working directory
 WORKDIR /app
@@ -26,20 +27,25 @@ RUN pnpm build --filter backend-node
 # Production stage
 FROM node:20-alpine AS production
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and OpenSSL for Prisma
+RUN npm install -g pnpm 
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --from=builder /app/backend-node/package.json ./backend-node/
+COPY --from=builder /app/prisma ./prisma
 
 # Install only production dependencies
 RUN pnpm install --frozen-lockfile --prod --no-cache
 
+# Generate Prisma client for production
+RUN cd prisma && pnpm prisma generate
+
 # Copy built application from builder stage
 COPY --from=builder /app/backend-node/dist ./backend-node/dist
-COPY --from=builder /app/backend-node/package.json ./backend-node/
 
 WORKDIR /app/backend-node
 
