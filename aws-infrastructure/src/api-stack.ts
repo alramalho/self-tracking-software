@@ -1,18 +1,17 @@
 import * as cdk from "aws-cdk-lib";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as s3 from "aws-cdk-lib/aws-s3";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
-import * as ecr from "aws-cdk-lib/aws-ecr";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
-import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
-import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
-import * as path from "path";
 import * as fs from "fs";
+import * as path from "path";
 import {
   CAMEL_CASE_PREFIX,
   KEBAB_CASE_PREFIX,
@@ -31,6 +30,7 @@ interface FargateDeploymentOptions {
   environment: Record<string, string>;
   vpc?: ec2.IVpc;
   cluster?: ecs.ICluster;
+  clusterName?: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -125,8 +125,7 @@ export class ApiStack extends cdk.Stack {
       backendPath: ".",
       dockerfilePath: "backend-node/Dockerfile",
       environment: nodeEnvConfig,
-      vpc: this.fargateService.cluster.vpc,
-      cluster: this.fargateService.cluster,
+      clusterName: `${KEBAB_CASE_PREFIX}-node-cluster-${props.environment}`,
     });
 
     // Setup WAF for the Python API (main API)
@@ -265,9 +264,9 @@ export class ApiStack extends cdk.Stack {
     // Create or reuse ECS Cluster to run Fargate tasks
     const fargateCluster =
       options.cluster ||
-      new ecs.Cluster(this, "SharedCluster", {
+      new ecs.Cluster(this, `Cluster-${options.serviceName}`, {
         vpc: fargateVpc,
-        clusterName: `${KEBAB_CASE_PREFIX}-cluster-${props.environment}`,
+        clusterName: options.clusterName || `${KEBAB_CASE_PREFIX}-cluster-${props.environment}`,
         containerInsights: true,
       });
 
