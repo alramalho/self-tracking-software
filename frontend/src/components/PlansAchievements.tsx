@@ -1,33 +1,20 @@
-import React, { useMemo } from "react";
-import {
-  ApiPlan,
-  Activity,
-  ActivityEntry,
-  convertApiPlanToPlan,
-} from "@/contexts/UserGlobalContext";
-import {
-  subWeeks,
-  startOfWeek,
-  isAfter,
-  format,
-  addWeeks,
-  isBefore,
-  subDays,
-  isSameWeek,
-} from "date-fns";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
-import { Badge } from "./ui/badge";
-import FireBadge from "./FireBadge";
-import TrophyBadge from "./FireBadge";
-import { Collapsible, CollapsibleContent } from "./ui/collapsible";
+import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import {
   ACHIEVEMENT_WEEKS,
 } from "@/contexts/PlanProgressContext/lib";
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { Activity, ActivityEntry } from "@prisma/client";
+import {
+  isSameWeek
+} from "date-fns";
+import React from "react";
+import { default as FireBadge, default as TrophyBadge } from "./FireBadge";
+import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 
 interface PlansAchievementsProps {
-  plans: ApiPlan[];
+  plans: CompletePlan[];
   activities: Activity[];
   activityEntries: ActivityEntry[];
   timeRangeDays?: number;

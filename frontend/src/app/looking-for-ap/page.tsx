@@ -1,18 +1,18 @@
 "use client";
 
-import React from "react";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { Button } from "@/components/ui/button";
-import {
-  ScanFace,
-  CheckCircle,
-} from "lucide-react";
 import { useApiWithAuth } from "@/api";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import UserCard from "@/components/UserCard";
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import UserCard from "@/components/UserCard";
+import {
+  CheckCircle,
+  ScanFace,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import React from "react";
 
 
 const LookingForApPage: React.FC = () => {
@@ -133,8 +133,8 @@ const LookingForApPage: React.FC = () => {
               <div className="mt-4">
                 <UserCard
                   user={currentUser}
-                  plan={currentPlan}
-                  plans={userData?.plans || []}
+                  plan={currentPlan as CompletePlan}
+                  plans={userData?.plans as CompletePlan[] || []}
                   activities={userData?.activities || []}
                   activityEntries={userData?.activityEntries || []}
                   showFriendRequest={false}

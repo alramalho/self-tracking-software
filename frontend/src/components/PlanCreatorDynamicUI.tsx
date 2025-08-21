@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
-import {
-  DynamicUISuggester,
-  BaseExtractionResponse,
-} from "./DynamicUISuggester";
-import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
-import { Activity, ApiPlan, PlanMilestone, useUserPlan } from "@/contexts/UserGlobalContext";
-
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  BaseExtractionResponse,
+  DynamicUISuggester,
+} from "./DynamicUISuggester";
 // Interface for plan extraction response
 interface PlanExtractionsResponse extends BaseExtractionResponse {
-  plan?: ApiPlan;
+  plan?: CompletePlan;
   activities?: Activity[];
   question_checks: Record<string, boolean>;
   message: string;
@@ -139,11 +139,11 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
           <div className="border border-gray-200 rounded-md p-3 bg-white">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Plan Type</h3>
             <p className="text-gray-900">
-            {data.plan?.outlineType === "specific"
+            {data.plan?.outlineType === "SPECIFIC"
               ? "Specific Dates"
               : "Times Per Week"}
             </p>
-            {data.plan?.outlineType === "timesPerWeek" && (
+            {data.plan?.outlineType === "TIMES_PER_WEEK" && (
               <p className="text-gray-900">
                 {data.plan?.timesPerWeek} times per week
               </p>
@@ -152,7 +152,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
         )}
 
         {/* Sessions */}
-        {data.plan?.outlineType === "specific" && data.plan?.sessions && (
+        {data.plan?.outlineType === "SPECIFIC" && data.plan?.sessions && (
           <div className="border border-gray-200 rounded-md p-3 bg-white">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Sessions</h3>
             {typeof data.plan.sessions === "number" ? (

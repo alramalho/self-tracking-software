@@ -1,12 +1,12 @@
 "use client";
 
-import { Plus, Pencil } from "lucide-react";
-import * as React from "react";
-import {  useUserPlan } from "@/contexts/UserGlobalContext";
-import { getThemeVariants } from "@/utils/theme";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import RecurrentCheckinPopover from "./RecurrentCheckinPopover";
+import { getThemeVariants } from "@/utils/theme";
 import { capitalize } from "lodash";
+import { Pencil, Plus } from "lucide-react";
+import * as React from "react";
+import RecurrentCheckinPopover from "./RecurrentCheckinPopover";
 
 const CheckinButton = ({
   title,
@@ -73,15 +73,15 @@ export default function AISettings() {
     <div className="flex flex-col gap-4 mb-12">
       <h1 className="text-2xl font-bold my-4">AI Settings</h1>
       <div className="flex flex-col flex-nowrap gap-4">
-        {user?.dailyCheckinSettings != undefined ? (
+        {user?.dailyCheckinDays != undefined && user?.dailyCheckinTime != undefined ? (
           <Card
             emoji="☀️"
             title="Recurrent Checkin"
             content={
               <>
                 <ul className="list-disc list-inside">
-                  <li>{formatList(user.dailyCheckinSettings.days)}</li>
-                  <li>In the {capitalize(user.dailyCheckinSettings.time)}</li>
+                  <li>{formatList(user.dailyCheckinDays)}</li>
+                  <li>In the {capitalize(user.dailyCheckinTime)}</li>
                 </ul>
               </>
             }

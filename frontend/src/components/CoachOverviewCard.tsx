@@ -1,19 +1,19 @@
-import React, { useState } from "react";
-import { parseISO, formatDistance } from "date-fns";
+import { useApiWithAuth } from "@/api";
+import { clearCoachSuggestedSessionsInPlan, updatePlan, upgradeCoachSuggestedSessionsToPlanSessions } from "@/app/actions";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { MessageBubble } from "./MessageBubble";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { PlanStatus } from "./PlanProgressCard";
-import { Button } from "./ui/button";
-import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
-import { ArrowBigRight, Check, Loader2, X } from "lucide-react";
 import { PlanSession } from "@prisma/client";
+import { formatDistance } from "date-fns";
+import { ArrowBigRight, Check, Loader2, X } from "lucide-react";
+import React, { useState } from "react";
 import { toast } from "react-hot-toast";
-import { useApiWithAuth } from "@/api";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
-import { clearCoachSuggestedSessionsInPlan, updatePlan, upgradeCoachSuggestedSessionsToPlanSessions } from "@/app/actions";
+import { MessageBubble } from "./MessageBubble";
+import { PlanStatus } from "./PlanProgressCard";
+import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Button } from "./ui/button";
 
 interface CoachOverviewCardProps {
   selectedPlan: CompletePlan;
@@ -217,7 +217,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                         <SmallActivityEntryCard
                           key={sessionId}
                           entry={{
-                            date: parseISO(session.date),
+                            date: session.date,
                             activityId: session.activityId,
                             quantity: session.quantity,
                             description: session.descriptiveGuide,

@@ -1,38 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { updatePlans } from "@/app/actions";
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
-import { Plus, PlusSquare, RefreshCw } from "lucide-react";
-import Link from "next/link";
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import {
-  DndContext,
   closestCenter,
-  KeyboardSensor,
+  DndContext,
+  DragEndEvent,
   MouseSensor,
   TouchSensor,
   useSensor,
-  useSensors,
-  DragEndEvent,
+  useSensors
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
-  horizontalListSortingStrategy,
   useSortable,
-  verticalListSortingStrategy,
+  verticalListSortingStrategy
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import PlanCard from "./PlanCard";
-import { useRouter } from "next/navigation";
-import Divider from "./Divider";
-import { updatePlans } from "@/app/actions";
+import { addMonths, format, isBefore } from "date-fns";
+import { Plus, PlusSquare, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { parseISO, format, addMonths, isBefore } from "date-fns";
+import Divider from "./Divider";
+import PlanCard from "./PlanCard";
 
 // Helper function to check if a plan is expired
-export const isPlanExpired = (plan: CompletePlan): boolean => {
+export const isPlanExpired = (plan: {finishingDate: Date | null}): boolean => {
   if (!plan.finishingDate) return false;
-  return isBefore(plan. finishingDate, new Date());
+  return isBefore(plan.finishingDate, new Date());
 };
 
 // Function to sort plans by sortOrder field, with fallback to creation date

@@ -1,14 +1,14 @@
 "use client";
 
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { MessageHistoryViewer } from "@/components/MessageHistoryViewer";
 import { Button } from "@/components/ui/button";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function MessageHistoryPage() {
   const { messagesData } = useUserPlan();
-  const messages = (messagesData.data?.messages || []).filter(message => message.text.trim() !== '');
+  const messages = (messagesData.data?.messages || []).filter(message => message.content?.trim() !== '');
   const router = useRouter();
 
   if (messagesData.isLoading) {

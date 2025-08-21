@@ -1,19 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useApiWithAuth } from "@/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
-  User,
-  Activity,
-  ApiPlan,
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
-import { Button } from "@/components/ui/button";
-import { toast } from "react-hot-toast";
-import { Loader2 } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@clerk/nextjs";
+import { Activity, User } from "@prisma/client";
+import { Plan } from "@prisma/types";
+import { Loader2 } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 
 export default function ClientPage() {
   const params = useParams();
@@ -24,7 +23,7 @@ export default function ClientPage() {
   const { isSignedIn } = useUser();
   const [inviterData, setInviterData] = useState<{
     user: User;
-    plans: ApiPlan[];
+    plans: Plan[];
     activities: Activity[];
   } | null>(null);
   const [isLoadingInviterData, setIsLoadingInviterData] = useState(true);
@@ -32,8 +31,8 @@ export default function ClientPage() {
   const searchParams = useSearchParams();
   const referrer = searchParams.get("referrer");
 
-  const areFriends = currentUser?.user?.friendIds?.includes(
-    inviterData?.user?.id || ""
+  const areFriends = currentUser?.friends?.some(
+    (friend) => friend.id === inviterData?.user?.id
   );
 
   useEffect(() => {
@@ -95,7 +94,7 @@ export default function ClientPage() {
       router.push(redirectUrl);
       return;
     } else if (referrer) {
-      if (currentUser?.user?.username === referrer) {
+      if (currentUser?.username === referrer) {
         toast("You can't refer yourself", {icon: "😅"});
         router.push(`/`);
         return;
@@ -116,8 +115,8 @@ export default function ClientPage() {
         <div className="flex flex-col items-center space-y-4">
           <Avatar className="w-24 h-24">
             <AvatarImage
-              src={inviterData.user?.picture}
-              alt={inviterData.user?.name}
+              src={inviterData.user?.picture || ""}
+              alt={inviterData.user?.name || ""}
             />
             <AvatarFallback>{inviterData.user?.name?.[0]}</AvatarFallback>
           </Avatar>
@@ -137,7 +136,7 @@ export default function ClientPage() {
           <div>
             <h2 className="text-xl font-medium mb-4">Plans</h2>
             <div className="grid gap-3">
-              {inviterData.plans.map((plan: ApiPlan, index: number) => (
+              {inviterData.plans.map((plan: Plan, index: number) => (
                 <div
                   key={index}
                   className="flex items-center gap-2 p-3 bg-white rounded-lg border"

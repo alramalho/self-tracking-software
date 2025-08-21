@@ -1,22 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import posthog from "posthog-js";
-import { useUserPlan, hasCachedUserData } from "@/contexts/UserGlobalContext";
-import { useSession } from "@clerk/nextjs";
-import { useNotifications } from "@/hooks/useNotifications";
-import BottomNav from "./BottomNav";
-import { Loader2 } from "lucide-react";
-import FeedbackForm from "./FeedbackForm";
-import { toast } from "react-hot-toast";
-import { usePathname, useRouter } from "next/navigation";
-import GenericLoader from "./GenericLoader";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
-import { cn } from "@/lib/utils";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useOnboardingCompleted } from "@/app/onboarding/components/OnboardingContext";
+import { hasCachedUserData, useUserPlan } from "@/contexts/UserGlobalContext";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { useSession } from "@clerk/nextjs";
+import { Loader2 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import posthog from "posthog-js";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
+import BottomNav from "./BottomNav";
+import FeedbackForm from "./FeedbackForm";
+import GenericLoader from "./GenericLoader";
 
 export default function GeneralInitializer({
   children,
@@ -37,8 +37,8 @@ export default function GeneralInitializer({
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [initialCacheExists] = useState(() => hasCachedUserData());
   const hasFriends =
-    userData?.friendIds?.length &&
-    userData?.friendIds?.length > 0;
+    userData?.friends?.length &&
+    userData?.friends?.length > 0;
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const router = useRouter();
   const { isOnboardingCompleted } = useOnboardingCompleted();

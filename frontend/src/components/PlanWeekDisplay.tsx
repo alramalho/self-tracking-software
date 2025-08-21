@@ -1,33 +1,29 @@
-import {
-  startOfWeek,
-  endOfWeek,
-  isSameWeek,
-  isAfter,
-  isBefore,
-  format,
-  isFuture,
-} from "date-fns";
-import { cn } from "@/lib/utils";
-import {
-  Activity,
-  Plan,
-  PlanSession,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
-import { usePlanProgress, PlanProgressData } from "@/contexts/PlanProgressContext";
+import { PlanProgressData, usePlanProgress } from "@/contexts/PlanProgressContext";
 import {
   isWeekCompleted as checkIsWeekCompleted,
   getCompletedOn,
   isSessionCompleted,
 } from "@/contexts/PlanProgressContext/lib";
+import {
+  CompletePlan,
+  useUserPlan,
+} from "@/contexts/UserGlobalContext";
+import { cn } from "@/lib/utils";
+import { Activity, PlanSession } from "@prisma/client";
+import {
+  endOfWeek,
+  format,
+  isAfter,
+  isSameWeek
+} from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import Confetti from "react-confetti-boom";
 import { useInView } from "react-intersection-observer";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Confetti from "react-confetti-boom";
 
 interface PlanWeekDisplayProps {
-  plan: Plan;
+  plan: CompletePlan;
   title?: string | React.ReactNode;
   date: Date;
   className?: string;
@@ -70,7 +66,7 @@ export const PlanWeekDisplay = ({
   });
 
   const totalPlannedActivities =
-    plan.outlineType === "timesPerWeek"
+    plan.outlineType === "TIMES_PER_WEEK"
       ? (week?.plannedActivities as number)
       : (week?.plannedActivities as PlanSession[])?.length || 0;
       
@@ -199,7 +195,7 @@ export const PlanWeekDisplay = ({
       </div>
 
       {/* coming up section, wherewe either display  */}
-      {plan.outlineType == "timesPerWeek" && !isWeekCompleted && (
+      {plan.outlineType == "TIMES_PER_WEEK" && !isWeekCompleted && (
         <div className="flex flex-col items-start justify-center gap-0 mt-4">
           <span className="text-sm text-gray-500">Coming up, any of:</span>
           <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 mt-2">
@@ -210,7 +206,7 @@ export const PlanWeekDisplay = ({
         </div>
       )}
 
-      {plan.outlineType == "specific" && (isCurrentWeek || isFutureWeek) && (
+      {plan.outlineType == "SPECIFIC" && (isCurrentWeek || isFutureWeek) && (
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
           <span className="text-sm text-gray-500">Coming up:</span>
           <div className="flex flex-row flex-wrap gap-2">
@@ -243,7 +239,7 @@ export const PlanWeekDisplay = ({
                       date: session.date,
                       activityId: session.activityId,
                       quantity: session.quantity,
-                      description: session.descriptive_guide,
+                      description: session.descriptiveGuide,
                     }}
                     onClick={(sessionId) => {
                       setSelectedSession(sessionId);

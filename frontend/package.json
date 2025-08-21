@@ -55,6 +55,7 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^10.16.4",
     "heic2any": "^0.0.4",
+    "idb": "^8.0.3",
     "lucide-react": "^0.451.0",
     "next": "14.2.5",
     "next-themes": "^0.3.0",

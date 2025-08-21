@@ -1,16 +1,17 @@
 "use client";
 
+import { useApiWithAuth } from "@/api";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { DailyCheckinTime } from "@prisma/client";
 import { Check } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
-import { Button } from "./ui/button";
+import toast from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import FeedbackForm from "./FeedbackForm";
-import { User, useUserPlan } from "@/contexts/UserGlobalContext";
-import toast from "react-hot-toast";
-import { useApiWithAuth } from "@/api";
-import Link from "next/link";
-import { getThemeVariants } from "@/utils/theme";
-import { useThemeColors } from "@/hooks/useThemeColors";
+import { Button } from "./ui/button";
 
 interface RecurrentCheckinPopoverProps {
   open: boolean;
@@ -31,14 +32,11 @@ const RecurrentCheckinPopover: React.FC<RecurrentCheckinPopoverProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const [isSaving, setIsSaving] = React.useState(false);
 
-  type DayType = NonNullable<User['dailyCheckinSettings']>['days'][number];
-  type TimeType = NonNullable<User['dailyCheckinSettings']>['time'];
-  
-  const [selectedDays, setSelectedDays] = React.useState<DayType[]>(
-    userData?.dailyCheckinSettings?.days || []
+  const [selectedDays, setSelectedDays] = React.useState<string[]>(
+    userData?.dailyCheckinDays || []
   );
-  const [selectedTimes, setSelectedTimes] = React.useState<TimeType | null>(
-    userData?.dailyCheckinSettings?.time || null
+  const [selectedTimes, setSelectedTimes] = React.useState<DailyCheckinTime | null>(
+    userData?.dailyCheckinTime || null
   );
 
   const days = {
@@ -58,7 +56,7 @@ const RecurrentCheckinPopover: React.FC<RecurrentCheckinPopoverProps> = ({
   const descriptionOfTimeOfDay = ["7-10am", "12-3pm", "6-9pm"];
 
   const toggleDay = (day: string) => {
-    const dayKey = Object.entries(days).find(([_, value]) => value === day)?.[0] as DayType;
+    const dayKey = Object.entries(days).find(([_, value]) => value === day)?.[0] as string;
     if (dayKey) {
       setSelectedDays((prev) =>
         prev.includes(dayKey) ? prev.filter((d) => d !== dayKey) : [...prev, dayKey]
@@ -67,7 +65,7 @@ const RecurrentCheckinPopover: React.FC<RecurrentCheckinPopoverProps> = ({
   };
 
   const toggleTime = (time: string) => {
-    const timeKey = Object.entries(timeOfDay).find(([_, value]) => value === time)?.[0] as TimeType;
+    const timeKey = Object.entries(timeOfDay).find(([_, value]) => value === time)?.[0] as DailyCheckinTime;
     if (timeKey) {
       setSelectedTimes((prev) => (prev === timeKey ? null : timeKey));
     }
@@ -146,7 +144,7 @@ const RecurrentCheckinPopover: React.FC<RecurrentCheckinPopoverProps> = ({
                   className="relative w-5 h-5 flex items-center justify-center cursor-pointer"
                   onClick={() => toggleDay(day)}
                 >
-                  {selectedDays.includes(key as DayType) && (
+                  {selectedDays.includes(key as string) && (
                     <Check className={`h-5 w-5 ${variants.text}`} />
                   )}
                 </div>
@@ -170,14 +168,14 @@ const RecurrentCheckinPopover: React.FC<RecurrentCheckinPopoverProps> = ({
               <div
                 key={key}
                 className={`relative flex-1 p-4 rounded-md border cursor-pointer transition-all ${
-                  selectedTimes === key as TimeType
+                  selectedTimes === key as DailyCheckinTime
                     ? `${variants.card.selected.border} ${variants.card.selected.bg}`
                     : "border-gray-300"
                 }`}
                 onClick={() => toggleTime(time)}
               >
                 <div className="absolute top-1 right-1">
-                  {selectedTimes === key as TimeType && (
+                  {selectedTimes === key as DailyCheckinTime && (
                     <Check className={`h-4 w-4 ${variants.text}`} />
                   )}
                 </div>

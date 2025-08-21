@@ -1,26 +1,25 @@
 "use client";
 
-import React from "react";
+import { PlanOutlineType } from "@prisma/client";
 import { CalendarDays, Sparkles } from "lucide-react";
 import { useOnboarding } from "../OnboardingContext";
-import { PlanType } from "@/contexts/UserGlobalContext";
 
 export const PlanTypeSelector = () => {
   const { completeStep, setPlanType, planType } = useOnboarding();
 
-  const handlePlanSelect = (selectedType: PlanType) => {
+  const handlePlanSelect = (selectedType: PlanOutlineType) => {
     completeStep("plan-type-selection", { planType: selectedType });
   };
 
   const planOptions = [
     {
-      id: "timesPerWeek" as const,
+      id: "TIMES_PER_WEEK" as const,
       title: "Times per Week",
       description: "Set how many times per week you want to do activities",
       icon: CalendarDays,
     },
     {
-      id: "specific" as const,
+      id: "SPECIFIC" as const,
       title: "Custom Plan",
       description: "AI will generate a personalized schedule for you",
       icon: Sparkles,

@@ -10,6 +10,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "noImplicitReturns": false,
     "plugins": [
       {
         "name": "next"

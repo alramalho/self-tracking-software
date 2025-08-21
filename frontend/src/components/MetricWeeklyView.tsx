@@ -1,6 +1,6 @@
-import React from "react";
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
-import { Activity } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
+import React from "react";
 
 interface Metric {
   id: string;

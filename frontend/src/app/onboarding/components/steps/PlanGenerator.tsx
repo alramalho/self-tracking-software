@@ -1,23 +1,16 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  CalendarDays,
-  CheckCheck,
-  CheckCircle,
-  CheckIcon,
-  Route,
-  TrendingUp,
-  UserRoundPlus,
-} from "lucide-react";
-import { useOnboarding } from "../OnboardingContext";
-import { useEffect, useState, useRef } from "react";
-import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useApiWithAuth } from "@/api";
+import { CompletePlan as Plan } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  CheckCheck
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
 import { withFadeUpAnimation } from "../../lib";
+import { useOnboarding } from "../OnboardingContext";
 
 const PlanCard = ({
   plan,
@@ -27,7 +20,7 @@ const PlanCard = ({
   onSelect,
   index,
 }: {
-  plan: ApiPlan;
+  plan: Plan;
   icon: React.ReactNode;
   label: React.ReactNode;
   isSelected: boolean;
@@ -149,7 +142,7 @@ const PlanGenerator = () => {
     setSelectedPlan,
   } = useOnboarding();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [generatedPlans, setGeneratedPlans] = useState<ApiPlan[] | null>(plans);
+  const [generatedPlans, setGeneratedPlans] = useState<Plan[] | null>(plans);
   const [generatedActivities, setGeneratedActivities] = useState<Activity[]>(
     []
   );
@@ -171,7 +164,7 @@ const PlanGenerator = () => {
   //   }
   // };
 
-  const handlePlanSelect = (plan: ApiPlan) => {
+  const handlePlanSelect = (plan: Plan) => {
     setSelectedPlan(plan);
     completeStep("plan-generator", {
       selectedPlan: plan,

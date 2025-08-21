@@ -1,7 +1,7 @@
-import React from "react";
 import { Button } from "@/components/ui/button";
+import { FinishedCallback } from "@/hooks/useMicrophone";
 import { Mic, Send, X } from "lucide-react";
-import { FinishedCallback, useMicrophone } from "@/hooks/useMicrophone";
+import React from "react";
 import { InputContainer } from "./InputContainer";
 
 interface VoiceModeInputProps {

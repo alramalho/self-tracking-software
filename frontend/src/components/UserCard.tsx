@@ -1,31 +1,26 @@
-import React, { useState } from "react";
-import {
-  Activity,
-  ActivityEntry,
-  ApiPlan,
-  User,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
-import { posthog } from "posthog-js";
 import { useApiWithAuth } from "@/api";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
-import { Send, UserPlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
-import { useTheme } from "@/contexts/ThemeContext";
-import { getThemeVariants } from "@/utils/theme";
-import { Textarea } from "@/components/ui/textarea";
-import { differenceInDays, formatDistanceToNow } from "date-fns";
 import PlanStreak from "@/components/PlanStreak";
+import { Button } from "@/components/ui/button";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
+import { Textarea } from "@/components/ui/textarea";
+import { useTheme } from "@/contexts/ThemeContext";
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { getThemeVariants } from "@/utils/theme";
+import { Activity, ActivityEntry, User } from "@prisma/client";
+import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
+import { differenceInDays, formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { posthog } from "posthog-js";
+import React, { useState } from "react";
+import toast from "react-hot-toast";
 
 interface UserCardProps {
   user: User;
   score?: number;
-  plan?: ApiPlan;
-  plans?: ApiPlan[];
+  plan?: CompletePlan;
+  plans?: CompletePlan[];
   activities?: Activity[];
   activityEntries?: ActivityEntry[];
   showFriendRequest?: boolean;
@@ -60,8 +55,8 @@ const UserCard: React.FC<UserCardProps> = ({
   const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
   const [sentFriendRequest, setSentFriendRequest] = useState(false);
   
-  const isOlderThan30Days = (date: string) => {
-    return differenceInDays(new Date(), new Date(date)) > 30;
+  const isOlderThan30Days = (date: Date) => {
+    return differenceInDays(new Date(), date) > 30;
   };
 
   const handleSendFriendRequest = async () => {
@@ -145,7 +140,7 @@ const UserCard: React.FC<UserCardProps> = ({
             onClick={handleProfileClick}
           >
             <img
-              src={user.picture}
+              src={user.picture || ""}
               alt={user.name || "User"}
               className="w-full h-full object-cover"
             />
@@ -185,7 +180,7 @@ const UserCard: React.FC<UserCardProps> = ({
           )}
 
           <div className="flex items-center text-sm text-gray-600">
-            {!user.last_active_at || isOlderThan30Days(user.last_active_at) ? (
+            {!user.lastActiveAt || isOlderThan30Days(user.lastActiveAt) ? (
               <>
                 <div
                   className="flex items-center gap-1 relative"
@@ -224,7 +219,7 @@ const UserCard: React.FC<UserCardProps> = ({
                 <span>
                   Last active{" "}
                   {formatDistanceToNow(
-                    new Date(user.last_active_at || user.createdAt!),
+                    new Date(user.lastActiveAt || user.createdAt!),
                     { addSuffix: true }
                   )}{" "}
                 </span>

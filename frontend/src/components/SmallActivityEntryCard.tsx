@@ -1,15 +1,14 @@
+import { cn } from "@/lib/utils";
+import { Activity } from "@prisma/client";
 import {
-  format,
-  isPast,
-  isToday,
-  parseISO,
   differenceInDays,
-  isYesterday,
+  format,
   isSameDay,
+  isToday,
+  isYesterday
 } from "date-fns";
 import { Check } from "lucide-react";
-import { ActivityEntry, Activity } from "@/contexts/UserGlobalContext";
-import { cn } from "@/lib/utils";
+
 
 export interface Entry {
   date: Date;

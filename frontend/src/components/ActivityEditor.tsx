@@ -1,31 +1,29 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Trash2, Check } from "lucide-react";
-import { useApiWithAuth } from "@/api";
+import {
+  useUserPlan,
+} from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
+import { Loader2, Trash2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
-import {
-  Activity,
-  useUserPlan,
-  VisibilityType,
-} from "@/contexts/UserGlobalContext";
 import ConfirmDialog from "./ConfirmDialog";
-import { EmojiInput } from "./ui/EmojiInput";
-import ActivityPrivacyDropdown from "./ActivityPrivacyDropdown";
 import SteppedColorPicker from "./SteppedColorPicker";
+import { EmojiInput } from "./ui/EmojiInput";
 import { Separator } from "./ui/separator";
 
-export function toReadablePrivacySetting(privacySetting: VisibilityType) {
-  switch (privacySetting) {
-    case "public":
-      return "Everyone";
-    case "private":
-      return "Only me";
-    case "friends":
-      return "Only Friends";
-  }
-}
+// export function toReadablePrivacySetting(privacySetting: VisibilityType) {
+//   switch (privacySetting) {
+//     case "public":
+//       return "Everyone";
+//     case "private":
+//       return "Only me";
+//     case "friends":
+//       return "Only Friends";
+//   }
+// }
 
 interface ActivityEditorProps {
   onClose: () => void;
@@ -44,12 +42,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const { useCurrentUserDataQuery, updateLocalUserData, syncCurrentUserWithProfile } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: userData } = currentUserDataQuery;
-  const [privacySetting, setPrivacySetting] = useState<VisibilityType>(
-    activity?.privacy_settings ||
-      userData?.defaultActivityVisibility ||
-      "public"
-  );
-  const [colorHex, setColorHex] = useState(activity?.color_hex || "");
+  // const [privacySetting, setPrivacySetting] = useState<VisibilityType>(
+  //   activity?.privacy_settings ||
+  //     userData?.defaultActivityVisibility ||
+  //     "public"
+  // );
+  const [colorHex, setColorHex] = useState(activity?.colorHex || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const api = useApiWithAuth();
@@ -63,12 +61,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       setTitle(activity.title || "");
       setMeasure(activity.measure || "");
       setEmoji(activity.emoji || "");
-      setPrivacySetting(
-        activity.privacy_settings ||
-          userData?.defaultActivityVisibility ||
-          "public"
-      );
-      setColorHex(activity.color_hex || "");
+      // setPrivacySetting(
+      //   activity.privacy_settings ||
+      //     userData?.defaultActivityVisibility ||
+      //     "public"
+      // );
+      setColorHex(activity.colorHex || "");
     }
   }, [activity, userData?.defaultActivityVisibility]);
 
@@ -108,8 +106,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         emoji,
         title: title.trim(),
         measure: measure.trim(),
-        privacy_settings: privacySetting,
-        color_hex: colorHex === "" ? null : colorHex,
+        // privacy_settings: privacySetting,
+        colorHex: colorHex === "" ? null : colorHex,
       });
       
       const savedActivity = response.data as Activity;

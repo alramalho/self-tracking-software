@@ -1,20 +1,16 @@
-import React, { useEffect, useState } from "react";
-import {
-  DynamicUISuggester,
-  BaseExtractionResponse,
-} from "./DynamicUISuggester";
-import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
 import {
-  Activity,
-  ActivityEntry,
-  ApiPlan,
-  PlanMilestone,
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
-import { EntryCard } from "./EntryCard";
+import { Activity, ActivityEntry } from "@prisma/client";
 import { useMutation } from "@tanstack/react-query";
-import { Description } from "@radix-ui/react-alert-dialog";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  BaseExtractionResponse,
+  DynamicUISuggester,
+} from "./DynamicUISuggester";
+import { EntryCard } from "./EntryCard";
 
 // Interface for plan extraction response
 interface PastWeekLoggingResponse extends BaseExtractionResponse {
@@ -81,7 +77,7 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
     mutationFn: async (entry: ActivityEntry) => {
       const formData = new FormData();
       formData.append("activityId", entry.activityId);
-      formData.append("iso_date_string", entry.date);
+      formData.append("iso_date_string", entry.date.toISOString());
       formData.append("quantity", entry.quantity.toString());
       formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
 

@@ -1,14 +1,14 @@
-import React, { useState } from "react";
-import {
-  DynamicUISuggester,
-  BaseExtractionResponse,
-} from "@/components/DynamicUISuggester";
-import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
-import { useOnboarding } from "../OnboardingContext";
-import { AlertCircle, BicepsFlexed, Crosshair, Goal, Volleyball } from "lucide-react";
-import { Activity } from "@/contexts/UserGlobalContext";
+import {
+  BaseExtractionResponse,
+  DynamicUISuggester,
+} from "@/components/DynamicUISuggester";
+import { Activity } from "@prisma/client";
+import { AlertCircle, BicepsFlexed } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { withFadeUpAnimation } from "../../lib";
+import { useOnboarding } from "../OnboardingContext";
 
 interface PlanActivitySetterResponse extends BaseExtractionResponse {
   activities?: Activity[];

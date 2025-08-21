@@ -1,5 +1,3 @@
-import React from 'react';
-import { Message } from "@/hooks/useMessageHistory";
 import {
   ChatBubble,
   ChatBubbleAvatar,
@@ -7,7 +5,9 @@ import {
 } from "@/components/ui/chat/chat-bubble";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
 import { useUserPlan } from '@/contexts/UserGlobalContext';
+import { Message } from "@/hooks/useMessageHistory";
 import { Eclipse } from 'lucide-react';
+import React from 'react';
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -28,7 +28,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages }) => {
           >
             <ChatBubbleAvatar
               src={
-                message.role === "user" ? userData?.picture : undefined
+                message.role === "user" ? userData?.picture || "" : undefined
               }
               fallback={<Eclipse className="w-8 h-8 bg-transparent" />}
             />

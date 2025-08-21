@@ -472,4 +472,5 @@ enum RecommendationObjectType {
 enum MessageRole {
   USER
   ASSISTANT
+  SYSTEM
 }

@@ -1,7 +1,7 @@
-import { Check } from "lucide-react";
-import { Activity } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants, ThemeColor } from "@/utils/theme";
+import { getThemeVariants } from "@/utils/theme";
+import { Activity } from "@prisma/client";
+import { Check } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 interface ActivityItemProps {

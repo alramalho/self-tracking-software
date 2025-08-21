@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useMemo } from "react";
 import {
   CompletePlan,
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
-import { Plan, Activity, ActivityEntry, PlanSession } from "@prisma/client";
+import { Activity, ActivityEntry, PlanSession } from "@prisma/client";
+import React, { createContext, useContext, useMemo } from "react";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
 
 export interface PlanAchievementResult {
@@ -24,7 +24,7 @@ export interface PlanWeek {
 }
 
 export interface PlanProgressData {
-  plan: Plan;
+  plan: CompletePlan;
   weeks: PlanWeek[];
   achievement: PlanAchievementResult;
 }
@@ -70,7 +70,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       //   : undefined
       
       return {
-        plan,
+        plan: plan as CompletePlan,
         achievement: calculatePlanAchievement(
           plan as CompletePlan,
           activityEntries,

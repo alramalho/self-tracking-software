@@ -1,23 +1,16 @@
 "use client";
 
-import { Message } from "@/contexts/UserGlobalContext";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { Message } from "@prisma/client";
 import { format, parseISO } from "date-fns";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface Emotion {
   name: string;
@@ -96,7 +89,7 @@ export function EmotionAreaChartViewer({
       )
       .reduce((acc: { [key: string]: number[] }, message) => {
         // Format the date to YYYY-MM-DD to group by day
-        const dateKey = format(parseISO(message.createdAt), "yyyy-MM-dd");
+        const dateKey = format(message.createdAt, "yyyy-MM-dd");
 
         let positiveCount = 0;
         let negativeCount = 0;

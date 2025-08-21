@@ -1,16 +1,16 @@
-import React, { useMemo } from "react";
-import {
-  SuggestionBase,
-  PlanGoalSuggestionData,
-  PlanActivitySuggestionData,
-  PlanTypeSuggestionData,
-  PlanSessionsSuggestionData,
-  PlanMilestoneSuggestionData,
-  PlanFinishingDateSuggestionData,
-} from "@/types/suggestions";
-import { toast } from "react-hot-toast";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  PlanActivitySuggestionData,
+  PlanFinishingDateSuggestionData,
+  PlanGoalSuggestionData,
+  PlanMilestoneSuggestionData,
+  PlanSessionsSuggestionData,
+  PlanTypeSuggestionData,
+  SuggestionBase,
+} from "@/types/suggestions";
+import React, { useMemo } from "react";
+import { toast } from "react-hot-toast";
 
 const PLAN_CREATION_ASSISTANT_MEMORY_IN_MINUTES = 180; // 3 hours
 
@@ -71,9 +71,9 @@ const PlanActivitiesSnippet: React.FC<{
 );
 
 const PlanTypeSnippet: React.FC<{
-  planType: "specific" | "timesPerWeek";
+  planType: "SPECIFIC" | "TIMES_PER_WEEK";
 }> = ({ planType }) => {
-  const emoji = planType === "specific" ? "📆" : "✅";
+  const emoji = planType === "SPECIFIC" ? "📆" : "✅";
 
   return (
     <div className="border-l-4 border-purple-500 pl-3">
@@ -208,7 +208,7 @@ const PlanFinishingDateSnippet: React.FC<{
   </div>
 );
 
-export interface CompletePlan {
+export interface FullPlan {
   goal: string;
   activities: Array<{
     id: string;
@@ -216,7 +216,7 @@ export interface CompletePlan {
     emoji: string;
     measure: string;
   }>;
-  planType: "specific" | "timesPerWeek";
+  planType: "SPECIFIC" | "TIMES_PER_WEEK";
   sessions:
     | Array<{
         date: string;
@@ -240,7 +240,7 @@ export interface CompletePlan {
 
 interface PlanBuildingContainerProps {
   suggestions: SuggestionBase[];
-  onPlanAccepted: (plan: CompletePlan) => Promise<void>;
+  onPlanAccepted: (plan: FullPlan) => Promise<void>;
   onPlanRejected: () => Promise<void>;
   disabled: boolean;
 }
@@ -364,7 +364,7 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
     goalSuggestion &&
       activitiesSuggestion &&
       planTypeSuggestion &&
-      (planTypeSuggestion.data.plan_type === "specific"
+      (planTypeSuggestion.data.plan_type === "SPECIFIC"
         ? sessionsSuggestion
         : true) &&
       milestonesSuggestion &&
@@ -383,13 +383,11 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
         milestones: milestonesSuggestion?.data.milestones.map((m) => ({
           description: m.description,
           date: new Date(m.date).toISOString(),
-          progress: m.progress,
-          criteria: m.criteria
-            ?.filter((c) => "activityId" in c)
-            .map((c) => ({
-              activityId: (c as any).activityId,
-              quantity: (c as any).quantity,
-            })),
+          progress: m.progress || undefined,
+          criteria: m.criteria?.items.map((c) => ({
+            activityId: c.activityId,
+            quantity: c.quantity,
+          })) || undefined,
         })),
         finishingDate: finishingDateSuggestion?.data.finishingDate,
         createdAt: new Date().toISOString(),
@@ -434,13 +432,11 @@ export const PlanBuildingContainer: React.FC<PlanBuildingContainerProps> = ({
           milestones={milestonesSuggestion.data.milestones.map((m) => ({
             description: m.description,
             date: new Date(m.date).toISOString(),
-            progress: m.progress,
-            criteria: m.criteria
-              ?.filter((c) => "activityId" in c)
-              .map((c) => ({
-                activityId: (c as any).activityId,
-                quantity: (c as any).quantity,
-              })),
+            progress: m.progress || undefined,
+            criteria: m.criteria?.items.map((c) => ({
+              activityId: c.activityId,
+              quantity: c.quantity,
+            })) || undefined,
           }))}
           activities={allUserActivities}
         />
