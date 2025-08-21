@@ -1,7 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { Prisma, ThemeColor } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export type HydratedCurrentUser = Awaited<
   ReturnType<typeof getCurrentUserData>

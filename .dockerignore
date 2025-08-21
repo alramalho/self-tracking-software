@@ -1,0 +1,11 @@
+aws-infrastructure/cdk.out
+aws-infrastructure/node_modules
+frontend/node_modules
+frontend/.next
+backend/node_modules
+backend-node/node_modules
+backend-node/dist
+.git
+*.log
+.DS_Store
+node_modules
