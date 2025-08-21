@@ -1,46 +1,46 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import { useApiWithAuth } from "@/api";
+import ActivityEntryEditor from "@/components/ActivityEntryEditor";
+import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
+import ActivityGridRenderer from "@/components/ActivityGridRenderer";
+import Divider from "@/components/Divider";
+import GenericLoader from "@/components/GenericLoader";
+import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
+import { PlanBadge } from "@/components/PlanBadge";
+import { isPlanExpired } from "@/components/PlansRenderer";
+import StreakDetailsPopover from "@/components/profile/PlanProgresPopover";
+import ProfileSettingsPopover, {
+  ActiveView,
+} from "@/components/profile/ProfileSettingsPopover";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useShareOrCopy } from "@/hooks/useShareOrCopy";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { differenceInDays, parseISO, subDays } from "date-fns";
 import {
   Bell,
   ChartArea,
   Check,
+  ChevronLeft,
   History,
+  Medal,
   Settings,
   UserPlus,
   X,
-  ChevronLeft,
-  Medal,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { useNotifications } from "@/hooks/useNotifications";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "react-hot-toast";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { parseISO, differenceInDays, subDays } from "date-fns";
-import { useParams, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { useApiWithAuth } from "@/api";
 import Link from "next/link";
-import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
-import ActivityEntryEditor from "@/components/ActivityEntryEditor";
-import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
-import Divider from "@/components/Divider";
-import ActivityGridRenderer from "@/components/ActivityGridRenderer";
+import { useParams, useSearchParams } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import { PlanBadge } from "@/components/PlanBadge";
-import ProfileSettingsPopover, {
-  ActiveView,
-} from "@/components/profile/ProfileSettingsPopover";
-import { getThemeVariants } from "@/utils/theme";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import GenericLoader from "@/components/GenericLoader";
-import { isPlanExpired } from "@/components/PlansRenderer";
-import StreakDetailsPopover from "@/components/profile/PlanProgresPopover";
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import { cn } from "@/lib/utils";
-import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
@@ -80,7 +80,7 @@ const ProfilePage: React.FC = () => {
     activityEntries: [],
     activities: [],
   };
-  const profileActivePlans = plans?.filter((p) => !isPlanExpired(p));
+  const profileActivePlans = plans?.filter((p) => !isPlanExpired({finishingDate: p.finishingDate}));
   const api = useApiWithAuth();
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<
     string | null

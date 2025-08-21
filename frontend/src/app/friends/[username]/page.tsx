@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { User, useUserPlan } from "@/contexts/UserGlobalContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Link from "next/link";
 import { useApiWithAuth } from "@/api";
-import { useQuery } from "@tanstack/react-query";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import UserSearch, { UserSearchResult } from "@/components/UserSearch";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, UserPlus, ChevronLeft } from "lucide-react";
+import React, { useState } from "react";
 
 const FriendsPage: React.FC<{ params: { username: string } }> = ({
   params,

@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { Check, X, Loader2 } from 'lucide-react';
 import { useApiWithAuth } from '@/api';
+import { Activity, ActivityEntry } from '@prisma/client';
+import { Check, Loader2, X } from 'lucide-react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { ActivityEntry } from '@/contexts/UserGlobalContext';
-import { Activity } from '@/contexts/UserGlobalContext';
 
 interface ActivitySuggestionProps {
   activity: Activity;
@@ -26,9 +25,10 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
 
   const handleAccept = async () => {
     try {
+      setIsAccepting(true);
       const formData = new FormData();
       formData.append("activityId", activity.id);
-      formData.append("iso_date_string", activityEntry.date);
+      formData.append("iso_date_string", activityEntry.date.toISOString());
       formData.append("quantity", activityEntry.quantity.toString());
       formData.append("isPublic", "false");
 
@@ -41,6 +41,7 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
       
       toast.success(`Logged ${activity.title} for ${activityEntry.date}`);
       onSuggestionHandled();
+      setIsAccepting(false);
     } catch (error) {
       toast.error("Failed to log activity");
       throw error;
@@ -49,11 +50,13 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
   
   const handleReject = async () => {
     try {
+      setIsRejecting(true);
       // Send system message to maintain AI memory
       await api.post("/ai/send-system-message", {
         message: `User rejected logging ${activity.title} for ${activityEntry.date} with ${activityEntry.quantity} ${activity.measure}`
       });
       onSuggestionHandled();
+      setIsRejecting(false);
     } catch (error) {
       toast.error("Failed to reject activity");
       throw error;

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import Number from "../Number";
-import { Activity, useUserPlan } from "@/contexts/UserGlobalContext";
-import ActivityItem  from "../ActivityItem";
-import { Plus } from "lucide-react";
 import ActivityEditor from "@/components/ActivityEditor";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
+import { Plus } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import ActivityItem from "../ActivityItem";
+import Number from "../Number";
 
 interface ActivitiesStepProps {
   onActivitiesChange: (activities: Activity[]) => void;

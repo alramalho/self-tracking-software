@@ -1,14 +1,15 @@
 "use client";
 
-import { Activity, ApiPlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan as Plan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { Activity } from "@prisma/client";
+import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import React, {
   createContext,
-  useContext,
   useCallback,
+  useContext,
 } from "react";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export interface OnboardingStep {
@@ -34,8 +35,8 @@ interface OnboardingContextValue {
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
-  plans: ApiPlan[] | null;
-  selectedPlan: ApiPlan | null;
+  plans: Plan[] | null;
+  selectedPlan: Plan | null;
   planGoal: string | null;
   planActivities: Activity[];
   planType: string | null;
@@ -44,7 +45,7 @@ interface OnboardingContextValue {
   setPlanGoal: (goal: string) => void;
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
-  setSelectedPlan: (plan: ApiPlan) => void;
+  setSelectedPlan: (plan: Plan) => void;
   setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
@@ -87,8 +88,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     {
       currentStep: initialStepId || steps[0]?.id || "",
       completedSteps: [] as string[],
-      plans: null as ApiPlan[] | null,
-      selectedPlan: null as ApiPlan | null,
+      plans: null as Plan[] | null,
+      selectedPlan: null as Plan | null,
       planGoal: null as string | null,
       planActivities: [] as Activity[],
       planProgress: null as string | null,
@@ -133,7 +134,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setOnboardingState((prevState) => ({ ...prevState, planType: type }));
   };
 
-  const setSelectedPlan = (plan: ApiPlan) => {
+  const setSelectedPlan = (plan: Plan) => {
     setOnboardingState((prevState) => ({ ...prevState, selectedPlan: plan }));
   };
 

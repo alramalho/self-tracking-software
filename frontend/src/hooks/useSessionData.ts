@@ -1,17 +1,10 @@
-import { useState, useEffect } from "react";
-import {
-  format,
-  parseISO,
-  isAfter,
-  isToday,
-  startOfWeek,
-  addWeeks,
-} from "date-fns";
-import { ApiPlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { addWeeks, format, isAfter, parseISO, startOfWeek } from "date-fns";
+import { useEffect, useState } from "react";
 
 export function useSessionData(
-  selectedPlan: ApiPlan,
-  getCompletedSessions: (plan: ApiPlan) => { date: string }[]
+  selectedPlan: CompletePlan,
+  getCompletedSessions: (plan: CompletePlan) => { date: string }[]
 ) {
   const [sessionData, setSessionData] = useState<
     { week: string; planned: number; completed: number | null }[]
@@ -24,7 +17,7 @@ export function useSessionData(
     const currentDate = new Date();
 
     const allDates = [
-      ...selectedPlan.sessions.map((s) => parseISO(s.date)),
+      ...selectedPlan.sessions.map((s) => s.date),
       ...completedSessions.map((s) => parseISO(s.date)),
     ].sort((a, b) => a.getTime() - b.getTime());
 
@@ -50,9 +43,7 @@ export function useSessionData(
     allDates.forEach((date) => {
       const weekKey = format(startOfWeek(date), "yyyy-MM-dd");
       if (
-        selectedPlan.sessions.some(
-          (s) => parseISO(s.date).getTime() === date.getTime()
-        )
+        selectedPlan.sessions.some((s) => s.date.getTime() === date.getTime())
       ) {
         cumulativePlanned += 1;
       }

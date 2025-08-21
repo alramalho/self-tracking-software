@@ -1,10 +1,10 @@
-import React from "react";
-import { ApiPlan } from "@/contexts/UserGlobalContext";
-import FireBadge from "./FireBadge";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
+import React from "react";
+import FireBadge from "./FireBadge";
 
 interface PlanStreakProps {
-  plan: ApiPlan;
+  plan: CompletePlan;
 }
 
 const PlanStreak: React.FC<PlanStreakProps> = ({ plan }) => {

@@ -1,11 +1,12 @@
-import React from "react";
-import { isSameWeek, format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import FireBadge from "./FireBadge";
-import { Collapsible, CollapsibleContent } from "./ui/collapsible";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { cn } from "@/lib/utils";
+import { isSameWeek } from "date-fns";
+import React from "react";
+import FireBadge from "./FireBadge";
 import { PlanProgressCard } from "./PlanProgressCard";
+import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 
 
 
@@ -92,7 +93,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
         return (
           <PlanProgressCard
             key={plan.id}
-            plan={plan}
+            plan={plan as CompletePlan}
             weeks={weeks}
             achievement={achievement}
             isCoached={isCoached}

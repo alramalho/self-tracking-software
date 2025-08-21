@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { useOnboarding } from "../OnboardingContext";
 import { withFadeUpAnimation } from "../../lib";
+import { useOnboarding } from "../OnboardingContext";
 
 const WelcomeStep = () => {
   const { completeStep } = useOnboarding();

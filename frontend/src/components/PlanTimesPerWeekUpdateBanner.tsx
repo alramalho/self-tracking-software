@@ -1,12 +1,11 @@
+import { CompletePlan } from '@/contexts/UserGlobalContext';
+import { Check, Loader2, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { Check, X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { ApiPlan } from '@/contexts/UserGlobalContext';
-
 interface PlanTimesPerWeekUpdateBannerProps {
   timesPerWeek: number;
   old_timesPerWeek: number;
-  plan?: ApiPlan;
+  plan?: CompletePlan;
   onAccept: () => Promise<void>;
   onReject: () => Promise<void>;
   disabled: boolean;

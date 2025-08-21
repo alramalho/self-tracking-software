@@ -184,6 +184,8 @@ backend
 -- metrics
 [x] log metric
 [x] check metric logged
+[] check daily check in logged
+[] check daily checkin properly display in table
 -- recommendations
 [x] implement plan index (now we don't have planIds array anymore)
 [x] can compute recommended users

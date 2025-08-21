@@ -1,15 +1,13 @@
-import React, { useState } from "react";
+import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { OutlineOption } from "../OutlineOption";
-import NumberInput from "../NumberInput";
-import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
-import { parseISO } from "date-fns";
-import Number from "../Number";
 import { Textarea } from "@/components/ui/textarea";
-import { PlanOutlineType } from "@prisma/client";
-import { Activity, PlanSession } from "@prisma/client";
 import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { Activity, PlanOutlineType, PlanSession } from "@prisma/client";
+import React, { useState } from "react";
+import Number from "../Number";
+import NumberInput from "../NumberInput";
+import { OutlineOption } from "../OutlineOption";
 
 interface OutlineStepProps {
   outlineType: PlanOutlineType;

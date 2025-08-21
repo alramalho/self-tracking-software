@@ -1,6 +1,5 @@
-import { Emotion } from "@/contexts/UserGlobalContext";
+import { MessageEmotion as Emotion } from "@prisma/client";
 import { Loader2 } from "lucide-react";
-import React from "react";
 
 export const EmotionBadges = ({
   emotions,

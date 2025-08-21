@@ -1,15 +1,13 @@
-import { Card } from "@/components/ui/card";
-import { MetricRater } from "@/components/MetricRater";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { Metric } from "@/contexts/UserGlobalContext";
-import { Button } from "@/components/ui/button";
 import { useApiWithAuth } from "@/api";
+import Divider from "@/components/Divider";
+import { MetricRater } from "@/components/MetricRater";
+import { Card } from "@/components/ui/card";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Metric } from "@prisma/client";
+import { isToday } from "date-fns";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
-import Divider from "@/components/Divider";
 import { DynamicUISuggester } from "./DynamicUISuggester";
-import { isToday } from "date-fns";
 
 interface MetricRating {
   rating: number;

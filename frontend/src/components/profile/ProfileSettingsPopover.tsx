@@ -1,44 +1,39 @@
-import React, { useState, useRef } from "react";
-import { useClerk } from "@clerk/nextjs";
-import { UserProfile } from "@clerk/nextjs";
-import {
-  LogOut,
-  Settings,
-  Paintbrush,
-  SquareArrowUp,
-  Brain,
-  User,
-  CreditCard,
-  LockKeyhole,
-  ChevronLeft,
-  Pencil,
-  CircleAlert,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { twMerge } from "tailwind-merge";
-import { capitalize } from "lodash";
-import AppleLikePopover from "@/components/AppleLikePopover";
-import AISettings from "@/components/AISettings";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
-import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
-import { usePostHog } from "posthog-js/react";
-import ConfirmDialog from "../ConfirmDialog";
-import { useUpgrade } from "@/contexts/UpgradeContext";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
-import PrivacySettings from "./ActivityPrivacySettings";
-import { motion, AnimatePresence } from "framer-motion";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
-import { Switch } from "../ui/switch";
 import { useApiWithAuth } from "@/api";
-import { toast } from "react-hot-toast";
+import AppleLikePopover from "@/components/AppleLikePopover";
+import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { useClerk, UserProfile } from "@clerk/nextjs";
+import { AnimatePresence, motion } from "framer-motion";
+import { capitalize } from "lodash";
+import {
+  ChevronLeft,
+  CircleAlert,
+  CreditCard,
+  LogOut,
+  Paintbrush,
+  Pencil,
+  Settings,
+  SquareArrowUp,
+  User
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
+import React, { useRef, useState } from "react";
+import { toast } from "react-hot-toast";
+import { twMerge } from "tailwind-merge";
+import ConfirmDialog from "../ConfirmDialog";
+import { Switch } from "../ui/switch";
+import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;

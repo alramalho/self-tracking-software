@@ -1,8 +1,5 @@
-import {
-  Activity,
-  ActivityEntry,
-  PlanMilestone,
-} from "@/contexts/UserGlobalContext";
+import { Activity, ActivityEntry } from "@prisma/client";
+import { PlanMilestone } from "@prisma/types";
 
 export interface SuggestionBase {
   id: string;
@@ -59,7 +56,7 @@ export interface PlanActivitySuggestionData extends SuggestionBase {
 export interface PlanTypeSuggestionData extends SuggestionBase {
   type: "plan_type";
   data: {
-    plan_type: "specific" | "timesPerWeek";
+    plan_type: "SPECIFIC" | "TIMES_PER_WEEK";
   };
 }
 

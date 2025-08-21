@@ -1,34 +1,34 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  useUserPlan,
-  Metric,
-  MetricEntry,
-  Activity,
-} from "@/contexts/UserGlobalContext";
-import { ArrowDown, Loader2 } from "lucide-react";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
 import { useApiWithAuth } from "@/api";
-import { toast } from "react-hot-toast";
-import { defaultMetrics } from "../metrics";
-import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
-import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
-import { MetricSelector } from "@/components/metrics/MetricSelector";
-import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
-import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
-import { useUpgrade } from "@/contexts/UpgradeContext";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
+import AINotification from "@/components/AINotification";
 import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
-import AINotification from "@/components/AINotification";
+import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
+import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
+import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
+import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import {
+  useUserPlan,
+} from "@/contexts/UserGlobalContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import {
+  Activity,
+  Metric,
+  MetricEntry
+} from "@prisma/client";
 import { subDays } from "date-fns";
-import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { ArrowDown, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
+import { defaultMetrics } from "../metrics";
 
 // Configuration constants
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
@@ -178,33 +178,33 @@ export default function InsightsDashboardPage() {
                   id: "demo1",
                   metricId: "demo",
                   rating: 8,
-                  date: "2024-03-09",
-                  createdAt: "2024-03-09T00:00:00Z",
+                  date: new Date("2024-03-09"),
+                  createdAt: new Date("2024-03-09T00:00:00Z"),
                 },
                 {
                   id: "demo2",
                   metricId: "demo",
                   rating: 7,
-                  date: "2024-03-07",
-                  createdAt: "2024-03-07T00:00:00Z",
+                  date: new Date("2024-03-07"),
+                  createdAt: new Date("2024-03-07T00:00:00Z"),
                 },
-              ]}
+              ] as MetricEntry[]}
               lastWeekEntries={[
                 {
                   id: "demo3",
                   metricId: "demo",
                   rating: 6,
-                  date: "2024-03-03",
-                  createdAt: "2024-03-03T00:00:00Z",
+                  date: new Date("2024-03-03"),
+                  createdAt: new Date("2024-03-03T00:00:00Z"),
                 },
                 {
                   id: "demo4",
                   metricId: "demo",
                   rating: 7,
-                  date: "2024-03-01",
-                  createdAt: "2024-03-01T00:00:00Z",
+                  date: new Date("2024-03-01"),
+                  createdAt: new Date("2024-03-01T00:00:00Z"),
                 },
-              ]}
+              ] as MetricEntry[]}
               onHelpClick={() => setTrendHelpMetricId("demo")}
             />
 
@@ -377,9 +377,8 @@ export default function InsightsDashboardPage() {
   // Check if an activity happened within the configured window before a date
   const activityHappenedWithinWindow = (
     activityId: string,
-    date: string
+    targetDate: Date
   ): boolean => {
-    const targetDate = new Date(date);
     const windowStart = new Date(targetDate);
     windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
 
@@ -501,7 +500,7 @@ export default function InsightsDashboardPage() {
     <div className="mx-auto p-6 max-w-2xl space-y-8">
       <div>
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
-        <DailyCheckinViewer entries={entries} />
+        <DailyCheckinViewer entries={entries.map((entry) => ({ date: entry.date.toISOString() }))} />
         <div className="mt-4">
           <DailyCheckinCard aiMessage={aiMessage} />
         </div>

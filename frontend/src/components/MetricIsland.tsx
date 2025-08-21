@@ -1,16 +1,18 @@
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { MetricRatingSelector } from "@/components/MetricRatingSelector";
+import { Button } from "@/components/ui/button";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
-import { Metric } from "@/contexts/UserGlobalContext";
-import { CircleCheck, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { CircleCheck, Loader2 } from "lucide-react";
+import React, { useState } from "react";
 import { PulsatingCirclePill } from "./ui/pulsating-circle-pill";
 
 interface MetricIslandProps {
-  metric: Metric;
+  metric: {
+    id: string;
+    title: string;
+    emoji: string;
+  };
   isLoggedToday: boolean;
   todaysRating?: number;
   isSkippedToday?: boolean;

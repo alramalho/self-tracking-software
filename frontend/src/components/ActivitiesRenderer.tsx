@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import { Activity, ActivityEntry } from "@prisma/client";
 import HeatMap from "@uiw/react-heat-map";
+import React, { useState } from "react";
 import toast from "react-hot-toast";
-import { Activity, ActivityEntry, Plan } from "@/contexts/UserGlobalContext";
 
 interface ActivitiesRendererProps {
   activities: Activity[];
@@ -15,7 +15,7 @@ const ActivitiesRenderer: React.FC<ActivitiesRendererProps> = ({ activities, act
     return activityEntries
       .filter((entry) => entry.activityId === activityId)
       .map((entry) => ({
-        date: entry.date.replaceAll("-", "/").split("T")[0],
+        date: entry.date.toISOString().replaceAll("-", "/").split("T")[0],
         count: entry.quantity,
       }));
   };

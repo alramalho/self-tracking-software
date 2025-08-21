@@ -1,4 +1,5 @@
-import { useUserPlan, Activity, MetricEntry } from "@/contexts/UserGlobalContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Activity } from "@prisma/client";
 import { isSameDay } from "date-fns";
 
 const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation

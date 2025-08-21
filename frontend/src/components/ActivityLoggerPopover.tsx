@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { Activity } from "@/contexts/UserGlobalContext";
-import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Activity } from "@prisma/client";
+import { useState } from "react";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 

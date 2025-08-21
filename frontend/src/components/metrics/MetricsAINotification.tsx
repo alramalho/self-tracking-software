@@ -1,10 +1,7 @@
-import React from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { useApiWithAuth } from "@/api";
 import AINotification from "@/components/AINotification";
 import { useAIMessageCache } from "@/hooks/useAIMessageCache";
-import { useFeatureFlag } from "@/hooks/useFeatureFlags";
+import { useRouter } from "next/navigation";
+import React from "react";
 
 export function MetricsAINotification() {
   const router = useRouter();

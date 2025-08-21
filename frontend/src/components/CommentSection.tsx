@@ -1,13 +1,14 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUserPlan, Comment } from "@/contexts/UserGlobalContext";
 import { useApiWithAuth } from "@/api";
-import toast from "react-hot-toast";
-import { parseISO, format, isToday, isYesterday, differenceInCalendarDays } from 'date-fns';
-import { getThemeVariants } from "@/utils/theme";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Send, X, ChevronDown, ChevronUp } from "lucide-react";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { getThemeVariants } from "@/utils/theme";
+import { Comment } from "@prisma/client";
+import { differenceInCalendarDays, format, isToday, isYesterday } from 'date-fns';
+import { ChevronDown, ChevronUp, Send, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 
 interface CommentSectionProps {
   activityEntryId: string;
@@ -19,8 +20,8 @@ interface CommentSectionProps {
   onToggleShowAll?: (shown: boolean) => void; // Callback when toggling
 }
 
-const getFormattedDate = (date: string) => {
-  const parsedDate = parseISO(date);
+const getFormattedDate = (date: Date) => {
+  const parsedDate = date;
   const now = new Date();
   
   if (isToday(parsedDate)) {
@@ -172,7 +173,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                   className="w-6 h-6 mt-1 cursor-pointer"
                   onClick={() => navigateToProfile(comment.username)}
                 >
-                  <AvatarImage src={comment.picture} alt={comment.username} />
+                  <AvatarImage src={comment.picture || undefined} alt={comment.username} />
                   <AvatarFallback>{comment.username[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
                 
@@ -210,8 +211,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         <form onSubmit={handleSubmitComment} className="flex gap-2 w-full">
           <div className={`flex items-center gap-2 p-2 w-full ${commentBg} rounded-lg border border-white/20 shadow-sm backdrop-blur-lg`}>
             <Avatar className="w-6 h-6">
-              <AvatarImage src={userData.user?.picture} />
-              <AvatarFallback>{userData.user?.name?.[0] || 'U'}</AvatarFallback>
+              <AvatarImage src={userData?.picture || undefined} />
+              <AvatarFallback>{userData?.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             
             <input

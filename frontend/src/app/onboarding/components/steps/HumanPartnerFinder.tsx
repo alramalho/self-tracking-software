@@ -1,26 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import AppleLikePopover from "@/components/AppleLikePopover";
+import { ApSearchComponent } from "@/components/ApSearch";
+import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
+import { Button } from "@/components/ui/button";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useShareOrCopy } from "@/hooks/useShareOrCopy";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  CalendarDays,
   PersonStanding,
   Search,
-  Send,
-  Sparkles,
-  Check,
-  X,
+  Send
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useShareOrCopy } from "@/hooks/useShareOrCopy";
-import AppleLikePopover from "@/components/AppleLikePopover";
-import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
-import { ApSearchComponent } from "@/components/ApSearch";
-import { FriendRequest, User, useUserPlan } from "@/contexts/UserGlobalContext";
-import { useApiWithAuth } from "@/api";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState } from "react";
 import { withFadeUpAnimation } from "../../lib";
 import { useOnboarding } from "../OnboardingContext";
 
@@ -75,68 +67,68 @@ const OptionCard = ({
   );
 };
 
-const FriendRequestCard = ({
-  request,
-  user,
-  type,
-  onAccept,
-  onReject,
-}: {
-  request: FriendRequest;
-  user: User | null;
-  type: "sent" | "received";
-  onAccept?: () => void;
-  onReject?: () => void;
-}) => {
-  return (
-    <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-      <Avatar className="w-10 h-10">
-        <AvatarImage src={user?.picture} alt={user?.name} />
-        <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
-      </Avatar>
+// const FriendRequestCard = ({
+//   request,
+//   user,
+//   type,
+//   onAccept,
+//   onReject,
+// }: {
+//   request: FriendRequest;
+//   user: User | null;
+//   type: "sent" | "received";
+//   onAccept?: () => void;
+//   onReject?: () => void;
+// }) => {
+//   return (
+//     <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+//       <Avatar className="w-10 h-10">
+//         <AvatarImage src={user?.picture} alt={user?.name} />
+//         <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
+//       </Avatar>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
-          {user?.name || "Unknown User"}
-        </p>
-        <p className="text-xs text-gray-500 truncate">
-          @{user?.username || "unknown"}
-        </p>
+//       <div className="flex-1 min-w-0">
+//         <p className="text-sm font-medium text-gray-900 truncate">
+//           {user?.name || "Unknown User"}
+//         </p>
+//         <p className="text-xs text-gray-500 truncate">
+//           @{user?.username || "unknown"}
+//         </p>
 
-        {request.message && (
-          <p className="text-xs text-gray-400 truncate mt-2">&quot;{request.message}&quot;</p>
-        )}
-      </div>
+//         {request.message && (
+//           <p className="text-xs text-gray-400 truncate mt-2">&quot;{request.message}&quot;</p>
+//         )}
+//       </div>
 
-      {type === "sent" && (
-        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-          Sent
-        </div>
-      )}
+//       {type === "sent" && (
+//         <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+//           Sent
+//         </div>
+//       )}
 
-      {type === "received" && (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
-            onClick={onAccept}
-          >
-            <Check className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-            onClick={onReject}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-};
+//       {type === "received" && (
+//         <div className="flex gap-2">
+//           <Button
+//             size="sm"
+//             variant="outline"
+//             className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
+//             onClick={onAccept}
+//           >
+//             <Check className="h-4 w-4" />
+//           </Button>
+//           <Button
+//             size="sm"
+//             variant="outline"
+//             className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+//             onClick={onReject}
+//           >
+//             <X className="h-4 w-4" />
+//           </Button>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
 const HumanPartnerFinder = () => {
   const { completeStep, } = useOnboarding();

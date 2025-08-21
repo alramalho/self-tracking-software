@@ -1,17 +1,16 @@
-import React from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { MetricEntry } from "@prisma/client";
+import { HelpCircle, TrendingDown, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
   LineChart,
-  XAxis,
-  YAxis,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
-import { MetricEntry } from "@/contexts/UserGlobalContext";
 
 interface MetricTrendCardProps {
   metric: {

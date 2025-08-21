@@ -1,42 +1,41 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useCallback,
-} from "react";
-import { parseISO, format } from "date-fns";
-import { useSession } from "@clerk/clerk-react";
-import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
-import {
-  useQuery,
-  UseQueryResult,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useApiWithAuth } from "@/api";
 import {
   getCurrentUserData,
-  getUserData,
-  getMetricsAndEntries,
   getMessages,
+  getMetricsAndEntries,
   getTimelineData,
+  getUserData,
   HydratedCurrentUser,
   HydratedUser,
   TimelineData,
   updateUser,
 } from "@/app/actions";
+import { useSession } from "@clerk/clerk-react";
+import { useClerk } from "@clerk/nextjs";
 import {
-  ThemeColor,
-  User,
+  Message,
+  MessageEmotion,
   Metric,
   MetricEntry,
   Notification,
-  Message,
-  MessageEmotion,
-  Recommendation
+  Recommendation,
+  ThemeColor,
+  User
 } from "@prisma/client";
 import { Plan, PlanMilestone } from "@prisma/types";
-import { useApiWithAuth } from "@/api";
+import {
+  useQuery,
+  useQueryClient,
+  UseQueryResult,
+} from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+} from "react";
+import { toast } from "react-hot-toast";
 
 type MessagesWithRelations = Message & {
   emotions: MessageEmotion[];

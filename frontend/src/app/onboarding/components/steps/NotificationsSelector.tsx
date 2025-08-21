@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Ban, CalendarDays, Sparkles, Check } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useOnboarding } from "../OnboardingContext";
-import { PlanType } from "@/contexts/UserGlobalContext";
-import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
+import { useNotifications } from "@/hooks/useNotifications";
+import { AnimatePresence, motion } from "framer-motion";
+import { Ban, Check } from "lucide-react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { withFadeUpAnimation } from "../../lib";
+import { useOnboarding } from "../OnboardingContext";
 
 const NotificationsSelector = () => {
   const { completeStep } = useOnboarding();

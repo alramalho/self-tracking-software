@@ -1,17 +1,18 @@
-import React from "react";
-import { useUserPlan, Notification } from "@/contexts/UserGlobalContext";
-import { useRouter } from "next/navigation";
 import { useApiWithAuth } from "@/api";
-import toast from "react-hot-toast";
-import { Check, X, MessageSquare, Eye, ScanFace } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import Link from "next/link";
-import posthog from "posthog-js";
-import { Remark } from "react-remark";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants, ThemeColor } from "@/utils/theme";
-import { formatTimeAgo } from "@/lib/utils";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { formatTimeAgo } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { Notification } from "@prisma/client";
+import { Check, Eye, X } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
+import React from "react";
+import toast from "react-hot-toast";
+import { Remark } from "react-remark";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface NotificationsProps {}
 
@@ -36,9 +37,9 @@ const Notifications: React.FC<NotificationsProps> = () => {
 
     let skipToast = false;
     const actionPromise = async () => {
-      if (notification.type === "info") {
+      if (notification.type === "INFO") {
         await concludeNotification();
-      } else if (notification.type === "engagement") {
+      } else if (notification.type === "ENGAGEMENT") {
         if (action === "dismiss") {
           await concludeNotification();
         } else if (action === "respond") {
@@ -48,11 +49,11 @@ const Notifications: React.FC<NotificationsProps> = () => {
           skipToast = true;
           if (
             notification.relatedData &&
-            notification.relatedData.message_id &&
-            notification.relatedData.message_text
+            (notification.relatedData as any).messageId &&
+            (notification.relatedData as any).messageText
           ) {
             router.push(
-              `/ai?assistantType=activity-extraction&messageId=${notification.relatedData.message_id}&messageText=${notification.relatedData.message_text}`
+              `/ai?assistantType=activity-extraction&messageId=${(notification.relatedData as any).messageId}&messageText=${(notification.relatedData as any).messageText}`
             );
           } else {
             toast.error(
@@ -61,9 +62,9 @@ const Notifications: React.FC<NotificationsProps> = () => {
           }
         }
         await concludeNotification(skipToast);
-      } else if (notification.type === "plan_invitation") {
+      } else if (notification.type === "PLAN_INVITATION") {
         router.push(`/join-plan/${notification.relatedId}`);
-      } else if (notification.type === "friend_request") {
+      } else if (notification.type === "FRIEND_REQUEST") {
         await api.post(
           `/${action}-${notification.type.replace("_", "-")}/${
             notification.relatedId
@@ -97,7 +98,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
     const iconSize = 20;
 
     switch (notification.type) {
-      case "friend_request":
+      case "FRIEND_REQUEST":
         return (
           <>
             <button
@@ -116,7 +117,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             </button>
           </>
         );
-      case "plan_invitation":
+      case "PLAN_INVITATION":
         return (
           <button
             onClick={() => handleNotificationAction(notification, "view")}
@@ -142,10 +143,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   const hasPictureData = (notification: Notification) => {
-    return notification.relatedData && notification.relatedData.picture;
+    return notification.relatedData && (notification.relatedData as any).picture;
   };
   const hasUsernameData = (notification: Notification) => {
-    return notification.relatedData && notification.relatedData.username;
+    return notification.relatedData && (notification.relatedData as any).username;
   };
 
   const handleClearAll = async () => {
@@ -238,10 +239,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
               >
                 <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
                   {[
-                    "friend_request",
-                    "plan_invitation",
-                    "info",
-                    "coach",
+                      "FRIEND_REQUEST",
+                    "PLAN_INVITATION",
+                    "INFO",
+                    "COACH",
                   ].includes(notification.type) &&
                     hasPictureData(notification) && (
                       <Link href={`/profile/${relatedData.username}`}>

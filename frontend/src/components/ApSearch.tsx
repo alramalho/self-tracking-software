@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import GenericLoader from "@/components/GenericLoader";
-import { useNotifications } from "@/hooks/useNotifications";
-import UserCard from "@/components/UserCard";
-import { getThemeVariants } from "@/utils/theme";
-import { cn } from "@/lib/utils";
-import UserSearch from "./UserSearch";
-import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
-import { Info, Bell } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import GenericLoader from "@/components/GenericLoader";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import UserCard from "@/components/UserCard";
+import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { Info } from "lucide-react";
+import React from "react";
+import toast from "react-hot-toast";
+import UserSearch from "./UserSearch";
 
 export const ApSearchComponent: React.FC = () => {
   const { useRecommendedUsersQuery, useCurrentUserDataQuery } = useUserPlan();
@@ -105,8 +105,8 @@ export const ApSearchComponent: React.FC = () => {
               </h3>
               <UserCard
                 user={currentUser}
-                plan={currentPlan}
-                plans={userData?.plans || []}
+                plan={currentPlan as CompletePlan}
+                plans={userData?.plans as CompletePlan[] || []}
                 activities={userData?.activities || []}
                 activityEntries={userData?.activityEntries || []}
                 showFriendRequest={false}
@@ -143,11 +143,11 @@ export const ApSearchComponent: React.FC = () => {
                 key={user.id}
                 user={user}
                 score={userScores[user.id] || 0}
-                plan={plan}
+                plan={plan as CompletePlan}
                 plans={
                   recommendationsData?.plans.filter((p) =>
                     p.userId === user.id
-                  ) || []
+                  ) as CompletePlan[] || []
                 }
                 showFriendRequest={true}
                 showScore={true}

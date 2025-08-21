@@ -1,28 +1,28 @@
-import React, { useEffect, useState } from "react";
-import { ApiPlan, PlanGroup, useUserPlan } from "@/contexts/UserGlobalContext";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import InviteButton from "./InviteButton";
-import {
-  Settings,
-  GripVertical,
-  GripHorizontal,
-  BadgeCheck,
-} from "lucide-react";
-import AppleLikePopover from "./AppleLikePopover";
-import { Button } from "./ui/button";
-import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
-import ConfirmDialog from "./ConfirmDialog";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
-import { twMerge } from "tailwind-merge";
-import { PlanEditModal } from "./PlanEditModal";
-import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { CompletePlan as Plan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import {
+  BadgeCheck,
+  GripHorizontal,
+  Settings
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { twMerge } from "tailwind-merge";
+import AppleLikePopover from "./AppleLikePopover";
+import ConfirmDialog from "./ConfirmDialog";
+import InviteButton from "./InviteButton";
+import { PlanEditModal } from "./PlanEditModal";
+import { Button } from "./ui/button";
 
+type PlanGroup = Plan["planGroup"];
 interface PlanCardProps {
-  plan: ApiPlan;
+  plan: Plan  ;
   planGroup?: PlanGroup;
   isSelected: boolean;
   currentUserId?: string;
@@ -51,8 +51,10 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const { useCurrentUserDataQuery } = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: currentUserData } = currentUserDataQuery;
-  const { isUserPremium } = usePaidPlan()
-  const isCoached = isUserPremium && currentUserData?.plans?.findIndex(p => p.id === plan.id) === 0;
+  const { isUserPremium } = usePaidPlan();
+  const isCoached =
+    isUserPremium &&
+    currentUserData?.plans?.findIndex((p) => p.id === plan.id) === 0;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showSettings, setShowSettings] = useState(false);
@@ -119,10 +121,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
         <div
           className={`flex flex-col items-left justify-center p-4 pr-20 rounded-lg ring-2 ${
             isSelected
-              ? twMerge(
-                  variants.ringBright,
-                  variants.veryFadedBg
-                )
+              ? twMerge(variants.ringBright, variants.veryFadedBg)
               : cn("ring-gray-300 bg-white")
           } sm:aspect-square w-full relative`}
         >
@@ -149,17 +148,17 @@ const PlanCard: React.FC<PlanCardProps> = ({
           {planGroup && planGroup.members && (
             <div className="flex items-center space-x-1 mt-2">
               {planGroup.members.map((member) => {
-                if (!currentUserId || member.userId === currentUserId) {
+                if (!currentUserId || member.id === currentUserId) {
                   return null;
                 }
                 return (
-                  <Avatar key={member.userId} className="w-6 h-6">
+                  <Avatar key={member.id} className="w-6 h-6">
                     <AvatarImage
                       src={member.picture || ""}
-                      alt={member.name || member.username}
+                      alt={member.name || member.username || ""}
                     />
                     <AvatarFallback>
-                      {member.name?.[0] || member.username?.[0] || "U"}
+                      {member.name?.[0] || member.username?.[0] || "U"} 
                     </AvatarFallback>
                   </Avatar>
                 );

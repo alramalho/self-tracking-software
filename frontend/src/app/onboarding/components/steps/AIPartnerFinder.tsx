@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import AppleLikePopover from "@/components/AppleLikePopover";
+import { CoachOverviewCard } from "@/components/CoachOverviewCard";
+import { MetricIsland } from "@/components/MetricIsland";
+import { MetricWeeklyView } from "@/components/MetricWeeklyView";
+import { PlanProgressCard } from "@/components/PlanProgressCard";
+import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
+import { Button } from "@/components/ui/button";
+import { createPlanProgressData } from "@/contexts/PlanProgressContext";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { Activity } from "@prisma/client";
 import {
-  CalendarDays,
   ChartArea,
   Home,
   LandPlot,
@@ -10,21 +18,11 @@ import {
   NotepadText,
   Route,
   ScanFace,
-  Send,
-  Sparkles,
+  Send
 } from "lucide-react";
-import { useOnboarding } from "../OnboardingContext";
-import { PlanType } from "@/contexts/UserGlobalContext";
-import { Button } from "@/components/ui/button";
-import AppleLikePopover from "@/components/AppleLikePopover";
-import { PlanProgressCard } from "@/components/PlanProgressCard";
-import { CoachOverviewCard } from "@/components/CoachOverviewCard";
-import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
-import { createPlanProgressData } from "@/contexts/PlanProgressContext";
-import { useUpgrade } from "@/contexts/UpgradeContext";
-import { MetricIsland } from "@/components/MetricIsland";
-import { MetricWeeklyView } from "@/components/MetricWeeklyView";
+import React, { useState } from "react";
 import { withFadeUpAnimation } from "../../lib";
+import { useOnboarding } from "../OnboardingContext";
 
 const CardItem = ({
   icon,
@@ -65,7 +63,7 @@ const CardItem = ({
 };
 
 const AIPartnerFinder = () => {
-  const { completeStep, setPlanType, planType } = useOnboarding();
+  const { completeStep } = useOnboarding();
   const [planStatePopoverDemoOpen, setPlanStatePopoverDemoOpen] =
     useState(false);
   const [planCreationPopoverDemoOpen, setPlanCreationPopoverDemoOpen] =
@@ -163,10 +161,6 @@ const AIPartnerFinder = () => {
     dummyActivities as any,
     dummyActivityEntries as any
   );
-
-  const handlePlanSelect = (selectedType: PlanType) => {
-    completeStep("plan-type-selection", { planType: selectedType });
-  };
 
   return (
     <div className="w-full max-w-lg space-y-2">
@@ -318,7 +312,7 @@ const AIPartnerFinder = () => {
                     title: "Exercise",
                     emoji: "🏃‍♂️",
                     measure: "minutes",
-                  },
+                  } as Activity ,
                   correlation: 0.65,
                 },
                 {
@@ -327,7 +321,7 @@ const AIPartnerFinder = () => {
                     title: "Meditation",
                     emoji: "🧘‍♂️",
                     measure: "minutes",
-                  },
+                  } as Activity,
                   correlation: 0.45,
                 },
               ]}

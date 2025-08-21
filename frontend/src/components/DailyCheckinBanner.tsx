@@ -1,22 +1,20 @@
-import { ScanFace } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
+import { useMutation } from "@tanstack/react-query";
+import { ScanFace } from "lucide-react";
 import { toast as hotToast } from "react-hot-toast";
 import { EntryCard } from "./EntryCard";
 
+import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import {
-  ActivityEntry,
-  MetricEntry,
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
-import { useState } from "react";
+import { ActivityEntry, MetricEntry } from "@prisma/client";
 import { formatDate } from "date-fns";
-import {
-  DynamicUISuggester,
-  BaseExtractionResponse,
-} from "./DynamicUISuggester";
 import AppleLikePopover from "./AppleLikePopover";
-import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import {
+  BaseExtractionResponse,
+  DynamicUISuggester,
+} from "./DynamicUISuggester";
 
 export const getRelativeDate = (date: Date) => {
   const today = new Date();
@@ -120,7 +118,7 @@ export function DailyCheckinBanner({
     mutationFn: async (entry: ActivityEntry) => {
       const formData = new FormData();
       formData.append("activityId", entry.activityId);
-      formData.append("iso_date_string", entry.date);
+      formData.append("iso_date_string", entry.date.toISOString());
       formData.append("quantity", entry.quantity.toString());
 
       const response = await api.post("/activities/log-activity", formData);

@@ -1,17 +1,14 @@
-import React from "react";
-import { Message, useUserPlan } from "@/contexts/UserGlobalContext";
-import { ChatInterface } from "./chat/ChatInterface";
-import { EmotionBadges } from "./chat/EmotionBadges";
-import { Card } from "./ui/card";
-import { ChatBubbleAvatar } from "./ui/chat/chat-bubble";
-import { ChatBubbleMessage } from "./ui/chat/chat-bubble";
-import { ChatBubble } from "./ui/chat/chat-bubble";
-import { ChatMessageList } from "./ui/chat/chat-message-list";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { Message, MessageEmotion } from "@prisma/client";
 import { Eclipse } from "lucide-react";
+import React from "react";
+import { EmotionBadges } from "./chat/EmotionBadges";
 import Divider from "./Divider";
+import { ChatBubble, ChatBubbleAvatar, ChatBubbleMessage } from "./ui/chat/chat-bubble";
+import { ChatMessageList } from "./ui/chat/chat-message-list";
 
 interface MessageHistoryViewerProps {
-  messages: Message[];
+  messages: (Message & { emotions: MessageEmotion[] })[];
 }
 
 function formatDate(dateString: string) {
@@ -43,7 +40,7 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
   }, [messages]);
 
   // Group messages by date
-  const messagesByDate: { [key: string]: Message[] } = {};
+  const messagesByDate: { [key: string]: (Message & { emotions: MessageEmotion[] })[] } = {};
 
   messages.forEach((message) => {
     const date = new Date(message.createdAt);
@@ -65,13 +62,7 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
   });
 
   function getMessageRole(message: Message) {
-    if (message.senderId === userData?.id) {
-      return "user";
-    }
-    if (message.senderId === "-1") {
-      return "system";
-    }
-    return "assistant";
+    return message.role.toLowerCase();
   }
 
   return (
@@ -86,23 +77,23 @@ export function MessageHistoryViewer({ messages }: MessageHistoryViewerProps) {
                 new Date(b.createdAt).getTime()
             )
             .map((message) => {
-              const role = getMessageRole(message);
-              if (role === "system") {
-                return <Divider text={message.text} key={message.id} />;
+              const role = message.role;
+              if (role === "SYSTEM") {
+                return <Divider text={message.content} key={message.id} />;
               }
               return (
                 <ChatBubble
                   key={message.id}
-                  variant={role === "assistant" ? "received" : "sent"}
+                  variant={role === "ASSISTANT" ? "received" : "sent"}
                 >
                   <ChatBubbleAvatar
-                    src={role === "user" ? userData?.picture : undefined}
+                    src={role === "USER" ? userData?.picture || "" : undefined}
                     fallback={<Eclipse className="w-8 h-8" />}
                   />
                   <div className="flex flex-col gap-2">
                     <ChatBubbleMessage
-                      message={message.text}
-                      variant={role === "assistant" ? "received" : "sent"}
+                      message={message.content}
+                      variant={role === "ASSISTANT" ? "received" : "sent"}
                     />
                     <EmotionBadges emotions={message.emotions} loading={false} />
                   </div>
