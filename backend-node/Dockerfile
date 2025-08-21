@@ -7,16 +7,21 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy workspace package files from root
-COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
+
+# Copy backend-node package.json first to ensure dependencies are known
+COPY backend-node/package.json ./backend-node/
 
 # Install ALL dependencies (including dev deps for building)
 RUN pnpm install --frozen-lockfile --no-cache
 
 # Copy backend-node source code
 COPY backend-node/ ./backend-node/
+COPY prisma/ ./prisma/
 
 # Build TypeScript from workspace root
-RUN pnpm --filter backend-node run build
+RUN pnpm db:generate
+RUN pnpm build --filter backend-node
 
 # Production stage
 FROM node:20-alpine AS production

@@ -1,5 +1,5 @@
 {
-  "name": "tracking-so-backend-node",
+  "name": "backend-node",
   "version": "1.0.0",
   "description": "Node.js backend for tracking.so using Express and Prisma",
   "main": "dist/index.js",

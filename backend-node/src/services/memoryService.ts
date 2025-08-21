@@ -1,20 +1,23 @@
-import { prisma } from "../utils/prisma";
 import { logger } from "../utils/logger";
+import { prisma } from "../utils/prisma";
 
 export interface ConversationMessage {
   id: string;
   userId: string;
-  role: "USER" | "ASSISTANT";
+  role: "USER" | "ASSISTANT" | "SYSTEM";
   content: string;
   createdAt: Date;
   emotions?: any[];
 }
 
+// note to self, we were amidst fixing bakcend docker build (local), then remotely
+// and we were also amidst fixing vercel frontend build
+
 export class MemoryService {
   async writeMessage(options: {
     content: string;
     userId: string;
-    role: "USER" | "ASSISTANT";
+    role: "USER" | "ASSISTANT" | "SYSTEM";
     emotions?: any[];
   }): Promise<ConversationMessage> {
     try {
@@ -87,7 +90,7 @@ export class MemoryService {
       // Format messages as conversation history
       return messages
         .reverse() // Show chronological order
-        .map((msg) => `${msg.role}: ${msg.content}`)
+        .map((msg: any) => `${msg.role}: ${msg.content}`)
         .join("\n");
     } catch (error) {
       logger.warn("Could not read conversation history:", error);
@@ -120,7 +123,7 @@ export class MemoryService {
       // Format messages as conversation history
       return messages
         .reverse() // Show chronological order
-        .map((msg) => `${msg.role}: ${msg.content}`)
+        .map((msg: any) => `${msg.role}: ${msg.content}`)
         .join("\n");
     } catch (error) {
       logger.warn("Could not read conversation history:", error);
