@@ -86,6 +86,7 @@ export class ApiStack extends cdk.Stack {
       backendPath: "backend",
       dockerfilePath: "Dockerfile.fargate",
       environment: pythonEnvConfig,
+      clusterName: `${KEBAB_CASE_PREFIX}-python-cluster-${props.environment}`,
     });
 
     // Deploy Node.js backend (new) - reuse VPC and cluster from Python backend
