@@ -10,8 +10,7 @@ export interface ConversationMessage {
   emotions?: any[];
 }
 
-// note to self, we were amidst fixing bakcend docker build (local), then remotely
-// and we were also amidst fixing vercel frontend build
+// note to self, we were amidst fixing remote builds (gh for backedn, vercel for fe)
 
 export class MemoryService {
   async writeMessage(options: {
