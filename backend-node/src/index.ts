@@ -1,32 +1,31 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env" });
 
-
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
 import compression from "compression";
+import cors from "cors";
+import express, { Express } from "express";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
-import { prisma } from "./utils/prisma";
 import { logger, morganMiddleware } from "./utils/logger";
+import { prisma } from "./utils/prisma";
 
 // Import routes
-import { usersRouter } from "./routes/users";
 import { activitiesRouter } from "./routes/activities";
-import { plansRouter } from "./routes/plans";
-import { metricsRouter } from "./routes/metrics";
+import { adminRouter } from "./routes/admin";
+import { aiRouter } from "./routes/ai";
+import { clerkRouter } from "./routes/clerk";
 import { messagesRouter } from "./routes/messages";
+import { metricsRouter } from "./routes/metrics";
 import { notificationsRouter } from "./routes/notifications";
 import { onboardingRouter } from "./routes/onboarding";
-import { adminRouter } from "./routes/admin";
-import { clerkRouter } from "./routes/clerk";
-import { aiRouter } from "./routes/ai";
+import { plansRouter } from "./routes/plans";
 import { stripeRouter } from "./routes/stripe";
+import { usersRouter } from "./routes/users";
 
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 8000;
 const ENVIRONMENT = process.env.NODE_ENV || "development";
 

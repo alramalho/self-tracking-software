@@ -1,6 +1,6 @@
-import { createLogger, format, transports } from "winston";
 import chalk from "chalk";
 import morgan from "morgan";
+import { createLogger, format, transports } from "winston";
 import { AuthenticatedRequest } from "../middleware/auth";
 
 const { combine, timestamp, errors, json, printf } = format;
@@ -61,13 +61,13 @@ export const logger = createLogger({
 });
 
 // If we're not in production, log to the console with custom format
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
-    new transports.Console({
-      format: consoleFormat,
-    })
-  );
-}
+// if (process.env.NODE_ENV !== "production") {
+logger.add(
+  new transports.Console({
+    format: consoleFormat,
+  })
+);
+// }
 
 function colorHttp(message: string): string {
   const parts = message.split(" ");
@@ -85,8 +85,8 @@ function colorHttp(message: string): string {
   };
 
   const coloredMethod = (methodColors[method] || chalk.cyan)(method);
-  const coloredUrl = (chalk.gray)(url);
-  const coloredRemaining = (chalk.gray)(remaining);
+  const coloredUrl = chalk.gray(url);
+  const coloredRemaining = chalk.gray(remaining);
   const statusCode = parseInt(status);
   const coloredStatus =
     statusCode >= 500 || statusCode == 0

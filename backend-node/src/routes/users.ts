@@ -1,20 +1,20 @@
-import { Router, Request, Response } from "express";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
-import { userService } from "../services/userService";
+import { Request, Response, Router } from "express";
+import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { notificationService } from "../services/notificationService";
-import { logger } from "../utils/logger";
-import { prisma } from "../utils/prisma";
 import { sesService } from "../services/sesService";
 import { TelegramService } from "../services/telegramService";
+import { userService } from "../services/userService";
 import {
-  TimezoneUpdateSchema,
-  ThemeUpdateSchema,
   DailyCheckinSettingsSchema,
   FeedbackSchema,
   FriendRequestSchema,
+  ThemeUpdateSchema,
+  TimezoneUpdateSchema,
 } from "../types/user";
+import { logger } from "../utils/logger";
+import { prisma } from "../utils/prisma";
 
-export const usersRouter = Router();
+export const usersRouter: Router = Router();
 const telegramService = new TelegramService();
 
 // Health check
@@ -80,7 +80,7 @@ usersRouter.get(
 usersRouter.get(
   "/connections/:username",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { username } = req.params;
       let user;
@@ -90,10 +90,11 @@ usersRouter.get(
       } else {
         user = await userService.getUserByUsername(username.toLowerCase());
         if (!user) {
-          return res.status(404).json({
+          res.status(404).json({
             success: false,
             error: { message: "User not found" },
           });
+          return;
         }
       }
 
@@ -160,12 +161,13 @@ usersRouter.post(
 usersRouter.get(
   "/search-users/:username",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { username } = req.params;
 
       if (req.user!.username?.toLowerCase() === username.toLowerCase()) {
-        return res.json([]);
+        res.json([]);
+        return;
       }
 
       let results = await userService.searchUsers(req.user!.id, username);
@@ -239,12 +241,13 @@ usersRouter.get(
 usersRouter.get(
   "/user/:username_or_id",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { username_or_id } = req.params;
 
       if (username_or_id.toLowerCase() === req.user!.username?.toLowerCase()) {
-        return res.json(req.user);
+        res.json(req.user);
+        return;
       }
 
       let user = await userService.getUserByUsername(username_or_id);
@@ -254,10 +257,11 @@ usersRouter.get(
       }
 
       if (!user) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: { message: "User not found" },
         });
+        return;
       }
 
       // Remove sensitive information
@@ -500,7 +504,7 @@ Timestamp: ${new Date().toISOString()}</small></p>
 
 usersRouter.get(
   "/all-users",
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (_req: Request, res: Response): Promise<void> => {
     try {
       const users = await userService.getAllUsers();
       res.json({ usernames: users.map((user) => user.username) });
@@ -517,7 +521,7 @@ usersRouter.get(
 // Get user profile (public endpoint)
 usersRouter.get(
   "/get-user-profile/:username_or_id",
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const { username_or_id } = req.params;
 
@@ -525,10 +529,11 @@ usersRouter.get(
       if (!user) {
         user = await userService.getUserById(username_or_id);
         if (!user) {
-          return res.status(404).json({
+          res.status(404).json({
             success: false,
             error: { message: `User '${username_or_id}' not found` },
           });
+          return;
         }
       }
 
@@ -720,7 +725,7 @@ usersRouter.get(
 usersRouter.post(
   "/update-timezone",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { timezone } = TimezoneUpdateSchema.parse(req.body);
 
@@ -802,12 +807,13 @@ usersRouter.post(
       ];
 
       if (!validTimezones.includes(timezone)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: {
             message: `Invalid timezone. Must be a valid IANA timezone identifier.`,
           },
         });
+        return;
       }
 
       const updatedUser = await userService.updateUser(req.user!.id, {
@@ -857,16 +863,17 @@ usersRouter.post(
 // Get user plan type
 usersRouter.get(
   "/user/:username/get-user-plan-type",
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const { username } = req.params;
       const user = await userService.getUserByUsername(username);
 
       if (!user) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: { message: "User not found" },
         });
+        return;
       }
 
       res.json({ plan_type: user.planType });

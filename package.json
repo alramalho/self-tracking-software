@@ -10,7 +10,11 @@
     "build:client": "turbo run build --filter=!server",
     "start": "turbo run start",
     "clean": "rm -rf node_modules && turbo run clean",
-    "db:generate": "turbo run db:generate"
+    "db:generate": "turbo run db:generate",
+    "build-docker-backend": "docker build -f backend-node/Dockerfile -t test-backend-node ."
+  },
+  "pnpm": {
+    "injectWorkspacePackages": true
   },
   "devDependencies": {
     "supabase": "^2.33.9",

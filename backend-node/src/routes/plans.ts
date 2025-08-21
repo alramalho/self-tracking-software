@@ -1,10 +1,10 @@
-import { Router, Response } from "express";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
-import { logger } from "../utils/logger";
-import { prisma } from "../utils/prisma";
+import { Response, Router } from "express";
+import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { plansPineconeService } from "../services/pineconeService";
 import { recommendationsService } from "../services/recommendationsService";
+import { logger } from "../utils/logger";
+import { prisma } from "../utils/prisma";
 
 const router = Router();
 
@@ -47,7 +47,10 @@ async function markUserRecommendationsOutdated(userId: string): Promise<void> {
 router.get(
   "/generate-invitation-link",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { plan_id } = req.query;
 
@@ -90,7 +93,10 @@ router.get(
 router.post(
   "/create-plan",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const planData = req.body;
 
@@ -169,7 +175,10 @@ router.post(
 router.delete(
   "/remove-plan/:planId",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { planId } = req.params;
 
@@ -198,7 +207,10 @@ router.delete(
 router.get(
   "/user-plans",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       // Get plans where user is the owner or a member of the plan group
       const plans = await prisma.plan.findMany({
@@ -241,7 +253,10 @@ router.get(
 router.get(
   "/:planId",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { planId } = req.params;
 
@@ -286,7 +301,10 @@ router.get(
 router.post(
   "/generate-sessions",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { goal, finishingDate, activities, description, existing_plan } =
         req.body;
@@ -320,7 +338,10 @@ router.post(
 router.post(
   "/:planId/update",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { planId } = req.params;
       const { data } = req.body;
@@ -530,7 +551,6 @@ router.post(
     }
   }
 );
-
 
 // Helper function to generate plan sessions using AI
 async function generatePlanSessions(params: {

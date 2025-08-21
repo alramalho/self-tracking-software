@@ -1,16 +1,10 @@
-import {
-  User,
-  Activity,
-  ActivityEntry,
-  Plan,
-  PlanGroup,
-  MoodReport,
-  Recommendation,
-  Connection,
-} from "@prisma/client";
+import { Connection, Prisma, User } from "@prisma/client";
+import { UserSearchResult } from "../types/user";
 import { prisma } from "../utils/prisma";
-import { logger } from "../utils/logger";
-import { UserSearchResult, LoadUsersDataResponse } from "../types/user";
+
+type UserWithPlans = Prisma.UserGetPayload<{
+  include: { plans: true };
+}>;
 
 export class UserService {
   async getAllUsers(): Promise<User[]> {
@@ -26,7 +20,7 @@ export class UserService {
     });
   }
 
-  async getAllPaidUsers(): Promise<User[]> {
+  async getAllPaidUsers(): Promise<UserWithPlans[]> {
     return prisma.user.findMany({
       where: {
         deletedAt: null,
@@ -293,42 +287,42 @@ export class UserService {
   //   return result;
   // }
 
-  private generateUserBio(plans: any[], activities: Activity[]): string {
-    const bioParts: string[] = [];
+  // private generateUserBio(plans: any[], activities: Activity[]): string {
+  //   const bioParts: string[] = [];
 
-    // Add plans info to bio
-    if (plans.length > 0) {
-      const planGoals = plans
-        .slice(0, 3)
-        .map((plan) => `${plan.emoji || "📋"} ${plan.goal}`);
+  //   // Add plans info to bio
+  //   if (plans.length > 0) {
+  //     const planGoals = plans
+  //       .slice(0, 3)
+  //       .map((plan) => `${plan.emoji || "📋"} ${plan.goal}`);
 
-      if (plans.length > 3) {
-        bioParts.push(
-          `Working on ${plans.length} plans including ${planGoals.slice(0, -1).join(", ")} and ${planGoals[planGoals.length - 1]}`
-        );
-      } else if (plans.length > 1) {
-        bioParts.push(
-          `Working on ${planGoals.slice(0, -1).join(", ")} and ${planGoals[planGoals.length - 1]}`
-        );
-      } else {
-        bioParts.push(`Working on ${planGoals[0]}`);
-      }
-    }
+  //     if (plans.length > 3) {
+  //       bioParts.push(
+  //         `Working on ${plans.length} plans including ${planGoals.slice(0, -1).join(", ")} and ${planGoals[planGoals.length - 1]}`
+  //       );
+  //     } else if (plans.length > 1) {
+  //       bioParts.push(
+  //         `Working on ${planGoals.slice(0, -1).join(", ")} and ${planGoals[planGoals.length - 1]}`
+  //       );
+  //     } else {
+  //       bioParts.push(`Working on ${planGoals[0]}`);
+  //     }
+  //   }
 
-    // Add activities info to bio
-    if (activities.length > 0) {
-      const activitySummary = activities
-        .slice(0, 3)
-        .map((activity) => activity.emoji)
-        .join(" ");
+  //   // Add activities info to bio
+  //   if (activities.length > 0) {
+  //     const activitySummary = activities
+  //       .slice(0, 3)
+  //       .map((activity) => activity.emoji)
+  //       .join(" ");
 
-      bioParts.push(`Tracking ${activitySummary}`);
-    }
+  //     bioParts.push(`Tracking ${activitySummary}`);
+  //   }
 
-    return bioParts.length > 0
-      ? bioParts.join(" | ")
-      : "Just joined tracking.so!";
-  }
+  //   return bioParts.length > 0
+  //     ? bioParts.join(" | ")
+  //     : "Just joined tracking.so!";
+  // }
 
   async getTimelineData(userId: string): Promise<any> {
     const user = await prisma.user.findUnique({

@@ -1,9 +1,9 @@
-import { Router, Request, Response } from "express";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
+import { Request, Response, Router } from "express";
+import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { memoryService } from "../services/memoryService";
+import { notificationService } from "../services/notificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
-import { notificationService } from "../services/notificationService";
-import { memoryService } from "../services/memoryService";
 
 const router = Router();
 
@@ -51,7 +51,7 @@ router.post(
 // Process scheduled notification
 router.post(
   "/process-scheduled-notification",
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<Response | void> => {
     try {
       const { notification_id } = req.body;
 
@@ -118,7 +118,10 @@ router.post(
 router.post(
   "/mark-notification-opened",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { notification_id } = req.query;
 
@@ -164,7 +167,10 @@ router.post(
 router.get(
   "/load-notifications",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       // Get all non-concluded notifications for user
       let notifications = await prisma.notification.findMany({
@@ -219,7 +225,10 @@ router.get(
 router.post(
   "/conclude-notification/:notificationId",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { notificationId } = req.params;
 
@@ -279,7 +288,10 @@ router.post(
 router.post(
   "/clear-all-notifications",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       // Get all non-concluded notifications
       const notifications = await prisma.notification.findMany({
@@ -331,7 +343,10 @@ router.post(
 router.get(
   "/get-pwa-subscription",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
@@ -350,7 +365,10 @@ router.get(
 router.post(
   "/create-and-process-notification",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const {
         message,

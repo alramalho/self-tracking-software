@@ -1,16 +1,16 @@
-import { Notification, NotificationType } from '@prisma/client';
-import { prisma } from '../utils/prisma';
-import { logger } from '../utils/logger';
+import { Notification, NotificationType } from "@prisma/client";
+import { logger } from "../utils/logger";
+import { prisma } from "../utils/prisma";
 
 // Temporary mock for web-push until package is available
 const webpush = {
   setVapidDetails: (subject: string, publicKey: string, privateKey: string) => {
-    logger.info('VAPID details configured (mock)');
+    logger.info("VAPID details configured (mock)");
   },
   sendNotification: async (subscription: any, payload: string) => {
-    logger.info('Mock push notification sent:', { subscription, payload });
+    logger.info("Mock push notification sent:", { subscription, payload });
     return { statusCode: 200 };
-  }
+  },
 };
 
 export interface CreateNotificationData {
@@ -35,13 +35,13 @@ export class NotificationService {
   private vapidPublicKey: string;
 
   constructor() {
-    this.vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-    this.vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
+    this.vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
+    this.vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
 
     // Configure web-push
     if (this.vapidPrivateKey && this.vapidPublicKey) {
       webpush.setVapidDetails(
-        'mailto:alexandre.ramalho.1998@gmail.com',
+        "mailto:alexandre.ramalho.1998@gmail.com",
         this.vapidPublicKey,
         this.vapidPrivateKey
       );
@@ -63,16 +63,18 @@ export class NotificationService {
     logger.info(`Deleted notification ${notificationId}`);
   }
 
-  async createNotification(data: CreateNotificationData): Promise<Notification> {
+  async createNotification(
+    data: CreateNotificationData
+  ): Promise<Notification> {
     const notification = await prisma.notification.create({
       data: {
         userId: data.userId,
         message: data.message,
-        type: data.type || 'INFO',
+        type: data.type || "INFO",
         relatedId: data.relatedId,
         relatedData: data.relatedData,
         promptTag: data.promptTag,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
 
@@ -80,13 +82,16 @@ export class NotificationService {
     return notification;
   }
 
-  async processNotification(notificationId: string, pushNotify: boolean = true): Promise<Notification | null> {
+  async processNotification(
+    notificationId: string,
+    pushNotify: boolean = true
+  ): Promise<Notification | null> {
     const notification = await prisma.notification.findUnique({
       where: { id: notificationId },
       include: { user: true },
     });
 
-    if (!notification || notification.status !== 'PENDING') {
+    if (!notification || notification.status !== "PENDING") {
       return null;
     }
 
@@ -94,7 +99,7 @@ export class NotificationService {
     const processedNotification = await prisma.notification.update({
       where: { id: notificationId },
       data: {
-        status: 'PROCESSED',
+        status: "PROCESSED",
         processedAt: new Date(),
       },
     });
@@ -113,45 +118,54 @@ export class NotificationService {
         });
         isPush = true;
       } catch (error) {
-        logger.error('Error sending push notification:', error);
+        logger.error("Error sending push notification:", error);
       }
     }
 
     // TODO: Add PostHog analytics when implemented
-    if (processedNotification.type === 'COACH') {
-      logger.info(`Coach notification sent to user ${user.id}, isPush: ${isPush}`);
+    if (processedNotification.type === "COACH") {
+      logger.info(
+        `Coach notification sent to user ${user.id}, isPush: ${isPush}`
+      );
     }
 
     logger.info(`Notification '${notificationId}' processed`);
     return processedNotification;
   }
 
-  async createAndProcessNotification(data: CreateNotificationData, pushNotify: boolean = true): Promise<Notification | null> {
+  async createAndProcessNotification(
+    data: CreateNotificationData,
+    pushNotify: boolean = true
+  ): Promise<Notification | null> {
     const notification = await this.createNotification(data);
     return await this.processNotification(notification.id, pushNotify);
   }
 
-  async markNotificationAsOpened(notificationId: string): Promise<Notification | null> {
+  async markNotificationAsOpened(
+    notificationId: string
+  ): Promise<Notification | null> {
     const notification = await this.getNotification(notificationId);
-    if (notification && notification.status === 'PROCESSED') {
+    if (notification && notification.status === "PROCESSED") {
       const updatedNotification = await prisma.notification.update({
         where: { id: notificationId },
         data: {
-          status: 'OPENED',
+          status: "OPENED",
           openedAt: new Date(),
         },
       });
-      
+
       logger.info(`Notification '${notificationId}' marked as opened`);
       return updatedNotification;
     }
     return null;
   }
 
-  async markNotificationAsConcluded(notificationId: string): Promise<Notification | null> {
+  async markNotificationAsConcluded(
+    notificationId: string
+  ): Promise<Notification | null> {
     const notification = await this.getNotification(notificationId);
     if (notification) {
-      if (notification.status === 'CONCLUDED') {
+      if (notification.status === "CONCLUDED") {
         logger.info(`Notification '${notificationId}' already concluded`);
         return notification;
       }
@@ -159,7 +173,7 @@ export class NotificationService {
       const updatedNotification = await prisma.notification.update({
         where: { id: notificationId },
         data: {
-          status: 'CONCLUDED',
+          status: "CONCLUDED",
           concludedAt: new Date(),
         },
       });
@@ -179,7 +193,7 @@ export class NotificationService {
   async getAllForUser(userId: string): Promise<Notification[]> {
     return prisma.notification.findMany({
       where: { userId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
@@ -187,13 +201,16 @@ export class NotificationService {
     return prisma.notification.findMany({
       where: {
         userId,
-        status: { not: 'CONCLUDED' },
+        status: { not: "CONCLUDED" },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
-  async getLatestNotificationSentToUser(userId: string, type?: NotificationType): Promise<Notification | null> {
+  async getLatestNotificationSentToUser(
+    userId: string,
+    type?: NotificationType
+  ): Promise<Notification | null> {
     const whereClause: any = {
       userId,
       sentAt: { not: null },
@@ -205,30 +222,35 @@ export class NotificationService {
 
     return prisma.notification.findFirst({
       where: whereClause,
-      orderBy: { sentAt: 'desc' },
+      orderBy: { sentAt: "desc" },
     });
   }
 
-  async getUserNotifications(userId: string, limit: number = 50): Promise<Notification[]> {
+  async getUserNotifications(
+    userId: string,
+    limit: number = 50
+  ): Promise<Notification[]> {
     return prisma.notification.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
     });
   }
 
   async sendPushNotification(
-    userId: string, 
-    title: string, 
-    body: string, 
-    url?: string, 
+    userId: string,
+    title: string,
+    body: string,
+    url?: string,
     icon?: string
   ): Promise<{ message: string }> {
-    const environment = process.env.NODE_ENV || 'development';
-    
-    if (environment === 'development' || environment === 'dev') {
-      logger.warn(`Skipping push notification for '${userId}' in '${environment}' environment`);
-      return { message: 'Push notification skipped in development' };
+    const environment = process.env.NODE_ENV || "development";
+
+    if (environment.startsWith("dev")) {
+      logger.warn(
+        `Skipping push notification for '${userId}' in '${environment}' environment`
+      );
+      return { message: "Push notification skipped in development" };
     }
 
     const user = await prisma.user.findUnique({
@@ -240,7 +262,11 @@ export class NotificationService {
       },
     });
 
-    if (!user?.pwaSubscriptionEndpoint || !user.pwaSubscriptionKey || !user.pwaSubscriptionAuthToken) {
+    if (
+      !user?.pwaSubscriptionEndpoint ||
+      !user.pwaSubscriptionKey ||
+      !user.pwaSubscriptionAuthToken
+    ) {
       logger.error(`Subscription not found for ${userId}`);
       throw new Error(`Subscription not found for ${userId}`);
     }
@@ -272,9 +298,9 @@ export class NotificationService {
 
       // TODO: Add PostHog analytics when implemented
       logger.info(`WebPush response status: ${response.statusCode}`);
-      return { message: 'Push notification sent successfully' };
+      return { message: "Push notification sent successfully" };
     } catch (error: any) {
-      logger.error('WebPush error:', error);
+      logger.error("WebPush error:", error);
       throw error;
     }
   }
@@ -283,7 +309,7 @@ export class NotificationService {
     return prisma.notification.count({
       where: {
         userId,
-        status: { not: 'CONCLUDED' },
+        status: { not: "CONCLUDED" },
       },
     });
   }
@@ -291,11 +317,10 @@ export class NotificationService {
   async sendTestPushNotification(userId: string): Promise<void> {
     await this.createAndProcessNotification({
       userId,
-      message: 'This is a test notification',
-      type: 'INFO',
+      message: "This is a test notification",
+      type: "INFO",
     });
   }
-
 }
 
 export const notificationService = new NotificationService();

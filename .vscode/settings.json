@@ -20,5 +20,11 @@
   ],
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "typescript.preferences.organizeImportsIgnoreCase": "auto",
+  "typescript.preferences.organizeImportsNumericCollation": true,
+  "typescript.preferences.organizeImportsCollation": "ordinal"
 }

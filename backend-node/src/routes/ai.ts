@@ -1,13 +1,13 @@
-import { Router, Request, Response } from "express";
+import { Request, Response, Router } from "express";
 import multer from "multer";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
-import { logger } from "../utils/logger";
-import { prisma } from "../utils/prisma";
-import { notificationService } from "../services/notificationService";
-import { sttService } from "../services/sttService";
+import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
+import { notificationService } from "../services/notificationService";
+import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
+import { logger } from "../utils/logger";
+import { prisma } from "../utils/prisma";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -18,7 +18,10 @@ router.post(
   "/transcribe",
   requireAuth,
   upload.single("audio_file"),
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const audioFile = req.file;
       const audioFormat = req.body.audio_format;
@@ -52,7 +55,10 @@ router.post(
 router.post(
   "/generate-coach-message",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const user = req.user!;
 
@@ -90,7 +96,10 @@ router.post(
 router.post(
   "/get-daily-checkin-extractions",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { ai_message, message, question_checks } = req.body;
 
@@ -175,7 +184,10 @@ router.post(
 router.post(
   "/get-past-week-logging-extractions",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { ai_message, message, question_checks } = req.body;
 
@@ -259,7 +271,10 @@ router.post(
 router.post(
   "/get-plan-extractions",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { message, question_checks } = req.body;
 
@@ -329,7 +344,10 @@ router.post(
 router.post(
   "/update-user-profile-from-questions",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { question_checks, message } = req.body;
 
@@ -396,7 +414,10 @@ router.post(
 router.post(
   "/reject-daily-checkin",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { message, activity_entries, metric_entries, rejection_feedback } =
         req.body;
@@ -429,7 +450,10 @@ router.post(
 router.post(
   "/reject-past-week-logging",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { feedback, user_message, ai_message } = req.body;
 
@@ -458,7 +482,10 @@ router.post(
 router.post(
   "/reject-plan",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { feedback, plan, user_message, ai_message } = req.body;
 
@@ -490,7 +517,10 @@ router.post(
 router.post(
   "/log-dynamic-ui-attempt-error",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { question_checks, attempts, id, extracted_data } = req.body;
 
@@ -522,7 +552,10 @@ router.post(
 router.post(
   "/log-dynamic-ui-skip",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
     try {
       const { question_checks, attempts, extracted_data, id } = req.body;
 
@@ -550,7 +583,7 @@ router.post(
 );
 
 // Health check
-router.get("/health", (_req: Request, res: Response) => {
+router.get("/health", (_req: Request, res: Response): void => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -559,5 +592,5 @@ router.get("/health", (_req: Request, res: Response) => {
   });
 });
 
-export const aiRouter = router;
+export const aiRouter: Router = router;
 export default aiRouter;

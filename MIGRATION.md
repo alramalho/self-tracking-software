@@ -188,6 +188,7 @@ backend
 [x] implement plan index (now we don't have planIds array anymore)
 [x] can compute recommended users
 [x] can see recommended users
+[ ] test errors are propagated to telegram
 
 ## missing verticals
 

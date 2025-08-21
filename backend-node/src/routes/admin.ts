@@ -1,11 +1,11 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
+import { notificationService } from "../services/notificationService";
+import { s3Service } from "../services/s3Service";
+import { sesService } from "../services/sesService";
+import { userService } from "../services/userService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
-import { notificationService } from "../services/notificationService";
-import { userService } from "../services/userService";
-import { sesService } from "../services/sesService";
-import { s3Service } from "../services/s3Service";
 
 interface AdminRequest extends Request {
   adminVerified?: boolean;
@@ -63,7 +63,7 @@ const adminAuth = async (
 router.post(
   "/send-notification",
   adminAuth,
-  async (req: AdminRequest, res: Response) => {
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
       const {
         userId,
@@ -98,7 +98,7 @@ router.post(
 router.post(
   "/send-notification-to-all-users",
   adminAuth,
-  async (req: AdminRequest, res: Response) => {
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
       const {
         message,
@@ -117,7 +117,7 @@ router.post(
         users = await prisma.user.findMany({
           where: {
             username: { in: filter_usernames },
-            deleted: false,
+            deletedAt: null,
           },
         });
       } else {
@@ -148,7 +148,7 @@ router.post(
 router.post(
   "/regenerate-image-url",
   adminAuth,
-  async (req: AdminRequest, res: Response) => {
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
       const { activity_entry_id, expiration_days = 7 } = req.body;
 
@@ -199,48 +199,56 @@ router.post(
 );
 
 // Get all users (admin only)
-router.get("/users", adminAuth, async (_req: AdminRequest, res: Response) => {
-  try {
-    const users = await userService.getAllUsers();
-    res.json({ users, count: users.length });
-  } catch (error) {
-    logger.error("Error fetching users:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
+router.get(
+  "/users",
+  adminAuth,
+  async (_req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const users = await userService.getAllUsers();
+      res.json({ users, count: users.length });
+    } catch (error) {
+      logger.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
   }
-});
+);
 
 // Get user statistics
-router.get("/stats", adminAuth, async (_req: AdminRequest, res: Response) => {
-  try {
-    const [
-      totalUsers,
-      totalActivities,
-      totalActivityEntries,
-      totalNotifications,
-      paidUsers,
-    ] = await Promise.all([
-      prisma.user.count({ where: { deleted: false } }),
-      prisma.activity.count({ where: { deletedAt: null } }),
-      prisma.activityEntry.count({ where: { deletedAt: null } }),
-      prisma.notification.count(),
-      prisma.user.count({ where: { deleted: false, planType: "PLUS" } }),
-    ]);
+router.get(
+  "/stats",
+  adminAuth,
+  async (_req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const [
+        totalUsers,
+        totalActivities,
+        totalActivityEntries,
+        totalNotifications,
+        paidUsers,
+      ] = await Promise.all([
+        prisma.user.count({ where: { deletedAt: null } }),
+        prisma.activity.count({ where: { deletedAt: null } }),
+        prisma.activityEntry.count({ where: { deletedAt: null } }),
+        prisma.notification.count(),
+        prisma.user.count({ where: { deletedAt: null, planType: "PLUS" } }),
+      ]);
 
-    res.json({
-      users: {
-        total: totalUsers,
-        paid: paidUsers,
-        free: totalUsers - paidUsers,
-      },
-      activities: totalActivities,
-      activity_entries: totalActivityEntries,
-      notifications: totalNotifications,
-    });
-  } catch (error) {
-    logger.error("Error fetching stats:", error);
-    res.status(500).json({ error: "Failed to fetch statistics" });
+      res.json({
+        users: {
+          total: totalUsers,
+          paid: paidUsers,
+          free: totalUsers - paidUsers,
+        },
+        activities: totalActivities,
+        activity_entries: totalActivityEntries,
+        notifications: totalNotifications,
+      });
+    } catch (error) {
+      logger.error("Error fetching stats:", error);
+      res.status(500).json({ error: "Failed to fetch statistics" });
+    }
   }
-});
+);
 
 // Public error logging endpoint (with rate limiting)
 const ALLOWED_ORIGINS = new Set([
@@ -264,7 +272,7 @@ interface ErrorLogRequest {
 router.post(
   "/public/log-error",
   publicRateLimit,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<Response | void> => {
     try {
       // Security checks
       const origin = req.headers.origin;
@@ -329,7 +337,7 @@ router.post(
 );
 
 // Health check endpoint
-router.get("/health", (_req: Request, res: Response) => {
+router.get("/health", (_req: Request, res: Response): void => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -341,7 +349,7 @@ router.get("/health", (_req: Request, res: Response) => {
 router.post(
   "/run-daily-metrics-notification",
   adminAuth,
-  async (req: AdminRequest, res: Response) => {
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
       logger.info(
         "Daily metrics notification endpoint called - currently disabled"
@@ -374,7 +382,7 @@ router.post(
 router.post(
   "/run-hourly-job",
   adminAuth,
-  async (req: AdminRequest, res: Response) => {
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
       logger.info("Starting hourly job execution");
 
@@ -487,7 +495,7 @@ const processUnactivatedEmails = async (
 router.post(
   "/run-daily-job",
   adminAuth,
-  async (req: AdminRequest, res: Response) => {
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
       const {
         filter_usernames = [],
@@ -549,5 +557,5 @@ router.post(
   }
 );
 
-export const adminRouter = router;
+export const adminRouter: Router = router;
 export default adminRouter;
