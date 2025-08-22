@@ -1,5 +1,3 @@
 packages:
-  - "frontend"
-  - "backend-node"
-  - "aws-infrastructure"
-  - "prisma"
+  - "apps/*"
+  - "packages/*"

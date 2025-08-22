@@ -138,6 +138,7 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
 [] hume service
 [] anything not necessary in the exposed routes
 [] ai assistants
+[] waf block on non allowed routes
 
 ## notes to self
 ...

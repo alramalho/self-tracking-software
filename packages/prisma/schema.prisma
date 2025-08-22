@@ -1,0 +1,477 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                              String             @id @default(cuid())
+  name                            String?
+  profile                         String?
+  picture                         String?
+  age                             Int?
+  username                        String?            @unique
+  timezone                        String?            @default("Europe/Berlin")
+  clerkId                         String?            @unique
+  language                        String?            @default("English")
+  planType                        PlanType           @default(FREE)
+  lastActiveAt                    DateTime?
+  email                           String             @unique
+  createdAt                       DateTime           @default(now())
+  deletedAt                       DateTime?
+  isPwaInstalled                  Boolean            @default(false)
+  isPwaNotificationsEnabled       Boolean            @default(false)
+  lookingForAp                    Boolean?           @default(false)
+  pwaSubscriptionEndpoint         String?
+  pwaSubscriptionKey              String?
+  pwaSubscriptionAuthToken        String?
+  unactivatedEmailSentAt          DateTime?
+  themeBaseColor                  ThemeColor         @default(BLUE)
+  defaultActivityVisibility       ActivityVisibility @default(PUBLIC)
+  recommendationsOutdated         Boolean            @default(false)
+  recommendationsLastCalculatedAt DateTime?
+
+  // Daily checkin settings
+  dailyCheckinDays String[]          @default([])
+  dailyCheckinTime DailyCheckinTime?
+
+  // Stripe settings
+  stripeCustomerId         String?
+  stripeSubscriptionId     String?
+  stripeSubscriptionStatus String?
+
+  // Relations
+  activities              Activity[]
+  activityEntries         ActivityEntry[]
+  metrics                 Metric[]
+  metricEntries           MetricEntry[]
+  plans                   Plan[]
+  messages                Message[]
+  notifications           Notification[]
+  planInvitationsSent     PlanInvitation[] @relation("PlanInvitationSender")
+  planInvitationsReceived PlanInvitation[] @relation("PlanInvitationRecipient")
+  planGroupMemberships    PlanGroup[]
+  recommendations         Recommendation[]
+  reactionsSent           Reaction[]
+
+  // Connection relationships (replaces friend system)
+  connectionsFrom Connection[] @relation("ConnectionFrom")
+  connectionsTo   Connection[] @relation("ConnectionTo")
+
+  // Referral relationships
+  referredUsers User[]  @relation("UserReferrals")
+  referredBy    User?   @relation("UserReferrals", fields: [referredById], references: [id])
+  referredById  String?
+
+  @@map("users")
+}
+
+model Connection {
+  id        String           @id @default(cuid())
+  fromId    String
+  toId      String
+  status    ConnectionStatus @default(PENDING)
+  message   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime?        @updatedAt
+
+  // Relations
+  from User @relation("ConnectionFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   User @relation("ConnectionTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+  @@index([fromId, status])
+  @@index([toId, status])
+  @@index([status])
+  @@map("connections")
+}
+
+model Activity {
+  id              String              @id @default(cuid())
+  userId          String
+  title           String
+  measure         String
+  emoji           String
+  createdAt       DateTime            @default(now())
+  privacySettings ActivityVisibility?
+  colorHex        String?
+  deletedAt       DateTime?
+
+  // Relations
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries      ActivityEntry[]
+  planSessions PlanSession[] // sessions on which activity is mentioned
+  plans        Plan[]
+
+  @@index([userId, deletedAt])
+  @@index([deletedAt, privacySettings])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+model ActivityEntry {
+  id          String    @id @default(cuid())
+  activityId  String
+  userId      String
+  quantity    Int
+  date        DateTime  @db.Date
+  createdAt   DateTime  @default(now())
+  description String?
+  deletedAt   DateTime?
+  timezone    String?
+
+  // Image info
+  imageS3Path    String?
+  imageUrl       String?
+  imageExpiresAt DateTime?
+  imageCreatedAt DateTime?
+  imageIsPublic  Boolean   @default(false)
+
+  // Relations
+  activity  Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions Reaction[]
+  comments  Comment[]
+
+  @@index([userId, deletedAt])
+  @@index([deletedAt, createdAt])
+  @@index([activityId])
+  @@index([createdAt])
+  @@map("activity_entries")
+}
+
+model Reaction {
+  id              String   @id @default(cuid())
+  activityEntryId String
+  userId          String // user that added the reaction
+  emoji           String
+  createdAt       DateTime @default(now())
+
+  // Relations
+  activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityEntryId, userId, emoji])
+  @@index([activityEntryId])
+  @@map("reactions")
+}
+
+model Comment {
+  id              String    @id @default(cuid())
+  activityEntryId String
+  userId          String
+  username        String
+  text            String
+  createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
+  picture         String?
+
+  // Relations
+  activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+
+  @@index([activityEntryId, deletedAt])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model Metric {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  emoji     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries MetricEntry[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("metrics")
+}
+
+model MetricEntry {
+  id                 String   @id @default(cuid())
+  userId             String
+  metricId           String
+  rating             Int
+  date               DateTime @db.Date
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  description        String?
+  skipped            Boolean  @default(false)
+  descriptionSkipped Boolean  @default(false)
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metric Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([metricId])
+  @@index([createdAt])
+  @@map("metric_entries")
+}
+
+
+model Plan {
+  id                         String            @id @default(cuid())
+  userId                     String
+  planGroupId                String?
+  goal                       String
+  emoji                      String?
+  finishingDate              DateTime?         @db.Date
+  createdAt                  DateTime          @default(now())
+  deletedAt                  DateTime?
+  durationType               PlanDurationType?
+  outlineType                PlanOutlineType   @default(SPECIFIC)
+  timesPerWeek               Int?
+  coachSuggestedTimesPerWeek Int?
+  notes                      String?
+  coachNotes                 String?
+  suggestedByCoachAt         DateTime?
+  sortOrder                  Int?
+
+  // Current week state
+  currentWeekState             PlanState @default(ON_TRACK)
+  currentWeekStateCalculatedAt DateTime?
+
+  // Relations
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planGroup   PlanGroup?       @relation(fields: [planGroupId], references: [id])
+  sessions    PlanSession[]
+  activities  Activity[]
+  invitations PlanInvitation[]
+  milestones  PlanMilestone[]
+
+  @@index([userId, deletedAt])
+  @@index([userId, id])
+  @@index([createdAt])
+  @@map("plans")
+}
+
+model PlanSession {
+  id               String   @id @default(cuid())
+  planId           String
+  isCoachSuggested Boolean  @default(false)
+  activityId       String
+  date             DateTime @db.Date
+  descriptiveGuide String   @default("")
+  quantity         Int
+  createdAt        DateTime @default(now())
+
+  // Relations
+  plan     Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([planId, isCoachSuggested])
+  @@index([activityId])
+  @@map("plan_sessions")
+}
+
+model PlanMilestone {
+  id          String   @id @default(cuid())
+  planId      String
+  date        DateTime @db.Date
+  description String
+  progress    Int?
+  criteria    Json? 
+  createdAt   DateTime @default(now())
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@map("plan_milestones")
+}
+
+model PlanGroup {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Relations
+  members User[]
+  plans   Plan[]
+
+  @@map("plan_groups")
+}
+
+model PlanInvitation {
+  id          String           @id @default(cuid())
+  planId      String
+  senderId    String
+  recipientId String
+  status      InvitationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime?        @updatedAt
+
+  // Relations
+  plan      Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sender    User @relation("PlanInvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("PlanInvitationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("plan_invitations")
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  userId    String
+  role      MessageRole
+  content   String
+  createdAt DateTime    @default(now())
+
+  // Relations
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emotions MessageEmotion[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model MessageEmotion {
+  id        String @id @default(cuid())
+  messageId String
+  name      String
+  score     Float
+  color     String
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_emotions")
+}
+
+model Notification {
+  id           String                  @id @default(cuid())
+  userId       String
+  message      String
+  createdAt    DateTime                @default(now())
+  sentAt       DateTime?
+  processedAt  DateTime?
+  openedAt     DateTime?
+  concludedAt  DateTime?
+  promptTag    String?
+  status       NotificationStatus      @default(PENDING)
+  type         NotificationType        @default(INFO)
+  relatedId    String?
+  relatedData  Json?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model Recommendation {
+  id                       String                   @id @default(cuid())
+  userId                   String
+  recommendationObjectType RecommendationObjectType @default(USER)
+  recommendationObjectId   String
+  score                    Float
+  metadata                 Json                     @default("{}")
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("recommendations")
+}
+
+// Enums
+enum PlanType {
+  FREE
+  PLUS
+}
+
+enum ThemeColor {
+  RANDOM
+  SLATE
+  BLUE
+  VIOLET
+  AMBER
+  EMERALD
+  ROSE
+}
+
+enum ActivityVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS
+}
+
+enum DailyCheckinTime {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+enum PlanDurationType {
+  HABIT
+  LIFESTYLE
+  CUSTOM
+}
+
+enum PlanOutlineType {
+  SPECIFIC
+  TIMES_PER_WEEK
+}
+
+enum PlanState {
+  ON_TRACK
+  AT_RISK
+  FAILED
+  COMPLETED
+}
+
+enum CriteriaJunction {
+  AND
+  OR
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationStatus {
+  PENDING
+  PROCESSED
+  OPENED
+  CONCLUDED
+}
+
+enum NotificationType {
+  FRIEND_REQUEST
+  PLAN_INVITATION
+  ENGAGEMENT
+  INFO
+  METRIC_CHECKIN
+  COACH
+}
+
+enum RecommendationObjectType {
+  USER
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
