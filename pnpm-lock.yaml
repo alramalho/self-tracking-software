@@ -172,7 +172,7 @@ importers:
         specifier: ^1.8.16
         version: 1.8.16
       tsx:
-        specifier: ^3.12.0
+        specifier: ^3.14.0
         version: 3.14.0
       typescript:
         specifier: ^5.1.6
