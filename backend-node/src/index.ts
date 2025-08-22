@@ -47,6 +47,8 @@ const allowedOrigins = [
   "https://tracking.so",
   "https://app.tracking.so",
   "https://app.tracking.so/",
+  "https://test-migration.tracking.so",
+  "https://test-migration.tracking.so/",
 ];
 
 if (ENVIRONMENT === "development") {
