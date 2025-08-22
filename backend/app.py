@@ -142,22 +142,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             )
 
 
-app.add_middleware(LoggingMiddleware)
-
-app.include_router(clerk_router)
-
-app.include_router(users_router)
-app.include_router(activities_router)
-app.include_router(plans_router)
-app.include_router(notifications_router)
-app.include_router(ai_router)
-app.include_router(onboarding_router)
-app.include_router(admin_router)
-app.include_router(tally_router)
-app.include_router(metrics_router)
-app.include_router(messages_router)
-app.include_router(stripe_router)
-
 origins = [
     "https://tracking.so",
     "https://app.tracking.so",
@@ -174,6 +158,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(LoggingMiddleware)
+
+app.include_router(clerk_router)
+
+app.include_router(users_router)
+app.include_router(activities_router)
+app.include_router(plans_router)
+app.include_router(notifications_router)
+app.include_router(ai_router)
+app.include_router(onboarding_router)
+app.include_router(admin_router)
+app.include_router(tally_router)
+app.include_router(metrics_router)
+app.include_router(messages_router)
+app.include_router(stripe_router)
 
 from fastapi import HTTPException
 
