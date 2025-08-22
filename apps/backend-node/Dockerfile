@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install pnpm and OpenSSL for Prisma
 RUN npm install -g pnpm 
@@ -7,25 +7,18 @@ RUN apk add --no-cache openssl
 # Set working directory
 WORKDIR /app
 
-# Copy workspace package files from root
-COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
+# Copy entire monorepo
+COPY . .
 
-# Copy backend-node package.json first to ensure dependencies are known
-COPY backend-node/package.json ./backend-node/
+# Install all dependencies
+RUN pnpm install --frozen-lockfile
 
-# Install ALL dependencies (including dev deps for building)
-RUN pnpm install --frozen-lockfile --no-cache
-
-# Copy backend-node source code
-COPY backend-node/ ./backend-node/
-COPY prisma/ ./prisma/
-
-# Build TypeScript from workspace root
+# Generate Prisma client and build
 RUN pnpm db:generate
 RUN pnpm build --filter backend-node
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 # Install pnpm and OpenSSL for Prisma
 RUN npm install -g pnpm 
@@ -33,21 +26,14 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY --from=builder /app/backend-node/package.json ./backend-node/
-COPY --from=builder /app/prisma ./prisma
+# Copy the entire built monorepo
+COPY --from=builder /app .
 
 # Install only production dependencies
-RUN pnpm install --frozen-lockfile --prod --no-cache
+RUN pnpm install --frozen-lockfile --prod
 
-# Generate Prisma client for production
-RUN cd prisma && pnpm prisma generate
-
-# Copy built application from builder stage
-COPY --from=builder /app/backend-node/dist ./backend-node/dist
-
-WORKDIR /app/backend-node
+# Set working directory to backend-node
+WORKDIR /app/apps/backend-node
 
 # Expose port 8000
 EXPOSE 8000
