@@ -1,4 +1,4 @@
-name: Deploy to Sandbox
+name: Deploy to AWS
 
 on:
   workflow_call:
