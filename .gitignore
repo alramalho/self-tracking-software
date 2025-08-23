@@ -15,3 +15,5 @@ db_data/*
 alex.ipynb
 
 .turbo
+
+data_migration
