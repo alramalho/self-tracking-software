@@ -29,6 +29,7 @@ const nextConfig = {
   env: {
     // Client env variables go here
   },
+  optimizePackageImports: ["@prisma/client"],
 };
 
 export default nextConfig;
