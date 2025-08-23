@@ -21,6 +21,7 @@ import {
 interface ApiStackProps {
   environment: string;
   certificateArn: string;
+  nodeCertificateArn: string;
 }
 
 interface FargateDeploymentOptions {
@@ -31,6 +32,7 @@ interface FargateDeploymentOptions {
   vpc?: ec2.IVpc;
   cluster?: ecs.ICluster;
   clusterName?: string;
+  certificateArn: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -87,6 +89,8 @@ export class ApiStack extends cdk.Stack {
       dockerfilePath: "Dockerfile.fargate",
       environment: pythonEnvConfig,
       clusterName: `${KEBAB_CASE_PREFIX}-python-cluster-${props.environment}`,
+      certificateArn: props.certificateArn,
+      nodeCertificateArn: props.nodeCertificateArn,
     });
 
     // Deploy Node.js backend (new) - reuse VPC and cluster from Python backend
@@ -127,6 +131,7 @@ export class ApiStack extends cdk.Stack {
       dockerfilePath: "apps/backend-node/Dockerfile",
       environment: nodeEnvConfig,
       clusterName: `${KEBAB_CASE_PREFIX}-node-cluster-${props.environment}`,
+      certificateArn: props.nodeCertificateArn,
     });
 
     // Setup WAF for the Python API (main API)
@@ -286,7 +291,7 @@ export class ApiStack extends cdk.Stack {
     let certificate = acm.Certificate.fromCertificateArn(
       this,
       `ImportedCertificate-${options.serviceName}`,
-      process.env.CERTIFICATE_ARN!
+      options.certificateArn
     );
 
     const fargateService =
