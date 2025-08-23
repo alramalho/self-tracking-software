@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd prisma
+          cd packages/prisma
           pnpm install
 
       - name: Deploy migrations
@@ -29,5 +29,5 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
-          cd prisma
-          npx prisma migrate deploy
+          cd packages/prisma
+          pnpm run deploy
