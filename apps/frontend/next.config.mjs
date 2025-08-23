@@ -1,4 +1,5 @@
 // import withSerwistInit from "@serwist/next";
+import { PrismaPlugin } from "@prisma/nextjs-monorepo-workaround-plugin";
 
 // const withSerwist = withSerwistInit({
 //   swSrc: "src/app/sw.ts",
@@ -29,13 +30,13 @@ const nextConfig = {
   env: {
     // Client env variables go here
   },
-  // webpack: (config, { isServer }) => {
-  //   if (isServer) {
-  //     config.plugins = [...config.plugins, new PrismaPlugin()];
-  //   }
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.plugins = [...config.plugins, new PrismaPlugin()];
+    }
 
-  //   return config;
-  // },
+    return config;
+  },
 };
 
 export default nextConfig;
