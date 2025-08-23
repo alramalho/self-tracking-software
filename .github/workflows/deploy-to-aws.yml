@@ -65,6 +65,7 @@ jobs:
         env:
           ENVIRONMENT: production
           CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
+          NODE_CERTIFICATE_ARN: ${{ secrets.NODE_CERTIFICATE_ARN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SHARED_ENCRYPTION_KEY: ${{ secrets.SHARED_ENCRYPTION_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
