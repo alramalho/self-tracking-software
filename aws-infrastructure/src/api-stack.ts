@@ -33,6 +33,7 @@ interface FargateDeploymentOptions {
   cluster?: ecs.ICluster;
   clusterName?: string;
   certificateArn: string;
+  nodeCertificateArn: string;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -132,6 +133,7 @@ export class ApiStack extends cdk.Stack {
       environment: nodeEnvConfig,
       clusterName: `${KEBAB_CASE_PREFIX}-node-cluster-${props.environment}`,
       certificateArn: props.nodeCertificateArn,
+      nodeCertificateArn: props.nodeCertificateArn,
     });
 
     // Setup WAF for the Python API (main API)
