@@ -341,11 +341,10 @@ export class AIService {
     Guidelines:
     - Extract activities mentioned in the conversation
     - Use atomic measures (e.g., 'pages', 'minutes', 'kilometers', not 'books' or 'marathons')
-    - For reading: use 'pages', for running: use 'kilometers' or 'minutes'
-    - For gym: use 'minutes' or 'sessions'
+    - Only single measure per activity (Never joint measures like 'pages or minutes')
     - Provide clear reasoning for each activity
-    - Set confidence based on clarity of information`;
-
+    - Set confidence based on clarity of information
+    `;
     return this.generateStructuredResponse(message, schema, systemPrompt);
   }
 

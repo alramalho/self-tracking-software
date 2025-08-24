@@ -284,7 +284,6 @@ async function generatePlan(params: {
 }): Promise<any> {
   const finishingDate = new Date();
   finishingDate.setDate(finishingDate.getDate() + params.weeks * 7);
-  const finishingDateStr = finishingDate.toISOString().split("T")[0];
 
   // Create plan in database with plan activity associations
   const plan = await prisma.plan.create({
@@ -292,7 +291,7 @@ async function generatePlan(params: {
       userId: params.userId,
       goal: params.goal,
       emoji: params.emoji,
-      finishingDate: finishingDateStr,
+      finishingDate: finishingDate,
       notes: `${params.guidelines}\n\nWeeks: ${params.weeks}, Sessions per week: ${params.sessionsPerWeek}`,
     },
   });
