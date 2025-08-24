@@ -9,8 +9,9 @@ import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
 import { Button } from "@/components/ui/button";
 import { createPlanProgressData } from "@/contexts/PlanProgressContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
+import { CompletePlan } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { Activity, CompletePlan } from "@tsw/prisma";
+import { Activity } from "@tsw/prisma";
 import {
   ChartArea,
   Home,
@@ -89,7 +90,7 @@ const AIPartnerFinder = () => {
     activities: [{ id: "reading-activity" }],
     coachNotes:
       "You're making great progress! I've noticed you're more consistent on weekdays. Let's try to maintain momentum on weekends too.",
-    suggestedByCoachAt: new Date().toISOString(),
+    suggestedByCoachAt: new Date(),
     currentWeekState: "ON_TRACK",
   } as Partial<CompletePlan>;
   const dummyCoachPlanWithSuggestions = {
