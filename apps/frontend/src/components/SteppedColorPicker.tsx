@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface ColorOption {
   name: string;
@@ -43,7 +43,7 @@ interface SteppedColorPickerProps {
 
 const SteppedColorPicker: React.FC<SteppedColorPickerProps> = ({ value, onChange }) => {
   const allOptions = [noColorOption, ...tailwindColorPalette];
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Find the currently selected color option
   const selectedOption = allOptions.find(color => color.hex === value) || noColorOption;
@@ -60,7 +60,6 @@ const SteppedColorPicker: React.FC<SteppedColorPickerProps> = ({ value, onChange
           {/* Show the selected color summary when collapsed */}
           {!isOpen && (
             <div className="flex items-center gap-2">
-              <span className="text-sm">{selectedOption.name}</span>
               <div className="flex gap-1">
                 <div 
                   className="w-4 h-4 rounded-sm"

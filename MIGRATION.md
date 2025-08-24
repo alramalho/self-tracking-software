@@ -146,51 +146,51 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
 ## TESTS (local)
 
 backend
-[X] health
-[X] api/users/all-users (non auth)
-[x] register via webapp (clerk webhook)
-[x] signin
-[x] load users data
+[ ] health
+[ ] api/users/all-users (non auth)
+[ ] register via webapp (clerk webhook)
+[ ] signin
+[ ] load users data
 [x] onboarding
-[x] adding activity
-[x] editing activity
-[x] uploading activity w/o photo 
-[x] uploading activity w/ photo 
-[x] updating activity
-[x] checking both in timeline
+[ ] adding activity
+[ ] editing activity
+[ ] uploading activity w/o photo 
+[ ] uploading activity w/ photo 
+[ ] updating activity
+[ ] checking both in timeline
 [ ] reacting
 [ ] comment
 [ ] check both there after refresh
 [ ] 
 -- user profile
-[x] can update settings (like looking for ap)
+[ ] can update settings (like looking for ap)
 ...
 -- notifications
-[x] can see
-[x] can dismiss
-[] push notify works
+[ ] can see
+[ ] can dismiss
+[ ] push notify works
 -- plans
-[x] create plan with
-    [x] date
-    [x] name
-    [x] emoji
-    [x] activities
-    [x] generated sessions
-    [x] times pe week
-    [x] milestones
-[x] milestones
-    [x] render
-    [x] edit (manual)
-    [x] edit (automatic)
+[ ] create plan with
+    [ ] date
+    [ ] name
+    [ ] emoji
+    [ ] activities
+    [ ] generated sessions
+    [ ] times pe week
+    [ ] milestones
+[ ] milestones
+    [ ] render
+    [ ] edit (manual)
+    [ ] edit (automatic)
 -- metrics
-[x] log metric
-[x] check metric logged
-[] check daily check in logged
-[] check daily checkin properly display in table
+[ ] log metric
+[ ] check metric logged
+[ ] check daily check in logged
+[ ] check daily checkin properly display in table
 -- recommendations
-[x] implement plan index (now we don't have planIds array anymore)
-[x] can compute recommended users
-[x] can see recommended users
+[ ] implement plan index (now we don't have planIds array anymore)
+[ ] can compute recommended users
+[ ] can see recommended users
 [ ] test errors are propagated to telegram
 
 ## missing verticals

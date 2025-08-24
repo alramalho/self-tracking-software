@@ -53,7 +53,7 @@ const allowedOrigins = [
 ];
 
 if (ENVIRONMENT === "development") {
-  allowedOrigins.push("http://localhost:3000");
+  allowedOrigins.push("http://localhost:3001");
 }
 
 app.use(
