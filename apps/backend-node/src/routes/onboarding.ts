@@ -336,11 +336,17 @@ function generateBasicSessions(params: {
   weeks: number;
   sessionsPerWeek: number;
   startDate: Date;
-}): any[] {
+}): {
+  planId: string;
+  activityId: string;
+  date: Date;
+  descriptiveGuide: string;
+  quantity: number;
+}[] {
   const sessions: Array<{
     planId: string;
     activityId: string;
-    date: string;
+    date: Date;
     descriptiveGuide: string;
     quantity: number;
   }> = [];
@@ -356,7 +362,7 @@ function generateBasicSessions(params: {
       sessions.push({
         planId: params.planId,
         activityId: activity.id,
-        date: sessionDate.toISOString().split("T")[0],
+        date: sessionDate,
         descriptiveGuide: `Session ${session + 1} of week ${week + 1}`,
         quantity: 1, // Default quantity
       });

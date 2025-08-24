@@ -9,16 +9,17 @@ import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
 import { Button } from "@/components/ui/button";
 import { createPlanProgressData } from "@/contexts/PlanProgressContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import { Activity } from "@tsw/prisma";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { Activity, CompletePlan } from "@tsw/prisma";
 import {
-    ChartArea,
-    Home,
-    LandPlot,
-    MoveRight,
-    NotepadText,
-    Route,
-    ScanFace,
-    Send
+  ChartArea,
+  Home,
+  LandPlot,
+  MoveRight,
+  NotepadText,
+  Route,
+  ScanFace,
+  Send,
 } from "lucide-react";
 import React, { useState } from "react";
 import { withFadeUpAnimation } from "../../lib";
@@ -72,20 +73,7 @@ const AIPartnerFinder = () => {
     useState(false);
 
   const { setShowUpgradePopover } = useUpgrade();
-
-
-
-  const dummyWeeks = [
-    {
-      startDate: new Date(),
-      plannedActivities: 7,
-      completedActivities: [
-        { date: new Date().toISOString() },
-        { date: new Date(Date.now() - 86400000).toISOString() },
-        { date: new Date(Date.now() - 2 * 86400000).toISOString() },
-      ],
-    },
-  ];
+  const { isUserPremium } = usePaidPlan();
 
   const dummyAchievement = {
     streak: 3,
@@ -96,16 +84,14 @@ const AIPartnerFinder = () => {
     id: "demo-coach-plan",
     goal: "Read 30 minutes daily",
     emoji: "📚",
-    outlineType: "timesPerWeek",
+    outlineType: "TIMES_PER_WEEK",
     timesPerWeek: 7,
-    activityIds: ["reading-activity"],
+    activities: [{ id: "reading-activity" }],
     coachNotes:
       "You're making great progress! I've noticed you're more consistent on weekdays. Let's try to maintain momentum on weekends too.",
     suggestedByCoachAt: new Date().toISOString(),
-    currentWeek: {
-      state: "ON_TRACK",
-    },
-  };
+    currentWeekState: "ON_TRACK",
+  } as Partial<CompletePlan>;
   const dummyCoachPlanWithSuggestions = {
     ...dummyCoachPlan,
     coachNotes:
@@ -209,16 +195,23 @@ const AIPartnerFinder = () => {
       <Button
         size="lg"
         className="w-full mt-8 rounded-xl"
-        onClick={() => setShowUpgradePopover(true)}
+        onClick={() => {
+          if (isUserPremium) {
+            completeStep("ai-partner-finder", {}, { complete: true });
+          } else {
+            setShowUpgradePopover(true);
+          }
+        }}
       >
-        Start trial <MoveRight className="ml-3 w-4 h-4" />
+        {isUserPremium ? "Continue" : "Start trial"}{" "}
+        <MoveRight className="ml-3 w-4 h-4" />
       </Button>
 
       <AppleLikePopover
         onClose={() => setPlanStatePopoverDemoOpen(false)}
         open={planStatePopoverDemoOpen}
       >
-        <div className="flex flex-col gap-4 pt-3 text-center space-y-2">
+        <div className="flex flex-col gap-4 pt-3 text-left space-y-2">
           <p className="text-md text-gray-600 font-semibold">
             In your <Home className="w-5 h-5 inline-block mb-1" /> Homepage, Oli
             provides you an overview of your plan and current week status.
@@ -226,7 +219,7 @@ const AIPartnerFinder = () => {
           <div className="w-full text-left">
             <PlanProgressCard
               plan={dummyCoachPlan as any}
-              weeks={dummyWeeks}
+              weeks={dummyPlanProgressData.weeks}
               achievement={dummyAchievement}
               isCoached={true}
               isExpanded={true}
@@ -298,7 +291,8 @@ const AIPartnerFinder = () => {
               className="bg-white"
             />
             <p className="text-md text-gray-600 mt-3">
-              You can then find both a weekly view of your metrics as well as a correlation analysis.
+              You can then find both a weekly view of your metrics as well as a
+              correlation analysis.
             </p>
             <MetricWeeklyView
               metric={dummyMetric}
@@ -312,7 +306,7 @@ const AIPartnerFinder = () => {
                     title: "Exercise",
                     emoji: "🏃‍♂️",
                     measure: "minutes",
-                  } as Activity ,
+                  } as Activity,
                   correlation: 0.65,
                 },
                 {
@@ -333,7 +327,9 @@ const AIPartnerFinder = () => {
               className="bg-white"
             />
             <p className="text-md text-gray-600 mt-3">
-              Or an even more in-depth view on the<br/> <ScanFace className="w-5 h-5 inline-block mb-1" /> Insights page!
+              Or an even more in-depth view on the
+              <br /> <ScanFace className="w-5 h-5 inline-block mb-1" /> Insights
+              page!
             </p>
           </div>
         </div>
@@ -341,5 +337,5 @@ const AIPartnerFinder = () => {
     </div>
   );
 };
- 
+
 export default withFadeUpAnimation(AIPartnerFinder);
