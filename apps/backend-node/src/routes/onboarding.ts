@@ -46,7 +46,7 @@ router.post(
       // Run parallel analysis
       const [questionAnalysis, goalParaphrase] = await Promise.all([
         aiService.analyzeQuestionCoverage(fullConversation, question_checks),
-        paraphraseUserGoal(message),
+        aiService.paraphraseGoal(message),
       ]);
 
       const response: any = {
@@ -56,7 +56,8 @@ router.post(
       if (!questionAnalysis.all_answered) {
         response.message = questionAnalysis.follow_up_message;
       } else {
-        response.goal = goalParaphrase;
+        response.goal = goalParaphrase.goal;
+        response.emoji = goalParaphrase.emoji;
       }
 
       res.json(response);
@@ -212,16 +213,6 @@ router.post(
   }
 );
 
-// Helper function to paraphrase user goal
-async function paraphraseUserGoal(goal: string): Promise<string> {
-  const systemPrompt = `You are a plan coach. Paraphrase goals to be short, concrete and tangible. 
-  They should include the achievable result, not timeframe or details.
-  Examples: 'I want to read 12 books this year' instead of 'i want to read more'
-  'I want to run 10km in under 1 hour' instead of 'i want to run more'
-  If the goal is already well phrased, output the same goal.`;
-
-  return aiService.generateText(`Paraphrase my goal: '${goal}'`, systemPrompt);
-}
 
 // Helper function to extract guidelines and emoji
 async function extractGuidelinesAndEmoji(

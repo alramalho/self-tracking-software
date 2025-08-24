@@ -392,6 +392,29 @@ export class AIService {
 
     return this.generateStructuredResponse(prompt, schema, systemPrompt);
   }
+
+  // Paraphrase user goal with emoji
+  async paraphraseGoal(goal: string): Promise<{
+    goal: string;
+    emoji: string;
+  }> {
+    const schema = z.object({
+      goal: z.string(),
+      emoji: z.string(),
+    });
+
+    const systemPrompt = `You are a plan coach. Paraphrase goals to be short, concrete and tangible. 
+    They should include the achievable result, not timeframe or details.
+    Examples: 'I want to read 12 books this year' instead of 'i want to read more'
+    'I want to run 10km in under 1 hour' instead of 'i want to run more'
+    If the goal is already well phrased, output the same goal.
+    If the goal is already short, concrete, and tangible, output the same goal.
+    Also provide a relevant emoji that represents the goal.`;
+
+    const prompt = `Paraphrase my goal: '${goal}'`;
+
+    return this.generateStructuredResponse(prompt, schema, systemPrompt);
+  }
 }
 
 export const aiService = new AIService();
