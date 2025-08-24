@@ -1,6 +1,6 @@
 import {
-    CompletePlan,
-    useUserPlan,
+  CompletePlan,
+  useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
 import React, { createContext, useContext, useMemo } from "react";
@@ -121,9 +121,11 @@ export const createPlanProgressData = (
   activities: Activity[],
   activityEntries: ActivityEntry[]
 ): PlanProgressData => {
-  return {
+  const result = {
     plan,
     achievement: calculatePlanAchievement(plan, activityEntries),
     weeks: getPlanWeeks(plan, activities, activityEntries),
   };
+  console.log(result);
+  return result;
 };

@@ -36,7 +36,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<
     string | null
   >(null);
-  const coachSuggestedSessions = selectedPlan.sessions.filter(
+  const coachSuggestedSessions = selectedPlan.sessions?.filter(
     (s) => s.isCoachSuggested
   );
   const [loadingStates, setLoadingStates] = useState({
