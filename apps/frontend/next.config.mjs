@@ -1,5 +1,5 @@
-// import withSerwistInit from "@serwist/next";
 import { PrismaPlugin } from "@prisma/nextjs-monorepo-workaround-plugin";
+import withSerwistInit from "@serwist/next";
 
 const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",
