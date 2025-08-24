@@ -36,7 +36,7 @@ RUN pnpm install --frozen-lockfile --prod
 WORKDIR /app/apps/backend-node
 
 # Expose port 8000
-EXPOSE 8000
+EXPOSE 3000
 
 # Start the application
 CMD ["pnpm", "start"]

@@ -26,7 +26,7 @@ import { stripeRouter } from "./routes/stripe";
 import { usersRouter } from "./routes/users";
 
 const app: Express = express();
-const PORT = process.env.PORT || 8000;
+const PORT = 3000;
 const ENVIRONMENT = process.env.NODE_ENV || "development";
 
 // Rate limiting
