@@ -141,11 +141,11 @@ export class ApiStack extends cdk.Stack {
       clusterName: `${KEBAB_CASE_PREFIX}-node-cluster-${props.environment}`,
       certificateArn: props.nodeCertificateArn,
       nodeCertificateArn: props.nodeCertificateArn,
-      betterStackConfig: {
-        enabled: true,
-        sourceToken: process.env.BETTER_STACK_SOURCE_TOKEN!,
-        ingestingHost: process.env.BETTER_STACK_INGESTING_HOST!,
-      } as BetterStackConfig,
+      // betterStackConfig: {
+      //   enabled: false,
+      //   sourceToken: process.env.BETTER_STACK_SOURCE_TOKEN!,
+      //   ingestingHost: process.env.BETTER_STACK_INGESTING_HOST!,
+      // } as BetterStackConfig,
     });
 
     // Setup WAF for the Python API (main API)
@@ -341,50 +341,50 @@ export class ApiStack extends cdk.Stack {
       );
 
     // Add Better Stack FireLens sidecar if configured
-    if (options.betterStackConfig?.enabled) {
-      const taskDef: ecs.TaskDefinition = fargateService.taskDefinition;
+    // if (options.betterStackConfig?.enabled) {
+    //   const taskDef: ecs.TaskDefinition = fargateService.taskDefinition;
 
-      // Add Better Stack Fluent Bit log router container
-      const logRouterContainer = taskDef.addContainer("log-router", {
-        image: ecs.ContainerImage.fromRegistry(
-          "betterstack/aws-ecs-fluent-bit:amd64-latest"
-        ),
-        cpu: 256,
-        memoryLimitMiB: 512,
-        memoryReservationMiB: 50,
-        essential: true,
-        environment: {
-          BETTER_STACK_SOURCE_TOKEN: options.betterStackConfig.sourceToken,
-          BETTER_STACK_INGESTING_HOST: options.betterStackConfig.ingestingHost,
-        },
-        logging: ecs.LogDrivers.awsLogs({
-          logGroup,
-          streamPrefix: "firelens",
-        }),
-      });
+    //   // Add Better Stack Fluent Bit log router container
+    //   const logRouterContainer = taskDef.addContainer("log-router", {
+    //     image: ecs.ContainerImage.fromRegistry(
+    //       "betterstack/aws-ecs-fluent-bit:amd64-latest"
+    //     ),
+    //     cpu: 256,
+    //     memoryLimitMiB: 512,
+    //     memoryReservationMiB: 50,
+    //     essential: true,
+    //     environment: {
+    //       BETTER_STACK_SOURCE_TOKEN: options.betterStackConfig.sourceToken,
+    //       BETTER_STACK_INGESTING_HOST: options.betterStackConfig.ingestingHost,
+    //     },
+    //     logging: ecs.LogDrivers.awsLogs({
+    //       logGroup,
+    //       streamPrefix: "firelens",
+    //     }),
+    //   });
 
-      // Use CloudFormation escape hatch to add FireLens configuration
-      const cfnTaskDef = taskDef.node.defaultChild as ecs.CfnTaskDefinition;
-      cfnTaskDef.addPropertyOverride(
-        "ContainerDefinitions.1.FirelensConfiguration",
-        {
-          Type: "fluentbit",
-          Options: {
-            "config-file-type": "file",
-            "config-file-value": "/fluent-bit-logtail.conf",
-            "enable-ecs-log-metadata": "true",
-          },
-        }
-      );
+    //   // Use CloudFormation escape hatch to add FireLens configuration
+    //   const cfnTaskDef = taskDef.node.defaultChild as ecs.CfnTaskDefinition;
+    //   cfnTaskDef.addPropertyOverride(
+    //     "ContainerDefinitions.1.FirelensConfiguration",
+    //     {
+    //       Type: "fluentbit",
+    //       Options: {
+    //         "config-file-type": "file",
+    //         "config-file-value": "/fluent-bit-logtail.conf",
+    //         "enable-ecs-log-metadata": "true",
+    //       },
+    //     }
+    //   );
 
-      // Update main container to use FireLens
-      cfnTaskDef.addPropertyOverride(
-        "ContainerDefinitions.0.LogConfiguration",
-        {
-          LogDriver: "awsfirelens",
-        }
-      );
-    }
+    //   // Update main container to use FireLens
+    //   cfnTaskDef.addPropertyOverride(
+    //     "ContainerDefinitions.0.LogConfiguration",
+    //     {
+    //       LogDriver: "awsfirelens",
+    //     }
+    //   );
+    // }
 
     fargateService.targetGroup.configureHealthCheck({
       path: "/health",
