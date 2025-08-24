@@ -26,7 +26,8 @@ import { stripeRouter } from "./routes/stripe";
 import { usersRouter } from "./routes/users";
 
 const app: Express = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 const ENVIRONMENT = process.env.NODE_ENV || "development";
 
 // Rate limiting
@@ -116,9 +117,9 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT} in ${ENVIRONMENT} mode`);
-  logger.info(`Health check available at http://localhost:${PORT}/health`);
+app.listen(PORT, HOST, () => {
+  logger.info(`Server running on ${HOST}:${PORT} in ${ENVIRONMENT} mode`);
+  logger.info(`Health check available at http://${HOST}:${PORT}/health`);
 });
 
 export default app;
