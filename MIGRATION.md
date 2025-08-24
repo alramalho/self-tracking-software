@@ -214,3 +214,9 @@ This provides:
 - TypeScript support for web-push
 
 Note: Scheduled notifications are handled by the existing `/run-hourly-job` endpoint, so AWS EventBridge cron integration was removed to avoid duplication.
+
+# TODO when merging to main
+[] switch to api.tracking.so
+    - re issue certifiactes
+[] change flight control base branch
+[] retest onboarding with dummy user
