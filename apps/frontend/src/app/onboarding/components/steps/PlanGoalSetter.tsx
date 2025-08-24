@@ -11,6 +11,7 @@ import { withFadeUpAnimation } from "../../lib";
 
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
   goal: string;
+  emoji: string;
 }
 
 function PlanGoalSetter() {
@@ -69,7 +70,7 @@ function PlanGoalSetter() {
               Goal
             </h3>
             <div className="space-y-2">
-              <span className="text-lg">🎯{" "}</span>
+              <span className="text-lg">{data.emoji || "🎯"}{" "}</span>
               <span className="flex-1 text-gray-900 italic">
                 {data.goal}
               </span>
