@@ -30,4 +30,4 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
           cd packages/prisma
-          pnpm run deploy
+          pnpm run db:deploy
