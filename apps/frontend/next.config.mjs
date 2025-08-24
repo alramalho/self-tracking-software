@@ -1,12 +1,12 @@
 // import withSerwistInit from "@serwist/next";
 import { PrismaPlugin } from "@prisma/nextjs-monorepo-workaround-plugin";
 
-// const withSerwist = withSerwistInit({
-//   swSrc: "src/app/sw.ts",
-//   swDest: "public/sw.js",
-//   register: false, // we'll do this manually
-//   cacheOnFrontEndNav: true,
-// });
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  register: false, // we'll do this manually
+  cacheOnFrontEndNav: true,
+});
 
 const nextConfig = {
   async rewrites() {
@@ -39,5 +39,5 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
-// export default withSerwist(nextConfig);
+// export default nextConfig;
+export default withSerwist(nextConfig);
