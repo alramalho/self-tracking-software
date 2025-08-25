@@ -477,150 +477,31 @@ export async function updatePlans(
   }
 }
 
-export async function upsertPlan(planData: any) {
+export async function leavePlan(planId: string) {
   const user = await validateUser();
 
   try {
-    // If plan has an ID, it's an update operation
-    if (planData.id) {
-      // Verify ownership
-      const existingPlan = await prisma.plan.findUnique({
-        where: { id: planData.id },
-      });
+    // Verify plan ownership
+    const plan = await prisma.plan.findUnique({
+      where: { id: planId },
+    });
 
-      if (!existingPlan || existingPlan.userId !== user.id) {
-        throw new Error("Not authorized to update this plan");
-      }
-
-      // Update the plan
-      const updatedPlan = await prisma.plan.update({
-        where: { id: planData.id },
-        data: {
-          goal: planData.goal,
-          emoji: planData.emoji,
-          finishingDate: planData.finishingDate,
-          notes: planData.notes,
-          durationType: planData.durationType,
-          outlineType: planData.outlineType || "SPECIFIC",
-          timesPerWeek: planData.timesPerWeek,
-          // Connect activities
-          ...(planData.activities?.length > 0 && {
-            activities: {
-              set: [], // Clear existing connections
-              connect: planData.activities.map((activity: any) => ({
-                id: activity.id,
-              })),
-            },
-          }),
-          // Update milestones if provided
-          ...(planData.milestones && {
-            milestones: {
-              deleteMany: {}, // Clear existing milestones
-              create: planData.milestones.map((milestone: any) => ({
-                description: milestone.description,
-                date: milestone.date,
-                criteria: milestone.criteria,
-              })),
-            },
-          }),
-          // Update sessions if provided
-          ...(planData.sessions && {
-            sessions: {
-              deleteMany: {}, // Clear existing sessions
-              create: planData.sessions.map((session: any) => ({
-                activityId: session.activityId,
-                date: session.date,
-                descriptiveGuide:
-                  session.descriptive_guide || session.descriptiveGuide || "",
-                quantity: session.quantity,
-              })),
-            },
-          }),
-        },
-        include: {
-          activities: true,
-          sessions: true,
-          milestones: true,
-        },
-      });
-
-      return { success: true, plan: updatedPlan };
-    } else {
-      // Create new plan
-      const result = await prisma.$transaction(async (tx) => {
-        // Create plan group first
-        const planGroup = await tx.planGroup.create({
-          data: {
-            members: {
-              connect: { id: user.id },
-            },
-          },
-        });
-
-        // Create plan with planGroupId reference
-        const newPlan = await tx.plan.create({
-          data: {
-            userId: user.id,
-            planGroupId: planGroup.id,
-            goal: planData.goal,
-            emoji: planData.emoji,
-            finishingDate: planData.finishingDate,
-            notes: planData.notes,
-            durationType: planData.durationType,
-            outlineType: planData.outlineType || "SPECIFIC",
-            timesPerWeek: planData.timesPerWeek,
-
-            // Connect activities directly
-            ...(planData.activities?.length > 0 && {
-              activities: {
-                connect: planData.activities.map((activity: any) => ({
-                  id: activity.id,
-                })),
-              },
-            }),
-
-            // Create milestones directly
-            ...(planData.milestones?.length > 0 && {
-              milestones: {
-                create: planData.milestones.map((milestone: any) => ({
-                  description: milestone.description,
-                  date: milestone.date,
-                  criteria: milestone.criteria,
-                })),
-              },
-            }),
-
-            // Create sessions directly
-            ...(planData.sessions?.length > 0 && {
-              sessions: {
-                create: planData.sessions.map((session: any) => ({
-                  activityId: session.activityId,
-                  date: session.date,
-                  descriptiveGuide:
-                    session.descriptive_guide || session.descriptiveGuide || "",
-                  quantity: session.quantity,
-                })),
-              },
-            }),
-          },
-          include: {
-            planGroup: true,
-            activities: true,
-            sessions: true,
-            milestones: true,
-          },
-        });
-
-        return newPlan;
-      });
-
-      return { success: true, plan: result };
+    if (!plan || plan.userId !== user.id) {
+      throw new Error("Not authorized to leave this plan");
     }
+
+    // Soft delete the plan by setting deletedAt
+    await prisma.plan.update({
+      where: { id: planId },
+      data: { deletedAt: new Date() },
+    });
+
+    return { success: true };
   } catch (error) {
-    console.error("Error upserting plan:", error);
+    console.error("Error leaving plan:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to save plan",
+      error: error instanceof Error ? error.message : "Failed to leave plan",
     };
   }
 }

@@ -5,7 +5,7 @@ import { CompletePlan as Plan } from "@/contexts/UserGlobalContext";
 import { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-    CheckCheck
+  CheckCheck
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -33,6 +33,7 @@ const PlanCard = ({
     const today = new Date();
     const diffTime = Math.abs(finishDate.getTime() - today.getTime());
     const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+    console.log({finishDate, today, diffTime, diffWeeks});
     return diffWeeks;
   };
 
@@ -149,20 +150,6 @@ const PlanGenerator = () => {
   const [progress, setProgress] = useState<number>(0);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const api = useApiWithAuth();
-
-  // const createPlan = async (plan: ApiPlan) => {
-  //   try {
-  //     const response = await api.post("/create-plan", {
-  //       ...plan,
-  //     });
-  //     const createdPlan = response.data.plan;
-  //     setSelectedPlan(createdPlan);
-  //     refetchUserData();
-  //   } catch (error) {
-  //     console.error("Plan creation error:", error);
-  //     toast.error("Failed to create plan. Please try again.");
-  //   }
-  // };
 
   const handlePlanSelect = (plan: Plan) => {
     setSelectedPlan(plan);

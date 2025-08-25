@@ -88,17 +88,17 @@ app.get("/exception", (_req, _res) => {
 });
 
 // API routes
-app.use("/api/users", usersRouter);
-app.use("/api/activities", activitiesRouter);
-app.use("/api/plans", plansRouter);
-app.use("/api/metrics", metricsRouter);
-app.use("/api/messages", messagesRouter);
-app.use("/api/notifications", notificationsRouter);
-app.use("/api/onboarding", onboardingRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api/clerk", clerkRouter);
-app.use("/api/ai", aiRouter);
-app.use("/api/stripe", stripeRouter);
+app.use("/users", usersRouter);
+app.use("/activities", activitiesRouter);
+app.use("/plans", plansRouter);
+app.use("/metrics", metricsRouter);
+app.use("/messages", messagesRouter);
+app.use("/notifications", notificationsRouter);
+app.use("/onboarding", onboardingRouter);
+app.use("/admin", adminRouter);
+app.use("/clerk", clerkRouter);
+app.use("/ai", aiRouter);
+app.use("/stripe", stripeRouter);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler);

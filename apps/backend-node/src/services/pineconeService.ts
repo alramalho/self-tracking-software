@@ -1,4 +1,4 @@
-import { Pinecone } from "@pinecone-database/pinecone";
+import { Index, Pinecone, RecordMetadata } from "@pinecone-database/pinecone";
 import { logger } from "../utils/logger";
 
 export interface SearchResult {
@@ -9,13 +9,14 @@ export interface SearchResult {
 
 export interface PineconeConfig {
   apiKey: string;
+  indexName: string;
   indexHost: string;
 }
 
 export class PineconeService {
   private pc: Pinecone;
   private indexHost: string;
-  private index: any;
+  private _namespace: Index<RecordMetadata>;
 
   constructor(
     config: PineconeConfig,
@@ -23,7 +24,7 @@ export class PineconeService {
   ) {
     this.pc = new Pinecone({ apiKey: config.apiKey });
     this.indexHost = config.indexHost;
-    this.index = this.pc.Index(config.indexHost);
+    this._namespace = this.pc.index(config.indexName, config.indexHost);
   }
 
   /**
@@ -35,10 +36,9 @@ export class PineconeService {
     metadata: Record<string, any> = {}
   ): Promise<void> {
     try {
-      await this.index.upsertRecords({
-        namespace: this.namespace,
-        records: [{ id: identifier, text, ...metadata }],
-      });
+      await this._namespace.upsertRecords([
+        { _id: identifier, chunk_text: text, ...metadata },
+      ]);
       logger.info(
         `Upserted record ${identifier} to namespace ${this.namespace}`
       );
@@ -59,15 +59,14 @@ export class PineconeService {
     try {
       const queryObj: any = {
         inputs: { text: queryText },
-        top_k: topK,
+        topK: topK,
       };
 
       if (filter) {
         queryObj.filter = filter;
       }
 
-      const result = await this.index.search({
-        namespace: this.namespace,
+      const result = await this._namespace.searchRecords({
         query: queryObj,
       });
 
@@ -142,6 +141,7 @@ export class PineconeService {
 // Create service instances for different namespaces
 const pineconeConfig: PineconeConfig = {
   apiKey: process.env.PINECONE_API_KEY || "",
+  indexName: process.env.PINECONE_INDEX_NAME || "",
   indexHost: process.env.PINECONE_INDEX_HOST || "",
 };
 

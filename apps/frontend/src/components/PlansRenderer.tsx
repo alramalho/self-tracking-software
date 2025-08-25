@@ -233,11 +233,11 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   };
 
   const handleInviteSuccess = () => {
-    refetchUserData();
+    refetchUserData(true);
   };
 
   const handlePlanRemoved = () => {
-    refetchUserData();
+    refetchUserData(true);
   };
 
   const handlePlanSelect = (planId: string) => {

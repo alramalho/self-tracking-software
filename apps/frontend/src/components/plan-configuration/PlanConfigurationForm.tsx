@@ -1,8 +1,8 @@
-import { upsertPlan } from "@/app/actions";
+import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
-    CompletePlan,
-    useUserPlan,
+  CompletePlan,
+  useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { usePlanGeneration } from "@/hooks/usePlanGeneration";
 import { PlanDurationType, PlanOutlineType } from "@tsw/prisma";
@@ -58,6 +58,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const [selectedActivities, setSelectedActivities] = useState<CompletePlan["activities"]>(
     plan ? userData?.activities?.filter(a => plan.activities.map(p => p.id).includes(a.id)) || [] : []
   );
+  const api = useApiWithAuth();
 
   const { generateSessions } = usePlanGeneration();
 
@@ -113,7 +114,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         existingPlan: isEdit ? plan : undefined,
       });
 
-      setGeneratedSessions(sessions);
+      setGeneratedSessions(sessions.map(session => ({
+        ...session,
+        date: new Date(session.date),
+      })));
     } catch (error) {
       toast.error("Failed to generate sessions");
     }
@@ -245,16 +249,11 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     try {
       setIsProcessing(true);
       const planToSave = createPlanToConfirm();
-      const result = await upsertPlan(planToSave);
-      
-      if (result.success) {
-        currentUserDataQuery.refetch();
-        toast.success(isEdit ? "Plan updated successfully" : "Plan created successfully");
-        onSuccess?.();
-      } else {
-        toast.error(result.error || "Failed to save plan");
-        onFailure?.(result.error || "Failed to save plan");
-      }
+      await api.post("/plans/upsert", planToSave);
+
+      currentUserDataQuery.refetch();
+      toast.success(isEdit ? "Plan updated successfully" : "Plan created successfully");
+      onSuccess?.();
     } catch (error) {
       const errorMessage = "Failed to save plan";
       toast.error(errorMessage);

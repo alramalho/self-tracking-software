@@ -1,6 +1,6 @@
 import { Activity } from "@tsw/prisma";
 import { Response, Router } from "express";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
@@ -213,7 +213,6 @@ router.post(
   }
 );
 
-
 // Helper function to extract guidelines and emoji
 async function extractGuidelinesAndEmoji(
   planGoal: string,
@@ -243,7 +242,7 @@ async function extractGuidelinesAndEmoji(
             sessions_per_week: z.string(),
           })
         ),
-        emoji: z.string().length(1),
+        emoji: z.string(),
       }),
       systemPrompt
     );

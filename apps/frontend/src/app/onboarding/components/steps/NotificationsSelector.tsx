@@ -59,9 +59,11 @@ const NotificationsSelector = () => {
       {isDevelopment && (
         <button
           onClick={handleSuccessTransition}
-          className="absolute bottom-4 left-4 w-8 h-8 opacity-0 cursor-pointer z-10"
+          className="fixed bottom-4 right-4 bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-2 rounded-lg text-sm font-medium shadow-lg z-50 transition-colors"
           title="Development bypass"
-        />
+        >
+          Skip
+        </button>
       )}
       <div className="w-full max-w-lg space-y-8 relative">
         <div className="flex flex-col items-center gap-4 text-center">

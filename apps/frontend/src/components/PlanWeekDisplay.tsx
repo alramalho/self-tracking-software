@@ -1,20 +1,20 @@
 import { PlanProgressData, usePlanProgress } from "@/contexts/PlanProgressContext";
 import {
-    isWeekCompleted as checkIsWeekCompleted,
-    getCompletedOn,
-    isSessionCompleted,
+  isWeekCompleted as checkIsWeekCompleted,
+  getCompletedOn,
+  isSessionCompleted,
 } from "@/contexts/PlanProgressContext/lib";
 import {
-    CompletePlan,
-    useUserPlan,
+  CompletePlan,
+  useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { cn } from "@/lib/utils";
 import { Activity, PlanSession } from "@tsw/prisma";
 import {
-    endOfWeek,
-    format,
-    isAfter,
-    isSameWeek
+  endOfWeek,
+  format,
+  isAfter,
+  isSameWeek
 } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -75,6 +75,7 @@ export const PlanWeekDisplay = ({
       format(new Date(entry.date), "yyyy-MM-dd")
     )
   );
+
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
@@ -236,7 +237,7 @@ export const PlanWeekDisplay = ({
                     key={sessionId}
                     selected={selectedSession === sessionId}
                     entry={{
-                      date: session.date,
+                      date: new Date(session.date),
                       activityId: session.activityId,
                       quantity: session.quantity,
                       description: session.descriptiveGuide,
