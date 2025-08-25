@@ -86,7 +86,6 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
     },
   });
 
-  // Handle plan acceptance - uses the plans.py /create-plan endpoint
   const handleAccept = async (data: PastWeekLoggingResponse): Promise<void> => {
     try {
       for (const activity_entry of data.activity_entries ?? []) {

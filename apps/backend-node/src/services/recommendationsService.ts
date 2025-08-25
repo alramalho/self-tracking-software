@@ -142,10 +142,9 @@ export class RecommendationsService {
         where: {
           userId: currentUserId,
           deletedAt: null,
-          finishingDate: { gt: new Date() }, // Only active plans
         },
-        orderBy: { createdAt: "desc" },
-        take: 1, // Use most recent plan
+        orderBy: { sortOrder: "asc" },
+        take: 1,
       });
 
       if (userPlans.length > 0) {

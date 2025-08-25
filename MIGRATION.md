@@ -152,12 +152,13 @@ backend
 [ ] signin
 [ ] load users data
 [x] onboarding
-[ ] adding activity
+[x] adding activity
 [ ] editing activity
 [ ] uploading activity w/o photo 
 [ ] uploading activity w/ photo 
 [ ] updating activity
 [ ] checking both in timeline
+[ ] checking was counted in coached plan
 [ ] reacting
 [ ] comment
 [ ] check both there after refresh
@@ -219,4 +220,6 @@ Note: Scheduled notifications are handled by the existing `/run-hourly-job` endp
 [] switch to api.tracking.so
     - re issue certifiactes
 [] change flight control base branch
+[] make sure stripe webhooks are properly tied
+[] make sure clerk webhooks are properly tied
 [] retest onboarding with dummy user

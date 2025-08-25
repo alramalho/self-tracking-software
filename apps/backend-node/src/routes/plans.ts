@@ -9,7 +9,7 @@ import { prisma } from "../utils/prisma";
 const router = Router();
 
 /**
- * Update plan embedding in Pinecone
+ * Update plan embedding in Pinecone using readable plan text
  */
 async function updatePlanEmbedding(
   planId: string,
@@ -412,12 +412,12 @@ router.post(
             outlineType: planData.outlineType || "SPECIFIC",
             timesPerWeek: planData.timesPerWeek,
             sortOrder: planData.sortOrder,
-            // Connect activities
-            ...(planData.activities?.length > 0 && {
+            // Connect activities - handle both activities array and activityIds array
+            ...((planData.activities?.length > 0 || planData.activityIds?.length > 0) && {
               activities: {
                 set: [], // Clear existing connections
-                connect: planData.activities.map((activity: any) => ({
-                  id: activity.id,
+                connect: (planData.activities || planData.activityIds || []).map((activity: any) => ({
+                  id: typeof activity === 'string' ? activity : activity.id,
                 })),
               },
             }),
@@ -453,7 +453,7 @@ router.post(
           },
         });
 
-        // Update plan embedding in background
+        // Update plan embedding in background using getReadablePlan
         updatePlanEmbedding(planData.id, req.user!.id);
 
         // Mark user recommendations as outdated
@@ -487,11 +487,11 @@ router.post(
               timesPerWeek: planData.timesPerWeek,
               sortOrder: planData.sortOrder,
 
-              // Connect activities directly
-              ...(planData.activities?.length > 0 && {
+              // Connect activities directly - handle both activities array and activityIds array
+              ...((planData.activities?.length > 0 || planData.activityIds?.length > 0) && {
                 activities: {
-                  connect: planData.activities.map((activity: any) => ({
-                    id: activity.id,
+                  connect: (planData.activities || planData.activityIds || []).map((activity: any) => ({
+                    id: typeof activity === 'string' ? activity : activity.id,
                   })),
                 },
               }),
@@ -533,7 +533,7 @@ router.post(
           return newPlan;
         });
 
-        // Update plan embedding in background
+        // Update plan embedding in background using getReadablePlan
         updatePlanEmbedding(result.id, req.user!.id);
 
         // Mark user recommendations as outdated
@@ -624,7 +624,7 @@ ${params.activities.map((a) => `- ${a.title} (${a.measure})`).join("\n")}`;
     // Define the schema for AI response
     const { z } = await import("zod");
     const GeneratedSession = z.object({
-      date: z.string(),
+      date: z.date().describe("The date of the session in YYYY-MM-DD format."),
       activity_name: z
         .string()
         .describe(

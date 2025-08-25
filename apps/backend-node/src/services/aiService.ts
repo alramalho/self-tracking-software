@@ -1,22 +1,42 @@
-import { openai } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import {
+  createOpenRouter,
+  OpenRouterProvider,
+} from "@openrouter/ai-sdk-provider";
 import { generateObject, generateText } from "ai";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 
+// note to self:
+// we were amidst fully testing locally, as date changes broke things in unexpected ways
+// specifiaclly, we were migrating to openrouter as we were facing some issues with models
+// not being able to properly generate on first attempt the desired schema
+// after that, we resume the dreadful work of making the app work
+// fully remotely (we were also facing weird cloudfront 429, but we should fully clean up
+// app before that as rn its probably making a shit ton of req, which it shouldn't anyway)
 export class AIService {
   private model: string;
+  private openai;
+  private openrouter: OpenRouterProvider;
 
   constructor() {
-    this.model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+    this.model = process.env.OPENROUTER_MODEL || "deepseek/deepseek-chat-v3.1";
+    this.openai = createOpenAICompatible({
+      name: "openrouter",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: "https://openrouter.ai/api/v1",
+    });
+    this.openrouter = createOpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY,
+    });
   }
 
   async generateText(prompt: string, systemPrompt?: string): Promise<string> {
     try {
       const result = await generateText({
-        model: openai(this.model),
+        model: this.openrouter.chat(this.model),
         prompt,
         system: systemPrompt,
-        maxTokens: 1000,
         temperature: 0.7,
       });
 
@@ -33,12 +53,13 @@ export class AIService {
     systemPrompt?: string
   ): Promise<T> {
     try {
+      console.log("Generating structured response with model:", this.model);
       const result = await generateObject({
-        model: openai(this.model),
+        model: this.openrouter.chat(this.model),
         prompt,
-        system: systemPrompt,
         schema,
-        temperature: 0.3, // Lower temperature for structured responses
+        system: systemPrompt,
+        temperature: 0.3,
       });
 
       return result.object;
@@ -344,6 +365,11 @@ export class AIService {
     - Only single measure per activity (Never joint measures like 'pages or minutes')
     - Provide clear reasoning for each activity
     - Set confidence based on clarity of information
+
+    Examples
+    - 'Reading' measured in 'pages' or 'minutes'
+    - 'Running' measured in 'kilometers' or 'minutes'
+    - 'Gym' measured in 'minutes' or 'sessions'
     `;
     return this.generateStructuredResponse(message, schema, systemPrompt);
   }

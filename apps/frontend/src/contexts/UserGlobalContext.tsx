@@ -1,39 +1,40 @@
 import { useApiWithAuth } from "@/api";
 import {
-    getCurrentUserData,
-    getMessages,
-    getMetricsAndEntries,
-    getTimelineData,
-    getUserData,
-    HydratedCurrentUser,
-    HydratedUser,
-    TimelineData,
-    updateUser,
+  getCurrentUserData,
+  getMessages,
+  getMetricsAndEntries,
+  getTimelineData,
+  getUserData,
+  HydratedCurrentUser,
+  HydratedUser,
+  TimelineData,
+  updateUser,
 } from "@/app/actions";
 import { useSession } from "@clerk/clerk-react";
 import { useClerk } from "@clerk/nextjs";
 import {
-    useQuery,
-    useQueryClient,
-    UseQueryResult,
+  useQuery,
+  useQueryClient,
+  UseQueryResult,
 } from "@tanstack/react-query";
 import {
-    Message,
-    MessageEmotion,
-    Metric,
-    MetricEntry,
-    Notification,
-    Recommendation,
-    ThemeColor,
-    User
+  Message,
+  MessageEmotion,
+  Metric,
+  MetricEntry,
+  Notification,
+  Recommendation,
+  ThemeColor,
+  User
 } from "@tsw/prisma";
 import { Plan, PlanMilestone } from "@tsw/prisma/types";
+import { isToday } from "date-fns";
 import { useRouter } from "next/navigation";
 import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
 } from "react";
 import { toast } from "react-hot-toast";
 
@@ -258,7 +259,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const timelineDataQuery = useTimelineDataQuery();
 
   const refetchUserData = useCallback(
-    async (notify = true) => {
+    async (notify = false) => {
       await queryClient.refetchQueries({ queryKey: ["userData"] });
 
       const refetchPromise = currentUserDataQuery.refetch().then((result) => {
@@ -314,12 +315,11 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
   const useIsMetricLoggedToday = (metricId: string) => {
     const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
     const entries = metricsAndEntriesData?.entries || [];
-    const today = new Date().toISOString().split("T")[0];
 
     return entries.some(
       (entry) =>
         entry.metricId === metricId &&
-        entry.date.toISOString().split("T")[0] === today
+        isToday(entry.date)
     );
   };
 
@@ -327,14 +327,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
     const metrics = metricsAndEntriesData?.metrics || [];
     const entries = metricsAndEntriesData?.entries || [];
-    const today = new Date().toISOString().split("T")[0];
 
     return metrics.some(
       (metric) =>
         !entries.some(
           (entry) =>
             entry.metricId === metric.id &&
-            entry.date.toISOString().split("T")[0] === today
+            isToday(entry.date)
         )
     );
   };

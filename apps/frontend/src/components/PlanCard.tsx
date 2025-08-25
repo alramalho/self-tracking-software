@@ -1,4 +1,4 @@
-import { useApiWithAuth } from "@/api";
+import { leavePlan } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CompletePlan as Plan, useUserPlan } from "@/contexts/UserGlobalContext";
@@ -59,7 +59,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const [showSettings, setShowSettings] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const api = useApiWithAuth();
   const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
@@ -73,7 +72,10 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   const handleLeavePlan = async () => {
     toast.promise(
-      api.post(`/plans/${plan.id}/leave`).then(() => {
+      leavePlan(plan.id!).then((result) => {
+        if (!result.success) {
+          throw new Error(result.error || "Failed to leave plan");
+        }
         setShowSettings(false);
         setShowLeaveConfirm(false);
         onPlanRemoved?.();

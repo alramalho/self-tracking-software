@@ -2,6 +2,7 @@ import { User } from "@tsw/prisma";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
+import { recommendationsService } from "../services/recommendationsService";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
 import { userService } from "../services/userService";
@@ -556,6 +557,81 @@ router.post(
     } catch (error) {
       logger.error("Error in daily job:", error);
       res.status(500).json({ error: "Failed to run daily job" });
+    }
+  }
+);
+
+// Compute recommendations for a specific user
+router.post(
+  "/compute-recommendations",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { username } = req.body;
+
+      if (!username) {
+        return res.status(400).json({ error: "username is required" });
+      }
+
+      // Get user by username
+      const user = await prisma.user.findUnique({
+        where: { username },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Compute recommendations
+      await recommendationsService.computeRecommendedUsers(user.id);
+
+      res.json({
+        message: `Recommendations computed successfully for user ${username}`,
+        user_id: user.id,
+      });
+    } catch (error) {
+      logger.error("Error computing recommendations:", error);
+      res.status(500).json({ error: "Failed to compute recommendations" });
+    }
+  }
+);
+
+// Get recommendations for a specific user
+router.get(
+  "/get-recommendations/:username",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { username } = req.params;
+
+      if (!username) {
+        return res.status(400).json({ error: "username is required" });
+      }
+
+      // Get user by username
+      const user = await prisma.user.findUnique({
+        where: { username },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get recommendations
+      const recommendations = await recommendationsService.getRecommendedUsers(
+        user.id
+      );
+
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+        },
+        ...recommendations,
+      });
+    } catch (error) {
+      logger.error("Error getting recommendations:", error);
+      res.status(500).json({ error: "Failed to get recommendations" });
     }
   }
 );

@@ -1,7 +1,7 @@
 import {
   Plan as PrismaPlan,
   PlanMilestone as PrismaPlanMilestone,
-} from "../../generated/prisma";
+} from "../generated/prisma";
 
 export type MilestoneCriteria = {
   junction: "AND" | "OR";
