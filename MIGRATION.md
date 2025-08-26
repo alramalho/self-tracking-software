@@ -153,11 +153,11 @@ backend
 [x] load users data
 [x] onboarding
 [x] adding activity
-[ ] editing activity
-[ ] uploading activity w/o photo 
-[ ] uploading activity w/ photo 
-[ ] updating activity
-[ ] checking both in timeline
+[x] editing activity
+[x] uploading activity w/o photo 
+[x] uploading activity w/ photo 
+[x] updating activity
+[x] checking both in timeline
 [ ] checking was counted in coached plan
 [ ] reacting
 [ ] comment
@@ -167,8 +167,9 @@ backend
 [ ] can update settings (like looking for ap)
 ...
 -- notifications
-[ ] can see
-[ ] can dismiss
+[x] can see
+[x] can dismiss single
+[x] can dismiss all
 [ ] push notify works
 -- plans
 [ ] create plan with
@@ -183,6 +184,7 @@ backend
     [ ] render
     [ ] edit (manual)
     [ ] edit (automatic)
+[ ] can click specific activity (in specific schedule) to see details
 -- metrics
 [ ] log metric
 [ ] check metric logged

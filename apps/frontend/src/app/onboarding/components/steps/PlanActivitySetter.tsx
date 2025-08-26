@@ -1,7 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import {
-    BaseExtractionResponse,
-    DynamicUISuggester,
+  BaseExtractionResponse,
+  DynamicUISuggester,
 } from "@/components/DynamicUISuggester";
 import { Activity } from "@tsw/prisma";
 import { AlertCircle, BicepsFlexed } from "lucide-react";

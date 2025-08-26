@@ -1,5 +1,6 @@
 import { Activity } from "@tsw/prisma";
 import { Response, Router } from "express";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
@@ -35,10 +36,11 @@ router.post(
         role: "USER",
       });
 
-      const conversationHistory = await memoryService.readConversationHistory(
-        req.user!.id,
-        30
-      );
+      // const conversationHistory = await memoryService.readConversationHistory(
+      //   req.user!.id,
+      //   30
+      // );
+      const conversationHistory = undefined;
       const fullConversation = conversationHistory
         ? `${conversationHistory}\n${req.user!.name || req.user!.username || "User"} (just now): ${message}`
         : `${req.user!.name || req.user!.username || "User"}: ${message}`;
@@ -248,6 +250,7 @@ async function extractGuidelinesAndEmoji(
     );
     return result;
   } catch (error) {
+    logger.error("Error extracting guidelines and emoji:", error);
     // Fallback to defaults if AI fails
     return {
       guidelines:
@@ -271,105 +274,43 @@ async function generatePlan(params: {
   sessionsPerWeek: string;
   guidelines: string;
   emoji: string;
-}): Promise<any> {
+}): Promise<{
+  id: string;
+  userId: string;
+  goal: string;
+  emoji: string;
+  activities: Activity[];
+  finishingDate: Date;
+  notes: string;
+  sessions: {
+    date: Date;
+    activityId: string;
+    descriptive_guide: string;
+    quantity: number;
+  }[];
+}> {
   const finishingDate = new Date();
   finishingDate.setDate(finishingDate.getDate() + params.weeks * 7);
 
-  // Create plan in database with plan activity associations
-  const plan = await prisma.plan.create({
-    data: {
-      userId: params.userId,
-      goal: params.goal,
-      emoji: params.emoji,
-      finishingDate: finishingDate,
-      notes: `${params.guidelines}\n\nWeeks: ${params.weeks}, Sessions per week: ${params.sessionsPerWeek}`,
-    },
-  });
-
-  // Create plan activities associations
-  // for (const activity of params.activities) {
-  //   await prisma.activity.create({
-  //     data: {
-  //       planId: plan.id,
-  //       activityId: activity.id,
-  //     },
-  //   });
-  // }
-
-  // Generate basic sessions (simplified - would use AI in full implementation)
-  const sessions = generateBasicSessions({
-    planId: plan.id,
+  const description = `${params.guidelines}\n\nWeeks: ${params.weeks}, Sessions per week: ${params.sessionsPerWeek}`;
+  const sessionsResult = await aiService.generatePlanSessions({
     activities: params.activities,
-    weeks: params.weeks,
-    sessionsPerWeek: parseInt(params.sessionsPerWeek.split("-")[0]),
-    startDate: new Date(),
+    finishingDate: finishingDate,
+    goal: params.goal,
+    description,
   });
-
-  // Create sessions in database
-  for (const session of sessions) {
-    await prisma.planSession.create({
-      data: session,
-    });
-  }
 
   return {
-    ...plan,
-    sessions,
+    id: uuidv4(),
+    userId: params.userId,
+    goal: params.goal,
+    emoji: params.emoji,
     activities: params.activities,
+    finishingDate: finishingDate,
+    notes: description,
+    sessions: sessionsResult.sessions,
   };
 }
-
-// Helper function to generate basic sessions
-function generateBasicSessions(params: {
-  planId: string;
-  activities: any[];
-  weeks: number;
-  sessionsPerWeek: number;
-  startDate: Date;
-}): {
-  planId: string;
-  activityId: string;
-  date: Date;
-  descriptiveGuide: string;
-  quantity: number;
-}[] {
-  const sessions: Array<{
-    planId: string;
-    activityId: string;
-    date: Date;
-    descriptiveGuide: string;
-    quantity: number;
-  }> = [];
-  const currentDate = new Date(params.startDate);
-
-  for (let week = 0; week < params.weeks; week++) {
-    for (let session = 0; session < params.sessionsPerWeek; session++) {
-      const sessionDate = new Date(currentDate);
-      sessionDate.setDate(currentDate.getDate() + week * 7 + session);
-
-      const activity = params.activities[session % params.activities.length];
-
-      sessions.push({
-        planId: params.planId,
-        activityId: activity.id,
-        date: sessionDate,
-        descriptiveGuide: `Session ${session + 1} of week ${week + 1}`,
-        quantity: 1, // Default quantity
-      });
-    }
-  }
-
-  return sessions;
-}
-
-// Health check
-router.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    service: "onboarding-routes",
-  });
-});
 
 export const onboardingRouter: Router = router;
 export default onboardingRouter;

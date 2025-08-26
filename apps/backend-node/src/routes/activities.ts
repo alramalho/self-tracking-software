@@ -269,7 +269,7 @@ router.get(
 
 // Upsert activity
 router.post(
-  "/upsert-activity",
+  "/upsert",
   requireAuth,
   async (
     req: AuthenticatedRequest,

@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
-import {
-  DynamicUISuggester,
-  BaseExtractionResponse,
-} from "@/components/DynamicUISuggester";
-import { toast } from "sonner";
 import { useApiWithAuth } from "@/api";
-import { useOnboarding } from "../OnboardingContext";
-import { AlertCircle, Crosshair, Goal } from "lucide-react";
+import {
+  BaseExtractionResponse,
+  DynamicUISuggester,
+} from "@/components/DynamicUISuggester";
+import { AlertCircle, Goal } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { withFadeUpAnimation } from "../../lib";
+import { useOnboarding } from "../OnboardingContext";
 
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
   goal: string;
@@ -20,7 +20,7 @@ function PlanGoalSetter() {
   const [text, setText] = useState(planGoal);
   const [allAnswered, setAllAnswered] = useState(false);
   const questionChecks = {
-    "Does the message mention a goal that is concrete and measurable?": {
+    "Does the message mention a goal that is minimally concrete and measurable? (E.g. 'Read 12 books a year' instead of 'Read more books')": {
       icon: <AlertCircle className="w-6 h-6 text-blue-500" />,
       title: "Make sure it is concrete and measurable",
       description:

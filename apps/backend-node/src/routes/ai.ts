@@ -4,6 +4,7 @@ import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
 import { notificationService } from "../services/notificationService";
+import { plansService } from "../services/plansService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
 import { logger } from "../utils/logger";
@@ -66,23 +67,30 @@ router.post(
         return res.status(401).json({ error: "You're on free plan." });
       }
 
-      // TODO: Check if user has plans when plans system is implemented
-      // For now, return placeholder
+      // Get user's first plan
+      const userPlan = await plansService.getUserFirstPlan(user.id);
+      if (!userPlan) {
+        return res.status(401).json({ error: "You have no plans." });
+      }
+
       logger.info(`Coach message generation requested for user ${user.id}`);
 
-      const message =
-        "AI coaching feature coming soon! Your personalized coaching messages will appear here once the AI system is fully implemented.";
+      // Recalculate current week state for the plan
+      await plansService.recalculateCurrentWeekState(userPlan.id, user.id);
+
+      // Generate coaching message using AI
+      const message = await aiService.generateCoachMessage(user, userPlan);
 
       // Create a notification for the user
       await notificationService.createAndProcessNotification({
         userId: user.id,
         message,
-        type: "INFO",
+        type: "COACH",
         relatedData: {
           picture:
             "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
         },
-      });
+      }, false); // Don't push notify as per Python implementation
 
       res.json({ message });
     } catch (error) {
