@@ -26,7 +26,7 @@ const NotificationsSelector = () => {
 
     // Complete the step after 2 seconds
     setTimeout(() => {
-      completeStep("notifications-selector", {next: `${partnerType}-partner-finder`});
+      completeStep("notifications-selector", {}, {nextStep: `${partnerType}-partner-finder`});
     }, 2000);
   };
 
@@ -159,13 +159,16 @@ const NotificationsSelector = () => {
                 <p className="text-md text-green-600">
                   Notifications have been enabled successfully!
                 </p>
-                <Button
+                {/* <Button
                   size="lg"
                   className="rounded-2xl"
-                  onClick={() => completeStep("notifications-selection", {next: `${partnerType}-partner-finder`})}
+                  onClick={() => {
+                    console.log("partnerType", partnerType);
+                    completeStep("notifications-selector", {}, {nextStep: `${partnerType}-partner-finder`})
+                  }}
                 >
                   Continue
-                </Button>
+                </Button> */}
               </motion.div>
             )}
           </AnimatePresence>

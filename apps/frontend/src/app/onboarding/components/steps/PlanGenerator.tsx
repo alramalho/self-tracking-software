@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { withFadeUpAnimation } from "../../lib";
 import { useOnboarding } from "../OnboardingContext";
+import { Button } from "@/components/ui/button";
 
 const PlanCard = ({
   plan,
@@ -153,10 +154,15 @@ const PlanGenerator = () => {
 
   const handlePlanSelect = async (plan: Plan) => {
     setSelectedPlan(plan);
+    // Create a Set of activity IDs to avoid duplicates
+    const activityIds = new Set(plan.activities.map(activity => activity.id));
+    
+    // Create activities one by one using the unique IDs
     await Promise.all(
-      plan.activities.map((activity) =>
-        api.post("/activities/upsert", activity)
-      )
+      Array.from(activityIds).map(id => {
+        const activity = plan.activities.find(a => a.id === id);
+        return api.post("/activities/upsert", activity);
+      })
     );
     await api.post("/plans/upsert", {
       ...plan,
@@ -413,6 +419,13 @@ const PlanGenerator = () => {
                       onSelect={() => handlePlanSelect(generatedPlans[1])}
                       index={1}
                     />
+
+                    <Button
+                      onClick={() => generatePlans()}
+                      className="w-full"
+                    >
+                      Regenerate Plans
+                    </Button>
                   </motion.div>
                 )}
               </motion.div>

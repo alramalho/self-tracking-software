@@ -21,7 +21,7 @@ export class AIService {
   private openrouter: OpenRouterProvider;
 
   constructor() {
-    this.model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini"; // "deepseek/deepseek-chat-v3.1"
+    this.model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
     // this.openai = createOpenAICompatible({
     //   name: "openrouter",
     //   apiKey: process.env.OPENROUTER_API_KEY,
@@ -48,7 +48,7 @@ export class AIService {
             // Keep original if not valid JSON
           }
         }
-        // console.debug("Fetching:", url, JSON.stringify(logOptions, null, 2));
+        // logger.debug("Fetching:", url, JSON.stringify(logOptions, null, 2));
         return fetch(url, options);
       },
     });
@@ -76,7 +76,7 @@ export class AIService {
     systemPrompt?: string
   ): Promise<T> {
     try {
-      console.log("Generating structured response with model:", this.model);
+      logger.debug("Generating structured response with model:", this.model);
       const result = await generateObject({
         model: this.openrouter.chat(this.model),
         prompt,
@@ -552,6 +552,7 @@ export class AIService {
     activities: any[];
     description?: string;
     existingPlan?: any;
+    sessionsPerWeek?: number;
   }): Promise<{
     sessions: {
       date: Date;
@@ -632,9 +633,12 @@ export class AIService {
         `The plan should be progressive (intensities or recurrence of activities should increase over time).` +
         `The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.` +
         `It is an absolute requirement that all present sessions activity names are contained in the list of activities.` +
-        `` +
-        `Please only include these activities in plan:` +
-        `${params.activities.map((a) => `- ${a.title} (${a.measure})`).join("\n")}`;
+        params.sessionsPerWeek
+          ? `The plan should have ${params.sessionsPerWeek} sessions per week.`
+          : "" +
+            `` +
+            `Please only include these activities in plan:` +
+            `${params.activities.map((a) => `- ${a.title} (${a.measure})`).join("\n")}`;
 
       let userPrompt = `Please generate me a plan to achieve the goal of ${params.goal} by ${finishingDateReadable}.`;
       if (params.description) {
@@ -646,7 +650,7 @@ export class AIService {
           .string()
           .describe("The date of the session in YYYY-MM-DD format."),
         activity_name: z
-          .string()
+          .enum(params.activities.map((a) => a.title))
           .describe(
             "The name of the activity to be performed. Should have no emoji to match exactly with the activity title."
           ),
@@ -655,7 +659,6 @@ export class AIService {
           .describe(
             "The quantity of the activity to be performed. Directly related to the activity and should be measured in the same way."
           ),
-        descriptive_guide: z.string(),
       });
 
       const GeneratedSessionWeek = z.object({
@@ -688,6 +691,8 @@ export class AIService {
         systemPrompt
       );
 
+      logger.info("Generated sessions:", response);
+
       // Convert generated sessions to the expected format
       const sessions: Array<{
         date: Date;
@@ -699,9 +704,6 @@ export class AIService {
         logger.info(
           `Week ${week.week_number}. Has ${week.sessions.length} sessions.`
         );
-
-        logger.info({ sessions: week.sessions });
-        logger.info({ activities: params.activities });
 
         for (const session of week.sessions) {
           // Find matching activity
