@@ -151,8 +151,20 @@ const PlanGenerator = () => {
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const api = useApiWithAuth();
 
-  const handlePlanSelect = (plan: Plan) => {
+  const handlePlanSelect = async (plan: Plan) => {
     setSelectedPlan(plan);
+    await Promise.all(
+      plan.activities.map((activity) =>
+        api.post("/activities/upsert", activity)
+      )
+    );
+    await api.post("/plans/upsert", {
+      ...plan,
+    }).then((res) => {
+      console.log("res", res);
+    }).catch((err) => {
+      console.error("err", err);
+    });
     completeStep("plan-generator", {
       selectedPlan: plan,
       plans: generatedPlans,
@@ -242,7 +254,7 @@ const PlanGenerator = () => {
       generatePlans();
       setIsLoading(true);
     } else {
-      if (generatedActivities.length === 0 && planActivities.length > 0) {
+      if (generatedActivities?.length === 0 && planActivities?.length > 0) {
         setGeneratedActivities(planActivities);
       }
     }

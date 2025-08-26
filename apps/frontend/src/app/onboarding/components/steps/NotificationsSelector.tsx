@@ -10,7 +10,7 @@ import { withFadeUpAnimation } from "../../lib";
 import { useOnboarding } from "../OnboardingContext";
 
 const NotificationsSelector = () => {
-  const { completeStep } = useOnboarding();
+  const { completeStep, partnerType } = useOnboarding();
   const { requestPermission, isPushGranted } = useNotifications();
   const [isSuccess, setIsSuccess] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -26,7 +26,7 @@ const NotificationsSelector = () => {
 
     // Complete the step after 2 seconds
     setTimeout(() => {
-      completeStep("notifications-selection", {next: "partner-selection"});
+      completeStep("notifications-selector", {next: `${partnerType}-partner-finder`});
     }, 2000);
   };
 
@@ -150,14 +150,23 @@ const NotificationsSelector = () => {
 
           <AnimatePresence>
             {isSuccess && (
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
-                className="text-md text-green-600"
+                className="flex flex-col items-center gap-4"
               >
-                Notifications have been enabled successfully!
-              </motion.p>
+                <p className="text-md text-green-600">
+                  Notifications have been enabled successfully!
+                </p>
+                <Button
+                  size="lg"
+                  className="rounded-2xl"
+                  onClick={() => completeStep("notifications-selection", {next: `${partnerType}-partner-finder`})}
+                >
+                  Continue
+                </Button>
+              </motion.div>
             )}
           </AnimatePresence>
 

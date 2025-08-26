@@ -29,7 +29,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
     action: string
   ) => {
     const concludeNotification = async (skipToast: boolean = false) => {
-      await api.post(`/conclude-notification/${notification.id}`);
+      await api.post(`/notifications/conclude/${notification.id}`);
       if (!skipToast) {
         notificationsData.refetch();
       }

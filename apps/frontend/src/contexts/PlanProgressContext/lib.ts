@@ -257,6 +257,7 @@ export function getPlanWeek(
   );
 
   // Filter to have only the activity entries that are within that week date range and are part of the plan
+  console.log({ userActivityEntries, planActivities: plan.activities });
   const planActivityEntriesThisWeek = userActivityEntries.filter((entry) => {
     const isInPlan =
       plan.activities?.some((a) => a.id === entry.activityId) ?? false;
@@ -328,5 +329,6 @@ export function getPlanWeeks(
     );
     weekStart = addWeeks(weekStart, 1);
   }
+  console.log("weeks", weeks);
   return weeks;
 }

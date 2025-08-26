@@ -37,7 +37,7 @@ export class PineconeService {
   ): Promise<void> {
     try {
       await this._namespace.upsertRecords([
-        { _id: identifier, chunk_text: text, ...metadata },
+        { _id: identifier, text, ...metadata },
       ]);
       logger.info(
         `Upserted record ${identifier} to namespace ${this.namespace}`

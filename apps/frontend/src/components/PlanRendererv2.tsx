@@ -1,24 +1,24 @@
 import { useApiWithAuth } from "@/api";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import {
-    CompletePlan,
-    useUserPlan,
+  CompletePlan,
+  useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Activity, Plan, PlanSession } from "@tsw/prisma";
 import {
-    addWeeks,
-    endOfWeek,
-    format,
-    isSameWeek,
-    subDays
+  addWeeks,
+  endOfWeek,
+  format,
+  isSameWeek,
+  subDays
 } from "date-fns";
 import {
-    ChartArea,
-    Maximize2,
-    Minimize2,
-    PlusSquare
+  ChartArea,
+  Maximize2,
+  Minimize2,
+  PlusSquare
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -31,11 +31,11 @@ import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "./ui/select";
 import { Switch } from "./ui/switch";
 

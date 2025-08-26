@@ -1,4 +1,5 @@
 import { Response, Router } from "express";
+import { z } from "zod";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { plansPineconeService } from "../services/pineconeService";
@@ -7,6 +8,49 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
 const router = Router();
+
+// Zod validation schemas
+const SessionSchema = z.object({
+  activityId: z.string(),
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid datetime string",
+  }),
+  descriptive_guide: z.string().optional(),
+  descriptiveGuide: z.string().optional(),
+  quantity: z.number().positive().optional(),
+});
+
+const MilestoneSchema = z.object({
+  description: z.string().min(1),
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid datetime string",
+  }),
+  criteria: z.string().optional(),
+});
+
+const ActivitySchema = z.object({
+  id: z.string(),
+});
+
+const PlanUpsertSchema = z.object({
+  id: z.string().optional(), // Present for updates, absent for creates
+  goal: z.string().min(1),
+  emoji: z.string().optional(),
+  finishingDate: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid datetime string",
+    })
+    .optional(),
+  notes: z.string().optional(),
+  durationType: z.enum(["HABIT", "LIFESTYLE", "CUSTOM"]).optional(),
+  outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
+  timesPerWeek: z.number().positive().optional(),
+  sortOrder: z.number().optional(),
+  activities: z.array(ActivitySchema).optional(),
+  sessions: z.array(SessionSchema).optional(),
+  milestones: z.array(MilestoneSchema).optional(),
+});
 
 /**
  * Update plan embedding in Pinecone using readable plan text
@@ -126,9 +170,11 @@ router.post(
             sortOrder: planData.sortOrder,
 
             // Connect activities directly
-            ...(planData.activityIds?.length > 0 && {
+            ...(planData.activities?.length > 0 && {
               activities: {
-                connect: planData.activityIds.map((id: string) => ({ id })),
+                connect: planData.activities.map((activity: any) => ({
+                  id: activity.id,
+                })),
               },
             }),
 
@@ -318,9 +364,9 @@ router.post(
       logger.info(`Generating sessions for plan goal: ${goal}`);
 
       // Use AI to generate sessions based on goal and activities
-      const sessionsResult = await generatePlanSessions({
+      const sessionsResult = await aiService.generatePlanSessions({
         goal,
-        finishingDate,
+        finishingDate: new Date(finishingDate),
         activities,
         description,
         existingPlan: existing_plan,
@@ -384,23 +430,32 @@ router.post(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const planData = req.body;
+      // Validate request body with Zod
+      const validationResult = PlanUpsertSchema.safeParse(req.body);
 
-      // If plan has an ID, it's an update operation
-      if (planData.id) {
-        // Verify ownership
-        const existingPlan = await prisma.plan.findUnique({
-          where: { id: planData.id },
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: validationResult.error.issues,
         });
+      }
 
-        if (!existingPlan || existingPlan.userId !== req.user!.id) {
+      const planData: z.infer<typeof PlanUpsertSchema> = validationResult.data;
+
+      const existingPlan = await prisma.plan.findUnique({
+        where: { id: planData.id },
+      });
+
+      if (existingPlan) {
+        // is update operation
+        if (existingPlan.userId !== req.user!.id) {
           return res.status(403).json({
             success: false,
             error: "Not authorized to update this plan",
           });
         }
 
-        // Update the plan
         const updatedPlan = await prisma.plan.update({
           where: { id: planData.id },
           data: {
@@ -412,16 +467,7 @@ router.post(
             outlineType: planData.outlineType || "SPECIFIC",
             timesPerWeek: planData.timesPerWeek,
             sortOrder: planData.sortOrder,
-            // Connect activities - handle both activities array and activityIds array
-            ...((planData.activities?.length > 0 || planData.activityIds?.length > 0) && {
-              activities: {
-                set: [], // Clear existing connections
-                connect: (planData.activities || planData.activityIds || []).map((activity: any) => ({
-                  id: typeof activity === 'string' ? activity : activity.id,
-                })),
-              },
-            }),
-            // Update milestones if provided
+            deletedAt: null,
             ...(planData.milestones && {
               milestones: {
                 deleteMany: {}, // Clear existing milestones
@@ -442,6 +488,14 @@ router.post(
                   descriptiveGuide:
                     session.descriptive_guide || session.descriptiveGuide || "",
                   quantity: session.quantity,
+                })),
+              },
+            }),
+            ...(planData.activities && {
+              activities: {
+                set: [], // Clear existing connections
+                connect: planData.activities.map((activity: any) => ({
+                  id: typeof activity === "string" ? activity : activity.id,
                 })),
               },
             }),
@@ -488,16 +542,16 @@ router.post(
               sortOrder: planData.sortOrder,
 
               // Connect activities directly - handle both activities array and activityIds array
-              ...((planData.activities?.length > 0 || planData.activityIds?.length > 0) && {
+              ...(planData.activities && {
                 activities: {
-                  connect: (planData.activities || planData.activityIds || []).map((activity: any) => ({
-                    id: typeof activity === 'string' ? activity : activity.id,
+                  connect: planData.activities.map((activity: any) => ({
+                    id: typeof activity === "string" ? activity : activity.id,
                   })),
                 },
               }),
 
               // Create milestones directly
-              ...(planData.milestones?.length > 0 && {
+              ...(planData.milestones && {
                 milestones: {
                   create: planData.milestones.map((milestone: any) => ({
                     description: milestone.description,
@@ -508,7 +562,7 @@ router.post(
               }),
 
               // Create sessions directly
-              ...(planData.sessions?.length > 0 && {
+              ...(planData.sessions && {
                 sessions: {
                   create: planData.sessions.map((session: any) => ({
                     activityId: session.activityId,
@@ -551,217 +605,6 @@ router.post(
     }
   }
 );
-
-// Helper function to generate plan sessions using AI
-async function generatePlanSessions(params: {
-  goal: string;
-  finishingDate?: Date;
-  activities: any[];
-  description?: string;
-  existingPlan?: any;
-}): Promise<{ sessions: any[] }> {
-  try {
-    // Calculate plan duration
-    const startDate = new Date();
-    const endDate = params.finishingDate
-      ? new Date(params.finishingDate)
-      : new Date(Date.now() + 8 * 7 * 24 * 60 * 60 * 1000); // Default 8 weeks
-    const weeks = Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
-    );
-
-    const currentDate =
-      startDate.toISOString().split("T")[0] +
-      ", " +
-      startDate.toLocaleDateString("en-US", { weekday: "long" });
-    const finishingDateStr = endDate.toISOString().split("T")[0];
-
-    let introduction: string;
-    if (params.existingPlan && params.description) {
-      // Get existing sessions for context (limit to first 10)
-      const existingSessions = params.existingPlan.sessions?.slice(0, 10) || [];
-      const sessionContext = existingSessions
-        .map((s: any) => {
-          const activity = params.activities.find((a) => a.id === s.activityId);
-          const sessionDate = new Date(s.date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            weekday: "long",
-          });
-          return `–${activity?.title || "Unknown"} (${s.quantity} ${activity?.measure || "units"}) on ${sessionDate}`;
-        })
-        .join("\n");
-
-      introduction = `You are a plan coach assistant. You are coaching with the plan '${params.goal}'
-Your task is to generate an adapted plan based on this edit description: \n-${params.description}\n
-Here are the CURRENT plan next 10 sessions for reference:
-${sessionContext}
-
-You must use this information thoughtfully as the basis for your plan generation. In regards to that:
-The plan has the finishing date of ${finishingDateStr} and today is ${currentDate}.
-Additional requirements:`;
-    } else {
-      introduction = `You will act as a personal coach for the goal of ${params.goal}.\nThe plan has the finishing date of ${finishingDateStr} and today is ${currentDate}.`;
-    }
-
-    const systemPrompt = `${introduction}
-No date should be before today (${currentDate}).
-You must develop a progressive plan over the course of ${weeks} weeks.
-Keep the activities to a minimum.
-The plan should be progressive (intensities or recurrence of activities should increase over time).
-The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.
-It is an absolute requirement that all present sessions activity names are contained in the list of activities.
-
-Please only include these activities in plan:
-${params.activities.map((a) => `- ${a.title} (${a.measure})`).join("\n")}`;
-
-    let userPrompt = `Please generate me a plan to achieve the goal of ${params.goal} by ${finishingDateStr}.`;
-    if (params.description) {
-      userPrompt += `\nAdditional description: ${params.description}`;
-    }
-
-    // Define the schema for AI response
-    const { z } = await import("zod");
-    const GeneratedSession = z.object({
-      date: z.date().describe("The date of the session in YYYY-MM-DD format."),
-      activity_name: z
-        .string()
-        .describe(
-          "The name of the activity to be performed. Should have no emoji to match exactly with the activity title."
-        ),
-      quantity: z
-        .number()
-        .describe(
-          "The quantity of the activity to be performed. Directly related to the activity and should be measured in the same way."
-        ),
-      descriptive_guide: z.string(),
-    });
-
-    const GeneratedSessionWeek = z.object({
-      week_number: z.number(),
-      reasoning: z
-        .string()
-        .describe(
-          "A step by step thinking outlining the week's outlook given current and leftover progress. Must be deep and reflective."
-        ),
-      sessions: z
-        .array(GeneratedSession)
-        .describe("List of sessions for this week."),
-    });
-
-    const GenerateSessionsResponse = z.object({
-      reasoning: z
-        .string()
-        .describe(
-          "A reflection on what is the goal and how does that affect the sessions progression."
-        ),
-      weeks: z
-        .array(GeneratedSessionWeek)
-        .describe("List of weeks with their sessions."),
-    });
-
-    // Use AI service to generate structured response
-    const response = await aiService.generateStructuredResponse(
-      userPrompt,
-      GenerateSessionsResponse,
-      systemPrompt
-    );
-
-    // Convert generated sessions to the expected format
-    const sessions: Array<{
-      date: string;
-      activityId: any;
-      descriptive_guide: string;
-      quantity: number;
-    }> = [];
-    for (const week of response.weeks) {
-      logger.info(
-        `Week ${week.week_number}. Has ${week.sessions.length} sessions.`
-      );
-      for (const session of week.sessions) {
-        // Find matching activity
-        const activity = params.activities.find(
-          (a) => a.title.toLowerCase() === session.activity_name.toLowerCase()
-        );
-
-        if (activity) {
-          sessions.push({
-            date: session.date,
-            activityId: activity.id,
-            descriptive_guide: session.descriptive_guide,
-            quantity: session.quantity,
-          });
-        }
-      }
-    }
-
-    return { sessions };
-  } catch (error) {
-    logger.error("Error in AI session generation:", error);
-    // Fallback to basic generation
-    return {
-      sessions: generateBasicSessions({
-        activities: params.activities,
-        weeks: Math.ceil(
-          (new Date(
-            params.finishingDate || Date.now() + 8 * 7 * 24 * 60 * 60 * 1000
-          ).getTime() -
-            new Date().getTime()) /
-            (7 * 24 * 60 * 60 * 1000)
-        ),
-        startDate: new Date(),
-        goal: params.goal,
-      }),
-    };
-  }
-}
-
-// Helper function to generate basic sessions
-function generateBasicSessions(params: {
-  activities: any[];
-  weeks: number;
-  startDate: Date;
-  goal: string;
-}): any[] {
-  const sessions: Array<{
-    date: string;
-    activityId: any;
-    descriptive_guide: string;
-    quantity: number;
-  }> = [];
-  const sessionsPerWeek = 3; // Default 3 sessions per week
-
-  for (let week = 0; week < params.weeks; week++) {
-    for (let sessionNum = 0; sessionNum < sessionsPerWeek; sessionNum++) {
-      const sessionDate = new Date(params.startDate);
-      sessionDate.setDate(
-        params.startDate.getDate() + week * 7 + sessionNum * 2
-      ); // Every other day
-
-      const activity = params.activities[sessionNum % params.activities.length];
-      const progressMultiplier = 1 + week * 0.1; // 10% increase per week
-
-      sessions.push({
-        date: sessionDate.toISOString().split("T")[0],
-        activityId: activity.id,
-        descriptive_guide: `Week ${week + 1}, Session ${sessionNum + 1}: Focus on ${activity.title}`,
-        quantity: Math.ceil(progressMultiplier * (sessionNum + 1)), // Progressive quantity
-      });
-    }
-  }
-
-  return sessions;
-}
-
-// Health check
-router.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    service: "plans-routes",
-  });
-});
 
 export const plansRouter: Router = router;
 export default plansRouter;

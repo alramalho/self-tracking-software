@@ -4,8 +4,8 @@ import { Activity } from "@tsw/prisma";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-    BaseExtractionResponse,
-    DynamicUISuggester,
+  BaseExtractionResponse,
+  DynamicUISuggester,
 } from "./DynamicUISuggester";
 // Interface for plan extraction response
 interface PlanExtractionsResponse extends BaseExtractionResponse {
@@ -23,7 +23,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
   const currentUserDataQuery = useCurrentUserDataQuery();
   // Track which plan steps we've identified in the text
   const questionChecks = {
-    "Does the message mention a goal that is concrete and measurable?": {
+    "Does the message mention a goal that is minimally concrete and measurable? (E.g. 'Read 12 books a year' instead of 'Read more books')": {
       title: "Your plan goal",
       description: "Make sure it's concrete and measurable. E.g. 'Read 12 books a year' instead of 'Read more books'",
     },
@@ -60,7 +60,7 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
   const handleAccept = async (data: PlanExtractionsResponse): Promise<void> => {
     try {
       for (const activity of data.activities ?? []) {
-        await api.post("/upsert-activity", activity);
+        await api.post("/upsert", activity);
       }
       await api.post("/create-plan", data.plan);
       onNext();

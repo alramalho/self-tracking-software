@@ -221,9 +221,8 @@ router.get(
   }
 );
 
-// Conclude notification
 router.post(
-  "/conclude-notification/:notificationId",
+  "/conclude/:notificationId",
   requireAuth,
   async (
     req: AuthenticatedRequest,

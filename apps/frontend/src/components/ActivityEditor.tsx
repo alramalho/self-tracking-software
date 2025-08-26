@@ -101,7 +101,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     setIsSaving(true);
     try {
-      const response = await api.post("/activities/upsert-activity", {
+      const response = await api.post("/activities/upsert", {
         ...activity,
         emoji,
         title: title.trim(),
