@@ -118,7 +118,7 @@ export function DailyCheckinBanner({
     mutationFn: async (entry: ActivityEntry) => {
       const formData = new FormData();
       formData.append("activityId", entry.activityId);
-      formData.append("iso_date_string", entry.date.toISOString());
+      formData.append("iso_date_string", new Date(entry.date).toISOString());
       formData.append("quantity", entry.quantity.toString());
 
       const response = await api.post("/activities/log-activity", formData);

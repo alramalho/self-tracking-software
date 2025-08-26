@@ -77,7 +77,7 @@ export function PastWeekLoggingDynamicUI({ onNext }: { onNext: () => void }) {
     mutationFn: async (entry: ActivityEntry) => {
       const formData = new FormData();
       formData.append("activityId", entry.activityId);
-      formData.append("iso_date_string", entry.date.toISOString());
+      formData.append("iso_date_string", new Date(entry.date).toISOString());
       formData.append("quantity", entry.quantity.toString());
       formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
 

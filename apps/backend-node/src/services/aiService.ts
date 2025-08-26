@@ -290,54 +290,6 @@ export class AIService {
     return this.generateStructuredResponse(goals, schema, systemPrompt);
   }
 
-  // Analyze user profile from conversation
-  async analyzeUserProfile(
-    conversation: string,
-    questions: string[]
-  ): Promise<{
-    profile: string;
-    age?: number;
-    interests: string[];
-    goals: string[];
-    question_analysis: Array<{
-      question: string;
-      answered: boolean;
-      answer?: string;
-      confidence: number;
-    }>;
-  }> {
-    const schema = z.object({
-      profile: z.string(),
-      age: z.number().optional(),
-      interests: z.array(z.string()),
-      goals: z.array(z.string()),
-      question_analysis: z.array(
-        z.object({
-          question: z.string(),
-          answered: z.boolean(),
-          answer: z.string().optional(),
-          confidence: z.number().min(0).max(1),
-        })
-      ),
-    });
-
-    const systemPrompt =
-      `You are an expert at analyzing user conversations to build comprehensive profiles.` +
-      `Analyze the conversation and determine what information is available about the user.` +
-      `` +
-      `Guidelines:` +
-      `- Extract key demographic and psychographic information` +
-      `- Identify interests, goals, and preferences` +
-      `- For each question, determine if it was answered in the conversation` +
-      `- Provide confidence scores for your analysis`;
-
-    const prompt = `Conversation: ${conversation}
-    
-    Questions to analyze: ${questions.join(", ")}`;
-
-    return this.generateStructuredResponse(prompt, schema, systemPrompt);
-  }
-
   // Generate motivational messages
   async generateMotivationalMessage(
     userProfile: string,

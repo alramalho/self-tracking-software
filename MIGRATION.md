@@ -186,7 +186,8 @@ backend
     [ ] edit (automatic)
 [ ] can click specific activity (in specific schedule) to see details
 -- metrics
-[ ] log metric
+[x] log metric
+[x] log note
 [ ] check metric logged
 [ ] check daily check in logged
 [ ] check daily checkin properly display in table

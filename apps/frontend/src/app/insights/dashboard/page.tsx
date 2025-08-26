@@ -13,15 +13,15 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import {
-    useUserPlan,
+  useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import {
-    Activity,
-    Metric,
-    MetricEntry
+  Activity,
+  Metric,
+  MetricEntry
 } from "@tsw/prisma";
 import { subDays } from "date-fns";
 import { ArrowDown, Loader2 } from "lucide-react";
@@ -393,13 +393,21 @@ export default function InsightsDashboardPage() {
   };
 
   // Calculate correlations for a metric
+
+  // note to self: we were fixing improper metric correlations
   const calculateMetricCorrelations = (metricId: string) => {
+    console.log(`Calculating correlations for metric ${metricId}`);
+
     const metricEntries = entries
       .filter((entry) => entry.metricId === metricId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    console.log(`Found ${metricEntries.length} entries for metric`);
+
     const correlations = activities
       .map((activity) => {
+        console.log(`Processing activity ${activity.id}`);
+
         const binaryActivityArray = metricEntries.map((entry) => {
           const didActivity = activityHappenedWithinWindow(
             activity.id,
@@ -408,26 +416,41 @@ export default function InsightsDashboardPage() {
           return didActivity ? 1 : 0;
         });
 
+        console.log(
+          `Binary array for activity ${activity.id}:`,
+          binaryActivityArray
+        );
+
         // Only calculate correlation if the activity has some occurrences
         if (binaryActivityArray.some((v) => v === 1)) {
           const ratings = metricEntries.map((e) => e.rating);
+          console.log(`Ratings array:`, ratings);
+
           const correlation = calculatePearsonCorrelation(
             ratings,
             binaryActivityArray
           );
+          console.log(
+            `Correlation for activity ${activity.id}: ${correlation}`
+          );
+
           return {
             activity,
             correlation,
           };
         }
+        console.log(`Skipping activity ${activity.id} - no occurrences`);
         return null;
       })
       .filter(Boolean);
 
     // Sort by absolute correlation value
-    return correlations.sort(
+    const sortedCorrelations = correlations.sort(
       (a, b) => Math.abs(b!.correlation) - Math.abs(a!.correlation)
     );
+
+    console.log(`Final sorted correlations:`, sortedCorrelations);
+    return sortedCorrelations;
   };
 
   // Calculate next milestone based on current entries
@@ -500,7 +523,7 @@ export default function InsightsDashboardPage() {
     <div className="mx-auto p-6 max-w-2xl space-y-8">
       <div>
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
-        <DailyCheckinViewer entries={entries.map((entry) => ({ date: entry.date.toISOString() }))} />
+        <DailyCheckinViewer entries={entries.map((entry) => ({ date: new Date(entry.date).toISOString() }))} />
         <div className="mt-4">
           <DailyCheckinCard aiMessage={aiMessage} />
         </div>
@@ -545,6 +568,8 @@ export default function InsightsDashboardPage() {
                       correlation: c.correlation,
                     }))
                 : [];
+
+            console.log("correlations", correlations);
             const hasCorrelations = correlations.length > 0;
             const chartData = prepareChartData(metric.id);
             const trend = calculateMetricTrend(

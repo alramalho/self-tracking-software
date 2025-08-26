@@ -1,17 +1,16 @@
 "use client";
 
-import React from "react";
-import { useRouter } from "next/navigation";
-import CreatePlanCardJourney from "@/components/CreatePlanCardJourney";
-import toast from "react-hot-toast";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import CreatePlanCardJourney from "@/components/CreatePlanCardJourney";
 import { Button } from "@/components/ui/button";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import { twMerge } from "tailwind-merge";
-import { SquareArrowUp } from "lucide-react";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { capitalize } from "lodash";
+import { useRouter } from "next/navigation";
+import React from "react";
+import toast from "react-hot-toast";
+import { twMerge } from "tailwind-merge";
 
 const CreateNewPlan: React.FC = () => {
   const router = useRouter();
@@ -34,7 +33,7 @@ const CreateNewPlan: React.FC = () => {
           <h1 className="text-2xl font-bold mb-8 mt-2">Create New Plan</h1>
           <span
             className={twMerge(
-              "text-3xl font-cursive flex items-center gap-2 my-8",
+              "text-3xl font-cursive flex items-center gap-2 my-3",
               userPaidPlanType === "FREE"
                 ? "text-gray-500"
                 : userPaidPlanType === "PLUS"
@@ -42,9 +41,9 @@ const CreateNewPlan: React.FC = () => {
                 : "text-indigo-500"
             )}
           >
-            On {capitalize(userPaidPlanType || "FREE")} Plansss
+            On {capitalize(userPaidPlanType || "FREE")} Plan
           </span>
-          <p>You have reached the maximum number of plans for your account.</p>
+          <p className="mb-5">You have reached the maximum number of plans for your account.</p>
           <Button
             className="w-full"
             onClick={() => setShowUpgradePopover(true)}

@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express";
 import multer from "multer";
+import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
@@ -82,15 +83,18 @@ router.post(
       const message = await aiService.generateCoachMessage(user, userPlan);
 
       // Create a notification for the user
-      await notificationService.createAndProcessNotification({
-        userId: user.id,
-        message,
-        type: "COACH",
-        relatedData: {
-          picture:
-            "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
+      await notificationService.createAndProcessNotification(
+        {
+          userId: user.id,
+          message,
+          type: "COACH",
+          relatedData: {
+            picture:
+              "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
+          },
         },
-      }, false); // Don't push notify as per Python implementation
+        false
+      ); // Don't push notify as per Python implementation
 
       res.json({ message });
     } catch (error) {
@@ -369,7 +373,14 @@ router.post(
         `Profile update from questions requested for user ${req.user!.id}`
       );
 
-      // Get current conversation context with history for better analysis
+      // Store user message in memory for context
+      await memoryService.writeMessage({
+        content: message,
+        userId: req.user!.id,
+        role: "USER",
+      });
+
+      // Get conversation history for better context
       const conversationHistory = await memoryService.readConversationHistory(
         req.user!.id,
         30
@@ -377,11 +388,28 @@ router.post(
       const fullConversation = conversationHistory
         ? `${conversationHistory}\n${req.user!.name || req.user!.username || "User"} (just now): ${message}`
         : `${req.user!.name || req.user!.username || "User"}: ${message}`;
-      const questions = Object.keys(question_checks);
 
-      // Run AI analysis in parallel
+      // Generate user profile using simplified AI call
       const [profileAnalysis, questionAnalysis] = await Promise.all([
-        aiService.analyzeUserProfile(fullConversation, questions),
+        aiService.generateStructuredResponse(
+          `Please generate a user profile based on a message that answers the following questions: ${Object.keys(question_checks).join(", ")}. Message: ${message}`,
+          z.object({
+            reasoning: z
+              .string()
+              .describe("Step by step reasoning on each of the questions"),
+            profile: z
+              .string()
+              .describe(
+                "Highly condensed clear depiction of the user profile based on the input questions"
+              ),
+            age: z
+              .number()
+              .nullable()
+              .describe(
+                "The user's age as a single integer, if mentioned, otherwise null"
+              ),
+          })
+        ),
         aiService.analyzeQuestionCoverage(fullConversation, question_checks),
       ]);
 
@@ -390,7 +418,7 @@ router.post(
         profile: profileAnalysis.profile,
       };
 
-      if (profileAnalysis.age) {
+      if (profileAnalysis.age !== null) {
         updates.age = profileAnalysis.age;
       }
 
@@ -406,10 +434,6 @@ router.post(
         all_answered: questionAnalysis.all_answered,
         user: updatedUser,
         question_checks: questionAnalysis.results,
-        analysis: {
-          interests: profileAnalysis.interests,
-          goals: profileAnalysis.goals,
-        },
       });
     } catch (error) {
       logger.error("Error updating user profile:", error);

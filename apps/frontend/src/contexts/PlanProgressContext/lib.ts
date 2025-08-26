@@ -36,7 +36,7 @@ export const countTimesPerWeekPlanCompletedWeekSessions = (
       );
     })
     .reduce((uniqueDays, entry) => {
-      const dayKey = entry.date.toISOString().split("T")[0];
+      const dayKey = new Date(entry.date).toISOString().split("T")[0];
       uniqueDays.add(dayKey);
       return uniqueDays;
     }, new Set<string>()).size;
