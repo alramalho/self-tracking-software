@@ -1,6 +1,6 @@
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import {
-    useUserPlan,
+  useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -8,28 +8,28 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { User } from "@tsw/prisma";
 import {
-    differenceInDays,
-    endOfWeek,
-    isWithinInterval,
-    startOfWeek,
+  differenceInDays,
+  endOfWeek,
+  isWithinInterval,
+  startOfWeek,
 } from "date-fns";
 import {
-    Bell,
-    ChevronDown,
-    ChevronRight,
-    Loader2,
-    PersonStandingIcon,
-    Search,
-    Send,
-    UserPlus
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  PersonStandingIcon,
+  Search,
+  Send,
+  UserPlus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useRef } from "react";
 import { Button } from "./ui/button";
 import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
 } from "./ui/collapsible";
 
 function isInCurrentWeek(date: string) {
