@@ -15,7 +15,7 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import AppleLikePopover from "./AppleLikePopover";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import InviteButton from "./InviteButton";
 import { PlanEditModal } from "./PlanEditModal";
 import { Button } from "./ui/button";
@@ -217,7 +217,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
         </div>
       </AppleLikePopover>
 
-      <ConfirmDialog
+      <ConfirmDialogOrPopover
         isOpen={showLeaveConfirm}
         onClose={() => setShowLeaveConfirm(false)}
         onConfirm={handleLeavePlan}

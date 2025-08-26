@@ -146,11 +146,11 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
 ## TESTS (local)
 
 backend
-[ ] health
-[ ] api/users/all-users (non auth)
-[ ] register via webapp (clerk webhook)
-[ ] signin
-[ ] load users data
+[x] health
+[x] api/users/all-users (non auth)
+[x] register via webapp (clerk webhook)
+[x] signin
+[x] load users data
 [x] onboarding
 [x] adding activity
 [ ] editing activity
@@ -193,6 +193,7 @@ backend
 [ ] can compute recommended users
 [ ] can see recommended users
 [ ] test errors are propagated to telegram
+[ ] AI message regeration
 
 ## missing verticals
 
