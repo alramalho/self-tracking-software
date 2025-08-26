@@ -13,7 +13,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Get all activities for user
 router.get(
-  "/activities",
+  "/",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -278,33 +278,16 @@ router.post(
     try {
       const { id, title, measure, emoji, privacy_settings } = req.body;
 
-      if (id) {
-        // Check if activity exists and belongs to user
-        const existingActivity = await prisma.activity.findFirst({
-          where: {
-            id,
-            userId: req.user!.id,
-            deletedAt: null,
-          },
-        });
-
-        if (existingActivity) {
-          const updatedActivity = await prisma.activity.update({
-            where: { id },
-            data: {
-              title,
-              measure,
-              emoji,
-              privacySettings: privacy_settings as ActivityVisibility,
-            },
-          });
-          return res.json(updatedActivity);
-        }
-      }
-
-      // Create new activity
-      const newActivity = await prisma.activity.create({
-        data: {
+      const activity = await prisma.activity.upsert({
+        where: { id },
+        update: {
+          userId: req.user!.id,
+          title,
+          measure,
+          emoji,
+          privacySettings: privacy_settings as ActivityVisibility,
+        },
+        create: {
           id,
           userId: req.user!.id,
           title,
@@ -314,7 +297,7 @@ router.post(
         },
       });
 
-      res.json(newActivity);
+      res.json(activity);
     } catch (error) {
       logger.error("Error upserting activity:", error);
       res.status(500).json({ error: "Failed to upsert activity" });
@@ -484,7 +467,7 @@ router.get(
 
 // Delete activity
 router.delete(
-  "/activities/:activityId",
+  "/:activityId",
   requireAuth,
   async (
     req: AuthenticatedRequest,

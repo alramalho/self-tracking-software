@@ -1,7 +1,7 @@
 import { Activity } from "@tsw/prisma";
 import { Response, Router } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
@@ -172,6 +172,8 @@ router.post(
         plan_progress
       );
 
+      logger.info("Guidelines result:", guidelinesResult);
+
       // Generate two plan options with different intensities
       const [plan1, plan2] = await Promise.all([
         generatePlan({
@@ -183,6 +185,7 @@ router.post(
           sessionsPerWeek: guidelinesResult.timeframes[0].sessions_per_week,
           guidelines: guidelinesResult.guidelines,
           emoji: guidelinesResult.emoji,
+          intensity: guidelinesResult.timeframes[0].intensity,
         }),
         generatePlan({
           userId: req.user!.id,
@@ -193,19 +196,19 @@ router.post(
           sessionsPerWeek: guidelinesResult.timeframes[1].sessions_per_week,
           guidelines: guidelinesResult.guidelines,
           emoji: guidelinesResult.emoji,
+          intensity: guidelinesResult.timeframes[1].intensity,
         }),
       ]);
 
-      // Sort plans by intensity (more sessions = more intense)
-      const sortedPlans = [plan1, plan2].sort((a, b) => {
-        const aSessions = a.sessions?.length || 0;
-        const bSessions = b.sessions?.length || 0;
-        return bSessions - aSessions; // Descending order (more intense first)
-      });
+      logger.info("Plan1:", plan1);
+      logger.info("Plan2:", plan2);
+
+      const relaxedPlan = plan1.intensity === "relaxed" ? plan1 : plan2;
+      const intensePlan = plan1.intensity === "intense" ? plan1 : plan2;
 
       res.json({
         message: "Here are two plans for you to choose from",
-        plans: sortedPlans,
+        plans: [relaxedPlan, intensePlan],
         activities: plan_activities,
       });
     } catch (error) {
@@ -221,33 +224,46 @@ async function extractGuidelinesAndEmoji(
   planProgress: string
 ): Promise<{
   guidelines: string;
-  timeframes: Array<{ weeks: number; sessions_per_week: string }>;
+  timeframes: Array<{
+    weeks: number;
+    sessions_per_week: string;
+    intensity: "relaxed" | "intense";
+  }>;
   emoji: string;
 }> {
-  const systemPrompt = `You are a professional plan creator. Create guidelines for a progressive plan.
-  Include tips, requirements, and considerations specific to this plan type.
-  Provide timeframe ranges with total weeks (8-16) and sessions per week for two intensities:
-  1. Relaxed option (fewer sessions per week)
-  2. Intense option (more sessions per week)
-  Format as JSON with guidelines, timeframes array, and one single emoji.`;
+  const systemPrompt = `You are a coach of coaches. You create guidelines that help the coach create a plan for their client.`;
 
-  const prompt = `Create guidelines for a plan with goal '${planGoal}' for someone with progress '${planProgress}'`;
+  const prompt = `Create guidelines for a coach to create a plan with goal '${planGoal}' for someone with progress '${planProgress}'`;
 
   try {
     const result = await aiService.generateStructuredResponse(
       prompt,
       z.object({
-        guidelines: z.string(),
+        guidelines: z
+          .string()
+          .describe(
+            "Guidelines for the plan coach. The guidelines should be focused on ."
+          ),
         timeframes: z.array(
           z.object({
-            weeks: z.number(),
-            sessions_per_week: z.string(),
+            intensity: z
+              .enum(["relaxed", "intense"])
+              .describe(
+                "Intensity of the plan. Intense plans are shorter (less weeks) and have more sessions per week than relaxed plans. "
+              ),
+            weeks: z.number().min(8).max(16),
+            sessions_per_week: z
+              .string()
+              .describe(
+                "Range of sessions per week. For example, '3-4' or '4-5'"
+              ),
           })
         ),
         emoji: z.string(),
       }),
       systemPrompt
     );
+    logger.debug("Guidelines and emoji:", result);
     return result;
   } catch (error) {
     logger.error("Error extracting guidelines and emoji:", error);
@@ -256,8 +272,8 @@ async function extractGuidelinesAndEmoji(
       guidelines:
         "Follow a progressive approach with consistency and gradual increases.",
       timeframes: [
-        { weeks: 12, sessions_per_week: "3" },
-        { weeks: 8, sessions_per_week: "4-5" },
+        { weeks: 12, sessions_per_week: "3", intensity: "relaxed" },
+        { weeks: 8, sessions_per_week: "4-5", intensity: "intense" },
       ],
       emoji: "🎯",
     };
@@ -274,11 +290,13 @@ async function generatePlan(params: {
   sessionsPerWeek: string;
   guidelines: string;
   emoji: string;
+  intensity: "relaxed" | "intense";
 }): Promise<{
   id: string;
   userId: string;
   goal: string;
   emoji: string;
+  intensity: "relaxed" | "intense";
   activities: Activity[];
   finishingDate: Date;
   notes: string;
@@ -309,6 +327,7 @@ async function generatePlan(params: {
     finishingDate: finishingDate,
     notes: description,
     sessions: sessionsResult.sessions,
+    intensity: params.intensity,
   };
 }
 
