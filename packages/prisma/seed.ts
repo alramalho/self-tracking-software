@@ -115,6 +115,15 @@ async function generateDummyData() {
       },
     });
 
+    const workoutActivity = await prisma.activity.create({
+      data: {
+        userId: users[1].id, // Alice
+        title: "Workout",
+        measure: "minutes",
+        emoji: "💪",
+      },
+    });
+
     // Generate activity and metric entries over 60 days
     const now = new Date();
     const baseDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000); // 60 days ago
@@ -170,6 +179,21 @@ async function generateDummyData() {
       });
       metricEntries.push(metricEntry);
     }
+
+    // Create Alice's workout entry from 2 days ago with photo
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const workoutEntry = await prisma.activityEntry.create({
+      data: {
+        activityId: workoutActivity.id,
+        userId: users[1].id, // Alice
+        quantity: 45,
+        date: twoDaysAgo,
+        imageUrl:
+          "https://plus.unsplash.com/premium_photo-1664299634542-7a76f829332c?q=80&w=1772&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        imageIsPublic: true,
+        imageExpiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // Expires in 30 days
+      },
+    });
 
     // Create plans
     const finishingDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);

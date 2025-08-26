@@ -158,11 +158,11 @@ backend
 [x] uploading activity w/ photo 
 [x] updating activity
 [x] checking both in timeline
-[ ] checking was counted in coached plan
-[ ] reacting
-[ ] comment
-[ ] check both there after refresh
-[ ] 
+[x] checking was counted in coached plan
+[x] reacting
+[x] comment
+[x] check both there after hard refresh
+
 -- user profile
 [ ] can update settings (like looking for ap)
 ...

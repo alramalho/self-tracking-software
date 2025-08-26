@@ -1,4 +1,4 @@
-import { ActivityEntry, MetricEntry, PrismaClient, User } from "@prisma/client";
+import { PrismaClient } from "./index";
 
 const prisma = new PrismaClient();
 
