@@ -2,14 +2,14 @@ import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-    useUserPlan,
+  useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { Activity } from "@tsw/prisma";
 import { Loader2, Trash2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import SteppedColorPicker from "./SteppedColorPicker";
 import { EmojiInput } from "./ui/EmojiInput";
 import { Separator } from "./ui/separator";
@@ -242,7 +242,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         </div>
       </AppleLikePopover>
 
-      <ConfirmDialog
+      <ConfirmDialogOrPopover
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={confirmDelete}

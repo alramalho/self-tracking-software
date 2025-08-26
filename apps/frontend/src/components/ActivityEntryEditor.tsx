@@ -1,15 +1,14 @@
-import React, { useState } from "react";
+import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useApiWithAuth } from "@/api";
-import { toast } from "react-hot-toast";
-import AppleLikePopover from "./AppleLikePopover";
+import { Textarea } from "@/components/ui/textarea";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
-import { Trash2 } from "lucide-react";
-import ConfirmDialog from "./ConfirmDialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { toast } from "react-hot-toast";
+import AppleLikePopover from "./AppleLikePopover";
+import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 
 interface ActivityEntry {
   id: string;
@@ -128,7 +127,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           )}
           Delete Activity
         </Button>
-        <ConfirmDialog
+        <ConfirmDialogOrPopover
           isOpen={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={handleDelete}

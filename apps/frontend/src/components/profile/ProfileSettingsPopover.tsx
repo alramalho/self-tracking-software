@@ -31,7 +31,7 @@ import { usePostHog } from "posthog-js/react";
 import React, { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import ConfirmDialog from "../ConfirmDialog";
+import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
 import { Switch } from "../ui/switch";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
 
@@ -394,7 +394,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
         {/* Keep ConfirmDialog outside the main navigation flow */}
       </AppleLikePopover>
-      <ConfirmDialog
+      <ConfirmDialogOrPopover
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
         onConfirm={handleLogout}
