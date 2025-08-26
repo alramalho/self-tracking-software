@@ -24,7 +24,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
         activities.map((a) => a.id).includes(entry.activityId)
       )
       .map((entry) => ({
-        date: entry.date.toISOString().replaceAll("-", "/"),
+        date: new Date(entry.date).toISOString().replaceAll("-", "/"),
         count: entry.quantity,
       }));
     return result;

@@ -353,7 +353,7 @@ router.post(
       const todaysEntries = await prisma.metricEntry.findMany({
         where: {
           userId: req.user!.id,
-          date: today,
+          date: new Date(today),
         },
       });
 
@@ -367,7 +367,7 @@ router.post(
       const updateResult = await prisma.metricEntry.updateMany({
         where: {
           userId: req.user!.id,
-          date: today,
+          date: new Date(today),
         },
         data: {
           descriptionSkipped: true,

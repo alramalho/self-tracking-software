@@ -15,7 +15,7 @@ const ActivitiesRenderer: React.FC<ActivitiesRendererProps> = ({ activities, act
     return activityEntries
       .filter((entry) => entry.activityId === activityId)
       .map((entry) => ({
-        date: entry.date.toISOString().replaceAll("-", "/").split("T")[0],
+        date: new Date(entry.date).toISOString().replaceAll("-", "/").split("T")[0],
         count: entry.quantity,
       }));
   };
