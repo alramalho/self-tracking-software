@@ -8,8 +8,8 @@ import { logger } from "../utils/logger";
 
 const DEFAULT_WEEKS = 8;
 
-// note to self:
-// we were amidst fully testing locally, as date changes broke things in unexpected ways
+// note to self 2:
+// after note to self 1, we were amidst fully testing locally, as date changes broke things in unexpected ways
 // specifiaclly, we were migrating to openrouter as we were facing some issues with models
 // not being able to properly generate on first attempt the desired schema
 // after that, we resume the dreadful work of making the app work
