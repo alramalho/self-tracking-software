@@ -1,14 +1,21 @@
-name: Deploy Backend
+name: Deploy Backend Status
 on:
-  workflow_call:
+  deployment_status:
 
 jobs:
-  # deploy-digitalocean:
-  #   uses: ./.github/workflows/deploy-to-digitalocean.yml
-  #   with:
-  #     app_id: e725e5a4-9d51-473f-85be-c8fa45671399
-  #   secrets: inherit
-
-  deploy-aws:
-    uses: ./.github/workflows/deploy-to-aws.yml
-    secrets: inherit
+  flightcontrol-status:
+    if: github.event.deployment_status.state == 'success' || github.event.deployment_status.state == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployment status
+        run: |
+          echo "Deployment status: ${{ github.event.deployment_status.state }}"
+          echo "Environment: ${{ github.event.deployment.environment }}"
+          echo "Deployment URL: ${{ github.event.deployment_status.target_url }}"
+          
+          if [ "${{ github.event.deployment_status.state }}" == "success" ]; then
+            echo "✅ Backend deployment succeeded!"
+          else
+            echo "❌ Backend deployment failed!"
+            exit 1
+          fi
