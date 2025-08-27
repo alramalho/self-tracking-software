@@ -16,6 +16,7 @@ export interface PineconeConfig {
 export class PineconeService {
   private pc: Pinecone;
   private indexHost: string;
+  private index: Index<RecordMetadata>; // Added this property
   private _namespace: Index<RecordMetadata>;
 
   constructor(
@@ -24,7 +25,10 @@ export class PineconeService {
   ) {
     this.pc = new Pinecone({ apiKey: config.apiKey });
     this.indexHost = config.indexHost;
-    this._namespace = this.pc.index(config.indexName, config.indexHost);
+    this.index = this.pc.index(config.indexName, config.indexHost); // Added this line
+    this._namespace = this.pc
+      .index(config.indexName, config.indexHost)
+      .namespace(namespace); // Fixed namespace usage
   }
 
   /**
@@ -93,10 +97,7 @@ export class PineconeService {
    */
   async deleteRecord(identifier: string): Promise<void> {
     try {
-      await this.index.deleteOne({
-        namespace: this.namespace,
-        id: identifier,
-      });
+      await this._namespace.deleteOne(identifier); // Fixed to use _namespace
       logger.info(
         `Deleted record ${identifier} from namespace ${this.namespace}`
       );
@@ -111,10 +112,7 @@ export class PineconeService {
    */
   async deleteRecords(identifiers: string[]): Promise<void> {
     try {
-      await this.index.deleteMany({
-        namespace: this.namespace,
-        ids: identifiers,
-      });
+      await this._namespace.deleteMany(identifiers); // Fixed to use _namespace
       logger.info(
         `Deleted ${identifiers.length} records from namespace ${this.namespace}`
       );
