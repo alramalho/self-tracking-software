@@ -3,6 +3,7 @@ import { User } from "@tsw/prisma";
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import { userService } from "../services/userService";
 import { logger } from "../utils/logger";
+import { setRequestContext } from "../utils/requestContext";
 
 // Type for authenticated requests
 export interface AuthenticatedRequest extends Request {
@@ -36,6 +37,8 @@ export function loadUserFromClerk(
         return;
       }
       (req as AuthenticatedRequest).user = user;
+      // Set the user ID in the request context for AI service usage
+      setRequestContext({ user: user });
       next();
     })
     .catch((error) => {

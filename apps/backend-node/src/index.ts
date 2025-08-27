@@ -9,6 +9,7 @@ import helmet from "helmet";
 
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
+import { requestContextMiddleware } from "./middleware/requestContext";
 import { logger, morganMiddleware } from "./utils/logger";
 import { prisma } from "./utils/prisma";
 
@@ -71,6 +72,10 @@ app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Request context middleware (must come before routes that use AI service)
+app.use(requestContextMiddleware);
+
 app.use(morganMiddleware);
 
 // Apply rate limiting

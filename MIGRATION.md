@@ -192,9 +192,9 @@ backend
 [x] check daily check in logged
 [x] check daily checkin properly display in table
 -- recommendations
-[ ] implement plan index (now we don't have planIds array anymore)
-[ ] can compute recommended users
-[ ] can see recommended users
+[x] implement plan index (now we don't have planIds array anymore)
+[x] can compute recommended users
+[x] can see recommended users
 [ ] test errors are propagated to telegram
 [ ] AI message regeration
 
