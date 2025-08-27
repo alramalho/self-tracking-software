@@ -19,10 +19,10 @@ importers:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^1.3.23
-        version: 1.3.23(zod@3.25.76)
+        version: 1.3.23(zod@4.1.3)
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.11
-        version: 1.0.11(zod@3.25.76)
+        version: 1.0.11(zod@4.1.3)
       '@aws-sdk/client-s3':
         specifier: ^3.856.0
         version: 3.858.0
@@ -40,7 +40,7 @@ importers:
         version: 1.7.15(express@4.21.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@openrouter/ai-sdk-provider':
         specifier: ^1.1.2
-        version: 1.1.2(ai@5.0.22(zod@3.25.76))(zod@3.25.76)
+        version: 1.1.2(ai@5.0.22(zod@4.1.3))(zod@4.1.3)
       '@pinecone-database/pinecone':
         specifier: ^6.1.2
         version: 6.1.2
@@ -55,7 +55,7 @@ importers:
         version: 8.0.417(@types/node@20.19.9)
       ai:
         specifier: ^5.0.22
-        version: 5.0.22(zod@3.25.76)
+        version: 5.0.22(zod@4.1.3)
       axios:
         specifier: ^1.4.0
         version: 1.11.0
@@ -103,7 +103,7 @@ importers:
         version: 6.10.1
       openai:
         specifier: ^5.10.3
-        version: 5.11.0(ws@8.18.3)(zod@3.25.76)
+        version: 5.11.0(ws@8.18.3)(zod@4.1.3)
       stripe:
         specifier: ^18.3.0
         version: 18.4.0(@types/node@20.19.9)
@@ -123,8 +123,8 @@ importers:
         specifier: ^3.10.0
         version: 3.17.0
       zod:
-        specifier: ^3.22.0
-        version: 3.25.76
+        specifier: ^4.0.0
+        version: 4.1.3
     devDependencies:
       '@types/bcrypt':
         specifier: ^5.0.0
@@ -206,7 +206,7 @@ importers:
         version: 3.2.2(react@18.3.1)
       '@openrouter/ai-sdk-provider':
         specifier: ^1.1.2
-        version: 1.1.2(ai@5.0.22(zod@3.25.76))(zod@3.25.76)
+        version: 1.1.2(ai@5.0.22(zod@4.1.3))(zod@4.1.3)
       '@prisma/nextjs-monorepo-workaround-plugin':
         specifier: ^6.14.0
         version: 6.14.0
@@ -7434,45 +7434,45 @@ packages:
     peerDependencies:
       zod: ^3.24.1
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.1.3:
+    resolution: {integrity: sha512-1neef4bMce1hNTrxvHVKxWjKfGDn0oAli3Wy1Uwb7TRO1+wEwoZUZNP1NXIEESybOBiFnBOhI6a4m6tCLE8dog==}
 
 snapshots:
 
   '@adobe/css-tools@4.4.3': {}
 
-  '@ai-sdk/gateway@1.0.11(zod@3.25.76)':
+  '@ai-sdk/gateway@1.0.11(zod@4.1.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.5(zod@3.25.76)
-      zod: 3.25.76
+      '@ai-sdk/provider-utils': 3.0.5(zod@4.1.3)
+      zod: 4.1.3
 
-  '@ai-sdk/openai-compatible@1.0.11(zod@3.25.76)':
+  '@ai-sdk/openai-compatible@1.0.11(zod@4.1.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.5(zod@3.25.76)
-      zod: 3.25.76
+      '@ai-sdk/provider-utils': 3.0.5(zod@4.1.3)
+      zod: 4.1.3
 
-  '@ai-sdk/openai@1.3.23(zod@3.25.76)':
+  '@ai-sdk/openai@1.3.23(zod@4.1.3)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
-      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.76)
-      zod: 3.25.76
+      '@ai-sdk/provider-utils': 2.2.8(zod@4.1.3)
+      zod: 4.1.3
 
-  '@ai-sdk/provider-utils@2.2.8(zod@3.25.76)':
+  '@ai-sdk/provider-utils@2.2.8(zod@4.1.3)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
       nanoid: 3.3.11
       secure-json-parse: 2.7.0
-      zod: 3.25.76
+      zod: 4.1.3
 
-  '@ai-sdk/provider-utils@3.0.5(zod@3.25.76)':
+  '@ai-sdk/provider-utils@3.0.5(zod@4.1.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.5
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
+      zod: 4.1.3
+      zod-to-json-schema: 3.24.6(zod@4.1.3)
 
   '@ai-sdk/provider@1.1.3':
     dependencies:
@@ -8976,10 +8976,10 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
-  '@openrouter/ai-sdk-provider@1.1.2(ai@5.0.22(zod@3.25.76))(zod@3.25.76)':
+  '@openrouter/ai-sdk-provider@1.1.2(ai@5.0.22(zod@4.1.3))(zod@4.1.3)':
     dependencies:
-      ai: 5.0.22(zod@3.25.76)
-      zod: 3.25.76
+      ai: 5.0.22(zod@4.1.3)
+      zod: 4.1.3
 
   '@opentelemetry/api@1.9.0': {}
 
@@ -10857,13 +10857,13 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@5.0.22(zod@3.25.76):
+  ai@5.0.22(zod@4.1.3):
     dependencies:
-      '@ai-sdk/gateway': 1.0.11(zod@3.25.76)
+      '@ai-sdk/gateway': 1.0.11(zod@4.1.3)
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.5(zod@3.25.76)
+      '@ai-sdk/provider-utils': 3.0.5(zod@4.1.3)
       '@opentelemetry/api': 1.9.0
-      zod: 3.25.76
+      zod: 4.1.3
 
   ajv-formats@2.1.1(ajv@8.17.1):
     optionalDependencies:
@@ -13864,10 +13864,10 @@ snapshots:
     dependencies:
       mimic-fn: 2.1.0
 
-  openai@5.11.0(ws@8.18.3)(zod@3.25.76):
+  openai@5.11.0(ws@8.18.3)(zod@4.1.3):
     optionalDependencies:
       ws: 8.18.3
-      zod: 3.25.76
+      zod: 4.1.3
 
   optionator@0.9.4:
     dependencies:
@@ -15755,8 +15755,8 @@ snapshots:
 
   yoga-wasm-web@0.3.3: {}
 
-  zod-to-json-schema@3.24.6(zod@3.25.76):
+  zod-to-json-schema@3.24.6(zod@4.1.3):
     dependencies:
-      zod: 3.25.76
+      zod: 4.1.3
 
-  zod@3.25.76: {}
+  zod@4.1.3: {}
