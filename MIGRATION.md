@@ -223,10 +223,11 @@ Note: Scheduled notifications are handled by the existing `/run-hourly-job` endp
 # TODO when merging to main
 [] switch to api.tracking.so
     - re issue certifiactes
-[] change flight control base branch
+[x] change flight control base branch
 [] make sure stripe webhooks are properly tied
 [] make sure clerk webhooks are properly tied
 [] retest onboarding with dummy user
+[x] change vercel env vars (move any test-migration to main)
 
 ## data migration
 [x] users: 249
