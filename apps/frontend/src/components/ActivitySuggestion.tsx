@@ -28,7 +28,7 @@ const ActivitySuggestion: React.FC<ActivitySuggestionProps> = ({
       setIsAccepting(true);
       const formData = new FormData();
       formData.append("activityId", activity.id);
-      formData.append("iso_date_string", activitynew Date(entry.date).toISOString());
+      formData.append("iso_date_string", new Date(activityEntry.date).toISOString());
       formData.append("quantity", activityEntry.quantity.toString());
       formData.append("isPublic", "false");
 
