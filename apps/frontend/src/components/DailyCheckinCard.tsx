@@ -1,12 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
-import AINotification from "./AINotification";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { differenceInDays } from "date-fns";
-import { ScanFace } from "lucide-react";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
+import React, { useEffect, useState } from "react";
+import AINotification from "./AINotification";
 
 interface DailyCheckinCardProps {
   aiMessage: string | null;
@@ -44,7 +41,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     dismissCheckin,
     buildCheckinMessage,
   } = useDailyCheckin();
-  const { userPlanType: userPaidPlanType } = usePaidPlan();
+  const { isUserPremium } = usePaidPlan();
   const [message, setMessage] = useState<string | null>(null);
   const [messageId, setMessageId] = useState<string | null>(null);
 
@@ -64,7 +61,7 @@ export const DailyCheckinCard: React.FC<DailyCheckinCardProps> = ({
     );
 
   if (
-    (!shouldShowNotification && userPaidPlanType !== "FREE") ||
+    (!shouldShowNotification) ||
     !message ||
     !messageId
   )

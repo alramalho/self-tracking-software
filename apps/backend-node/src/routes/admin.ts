@@ -582,12 +582,17 @@ router.post(
         return res.status(404).json({ error: "User not found" });
       }
 
+      // Update user embedding
+      await userService.updateUserEmbedding(user);
+
       // Compute recommendations
-      await recommendationsService.computeRecommendedUsers(user.id);
+      const recommendations =
+        await recommendationsService.computeRecommendedUsers(user.id);
 
       res.json({
         message: `Recommendations computed successfully for user ${username}`,
         user_id: user.id,
+        recommendations,
       });
     } catch (error) {
       logger.error("Error computing recommendations:", error);

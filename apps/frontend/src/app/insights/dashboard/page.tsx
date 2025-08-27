@@ -2,7 +2,6 @@
 
 import { useApiWithAuth } from "@/api";
 import AINotification from "@/components/AINotification";
-import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
 import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
@@ -148,9 +147,9 @@ export default function InsightsDashboardPage() {
                 { date: subDays(new Date(), 5).toISOString() },
               ]}
             />
-            <div className="mt-4">
+            {/* <div className="mt-4">
               <DailyCheckinCard aiMessage={null} />
-            </div>
+            </div> */}
           </div>
 
           {/* Demo Metrics Preview */}
@@ -510,9 +509,9 @@ export default function InsightsDashboardPage() {
       <div>
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
         <DailyCheckinViewer entries={entries.map((entry) => ({ date: new Date(entry.date).toISOString() }))} />
-        <div className="mt-4">
+        {/* <div className="mt-4">
           <DailyCheckinCard aiMessage={aiMessage} />
-        </div>
+        </div> */}
       </div>
 
       <div>
