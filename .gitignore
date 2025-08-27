@@ -15,3 +15,7 @@ db_data/*
 alex.ipynb
 
 .turbo
+
+data_migration
+
+apps/backend-node/.env.prod

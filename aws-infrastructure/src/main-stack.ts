@@ -6,6 +6,7 @@ import { DbStack } from "./db-stack";
 interface MainStackProps {
   environment: string;
   certificateArn: string;
+  nodeCertificateArn: string;
 }
 
 export class MainStack extends cdk.Stack {
@@ -16,6 +17,7 @@ export class MainStack extends cdk.Stack {
     const { fargateService } = new ApiStack(this, "ApiStack", {
       environment: props.environment,
       certificateArn: props.certificateArn,
+      nodeCertificateArn: props.nodeCertificateArn,
     });
 
     new DbStack(this, "DbStack", {

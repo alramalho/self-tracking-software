@@ -1,4 +1,4 @@
-name: Deploy to Sandbox
+name: Deploy to AWS
 
 on:
   workflow_call:
@@ -65,10 +65,13 @@ jobs:
         env:
           ENVIRONMENT: production
           CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
+          NODE_CERTIFICATE_ARN: ${{ secrets.NODE_CERTIFICATE_ARN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SHARED_ENCRYPTION_KEY: ${{ secrets.SHARED_ENCRYPTION_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           MONGO_DB_CONNECTION_STRING: ${{ secrets.MONGO_DB_CONNECTION_STRING }}
+          CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           CLERK_JWT_PUBLIC_KEY: ${{ secrets.CLERK_JWT_PUBLIC_KEY }}
           SVIX_SECRET: ${{ secrets.SVIX_SECRET }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
@@ -99,7 +102,12 @@ jobs:
           POSTGRES_HOST: ${{ vars.POSTGRES_HOST }}
           POSTGRES_PORT: ${{ vars.POSTGRES_PORT }}
           POSTGRES_DB: ${{ vars.POSTGRES_DB }}
-          
+
+          BETTER_STACK_SOURCE_TOKEN: ${{ secrets.BETTER_STACK_SOURCE_TOKEN }}
+          BETTER_STACK_INGESTING_HOST: ${{ secrets.BETTER_STACK_INGESTING_HOST }}
+
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
           
         run: |
           cd aws-infrastructure

@@ -22,14 +22,14 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Node API",
-      "cwd": "${workspaceFolder}/backend-node",
-      "runtimeExecutable": "${env:HOME}/.n/bin/yarn",
+      "name": "Debug Api (dev)",
+      "runtimeExecutable": "/Users/alramalho/Library/pnpm/pnpm",
       "runtimeArgs": ["dev"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"]
-    }
+      "skipFiles": ["<node_internals>/**", "node_modules/**"],
+      "cwd": "${workspaceFolder}/apps/backend-node"
+    },
   ],
   "inputs": [
     {

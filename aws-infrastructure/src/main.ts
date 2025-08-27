@@ -12,10 +12,16 @@ const app = new cdk.App();
 if (!process.env.ENVIRONMENT) {
   console.error("\x1b[41m%s\x1b[0m", "ERROR: ENVIRONMENT variable is not set.");
   process.exit(1);
-} else if (!process.env.CERTIFICATE_ARN) {
+} else if (!process.env.CERTIFICATE_ARN || !process.env.NODE_CERTIFICATE_ARN) {
   console.error(
     "\x1b[41m%s\x1b[0m",
     "ERROR: CERTIFICATE_ARN variable is not set."
+  );
+  process.exit(1);
+} else if (!process.env.NODE_CERTIFICATE_ARN) {
+  console.error(
+    "\x1b[41m%s\x1b[0m",
+    "ERROR: NODE_CERTIFICATE_ARN variable is not set."
   );
   process.exit(1);
 } else {
@@ -32,5 +38,6 @@ new MainStack(
     // @ts-ignore
     environment: process.env.ENVIRONMENT,
     certificateArn: process.env.CERTIFICATE_ARN,
+    nodeCertificateArn: process.env.NODE_CERTIFICATE_ARN,
   }
 );

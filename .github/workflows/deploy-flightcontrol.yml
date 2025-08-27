@@ -1,0 +1,90 @@
+name: Deploy to FlightControl
+on:
+  workflow_call:
+
+jobs:
+  deploy-flightcontrol:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger FlightControl deployment
+        id: deploy
+        run: |
+          echo "Triggering FlightControl deployment..."
+          
+          # Trigger deployment via deploy hook
+          RESPONSE=$(curl -s -w "%{http_code}" \
+            "${{ secrets.FLIGHTCONTROL_DEPLOY_HOOK_URL }}?commit=${{ github.sha }}&branch=${{ github.ref_name }}")
+          
+          HTTP_CODE="${RESPONSE: -3}"
+          BODY="${RESPONSE%???}"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Failed to trigger deployment. HTTP code: $HTTP_CODE"
+            echo "Response: $BODY"
+            exit 1
+          fi
+          
+          # Extract deployment ID from response
+          DEPLOYMENT_ID=$(echo "$BODY" | jq -r '.deploymentId // empty')
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "❌ Failed to get deployment ID from response"
+            exit 1
+          fi
+          
+          echo "✅ Deployment triggered successfully"
+          echo "Deployment ID: $DEPLOYMENT_ID"
+          echo "deployment_id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for deployment completion
+        run: |
+          DEPLOYMENT_ID="${{ steps.deploy.outputs.deployment_id }}"
+          echo "Monitoring deployment: $DEPLOYMENT_ID"
+          
+          # Poll deployment status
+          MAX_ATTEMPTS=60
+          ATTEMPT=1
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Checking deployment status (attempt $ATTEMPT/$MAX_ATTEMPTS)..."
+            
+            RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.FLIGHTCONTROL_API_KEY }}" \
+              "https://api.flightcontrol.dev/v1/deployments/$DEPLOYMENT_ID")
+            
+            STATUS=$(echo "$RESPONSE" | jq -r '.status // empty')
+            
+            if [ -z "$STATUS" ]; then
+              echo "❌ Failed to get deployment status"
+              exit 1
+            fi
+            
+            echo "Current status: $STATUS"
+            
+            # Check if deployment is finished
+            case "$STATUS" in
+              "SUCCESS")
+                echo "✅ Deployment completed successfully!"
+                exit 0
+                ;;
+              "NO_CHANGE")
+                echo "✅ No changes required for deployment"
+                exit 0
+                ;;
+              "FAILED"|"ERROR"|"CANCELLED"|"BUILD_ERROR"|"DEPLOY_ERROR")
+                echo "❌ Deployment failed with status: $STATUS"
+                exit 1
+                ;;
+              "PENDING"|"INPROGRESS"|"BUILDING"|"DEPLOYING"|"PENDING_DEPENDENCY"|"PROVISIONING")
+                echo "⏳ Deployment in progress (status: $STATUS)..."
+                sleep 30
+                ATTEMPT=$((ATTEMPT + 1))
+                ;;
+              *)
+                echo "❓ Unknown deployment status: $STATUS"
+                sleep 30
+                ATTEMPT=$((ATTEMPT + 1))
+                ;;
+            esac
+          done
+          
+          echo "❌ Deployment timeout after $((MAX_ATTEMPTS * 30)) seconds"
+          exit 1
