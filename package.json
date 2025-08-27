@@ -11,7 +11,7 @@
     "start": "turbo run start",
     "clean": "rm -rf node_modules && turbo run clean",
     "db:generate": "turbo run db:generate",
-    "build-docker-backend": "docker build -f backend-node/Dockerfile -t test-backend-node ."
+    "build-docker-backend": "docker build -f apps/backend-node/Dockerfile -t test-backend-node ."
   },
   "pnpm": {
     "injectWorkspacePackages": true

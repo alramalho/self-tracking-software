@@ -3,12 +3,6 @@ on:
   workflow_call:
 
 jobs:
-  # deploy-digitalocean:
-  #   uses: ./.github/workflows/deploy-to-digitalocean.yml
-  #   with:
-  #     app_id: e725e5a4-9d51-473f-85be-c8fa45671399
-  #   secrets: inherit
-
-  deploy-aws:
-    uses: ./.github/workflows/deploy-to-aws.yml
+  deploy-flightcontrol:
+    uses: ./.github/workflows/deploy-flightcontrol.yml
     secrets: inherit

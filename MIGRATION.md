@@ -138,6 +138,7 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
 [] hume service
 [] anything not necessary in the exposed routes
 [] ai assistants
+[] waf block on non allowed routes
 
 ## notes to self
 ...
@@ -145,8 +146,8 @@ There is a lot of dead code, so we will only migrate the necessary logic by star
 ## TESTS (local)
 
 backend
-[X] health
-[X] api/users/all-users (non auth)
+[x] health
+[x] api/users/all-users (non auth)
 [x] register via webapp (clerk webhook)
 [x] signin
 [x] load users data
@@ -157,40 +158,45 @@ backend
 [x] uploading activity w/ photo 
 [x] updating activity
 [x] checking both in timeline
-[ ] reacting
-[ ] comment
-[ ] check both there after refresh
-[ ] 
+[x] checking was counted in coached plan
+[x] reacting
+[x] comment
+[x] check both there after hard refresh
+
 -- user profile
-[x] can update settings (like looking for ap)
+[ ] can update settings (like looking for ap)
 ...
 -- notifications
 [x] can see
-[x] can dismiss
-[] push notify works
+[x] can dismiss single
+[x] can dismiss all
+[ ] push notify works
 -- plans
-[x] create plan with
-    [x] date
-    [x] name
-    [x] emoji
-    [x] activities
-    [x] generated sessions
-    [x] times pe week
-    [x] milestones
-[x] milestones
-    [x] render
-    [x] edit (manual)
-    [x] edit (automatic)
+[ ] create plan with
+    [ ] date
+    [ ] name
+    [ ] emoji
+    [ ] activities
+    [ ] generated sessions
+    [ ] times pe week
+    [ ] milestones
+[ ] milestones
+    [ ] render
+    [ ] edit (manual)
+    [ ] edit (automatic)
+[ ] can click specific activity (in specific schedule) to see details
 -- metrics
 [x] log metric
+[x] log note
 [x] check metric logged
-[] check daily check in logged
-[] check daily checkin properly display in table
+[x] check daily check in logged
+[x] check daily checkin properly display in table
 -- recommendations
 [x] implement plan index (now we don't have planIds array anymore)
 [x] can compute recommended users
 [x] can see recommended users
 [ ] test errors are propagated to telegram
+[ ] AI message regeration
 
 ## missing verticals
 
@@ -213,3 +219,20 @@ This provides:
 - TypeScript support for web-push
 
 Note: Scheduled notifications are handled by the existing `/run-hourly-job` endpoint, so AWS EventBridge cron integration was removed to avoid duplication.
+
+# TODO when merging to main
+[] switch to api.tracking.so
+    - re issue certifiactes
+[] change flight control base branch
+[] make sure stripe webhooks are properly tied
+[] make sure clerk webhooks are properly tied
+[] retest onboarding with dummy user
+
+## data migration
+[x] users: 249
+[x] activities: 767
+[x] activitiy entries: 1419
+[x] plans: 
+[x] metrics
+[x] metric entries
+[x] connections
