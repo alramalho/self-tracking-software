@@ -227,3 +227,11 @@ Note: Scheduled notifications are handled by the existing `/run-hourly-job` endp
 [] make sure stripe webhooks are properly tied
 [] make sure clerk webhooks are properly tied
 [] retest onboarding with dummy user
+
+## data migration
+[x] users: 249
+[x] activities: 767
+[x] activitiy entries: 1419
+[x] plans: 
+[x] metrics
+[x] metric entries

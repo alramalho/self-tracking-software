@@ -43,6 +43,7 @@ const PlanUpsertSchema = z.object({
     })
     .nullish(),
   notes: z.string().optional(),
+  planGroupId: z.string().optional(),
   durationType: z.enum(["HABIT", "LIFESTYLE", "CUSTOM"]).optional(),
   outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
   timesPerWeek: z.number().positive().optional(),
@@ -146,20 +147,10 @@ router.post(
 
       // Create everything in a single transaction
       const result = await prisma.$transaction(async (tx) => {
-        // Create plan group first
-        const planGroup = await tx.planGroup.create({
-          data: {
-            members: {
-              connect: { id: req.user!.id },
-            },
-          },
-        });
-
         // Create plan with planGroupId reference
         const newPlan = await tx.plan.create({
           data: {
             userId: req.user!.id,
-            planGroupId: planGroup.id,
             goal: planData.goal,
             emoji: planData.emoji,
             finishingDate: planData.finishingDate
@@ -503,6 +494,7 @@ router.post(
                 })),
               },
             }),
+            planGroupId: planData.planGroupId,
           },
           include: {
             activities: true,
@@ -518,20 +510,10 @@ router.post(
       } else {
         // Create new plan using existing create-plan logic
         const result = await prisma.$transaction(async (tx) => {
-          // Create plan group first
-          const planGroup = await tx.planGroup.create({
-            data: {
-              members: {
-                connect: { id: req.user!.id },
-              },
-            },
-          });
-
           // Create plan with planGroupId reference
           const newPlan = await tx.plan.create({
             data: {
               userId: req.user!.id,
-              planGroupId: planGroup.id,
               goal: planData.goal,
               emoji: planData.emoji,
               finishingDate: planData.finishingDate,
