@@ -1,21 +1,8 @@
-name: Deploy Backend Status
+name: Deploy Backend
 on:
-  deployment_status:
+  workflow_call:
 
 jobs:
-  flightcontrol-status:
-    if: github.event.deployment_status.state == 'success' || github.event.deployment_status.state == 'failure'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check deployment status
-        run: |
-          echo "Deployment status: ${{ github.event.deployment_status.state }}"
-          echo "Environment: ${{ github.event.deployment.environment }}"
-          echo "Deployment URL: ${{ github.event.deployment_status.target_url }}"
-          
-          if [ "${{ github.event.deployment_status.state }}" == "success" ]; then
-            echo "✅ Backend deployment succeeded!"
-          else
-            echo "❌ Backend deployment failed!"
-            exit 1
-          fi
+  deploy-flightcontrol:
+    uses: ./.github/workflows/deploy-flightcontrol.yml
+    secrets: inherit
