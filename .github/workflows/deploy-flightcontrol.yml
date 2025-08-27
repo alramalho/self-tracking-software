@@ -61,16 +61,25 @@ jobs:
             
             # Check if deployment is finished
             case "$STATUS" in
-              "success")
+              "SUCCESS")
                 echo "✅ Deployment completed successfully!"
                 exit 0
                 ;;
-              "failed"|"error"|"cancelled")
+              "NO_CHANGE")
+                echo "✅ No changes required for deployment"
+                exit 0
+                ;;
+              "FAILED"|"ERROR"|"CANCELLED"|"BUILD_ERROR"|"DEPLOY_ERROR")
                 echo "❌ Deployment failed with status: $STATUS"
                 exit 1
                 ;;
+              "PENDING"|"INPROGRESS"|"BUILDING"|"DEPLOYING"|"PENDING_DEPENDENCY"|"PROVISIONING")
+                echo "⏳ Deployment in progress (status: $STATUS)..."
+                sleep 30
+                ATTEMPT=$((ATTEMPT + 1))
+                ;;
               *)
-                echo "⏳ Deployment in progress..."
+                echo "❓ Unknown deployment status: $STATUS"
                 sleep 30
                 ATTEMPT=$((ATTEMPT + 1))
                 ;;
