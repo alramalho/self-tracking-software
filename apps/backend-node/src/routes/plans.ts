@@ -41,7 +41,7 @@ const PlanUpsertSchema = z.object({
     .refine((val) => !isNaN(Date.parse(val)), {
       message: "Invalid datetime string",
     })
-    .optional(),
+    .nullish(),
   notes: z.string().optional(),
   durationType: z.enum(["HABIT", "LIFESTYLE", "CUSTOM"]).optional(),
   outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
@@ -162,7 +162,9 @@ router.post(
             planGroupId: planGroup.id,
             goal: planData.goal,
             emoji: planData.emoji,
-            finishingDate: planData.finishingDate,
+            finishingDate: planData.finishingDate
+              ? new Date(planData.finishingDate)
+              : undefined,
             notes: planData.notes,
             durationType: planData.durationType,
             outlineType: planData.outlineType || "SPECIFIC",
@@ -364,9 +366,11 @@ router.post(
       logger.info(`Generating sessions for plan goal: ${goal}`);
 
       // Use AI to generate sessions based on goal and activities
+
+      console.log({ finishingDate });
       const sessionsResult = await aiService.generatePlanSessions({
         goal,
-        finishingDate: new Date(finishingDate),
+        finishingDate,
         activities,
         description,
         existingPlan: existing_plan,

@@ -3,10 +3,10 @@ import {
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
 import { generateObject, generateText } from "ai";
+import { format } from "date-fns";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
-
 const DEFAULT_WEEKS = 8;
 
 // note to self 2:
@@ -540,8 +540,9 @@ export class AIService {
       });
 
       let finishingDate: Date;
+      console.log({ finishingDate: params.finishingDate });
       if (params.finishingDate) {
-        finishingDate = params.finishingDate;
+        finishingDate = new Date(params.finishingDate);
       } else {
         finishingDate = new Date(
           today.getTime() + DEFAULT_WEEKS * 7 * 24 * 60 * 60 * 1000
@@ -550,6 +551,30 @@ export class AIService {
       const weeks = Math.ceil(
         (finishingDate.getTime() - today.getTime()) / (7 * 24 * 60 * 60 * 1000)
       );
+
+      console.log(`The plan has weeks: ${weeks}`);
+
+      // Calculate week start dates (all Sundays, starting from last/current Sunday)
+      const weekStartDates: string[] = [];
+
+      // Find the last Sunday before today (or today if today is Sunday)
+      let currentWeekStart = new Date(today);
+      const dayOfWeek = currentWeekStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+      if (dayOfWeek !== 0) {
+        // Go back to last Sunday
+        currentWeekStart.setDate(currentWeekStart.getDate() - dayOfWeek);
+      }
+
+      // Generate all Sunday start dates for the plan duration
+      for (let i = 0; i < weeks; i++) {
+        weekStartDates.push(currentWeekStart.toISOString().split("T")[0]);
+
+        // Move to next Sunday
+        const nextSunday = new Date(currentWeekStart);
+        nextSunday.setDate(currentWeekStart.getDate() + 7);
+        currentWeekStart = nextSunday;
+      }
 
       const finishingDateReadable = finishingDate.toLocaleDateString("en-GB", {
         day: "numeric",
@@ -586,7 +611,8 @@ export class AIService {
           `${sessionContext}` +
           `` +
           `You must use this information thoughtfully as the basis for your plan generation. In regards to that:` +
-          `The plan has the finishing date of ${finishingDateReadable} and today is ${todayReadableDate}.` +
+          `Today is ${todayReadableDate}, so there cannot be any activity in the past.` +
+          `The plan has the finishing date of ${finishingDateReadable}.` +
           `Additional requirements:`;
       } else {
         introduction =
@@ -596,8 +622,9 @@ export class AIService {
 
       const systemPrompt =
         `${introduction}` +
-        `No date should be before today (${todayReadableDate}).` +
+        `Today is ${todayReadableDate}, so there cannot be any activity in the past.` +
         `You must develop a progressive plan over the course of ${weeks} weeks.` +
+        `The weeks start on the following dates: ${weekStartDates.join(", ")}` +
         `Keep the activities to a minimum.` +
         `The plan should be progressive (intensities or recurrence of activities should increase over time).` +
         `The plan should take into account the finishing date and adjust the intensity and/or recurrence of the activities accordingly.` +
@@ -617,7 +644,9 @@ export class AIService {
       const GeneratedSession = z.object({
         date: z
           .string()
-          .describe("The date of the session in YYYY-MM-DD format."),
+          .describe(
+            `The date of the session in YYYY-MM-DD format. Must be after ${format(new Date(), "yyyy-MM-dd")} (today).`
+          ),
         activity_name: z
           .enum(params.activities.map((a) => a.title))
           .describe(
@@ -631,7 +660,11 @@ export class AIService {
       });
 
       const GeneratedSessionWeek = z.object({
-        week_number: z.number(),
+        week_start_date: z
+          .enum(weekStartDates as [string, ...string[]])
+          .describe(
+            `The start date of the week in YYYY-MM-DD format. Must be one of: ${weekStartDates.join(", ")}`
+          ),
         reasoning: z
           .string()
           .describe(
@@ -671,7 +704,7 @@ export class AIService {
       }> = [];
       for (const week of response.weeks) {
         logger.info(
-          `Week ${week.week_number}. Has ${week.sessions.length} sessions.`
+          `Week starting ${week.week_start_date}. Has ${week.sessions.length} sessions.`
         );
 
         for (const session of week.sessions) {

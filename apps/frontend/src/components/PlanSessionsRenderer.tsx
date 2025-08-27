@@ -31,10 +31,12 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   };
 
   const formatSessionsForHeatMap = () => {
-    const sessions = plan.sessions.map((session) => ({
-      date: format(session.date, "yyyy/MM/dd"),
-      count: session.quantity,
-    }));
+    const sessions = plan.sessions.map((session) => {
+      return {
+        date: format(session.date, "yyyy/MM/dd"),
+        count: session.quantity,
+      };
+    });
 
     if (plan.finishingDate) {
       sessions.push({
