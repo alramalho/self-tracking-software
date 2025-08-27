@@ -1,9 +1,9 @@
-import { useCallback } from "react";
 import { useApiWithAuth } from "@/api";
-import { useState } from "react";
-import { Button } from "./ui/button";
-import { DynamicUISuggester } from "./DynamicUISuggester";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { UserRoundPen } from "lucide-react";
+import { useCallback, useState } from "react";
+import { DynamicUISuggester } from "./DynamicUISuggester";
+import { Button } from "./ui/button";
 
 export function ProfileSetupDynamicUI({
   onSubmit,
@@ -12,6 +12,7 @@ export function ProfileSetupDynamicUI({
   onSubmit: () => void;
   submitButtonText?: string;
 }) {
+  const { refetchUserData } = useUserPlan();
   const questionsChecks = {
     "A description of the user. This will be used for helping other users find you." : {
       title: "Your details",
@@ -63,6 +64,7 @@ export function ProfileSetupDynamicUI({
           setAllQuestionsAnswered(
             Object.values(response.data.question_checks).every((value) => value)
           );
+          refetchUserData();
 
           return response.data;
         }}

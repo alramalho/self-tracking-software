@@ -5,6 +5,7 @@ import {
 import { generateObject, generateText } from "ai";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
+import { getCurrentUser } from "../utils/requestContext";
 
 const DEFAULT_WEEKS = 8;
 
@@ -18,27 +19,37 @@ const DEFAULT_WEEKS = 8;
 export class AIService {
   private model: string;
   // private openai;
-  private openrouter: OpenRouterProvider;
 
   constructor() {
     this.model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
-    // this.openai = createOpenAICompatible({
-    //   name: "openrouter",
-    //   apiKey: process.env.OPENROUTER_API_KEY,
-    //   baseURL: "https://openrouter.helicone.ai/api/v1",
-    // });
 
     if (!process.env.OPENROUTER_API_KEY || !process.env.HELICONE_API_KEY) {
       throw new Error("OPENROUTER_API_KEY or HELICONE_API_KEY is not set");
     }
+  }
 
-    this.openrouter = createOpenRouter({
+  private getOpenRouterWithUserId(): OpenRouterProvider {
+    const user = getCurrentUser();
+
+    const headers = {
+      "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    };
+
+    if (user?.id) {
+      headers["Helicone-User-Id"] = user.id;
+    } else {
+      logger.debug("No user ID found, skipping Helicone-User-Id header");
+    }
+
+    if (user?.username) {
+      headers["Helicone-Property-Username"] = user.username;
+    }
+
+    return createOpenRouter({
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: "https://openrouter.helicone.ai/api/v1",
-      headers: {
-        "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      },
+      headers,
       fetch: (url, options) => {
         const logOptions = { ...options };
         if (options?.body && typeof options.body === "string") {
@@ -48,7 +59,7 @@ export class AIService {
             // Keep original if not valid JSON
           }
         }
-        // logger.debug("Fetching:", url, JSON.stringify(logOptions, null, 2));
+        logger.debug("Fetching:", url, JSON.stringify(logOptions, null, 2));
         return fetch(url, options);
       },
     });
@@ -56,8 +67,9 @@ export class AIService {
 
   async generateText(prompt: string, systemPrompt?: string): Promise<string> {
     try {
+      const openrouter = this.getOpenRouterWithUserId();
       const result = await generateText({
-        model: this.openrouter.chat(this.model),
+        model: openrouter.chat(this.model),
         prompt,
         system: systemPrompt,
         temperature: 0.7,
@@ -77,8 +89,9 @@ export class AIService {
   ): Promise<T> {
     try {
       logger.debug("Generating structured response with model:", this.model);
+      const openrouter = this.getOpenRouterWithUserId();
       const result = await generateObject({
-        model: this.openrouter.chat(this.model),
+        model: openrouter.chat(this.model),
         prompt,
         schema,
         system: systemPrompt,
@@ -667,7 +680,7 @@ export class AIService {
             sessions.push({
               date: new Date(session.date),
               activityId: activity.id,
-              descriptive_guide: session.descriptive_guide,
+              descriptive_guide: `${activity.title} - ${session.quantity} ${activity.measure}`,
               quantity: session.quantity,
             });
           }
