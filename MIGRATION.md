@@ -235,3 +235,4 @@ Note: Scheduled notifications are handled by the existing `/run-hourly-job` endp
 [x] plans: 
 [x] metrics
 [x] metric entries
+[x] connections
