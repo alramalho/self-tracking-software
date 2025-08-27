@@ -24,7 +24,7 @@ import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { differenceInDays, parseISO, subDays } from "date-fns";
+import { differenceInDays, subDays } from "date-fns";
 import {
   Bell,
   ChartArea,
@@ -614,14 +614,14 @@ const ProfilePage: React.FC = () => {
                         daysUntilExpiration={
                           entry.imageExpiresAt
                             ? differenceInDays(
-                                parseISO(entry.imageExpiresAt.toISOString()!),
+                                entry.imageExpiresAt,
                                 new Date()
                               )
                             : -1
                         }
                         hasImageExpired={
                           !entry.imageExpiresAt ||
-                          new Date(entry.imageExpiresAt!) < new Date()
+                          new Date(entry.imageExpiresAt) < new Date()
                         }
                         userPicture={profileData?.picture || undefined}
                         userName={profileData?.name || undefined}
