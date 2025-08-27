@@ -33,7 +33,6 @@ export class AIService {
 
     const headers = {
       "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-      "Helicone-Property-Environment": process.env.NODE_ENV,
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
     };
 
@@ -45,6 +44,10 @@ export class AIService {
 
     if (user?.username) {
       headers["Helicone-Property-Username"] = user.username;
+    }
+
+    if (process.env.NODE_ENV) {
+      headers["Helicone-Property-Environment"] = process.env.NODE_ENV;
     }
 
     return createOpenRouter({
