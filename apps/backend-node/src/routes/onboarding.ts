@@ -1,7 +1,7 @@
 import { Activity } from "@tsw/prisma";
 import { Response, Router } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
@@ -236,31 +236,33 @@ async function extractGuidelinesAndEmoji(
   const prompt = `Create guidelines for a coach to create a plan with goal '${planGoal}' for someone with progress '${planProgress}'`;
 
   try {
+    const schema = z.object({
+      guidelines: z
+        .string()
+        .describe(
+          "Guidelines for the plan coach. The guidelines should be focused on ."
+        ),
+      timeframes: z.array(
+        z.object({
+          intensity: z
+            .enum(["relaxed", "intense"])
+            .describe(
+              "Intensity of the plan. Intense plans are shorter (less weeks) and have more sessions per week than relaxed plans. "
+            ),
+          weeks: z.number().min(8).max(16),
+          sessions_per_week: z
+            .string()
+            .describe(
+              "Range of sessions per week. For example, '3-4' or '4-5'"
+            ),
+        })
+      ),
+      emoji: z.string(),
+    });
+
     const result = await aiService.generateStructuredResponse(
       prompt,
-      z.object({
-        guidelines: z
-          .string()
-          .describe(
-            "Guidelines for the plan coach. The guidelines should be focused on ."
-          ),
-        timeframes: z.array(
-          z.object({
-            intensity: z
-              .enum(["relaxed", "intense"])
-              .describe(
-                "Intensity of the plan. Intense plans are shorter (less weeks) and have more sessions per week than relaxed plans. "
-              ),
-            weeks: z.number().min(8).max(16),
-            sessions_per_week: z
-              .string()
-              .describe(
-                "Range of sessions per week. For example, '3-4' or '4-5'"
-              ),
-          })
-        ),
-        emoji: z.string(),
-      }),
+      schema,
       systemPrompt
     );
     logger.debug("Guidelines and emoji:", result);

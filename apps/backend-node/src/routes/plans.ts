@@ -1,5 +1,5 @@
 import { Response, Router } from "express";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { plansPineconeService } from "../services/pineconeService";
@@ -506,10 +506,6 @@ router.post(
             milestones: true,
           },
         });
-
-        // Update plan embedding in background using getReadablePlan
-        updatePlanEmbedding(planData.id, req.user!.id);
-
         // Mark user recommendations as outdated
         markUserRecommendationsOutdated(req.user!.id);
 
@@ -587,7 +583,6 @@ router.post(
           return newPlan;
         });
 
-        // Update plan embedding in background using getReadablePlan
         updatePlanEmbedding(result.id, req.user!.id);
 
         // Mark user recommendations as outdated
