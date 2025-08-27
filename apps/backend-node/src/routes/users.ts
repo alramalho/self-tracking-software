@@ -441,7 +441,7 @@ usersRouter.post(
       const feedback = FeedbackSchema.parse(req.body);
 
       // Send email notification using SES
-      const adminEmail = process.env.ADMIN_EMAIL || "admin@tracking.so";
+      const adminEmail = process.env.ADMIN_EMAIL || "alex@tracking.so";
       try {
         await sesService.sendEmail({
           to: [adminEmail],

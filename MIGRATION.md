@@ -237,3 +237,8 @@ Note: Scheduled notifications are handled by the existing `/run-hourly-job` endp
 [x] metric entries
 [x] connections
 
+## 1 week after
+[] move back the clerk / stripe callbacks to api.tracking.so
+[] delete backend/ folder
+[] delete aws stacks
+ 

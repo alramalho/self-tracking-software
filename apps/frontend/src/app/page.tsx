@@ -1,6 +1,7 @@
 "use client";
 
 import AppleLikePopover from "@/components/AppleLikePopover";
+import FeedbackPopover from "@/components/FeedbackPopover";
 import InsightsDemo from "@/components/InsightsDemo";
 import { MetricIsland } from "@/components/MetricIsland";
 import { MetricWeeklyView } from "@/components/MetricWeeklyView";
@@ -10,19 +11,19 @@ import TimelineRenderer from "@/components/TimelineRenderer";
 import { TodaysNoteSection } from "@/components/TodaysNoteSection";
 import { Button } from "@/components/ui/button";
 import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { MetricEntry } from "@tsw/prisma";
 import {
-    Bell,
-    ChevronDown,
-    ChevronRight,
-    HelpCircle,
-    RefreshCcw,
-    Search,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  HelpCircle,
+  RefreshCcw,
+  Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -31,9 +32,7 @@ import PullToRefresh from "react-simple-pull-to-refresh";
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import {
-    useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -46,13 +45,9 @@ import { getUser } from "./actions";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
-  const {
-    useCurrentUserDataQuery,
-    notificationsData,
-    refetchAllData,
-  } = useUserPlan();
-  const { data: userData } =
-    useCurrentUserDataQuery();
+  const { useCurrentUserDataQuery, notificationsData, refetchAllData } =
+    useUserPlan();
+  const { data: userData } = useCurrentUserDataQuery();
   const {
     userMetrics,
     entries,
@@ -63,6 +58,7 @@ const HomePage: React.FC = () => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isMetricsCollapsed, setIsMetricsCollapsed] = useLocalStorage<boolean>(
     "metrics-section-collapsed",
     false
@@ -98,7 +94,7 @@ const HomePage: React.FC = () => {
     const fetchUser = async () => {
       console.log(`Fetching user ${userData?.id}`);
       const user = await getUser();
-      
+
       console.log(`User fetched from prisma! ${user?.id}`);
     };
     fetchUser();
@@ -110,6 +106,7 @@ const HomePage: React.FC = () => {
     // Optionally refetch notifications to update the UI
     await notificationsData.refetch();
   };
+
 
   // Color mapping for metrics
   const getMetricColor = (index: number) => {
@@ -127,7 +124,6 @@ const HomePage: React.FC = () => {
     ] as const;
     return colors[index % colors.length];
   };
-
 
   return (
     <PullToRefresh
@@ -162,6 +158,17 @@ const HomePage: React.FC = () => {
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsFeedbackOpen(true)}
+              className="p-0 hover:bg-gray-100 rounded-full transition-colors duration-200"
+              title="Send Feedback"
+            >
+              <img
+                src="/icons/support-agent.svg"
+                alt="Support"
+                className="w-9 h-9"
+              />
+            </button>
             <div className="relative">
               <button
                 onClick={() => setIsNotificationsOpen(true)}
@@ -188,7 +195,7 @@ const HomePage: React.FC = () => {
 
         {/* AI Coach Banner */}
         {isUserOnFreePlan && (
-          <div 
+          <div
             onClick={() => setShowAICoachPopover(true)}
             className="bg-gradient-to-r from-purple-50 to-blue-50 ring-1 ring-purple-200 backdrop-blur-sm rounded-full py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200"
           >
@@ -196,7 +203,9 @@ const HomePage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <ScanFace size={24} className="text-purple-500" />
                 <div>
-                  <span className="text-sm font-semibold text-purple-700">AI Coach & Insights</span>
+                  <span className="text-sm font-semibold text-purple-700">
+                    AI Coach & Insights
+                  </span>
                   <p className="text-xs text-purple-600">
                     Get personalized coaching and track daily metrics
                   </p>
@@ -247,9 +256,7 @@ const HomePage: React.FC = () => {
               </button>
             </div>
 
-            <PlansProgressDisplay
-              isExpanded={!isPlansCollapsed}
-            />
+            <PlansProgressDisplay isExpanded={!isPlansCollapsed} />
           </div>
         )}
 
@@ -296,8 +303,7 @@ const HomePage: React.FC = () => {
                     const today = new Date().toISOString().split("T")[0];
                     const todaysEntry = entries.find(
                       (entry: MetricEntry) =>
-                        entry.metricId === metric.id &&
-                        isToday(entry.date)
+                        entry.metricId === metric.id && isToday(entry.date)
                     );
                     const isLoggedToday =
                       !!todaysEntry && todaysEntry.rating > 0;
@@ -414,6 +420,14 @@ const HomePage: React.FC = () => {
             </Button>
           </div>
         </AppleLikePopover>
+
+        {/* Feedback Modal */}
+        <FeedbackPopover
+          email={userData?.email || ""}
+          onClose={() => setIsFeedbackOpen(false)}
+          isEmailEditable={!userData?.email}
+          open={isFeedbackOpen}
+        />
       </div>
     </PullToRefresh>
   );
