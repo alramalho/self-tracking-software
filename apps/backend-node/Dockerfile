@@ -15,7 +15,7 @@ RUN pnpm install --frozen-lockfile
 
 # Generate Prisma client and build
 RUN pnpm db:generate
-RUN pnpm build --filter apps/backend-node
+RUN pnpm build --filter backend-node
 
 # Production stage
 FROM node:22-alpine AS production
