@@ -1,20 +1,16 @@
-import React from "react";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { formatTimeAgo, getMessagePreview } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { motion } from "framer-motion";
 import {
-  ArrowRight,
   Key,
-  Lock,
-  LockKeyhole,
   Reply,
   ScanFace,
-  X,
+  X
 } from "lucide-react";
+import React from "react";
 import { Remark } from "react-remark";
-import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "./ui/badge";
-import { formatTimeAgo } from "@/lib/utils";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
-import { getMessagePreview } from "@/lib/utils";
 
 interface AINotificationProps {
   messages: string[];

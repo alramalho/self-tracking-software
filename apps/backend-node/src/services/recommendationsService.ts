@@ -37,6 +37,7 @@ function calculateRecencySimilarity(lastActiveAt: Date | null): number {
 
   const hoursSinceLastActive =
     (Date.now() - lastActiveAt.getTime()) / (1000 * 60 * 60);
+
   return tanhFitRecency(hoursSinceLastActive);
 }
 
@@ -86,7 +87,9 @@ export class RecommendationsService {
   /**
    * Compute recommended users for a given user
    */
-  async computeRecommendedUsers(currentUserId: string): Promise<void> {
+  async computeRecommendedUsers(
+    currentUserId: string
+  ): Promise<Record<string, any>> {
     try {
       logger.info(`Computing recommendations for user ${currentUserId}`);
 
@@ -109,7 +112,7 @@ export class RecommendationsService {
 
       if (usersLookingForPartners.length === 0) {
         logger.info("No users looking for accountability partners found");
-        return;
+        return {};
       }
 
       const results: Record<string, any> = {};
@@ -237,6 +240,8 @@ export class RecommendationsService {
       logger.info(
         `Computed ${Object.keys(results).length} recommendations for user ${currentUserId}`
       );
+
+      return results;
     } catch (error) {
       logger.error("Error computing recommended users:", error);
       throw error;

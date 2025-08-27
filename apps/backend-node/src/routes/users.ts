@@ -1,3 +1,4 @@
+import recommendationsService from "@/services/recommendationsService";
 import { Request, Response, Router } from "express";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { notificationService } from "../services/notificationService";
@@ -223,7 +224,7 @@ usersRouter.get(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const recommendations = await userService.getRecommendedUsers(
+      const recommendations = await recommendationsService.getRecommendedUsers(
         req.user!.id
       );
       res.json(recommendations);

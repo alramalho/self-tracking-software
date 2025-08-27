@@ -1,3 +1,4 @@
+import { userService } from "@/services/userService";
 import { Request, Response, Router } from "express";
 import multer from "multer";
 import { z } from "zod/v4";
@@ -426,6 +427,8 @@ router.post(
         where: { id: req.user!.id },
         data: updates,
       });
+
+      await userService.updateUserEmbedding(updatedUser);
 
       res.json({
         message: questionAnalysis.all_answered

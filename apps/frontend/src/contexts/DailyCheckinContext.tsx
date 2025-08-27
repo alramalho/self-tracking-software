@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { DailyCheckinBanner } from "@/components/DailyCheckinBanner";
+import { useApiWithAuth } from "@/api";
+import { InsightsBanner } from "@/components/InsightsBanner";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { differenceInCalendarDays, isToday } from "date-fns";
-import { InsightsBanner } from "@/components/InsightsBanner";
-import { useApiWithAuth } from "@/api";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 
 interface DailyCheckinContextType {

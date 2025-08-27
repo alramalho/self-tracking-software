@@ -1,6 +1,8 @@
+import { logger } from "@/utils/logger";
 import { Connection, Prisma, User } from "@tsw/prisma";
 import { UserSearchResult } from "../types/user";
 import { prisma } from "../utils/prisma";
+import { usersPineconeService } from "./pineconeService";
 
 type UserWithPlans = Prisma.UserGetPayload<{
   include: { plans: true };
@@ -413,9 +415,21 @@ export class UserService {
     });
   }
 
-  async getRecommendedUsers(userId: string) {
-    const { recommendationsService } = await import("./recommendationsService");
-    return recommendationsService.getRecommendedUsers(userId);
+  async updateUserEmbedding(user: User): Promise<void> {
+    try {
+      if (user.profile) {
+        await usersPineconeService.upsertRecord(user.profile, user.id, {
+          user_id: user.id,
+        });
+        logger.info(`Updated user embedding for plan ${user.id}`);
+      }
+    } catch (error) {
+      logger.error(
+        `Failed to update user embedding for plan ${user.id}:`,
+        error
+      );
+      // Don't throw the error to avoid breaking user operations
+    }
   }
 }
 
