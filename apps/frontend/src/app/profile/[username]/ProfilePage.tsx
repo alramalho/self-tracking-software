@@ -80,6 +80,7 @@ const ProfilePage: React.FC = () => {
     activityEntries: [],
     activities: [],
   };
+
   const profileActivePlans = plans?.filter((p) => !isPlanExpired({finishingDate: p.finishingDate}));
   const api = useApiWithAuth();
   const [showEditActivityEntry, setShowEditActivityEntry] = useState<

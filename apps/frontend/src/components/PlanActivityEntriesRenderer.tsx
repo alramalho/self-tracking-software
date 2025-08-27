@@ -48,10 +48,12 @@ const PlanActivityEntriesRenderer: React.FC<
   };
 
   const formatEntriesForHeatMap = () => {
-    const formattedEntries = planActivityEntries.map((entry) => ({
-      date: format(entry.date, "yyyy/MM/dd"),
-      count: entry.quantity,
-    }));
+    const formattedEntries = planActivityEntries.map((entry) => {
+      return {
+        date: format(entry.date, "yyyy/MM/dd"),
+        count: entry.quantity,
+      };
+    });
     return formattedEntries;
   };
 
