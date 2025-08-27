@@ -376,7 +376,7 @@ export default function InsightsDashboardPage() {
 
   // Check if an activity happened within the configured window before a date
   const activityHappenedWithinWindow = (
-    activityId: string,
+    activityId: string, 
     targetDate: Date
   ): boolean => {
     const windowStart = new Date(targetDate);
@@ -394,44 +394,31 @@ export default function InsightsDashboardPage() {
 
   // Calculate correlations for a metric
 
-  // note to self: we were fixing improper metric correlations
+  // note to self 1: we were fixing improper metric correlations
   const calculateMetricCorrelations = (metricId: string) => {
-    console.log(`Calculating correlations for metric ${metricId}`);
 
     const metricEntries = entries
       .filter((entry) => entry.metricId === metricId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    console.log(`Found ${metricEntries.length} entries for metric`);
-
     const correlations = activities
       .map((activity) => {
-        console.log(`Processing activity ${activity.id}`);
 
         const binaryActivityArray = metricEntries.map((entry) => {
           const didActivity = activityHappenedWithinWindow(
             activity.id,
-            entry.date
+            new Date(entry.date)
           );
           return didActivity ? 1 : 0;
         });
 
-        console.log(
-          `Binary array for activity ${activity.id}:`,
-          binaryActivityArray
-        );
-
         // Only calculate correlation if the activity has some occurrences
         if (binaryActivityArray.some((v) => v === 1)) {
           const ratings = metricEntries.map((e) => e.rating);
-          console.log(`Ratings array:`, ratings);
 
           const correlation = calculatePearsonCorrelation(
             ratings,
             binaryActivityArray
-          );
-          console.log(
-            `Correlation for activity ${activity.id}: ${correlation}`
           );
 
           return {
@@ -439,7 +426,6 @@ export default function InsightsDashboardPage() {
             correlation,
           };
         }
-        console.log(`Skipping activity ${activity.id} - no occurrences`);
         return null;
       })
       .filter(Boolean);
