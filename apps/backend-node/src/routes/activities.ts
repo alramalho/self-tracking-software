@@ -202,6 +202,8 @@ router.post(
           logger.error("Error uploading photo to S3:", error);
           // Continue without photo - don't fail the entire activity logging
         }
+      } else {
+        logger.info("No photo provided");
       }
 
       // Update user's last active time
