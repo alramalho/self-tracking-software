@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 // import * as acm from "aws-cdk-lib/aws-certificatemanager";
 // import * as ec2 from "aws-cdk-lib/aws-ec2";
 // import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
@@ -145,27 +145,25 @@ export class ApiStack extends cdk.Stack {
     //   // } as BetterStackConfig,
     // });
 
-    if (
-      !process.env.CLOUDFRONT_DISTRIBUTION_ID ||
-      !process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME
-    ) {
-      throw new Error(
-        "CLOUDFRONT_DISTRIBUTION_ID and CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME must be set"
-      );
+    // Get load balancer from environment variable
+    const loadBalancerArn = process.env.LOAD_BALANCER_ARN;
+    if (!loadBalancerArn) {
+      throw new Error("LOAD_BALANCER_ARN environment variable is required");
     }
 
-    const cloudFrontDistribution =
-      cloudfront.Distribution.fromDistributionAttributes(
+    const loadBalancer =
+      elbv2.ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(
         this,
-        "ExistingCloudFrontDistribution",
+        "ExistingLoadBalancer",
         {
-          distributionId: process.env.CLOUDFRONT_DISTRIBUTION_ID!,
-          domainName: process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME!, // Default CloudFront domain
+          loadBalancerArn: loadBalancerArn,
+          securityGroupId:
+            process.env.LOAD_BALANCER_SECURITY_GROUP_ID || "sg-placeholder",
         }
       );
 
-    // Setup WAF for the existing CloudFront distribution
-    this.setupWAF(props, cloudFrontDistribution);
+    // Setup WAF for the existing load balancer
+    this.setupWAF(props, loadBalancer);
 
     // this.deployLambdaBackend(props, s3Bucket);
   }
@@ -511,7 +509,7 @@ export class ApiStack extends cdk.Stack {
 
   private setupWAF(
     props: ApiStackProps,
-    cloudFrontDistribution: cloudfront.IDistribution
+    loadBalancer: elbv2.IApplicationLoadBalancer
   ) {
     // --- Read Allowed Routes ---
     const allowedRoutesFilePath = path.join(
@@ -597,11 +595,11 @@ export class ApiStack extends cdk.Stack {
       this,
       "AllowedRoutesPatternSet",
       {
-        name: `${PASCAL_CASE_PREFIX}-allowed-routes-set-${props.environment}`.substring(
+        name: `${PASCAL_CASE_PREFIX}-allowed-routes-set-${props.environment}-${cdk.Aws.REGION}`.substring(
           0,
           128
         ), // Ensure name uniqueness and length
-        scope: "CLOUDFRONT",
+        scope: "REGIONAL",
         // Use the list of combined regex patterns generated above
         regularExpressionList: allowedRoutesRegex,
         description: "Regex patterns for allowed URI paths read from file",
@@ -620,7 +618,7 @@ export class ApiStack extends cdk.Stack {
           },
         },
       },
-      scope: "CLOUDFRONT",
+      scope: "REGIONAL",
       visibilityConfig: {
         cloudWatchMetricsEnabled: true,
         metricName: `${PASCAL_CASE_PREFIX}-web-acl-metric-${props.environment}`,
@@ -802,14 +800,9 @@ export class ApiStack extends cdk.Stack {
       ],
     });
 
-    const distributionArn = `arn:aws:cloudfront::${cdk.Aws.ACCOUNT_ID}:distribution/${process.env.CLOUDFRONT_DISTRIBUTION_ID}`;
-
-    console.log({ newDistributionArn: distributionArn });
-    console.log({ DistributionArn: cloudFrontDistribution.distributionArn });
-
-    // Associate WAF Web ACL with the CloudFront Distribution
+    // Associate WAF Web ACL with the Application Load Balancer
     new wafv2.CfnWebACLAssociation(this, "WebAclAssociation", {
-      resourceArn: distributionArn,
+      resourceArn: loadBalancer.loadBalancerArn,
       webAclArn: webAcl.attrArn,
     });
   }
