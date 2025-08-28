@@ -110,14 +110,19 @@ morgan.token("userId", function (req: AuthenticatedRequest) {
   return req.user ? req.user.id : "anonymous";
 });
 
+morgan.token("ip", function (req: any) {
+  return req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || "unknown";
+});
+
 export const morganMiddleware = morgan((tokens, req, res) => {
   const status = parseInt(tokens.status?.(req, res) ?? "0");
   const method = tokens.method?.(req, res) ?? "UNKNOWN";
   const url = tokens.url?.(req, res) ?? "";
   const responseTime = tokens["response-time"]?.(req, res);
   const userId = tokens.userId?.(req, res);
+  const ip = tokens.ip?.(req, res);
 
-  const message = `${method} ${url} ${status} ${responseTime} ms - ${userId}`;
+  const message = `(IP: ${ip}) ${method} ${url} ${status} ${responseTime} ms - ${userId}`;
 
   if (status >= 500) {
     logger.error(colorHttp(message));
