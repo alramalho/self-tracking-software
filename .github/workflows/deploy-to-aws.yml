@@ -59,7 +59,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 # necessary as we're deploying cloudfront waf
+          aws-region: eu-central-1 # necessary as we're deploying cloudfront waf
 
       - name: Deploy Prod CDK
         env:
@@ -110,7 +110,6 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
           LOAD_BALANCER_ARN: ${{ vars.LOAD_BALANCER_ARN }}
-          LOAD_BALANCER_SECURITY_GROUP_ID: ${{ vars.LOAD_BALANCER_SECURITY_GROUP_ID }}
           
         run: |
           cd aws-infrastructure
