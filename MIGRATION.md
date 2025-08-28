@@ -239,6 +239,6 @@ Note: Scheduled notifications are handled by the existing `/run-hourly-job` endp
 
 ## 1 week after
 [] move back the clerk / stripe callbacks to api.tracking.so
-[] delete backend/ folder
+[] delete backend/ folder (keep scripts!)
 [] delete aws stacks
- 
+[] delete allowed routes BS (not script though)
