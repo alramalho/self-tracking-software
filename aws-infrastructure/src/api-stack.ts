@@ -1,12 +1,13 @@
 import * as cdk from "aws-cdk-lib";
-import * as acm from "aws-cdk-lib/aws-certificatemanager";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
-import * as ecs from "aws-cdk-lib/aws-ecs";
-import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as logs from "aws-cdk-lib/aws-logs";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+// import * as acm from "aws-cdk-lib/aws-certificatemanager";
+// import * as ec2 from "aws-cdk-lib/aws-ec2";
+// import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
+// import * as ecs from "aws-cdk-lib/aws-ecs";
+// import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
+// import * as iam from "aws-cdk-lib/aws-iam";
+// import * as lambda from "aws-cdk-lib/aws-lambda";
+// import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
@@ -18,34 +19,34 @@ import {
   PASCAL_CASE_PREFIX,
 } from "./utils/constants";
 
-interface BetterStackConfig {
-  enabled: boolean;
-  sourceToken: string;
-  ingestingHost: string;
-}
+// interface BetterStackConfig {
+//   enabled: boolean;
+//   sourceToken: string;
+//   ingestingHost: string;
+// }
 
 interface ApiStackProps {
   environment: string;
-  certificateArn: string;
-  nodeCertificateArn: string;
+  // certificateArn: string;
+  // nodeCertificateArn: string;
 }
 
-interface FargateDeploymentOptions {
-  serviceName: string;
-  backendPath: string;
-  dockerfilePath: string;
-  environment: Record<string, string>;
-  vpc?: ec2.IVpc;
-  cluster?: ecs.ICluster;
-  clusterName?: string;
-  certificateArn: string;
-  nodeCertificateArn: string;
-  betterStackConfig?: BetterStackConfig;
-}
+// interface FargateDeploymentOptions {
+//   serviceName: string;
+//   backendPath: string;
+//   dockerfilePath: string;
+//   environment: Record<string, string>;
+//   vpc?: ec2.IVpc;
+//   cluster?: ecs.ICluster;
+//   clusterName?: string;
+//   certificateArn: string;
+//   nodeCertificateArn: string;
+//   betterStackConfig?: BetterStackConfig;
+// }
 
 export class ApiStack extends cdk.Stack {
-  public fargateService: ecs_patterns.ApplicationLoadBalancedFargateService;
-  public nodeFargateService: ecs_patterns.ApplicationLoadBalancedFargateService;
+  // public fargateService: ecs_patterns.ApplicationLoadBalancedFargateService;
+  // public nodeFargateService: ecs_patterns.ApplicationLoadBalancedFargateService;
   // public fastApiLambda: lambda.DockerImageFunction;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
@@ -58,98 +59,119 @@ export class ApiStack extends cdk.Stack {
       `${KEBAB_CASE_PREFIX}-bucket-${props.environment}`
     );
 
-    // Deploy Python backend (existing)
-    const pythonEnvConfig = {
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
-      OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
-      SHARED_ENCRYPTION_KEY: process.env.SHARED_ENCRYPTION_KEY!,
-      MONGO_DB_CONNECTION_STRING: process.env.MONGO_DB_CONNECTION_STRING!,
-      CLERK_JWT_PUBLIC_KEY: process.env.CLERK_JWT_PUBLIC_KEY!,
-      SVIX_SECRET: process.env.SVIX_SECRET!,
-      PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
-      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
-      ENVIRONMENT: process.env.ENVIRONMENT!,
-      JINA_API_KEY: process.env.JINA_API_KEY!,
-      POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
-      ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
-      OVERRIDE_AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
-      OVERRIDE_AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
-      LOOPS_API_KEY: process.env.LOOPS_API_KEY!,
-      OTEL_ENABLED: process.env.OTEL_ENABLED!,
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
-        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
-      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
-        process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
-      AXIOM_TOKEN: process.env.AXIOM_TOKEN!,
-      AXIOM_ORG_ID: process.env.AXIOM_ORG_ID!,
-      AXIOM_DATASET: process.env.AXIOM_DATASET!,
-      AXIOM_BATCH_SIZE: process.env.AXIOM_BATCH_SIZE!,
-      TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
-      TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
-      STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
-      STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
-      STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
-    };
+    // // Deploy Python backend (existing)
+    // const pythonEnvConfig = {
+    //   OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+    //   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY!,
+    //   SHARED_ENCRYPTION_KEY: process.env.SHARED_ENCRYPTION_KEY!,
+    //   MONGO_DB_CONNECTION_STRING: process.env.MONGO_DB_CONNECTION_STRING!,
+    //   CLERK_JWT_PUBLIC_KEY: process.env.CLERK_JWT_PUBLIC_KEY!,
+    //   SVIX_SECRET: process.env.SVIX_SECRET!,
+    //   PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
+    //   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
+    //   ENVIRONMENT: process.env.ENVIRONMENT!,
+    //   JINA_API_KEY: process.env.JINA_API_KEY!,
+    //   POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
+    //   ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
+    //   OVERRIDE_AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
+    //   OVERRIDE_AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
+    //   LOOPS_API_KEY: process.env.LOOPS_API_KEY!,
+    //   OTEL_ENABLED: process.env.OTEL_ENABLED!,
+    //   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+    //     process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
+    //   OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
+    //     process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
+    //   AXIOM_TOKEN: process.env.AXIOM_TOKEN!,
+    //   AXIOM_ORG_ID: process.env.AXIOM_ORG_ID!,
+    //   AXIOM_DATASET: process.env.AXIOM_DATASET!,
+    //   AXIOM_BATCH_SIZE: process.env.AXIOM_BATCH_SIZE!,
+    //   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
+    //   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
+    //   STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
+    //   STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
+    //   STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
+    // };
 
-    this.fargateService = this.deployFargateBackend(props, s3Bucket, {
-      serviceName: "api-python",
-      backendPath: "backend",
-      dockerfilePath: "Dockerfile.fargate",
-      environment: pythonEnvConfig,
-      clusterName: `${KEBAB_CASE_PREFIX}-python-cluster-${props.environment}`,
-      certificateArn: props.certificateArn,
-      nodeCertificateArn: props.nodeCertificateArn,
-    });
+    // this.fargateService = this.deployFargateBackend(props, s3Bucket, {
+    //   serviceName: "api-python",
+    //   backendPath: "backend",
+    //   dockerfilePath: "Dockerfile.fargate",
+    //   environment: pythonEnvConfig,
+    //   clusterName: `${KEBAB_CASE_PREFIX}-python-cluster-${props.environment}`,
+    //   certificateArn: props.certificateArn,
+    //   nodeCertificateArn: props.nodeCertificateArn,
+    // });
 
-    // Deploy Node.js backend (new) - reuse VPC and cluster from Python backend
-    const nodeEnvConfig = {
-      DATABASE_URL: process.env.DATABASE_URL!,
-      DIRECT_URL: process.env.DIRECT_URL!,
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
-      CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY!,
-      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
-      SVIX_SECRET: process.env.SVIX_SECRET!,
-      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
-      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
-      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
-      POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
-      ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
-      PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
-      PINECONE_INDEX_HOST: process.env.PINECONE_INDEX_HOST!,
-      POSTGRES_USER: process.env.POSTGRES_USER!,
-      POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD!,
-      POSTGRES_HOST: process.env.POSTGRES_HOST!,
-      POSTGRES_PORT: process.env.POSTGRES_PORT!,
-      POSTGRES_DB: process.env.POSTGRES_DB!,
-      OTEL_ENABLED: process.env.OTEL_ENABLED!,
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
-        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
-      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
-        process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
-      TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
-      TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
-      STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
-      STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
-      STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
-    };
+    // // Deploy Node.js backend (new) - reuse VPC and cluster from Python backend
+    // const nodeEnvConfig = {
+    //   DATABASE_URL: process.env.DATABASE_URL!,
+    //   DIRECT_URL: process.env.DIRECT_URL!,
+    //   OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+    //   CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY!,
+    //   CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY!,
+    //   SVIX_SECRET: process.env.SVIX_SECRET!,
+    //   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY!,
+    //   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
+    //   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
+    //   POSTHOG_API_KEY: process.env.POSTHOG_API_KEY!,
+    //   ADMIN_API_KEY: process.env.ADMIN_API_KEY!,
+    //   PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
+    //   PINECONE_INDEX_HOST: process.env.PINECONE_INDEX_HOST!,
+    //   POSTGRES_USER: process.env.POSTGRES_USER!,
+    //   POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD!,
+    //   POSTGRES_HOST: process.env.POSTGRES_HOST!,
+    //   POSTGRES_PORT: process.env.POSTGRES_PORT!,
+    //   POSTGRES_DB: process.env.POSTGRES_DB!,
+    //   OTEL_ENABLED: process.env.OTEL_ENABLED!,
+    //   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+    //     process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT!,
+    //   OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
+    //     process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT!,
+    //   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
+    //   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID!,
+    //   STRIPE_PLUS_PRODUCT_ID: process.env.STRIPE_PLUS_PRODUCT_ID!,
+    //   STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
+    //   STRIPE_ENDPOINT_SECRET: process.env.STRIPE_ENDPOINT_SECRET!,
+    // };
 
-    this.nodeFargateService = this.deployFargateBackend(props, s3Bucket, {
-      serviceName: "api-node",
-      backendPath: ".",
-      dockerfilePath: "apps/backend-node/Dockerfile",
-      environment: nodeEnvConfig,
-      clusterName: `${KEBAB_CASE_PREFIX}-node-cluster-${props.environment}`,
-      certificateArn: props.nodeCertificateArn,
-      nodeCertificateArn: props.nodeCertificateArn,
-      // betterStackConfig: {
-      //   enabled: false,
-      //   sourceToken: process.env.BETTER_STACK_SOURCE_TOKEN!,
-      //   ingestingHost: process.env.BETTER_STACK_INGESTING_HOST!,
-      // } as BetterStackConfig,
-    });
+    // this.nodeFargateService = this.deployFargateBackend(props, s3Bucket, {
+    //   serviceName: "api-node",
+    //   backendPath: ".",
+    //   dockerfilePath: "apps/backend-node/Dockerfile",
+    //   environment: nodeEnvConfig,
+    //   clusterName: `${KEBAB_CASE_PREFIX}-node-cluster-${props.environment}`,
+    //   certificateArn: props.nodeCertificateArn,
+    //   nodeCertificateArn: props.nodeCertificateArn,
+    //   // betterStackConfig: {
+    //   //   enabled: false,
+    //   //   sourceToken: process.env.BETTER_STACK_SOURCE_TOKEN!,
+    //   //   ingestingHost: process.env.BETTER_STACK_INGESTING_HOST!,
+    //   // } as BetterStackConfig,
+    // });
 
-    // Setup WAF for the Python API (main API)
-    this.setupWAF(props, this.fargateService.loadBalancer);
+    // Get CloudFront distribution from environment variable
+    const cloudFrontDistributionArn = process.env.CLOUDFRONT_DISTRIBUTION_ARN;
+    if (!cloudFrontDistributionArn) {
+      throw new Error("CLOUDFRONT_DISTRIBUTION_ARN environment variable is required");
+    }
+
+    // Extract distribution ID from ARN (format: arn:aws:cloudfront::account:distribution/DISTRIBUTIONID)
+    const distributionId = cloudFrontDistributionArn.split('/').pop();
+    if (!distributionId) {
+      throw new Error("Invalid CloudFront distribution ARN format");
+    }
+
+    const cloudFrontDistribution = cloudfront.Distribution.fromDistributionAttributes(
+      this,
+      "ExistingCloudFrontDistribution",
+      {
+        distributionId,
+        domainName: `${distributionId}.cloudfront.net`, // Default CloudFront domain
+      }
+    );
+
+    // Setup WAF for the existing CloudFront distribution
+    this.setupWAF(props, cloudFrontDistribution);
 
     // this.deployLambdaBackend(props, s3Bucket);
   }
@@ -268,7 +290,8 @@ export class ApiStack extends cdk.Stack {
   //   );
   // }
 
-  private deployFargateBackend(
+  // COMMENTED OUT: Fargate deployment method - use external infrastructure
+  /* private deployFargateBackend(
     props: ApiStackProps,
     s3Bucket: s3.IBucket,
     options: FargateDeploymentOptions
@@ -490,9 +513,9 @@ export class ApiStack extends cdk.Stack {
     }
 
     return fargateService;
-  }
+  } */
 
-  private setupWAF(props: ApiStackProps, loadBalancer: any) {
+  private setupWAF(props: ApiStackProps, cloudFrontDistribution: cloudfront.IDistribution) {
     // --- Read Allowed Routes ---
     const allowedRoutesFilePath = path.join(
       __dirname,
@@ -577,11 +600,11 @@ export class ApiStack extends cdk.Stack {
       this,
       "AllowedRoutesPatternSet",
       {
-        name: `${PASCAL_CASE_PREFIX}-allowed-routes-set-${props.environment}-${cdk.Aws.REGION}`.substring(
+        name: `${PASCAL_CASE_PREFIX}-allowed-routes-set-${props.environment}`.substring(
           0,
           128
         ), // Ensure name uniqueness and length
-        scope: "REGIONAL",
+        scope: "CLOUDFRONT",
         // Use the list of combined regex patterns generated above
         regularExpressionList: allowedRoutesRegex,
         description: "Regex patterns for allowed URI paths read from file",
@@ -600,7 +623,7 @@ export class ApiStack extends cdk.Stack {
           },
         },
       },
-      scope: "REGIONAL",
+      scope: "CLOUDFRONT",
       visibilityConfig: {
         cloudWatchMetricsEnabled: true,
         metricName: `${PASCAL_CASE_PREFIX}-web-acl-metric-${props.environment}`,
@@ -782,9 +805,9 @@ export class ApiStack extends cdk.Stack {
       ],
     });
 
-    // Associate WAF Web ACL with the Application Load Balancer
+    // Associate WAF Web ACL with the CloudFront Distribution
     new wafv2.CfnWebACLAssociation(this, "WebAclAssociation", {
-      resourceArn: loadBalancer.loadBalancerArn,
+      resourceArn: cloudFrontDistribution.distributionArn,
       webAclArn: webAcl.attrArn,
     });
   }

@@ -6,3 +6,8 @@ jobs:
   deploy-flightcontrol:
     uses: ./.github/workflows/deploy-flightcontrol.yml
     secrets: inherit
+
+  deploy-aws:
+    needs: deploy-flightcontrol
+    uses: ./.github/workflows/deploy-to-aws.yml
+    secrets: inherit

@@ -14,16 +14,16 @@ export class MainStack extends cdk.Stack {
     super(scope, id);
 
     // Deploy Lambda backend
-    const { fargateService } = new ApiStack(this, "ApiStack", {
+    new ApiStack(this, "ApiStack", {
       environment: props.environment,
-      certificateArn: props.certificateArn,
-      nodeCertificateArn: props.nodeCertificateArn,
+      // certificateArn: props.certificateArn,
+      // nodeCertificateArn: props.nodeCertificateArn,
     });
 
-    new DbStack(this, "DbStack", {
-      environment: props.environment,
-      writableBy: [fargateService.taskDefinition.taskRole],
-      readableBy: [fargateService.taskDefinition.taskRole],
-    });
+    // new DbStack(this, "DbStack", {
+    //   environment: props.environment,
+    //   writableBy: [fargateService.taskDefinition.taskRole],
+    //   readableBy: [fargateService.taskDefinition.taskRole],
+    // });
   }
 }

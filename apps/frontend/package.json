@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "update-routes": "tsx ../../scripts/update_allowed_routes.ts",
     "test": "vitest"
   },
   "dependencies": {
