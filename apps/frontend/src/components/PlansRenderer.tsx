@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { addMonths, format, isBefore } from "date-fns";
+import { addMonths, isBefore } from "date-fns";
 import { Plus, PlusSquare, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -192,7 +192,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
 
   const handleReactivatePlan = async (planId: string) => {
     try {
-      const oneMonthLater = format(addMonths(new Date(), 1), "yyyy-MM-dd");
+      const oneMonthLater = addMonths(new Date(), 1);
       const result = await updatePlans([{
         planId,
         updates: { finishingDate: oneMonthLater }
