@@ -69,3 +69,5 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+.scripts/
