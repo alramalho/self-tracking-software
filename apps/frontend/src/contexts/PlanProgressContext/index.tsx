@@ -3,6 +3,7 @@ import {
   useUserPlan,
 } from "@/contexts/UserGlobalContext";
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
+import { isAfter } from "date-fns";
 import React, { createContext, useContext, useMemo } from "react";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
 
@@ -61,7 +62,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const { plans, activities, activityEntries } = userData;
 
-    const planProgress = plans.map((plan): PlanProgressData => {
+    const planProgress = plans.filter((p) => p.deletedAt === null && p.finishingDate && isAfter(p.finishingDate, new Date())).map((plan): PlanProgressData => {
       // const convertedPlan = plan;
       // const planStartDate = convertedPlan.outlineType === "SPECIFIC" 
       //   ? (convertedPlan.sessions.length > 0 
