@@ -1,0 +1,6 @@
+cd apps/backend-node
+# pnpm update-routes
+# tsx scripts/update_allowed_routes.ts
+echo "Checking for forbidden lines..."
+tsx scripts/check_forbidden_lines.ts
+cd ..
