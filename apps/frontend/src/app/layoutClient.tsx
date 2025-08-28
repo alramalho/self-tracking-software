@@ -10,9 +10,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { useSession } from "@clerk/clerk-react";
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
-import { QueryClient } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
 
@@ -27,7 +27,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const localStoragePersister = createSyncStoragePersister({
+const localStoragePersister = createAsyncStoragePersister({
   storage: typeof window !== "undefined" ? window.localStorage : undefined,
   key: "TRACKING_SO_QUERY_CACHE",
   throttleTime: 1000,

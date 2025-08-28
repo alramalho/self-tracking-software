@@ -24,6 +24,7 @@ import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
+import { ActivityEntry } from "@tsw/prisma";
 import { differenceInDays, subDays } from "date-fns";
 import {
   Bell,
@@ -83,9 +84,9 @@ const ProfilePage: React.FC = () => {
 
   const profileActivePlans = plans?.filter((p) => !isPlanExpired({finishingDate: p.finishingDate}));
   const api = useApiWithAuth();
-  const [showEditActivityEntry, setShowEditActivityEntry] = useState<
-    string | null
-  >(null);
+  const [showEditActivityEntry, setShowActivityToEdit] = useState<
+    ActivityEntry | undefined
+  >(undefined);
   const userInformalName = profileData?.name?.includes(" ")
     ? profileData.name.split(" ")[0]
     : profileData?.username;
@@ -628,7 +629,13 @@ const ProfilePage: React.FC = () => {
                         userUsername={profileData?.username || undefined}
                         editable={isOnesOwnProfile}
                         onEditClick={() => {
-                          setShowEditActivityEntry(entry.id);
+                          const activityToEdit = activityEntries.find((e) => e.id === entry.id);
+                          if (activityToEdit) {
+                            setShowActivityToEdit(activityToEdit);
+                          } else {
+                            console.error(`Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`);
+                            toast.error("Activity to edit not found! Please contact support");
+                          }
                         }}
                       />
                     );
@@ -672,16 +679,16 @@ const ProfilePage: React.FC = () => {
         <ActivityEntryEditor
           open={!!showEditActivityEntry}
           activityEntry={{
-            id: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.id,
-            quantity: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.quantity,
-            date: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.date.toISOString(),
-            activityId: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.activityId,
-            description: activityEntries.find((entry) => entry.id === showEditActivityEntry)!.description || undefined,
+            id: showEditActivityEntry.id,
+            quantity: showEditActivityEntry.quantity,
+            date: showEditActivityEntry.date,
+            activityId: showEditActivityEntry.activityId,
+            description: showEditActivityEntry.description || undefined,
           }}
           onDelete={() => {
             profileDataQuery.refetch();
           }}
-          onClose={() => setShowEditActivityEntry(null)}
+          onClose={() => setShowActivityToEdit(undefined)}
         />
       )}
     </div>

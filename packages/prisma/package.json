@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:seed": "ts-node seed.ts",
     "seed": "pnpm db:seed",
+    "migrate-prod-to-dev": "ts-node migrate_prod_to_dev.ts",
     "clean": "rm -rf node_modules",
     "db:migrate": "prisma migrate dev --skip-generate",
     "db:deploy": "prisma migrate deploy"
