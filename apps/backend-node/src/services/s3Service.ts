@@ -1,8 +1,8 @@
 import {
-  S3Client,
-  PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { logger } from "../utils/logger";
@@ -17,8 +17,8 @@ export class S3Service {
     this.s3Client = new S3Client({
       region: process.env.AWS_REGION || "eu-central-1",
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+        accessKeyId: process.env.CUSTOM_AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.CUSTOM_AWS_SECRET_ACCESS_KEY || "",
       },
     });
     this.bucketName = S3_BUCKET_NAME;
