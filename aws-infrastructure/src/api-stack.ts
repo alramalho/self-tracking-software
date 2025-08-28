@@ -802,9 +802,14 @@ export class ApiStack extends cdk.Stack {
       ],
     });
 
+    const distributionArn = `arn:aws:cloudfront::${cdk.Aws.ACCOUNT_ID}:distribution/${process.env.CLOUDFRONT_DISTRIBUTION_ID}`;
+
+    console.log({ newDistributionArn: distributionArn });
+    console.log({ DistributionArn: cloudFrontDistribution.distributionArn });
+
     // Associate WAF Web ACL with the CloudFront Distribution
     new wafv2.CfnWebACLAssociation(this, "WebAclAssociation", {
-      resourceArn: cloudFrontDistribution.distributionArn,
+      resourceArn: distributionArn,
       webAclArn: webAcl.attrArn,
     });
   }
