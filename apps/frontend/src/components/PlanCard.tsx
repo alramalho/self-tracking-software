@@ -9,16 +9,15 @@ import { getThemeVariants } from "@/utils/theme";
 import {
   BadgeCheck,
   GripHorizontal,
-  Settings
+  Pencil,
+  Trash2
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import InviteButton from "./InviteButton";
 import { PlanEditModal } from "./PlanEditModal";
-import { Button } from "./ui/button";
 
 type PlanGroup = Plan["planGroup"];
 interface PlanCardProps {
@@ -57,27 +56,30 @@ const PlanCard: React.FC<PlanCardProps> = ({
     currentUserData?.plans?.findIndex((p) => p.id === plan.id) === 0;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     console.log({ isCoached });
   }, [isCoached]);
 
-  const handleSettingsClick = (e: React.MouseEvent) => {
+  const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowSettings(true);
+    setShowEditModal(true);
   };
 
-  const handleLeavePlan = async () => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeletePlan = async () => {
     toast.promise(
       leavePlan(plan.id!).then((result) => {
         if (!result.success) {
           throw new Error(result.error || "Failed to leave plan");
         }
-        setShowSettings(false);
-        setShowLeaveConfirm(false);
+        setShowDeleteConfirm(false);
         onPlanRemoved?.();
       }),
       {
@@ -169,7 +171,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           )}
         </div>
 
-        <div className="absolute top-2 right-2 flex gap-1 items-center justify-center">
+        <div className="absolute top-2 right-2 flex gap-1 items-center justify-end">
           {isCoached && (
             <div className="flex items-center justify-center gap-1 mr-2">
               <span className="text-xs text-gray-500">Coached</span>
@@ -180,50 +182,30 @@ const PlanCard: React.FC<PlanCardProps> = ({
             <InviteButton planId={plan.id!} onInviteSuccess={onInviteSuccess} />
           )}
           <button
-            data-testid="plan-settings-button"
-            onClick={handleSettingsClick}
+            data-testid="plan-edit-button"
+            onClick={handleEditClick}
+            className="text-gray-500 hover:text-gray-700"
           >
-            <Settings className="h-4 w-4" />
+            <Pencil className="h-4 w-4 mr-1" />
+          </button>
+          <button
+            data-testid="plan-delete-button"
+            onClick={handleDeleteClick}
+            className="text-red-400 hover:text-red-600"
+          >
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <AppleLikePopover
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
-      >
-        <div className="flex flex-col gap-4">
-          <h2 className="text-xl font-semibold mb-4">Plan Settings</h2>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowSettings(false);
-              setShowEditModal(true);
-            }}
-            className="w-full"
-          >
-            Edit Plan
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              setShowSettings(false);
-              setShowLeaveConfirm(true);
-            }}
-            className="w-full"
-          >
-            Leave Plan
-          </Button>
-        </div>
-      </AppleLikePopover>
 
       <ConfirmDialogOrPopover
-        isOpen={showLeaveConfirm}
-        onClose={() => setShowLeaveConfirm(false)}
-        onConfirm={handleLeavePlan}
-        title="Leave Plan"
-        description="Are you sure you want to leave this plan? This action cannot be undone."
-        confirmText="Leave Plan"
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeletePlan}
+        title={<div className="flex items-center justify-center gap-2"><Trash2 className="h-6 w-6 text-red-400" /> Delete Plan</div>}
+        description="Are you sure you want to delete this plan? This action cannot be undone."
+        confirmText="Delete Plan"
         cancelText="Cancel"
         variant="destructive"
       />
