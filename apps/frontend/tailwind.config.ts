@@ -72,6 +72,10 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
+        shine: {
+          "0%": { "background-position": "100%" },
+          "100%": { "background-position": "-100%" },
+        },
         "accordion-down": {
           from: {
             height: "0",
@@ -143,6 +147,7 @@ const config = {
           },
         },
       },
+
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
@@ -150,6 +155,7 @@ const config = {
         "collapsible-up": "collapsible-up 0.3s ease-out",
         wiggle: "wiggle 3s ease-in-out infinite",
         float: "float 3s ease-in-out infinite",
+        shine: "shine 5s linear infinite",
       },
     },
     fontFamily: {
