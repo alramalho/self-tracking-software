@@ -85,7 +85,7 @@ app.use(limiter);
 
 app.get("/health", (_req, res) => {
   logger.info("Health check");
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({ status: "ok" });
 });
 
 // Test exception endpoint (for testing error handling)

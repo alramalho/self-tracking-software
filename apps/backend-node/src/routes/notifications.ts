@@ -450,14 +450,5 @@ router.post(
   }
 );
 
-// Health check
-router.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    service: "notifications-routes",
-  });
-});
-
 export const notificationsRouter: Router = router;
 export default notificationsRouter;
