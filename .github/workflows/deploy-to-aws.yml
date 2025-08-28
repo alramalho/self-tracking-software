@@ -109,7 +109,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
-          CLOUDFRONT_DISTRIBUTION_ARN: ${{ vars.CLOUDFRONT_DISTRIBUTION_ARN }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+          CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME: ${{ vars.CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME }}
           
         run: |
           cd aws-infrastructure
