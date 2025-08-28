@@ -75,7 +75,7 @@ const UserCard: React.FC<UserCardProps> = ({
         payload.message = message.trim();
       }
 
-      await api.post(`/users/send-friend-request/${user.id}`, payload);
+      await api.post(`/users/send-connection-request/${user.id}`, payload);
 
       currentUserQuery.refetch();
       setSentFriendRequest(true);
