@@ -1,17 +1,15 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { Button } from "@/components/ui/button";
 import { CompletePlan as Plan } from "@/contexts/UserGlobalContext";
 import { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CheckCheck
-} from "lucide-react";
+import { CheckCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { withFadeUpAnimation } from "../../lib";
 import { useOnboarding } from "../OnboardingContext";
-import { Button } from "@/components/ui/button";
 
 const PlanCard = ({
   plan,
@@ -34,7 +32,7 @@ const PlanCard = ({
     const today = new Date();
     const diffTime = Math.abs(finishDate.getTime() - today.getTime());
     const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-    console.log({finishDate, today, diffTime, diffWeeks});
+    console.log({ finishDate, today, diffTime, diffWeeks });
     return diffWeeks;
   };
 
@@ -130,7 +128,6 @@ const PlanCard = ({
   );
 };
 
-
 const PlanGenerator = () => {
   const {
     planGoal,
@@ -155,22 +152,25 @@ const PlanGenerator = () => {
   const handlePlanSelect = async (plan: Plan) => {
     setSelectedPlan(plan);
     // Create a Set of activity IDs to avoid duplicates
-    const activityIds = new Set(plan.activities.map(activity => activity.id));
-    
+    const activityIds = new Set(plan.activities.map((activity) => activity.id));
+
     // Create activities one by one using the unique IDs
     await Promise.all(
-      Array.from(activityIds).map(id => {
-        const activity = plan.activities.find(a => a.id === id);
+      Array.from(activityIds).map((id) => {
+        const activity = plan.activities.find((a) => a.id === id);
         return api.post("/activities/upsert", activity);
       })
     );
-    await api.post("/plans/upsert", {
-      ...plan,
-    }).then((res) => {
-      console.log("res", res);
-    }).catch((err) => {
-      console.error("err", err);
-    });
+    await api
+      .post("/plans/upsert", {
+        ...plan,
+      })
+      .then((res) => {
+        console.log("res", res);
+      })
+      .catch((err) => {
+        console.error("err", err);
+      });
     completeStep("plan-generator", {
       selectedPlan: plan,
       plans: generatedPlans,
@@ -420,12 +420,14 @@ const PlanGenerator = () => {
                       index={1}
                     />
 
-                    <Button
-                      onClick={() => generatePlans()}
-                      className="w-full"
-                    >
-                      Regenerate Plans
-                    </Button>
+                    {process.env.NODE_ENV === "development" && (
+                      <Button
+                        onClick={() => generatePlans()}
+                        className="w-full bg-yellow-400 text-black"
+                      >
+                        Regenerate Plans
+                      </Button>
+                    )}
                   </motion.div>
                 )}
               </motion.div>
