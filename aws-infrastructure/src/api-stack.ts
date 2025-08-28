@@ -1,5 +1,4 @@
 import * as cdk from "aws-cdk-lib";
-import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 // import * as acm from "aws-cdk-lib/aws-certificatemanager";
 // import * as ec2 from "aws-cdk-lib/aws-ec2";
 // import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
@@ -150,20 +149,8 @@ export class ApiStack extends cdk.Stack {
     if (!loadBalancerArn) {
       throw new Error("LOAD_BALANCER_ARN environment variable is required");
     }
-
-    const loadBalancer =
-      elbv2.ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(
-        this,
-        "ExistingLoadBalancer",
-        {
-          loadBalancerArn: loadBalancerArn,
-          securityGroupId:
-            process.env.LOAD_BALANCER_SECURITY_GROUP_ID || "sg-placeholder",
-        }
-      );
-
     // Setup WAF for the existing load balancer
-    this.setupWAF(props, loadBalancer);
+    this.setupWAF(props, loadBalancerArn);
 
     // this.deployLambdaBackend(props, s3Bucket);
   }
@@ -507,10 +494,7 @@ export class ApiStack extends cdk.Stack {
     return fargateService;
   } */
 
-  private setupWAF(
-    props: ApiStackProps,
-    loadBalancer: elbv2.IApplicationLoadBalancer
-  ) {
+  private setupWAF(props: ApiStackProps, loadBalancerArn: string) {
     // --- Read Allowed Routes ---
     const allowedRoutesFilePath = path.join(
       __dirname,
@@ -802,7 +786,7 @@ export class ApiStack extends cdk.Stack {
 
     // Associate WAF Web ACL with the Application Load Balancer
     new wafv2.CfnWebACLAssociation(this, "WebAclAssociation", {
-      resourceArn: loadBalancer.loadBalancerArn,
+      resourceArn: loadBalancerArn,
       webAclArn: webAcl.attrArn,
     });
   }
