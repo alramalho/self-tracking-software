@@ -11,8 +11,7 @@
     "db:seed": "dotenv -e .env -- tsx scripts/seed.ts",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts",
-    "update-routes": "tsx scripts/update_allowed_routes.ts"
+    "format": "prettier --write src/**/*.ts"
   },
   "keywords": [
     "tracking",
