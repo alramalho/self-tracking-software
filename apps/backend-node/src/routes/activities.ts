@@ -276,7 +276,11 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      const { id, title, measure, emoji, privacy_settings } = req.body;
+      let { id, title, measure, emoji, privacy_settings } = req.body;
+
+      if (!id) {
+        id = uuidv4();
+      }
 
       const activity = await prisma.activity.upsert({
         where: { id },
