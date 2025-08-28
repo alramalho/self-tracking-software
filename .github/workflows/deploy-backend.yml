@@ -8,6 +8,6 @@ jobs:
     secrets: inherit
 
   deploy-aws:
-    needs: deploy-flightcontrol
+    # needs: deploy-flightcontrol
     uses: ./.github/workflows/deploy-to-aws.yml
     secrets: inherit
