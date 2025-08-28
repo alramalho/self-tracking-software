@@ -82,6 +82,7 @@ app.use(morganMiddleware);
 app.use(limiter);
 
 // Health check endpoint
+
 app.get("/health", (_req, res) => {
   logger.info("Health check");
   res.json({ status: "ok", timestamp: new Date().toISOString() });
