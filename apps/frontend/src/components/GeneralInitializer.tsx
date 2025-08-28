@@ -37,9 +37,10 @@ export default function GeneralInitializer({
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const router = useRouter();
   const { isOnboardingCompleted } = useOnboardingCompleted();
+  const { isUserFree } = usePaidPlan();
 
   const onboardingNecessary = useMemo(
-    () => !isWaitingForData && !hasFriends && userPaidPlanType?.toLowerCase() === "FREE" && !isOnboardingCompleted,
+    () => !isWaitingForData && !hasFriends && isUserFree && !isOnboardingCompleted,
     [isWaitingForData, hasFriends, userPaidPlanType, isOnboardingCompleted]
   );
 
