@@ -81,7 +81,7 @@ export default function ClientPage() {
       toast.success("Friend request sent successfully!");
       router.push(`/`);
     } catch (error) {
-      console.exrror("[ClientPage] Error sending friend request:", error);
+      console.error("[ClientPage] Error sending friend request:", error);
       toast.error("Failed to send friend request. Please try again.");
     } finally {
       setIsSendingRequest(false);
