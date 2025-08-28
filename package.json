@@ -18,7 +18,6 @@
     "injectWorkspacePackages": true
   },
   "devDependencies": {
-    "husky": "^9.1.7",
     "supabase": "^2.33.9",
     "turbo": "^2.5.5"
   }
