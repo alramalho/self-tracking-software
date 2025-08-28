@@ -189,7 +189,7 @@ export async function getUserData(username: string) {
         activities: {
           where: {
             deletedAt: null,
-            OR: [{ privacySettings: "PUBLIC" }, { privacySettings: null }],
+            // OR: [{ privacySettings: "PUBLIC" }, { privacySettings: null }],
           },
           orderBy: { createdAt: "desc" },
         },
