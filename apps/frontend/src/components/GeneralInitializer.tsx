@@ -5,11 +5,8 @@ import { hasCachedUserData, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
-import { getThemeVariants } from "@/utils/theme";
 import { useSession } from "@clerk/nextjs";
-import { Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { useEffect, useMemo, useState } from "react";
@@ -31,8 +28,6 @@ export default function GeneralInitializer({
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [initialCacheExists] = useState(() => hasCachedUserData());
@@ -54,7 +49,7 @@ export default function GeneralInitializer({
     if (onboardingNecessary) {
       router.push("/onboarding");
     }
-  }, [onboardingNecessary, isWaitingForData, hasFriends, userPaidPlanType]);
+  }, [onboardingNecessary, router]);
 
   useEffect(() => {
     if (
@@ -103,6 +98,7 @@ export default function GeneralInitializer({
     !isClerkLoaded ||
     (isSignedIn && isWaitingForData && !initialCacheExists)
   ) {
+    console.log("showGenericLoader", {isClerkLoaded, isSignedIn, isWaitingForData, initialCacheExists});
     return (
       <>
         {showBugDialog && (
@@ -142,13 +138,6 @@ export default function GeneralInitializer({
         </>
       )}
 
-      {/* Show a mini loader if user is signed in and main user data is actively loading, 
-          even if we are showing children due to initially existing cache. */}
-      {isSignedIn && isWaitingForData && (
-        <div className="fixed bottom-[6.5rem] left-4 bg-white dark:bg-gray-900 p-2 rounded-full shadow-md z-50">
-          <Loader2 className={`h-6 w-6 animate-spin ${variants.text}`} />
-        </div>
-      )}
     </>
   );
 }

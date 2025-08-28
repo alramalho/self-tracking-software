@@ -417,6 +417,13 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     (currentUserDataQuery.data?.themeBaseColor?.toLowerCase() as ThemeColorType) ||
     "blue";
 
+  useEffect(() => {
+    console.log("currentUserDataQuery.isFetching", currentUserDataQuery.isFetching);
+    console.log("timelineDataQuery.isFetching", timelineDataQuery.isFetching);
+    console.log("notificationsData.isFetching", notificationsData.isFetching);
+    console.log("messagesData.isFetching", messagesData.isFetching);
+  }, [currentUserDataQuery.isFetching, timelineDataQuery.isFetching, notificationsData.isFetching, messagesData.isFetching]);
+
   const context = {
     useCurrentUserDataQuery,
     useUserDataQuery,
@@ -451,13 +458,12 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     isWaitingForData:
-      currentUserDataQuery.isPending ||
       currentUserDataQuery.isFetching ||
-      timelineDataQuery.isPending ||
+      // timelineDataQuery.isPending ||
       timelineDataQuery.isFetching ||
-      notificationsData.isPending ||
+      // notificationsData.isPending ||
       notificationsData.isFetching ||
-      messagesData.isPending ||
+      // messagesData.isPending ||
       messagesData.isFetching,
   };
 
