@@ -1,9 +1,20 @@
 import { type ClassValue, clsx } from "clsx";
+import { isAfter } from "date-fns";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export const isActivePlan = (plan: {
+  finishingDate: Date | string | null;
+  deletedAt: Date | string | null;
+}) => {
+  if (!plan.finishingDate) return true;
+  if (plan.deletedAt) return false;
+
+  return isAfter(new Date(plan.finishingDate), new Date());
+};
 
 export function arrayBufferToBase64Async(arrayBuffer: ArrayBuffer) {
   const base64 = Buffer.from(arrayBuffer).toString("base64");

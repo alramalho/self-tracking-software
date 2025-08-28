@@ -8,7 +8,7 @@ import UserCard from "@/components/UserCard";
 import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { cn } from "@/lib/utils";
+import { cn, isActivePlan } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { Info } from "lucide-react";
 import React from "react";
@@ -106,7 +106,7 @@ export const ApSearchComponent: React.FC = () => {
               <UserCard
                 user={currentUser}
                 plan={currentPlan as CompletePlan}
-                plans={userData?.plans as CompletePlan[] || []}
+                plans={userData?.plans.filter((p) => isActivePlan(p)) as CompletePlan[] || []}
                 activities={userData?.activities || []}
                 activityEntries={userData?.activityEntries || []}
                 showFriendRequest={false}
