@@ -13,7 +13,7 @@ import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 interface ActivityEntry {
   id: string;
   quantity: number;
-  date: string;
+  date: Date;
   activityId: string;
   description?: string;
 }
