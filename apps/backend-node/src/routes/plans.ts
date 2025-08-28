@@ -513,6 +513,7 @@ router.post(
           // Create plan with planGroupId reference
           const newPlan = await tx.plan.create({
             data: {
+              id: planData.id,
               userId: req.user!.id,
               goal: planData.goal,
               emoji: planData.emoji,
