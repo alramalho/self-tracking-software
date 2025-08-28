@@ -42,7 +42,7 @@ export const ApSearchComponent: React.FC = () => {
   const handleSendFriendRequest = async (userId: string) => {
     await toast.promise(
       (async () => {
-        await api.post(`/users/send-friend-request/${userId}`);
+        await api.post(`/users/send-connection-request/${userId}`);
         await currentUserQuery.refetch();
       })(),
       {

@@ -77,11 +77,11 @@ export default function ClientPage() {
   const handleSendFriendRequest = async () => {
     try {
       setIsSendingRequest(true);
-      await api.post(`/users/send-friend-request/${inviterData.user?.id}`);
+      await api.post(`/users/send-connection-request/${inviterData.user?.id}`);
       toast.success("Friend request sent successfully!");
       router.push(`/`);
     } catch (error) {
-      console.error("[ClientPage] Error sending friend request:", error);
+      console.exrror("[ClientPage] Error sending friend request:", error);
       toast.error("Failed to send friend request. Please try again.");
     } finally {
       setIsSendingRequest(false);
