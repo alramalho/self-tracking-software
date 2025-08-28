@@ -389,14 +389,5 @@ router.post(
   }
 );
 
-// Health check
-router.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    service: "metrics-routes",
-  });
-});
-
 export const metricsRouter: Router = router;
 export default metricsRouter;

@@ -221,14 +221,5 @@ router.post(
   }
 );
 
-// Health check
-router.get("/health", (_req, res): Response | void => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    service: "stripe-routes",
-  });
-});
-
 export const stripeRouter: Router = router;
 export default stripeRouter;

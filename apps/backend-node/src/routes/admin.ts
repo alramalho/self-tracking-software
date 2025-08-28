@@ -338,15 +338,6 @@ router.post(
   }
 );
 
-// Health check endpoint
-router.get("/health", (_req: Request, res: Response): void => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    service: "admin-routes",
-  });
-});
-
 // Run daily metrics notification
 router.post(
   "/run-daily-metrics-notification",

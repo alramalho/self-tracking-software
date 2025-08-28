@@ -1,5 +1,5 @@
 import { userService } from "@/services/userService";
-import { Request, Response, Router } from "express";
+import { Response, Router } from "express";
 import multer from "multer";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
@@ -616,16 +616,6 @@ router.post(
     }
   }
 );
-
-// Health check
-router.get("/health", (_req: Request, res: Response): void => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    service: "ai-routes",
-    note: "AI features with memory management and conversation context",
-  });
-});
 
 export const aiRouter: Router = router;
 export default aiRouter;
