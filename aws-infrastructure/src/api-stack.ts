@@ -13,11 +13,7 @@ import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
 import * as fs from "fs";
 import * as path from "path";
-import {
-  CAMEL_CASE_PREFIX,
-  KEBAB_CASE_PREFIX,
-  PASCAL_CASE_PREFIX,
-} from "./utils/constants";
+import { KEBAB_CASE_PREFIX, PASCAL_CASE_PREFIX } from "./utils/constants";
 
 // interface BetterStackConfig {
 //   enabled: boolean;
@@ -149,26 +145,24 @@ export class ApiStack extends cdk.Stack {
     //   // } as BetterStackConfig,
     // });
 
-    // Get CloudFront distribution from environment variable
-    const cloudFrontDistributionArn = process.env.CLOUDFRONT_DISTRIBUTION_ARN;
-    if (!cloudFrontDistributionArn) {
-      throw new Error("CLOUDFRONT_DISTRIBUTION_ARN environment variable is required");
+    if (
+      !process.env.CLOUDFRONT_DISTRIBUTION_ID ||
+      !process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME
+    ) {
+      throw new Error(
+        "CLOUDFRONT_DISTRIBUTION_ID and CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME must be set"
+      );
     }
 
-    // Extract distribution ID from ARN (format: arn:aws:cloudfront::account:distribution/DISTRIBUTIONID)
-    const distributionId = cloudFrontDistributionArn.split('/').pop();
-    if (!distributionId) {
-      throw new Error("Invalid CloudFront distribution ARN format");
-    }
-
-    const cloudFrontDistribution = cloudfront.Distribution.fromDistributionAttributes(
-      this,
-      "ExistingCloudFrontDistribution",
-      {
-        distributionId,
-        domainName: `${distributionId}.cloudfront.net`, // Default CloudFront domain
-      }
-    );
+    const cloudFrontDistribution =
+      cloudfront.Distribution.fromDistributionAttributes(
+        this,
+        "ExistingCloudFrontDistribution",
+        {
+          distributionId: process.env.CLOUDFRONT_DISTRIBUTION_ID!,
+          domainName: process.env.CLOUDFRONT_DISTRIBUTION_DOMAIN_NAME!, // Default CloudFront domain
+        }
+      );
 
     // Setup WAF for the existing CloudFront distribution
     this.setupWAF(props, cloudFrontDistribution);
@@ -515,7 +509,10 @@ export class ApiStack extends cdk.Stack {
     return fargateService;
   } */
 
-  private setupWAF(props: ApiStackProps, cloudFrontDistribution: cloudfront.IDistribution) {
+  private setupWAF(
+    props: ApiStackProps,
+    cloudFrontDistribution: cloudfront.IDistribution
+  ) {
     // --- Read Allowed Routes ---
     const allowedRoutesFilePath = path.join(
       __dirname,
