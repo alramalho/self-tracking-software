@@ -19,10 +19,10 @@ ALTER TABLE "public"."_PlanGroupToUser" ADD CONSTRAINT "_PlanGroupToUser_AB_pkey
 DROP INDEX "public"."_PlanGroupToUser_AB_unique";
 
 -- AlterTable
-ALTER TABLE "public"."activities" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+ALTER TABLE "public"."activities" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- AlterTable
-ALTER TABLE "public"."activity_entries" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+ALTER TABLE "public"."activity_entries" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- AlterTable
-ALTER TABLE "public"."plans" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+ALTER TABLE "public"."plans" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
