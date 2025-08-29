@@ -1,13 +1,8 @@
 #!/usr/bin/env tsx
 
+import listEndpoints from "express-list-endpoints";
 import * as fs from "fs";
 import * as path from "path";
-
-// Set environment variables to prevent database connection during route extraction
-if (!process.env.DATABASE_URL)
-  process.env.DATABASE_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
-if (!process.env.DIRECT_URL)
-  process.env.DIRECT_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
 
 // Suppress console output during app import
 const originalConsole = {
@@ -20,125 +15,20 @@ const originalConsole = {
 // Disable console during import
 console.log = console.error = console.warn = console.info = () => {};
 
-/**
- * Extract routes from an Express Router recursively
- */
-function extractRoutes(router: any, basePath = ""): string[] {
-  const routes: string[] = [];
-
-  if (!router.stack) {
-    return routes;
-  }
-
-  for (const layer of router.stack) {
-    if (layer.route) {
-      // This is a route endpoint
-      const path = basePath + layer.route.path;
-      // Convert Express route parameters (:param) to AWS WAF format ({param})
-      const awsPath = path.replace(/:([^/]+)/g, "{$1}");
-      routes.push(awsPath);
-    } else if (layer.name === "router" && layer.handle.stack) {
-      // This is a sub-router
-      const mountPath = layer.regexp.source
-        .replace("^\\", "")
-        .replace("\\/?(?=\\/|$)", "")
-        .replace(/\\\//g, "/")
-        .replace(/[^a-zA-Z0-9\-_/]/g, "");
-
-      const subRoutes = extractRoutes(layer.handle, basePath + mountPath);
-      routes.push(...subRoutes);
-    }
-  }
-
-  return routes;
-}
-
-/**
- * Dynamically extract all routes from the Express application
- */
 async function getAllRoutes(): Promise<string[]> {
-  try {
-    // Import the Express app
-    const appModule = await import("../src/index.js");
-    const app = appModule.default;
+  // Import the Express app
+  const appModule = await import("../src/index.js");
+  const app = appModule.default;
 
-    if (!app || !app._router) {
-      throw new Error("Could not access Express app router");
-    }
+  // Use express-list-endpoints to get all routes
+  const endpoints = listEndpoints(app);
 
-    const routes: string[] = [];
+  // Convert :param to {param} and flatten
+  const routes = endpoints.map((endpoint: any) =>
+    endpoint.path.replace(/:([^/]+)/g, "{$1}")
+  );
 
-    // Extract routes from the main router
-    const extractedRoutes = extractRoutes(app._router);
-    routes.push(...extractedRoutes);
-
-    // Add any standalone routes that might be defined directly on the app
-    // Health and exception endpoints are defined directly on app
-    routes.push("/health");
-    routes.push("/exception");
-
-    return routes.sort();
-  } catch (error) {
-    console.error(
-      "Failed to dynamically extract routes, falling back to static analysis"
-    );
-
-    // Fallback: analyze route files statically
-    return await analyzeRouteFiles();
-  }
-}
-
-/**
- * Fallback method: analyze route files statically
- */
-async function analyzeRouteFiles(): Promise<string[]> {
-  const routesDir = path.join(__dirname, "..", "src", "routes");
-  const indexFile = path.join(__dirname, "..", "src", "index.ts");
-
-  const routes: string[] = [];
-
-  // Add standalone routes from index.ts
-  routes.push("/health");
-  routes.push("/exception");
-
-  // Read index.ts to get route prefixes
-  const indexContent = fs.readFileSync(indexFile, "utf8");
-  const routePrefixes: { [key: string]: string } = {};
-
-  // Extract app.use statements to get route prefixes
-  const appUseRegex = /app\.use\(["']([^"']+)["'],\s*(\w+Router)\)/g;
-  let match;
-  while ((match = appUseRegex.exec(indexContent)) !== null) {
-    const prefix = match[1];
-    const routerName = match[2];
-    routePrefixes[routerName] = prefix;
-  }
-
-  // Read all route files
-  const routeFiles = fs.readdirSync(routesDir).filter((f) => f.endsWith(".ts"));
-
-  for (const file of routeFiles) {
-    const filePath = path.join(routesDir, file);
-    const content = fs.readFileSync(filePath, "utf8");
-
-    // Extract router name from export
-    const exportMatch = content.match(/export.*?(\w+Router)/);
-    const routerName = exportMatch?.[1];
-    const prefix = routerName ? routePrefixes[routerName] || "" : "";
-
-    // Extract route definitions
-    const routeRegex =
-      /router\.(get|post|put|delete|patch)\s*\(\s*["']([^"']+)["']/g;
-    let routeMatch;
-    while ((routeMatch = routeRegex.exec(content)) !== null) {
-      const routePath = routeMatch[2];
-      // Convert Express params to AWS WAF format
-      const awsPath = (prefix + routePath).replace(/:([^/]+)/g, "{$1}");
-      routes.push(awsPath);
-    }
-  }
-
-  return routes.sort();
+  return Array.from(new Set(routes)).sort();
 }
 
 // Main execution

@@ -2,13 +2,11 @@
 # Generated from backend-node Express.js routes
 # Run: npm run update-routes (from backend-node directory)
 
-/activities/
+/activities
 /activities/activity-entries
-/activities/activity-entries/{activityEntryId}
 /activities/activity-entries/{activityEntryId}
 /activities/activity-entries/{activityEntryId}/comments
 /activities/activity-entries/{activityEntryId}/comments/{commentId}
-/activities/activity-entries/{activityEntryId}/reactions
 /activities/activity-entries/{activityEntryId}/reactions
 /activities/log-activity
 /activities/recent-activities
@@ -40,8 +38,7 @@
 /exception
 /health
 /messages/{messageId}/move-up
-/metrics/
-/metrics/
+/metrics
 /metrics/log-metric
 /metrics/log-todays-note
 /metrics/metric-entries
@@ -71,3 +68,25 @@
 /plans/{planId}
 /plans/{planId}/update
 /stripe/webhook
+/users/accept-connection-request/{request_id}
+/users/all-users
+/users/check-username/{username}
+/users/connections/{username}
+/users/get-user-profile/{username_or_id}
+/users/handle-referral/{referrer_username}
+/users/load-messages
+/users/recommended-users
+/users/reject-connection-request/{request_id}
+/users/report-feedback
+/users/search-users/{username}
+/users/send-connection-request/{recipientId}
+/users/timeline
+/users/update-theme
+/users/update-timezone
+/users/update-user
+/users/user
+/users/user-health
+/users/user/connection-count
+/users/user/daily-checkin-settings
+/users/user/{username_or_id}
+/users/user/{username}/get-user-plan-type
