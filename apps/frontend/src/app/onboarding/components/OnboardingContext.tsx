@@ -6,9 +6,9 @@ import { Activity } from "@tsw/prisma";
 import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import React, {
-    createContext,
-    useCallback,
-    useContext,
+  createContext,
+  useCallback,
+  useContext,
 } from "react";
 import toast from "react-hot-toast";
 
@@ -229,7 +229,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       // Check if this step should mark onboarding as complete
       if (options?.complete) {
         newState.isComplete = true;
-        posthog?.capture('onboarding-completed');
+        posthog.capture('onboarding-completed');
         toast.success("Onboarding completed! ");
         router.push("/");
       } else {
