@@ -4,9 +4,10 @@ import * as fs from "fs";
 import * as path from "path";
 
 // Set environment variables to prevent database connection during route extraction
-if (!process.env.NODE_ENV) process.env.NODE_ENV = "script";
-if (!process.env.DATABASE_URL) process.env.DATABASE_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
-if (!process.env.DIRECT_URL) process.env.DIRECT_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
+if (!process.env.DATABASE_URL)
+  process.env.DATABASE_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
+if (!process.env.DIRECT_URL)
+  process.env.DIRECT_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
 
 // Suppress console output during app import
 const originalConsole = {
@@ -43,7 +44,7 @@ function extractRoutes(router: any, basePath = ""): string[] {
         .replace("\\/?(?=\\/|$)", "")
         .replace(/\\\//g, "/")
         .replace(/[^a-zA-Z0-9\-_/]/g, "");
-      
+
       const subRoutes = extractRoutes(layer.handle, basePath + mountPath);
       routes.push(...subRoutes);
     }
@@ -78,8 +79,10 @@ async function getAllRoutes(): Promise<string[]> {
 
     return routes.sort();
   } catch (error) {
-    console.error("Failed to dynamically extract routes, falling back to static analysis");
-    
+    console.error(
+      "Failed to dynamically extract routes, falling back to static analysis"
+    );
+
     // Fallback: analyze route files statically
     return await analyzeRouteFiles();
   }
@@ -91,17 +94,17 @@ async function getAllRoutes(): Promise<string[]> {
 async function analyzeRouteFiles(): Promise<string[]> {
   const routesDir = path.join(__dirname, "..", "src", "routes");
   const indexFile = path.join(__dirname, "..", "src", "index.ts");
-  
+
   const routes: string[] = [];
-  
+
   // Add standalone routes from index.ts
   routes.push("/health");
   routes.push("/exception");
-  
+
   // Read index.ts to get route prefixes
   const indexContent = fs.readFileSync(indexFile, "utf8");
   const routePrefixes: { [key: string]: string } = {};
-  
+
   // Extract app.use statements to get route prefixes
   const appUseRegex = /app\.use\(["']([^"']+)["'],\s*(\w+Router)\)/g;
   let match;
@@ -110,21 +113,22 @@ async function analyzeRouteFiles(): Promise<string[]> {
     const routerName = match[2];
     routePrefixes[routerName] = prefix;
   }
-  
+
   // Read all route files
-  const routeFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.ts'));
-  
+  const routeFiles = fs.readdirSync(routesDir).filter((f) => f.endsWith(".ts"));
+
   for (const file of routeFiles) {
     const filePath = path.join(routesDir, file);
     const content = fs.readFileSync(filePath, "utf8");
-    
+
     // Extract router name from export
     const exportMatch = content.match(/export.*?(\w+Router)/);
     const routerName = exportMatch?.[1];
     const prefix = routerName ? routePrefixes[routerName] || "" : "";
-    
+
     // Extract route definitions
-    const routeRegex = /router\.(get|post|put|delete|patch)\s*\(\s*["']([^"']+)["']/g;
+    const routeRegex =
+      /router\.(get|post|put|delete|patch)\s*\(\s*["']([^"']+)["']/g;
     let routeMatch;
     while ((routeMatch = routeRegex.exec(content)) !== null) {
       const routePath = routeMatch[2];
@@ -133,7 +137,7 @@ async function analyzeRouteFiles(): Promise<string[]> {
       routes.push(awsPath);
     }
   }
-  
+
   return routes.sort();
 }
 
@@ -157,7 +161,9 @@ async function main() {
       "/redoc",
     ]);
 
-    const filteredRoutes = routes.filter((route: string) => !excludedRoutes.has(route));
+    const filteredRoutes = routes.filter(
+      (route: string) => !excludedRoutes.has(route)
+    );
 
     // Write to allowed-routes.txt in the aws-infrastructure directory
     const scriptDir = __dirname;
@@ -185,7 +191,9 @@ async function main() {
       `✅ Successfully wrote ${filteredRoutes.length} routes to ${outputPath}`
     );
     console.log("🎯 Sample routes:");
-    filteredRoutes.slice(0, 8).forEach((route: string) => console.log(`   ${route}`));
+    filteredRoutes
+      .slice(0, 8)
+      .forEach((route: string) => console.log(`   ${route}`));
     if (filteredRoutes.length > 8) {
       console.log(`   ... and ${filteredRoutes.length - 8} more`);
     }
