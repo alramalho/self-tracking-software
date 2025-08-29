@@ -15,7 +15,7 @@ const originalConsole = {
 // Disable console during import
 console.log = console.error = console.warn = console.info = () => {};
 
-async function getAllRoutes(): Promise<string[]> {
+async function getAllRoutes(simplify: boolean = false): Promise<string[]> {
   // Import the Express app
   const appModule = await import("../src/index.js");
   const app = appModule.default;
@@ -24,9 +24,23 @@ async function getAllRoutes(): Promise<string[]> {
   const endpoints = listEndpoints(app);
 
   // Convert :param to {param} and flatten
-  const routes = endpoints.map((endpoint: any) =>
+  let routes = endpoints.map((endpoint: any) =>
     endpoint.path.replace(/:([^/]+)/g, "{$1}")
   );
+
+  if (simplify) {
+    // Simplify routes to just base path + {any}
+    routes = routes.map((route: string) => {
+      const segments = route.split('/');
+      const basePath = segments[1]; // Get first segment after /
+      
+      // If route has parameters or multiple segments, simplify to /{basePath}/{any}
+      if (segments.length > 2 || route.includes('{')) {
+        return `/${basePath}/{any}`;
+      }
+      return route;
+    });
+  }
 
   return Array.from(new Set(routes)).sort();
 }
@@ -37,10 +51,13 @@ async function main() {
     // Restore console for output
     Object.assign(console, originalConsole);
 
-    console.log("🔍 Extracting routes from Express.js backend-node...");
+    // Check for --simplify flag
+    const simplify = process.argv.includes('--simplify');
+    
+    console.log(`🔍 Extracting routes from Express.js backend-node${simplify ? ' (simplified)' : ''}...`);
 
     // Get all routes
-    const routes = await getAllRoutes();
+    const routes = await getAllRoutes(simplify);
     console.log(`📊 Found ${routes.length} routes`);
 
     // Filter out excluded routes (FastAPI specific routes that don't apply to Express)
