@@ -31,11 +31,11 @@ async function getAllRoutes(simplify: boolean = false): Promise<string[]> {
   if (simplify) {
     // Simplify routes to just base path + {any}
     routes = routes.map((route: string) => {
-      const segments = route.split('/');
+      const segments = route.split("/");
       const basePath = segments[1]; // Get first segment after /
-      
+
       // If route has parameters or multiple segments, simplify to /{basePath}/{any}
-      if (segments.length > 2 || route.includes('{')) {
+      if (segments.length > 2 || route.includes("{")) {
         return `/${basePath}/{any}`;
       }
       return route;
@@ -52,9 +52,11 @@ async function main() {
     Object.assign(console, originalConsole);
 
     // Check for --simplify flag
-    const simplify = process.argv.includes('--simplify');
-    
-    console.log(`🔍 Extracting routes from Express.js backend-node${simplify ? ' (simplified)' : ''}...`);
+    const simplify = process.argv.includes("--simplify");
+
+    console.log(
+      `🔍 Extracting routes from Express.js backend-node${simplify ? " (simplified)" : ""}...`
+    );
 
     // Get all routes
     const routes = await getAllRoutes(simplify);
