@@ -28,7 +28,7 @@ port = 54322
 shadow_port = 54320
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
 # server_version;` on the remote database to check.
-major_version = 17
+major_version = 15
 
 [db.pooler]
 enabled = false
@@ -47,7 +47,7 @@ max_client_conn = 100
 
 [db.migrations]
 # If disabled, migrations will be skipped during a db push or reset.
-enabled = true
+# enabled = true
 # Specifies an ordered list of schema files that describe your database.
 # Supports glob patterns relative to supabase directory: "./schemas/*.sql"
 schema_paths = []
@@ -59,15 +59,15 @@ enabled = true
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
 
-[db.network_restrictions]
-# Enable management of network restrictions.
-enabled = false
-# List of IPv4 CIDR blocks allowed to connect to the database.
-# Defaults to allow all IPv4 connections. Set empty array to block all IPs.
-allowed_cidrs = ["0.0.0.0/0"]
-# List of IPv6 CIDR blocks allowed to connect to the database.
-# Defaults to allow all IPv6 connections. Set empty array to block all IPs.
-allowed_cidrs_v6 = ["::/0"]
+# [db.network_restrictions]
+# # Enable management of network restrictions.
+# enabled = false
+# # List of IPv4 CIDR blocks allowed to connect to the database.
+# # Defaults to allow all IPv4 connections. Set empty array to block all IPs.
+# allowed_cidrs = ["0.0.0.0/0"]
+# # List of IPv6 CIDR blocks allowed to connect to the database.
+# # Defaults to allow all IPv6 connections. Set empty array to block all IPs.
+# allowed_cidrs_v6 = ["::/0"]
 
 [realtime]
 enabled = true
@@ -141,21 +141,21 @@ minimum_password_length = 6
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
 
-[auth.rate_limit]
-# Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
-# Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
-sms_sent = 30
-# Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
-anonymous_users = 30
-# Number of sessions that can be refreshed in a 5 minute interval per IP address.
-token_refresh = 150
-# Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
-# Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
-token_verifications = 30
-# Number of Web3 logins that can be made in a 5 minute interval per IP address.
-web3 = 30
+# [auth.rate_limit]
+# # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
+# email_sent = 2
+# # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
+# sms_sent = 30
+# # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
+# anonymous_users = 30
+# # Number of sessions that can be refreshed in a 5 minute interval per IP address.
+# token_refresh = 150
+# # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
+# sign_in_sign_ups = 30
+# # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
+# token_verifications = 30
+# # Number of Web3 logins that can be made in a 5 minute interval per IP address.
+# web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
 # [auth.captcha]
@@ -275,8 +275,8 @@ skip_nonce_check = false
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
-[auth.web3.solana]
-enabled = false
+# [auth.web3.solana]
+# enabled = false
 
 # Use Firebase Auth as a third-party provider alongside Supabase Auth.
 [auth.third_party.firebase]
