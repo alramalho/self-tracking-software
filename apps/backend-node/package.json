@@ -10,7 +10,7 @@
     "start": "tsx src/index.ts",
     "db:seed": "dotenv -e .env -- tsx scripts/seed.ts",
     "test": "jest",
-    "update-routes": "dotenv -e .env -- tsx scripts/update_allowed_routes.ts",
+    "update-routes": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/update_allowed_routes.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
