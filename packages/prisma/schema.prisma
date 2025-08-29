@@ -99,7 +99,7 @@ model Activity {
   measure         String
   emoji           String
   createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  updatedAt       DateTime            @default(now()) @updatedAt
   privacySettings ActivityVisibility?
   colorHex        String?
   deletedAt       DateTime?
@@ -123,7 +123,7 @@ model ActivityEntry {
   quantity    Int
   date        DateTime  @db.Date
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now()) @updatedAt
   description String?
   deletedAt   DateTime?
   timezone    String?
@@ -230,7 +230,7 @@ model Plan {
   emoji                      String?
   finishingDate              DateTime?         @db.Date
   createdAt                  DateTime          @default(now())
-  updatedAt                  DateTime          @updatedAt
+  updatedAt                  DateTime          @default(now()) @updatedAt
   deletedAt                  DateTime?
   durationType               PlanDurationType?
   outlineType                PlanOutlineType   @default(SPECIFIC)
