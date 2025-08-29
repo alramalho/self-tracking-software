@@ -4,9 +4,9 @@ import * as fs from "fs";
 import * as path from "path";
 
 // Set environment variables to prevent database connection during route extraction
-process.env.NODE_ENV = "script";
-process.env.DATABASE_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
-process.env.DIRECT_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
+if (!process.env.NODE_ENV) process.env.NODE_ENV = "script";
+if (!process.env.DATABASE_URL) process.env.DATABASE_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
+if (!process.env.DIRECT_URL) process.env.DIRECT_URL = "postgresql://dummy:dummy@dummy:5432/dummy";
 
 // Suppress console output during app import
 const originalConsole = {
@@ -20,96 +20,121 @@ const originalConsole = {
 console.log = console.error = console.warn = console.info = () => {};
 
 /**
- * Get all routes manually by analyzing the known route structure
- * This is more reliable than trying to introspect the Express app
+ * Extract routes from an Express Router recursively
  */
-function getAllRoutes(): string[] {
-  return [
-    // Health and basic endpoints
-    "/health",
-    "/exception",
+function extractRoutes(router: any, basePath = ""): string[] {
+  const routes: string[] = [];
 
-    // User routes (from /api/users prefix)
-    "/api/users/user-health",
-    "/api/users/user",
-    "/api/users/connections/{username}",
-    "/api/users/check-username/{username}",
-    "/api/users/update-user",
-    "/api/users/search-users/{username}",
-    "/api/users/user/connection-count",
-    "/api/users/recommended-users",
-    "/api/users/user/{username_or_id}",
-    "/api/users/send-connection-request/{recipientId}",
-    "/api/users/accept-connection-request/{request_id}",
-    "/api/users/reject-connection-request/{request_id}",
-    "/api/users/timeline",
-    "/api/users/report-feedback",
-    "/api/users/all-users",
-    "/api/users/get-user-profile/{username_or_id}",
-    "/api/users/handle-referral/{referrer_username}",
-    "/api/users/load-messages",
-    "/api/users/update-timezone",
-    "/api/users/update-theme",
-    "/api/users/user/{username}/get-user-plan-type",
-    "/api/users/user/daily-checkin-settings",
+  if (!router.stack) {
+    return routes;
+  }
 
-    // Activity routes (from /api/activities prefix)
-    "/api/activities/activities",
-    "/api/activities/activity-entries",
-    "/api/activities/log-activity",
-    "/api/activities/activity-entries/{entryId}",
-    "/api/activities/activities/{activityId}",
-    "/api/activities/activity/{activityId}/entries",
-    "/api/activities/recent-activities",
-    "/api/activities/activity-feed",
-    "/api/activities/activities/{activityId}/visibility",
+  for (const layer of router.stack) {
+    if (layer.route) {
+      // This is a route endpoint
+      const path = basePath + layer.route.path;
+      // Convert Express route parameters (:param) to AWS WAF format ({param})
+      const awsPath = path.replace(/:([^/]+)/g, "{$1}");
+      routes.push(awsPath);
+    } else if (layer.name === "router" && layer.handle.stack) {
+      // This is a sub-router
+      const mountPath = layer.regexp.source
+        .replace("^\\", "")
+        .replace("\\/?(?=\\/|$)", "")
+        .replace(/\\\//g, "/")
+        .replace(/[^a-zA-Z0-9\-_/]/g, "");
+      
+      const subRoutes = extractRoutes(layer.handle, basePath + mountPath);
+      routes.push(...subRoutes);
+    }
+  }
 
-    // Plans routes (from /api/plans prefix)
-    "/api/plans/plans",
-    "/api/plans/create-plan",
-    "/api/plans/plans/{planId}",
-    "/api/plans/plans/{planId}/activities",
-    "/api/plans/plans/{planId}/complete",
+  return routes;
+}
 
-    // Metrics routes (from /api/metrics prefix)
-    "/api/metrics/metrics/{username}",
-    "/api/metrics/streaks/{username}",
-    "/api/metrics/leaderboard",
+/**
+ * Dynamically extract all routes from the Express application
+ */
+async function getAllRoutes(): Promise<string[]> {
+  try {
+    // Import the Express app
+    const appModule = await import("../src/index.js");
+    const app = appModule.default;
 
-    // Messages routes (from /api/messages prefix)
-    "/api/messages/send-message",
-    "/api/messages/messages/{recipientId}",
-    "/api/messages/messages/{messageId}/emotions",
+    if (!app || !app._router) {
+      throw new Error("Could not access Express app router");
+    }
 
-    // Notifications routes (from /api/notifications prefix)
-    "/api/notifications/notifications",
-    "/api/notifications/notifications/{notificationId}/mark-read",
-    "/api/notifications/notifications/mark-all-read",
-    "/api/notifications/subscribe-push",
-    "/api/notifications/unsubscribe-push",
+    const routes: string[] = [];
 
-    // Onboarding routes (from /api/onboarding prefix)
-    "/api/onboarding/sample-activities",
-    "/api/onboarding/create-sample-activities",
-    "/api/onboarding/skip-onboarding",
+    // Extract routes from the main router
+    const extractedRoutes = extractRoutes(app._router);
+    routes.push(...extractedRoutes);
 
-    // Admin routes (from /api/admin prefix)
-    "/api/admin/users",
-    "/api/admin/user-details/{userId}",
-    "/api/admin/analytics",
+    // Add any standalone routes that might be defined directly on the app
+    // Health and exception endpoints are defined directly on app
+    routes.push("/health");
+    routes.push("/exception");
 
-    // Clerk routes (from /api/clerk prefix)
-    "/api/clerk/webhooks",
+    return routes.sort();
+  } catch (error) {
+    console.error("Failed to dynamically extract routes, falling back to static analysis");
+    
+    // Fallback: analyze route files statically
+    return await analyzeRouteFiles();
+  }
+}
 
-    // AI routes (from /api/ai prefix)
-    "/api/ai/recommendations",
-    "/api/ai/activity-insights",
-
-    // Stripe routes (from /api/stripe prefix)
-    "/api/stripe/create-checkout-session",
-    "/api/stripe/webhook",
-    "/api/stripe/billing-portal",
-  ].sort();
+/**
+ * Fallback method: analyze route files statically
+ */
+async function analyzeRouteFiles(): Promise<string[]> {
+  const routesDir = path.join(__dirname, "..", "src", "routes");
+  const indexFile = path.join(__dirname, "..", "src", "index.ts");
+  
+  const routes: string[] = [];
+  
+  // Add standalone routes from index.ts
+  routes.push("/health");
+  routes.push("/exception");
+  
+  // Read index.ts to get route prefixes
+  const indexContent = fs.readFileSync(indexFile, "utf8");
+  const routePrefixes: { [key: string]: string } = {};
+  
+  // Extract app.use statements to get route prefixes
+  const appUseRegex = /app\.use\(["']([^"']+)["'],\s*(\w+Router)\)/g;
+  let match;
+  while ((match = appUseRegex.exec(indexContent)) !== null) {
+    const prefix = match[1];
+    const routerName = match[2];
+    routePrefixes[routerName] = prefix;
+  }
+  
+  // Read all route files
+  const routeFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.ts'));
+  
+  for (const file of routeFiles) {
+    const filePath = path.join(routesDir, file);
+    const content = fs.readFileSync(filePath, "utf8");
+    
+    // Extract router name from export
+    const exportMatch = content.match(/export.*?(\w+Router)/);
+    const routerName = exportMatch?.[1];
+    const prefix = routerName ? routePrefixes[routerName] || "" : "";
+    
+    // Extract route definitions
+    const routeRegex = /router\.(get|post|put|delete|patch)\s*\(\s*["']([^"']+)["']/g;
+    let routeMatch;
+    while ((routeMatch = routeRegex.exec(content)) !== null) {
+      const routePath = routeMatch[2];
+      // Convert Express params to AWS WAF format
+      const awsPath = (prefix + routePath).replace(/:([^/]+)/g, "{$1}");
+      routes.push(awsPath);
+    }
+  }
+  
+  return routes.sort();
 }
 
 // Main execution
@@ -121,7 +146,7 @@ async function main() {
     console.log("🔍 Extracting routes from Express.js backend-node...");
 
     // Get all routes
-    const routes = getAllRoutes();
+    const routes = await getAllRoutes();
     console.log(`📊 Found ${routes.length} routes`);
 
     // Filter out excluded routes (FastAPI specific routes that don't apply to Express)
@@ -132,7 +157,7 @@ async function main() {
       "/redoc",
     ]);
 
-    const filteredRoutes = routes.filter((route) => !excludedRoutes.has(route));
+    const filteredRoutes = routes.filter((route: string) => !excludedRoutes.has(route));
 
     // Write to allowed-routes.txt in the aws-infrastructure directory
     const scriptDir = __dirname;
@@ -160,7 +185,7 @@ async function main() {
       `✅ Successfully wrote ${filteredRoutes.length} routes to ${outputPath}`
     );
     console.log("🎯 Sample routes:");
-    filteredRoutes.slice(0, 8).forEach((route) => console.log(`   ${route}`));
+    filteredRoutes.slice(0, 8).forEach((route: string) => console.log(`   ${route}`));
     if (filteredRoutes.length > 8) {
       console.log(`   ... and ${filteredRoutes.length - 8} more`);
     }
