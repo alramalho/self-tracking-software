@@ -10,7 +10,7 @@
     "start": "tsx src/index.ts",
     "db:seed": "dotenv -e .env -- tsx scripts/seed.ts",
     "test": "jest",
-    "update-routes": "tsx scripts/update_allowed_routes.ts",
+    "update-routes": "dotenv -e .env -- tsx scripts/update_allowed_routes.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
@@ -62,6 +62,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "express-list-endpoints": "^7.1.1",
     "@types/bcrypt": "^5.0.0",
     "@types/compression": "^1.7.2",
     "@types/cors": "^2.8.13",
