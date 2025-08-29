@@ -65,6 +65,7 @@ export default function GeneralInitializer({
         username: userData.username,
         is_app_installed: isAppInstalled,
         is_looking_for_ap: userData.lookingForAp,
+        friend_count: userData.friends?.length,
         is_push_granted: isPushGranted,
       });
       setHasRanPosthogIdentify(true);
