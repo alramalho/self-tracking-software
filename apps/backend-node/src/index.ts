@@ -123,9 +123,13 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-app.listen(PORT, HOST, () => {
-  logger.info(`Server running on ${HOST}:${PORT} in ${ENVIRONMENT} mode`);
-  logger.info(`Health check available at http://${HOST}:${PORT}/health`);
-});
+if (process.env.SKIP_SERVER_START === "true") {
+  logger.info("Skipping server start");
+} else {
+  app.listen(PORT, HOST, () => {
+    logger.info(`Server running on ${HOST}:${PORT} in ${ENVIRONMENT} mode`);
+    logger.info(`Health check available at http://${HOST}:${PORT}/health`);
+  });
+}
 
 export default app;
