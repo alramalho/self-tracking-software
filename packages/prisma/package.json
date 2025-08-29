@@ -18,9 +18,12 @@
     "migrate-prod-to-dev": "ts-node migrate_prod_to_dev.ts",
     "clean": "rm -rf node_modules",
     "db:migrate": "prisma migrate dev --skip-generate",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "prod:db:status": "dotenv -e .env.prod -- prisma migrate status"
   },
   "dependencies": {
+    "dotenv": "^16.3.1",
     "@prisma/client": "^6.13.0",
     "ts-node": "^10.9.1"
   },
