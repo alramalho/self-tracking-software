@@ -1,24 +1,24 @@
 "use client";
 
-import {
-  OnboardingProvider,
-  useOnboarding,
-  OnboardingStep,
-} from "./components/OnboardingContext";
-import { OnboardingContainer } from "./components/container";
 import { ProgressBar } from "@/components/ProgressBar";
-import WelcomeStep from "./components/steps/WelcomeStep";
-import PlanGoalSetter from "./components/steps/PlanGoalSetter";
+import { useNotifications } from "@/hooks/useNotifications";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useMemo } from "react";
-import PlanProgressInitiator from "./components/steps/PlanProgressInitiator";
+import {
+  OnboardingProvider,
+  OnboardingStep,
+  useOnboarding,
+} from "./components/OnboardingContext";
+import { OnboardingContainer } from "./components/container";
+import AIPartnerFinder from "./components/steps/AIPartnerFinder";
+import HumanPartnerFinder from "./components/steps/HumanPartnerFinder";
+import NotificationsSelector from "./components/steps/NotificationsSelector";
+import PartnerTypeSelector from "./components/steps/PartnerSelector";
 import PlanActivitySetter from "./components/steps/PlanActivitySetter";
 import PlanGenerator from "./components/steps/PlanGenerator";
-import PartnerTypeSelector from "./components/steps/PartnerSelector";
-import NotificationsSelector from "./components/steps/NotificationsSelector";
-import HumanPartnerFinder from "./components/steps/HumanPartnerFinder";
-import { useNotifications } from "@/hooks/useNotifications";
-import AIPartnerFinder from "./components/steps/AIPartnerFinder";
+import PlanGoalSetter from "./components/steps/PlanGoalSetter";
+import PlanProgressInitiator from "./components/steps/PlanProgressInitiator";
+import WelcomeStep from "./components/steps/WelcomeStep";
 
 const OnboardingStepRenderer = () => {
   const {
@@ -26,6 +26,7 @@ const OnboardingStepRenderer = () => {
     currentStep,
     totalSteps,
     prevStep,
+    hasNextStep,
     nextStep,
     isStepCompleted,
     steps,
@@ -50,7 +51,7 @@ const OnboardingStepRenderer = () => {
         onClick={prevStep}
         className="fixed top-2 left-2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
       />
-      {isStepCompletedCallback && (
+      {isStepCompletedCallback && hasNextStep && (
         <ChevronRight
           onClick={nextStep}
           className="fixed top-2 right-2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"

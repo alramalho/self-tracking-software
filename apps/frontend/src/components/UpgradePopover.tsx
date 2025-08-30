@@ -1,13 +1,14 @@
-import React, { useState, ReactNode, useEffect } from "react";
+import AppleLikePopover from "@/components/AppleLikePopover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import AppleLikePopover from "@/components/AppleLikePopover";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { FAQ } from "./FAQ";
-import Divider from "./Divider";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { CheckCircle } from "lucide-react";
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import React, { ReactNode, useEffect, useState } from "react";
+import Divider from "./Divider";
+import { Avatar, AvatarImage } from "./ui/avatar";
 
 interface FeatureItem {
   emoji: string;
@@ -274,6 +275,9 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
     "monthly" | "quarterly" | "yearly"
   >("quarterly");
 
+  const { isUserPremium } = useUpgrade();
+  const { refetchUserData } = useUserPlan();
+
   const planFeatures: FeatureItem[] = [
     { emoji: "✔️", title: <span>Unlimited plans & activities</span> },
     // { emoji: "🔒", title: <span>Activity privacy</span> },
@@ -376,15 +380,28 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 </div>
               </div>
 
-              <Link
-                href={currentTier.paymentLink}
-                target="_blank"
-                className="block"
-              >
-                <Button className="w-full rounded-xl bg-purple-500 hover:bg-purple-600 text-lg py-6">
-                  Start Free Trial
+              {isUserPremium ? (
+                <Button 
+                  className="w-full rounded-xl bg-green-500 hover:bg-emerald-700 text-lg py-6"
+                  onClick={() => {
+                    refetchUserData();
+                    onClose();
+                  }}
+                >
+                  <CheckCircle className="mr-2 w-4 h-4" />
+                  Continue
                 </Button>
-              </Link>
+              ) : (
+                <Link
+                  href={currentTier.paymentLink}
+                  target="_blank"
+                  className="block"
+                >
+                  <Button className="w-full rounded-xl bg-purple-500 hover:bg-purple-600 text-lg py-6">
+                    Start Free Trial
+                  </Button>
+                </Link>
+              )}
             </div>
           </Card>
 

@@ -505,3 +505,19 @@ export async function leavePlan(planId: string) {
     };
   }
 }
+
+export async function fetchUserPlanType() {
+  const user = await validateUser();
+
+  try {
+    const userData = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { planType: true },
+    });
+
+    return userData?.planType || "FREE";
+  } catch (error) {
+    console.error("Error fetching user plan:", error);
+    return "FREE";
+  }
+}
