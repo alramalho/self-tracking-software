@@ -12,6 +12,10 @@ const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
   apiVersion: "2025-07-30.basil", // Use the supported API version
 });
 
+if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.STRIPE_API_KEY) {
+  throw new Error("STRIPE_WEBHOOK_SECRET is not set");
+}
+
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
 const STRIPE_PLUS_PRODUCT_ID = process.env.STRIPE_PLUS_PRODUCT_ID!;
 const telegramService = new TelegramService();
@@ -48,17 +52,18 @@ router.post(
     let event: Stripe.Event;
 
     try {
+      console.log({ payload, sig, STRIPE_WEBHOOK_SECRET });
       // Verify webhook signature
-      if (typeof payload === "string") {
+      if (Buffer.isBuffer(payload)) {
         event = stripe.webhooks.constructEvent(
           payload,
           sig,
           STRIPE_WEBHOOK_SECRET
         );
       } else {
-        // Handle case where body parser processed the request
+        // Fallback for string
         event = stripe.webhooks.constructEvent(
-          JSON.stringify(payload),
+          payload.toString(),
           sig,
           STRIPE_WEBHOOK_SECRET
         );
