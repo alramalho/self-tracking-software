@@ -54,6 +54,7 @@ const allowedOrigins = [
 ];
 
 if (ENVIRONMENT === "development") {
+  allowedOrigins.push("https://alex-trackingso.loca.lt");
   allowedOrigins.push("http://localhost:3001");
 }
 
@@ -67,7 +68,7 @@ app.use(
 );
 
 // Raw body middleware for Stripe webhooks (must come before JSON parser)
-app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+app.use("/stripe/webhook", express.raw({ type: "application/json" }));
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
