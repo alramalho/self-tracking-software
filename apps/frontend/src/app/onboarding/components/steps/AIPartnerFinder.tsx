@@ -14,6 +14,7 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { Activity } from "@tsw/prisma";
 import {
   ChartArea,
+  CheckCircle,
   Home,
   LandPlot,
   MoveRight,
@@ -204,8 +205,17 @@ const AIPartnerFinder = () => {
           }
         }}
       >
-        {isUserPremium ? "Continue" : "Start trial"}{" "}
-        <MoveRight className="ml-3 w-4 h-4" />
+        {isUserPremium ? (
+          <>
+            <CheckCircle className="mr-2  w-4 h-4" />
+            <span>Continue</span>{" "}
+          </>
+        ) : (
+          <>
+            <span>Start trial</span>{" "}
+            <MoveRight className="ml-3 w-4 h-4" />
+          </>
+        )}{" "}
       </Button>
 
       <AppleLikePopover
