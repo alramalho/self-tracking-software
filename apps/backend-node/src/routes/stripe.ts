@@ -90,6 +90,35 @@ router.post(
             (event.data.object as Stripe.Subscription).id,
             { expand: ["customer"] }
           );
+
+          if (
+            event.type === "customer.subscription.deleted" ||
+            event.type === "customer.subscription.paused"
+          ) {
+            const customer = subscription.customer as Stripe.Customer;
+            const userEmail = customer.email;
+
+            if (!userEmail) {
+              logger.error(
+                "No user email found in customer data when downgrading user"
+              );
+              return res
+                .status(400)
+                .json({
+                  error: "No customer email found when downgrading user",
+                });
+            }
+
+            await prisma.user.update({
+              where: { email: userEmail as string },
+              data: {
+                planType: "FREE",
+                stripeCustomerId: customer.id,
+                stripeSubscriptionId: subscription.id,
+                stripeSubscriptionStatus: subscription.status,
+              },
+            });
+          }
           break;
 
         case "payment_intent.succeeded":
