@@ -438,9 +438,12 @@ router.post(
 
       const planData: z.infer<typeof PlanUpsertSchema> = validationResult.data;
 
-      const existingPlan = await prisma.plan.findUnique({
-        where: { id: planData.id },
-      });
+      let existingPlan;
+      if (planData.id) {
+        existingPlan = await prisma.plan.findUnique({
+          where: { id: planData.id },
+        });
+      }
 
       if (existingPlan) {
         // is update operation

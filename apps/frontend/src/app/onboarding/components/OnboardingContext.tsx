@@ -37,11 +37,14 @@ interface OnboardingContextValue {
   planGoal: string | null;
   planActivities: Activity[];
   planType: string | null;
+  planEmoji: string | null;
+  planTimesPerWeek: number;
   partnerType: "human" | "ai" | null;
   planProgress: string | null;
   setPlanGoal: (goal: string) => void;
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
+  setPlanTimesPerWeek: (times: number) => void;
   setSelectedPlan: (plan: Plan) => void;
   setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
@@ -88,17 +91,20 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       plans: null as Plan[] | null,
       selectedPlan: null as Plan | null,
       planGoal: null as string | null,
+      planEmoji: null as string | null,
       planActivities: [] as Activity[],
       planProgress: null as string | null,
       planType: null as string | null,
       partnerType: null as "human" | "ai" | null,
       isComplete: false as boolean,
+      planTimesPerWeek: 3 as number,
     }
   );
   const {
     currentStep,
     completedSteps,
     planGoal,
+    planEmoji,
     planActivities,
     planType,
     planProgress,
@@ -106,7 +112,9 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     partnerType,
     selectedPlan,
     isComplete,
+    planTimesPerWeek,
   } = onboardingState;
+
   const router = useRouter();
   const setCurrentStep = (stepId: string) => {
     setOnboardingState({ ...onboardingState, currentStep: stepId });
@@ -131,6 +139,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setOnboardingState((prevState) => ({ ...prevState, planType: type }));
   };
 
+  const setPlanTimesPerWeek = (times: number) => {
+    setOnboardingState((prevState) => ({ ...prevState, planTimesPerWeek: times }));
+  };
+
   const setSelectedPlan = (plan: Plan) => {
     setOnboardingState((prevState) => ({ ...prevState, selectedPlan: plan }));
   };
@@ -152,7 +164,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   const hasNextStep = useMemo(
     () => {
       const currentStepData = steps.find((step) => step.id === currentStep);
-      return currentStepData?.next || currentStepIndex < totalSteps - 1;
+      return currentStepData?.next != undefined || currentStepIndex < totalSteps - 1;
     },
     [currentStepIndex, totalSteps]
   );
@@ -268,6 +280,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     },
     [completedSteps, steps, totalSteps, posthog, onboardingState]
   );
+
   const contextValue: OnboardingContextValue = {
     currentStep,
     totalSteps,
@@ -287,15 +300,18 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     plans,
     selectedPlan,
     planGoal,
+    planEmoji,
     partnerType,
     planActivities,
     planType,
     planProgress,
+    planTimesPerWeek,
     setPlanGoal,
     setPlanActivities,
     updateOnboardingState: (updates: object) => {
       setOnboardingState({ ...onboardingState, ...updates });
     },
+    setPlanTimesPerWeek,
     setPlanType,
     setSelectedPlan,
     setPartnerType,
