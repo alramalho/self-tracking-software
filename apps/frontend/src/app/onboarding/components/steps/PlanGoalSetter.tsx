@@ -4,7 +4,7 @@ import {
   DynamicUISuggester,
 } from "@/components/DynamicUISuggester";
 import { AlertCircle, Goal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { withFadeUpAnimation } from "../../lib";
 import { useOnboarding } from "../OnboardingContext";
@@ -51,10 +51,6 @@ function PlanGoalSetter() {
       throw error;
     }
   };
-  
-  useEffect(() => {
-    console.log({allAnswered})
-  }, [allAnswered]);
 
   const renderExtractedData = (data: PlanGoalSetterResponse) => {
 
@@ -84,6 +80,7 @@ function PlanGoalSetter() {
   const handleAccept = async (data: PlanGoalSetterResponse): Promise<void> => {
     completeStep("plan-goal-setter", {
       planGoal: data.goal,
+      planEmoji: data.emoji,
       planType: "specific",
     });
   };
