@@ -9,6 +9,14 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "img.clerk.com",
+      },
+    ],
+  },
   async rewrites() {
     return [
       {

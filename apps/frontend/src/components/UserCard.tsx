@@ -227,6 +227,14 @@ const UserCard: React.FC<UserCardProps> = ({
             )}
           </div>
 
+          {user.age && (
+            <div className="mt-2">
+              <p className="text-gray-700 text-sm line-clamp-3">
+                {user.age} years old
+              </p>
+            </div>
+          )}
+
           {user.profile && (
             <div className="mt-2">
               <p className="text-gray-700 text-sm line-clamp-3">

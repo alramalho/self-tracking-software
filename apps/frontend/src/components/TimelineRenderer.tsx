@@ -150,7 +150,7 @@ const TimelineRenderer: React.FC<{
                         Search Users
                       </Button>
                       <Button
-                        onClick={() => router.push("/looking-for-ap")}
+                        onClick={() => router.push("/ap-search")}
                         variant="outline"
                         className="flex-1"
                       >

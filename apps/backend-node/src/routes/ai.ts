@@ -1,7 +1,5 @@
-import { userService } from "@/services/userService";
 import { Response, Router } from "express";
 import multer from "multer";
-import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
@@ -10,7 +8,6 @@ import { plansService } from "../services/plansService";
 import { sttService } from "../services/sttService";
 import { TelegramService } from "../services/telegramService";
 import { logger } from "../utils/logger";
-import { prisma } from "../utils/prisma";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -349,98 +346,6 @@ router.post(
     } catch (error) {
       logger.error("Error in plan extractions:", error);
       res.status(500).json({ error: "Failed to process plan extractions" });
-    }
-  }
-);
-
-// Update user profile from questions
-router.post(
-  "/update-user-profile-from-questions",
-  requireAuth,
-  async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<Response | void> => {
-    try {
-      const { question_checks, message } = req.body;
-
-      if (!message || !question_checks) {
-        return res
-          .status(400)
-          .json({ error: "message and question_checks are required" });
-      }
-
-      logger.info(
-        `Profile update from questions requested for user ${req.user!.id}`
-      );
-
-      // Store user message in memory for context
-      await memoryService.writeMessage({
-        content: message,
-        userId: req.user!.id,
-        role: "USER",
-      });
-
-      // Get conversation history for better context
-      const conversationHistory = await memoryService.readConversationHistory(
-        req.user!.id,
-        30
-      );
-      const fullConversation = conversationHistory
-        ? `${conversationHistory}\n${req.user!.name || req.user!.username || "User"} (just now): ${message}`
-        : `${req.user!.name || req.user!.username || "User"}: ${message}`;
-
-      // Generate user profile using simplified AI call
-      const [profileAnalysis, questionAnalysis] = await Promise.all([
-        aiService.generateStructuredResponse(
-          `Please generate a user profile based on a message that answers the following questions: ${Object.keys(question_checks).join(", ")}. Message: ${message}`,
-          z.object({
-            reasoning: z
-              .string()
-              .describe("Step by step reasoning on each of the questions"),
-            profile: z
-              .string()
-              .describe(
-                "Highly condensed clear depiction of the user profile based on the input questions"
-              ),
-            age: z
-              .number()
-              .nullable()
-              .describe(
-                "The user's age as a single integer, if mentioned, otherwise null"
-              ),
-          })
-        ),
-        aiService.analyzeQuestionCoverage(fullConversation, question_checks),
-      ]);
-
-      // Update user profile in database
-      const updates: any = {
-        profile: profileAnalysis.profile,
-      };
-
-      if (profileAnalysis.age !== null) {
-        updates.age = profileAnalysis.age;
-      }
-
-      const updatedUser = await prisma.user.update({
-        where: { id: req.user!.id },
-        data: updates,
-      });
-
-      await userService.updateUserEmbedding(updatedUser);
-
-      res.json({
-        message: questionAnalysis.all_answered
-          ? `Thank you for the information! ✅ I have updated your profile with '${updates.profile}'. Want to make any changes?`
-          : questionAnalysis.follow_up_message,
-        all_answered: questionAnalysis.all_answered,
-        user: updatedUser,
-        question_checks: questionAnalysis.results,
-      });
-    } catch (error) {
-      logger.error("Error updating user profile:", error);
-      res.status(500).json({ error: "Failed to update user profile" });
     }
   }
 );

@@ -1,39 +1,31 @@
-import { useApiWithAuth } from "@/api";
+import { updateUser } from "@/app/actions";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { useClerk, UserProfile } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import { capitalize } from "lodash";
 import {
   ChevronLeft,
-  CircleAlert,
   CreditCard,
   LogOut,
   Paintbrush,
   Pencil,
-  Settings,
   SquareArrowUp,
   User
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import React, { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
-import { Switch } from "../ui/switch";
+import { TextAreaWithVoice } from "../ui/TextAreaWithVoice";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
+import { EditAgePopup, EditFullNamePopup, EditLookingForApPopup, EditProfilePicturePopup } from "./EditFieldPopups";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -67,17 +59,18 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   open,
   onClose,
   initialActiveView = null,
-  redirectTo = null,
 }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Single state for view navigation
-  const [activeView, setActiveView] = useState<ActiveView>(initialActiveView as ActiveView || "main");
-  const api = useApiWithAuth();
+  const [activeView, setActiveView] = useState<ActiveView>(
+    (initialActiveView as ActiveView) || "main"
+  );
   const previousViewRef = useRef<ActiveView>("main");
 
   const { isUserFree, userPlanType } = usePaidPlan();
   const { signOut } = useClerk();
-  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
+  const { user } = useUser();
+  const { useCurrentUserDataQuery} = useUserPlan();
   const currentUserDataQuery = useCurrentUserDataQuery();
   const { data: currentUserData } = currentUserDataQuery;
   const posthog = usePostHog();
@@ -87,8 +80,15 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   );
   const themeColors = useThemeColors();
   const themeVariants = getThemeVariants(themeColors.raw);
-  const router = useRouter();
-  
+  const [temporaryProfileDescription, setTemporaryProfileDescription] =
+    useState(currentUserData?.profile || "");
+
+  // Edit popup states
+  const [showEditLookingForAp, setShowEditLookingForAp] = useState(false);
+  const [showEditAge, setShowEditAge] = useState(false);
+  const [showEditFullName, setShowEditFullName] = useState(false);
+  const [showEditProfilePicture, setShowEditProfilePicture] = useState(false);
+
   const handleLogout = () => {
     signOut();
     posthog.reset();
@@ -162,90 +162,133 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
         >
           {(() => {
             switch (activeView) {
-              case "userSummary": // Renamed from "user"
+              case "userSummary":
                 return (
                   <div>
                     {/* Back button goes to main settings */}
                     <Button
                       variant="ghost"
-                      onClick={() => navigateTo("main")} // Use navigateTo
+                      onClick={() => navigateTo("main")}
                       className="mb-4 px-0 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
                     >
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
-                    <h2 className="text-lg font-semibold mb-3">
+                    <h2 className="text-lg font-semibold mb-6">
                       User Settings
                     </h2>
-                    <div className="flex flex-col items-start gap-2">
-                      <div className="flex items-center gap-2 mt-1">
-                        <Switch
-                          checked={lookingForAp}
-                          onCheckedChange={async (checked) => {
-                            setLookingForAp(checked);
-                            await api.post("/users/update-user", {
-                              lookingForAp: checked,
-                            });
-                            toast.success("Profile updated");
-                            currentUserDataQuery.refetch();
-                          }}
-                        />
-                        <span className="text-sm text-gray-500">
-                          Looking for Accountability Partner
-                          <Popover>
-                            <PopoverTrigger className="inline cursor-help" onClick={(e) => e.stopPropagation()}>
-                              <CircleAlert size={16} className="ml-1 inline text-gray-400" />
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3 text-sm">
-                              <p>This will make your profile discoverable and allow us to recommend your profile to people also looking for AP&apos;s.</p>
-                            </PopoverContent>
-                          </Popover>
-                        </span>
-                        {/* <span className="text-xs text-gray-400">
-                          <CircleAlert size={16} /> This will make your profile discoverable and allow us to recommend your profile to people also looking for AP&apos;s.
-                        </span> */}
-                      </div>
-                      <div className="relative space-y-2 p-3 border rounded-md bg-gray-50 pr-8">
-                        {currentUserData?.profile ? (
-                          <p className="text-sm text-gray-700 italic">
-                            {currentUserData.profile}
+                    
+                    <div className="space-y-4">
+                      {/* Looking for AP */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Looking for Accountability Partner</p>
+                          <p className={twMerge(
+                            "text-xs text-gray-500",
+                            currentUserData?.lookingForAp ? "text-green-600" : "text-gray-500"
+                          )}>
+                            {currentUserData?.lookingForAp ? "Yes" : "No"}
                           </p>
-                        ) : (
-                          <p className="text-sm text-gray-500 italic">
-                            No profile description set.
-                          </p>
-                        )}
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="absolute bottom-1 right-0 text-gray-500 hover:text-gray-700"
-                          onClick={() => navigateTo("editProfile")}
+                          className={"text-gray-500"}
+                          onClick={() => setShowEditLookingForAp(true)}
                         >
-                          <Pencil size={18} />
+                          <Pencil size={16} />
                         </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-start px-2 gap-2 mt-4"
-                        onClick={() => navigateTo("userProfile")}
-                      >
-                        <Settings size={20} />
-                        <span>Manage my account data</span>
-                      </Button>
+
+                      {/* Age */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Age</p>
+                          <p className="text-xs text-gray-500">
+                            {currentUserData?.age ? `${currentUserData.age} years old` : "No age set"}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() => setShowEditAge(true)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                      </div>
+
+                      {/* Full Name */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Full Name</p>
+                          <p className="text-xs text-gray-500">
+                            {user?.firstName && user?.lastName 
+                              ? `${user.firstName} ${user.lastName}` 
+                              : "No name set"}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() => setShowEditFullName(true)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                      </div>
+
+                      {/* Username (Read Only) */}
+                      <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Username</p>
+                          <p className="text-xs text-gray-500">
+                            {user?.username || "No username set"}
+                          </p>
+                        </div>
+                        <div className="text-xs text-gray-400 px-2">
+                          Read only
+                        </div>
+                      </div>
+
+                      {/* Email (Read Only) */}
+                      <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">Email</p>
+                          <p className="text-xs text-gray-500">
+                            {user?.primaryEmailAddress?.emailAddress || "No email"}
+                          </p>
+                        </div>
+                        <div className="text-xs text-gray-400 px-2">
+                          Read only
+                        </div>
+                      </div>
+
+                      {/* Profile Picture */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1 flex items-center gap-3">
+                          <img 
+                            src={user?.imageUrl || "/default-avatar.png"} 
+                            alt="Profile" 
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Profile Picture</p>
+                            <p className="text-xs text-gray-500">Click to update your photo</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() => setShowEditProfilePicture(true)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                      </div>
+
                     </div>
-                  </div>
-                );
-              case "userProfile": // New case for the full profile
-                return (
-                  <div>
-                    {/* Back button goes to user summary */}
-                    <Button
-                      variant="ghost"
-                      onClick={() => navigateTo("userSummary")} // Use navigateTo
-                      className="mb-4 px-0 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-                    >
-                      <ChevronLeft size={18} /> Back to User Settings
-                    </Button>
-                    <UserProfile routing={"hash"} />
                   </div>
                 );
               case "editProfile": // New case for editing the profile
@@ -262,18 +305,33 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <h2 className="text-lg font-semibold mb-3">
                       Update Your Profile Description
                     </h2>
-                    <ProfileSetupDynamicUI
-                      submitButtonText="Save Profile"
-                      onSubmit={async () => {
-                        // Refetch user data after update and navigate back
-                        await refetchUserData();
-                        if (redirectTo) {
-                          router.push(redirectTo);
-                        } else {
+                    <p>
+                      You may use this space to talk about who you are, as this will be showed to other users in the discovery tab and used in the matchmaking algorithm.
+                    </p>
+                    <div className="p-2">
+                      <TextAreaWithVoice
+                        value={temporaryProfileDescription}
+                        onChange={(value) => {
+                          setTemporaryProfileDescription(value);
+                        }}
+                        placeholder="A lively and outgoing "
+                      />
+                    </div>
+                    {temporaryProfileDescription && (
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          await updateUser({
+                            profile: temporaryProfileDescription,
+                          });
+                          toast.success("Profile updated");
+                          currentUserDataQuery.refetch();
                           navigateTo("userSummary");
-                        }
-                      }}
-                    />
+                        }}
+                      >
+                        Save
+                      </Button>
+                    )}
                   </div>
                 );
               case "color":
@@ -301,9 +359,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <span
                         className={twMerge(
                           "text-xl font-cursive flex items-center gap-2",
-                          isUserFree
-                            ? "text-gray-500"
-                            : themeVariants.text
+                          isUserFree ? "text-gray-500" : themeVariants.text
                         )}
                       >
                         On {capitalize(userPlanType || "FREE")} Plan
@@ -394,6 +450,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
         {/* Keep ConfirmDialog outside the main navigation flow */}
       </AppleLikePopover>
+      
       <ConfirmDialogOrPopover
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
@@ -403,6 +460,40 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
         confirmText="Logout"
         cancelText="Cancel"
         variant="destructive"
+      />
+
+      {/* Edit Field Popups */}
+      <EditLookingForApPopup
+        open={showEditLookingForAp}
+        onClose={() => setShowEditLookingForAp(false)}
+        currentValue={currentUserData?.lookingForAp || false}
+        onSave={() => {
+          currentUserDataQuery.refetch();
+          setLookingForAp(currentUserData?.lookingForAp || false);
+        }}
+      />
+
+      <EditAgePopup
+        open={showEditAge}
+        onClose={() => setShowEditAge(false)}
+        currentValue={currentUserData?.age || null}
+        onSave={() => currentUserDataQuery.refetch()}
+      />
+
+      <EditFullNamePopup
+        open={showEditFullName}
+        onClose={() => setShowEditFullName(false)}
+        onSave={() => {
+          // Clerk data updates automatically
+        }}
+      />
+
+      <EditProfilePicturePopup
+        open={showEditProfilePicture}
+        onClose={() => setShowEditProfilePicture(false)}
+        onSave={() => {
+          // Clerk data updates automatically
+        }}
       />
     </>
   );

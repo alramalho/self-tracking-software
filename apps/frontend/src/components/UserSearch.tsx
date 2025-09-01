@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from "react";
 import { useApiWithAuth } from "@/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, X } from "lucide-react";
-import { Button } from "./ui/button";
-import { useRouter } from "next/navigation";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 export interface UserSearchResult {
   userId: string;
@@ -133,7 +132,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
       {apRedirect && (
         <span className="text-sm text-gray-500">
           Looking for a partner to get started?{" "}
-          <Link href="/looking-for-ap">
+          <Link href="/ap-search">
             <span className="text-blue-500">Click here</span>
           </Link>
         </span>
