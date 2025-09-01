@@ -36,6 +36,7 @@ model User {
   defaultActivityVisibility       ActivityVisibility @default(PUBLIC)
   recommendationsOutdated         Boolean            @default(false)
   recommendationsLastCalculatedAt DateTime?
+  onboardingCompletedAt           DateTime?
 
   // Daily checkin settings
   dailyCheckinDays String[]          @default([])

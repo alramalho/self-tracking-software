@@ -140,8 +140,10 @@ const HumanPartnerFinder = () => {
   const [apSearchPopupOpen, setApSearchPopupOpen] = useState(false);
   const [hasShared, setHasShared] = useState(false);
   const [hasOpenedCommunitySearch, setHasOpenedCommunitySearch] = useState(false);
+  const [ isContinuing, setIsContinuing]  = useState(false)
 
   const handleContinueToApp = () => {
+    setIsContinuing(true)
     completeStep("human-partner-finder", {}, {
       complete: true,
     });
@@ -200,6 +202,7 @@ const HumanPartnerFinder = () => {
               <Button 
                 className="w-full bg-black hover:bg-gray-800 text-white py-3 px-6 rounded-lg font-medium"
                 onClick={() => handleContinueToApp()}
+                loading={isContinuing}
               >
                 Continue to app
               </Button>

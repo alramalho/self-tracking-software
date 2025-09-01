@@ -1,10 +1,8 @@
 "use client";
 
-import { useOnboardingCompleted } from "@/app/onboarding/components/OnboardingContext";
 import { hasCachedUserData, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { cn } from "@/lib/utils";
 import { useSession } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,18 +29,12 @@ export default function GeneralInitializer({
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [initialCacheExists] = useState(() => hasCachedUserData());
-  const hasFriends =
-    userData?.friends?.length &&
-    userData?.friends?.length > 0;
-  const { userPlanType: userPaidPlanType } = usePaidPlan();
   const router = useRouter();
-  const { isOnboardingCompleted } = useOnboardingCompleted();
-  const { isUserFree } = usePaidPlan();
+  const isOnboardingCompleted = userData?.onboardingCompletedAt != null;
 
-  const onboardingNecessary = useMemo(
-    () => !isWaitingForData && !hasFriends && isUserFree && !isOnboardingCompleted,
-    [isWaitingForData, hasFriends, userPaidPlanType, isOnboardingCompleted]
-  );
+  const onboardingNecessary = useMemo(() => {
+    return currentUserDataQuery.isFetched && !isOnboardingCompleted;
+  }, [isOnboardingCompleted]);
 
   const email = userData?.email || "";
 
@@ -53,12 +45,7 @@ export default function GeneralInitializer({
   }, [onboardingNecessary, router]);
 
   useEffect(() => {
-    if (
-      isSignedIn &&
-      hasLoadedUserData &&
-      userData &&
-      !hasRanPosthogIdentify
-    ) {
+    if (isSignedIn && hasLoadedUserData && userData && !hasRanPosthogIdentify) {
       posthog.identify(userData.id, {
         email: userData.email,
         name: userData.name,
@@ -98,9 +85,13 @@ export default function GeneralInitializer({
 
   if (
     !isClerkLoaded ||
-    (isSignedIn && isWaitingForData && !initialCacheExists)
+    (isSignedIn && currentUserDataQuery.isFetched && !initialCacheExists)
   ) {
-    console.log("showGenericLoader", {isClerkLoaded, isSignedIn, isWaitingForData, initialCacheExists});
+    console.log("showGenericLoader", {
+      isClerkLoaded,
+      isSignedIn,
+      initialCacheExists,
+    });
     return (
       <>
         {showBugDialog && (
@@ -139,7 +130,6 @@ export default function GeneralInitializer({
           {isSignedIn && <BottomNav />}
         </>
       )}
-
     </>
   );
 }

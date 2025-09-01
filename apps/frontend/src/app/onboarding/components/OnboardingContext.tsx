@@ -1,6 +1,10 @@
 "use client";
 
-import { CompletePlan as Plan } from "@/contexts/UserGlobalContext";
+import { updateUser } from "@/app/actions";
+import {
+  CompletePlan as Plan,
+  useUserPlan,
+} from "@/contexts/UserGlobalContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Activity } from "@tsw/prisma";
 import { useRouter } from "next/navigation";
@@ -49,7 +53,6 @@ interface OnboardingContextValue {
   setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
-  isOnboardingComplete: boolean;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -68,21 +71,12 @@ interface OnboardingProviderProps {
   initialStepId?: string;
 }
 
-export const useOnboardingCompleted = () => {
-  const [onboardingState] = useLocalStorage("onboarding-state", {
-    isComplete: false,
-  });
-
-  return {
-    isOnboardingCompleted: onboardingState.isComplete,
-  };
-};
-
 export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   children,
   steps,
   initialStepId,
 }) => {
+  const { refetchUserData } = useUserPlan();
   const [onboardingState, setOnboardingState] = useLocalStorage(
     "onboarding-state",
     {
@@ -96,7 +90,6 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planProgress: null as string | null,
       planType: null as string | null,
       partnerType: null as "human" | "ai" | null,
-      isComplete: false as boolean,
       planTimesPerWeek: 3 as number,
     }
   );
@@ -111,7 +104,6 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     plans,
     partnerType,
     selectedPlan,
-    isComplete,
     planTimesPerWeek,
   } = onboardingState;
 
@@ -140,7 +132,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   };
 
   const setPlanTimesPerWeek = (times: number) => {
-    setOnboardingState((prevState) => ({ ...prevState, planTimesPerWeek: times }));
+    setOnboardingState((prevState) => ({
+      ...prevState,
+      planTimesPerWeek: times,
+    }));
   };
 
   const setSelectedPlan = (plan: Plan) => {
@@ -161,13 +156,12 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   const progress =
     totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0;
 
-  const hasNextStep = useMemo(
-    () => {
-      const currentStepData = steps.find((step) => step.id === currentStep);
-      return currentStepData?.next != undefined || currentStepIndex < totalSteps - 1;
-    },
-    [currentStepIndex, totalSteps]
-  );
+  const hasNextStep = useMemo(() => {
+    const currentStepData = steps.find((step) => step.id === currentStep);
+    return (
+      currentStepData?.next != undefined || currentStepIndex < totalSteps - 1
+    );
+  }, [currentStepIndex, totalSteps]);
   const nextStep = useCallback(() => {
     const currentStepData = steps.find((step) => step.id === currentStep);
 
@@ -247,10 +241,15 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
       // Check if this step should mark onboarding as complete
       if (options?.complete) {
-        newState.isComplete = true;
-        posthog.capture("onboarding-completed");
-        toast.success("Onboarding completed! ");
-        router.push("/");
+        updateUser({
+          onboardingCompletedAt: new Date(),
+        }).then(() => {
+          refetchUserData().then( () => {
+            posthog.capture("onboarding-completed");
+            toast.success("Onboarding completed! ");
+            router.push("/");
+          });
+        });
       } else {
         // Priority 1: If options.nextStep is provided, go to that specific step
         if (options?.nextStep) {
@@ -315,7 +314,6 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     setPlanType,
     setSelectedPlan,
     setPartnerType,
-    isOnboardingComplete: isComplete,
   };
 
   return (
