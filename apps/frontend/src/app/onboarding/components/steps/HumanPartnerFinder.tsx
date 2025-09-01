@@ -2,7 +2,6 @@
 
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ApSearchComponent } from "@/components/ApSearch";
-import { ProfileSetupDynamicUI } from "@/components/ProfileSetupDynamicUI";
 import { Button } from "@/components/ui/button";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
@@ -177,11 +176,7 @@ const HumanPartnerFinder = () => {
         <OptionCard
           isSelected={false}
           onClick={() => {
-            if (hasProfile) {
-              setApSearchPopupOpen(true);
-            } else {
-              setProfileSetupPopoverOpen(true);
-            }
+            setApSearchPopupOpen(true);
           }}
           icon={<Search className="w-6 h-6" />}
           title="Find one in our community"
@@ -210,21 +205,6 @@ const HumanPartnerFinder = () => {
           )}
         </AnimatePresence>
       </div>
-
-      <AppleLikePopover
-        open={profileSetupPopupOpen}
-        onClose={() => {
-          setProfileSetupPopoverOpen(false);
-        }}
-      >
-        <ProfileSetupDynamicUI
-          submitButtonText="Save Profile"
-          onSubmit={async () => {
-            setProfileSetupPopoverOpen(false);
-            setApSearchPopupOpen(true);
-          }}
-        />
-      </AppleLikePopover>
       <AppleLikePopover
         open={apSearchPopupOpen}
         onClose={() => {
