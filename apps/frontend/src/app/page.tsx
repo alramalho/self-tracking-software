@@ -2,20 +2,17 @@
 
 import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
+import { HomepageMetricsSection } from "@/components/HomepageMetricsSection";
 import InsightsDemo from "@/components/InsightsDemo";
-import { MetricIsland } from "@/components/MetricIsland";
-import { MetricWeeklyView } from "@/components/MetricWeeklyView";
 import Notifications from "@/components/Notifications";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
-import { TodaysNoteSection } from "@/components/TodaysNoteSection";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { MetricEntry } from "@tsw/prisma";
 import {
   Bell,
   ChevronDown,
@@ -29,7 +26,6 @@ import React, { useEffect, useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
 
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
-import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -38,7 +34,6 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { isToday } from "date-fns";
 import { getUser } from "./actions";
 
 const HomePage: React.FC = () => {
@@ -46,20 +41,10 @@ const HomePage: React.FC = () => {
   const { useCurrentUserDataQuery, notificationsData, refetchAllData } =
     useUserPlan();
   const { data: userData } = useCurrentUserDataQuery();
-  const {
-    userMetrics,
-    entries,
-    getMetricWeekData,
-    getPositiveCorrelations,
-    formatCorrelationString,
-  } = useMetrics();
+  const { userMetrics } = useMetrics();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [isMetricsCollapsed, setIsMetricsCollapsed] = useLocalStorage<boolean>(
-    "metrics-section-collapsed",
-    false
-  );
   const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
     "plans-section-collapsed",
     false
@@ -80,9 +65,6 @@ const HomePage: React.FC = () => {
     ) || [];
   const unreadNotificationsCount = unreadNotifications.length;
 
-  const { areAllMetricsCompleted } = useDailyCheckin();
-
-
   useEffect(() => {
     const fetchUser = async () => {
       console.log(`Fetching user ${userData?.id}`);
@@ -101,22 +83,6 @@ const HomePage: React.FC = () => {
   };
 
 
-  // Color mapping for metrics
-  const getMetricColor = (index: number) => {
-    const colors = [
-      "blue",
-      "yellow",
-      "green",
-      "purple",
-      "rose",
-      "orange",
-      "amber",
-      "pink",
-      "red",
-      "gray",
-    ] as const;
-    return colors[index % colors.length];
-  };
 
   return (
     <PullToRefresh
@@ -255,99 +221,7 @@ const HomePage: React.FC = () => {
         )}
 
         {userMetrics.length > 0 && !isUserOnFreePlan && (
-          <div className="">
-            <Collapsible
-              open={!isMetricsCollapsed}
-              onOpenChange={(open) => setIsMetricsCollapsed(!open)}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <CollapsibleTrigger asChild>
-                    <button
-                      className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
-                      aria-label={
-                        isMetricsCollapsed
-                          ? "Expand metrics"
-                          : "Collapse metrics"
-                      }
-                    >
-                      {isMetricsCollapsed ? (
-                        <ChevronRight size={16} className="text-gray-600" />
-                      ) : (
-                        <ChevronDown size={16} className="text-gray-600" />
-                      )}
-                    </button>
-                  </CollapsibleTrigger>
-                  <h3 className="text-md font-semibold text-gray-900">
-                    Your Metrics
-                  </h3>
-                </div>
-                <button
-                  onClick={() => router.push("/insights/dashboard")}
-                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
-                >
-                  View Insights
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex flex-col gap-3 flex-wrap">
-                  {userMetrics.slice(0, 3).map((metric, index) => {
-                    const today = new Date().toISOString().split("T")[0];
-                    const todaysEntry = entries.find(
-                      (entry: MetricEntry) =>
-                        entry.metricId === metric.id && isToday(entry.date)
-                    );
-                    const isLoggedToday =
-                      !!todaysEntry && todaysEntry.rating > 0;
-                    const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
-                    const todaysRating = todaysEntry?.rating;
-
-                    const weekData = getMetricWeekData(metric.id);
-                    const hasAnyData = weekData.some((val) => val > 0);
-                    const positiveCorrelations = getPositiveCorrelations(
-                      metric.id
-                    );
-
-                    return (
-                      <div key={`${metric.id}-${index}-homepage`}>
-                        <MetricIsland
-                          key={metric.id}
-                          metric={metric}
-                          isLoggedToday={isLoggedToday}
-                          todaysRating={todaysRating}
-                          isSkippedToday={isSkippedToday}
-                        />
-                        <CollapsibleContent>
-                          <MetricWeeklyView
-                            metric={metric}
-                            weekData={weekData}
-                            color={getMetricColor(index)}
-                            hasAnyData={hasAnyData}
-                            positiveCorrelations={positiveCorrelations}
-                            formatCorrelationString={formatCorrelationString}
-                          />
-                        </CollapsibleContent>
-                      </div>
-                    );
-                  })}
-                  {areAllMetricsCompleted && <TodaysNoteSection />}
-                </div>
-
-                {userMetrics.length > 3 && (
-                  <div className="text-center">
-                    <button
-                      onClick={() => router.push("/insights/dashboard")}
-                      className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                    >
-                      +{userMetrics.length - 3} more metrics
-                    </button>
-                  </div>
-                )}
-              </div>
-            </Collapsible>
-          </div>
+          <HomepageMetricsSection />
         )}
 
         <div className="mb-6">
