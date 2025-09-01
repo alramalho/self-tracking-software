@@ -2,11 +2,7 @@ import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
 import { Loader2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 export interface UserSearchResult {
@@ -27,18 +23,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
   onUserClick,
   selectedUsers = [],
   onUserRemove,
-  apRedirect = true,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const api = useApiWithAuth();
-  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
-  const router = useRouter();
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -129,14 +118,6 @@ const UserSearch: React.FC<UserSearchProps> = ({
       >
         Find me an Accountability Partner 🤝
       </Button> */}
-      {apRedirect && (
-        <span className="text-sm text-gray-500">
-          Looking for a partner to get started?{" "}
-          <Link href="/ap-search">
-            <span className="text-blue-500">Click here</span>
-          </Link>
-        </span>
-      )}
     </div>
   );
 };

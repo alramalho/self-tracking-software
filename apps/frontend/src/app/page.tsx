@@ -15,7 +15,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { MetricEntry } from "@tsw/prisma";
 import {
   Bell,
@@ -23,7 +22,7 @@ import {
   ChevronRight,
   HelpCircle,
   RefreshCcw,
-  Search,
+  ScanFace,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -40,7 +39,6 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { isToday } from "date-fns";
-import { ScanFace } from "lucide-react";
 import { getUser } from "./actions";
 
 const HomePage: React.FC = () => {
@@ -56,7 +54,6 @@ const HomePage: React.FC = () => {
     formatCorrelationString,
   } = useMetrics();
 
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isMetricsCollapsed, setIsMetricsCollapsed] = useLocalStorage<boolean>(
@@ -85,10 +82,6 @@ const HomePage: React.FC = () => {
 
   const { areAllMetricsCompleted } = useDailyCheckin();
 
-  const handleUserClick = (user: UserSearchResult) => {
-    router.push(`/profile/${user.username}`);
-    setIsSearchOpen(false);
-  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -185,10 +178,11 @@ const HomePage: React.FC = () => {
               </button>
             </div>
             <button
-              onClick={() => setIsSearchOpen(true)}
+              onClick={() => router.push("/insights/dashboard")}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+              title="AI Insights"
             >
-              <Search size={24} />
+              <ScanFace size={24} />
             </button>
           </div>
         </div>
@@ -357,19 +351,9 @@ const HomePage: React.FC = () => {
         )}
 
         <div className="mb-6">
-          <TimelineRenderer onOpenSearch={() => setIsSearchOpen(true)} />
+          <TimelineRenderer onOpenSearch={() => router.push("/ap-search")} />
         </div>
 
-        <AppleLikePopover
-          onClose={() => setIsSearchOpen(false)}
-          open={isSearchOpen}
-          title="Search Users"
-        >
-          <div className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Search Users</h2>
-            <UserSearch onUserClick={handleUserClick} />
-          </div>
-        </AppleLikePopover>
 
         <AppleLikePopover
           onClose={handleNotificationsClose}

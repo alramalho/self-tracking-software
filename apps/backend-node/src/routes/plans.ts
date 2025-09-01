@@ -506,7 +506,7 @@ router.post(
           },
         });
         // Mark user recommendations as outdated
-        markUserRecommendationsOutdated(req.user!.id);
+        recommendationsService.computeRecommendedUsers(req.user!.id);
 
         logger.info(`Updated plan ${planData.id} for user ${req.user!.id}`);
         return res.json({ success: true, plan: updatedPlan });
@@ -576,7 +576,7 @@ router.post(
         updatePlanEmbedding(result.id, req.user!.id);
 
         // Mark user recommendations as outdated
-        markUserRecommendationsOutdated(req.user!.id);
+        recommendationsService.computeRecommendedUsers(req.user!.id);
 
         logger.info(`Created plan ${result.id} for user ${req.user!.id}`);
         return res.json({ success: true, plan: result });

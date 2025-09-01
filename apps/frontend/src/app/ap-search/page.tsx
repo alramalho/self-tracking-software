@@ -3,6 +3,7 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ApSearchComponent } from "@/components/ApSearch";
 import { Button } from "@/components/ui/button";
+import UserSearch, { UserSearchResult } from "@/components/UserSearch";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -11,6 +12,10 @@ import React from "react";
 const ApSearchPage: React.FC = () => {
   const { isPushGranted, requestPermission } = useNotifications();
   const router = useRouter();
+
+  const handleUserClick = (user: UserSearchResult) => {
+    router.push(`/profile/${user.username}`);
+  };
 
   if (!isPushGranted) {
     return (
@@ -37,7 +42,8 @@ const ApSearchPage: React.FC = () => {
           )}
           {isPushGranted && (
             <p className="text-gray-500 text-sm text-center">
-              This will enable you to stay on top of newest recommended partners and received friend requests.
+              This will enable you to stay on top of newest recommended partners
+              and received friend requests.
             </p>
           )}
           <Button className="mt-4" onClick={requestPermission}>
@@ -49,7 +55,12 @@ const ApSearchPage: React.FC = () => {
     );
   }
   return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl">
+    <div className="container mx-auto py-4 px-4 max-w-3xl space-y-6">
+      {/* Search Section */}
+
+      <UserSearch onUserClick={handleUserClick} />
+
+      {/* Recommendations Section */}
       <ApSearchComponent />
     </div>
   );
