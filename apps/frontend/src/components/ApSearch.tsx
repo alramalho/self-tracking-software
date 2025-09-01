@@ -2,18 +2,16 @@
 
 import { useApiWithAuth } from "@/api";
 import GenericLoader from "@/components/GenericLoader";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import UserCard from "@/components/UserCard";
 import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn, isActivePlan } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { Info } from "lucide-react";
-import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import React, { useState } from "react";
 import toast from "react-hot-toast";
-import UserSearch from "./UserSearch";
 
 export const ApSearchComponent: React.FC = () => {
   const { useRecommendedUsersQuery, useCurrentUserDataQuery } = useUserPlan();
@@ -22,6 +20,7 @@ export const ApSearchComponent: React.FC = () => {
   const currentUser = userData;
   const currentPlan = userData?.plans[0];
   const api = useApiWithAuth();
+  const [isProfileExpanded, setIsProfileExpanded] = useState(true);
 
   const { data: recommendationsData, isLoading: isLoadingRecommendations } =
     useRecommendedUsersQuery();
@@ -62,64 +61,57 @@ export const ApSearchComponent: React.FC = () => {
   }
   return (
     <>
-      <h1 className="text-2xl font-bold mb-3">
-        Recommended Accountability Partners{" "}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 inline-flex align-text-top">
-              <Info className="h-5 w-5 text-gray-500" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80">
-            <div className="space-y-2">
-              <p className="text-sm">
-                We calculate your compatibility with other users based on your data and goals.
-              </p>
-              <p className="text-xs text-gray-500">
-                If you think we could do anything better, please let us know!
-              </p>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </h1>
+      <div className="space-y-6 mt-4">
+        {currentUser && (
+          <div>
+            <button
+              onClick={() => setIsProfileExpanded(!isProfileExpanded)}
+              className="flex items-center gap-2 w-full text-left mb-4 hover:opacity-70 transition-opacity"
+            >
+              <h2 className="text-lg font-semibold">Your profile</h2>
+              {isProfileExpanded ? (
+                <ChevronUp size={20} />
+              ) : (
+                <ChevronDown size={20} />
+              )}
+            </button>
+            
+            <AnimatePresence>
+              {isProfileExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="pt-2"
+                >
+                  <div className="grid grid-cols-1 justify-items-center">
+                    <UserCard
+                      user={currentUser}
+                      plan={currentPlan as CompletePlan}
+                      plans={
+                        (userData?.plans.filter((p) =>
+                          isActivePlan(p)
+                        ) as CompletePlan[]) || []
+                      }
+                      activities={userData?.activities || []}
+                      activityEntries={userData?.activityEntries || []}
+                      showFriendRequest={false}
+                      showScore={false}
+                      showStreaks={false}
+                      className={`max-w-sm ring-1 ${cn(
+                        variants.ringBright,
+                        variants.card.softGlassBg
+                      )}`}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
-      {recommendations.length === 0 ? (
-        <div className="text-center pb-5">
-          <p className="text-gray-500 text-lg text-left">
-            😕 No recommended users found, you may still search for users manually
-          </p>
-          <br/>
-          <UserSearch
-            onUserClick={(user) => {
-              handleSendFriendRequest(user.userId);
-            }}
-            apRedirect={false}
-          />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-          {currentUser && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2 mx-auto w-full text-center text-gray-500">
-                This is how your profile looks
-              </h3>
-              <UserCard
-                user={currentUser}
-                plan={currentPlan as CompletePlan}
-                plans={userData?.plans.filter((p) => isActivePlan(p)) as CompletePlan[] || []}
-                activities={userData?.activities || []}
-                activityEntries={userData?.activityEntries || []}
-                showFriendRequest={false}
-                showScore={false}
-                showStreaks={false}
-                className={`max-w-sm mx-auto ring-1 ${cn(
-                  variants.ringBright,
-                  variants.card.softGlassBg
-                )}`}
-              />
-            </div>
-          )}
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {recommendations.map((recommendation) => {
             const user = recommendedUsers.find(
               (user) => user.id === recommendation.recommendationObjectId
@@ -136,7 +128,10 @@ export const ApSearchComponent: React.FC = () => {
                 }
                 if (a.sortOrder !== null && b.sortOrder === null) return -1;
                 if (a.sortOrder === null && b.sortOrder !== null) return 1;
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                return (
+                  new Date(b.createdAt).getTime() -
+                  new Date(a.createdAt).getTime()
+                );
               })[0];
             return (
               <UserCard
@@ -145,9 +140,9 @@ export const ApSearchComponent: React.FC = () => {
                 score={userScores[user.id] || 0}
                 plan={plan as CompletePlan}
                 plans={
-                  recommendationsData?.plans.filter((p) =>
-                    p.userId === user.id
-                  ) as CompletePlan[] || []
+                  (recommendationsData?.plans.filter(
+                    (p) => p.userId === user.id
+                  ) as CompletePlan[]) || []
                 }
                 showFriendRequest={true}
                 showScore={true}
@@ -157,7 +152,7 @@ export const ApSearchComponent: React.FC = () => {
             );
           })}
         </div>
-      )}
+      </div>
     </>
   );
 };

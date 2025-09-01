@@ -13,7 +13,7 @@ import {
   Home,
   Loader2,
   PlusSquare,
-  ScanFace,
+  Search,
   User,
 } from "lucide-react";
 import Link from "next/link";
@@ -57,7 +57,7 @@ const BottomNav = () => {
     home: isWaitingForData && isActiveRoute("/"),
     plans: isWaitingForData && isActiveRoute("/plans"),
     add: isWaitingForData && isActiveRoute("/add"),
-    insights: isWaitingForData && isActiveRoute("/insights"),
+    search: isWaitingForData && isActiveRoute("/ap-search"),
     profile: isWaitingForData && isActiveRoute("/profile"),
   }), [isWaitingForData, pathname]);
 
@@ -225,14 +225,14 @@ const BottomNav = () => {
           </Link>
 
           <Link
-            href="/insights/dashboard"
-            data-testid="nav-insights"
+            href="/ap-search"
+            data-testid="nav-search"
             className={cn(
               "relative transition-all duration-200",
               isDesktop 
                 ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
                 : "flex flex-col justify-center items-center p-2",
-              isActiveRoute("/insights")
+              isActiveRoute("/ap-search")
                 ? cn(
                     activeThemeClass,
                     isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
@@ -240,16 +240,16 @@ const BottomNav = () => {
                 : "text-gray-500 hover:text-gray-700"
             )}
             onClick={() => {
-              if (!pathname.startsWith("/insights")) {
+              if (!pathname.startsWith("/ap-search")) {
                 setIsLoadingInsights(true);
               }
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {(isLoadingInsights || showGlobalLoader.insights) ? (
+              {(isLoadingInsights || showGlobalLoader.search) ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
-                <ScanFace size={24} strokeWidth={2.5} />
+                <Search size={24} strokeWidth={2.5} />
               )}
             </div>
             <span className={cn(
@@ -257,23 +257,10 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/insights") && "hidden"
+              !isDesktop && !isActiveRoute("/ap-search") && "hidden"
             )}>
-              AI Insights
+              Search
             </span>
-            {hasCheckinNotification && (
-              <div className={cn(
-                "absolute z-10",
-                isDesktop ? "top-2 left-8" : "top-0 right-0"
-              )}>
-                <Badge
-                  variant="destructive"
-                  className="h-5 w-5 flex items-center justify-center p-0 text-xs"
-                >
-                  1
-                </Badge>
-              </div>
-            )}
           </Link>
 
           <Link
