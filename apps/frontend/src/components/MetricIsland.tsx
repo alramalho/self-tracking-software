@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { CircleCheck, Loader2 } from "lucide-react";
+import { CircleCheckBig, Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import { PulsatingCirclePill } from "./ui/pulsating-circle-pill";
 
@@ -94,7 +94,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
             <span
               className={`flex items-center gap-1 ${variants.text} opacity-70`}
             >
-              <CircleCheck className="w-6 h-6" />
+              <CircleCheckBig className="w-6 h-6" />
             </span>
           )}
         </div>
