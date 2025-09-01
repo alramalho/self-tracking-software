@@ -1,11 +1,13 @@
+import { validateEnv } from "@/lib/env";
+import { ClerkProvider } from "@clerk/nextjs";
+import "@ncdai/react-wheel-picker/style.css";
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
-import dynamic from "next/dynamic";
-import { validateEnv } from "@/lib/env";
-import { PHProvider } from "./providers";
 import PostHogPageView from "./PostHogPageView";
+import { PHProvider } from "./providers";
+
 
 const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 
