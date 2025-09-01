@@ -458,13 +458,10 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     isWaitingForData:
-      currentUserDataQuery.isFetching ||
-      // timelineDataQuery.isPending ||
-      timelineDataQuery.isFetching ||
-      // notificationsData.isPending ||
-      notificationsData.isFetching ||
-      // messagesData.isPending ||
-      messagesData.isFetching,
+      currentUserDataQuery.isFetched &&
+        timelineDataQuery.isFetched &&
+      notificationsData.isFetched &&
+      messagesData.isFetched,
   };
 
   return (
