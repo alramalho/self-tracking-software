@@ -63,6 +63,8 @@ export const HomepageMetricsSection: React.FC = () => {
     return !isLoggedToday && !isSkippedToday;
   }).length;
 
+  const isAfter2PM = new Date().getHours() >= 14;
+
   return (
     <div className="">
       <Collapsible
@@ -88,7 +90,7 @@ export const HomepageMetricsSection: React.FC = () => {
               </button>
             </CollapsibleTrigger>
             
-            {isMetricsCollapsed && unloggedMetricsCount > 0 ? (
+            {isMetricsCollapsed && unloggedMetricsCount > 0 && isAfter2PM ? (
               <div className="flex items-center gap-2">
                 <span className="text-md font-semibold text-gray-900">
                   {unloggedMetricsCount} metric{unloggedMetricsCount > 1 ? "s" : ""} to log today
@@ -112,7 +114,7 @@ export const HomepageMetricsSection: React.FC = () => {
 
         <CollapsibleContent>
           <div className="space-y-4 pt-1">
-            <div className="flex flex-col gap-3 flex-wrap px-1">
+            <div className="flex flex-col gap-3 flex-wrap px-1 pb-1">
               {userMetrics.slice(0, 3).map((metric, index) => {
                 const today = new Date().toISOString().split("T")[0];
                 const todaysEntry = entries.find(

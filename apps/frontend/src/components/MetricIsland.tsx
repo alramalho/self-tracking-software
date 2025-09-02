@@ -33,6 +33,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const currentHour = new Date().getHours();
   const isAfter2PM = currentHour >= 14;
+  const canLogMetrics = isAfter2PM && !isLoggedToday && !isSkippedToday;
 
   const handleRatingSelect = async (rating: number) => {
     setIsLogging(true);
@@ -72,7 +73,9 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
 
   return (
     <div
-      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-gray-50 backdrop-blur-sm ring-gray-200 ${isLoggedToday && "opacity-70"} ${className}`}
+      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-gray-50 backdrop-blur-sm ring-gray-200 ${
+        isLoggedToday && "opacity-70"
+      } ${className}`}
     >
       <div>
         <div className="flex items-center justify-between">
@@ -81,7 +84,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
             <span className="text-sm font-medium text-gray-600">
               {metric.title}
             </span>
-            {isAfter2PM && !isLoggedToday && !isSkippedToday && (
+            {canLogMetrics && (
               <div className="flex items-center gap-2 opacity-50">
                 <PulsatingCirclePill variant="yellow" size="sm" />
                 <span className={`text-xs font-semibold ${variants.text}`}>
@@ -99,7 +102,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
           )}
         </div>
 
-        {!isLoggedToday && !isSkippedToday && (
+        {canLogMetrics ? (
           <div className="flex flex-row items-center justify-between gap-3 mt-3">
             <MetricRatingSelector
               onRatingSelect={handleRatingSelect}
@@ -122,6 +125,12 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
               )}
             </Button>
           </div>
+        ) : (
+          <>
+            <span className="text-xs text-gray-500">
+              Come back after 2 PM to log your daily metric
+            </span>
+          </>
         )}
       </div>
     </div>
