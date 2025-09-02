@@ -5,7 +5,7 @@ import {
   PlanState,
   User,
 } from "@tsw/prisma";
-import { endOfWeek, startOfWeek } from "date-fns";
+import { endOfWeek, isThisWeek, startOfWeek } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -210,7 +210,6 @@ export class PlansService {
       });
 
       if (oldState !== newState) {
-        // Process state transition asynchronously (equivalent to Python threading.Thread)
         this.processStateTransition(updatedPlan, user, newState).catch(
           (error) => {
             logger.error(
@@ -267,7 +266,10 @@ export class PlansService {
         outlineType: plan.outlineType,
       };
 
-      if (newState === PlanState.FAILED) {
+      if (
+        newState === PlanState.FAILED &&
+        (plan.suggestedByCoachAt ? !isThisWeek(plan.suggestedByCoachAt) : true)
+      ) {
         if (plan.outlineType === PlanOutlineType.TIMES_PER_WEEK) {
           // Reduce times per week by 1 (minimum 1)
           const newTimesPerWeek = Math.max(1, (plan.timesPerWeek || 1) - 1);

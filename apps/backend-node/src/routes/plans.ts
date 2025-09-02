@@ -34,7 +34,7 @@ const ActivitySchema = z.object({
 
 const PlanUpsertSchema = z.object({
   id: z.string().optional(), // Present for updates, absent for creates
-  goal: z.string().min(1),
+  goal: z.string().min(1).optional(),
   emoji: z.string().optional(),
   finishingDate: z
     .string()
@@ -51,6 +51,9 @@ const PlanUpsertSchema = z.object({
   activities: z.array(ActivitySchema).optional(),
   sessions: z.array(SessionSchema).optional(),
   milestones: z.array(MilestoneSchema).optional(),
+  coachNotes: z.string().nullable().optional(),
+  suggestedByCoachAt: z.date().nullable().optional(),
+  coachSuggestedTimesPerWeek: z.number().positive().nullable().optional(),
 });
 
 /**
@@ -434,17 +437,12 @@ router.post(
           });
         }
 
+        const { milestones, sessions, activities, ...plan } = planData;
+
         const updatedPlan = await prisma.plan.update({
           where: { id: planData.id },
           data: {
-            goal: planData.goal,
-            emoji: planData.emoji,
-            finishingDate: planData.finishingDate,
-            notes: planData.notes,
-            durationType: planData.durationType,
-            outlineType: planData.outlineType || "SPECIFIC",
-            timesPerWeek: planData.timesPerWeek,
-            sortOrder: planData.sortOrder,
+            ...plan,
             deletedAt: null,
             ...(planData.milestones && {
               milestones: {
