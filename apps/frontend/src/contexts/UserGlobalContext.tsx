@@ -97,7 +97,7 @@ const UserGlobalContext = createContext<UserGlobalContextType | undefined>(
 );
 
 // Function to check if we have any cached query data by TanStack Query
-export const hasCachedUserData = () => {
+export const hasCacheData = () => {
   if (typeof window === "undefined") return false;
   try {
     const cachedData = localStorage.getItem("TRACKING_SO_QUERY_CACHE");
@@ -418,10 +418,15 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     "blue";
 
   useEffect(() => {
+    console.log("hasCachedData", hasCacheData());
     console.log("currentUserDataQuery.isFetching", currentUserDataQuery.isFetching);
+    console.log("currentUserDataQuery.isFetched", currentUserDataQuery.isFetching);
     console.log("timelineDataQuery.isFetching", timelineDataQuery.isFetching);
+    console.log("timelineDataQuery.isFetched", timelineDataQuery.isFetched);
     console.log("notificationsData.isFetching", notificationsData.isFetching);
+    console.log("notificationsData.isFetched", notificationsData.isFetched);
     console.log("messagesData.isFetching", messagesData.isFetching);
+    console.log("messagesData.isFetched", messagesData.isFetched);
   }, [currentUserDataQuery.isFetching, timelineDataQuery.isFetching, notificationsData.isFetching, messagesData.isFetching]);
 
   const context = {
@@ -458,6 +463,7 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     isWaitingForData:
+      !hasCacheData() &&
       currentUserDataQuery.isFetched &&
         timelineDataQuery.isFetched &&
       notificationsData.isFetched &&
