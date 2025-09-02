@@ -1,6 +1,6 @@
 "use client";
 
-import { hasCachedUserData, useUserPlan } from "@/contexts/UserGlobalContext";
+import { hasCacheData, useUserPlan } from "@/contexts/UserGlobalContext";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,7 @@ export default function GeneralInitializer({
   const [showBugDialog, setShowBugDialog] = useState(false);
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [initialCacheExists] = useState(() => hasCachedUserData());
+  const [initialCacheExists] = useState(() => hasCacheData());
   const router = useRouter();
   const isOnboardingCompleted = userData?.onboardingCompletedAt != null;
 

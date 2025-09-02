@@ -85,7 +85,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
         // };
       }
 
-      await api.post(`/plans/${selectedPlan.id}/update`, {
+      await api.post(`/plans/${selectedPlan.id}/upsert`, {
         data: updateData,
       });
       onRefetch?.();

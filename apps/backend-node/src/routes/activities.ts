@@ -1,4 +1,5 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
+import { plansService } from "@/services/plansService";
 import { ActivityVisibility } from "@tsw/prisma";
 import { Response, Router } from "express";
 import multer from "multer";
@@ -72,6 +73,9 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
+      logger.info(
+        `Logging activity for user ${req.user!.username} (${req.user!.id})`
+      );
       const {
         activityId,
         iso_date_string,
@@ -214,8 +218,20 @@ router.post(
         },
       });
 
-      // TODO: Add PostHog analytics
       // TODO: Add plan state processing
+      const plans = await prisma.plan.findMany({
+        where: {
+          userId: req.user!.id,
+          activities: {
+            some: {
+              id: activityId,
+            },
+          },
+        },
+      });
+      for (const plan of plans) {
+        plansService.recalculateCurrentWeekState(plan, req.user!);
+      }
 
       res.json({
         id: entry.id,
