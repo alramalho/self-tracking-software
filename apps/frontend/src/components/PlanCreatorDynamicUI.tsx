@@ -56,13 +56,13 @@ export function PlanCreatorDynamicUI({ onNext }: { onNext: () => void }) {
     }
   };
 
-  // Handle plan acceptance - uses the plans.py /create-plan endpoint
   const handleAccept = async (data: PlanExtractionsResponse): Promise<void> => {
     try {
       for (const activity of data.activities ?? []) {
         await api.post("/upsert", activity);
       }
-      await api.post("/create-plan", data.plan);
+      // remove any empty string of data.plan
+      await api.post("/upsert", data.plan);
       onNext();
       currentUserDataQuery.refetch();
       toast.success("Plan created successfully!");

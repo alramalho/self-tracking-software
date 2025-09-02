@@ -9,7 +9,6 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { capitalize } from "lodash";
 import { useRouter } from "next/navigation";
 import React from "react";
-import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 
 const CreateNewPlan: React.FC = () => {
@@ -58,8 +57,7 @@ const CreateNewPlan: React.FC = () => {
   return (
     <CreatePlanCardJourney
       onComplete={() => {
-        toast.success("Plan creation finished successfully");
-        router.push("/");
+        router.push("/plans");
       }}
     >
       <h1 className="text-2xl font-bold mb-8">Create New Plan</h1>

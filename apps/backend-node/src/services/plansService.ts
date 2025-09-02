@@ -1,8 +1,15 @@
-import { Plan, PlanOutlineType, PlanState, User } from "@tsw/prisma";
+import {
+  Plan,
+  PlanOutlineType,
+  PlanSession,
+  PlanState,
+  User,
+} from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import { aiService } from "./aiService";
 
 export class PlansService {
   async getUserFirstPlan(userId: string) {
@@ -186,26 +193,6 @@ export class PlansService {
           );
           newState = PlanState.AT_RISK;
         }
-        // if (margin <= maxMargin && margin >= 0) {
-        //   if (margin >= 2 || margin === maxMargin) {
-        //     console.log(
-        //       `Margin (${margin}) is greater than 2 OR equal to max margin (${maxMargin}) - plan is on track`
-        //     );
-        //     newState = PlanState.ON_TRACK;
-        //   } else {
-        //     console.log(
-        //       `Margin (${margin}) is less than 2 or different than max margin (${maxMargin}) - plan is at risk`
-        //     );
-        //     newState = PlanState.AT_RISK;
-        //   }
-        // } else if (margin < 0) {
-        //   console.log(`Margin (${margin}) is less than 0 - plan is failed`);
-        //   newState = PlanState.FAILED;
-        // } else {
-        //   const errorMsg = `Unexpected margin calculation for plan '${plan.goal}' of user '${user.username}': ${margin}`;
-        //   logger.error(errorMsg);
-        //   throw new Error(errorMsg);
-        // }
       }
 
       // Update the plan's current week state
@@ -223,8 +210,16 @@ export class PlansService {
       });
 
       if (oldState !== newState) {
-        // Note: State transition processing would go here
-        // (equivalent to the Python threading.Thread call)
+        // Process state transition asynchronously (equivalent to Python threading.Thread)
+        this.processStateTransition(updatedPlan, user, newState).catch(
+          (error) => {
+            logger.error(
+              `Error processing state transition for plan ${updatedPlan.id}:`,
+              error
+            );
+          }
+        );
+
         logger.info(
           `Plan '${plan.goal}' of user '${user.username}' state transition: ${oldState} -> ${newState}`
         );
@@ -236,6 +231,95 @@ export class PlansService {
       return updatedPlan;
     } catch (error) {
       logger.error("Error recalculating plan week state:", error);
+      throw error;
+    }
+  }
+
+  private async processStateTransition(
+    plan: Plan & { activities?: any[]; sessions?: PlanSession[] },
+    user: User,
+    newState: PlanState
+  ): Promise<void> {
+    try {
+      logger.info(
+        `Processing state transition for plan '${plan.goal}' to state '${newState}'`
+      );
+
+      // Get plan activities for processing
+      const planWithActivities = await prisma.plan.findUnique({
+        where: { id: plan.id },
+        include: { activities: true },
+      });
+
+      if (!planWithActivities) {
+        throw new Error(`Plan ${plan.id} not found for state transition`);
+      }
+
+      let updatePlanData: Partial<Plan> = {};
+      let coachNotesData: {
+        goal: string;
+        outlineType: PlanOutlineType;
+        timesPerWeek?: number;
+        oldSessions?: PlanSession[];
+        newSessions?: PlanSession[];
+      } = {
+        goal: plan.goal,
+        outlineType: plan.outlineType,
+      };
+
+      if (newState === PlanState.FAILED) {
+        if (plan.outlineType === PlanOutlineType.TIMES_PER_WEEK) {
+          // Reduce times per week by 1 (minimum 1)
+          const newTimesPerWeek = Math.max(1, (plan.timesPerWeek || 1) - 1);
+          updatePlanData.coachSuggestedTimesPerWeek = newTimesPerWeek;
+          updatePlanData.suggestedByCoachAt = new Date();
+        }
+        if (plan.outlineType === PlanOutlineType.SPECIFIC) {
+          const suggestedSessions = await aiService.generatePlanSessions({
+            goal: plan.goal,
+            activities: planWithActivities.activities,
+            existingPlan: plan,
+            description:
+              "The user has failed the current plan's week." +
+              "Please adapt the next week so it is downgraded 1 level of difficulty." +
+              "The update should be minimal",
+          });
+          coachNotesData.oldSessions = plan.sessions as PlanSession[];
+          const actualNewSesssions =
+            await prisma.planSession.createManyAndReturn({
+              data: suggestedSessions.sessions.map((session) => ({
+                planId: plan.id,
+                date: session.date,
+                activityId: session.activityId,
+                quantity: session.quantity,
+                isCoachSuggested: true,
+              })),
+            });
+          coachNotesData.newSessions = actualNewSesssions;
+          updatePlanData.suggestedByCoachAt = new Date();
+        }
+      }
+
+      const coachNotes = await aiService.generateCoachNotes(
+        coachNotesData,
+        newState,
+        planWithActivities.activities
+      );
+      updatePlanData.coachNotes = coachNotes;
+
+      await prisma.plan.update({
+        where: { id: plan.id },
+        data: updatePlanData,
+      });
+
+      logger.info(
+        `State transition processing completed for plan '${plan.goal}'`
+      );
+    } catch (error) {
+      logger.error(
+        `Error in processStateTransition for plan ${plan.id}:`,
+        error
+      );
       throw error;
     }
   }

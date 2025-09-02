@@ -2,6 +2,8 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { Prisma } from "@tsw/prisma";
+import { endOfWeek, startOfWeek } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 export type HydratedCurrentUser = Awaited<
   ReturnType<typeof getCurrentUserData>
@@ -109,21 +111,6 @@ export async function getCurrentUserData() {
   }
 }
 
-export async function updatePlan(planId: string, data: Prisma.PlanUpdateInput) {
-  const user = await validateUser();
-
-  console.log(
-    `Updating plan ${planId} for user ${user.id} with data ${JSON.stringify(
-      data
-    )}`
-  );
-  const plan = await prisma.plan.update({
-    where: { userId: user.id, id: planId },
-    data,
-  });
-  return plan;
-}
-
 export async function clearCoachSuggestedSessionsInPlan(planId: string) {
   const user = await validateUser();
 
@@ -142,6 +129,11 @@ export async function upgradeCoachSuggestedSessionsToPlanSessions(
   planId: string
 ) {
   const user = await validateUser();
+  const currentDate = toZonedTime(new Date(), user.timezone || "UTC");
+  const weekStart = startOfWeek(currentDate, {
+    weekStartsOn: 0,
+  });
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
 
   // Delete all existing non-coach-suggested sessions for the plan
   await prisma.planSession.deleteMany({
@@ -150,6 +142,10 @@ export async function upgradeCoachSuggestedSessionsToPlanSessions(
       isCoachSuggested: false,
       plan: {
         userId: user.id,
+      },
+      date: {
+        gte: weekStart,
+        lt: weekEnd,
       },
     },
   });
@@ -161,6 +157,10 @@ export async function upgradeCoachSuggestedSessionsToPlanSessions(
       isCoachSuggested: true,
       plan: {
         userId: user.id,
+      },
+      date: {
+        gte: weekStart,
+        lt: weekEnd,
       },
     },
     data: {

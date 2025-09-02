@@ -88,6 +88,61 @@ async function markUserRecommendationsOutdated(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Update sort orders for plans without sortOrder values
+ */
+async function updateSortOrders(
+  tx: any,
+  userId: string,
+  excludePlanId?: string
+): Promise<void> {
+  // Update all other active plans to increase sort order by one
+  await tx.plan.updateMany({
+    where: {
+      userId,
+      deletedAt: null,
+      id: {
+        not: excludePlanId,
+      },
+      sortOrder: { not: null },
+    },
+    data: {
+      sortOrder: { increment: 1 },
+    },
+  });
+
+  // First, get the max sortOrder
+  const maxSortOrder = await tx.plan.aggregate({
+    where: {
+      userId,
+      deletedAt: null,
+      sortOrder: { not: null },
+    },
+    _max: { sortOrder: true },
+  });
+
+  const currentMax = maxSortOrder._max.sortOrder || 0;
+
+  // Find plans without sortOrder
+  const plansWithoutSort = await tx.plan.findMany({
+    where: {
+      userId,
+      deletedAt: null,
+      sortOrder: null,
+      ...(excludePlanId && { id: { not: excludePlanId } }),
+    },
+    select: { id: true },
+  });
+
+  // Update plans without sortOrder sequentially
+  for (let i = 0; i < plansWithoutSort.length; i++) {
+    await tx.plan.update({
+      where: { id: plansWithoutSort[i].id },
+      data: { sortOrder: currentMax + i + 1 },
+    });
+  }
+}
+
 // Generate invitation link for external sharing
 router.get(
   "/generate-invitation-link",
@@ -131,81 +186,6 @@ router.get(
     } catch (error) {
       logger.error("Error generating invitation link:", error);
       res.status(500).json({ error: "Failed to generate invitation link" });
-    }
-  }
-);
-
-router.post(
-  "/create-plan",
-  requireAuth,
-  async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<Response | void> => {
-    try {
-      const planData = req.body;
-
-      // Create everything in a single transaction
-      const result = await prisma.$transaction(async (tx) => {
-        // Create plan with planGroupId reference
-        const newPlan = await tx.plan.create({
-          data: {
-            userId: req.user!.id,
-            goal: planData.goal,
-            emoji: planData.emoji,
-            finishingDate: planData.finishingDate
-              ? new Date(planData.finishingDate)
-              : undefined,
-            notes: planData.notes,
-            durationType: planData.durationType,
-            outlineType: planData.outlineType || "SPECIFIC",
-            timesPerWeek: planData.timesPerWeek,
-            sortOrder: planData.sortOrder,
-
-            // Connect activities directly
-            ...(planData.activities?.length > 0 && {
-              activities: {
-                connect: planData.activities.map((activity: any) => ({
-                  id: activity.id,
-                })),
-              },
-            }),
-
-            // Create sessions directly
-            ...(planData.sessions?.length > 0 && {
-              sessions: {
-                create: planData.sessions.map((session: any) => ({
-                  activityId: session.activityId,
-                  date: session.date,
-                  descriptiveGuide: session.descriptive_guide || "",
-                  quantity: session.quantity,
-                })),
-              },
-            }),
-          },
-          include: {
-            planGroup: true,
-            activities: true,
-            sessions: true,
-          },
-        });
-
-        return newPlan;
-      });
-
-      // Update plan embedding in background
-      updatePlanEmbedding(result.id, req.user!.id);
-
-      // Mark user recommendations as outdated
-      markUserRecommendationsOutdated(req.user!.id);
-
-      logger.info(`Created plan ${result.id} for user ${req.user!.id}`);
-      res.status(201).json({
-        plan: result,
-      });
-    } catch (error) {
-      logger.error("Error creating plan:", error);
-      res.status(500).json({ error: "Failed to create plan" });
     }
   }
 );
@@ -516,7 +496,7 @@ router.post(
           // Create plan with planGroupId reference
           const newPlan = await tx.plan.create({
             data: {
-              id: planData.id,
+              id: planData.id || undefined,
               userId: req.user!.id,
               goal: planData.goal,
               emoji: planData.emoji,
@@ -525,7 +505,7 @@ router.post(
               durationType: planData.durationType,
               outlineType: planData.outlineType || "SPECIFIC",
               timesPerWeek: planData.timesPerWeek,
-              sortOrder: planData.sortOrder,
+              sortOrder: 1,
 
               // Connect activities directly - handle both activities array and activityIds array
               ...(planData.activities && {
@@ -569,6 +549,9 @@ router.post(
               milestones: true,
             },
           });
+
+          // Update sort orders for plans without sortOrder
+          await updateSortOrders(tx, req.user!.id, newPlan.id);
 
           return newPlan;
         });
