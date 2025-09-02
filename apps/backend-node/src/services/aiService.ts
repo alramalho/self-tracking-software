@@ -2,6 +2,7 @@ import {
   createOpenRouter,
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
+import { PlanOutlineType } from "@tsw/prisma";
 import { generateObject, generateText } from "ai";
 import { format } from "date-fns";
 import { z } from "zod/v4";
@@ -781,6 +782,254 @@ export class AIService {
     }
 
     return sessions;
+  }
+
+  async generateCoachNotes(
+    plan: { goal: string; outlineType: PlanOutlineType; timesPerWeek?: number },
+    newPlanState: "FAILED" | "COMPLETED" | "AT_RISK" | "ON_TRACK",
+    planActivities: Array<{ title: string; measure: string }>,
+    oldSessions?: Array<{
+      date: string;
+      activityId: string;
+      quantity: number;
+      descriptiveGuide?: string;
+    }>,
+    newSessions?: Array<{
+      date: string;
+      activityId: string;
+      quantity: number;
+      descriptiveGuide?: string;
+    }>
+  ): Promise<string> {
+    const currentDate = new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      weekday: "long",
+    });
+
+    const system =
+      `You are an expert coach assisting the user in the plan '${plan.goal}'` +
+      `Your task now is to generate small coach notes that accompany this change ` +
+      `both explaining and motivating, based on the plan performance. ` +
+      `The coach notes should be very very brief. ` +
+      `Today is ${currentDate}`;
+
+    let messages: Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }>;
+
+    if (plan.outlineType === PlanOutlineType.TIMES_PER_WEEK) {
+      const generateMessageStr = (
+        activities: Array<{ title: string; measure: string }>,
+        state: typeof newPlanState,
+        planGoal: string,
+        timesPerWeek: number
+      ) => {
+        const performanceMap = {
+          FAILED: "poor",
+          COMPLETED: "excellent",
+          AT_RISK: "concerning",
+          ON_TRACK: "good",
+        };
+        const performance = performanceMap[state];
+        const activitiesStr = activities
+          .map((a) => `${a.title} (measured in ${a.measure})`)
+          .join(", ");
+
+        return (
+          `This week I had a ${performance} performance. My Plan: '${planGoal}', consisting ` +
+          `of doing any of the activities ${activitiesStr} at least ${timesPerWeek} times per week.`
+        );
+      };
+
+      messages = [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: generateMessageStr(
+            [
+              { title: "Running", measure: "km" },
+              { title: "Gym Session", measure: "session" },
+            ],
+            "FAILED",
+            "I want to exercise regularly to improve my fitness",
+            4
+          ),
+        },
+        {
+          role: "assistant",
+          content:
+            "Reduced from 4 to 3 times per week. Focus on consistency over intensity - building the habit is more important than pushing limits right now.",
+        },
+        {
+          role: "user",
+          content: generateMessageStr(
+            [{ title: "Reading", measure: "pages" }],
+            "COMPLETED",
+            "I want to read more books this year",
+            3
+          ),
+        },
+        {
+          role: "assistant",
+          content:
+            "Excellent work! You've built a sustainable reading habit that fits your life. This consistency is exactly how lasting change happens.",
+        },
+        {
+          role: "user",
+          content: generateMessageStr(
+            [{ title: "Yoga", measure: "minutes" }],
+            "AT_RISK",
+            "I want to practice yoga regularly",
+            4
+          ),
+        },
+        {
+          role: "assistant",
+          content:
+            "You still have time to get back on track this week! Focus on the next session and don't worry about catching up - consistency beats perfection.",
+        },
+        {
+          role: "user",
+          content: generateMessageStr(
+            [{ title: "Swimming", measure: "laps" }],
+            "ON_TRACK",
+            "I want to improve my swimming endurance",
+            3
+          ),
+        },
+        {
+          role: "assistant",
+          content:
+            "You've got excellent momentum and plenty of buffer time! Keep this steady pace and you'll crush your weekly goal.",
+        },
+        {
+          role: "user",
+          content: generateMessageStr(
+            planActivities,
+            newPlanState,
+            plan.goal,
+            plan.timesPerWeek || 0
+          ),
+        },
+      ];
+    } else {
+      // SPECIFIC plan type with sessions
+      if (!oldSessions || !newSessions) {
+        throw new Error(
+          "oldSessions and newSessions are required for SPECIFIC plan types"
+        );
+      }
+
+      const formatSessionsStr = (sessions: typeof oldSessions) => {
+        return sessions
+          .map((session) => {
+            const activity = planActivities.find(
+              (a) => a.id === session.activityId
+            );
+            const sessionDate = new Date(session.date).toLocaleDateString(
+              "en-US",
+              {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                weekday: "long",
+              }
+            );
+            return `–${activity?.title || "Unknown"} (${session.quantity} ${activity?.measure || "units"}) in ${sessionDate}`;
+          })
+          .join("\n");
+      };
+
+      const generateMessageStr = (
+        oldSessionsList: typeof oldSessions,
+        newSessionsList: typeof newSessions,
+        state: typeof newPlanState,
+        planGoal: string
+      ) => {
+        const performanceMap = {
+          FAILED: "poor",
+          COMPLETED: "excellent",
+          AT_RISK: "concerning",
+          ON_TRACK: "good",
+        };
+        const performance = performanceMap[state];
+        const oldSessionsStr = formatSessionsStr(oldSessionsList);
+        const newSessionsStr = formatSessionsStr(newSessionsList);
+
+        return `This week I had a ${performance} performance. My Plan: '${planGoal}'\nOld sessions:\n${oldSessionsStr}\nNew sessions:\n${newSessionsStr}`;
+      };
+
+      messages = [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: generateMessageStr(
+            [
+              {
+                date: "2024-12-16",
+                activityId: "running_001",
+                quantity: 5,
+                descriptiveGuide: "Start with moderate pace",
+              },
+              {
+                date: "2024-12-17",
+                activityId: "gym_001",
+                quantity: 1,
+                descriptiveGuide: "Full body workout",
+              },
+            ],
+            [
+              {
+                date: "2024-12-16",
+                activityId: "running_001",
+                quantity: 3,
+                descriptiveGuide: "Easy pace, focus on completion",
+              },
+              {
+                date: "2024-12-18",
+                activityId: "gym_001",
+                quantity: 1,
+                descriptiveGuide: "Light workout, basic movements",
+              },
+            ],
+            "FAILED",
+            "I want to be able to do 50 pushups in a row"
+          ),
+        },
+        {
+          role: "assistant",
+          content:
+            "Reduced intensity and lowered running distance. Focus on consistency over intensity - building the habit is more important than pushing limits right now.",
+        },
+        {
+          role: "user",
+          content: generateMessageStr(
+            oldSessions,
+            newSessions,
+            newPlanState,
+            plan.goal
+          ),
+        },
+      ];
+    }
+
+    try {
+      const openrouter = this.getOpenRouterWithUserId();
+      const result = await generateText({
+        model: openrouter.chat("openai/gpt-4.1-mini"),
+        messages,
+        temperature: 1,
+      });
+
+      logger.info(`Generated coach notes: ${result.text}`);
+      return result.text;
+    } catch (error) {
+      logger.error("Error generating coach notes:", error);
+      throw new Error(`Coach notes generation failed: ${error}`);
+    }
   }
 }
 

@@ -75,7 +75,7 @@ router.post(
       logger.info(`Coach message generation requested for user ${user.id}`);
 
       // Recalculate current week state for the plan
-      await plansService.recalculateCurrentWeekState(userPlan.id, user.id);
+      await plansService.recalculateCurrentWeekState(userPlan, user);
 
       // Generate coaching message using AI
       const message = await aiService.generateCoachMessage(user, userPlan);

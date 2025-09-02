@@ -230,7 +230,12 @@ router.post(
         },
       });
       for (const plan of plans) {
-        plansService.recalculateCurrentWeekState(plan, req.user!);
+        if (plan.sortOrder == 0) {
+          // only coach first plan
+          plansService.recalculateCurrentWeekState(plan, req.user!);
+        } else {
+          logger.info(`Plan '${plan.goal}' is not the first plan, skipping`);
+        }
       }
 
       res.json({

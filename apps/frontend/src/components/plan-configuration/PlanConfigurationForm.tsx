@@ -43,17 +43,17 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const { data: userData } = currentUserDataQuery;
 
   // Initialize state from plan if editing, otherwise use defaults
-  const [description, setDescription] = useState(plan?.notes || "");
-  const [selectedEmoji, setSelectedEmoji] = useState(plan?.emoji || "");
+  const [description, setDescription] = useState<string | undefined>(plan?.notes || undefined);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(plan?.emoji || undefined);
   const [currentFinishingDate, setCurrentFinishingDate] = useState(plan?.finishingDate);
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedSessions, setGeneratedSessions] = useState<CompletePlan["sessions"]>();
-  const [goal, setGoal] = useState(plan?.goal || "");
-  const [planNotes, setPlanNotes] = useState("");
+  const [goal, setGoal] = useState<string | undefined>(plan?.goal || undefined);
+  const [planNotes, setPlanNotes] = useState<string | undefined>(plan?.notes || undefined);
   const [milestones, setMilestones] = useState<PlanMilestone[]>(plan?.milestones || []);
   const [planDuration, setPlanDuration] = useState<PlanDurationType>(plan?.durationType || "CUSTOM");
   const [outlineType, setOutlineType] = useState<PlanOutlineType>(plan?.outlineType || "SPECIFIC");
-  const [timesPerWeek, setTimesPerWeek] = useState(plan?.timesPerWeek || 0);
+  const [timesPerWeek, setTimesPerWeek] = useState<number | undefined>(plan?.timesPerWeek || undefined);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedActivities, setSelectedActivities] = useState<CompletePlan["activities"]>(
     plan ? userData?.activities?.filter(a => plan.activities.map(p => p.id).includes(a.id)) || [] : []
@@ -67,7 +67,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       case 1:
         return !!planDuration;
       case 2:
-        return !!goal.trim();
+        return !!goal && goal.trim() !== "";
       case 3:
         return !!selectedEmoji;
       case 4:
@@ -75,7 +75,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       case 5:
         if (!outlineType) return false;
         if (outlineType === "SPECIFIC") return !!generatedSessions;
-        if (outlineType === "TIMES_PER_WEEK") return timesPerWeek > 0;
+        if (outlineType === "TIMES_PER_WEEK") return timesPerWeek && timesPerWeek > 0;
         return false;
       default:
         return true;
@@ -191,7 +191,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const isPlanComplete = useCallback(() => {
     const hasRequiredFields = 
       planDuration &&
-      goal.trim() !== "" &&
+      goal && goal.trim() !== "" &&
       selectedEmoji &&
       selectedActivities.length > 0 &&
       outlineType;
@@ -288,7 +288,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     // Basic requirements for all plan types
     const hasBasicInfo =
       planDuration &&
-      goal.trim() !== "" &&
+      goal && goal  .trim() !== "" &&
       selectedEmoji &&
       selectedActivities.length > 0;
 
@@ -340,7 +340,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         <Step stepNumber={2} isVisible={shouldShowStep(2)} ref={stepRefs.step2}>
           <Divider />
           <GoalStep
-            goal={goal}
+            goal={goal || ""}
             setGoal={setGoal}
             isEdit={isEdit}
           />
@@ -359,7 +359,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
         <Step stepNumber={3} isVisible={shouldShowStep(3)} ref={stepRefs.step3}>
           <Divider />
           <EmojiStep
-            selectedEmoji={selectedEmoji}
+            selectedEmoji={selectedEmoji || ""}
             setSelectedEmoji={setSelectedEmoji}
           />
           {!isEdit && (
@@ -397,7 +397,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           <OutlineStep
             outlineType={outlineType}
             setOutlineType={setOutlineType}
-            timesPerWeek={timesPerWeek}
+            timesPerWeek={timesPerWeek || 0}
             setTimesPerWeek={setTimesPerWeek}
             title={title}
             generatedSessions={generatedSessions}
@@ -405,7 +405,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             onGenerate={handleGenerate}
             activities={selectedActivities}
             finishingDate={currentFinishingDate || undefined}
-            description={description}
+            description={description || ""}
             setDescription={setDescription}
           />
           {!isEdit && (

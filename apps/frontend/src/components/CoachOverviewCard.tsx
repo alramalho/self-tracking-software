@@ -1,5 +1,8 @@
 import { useApiWithAuth } from "@/api";
-import { clearCoachSuggestedSessionsInPlan, updatePlan, upgradeCoachSuggestedSessionsToPlanSessions } from "@/app/actions";
+import {
+  clearCoachSuggestedSessionsInPlan,
+  upgradeCoachSuggestedSessionsToPlanSessions,
+} from "@/app/actions";
 import { CompletePlan } from "@/contexts/UserGlobalContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
@@ -64,30 +67,15 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
     try {
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
 
-      let updateData: any = {
-        suggestedByCoachAt: null,
-        coachNotes: null,
-      };
-
       if (suggestionType === "sessions") {
-        await upgradeCoachSuggestedSessionsToPlanSessions(
-          selectedPlan.id,
-        );
+        await upgradeCoachSuggestedSessionsToPlanSessions(selectedPlan.id);
       } else if (suggestionType === "timesPerWeek") {
-        await updatePlan(selectedPlan.id, {
+        await api.post(`/plans/${selectedPlan.id}/upsert`, {
           timesPerWeek: selectedPlan.coachSuggestedTimesPerWeek,
           coachSuggestedTimesPerWeek: null,
         });
-        // updateData = {
-        //   ...updateData,
-        //   timesPerWeek: selectedPlan.coachSuggestedTimesPerWeek,
-        //   coachSuggestedTimesPerWeek: null,
-        // };
       }
 
-      await api.post(`/plans/${selectedPlan.id}/upsert`, {
-        data: updateData,
-      });
       onRefetch?.();
       toast.success(
         suggestionType === "sessions"
@@ -122,8 +110,10 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       if (suggestionType === "sessions") {
         clearCoachSuggestedSessionsInPlan(selectedPlan.id);
       } else if (suggestionType === "timesPerWeek") {
-        await updatePlan(selectedPlan.id, {
-          coachSuggestedTimesPerWeek: null,
+        await api.post(`/plans/${selectedPlan.id}/upsert`, {
+          data: {
+            coachSuggestedTimesPerWeek: null,
+          },
         });
       }
 
@@ -181,105 +171,104 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
           </>
         )}
 
-        {coachSuggestedSessions &&
-          coachSuggestedSessions.length > 0 && (
-            <div className="flex flex-col justify-start gap-4 w-full">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-row gap-2">
-                  {!selectedPlan.coachNotes && (
-                    <Avatar>
-                      <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
-                      <AvatarFallback>CN</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="text-start">
-                    <span className="text-lg font-semibold text-gray-800 block">
-                      New Schedule Suggestion
-                    </span>
-                    <span className="text-xs text-gray-400 font-medium">
-                      UPDATED SESSIONS
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-                  {coachSuggestedSessions.map(
-                    (session: PlanSession, index: number) => {
-                      const activity = planActivities?.find(
-                        (a) => a.id === session.activityId
-                      );
-                      if (!activity) return null;
-
-                      const sessionId = `coach-session-${session.activityId}-${index}`;
-                      const isSelected = selectedSuggestedSession === sessionId;
-
-                      return (
-                        <SmallActivityEntryCard
-                          key={sessionId}
-                          entry={{
-                            date: session.date,
-                            activityId: session.activityId,
-                            quantity: session.quantity,
-                            description: session.descriptiveGuide,
-                          }}
-                          activity={activity}
-                          selected={isSelected}
-                          onClick={(clickedSessionId) => {
-                            setSelectedSuggestedSession(
-                              clickedSessionId === selectedSuggestedSession
-                                ? null
-                                : clickedSessionId
-                            );
-                          }}
-                          className={`border-2 ${variants.veryFadedBg} ${variants.border}`}
-                        />
-                      );
-                    }
-                  )}
+        {coachSuggestedSessions && coachSuggestedSessions.length > 0 && (
+          <div className="flex flex-col justify-start gap-4 w-full">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-row gap-2">
+                {!selectedPlan.coachNotes && (
+                  <Avatar>
+                    <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+                    <AvatarFallback>CN</AvatarFallback>
+                  </Avatar>
+                )}
+                <div className="text-start">
+                  <span className="text-lg font-semibold text-gray-800 block">
+                    New Schedule Suggestion
+                  </span>
+                  <span className="text-xs text-gray-400 font-medium">
+                    UPDATED SESSIONS
+                  </span>
                 </div>
               </div>
 
-              {!isDemo && (
-                <div className="flex flex-row gap-3 justify-center">
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
-                    disabled={
-                      loadingStates.decliningSessions ||
-                      loadingStates.acceptingSessions
-                    }
-                    onClick={async () => {
-                      await handleDeclineSuggestion("sessions");
-                    }}
-                  >
-                    {loadingStates.decliningSessions ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <X className="h-4 w-4 mr-2" />
-                    )}
-                    Decline
-                  </Button>
-                  <Button
-                    className={`flex-1 h-10 text-sm font-medium ${variants.bg}`}
-                    disabled={
-                      loadingStates.acceptingSessions ||
-                      loadingStates.decliningSessions
-                    }
-                    onClick={async () => {
-                      await handleAcceptSuggestion("sessions");
-                    }}
-                  >
-                    {loadingStates.acceptingSessions ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4 mr-2" />
-                    )}
-                    Accept
-                  </Button>
-                </div>
-              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+                {coachSuggestedSessions.map(
+                  (session: PlanSession, index: number) => {
+                    const activity = planActivities?.find(
+                      (a) => a.id === session.activityId
+                    );
+                    if (!activity) return null;
+
+                    const sessionId = `coach-session-${session.activityId}-${index}`;
+                    const isSelected = selectedSuggestedSession === sessionId;
+
+                    return (
+                      <SmallActivityEntryCard
+                        key={sessionId}
+                        entry={{
+                          date: session.date,
+                          activityId: session.activityId,
+                          quantity: session.quantity,
+                          description: session.descriptiveGuide,
+                        }}
+                        activity={activity}
+                        selected={isSelected}
+                        onClick={(clickedSessionId) => {
+                          setSelectedSuggestedSession(
+                            clickedSessionId === selectedSuggestedSession
+                              ? null
+                              : clickedSessionId
+                          );
+                        }}
+                        className={`border-2 ${variants.veryFadedBg} ${variants.border}`}
+                      />
+                    );
+                  }
+                )}
+              </div>
             </div>
-          )}
+
+            {!isDemo && (
+              <div className="flex flex-row gap-3 justify-center">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
+                  disabled={
+                    loadingStates.decliningSessions ||
+                    loadingStates.acceptingSessions
+                  }
+                  onClick={async () => {
+                    await handleDeclineSuggestion("sessions");
+                  }}
+                >
+                  {loadingStates.decliningSessions ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <X className="h-4 w-4 mr-2" />
+                  )}
+                  Decline
+                </Button>
+                <Button
+                  className={`flex-1 h-10 text-sm font-medium ${variants.bg}`}
+                  disabled={
+                    loadingStates.acceptingSessions ||
+                    loadingStates.decliningSessions
+                  }
+                  onClick={async () => {
+                    await handleAcceptSuggestion("sessions");
+                  }}
+                >
+                  {loadingStates.acceptingSessions ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Accept
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {selectedPlan.coachSuggestedTimesPerWeek && (
           <div className="flex flex-col justify-start gap-4 w-full">

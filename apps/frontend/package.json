@@ -58,6 +58,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "framer-motion": "^10.16.4",
     "heic2any": "^0.0.4",
     "idb": "^8.0.3",
