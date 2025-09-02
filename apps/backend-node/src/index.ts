@@ -7,7 +7,7 @@ import express, { Express } from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 
-import { errorHandler } from "./middleware/errorHandler";
+import { errorHandler, responseMonitor } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { requestContextMiddleware } from "./middleware/requestContext";
 import { logger, morganMiddleware } from "./utils/logger";
@@ -77,6 +77,9 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Request context middleware (must come before routes that use AI service)
 app.use(requestContextMiddleware);
 
+// Response monitoring middleware (must come before routes)
+app.use(responseMonitor);
+
 app.use(morganMiddleware);
 
 // Apply rate limiting
@@ -92,6 +95,9 @@ app.get("/health", (_req, res) => {
 // Test exception endpoint (for testing error handling)
 app.get("/exception", (_req, _res) => {
   throw new Error("Test exception");
+});
+app.get("/400", (_req, _res) => {
+  return _res.status(400).json({ error: "Test 400" });
 });
 
 // API routes

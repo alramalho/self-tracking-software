@@ -1,12 +1,57 @@
-import { Request, Response, NextFunction } from "express";
-import { logger } from "../utils/logger";
+import { NextFunction, Request, Response } from "express";
 import { TelegramService } from "../services/telegramService";
+import { logger } from "../utils/logger";
 import { AuthenticatedRequest } from "./auth";
 
 export interface CustomError extends Error {
   statusCode?: number;
   code?: string;
 }
+
+export const responseMonitor = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const originalSend = res.send;
+  const originalJson = res.json;
+
+  const sendTelegramNotification = async () => {
+    if (res.statusCode >= 400) {
+      try {
+        const telegramService = new TelegramService();
+        const authenticatedReq = req as AuthenticatedRequest;
+        const userUsername = authenticatedReq.user?.username || "anonymous";
+        const userId = authenticatedReq.user?.id || "unknown";
+
+        await telegramService.sendErrorNotification({
+          errorMessage: `HTTP ${res.statusCode} response on ${req.url}`,
+          userUsername,
+          userId,
+          path: req.url,
+          method: req.method,
+          statusCode: res.statusCode.toString(),
+        });
+      } catch (telegramError) {
+        logger.error("Failed to send Telegram notification:", telegramError);
+      }
+    }
+  };
+
+  res.send = function (body) {
+    console.log("sending body", body);
+    sendTelegramNotification();
+    return originalSend.call(this, body);
+  };
+
+  res.json = function (body) {
+    console.log("sending json", body);
+    sendTelegramNotification();
+    return originalJson.call(this, body);
+  };
+
+  next();
+};
 
 export const errorHandler = async (
   error: CustomError,
@@ -27,34 +72,6 @@ export const errorHandler = async (
     userAgent: req.get("User-Agent"),
     ip: req.ip,
   });
-
-  // Send error notification to Telegram for non-401/404/405 errors
-  if (
-    statusCode >= 500 ||
-    (statusCode >= 400 &&
-      statusCode !== 401 &&
-      statusCode !== 404 &&
-      statusCode !== 405)
-  ) {
-    try {
-      const telegramService = new TelegramService();
-      // Extract user context from authenticated request if available
-      const authenticatedReq = req as AuthenticatedRequest;
-      const userUsername = authenticatedReq.user?.username || "anonymous";
-      const userId = authenticatedReq.user?.id || "unknown";
-
-      await telegramService.sendErrorNotification({
-        errorMessage: error.message,
-        userUsername,
-        userId,
-        path: req.url,
-        method: req.method,
-        statusCode: statusCode.toString(),
-      });
-    } catch (telegramError) {
-      logger.error("Failed to send Telegram notification:", telegramError);
-    }
-  }
 
   // Don't leak error details in production
   const response = {
