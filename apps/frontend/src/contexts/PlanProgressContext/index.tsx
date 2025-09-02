@@ -62,7 +62,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const { plans, activities, activityEntries } = userData;
 
-    const planProgress = plans.filter((p) => p.deletedAt === null && p.finishingDate && isAfter(p.finishingDate, new Date())).map((plan): PlanProgressData => {
+    const planProgress = plans.filter((p) => p.deletedAt === null && (p.finishingDate ? isAfter(p.finishingDate, new Date()) : true)).map((plan): PlanProgressData => {
       // const convertedPlan = plan;
       // const planStartDate = convertedPlan.outlineType === "SPECIFIC" 
       //   ? (convertedPlan.sessions.length > 0 
