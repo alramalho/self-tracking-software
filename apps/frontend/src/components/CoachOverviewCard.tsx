@@ -67,14 +67,23 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
     try {
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
 
+      let updateData = {};
       if (suggestionType === "sessions") {
         await upgradeCoachSuggestedSessionsToPlanSessions(selectedPlan.id);
+        updateData = {
+          coachNotes: null,
+        };
       } else if (suggestionType === "timesPerWeek") {
-        await api.post(`/plans/${selectedPlan.id}/upsert`, {
+        updateData = {
           timesPerWeek: selectedPlan.coachSuggestedTimesPerWeek,
           coachSuggestedTimesPerWeek: null,
-        });
+          coachNotes: null,
+        };
       }
+      await api.post(`/plans/upsert`, {
+        id: selectedPlan.id,
+        ...updateData,
+      });
 
       onRefetch?.();
       toast.success(
@@ -82,6 +91,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
           ? "Schedule updated successfully!"
           : "Plan updated successfully!"
       );
+
     } catch (error) {
       console.error("Failed to accept suggestion:", error);
       toast.error(
@@ -107,15 +117,22 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
     try {
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
 
+      let updateData = {};
       if (suggestionType === "sessions") {
         clearCoachSuggestedSessionsInPlan(selectedPlan.id);
+        updateData = {
+          coachNotes: null,
+        };
       } else if (suggestionType === "timesPerWeek") {
-        await api.post(`/plans/${selectedPlan.id}/upsert`, {
-          data: {
-            coachSuggestedTimesPerWeek: null,
-          },
-        });
+        updateData = {
+          coachSuggestedTimesPerWeek: null,
+          coachNotes: null,
+        };
       }
+      await api.post(`/plans/upsert`, {
+        id: selectedPlan.id,  
+        ...updateData,
+      });
 
       onRefetch?.();
       toast.success("Suggestion declined");
