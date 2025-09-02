@@ -2,6 +2,7 @@
 # Generated from backend-node Express.js routes
 # Run: npm run update-routes (from backend-node directory)
 
+/400
 /activities
 /activities/{any}
 /admin/{any}

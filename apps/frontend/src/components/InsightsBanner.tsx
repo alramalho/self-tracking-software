@@ -1,13 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ChevronRight, Clock } from "lucide-react";
-import { useNotifications } from "@/hooks/useNotifications";
-import { useRouter } from "next/navigation";
 import { ExampleCorrelations } from "@/components/ExampleCorrelations";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { MetricRaters } from "@/components/MetricRaters";
+import { Button } from "@/components/ui/button";
+import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { ChevronRight, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import AppleLikePopover from "./AppleLikePopover";
-import { useEffect } from "react";
 
 interface InsightsBannerProps {
   open: boolean;
@@ -16,10 +13,9 @@ interface InsightsBannerProps {
 
 export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const router = useRouter();
-  const { useMetricsAndEntriesQuery, useHasMetricsToLogToday } = useUserPlan();
+  const { useMetricsAndEntriesQuery } = useUserPlan();
   const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
   const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
-  const hasMetricsToLogToday = useHasMetricsToLogToday();
   const now = new Date();
   const hours = now.getHours();
   const minutes = now.getMinutes();

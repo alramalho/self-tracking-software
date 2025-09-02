@@ -28,7 +28,6 @@ import {
   User
 } from "@tsw/prisma";
 import { Plan, PlanMilestone } from "@tsw/prisma/types";
-import { isToday } from "date-fns";
 import { useRouter } from "next/navigation";
 import React, {
   createContext,
@@ -76,8 +75,6 @@ export interface UserGlobalContextType {
     metrics: Metric[];
     entries: MetricEntry[];
   }>;
-  useHasMetricsToLogToday: () => boolean;
-  useIsMetricLoggedToday: (metricId: string) => boolean;
   hasLoadedUserData: boolean;
   messagesData: UseQueryResult<{ messages: MessagesWithRelations[] }>;
   notificationsData: UseQueryResult<{ notifications: Notification[] }>;
@@ -312,32 +309,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
       staleTime: 1000 * 60 * 5,
     });
 
-  const useIsMetricLoggedToday = (metricId: string) => {
-    const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
-    const entries = metricsAndEntriesData?.entries || [];
-
-    return entries.some(
-      (entry) =>
-        entry.metricId === metricId &&
-        isToday(entry.date)
-    );
-  };
-
-  const useHasMetricsToLogToday = () => {
-    const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
-    const metrics = metricsAndEntriesData?.metrics || [];
-    const entries = metricsAndEntriesData?.entries || [];
-
-    return metrics.some(
-      (metric) =>
-        !entries.some(
-          (entry) =>
-            entry.metricId === metric.id &&
-            isToday(entry.date)
-        )
-    );
-  };
-
   useEffect(() => {
     const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (
@@ -436,8 +407,6 @@ export const UserPlanProvider: React.FC<{ children: React.ReactNode }> = ({
     useMultipleUsersDataQuery,
     useMetricsAndEntriesQuery,
     useTimelineDataQuery,
-    useIsMetricLoggedToday,
-    useHasMetricsToLogToday,
     hasLoadedUserData:
       currentUserDataQuery.isSuccess && !!currentUserDataQuery.data,
     messagesData,
