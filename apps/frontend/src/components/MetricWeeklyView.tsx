@@ -58,7 +58,7 @@ export const MetricWeeklyView: React.FC<MetricWeeklyViewProps> = ({
       ) : (
         <div className="py-2 text-center">
           <p className="text-sm text-gray-500">
-            No data this week. Start logging above!
+            No data this week yet.
           </p>
         </div>
       )}
