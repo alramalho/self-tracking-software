@@ -1,9 +1,8 @@
-import { useApiWithAuth } from "@/api";
 import { InsightsBanner } from "@/components/InsightsBanner";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useMetrics } from "@/contexts/metrics";
 import { differenceInCalendarDays, isToday } from "date-fns";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { toast } from "react-hot-toast";
+import { useCurrentUser } from "./users";
 
 interface DailyCheckinContextType {
   show: (initialMessage?: string) => void;
@@ -14,10 +13,7 @@ interface DailyCheckinContextType {
   checkinMessage: string | undefined;
   buildCheckinMessage: () => { message: string; id: string };
   logIndividualMetric: (metricId: string, rating: number) => Promise<void>;
-  skipMetric: (metricId: string) => Promise<void>;
   areAllMetricsCompleted: boolean;
-  logTodaysNote: (note: string) => Promise<void>;
-  skipTodaysNote: () => Promise<void>;
 }
 
 const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
@@ -27,7 +23,9 @@ const DailyCheckinContext = createContext<DailyCheckinContextType | undefined>(
 export const useDailyCheckin = () => {
   const context = useContext(DailyCheckinContext);
   if (!context) {
-    throw new Error("useDailyCheckin must be used within a DailyCheckinProvider");
+    throw new Error(
+      "useDailyCheckin must be used within a DailyCheckinProvider"
+    );
   }
   return context;
 };
@@ -41,17 +39,11 @@ export const DailyCheckinPopoverProvider: React.FC<{
   );
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
-  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
-  const entries = metricsAndEntriesData?.entries;
-  const metrics = metricsAndEntriesData?.metrics || [];
-  const { data: userData } = useCurrentUserDataQuery();
+  const { currentUser: user } = useCurrentUser();
+  const { metrics, entries, logIndividualMetric } = useMetrics();
   const [checkinMessage, setCheckinMessage] = useState<string | undefined>(
     undefined
   );
-  const user = userData;
-  const api = useApiWithAuth();
 
   useEffect(() => {
     if (user) {
@@ -64,7 +56,9 @@ export const DailyCheckinPopoverProvider: React.FC<{
     let pool: Record<string, string> = {};
 
     if (currentHours < 19) {
-      pool["How is your day going?"] = `Hey ${user?.username}! You haven't checked in yet. How is your day going?`;
+      pool[
+        "How is your day going?"
+      ] = `Hey ${user?.username}! You haven't checked in yet. How is your day going?`;
     } else {
       pool["How was your day?"] = `Hey ${user?.username}! How was your day?`;
     }
@@ -74,27 +68,20 @@ export const DailyCheckinPopoverProvider: React.FC<{
       message: pool[Object.keys(pool)[randomPick]],
       id: Object.keys(pool)[randomPick],
     };
-  }
+  };
 
-  // Check if all metrics are completed (either logged today or skipped)
   const areAllMetricsCompleted = React.useMemo(() => {
-    if (!metrics.length) return false;
-    
-    const today = new Date().toISOString().split("T")[0];
-    
-    return metrics.every(metric => {
-      // Check if metric is logged or skipped today
+    if (!metrics?.length) return false;
+
+    return metrics.every((metric) => {
       const todaysEntry = entries?.find(
-        entry => 
-          entry.metricId === metric.id && 
-          isToday(entry.date)
+        (entry) => entry.metricId === metric.id && isToday(entry.date)
       );
-      
+
       return todaysEntry && (todaysEntry.rating > 0 || todaysEntry.skipped);
     });
   }, [metrics, entries]);
 
-  // Find the latest entry by date
   const latestEntry =
     entries && entries.length > 0
       ? entries.reduce(
@@ -109,8 +96,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
     : undefined;
 
   useEffect(() => {
-    
-    if (!latestEntry || (daysSinceLastEntry && daysSinceLastEntry >= 1) ) {
+    if (!latestEntry || (daysSinceLastEntry && daysSinceLastEntry >= 1)) {
       setHasCheckedInToday(false);
       return;
     }
@@ -118,7 +104,6 @@ export const DailyCheckinPopoverProvider: React.FC<{
     const lastCheckin = new Date(latestEntry.date);
     const today = new Date();
 
-    // Check if the last check-in was today
     const wasToday =
       lastCheckin.getFullYear() === today.getFullYear() &&
       lastCheckin.getMonth() === today.getMonth() &&
@@ -126,7 +111,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
     if (wasToday) {
       setHasCheckedInToday(true);
-    } 
+    }
 
     // Reset dismissal state at the start of a new day
     if (!wasToday && isDismissed) {
@@ -146,71 +131,6 @@ export const DailyCheckinPopoverProvider: React.FC<{
 
   const shouldShowNotification = hasCheckedInToday && !isDismissed;
 
-  const logIndividualMetric = async (metricId: string, rating: number): Promise<void> => {
-    try {
-      await api.post("/metrics/log-metric", {
-        metric_id: metricId,
-        rating: rating,
-        date: new Date().toISOString(),
-      });
-      
-      // Refresh metrics data
-      await metricsAndEntriesQuery.refetch();
-      toast.success("Metric logged successfully!");
-    } catch (error) {
-      console.error("Error logging individual metric:", error);
-      toast.error("Failed to log metric");
-      throw error;
-    }
-  };
-
-  const logTodaysNote = async (note: string): Promise<void> => {
-    try {
-      await api.post("/metrics/log-todays-note", {
-        note: note,
-      });
-      
-      // Refresh metrics data to get updated descriptions
-      await metricsAndEntriesQuery.refetch();
-      toast.success("Note added to today's entries!");
-    } catch (error) {
-      console.error("Error logging today's note:", error);
-      toast.error("Failed to add note");
-      throw error;
-    }
-  };
-
-  const skipMetric = async (metricId: string): Promise<void> => {
-    try {
-      await api.post("/metrics/skip-metric", {
-        metric_id: metricId,
-        date: new Date().toISOString(),
-      });
-      
-      // Refresh metrics data
-      await metricsAndEntriesQuery.refetch();
-      toast.success("Metric skipped successfully!");
-    } catch (error) {
-      console.error("Error skipping metric:", error);
-      toast.error("Failed to skip metric");
-      throw error;
-    }
-  };
-
-  const skipTodaysNote = async (): Promise<void> => {
-    try {
-      await api.post("/metrics/skip-todays-note");
-      
-      // Refresh metrics data
-      await metricsAndEntriesQuery.refetch();
-      toast.success("Today's note skipped successfully!");
-    } catch (error) {
-      console.error("Error skipping today's note:", error);
-      toast.error("Failed to skip today's note");
-      throw error;
-    }
-  };
-
   return (
     <DailyCheckinContext.Provider
       value={{
@@ -225,10 +145,7 @@ export const DailyCheckinPopoverProvider: React.FC<{
         checkinMessage,
         buildCheckinMessage,
         logIndividualMetric,
-        skipMetric,
         areAllMetricsCompleted,
-        logTodaysNote,
-        skipTodaysNote,
       }}
     >
       {children}

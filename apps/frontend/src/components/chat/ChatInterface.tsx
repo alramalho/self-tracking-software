@@ -4,7 +4,7 @@ import {
   ChatBubbleMessage,
 } from "@/components/ui/chat/chat-bubble";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
-import { useUserPlan } from '@/contexts/UserGlobalContext';
+import { useCurrentUser } from "@/contexts/users";
 import { Message } from "@/hooks/useMessageHistory";
 import { Eclipse } from 'lucide-react';
 import React from 'react';
@@ -14,9 +14,7 @@ interface ChatInterfaceProps {
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
+  const { currentUser } = useCurrentUser();
   
   return (
     <div className="w-full max-w-3xl mx-auto px-4">
@@ -28,7 +26,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages }) => {
           >
             <ChatBubbleAvatar
               src={
-                message.role === "user" ? userData?.picture || "" : undefined
+                message.role === "user" ? currentUser?.picture || "" : undefined
               }
               fallback={<Eclipse className="w-8 h-8 bg-transparent" />}
             />

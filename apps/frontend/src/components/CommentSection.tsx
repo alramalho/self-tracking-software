@@ -1,7 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { getThemeVariants } from "@/utils/theme";
 import { Comment } from "@tsw/prisma";
 import { differenceInCalendarDays, format, isToday, isYesterday } from 'date-fns';
@@ -53,8 +53,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const { currentUser } = useCurrentUser();
   const api = useApiWithAuth();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
@@ -136,7 +135,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const visibleComments = getVisibleComments();
   const hasHiddenComments = comments.length > 2 && !showAllComments;
 
-  if (comments.length === 0 && !userData) {
+  if (comments.length === 0 && !currentUser) {
     return null;
   }
 
@@ -192,7 +191,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                   <p className="text-sm break-words whitespace-pre-wrap">{comment.text}</p>
                 </div>
                 
-                {userData?.id === comment.userId && (
+                {currentUser?.id === comment.userId && (
                   <button 
                     onClick={() => handleDeleteComment(comment.id)}
                     className="text-gray-400 hover:text-gray-600"
@@ -207,12 +206,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       )}
 
       {/* Comment input */}
-      {userData && (
+      {currentUser && (
         <form onSubmit={handleSubmitComment} className="flex gap-2 w-full">
           <div className={`flex items-center gap-2 p-2 w-full ${commentBg} rounded-lg border border-white/20 shadow-sm backdrop-blur-lg`}>
             <Avatar className="w-6 h-6">
-              <AvatarImage src={userData?.picture || undefined} />
-              <AvatarFallback>{userData?.name?.[0] || 'U'}</AvatarFallback>
+              <AvatarImage src={currentUser?.picture || undefined} />
+              <AvatarFallback>{currentUser?.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             
             <input

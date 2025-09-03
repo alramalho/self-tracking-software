@@ -2,8 +2,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useUpgrade } from "@/contexts/UpgradeContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import React, { ReactNode, useEffect, useState } from "react";
@@ -275,8 +274,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
     "monthly" | "quarterly" | "yearly"
   >("quarterly");
 
-  const { isUserPremium } = useUpgrade();
-  const { refetchUserData } = useUserPlan();
+  const { isUserPremium } = usePaidPlan();
 
   const planFeatures: FeatureItem[] = [
     { emoji: "✔️", title: <span>Unlimited plans & activities</span> },
@@ -384,7 +382,6 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 <Button 
                   className="w-full rounded-xl bg-green-500 hover:bg-emerald-700 text-lg py-6"
                   onClick={() => {
-                    refetchUserData();
                     onClose();
                   }}
                 >

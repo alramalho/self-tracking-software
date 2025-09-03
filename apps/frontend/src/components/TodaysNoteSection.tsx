@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
-import { useApiWithAuth } from "@/api";
-import { toast } from "react-hot-toast";
-import { Loader2, Check, XCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { useMetrics } from "@/contexts/metrics";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
 import { cn } from "@/lib/utils";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { getThemeVariants } from "@/utils/theme";
 import { isToday } from "date-fns";
+import { motion } from "framer-motion";
+import { Check, Loader2, XCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 
 interface TodaysNoteSectionProps {
   onSubmitted?: () => void;
@@ -27,25 +26,21 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const api = useApiWithAuth();
-  const { useMetricsAndEntriesQuery } = useUserPlan();
-  const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
-  const entries = metricsAndEntriesData?.entries || [];
-  const { skipTodaysNote } = useDailyCheckin();
+  const { skipTodaysNote, entries } = useMetrics()
 
   // Check if any of today's entries already have descriptions or are skipped
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const todaysEntries = entries.filter(
+    const todaysEntries = entries?.filter(
       entry => isToday(entry.date)
     );
     
     // Check if any entry has a description
-    const entryWithDescription = todaysEntries.find(entry => 
+    const entryWithDescription = todaysEntries?.find(entry => 
       entry.description && entry.description.trim() !== ""
     );
     
     // Check if any entry has description_skipped set to true
-    const entryWithSkippedDescription = todaysEntries.find(entry => 
+    const entryWithSkippedDescription = todaysEntries?.find(entry => 
       entry.descriptionSkipped === true
     );
     

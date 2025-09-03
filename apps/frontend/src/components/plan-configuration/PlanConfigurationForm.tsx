@@ -1,11 +1,12 @@
-import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
+import { useActivities } from "@/contexts/activities";
 import {
   CompletePlan,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+  usePlans
+} from "@/contexts/plans";
+import { useCurrentUser } from "@/contexts/users";
 import { usePlanGeneration } from "@/hooks/usePlanGeneration";
-import { PlanDurationType, PlanOutlineType } from "@tsw/prisma";
+import { Activity, PlanDurationType, PlanOutlineType } from "@tsw/prisma";
 import { PlanMilestone } from "@tsw/prisma/types";
 import { Loader2 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -30,24 +31,20 @@ interface PlanConfigurationFormProps {
 }
 
 const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
-  onSuccess,
-  onFailure,
   plan,
   onClose,
   title,
   isEdit = false,
   scrollToMilestones = false,
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-
+  const { currentUser } = useCurrentUser();
+  const {activities} = useActivities();
+  const { upsertPlan, isUpsertingPlan } = usePlans();
   // Initialize state from plan if editing, otherwise use defaults
   const [description, setDescription] = useState<string | undefined>(plan?.notes || undefined);
   const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(plan?.emoji || undefined);
   const [currentFinishingDate, setCurrentFinishingDate] = useState(plan?.finishingDate);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedSessions, setGeneratedSessions] = useState<CompletePlan["sessions"]>();
+  const [generatedSessions, setGeneratedSessions] = useState<{date: Date, activityId: string, descriptive_guide: string, quantity: number}[]>();
   const [goal, setGoal] = useState<string | undefined>(plan?.goal || undefined);
   const [planNotes, setPlanNotes] = useState<string | undefined>(plan?.notes || undefined);
   const [milestones, setMilestones] = useState<PlanMilestone[]>(plan?.milestones || []);
@@ -55,10 +52,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   const [outlineType, setOutlineType] = useState<PlanOutlineType>(plan?.outlineType || "SPECIFIC");
   const [timesPerWeek, setTimesPerWeek] = useState<number | undefined>(plan?.timesPerWeek || undefined);
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedActivities, setSelectedActivities] = useState<CompletePlan["activities"]>(
-    plan ? userData?.activities?.filter(a => plan.activities.map(p => p.id).includes(a.id)) || [] : []
+  const [selectedActivities, setSelectedActivities] = useState<Activity[]>(
+    plan ? activities?.filter((a) => plan.activities.map((ac: Activity) => ac.id).includes(a.id)) || [] : []
   );
-  const api = useApiWithAuth();
 
   const { generateSessions } = usePlanGeneration();
 
@@ -123,8 +119,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
     }
   };
 
-  const createPlanToConfirm = useCallback((): CompletePlan => {
-    const basePlan: any = {
+  const createPlanToConfirm = useCallback(() => {
+    const basePlan = {
       goal,
       emoji: selectedEmoji,
       finishingDate: currentFinishingDate || null,
@@ -137,6 +133,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       userId: plan?.userId || "",
       createdAt: plan?.createdAt || new Date(),
       sessions: [],
+      timesPerWeek: timesPerWeek,
     };
 
     if (outlineType === "SPECIFIC") {
@@ -168,11 +165,11 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   ]);
 
   const hasMadeAnyChanges = useCallback(() => {
-    if (!plan || !userData) return false;
+    if (!plan || !currentUser) return false;
 
     const planToBeSaved = createPlanToConfirm();
-    const currentActivityIds = new Set(selectedActivities.map(a => a.id));
-    const originalActivityIds = new Set(plan.activities.map(a => a.id));
+    const currentActivityIds = new Set(selectedActivities.map((a) => a.id));
+    const originalActivityIds = new Set(plan.activities.map((a: Activity) => a.id));
 
     return (
       planToBeSaved.goal !== plan.goal ||
@@ -186,7 +183,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       currentActivityIds.size !== originalActivityIds.size ||
       Array.from(currentActivityIds).some(id => !originalActivityIds.has(id))
     );
-  }, [createPlanToConfirm, plan, userData, selectedActivities]);
+  }, [createPlanToConfirm, plan, currentUser, selectedActivities]);
 
   const isPlanComplete = useCallback(() => {
     const hasRequiredFields = 
@@ -246,21 +243,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
       return;
     }
 
-    try {
-      setIsProcessing(true);
-      const planToSave = createPlanToConfirm();
-      await api.post("/plans/upsert", planToSave);
-
-      currentUserDataQuery.refetch();
-      toast.success(isEdit ? "Plan updated successfully" : "Plan created successfully");
-      onSuccess?.();
-    } catch (error) {
-      const errorMessage = "Failed to save plan";
-      toast.error(errorMessage);
-      onFailure?.(errorMessage);
-    } finally {
-      setIsProcessing(false);
-    }
+    const planToSave = createPlanToConfirm();
+    upsertPlan({ planId: plan?.id || "", updates: planToSave, muteNotifications: true });
   };
 
   const stepRefs = {
@@ -431,10 +415,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             <div className="flex justify-end mt-4">
               <Button
                 onClick={handleConfirm}
-                disabled={isProcessing || !isPlanComplete()}
+                disabled={isUpsertingPlan || !isPlanComplete()}
                 className="flex-1 gap-2"
               >
-                {isProcessing ? (
+                {isUpsertingPlan ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Processing...
@@ -458,10 +442,10 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
           {isEdit && canConfirmPlan() && (
             <Button
               onClick={handleConfirm}
-              disabled={isProcessing}
+              disabled={isUpsertingPlan}
               className="flex-1 gap-2"
             >
-              {isProcessing ? (
+              {isUpsertingPlan ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...

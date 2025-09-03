@@ -3,23 +3,22 @@
 import { useApiWithAuth } from "@/api";
 import { isNotifySupported } from "@/app/swSupport";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useDataNotifications } from "@/contexts/notifications";
 import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useSession } from "@clerk/nextjs";
 import { Notification as PrismaNotification } from "@tsw/prisma";
 import React, {
-    createContext,
-    ReactNode,
-    useContext,
-    useEffect,
-    useState
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState
 } from "react";
 
 interface NotificationsContextType {
   notificationCount: number;
   dailyCheckinNotification: boolean;
   addToNotificationCount: (count: number, type?: 'profile' | 'general') => void;
-  clearGeneralNotifications: () => void;
   sendLocalNotification: (
     title: string,
     body: string,
@@ -47,7 +46,7 @@ export const NotificationsProvider = ({
 }: {
   children: ReactNode;
 }) => {
-  const { notificationsData } = useUserPlan();
+  const { notifications } = useDataNotifications();
   const { isSignedIn } = useSession();
   const [notificationCount, setNotificationCount] = useState(0);
   const { shouldShowNotification } = useDailyCheckin();
@@ -66,8 +65,8 @@ export const NotificationsProvider = ({
   const api = useApiWithAuth();
 
   useEffect(() => {
-    if (notificationsData.data) {
-      const nonConcludedNotificationsCount = notificationsData.data.notifications?.filter(
+    if (notifications) {
+      const nonConcludedNotificationsCount = notifications.filter(
         (notification: PrismaNotification) => notification.status !== "CONCLUDED"
       ).length || 0;
       
@@ -78,7 +77,7 @@ export const NotificationsProvider = ({
         navigator.setAppBadge(totalBadgeCount);
       }
     }
-  }, [notificationsData.data, dailyCheckinNotification]);
+  }, [notifications, dailyCheckinNotification]);
 
   useEffect(() => {
     subscription
@@ -327,7 +326,6 @@ export const NotificationsProvider = ({
         notificationCount,
         dailyCheckinNotification,
         addToNotificationCount,
-        clearGeneralNotifications: clearAllNotifications,
         sendLocalNotification,
         sendPushNotification,
         requestPermission,

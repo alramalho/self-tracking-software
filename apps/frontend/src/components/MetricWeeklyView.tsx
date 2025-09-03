@@ -1,20 +1,9 @@
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
-import { Activity } from "@tsw/prisma";
+import { MetricCorrelation } from "@/contexts/metrics/lib";
 import React from "react";
 
-interface Metric {
-  id: string;
-  emoji: string;
-  title: string;
-}
-
-interface MetricCorrelation {
-  activity: Activity;
-  correlation: number;
-}
-
 interface MetricWeeklyViewProps {
-  metric: Metric;
+  metric: { emoji: string; title: string };
   weekData: number[];
   color:
     | "yellow"
@@ -29,9 +18,14 @@ interface MetricWeeklyViewProps {
     | "gray";
   hasAnyData: boolean;
   positiveCorrelations?: MetricCorrelation[];
-  formatCorrelationString?: (correlation: MetricCorrelation) => string;
   className?: string;
 }
+
+export const formatCorrelationString = (
+  correlation: MetricCorrelation
+): string => {
+  return `${correlation.activity.emoji || "📊"} ${correlation.activity.title}`;
+};
 
 export const MetricWeeklyView: React.FC<MetricWeeklyViewProps> = ({
   metric,
@@ -39,7 +33,6 @@ export const MetricWeeklyView: React.FC<MetricWeeklyViewProps> = ({
   color,
   hasAnyData,
   positiveCorrelations = [],
-  formatCorrelationString,
   className = "",
 }) => {
   return (
@@ -57,9 +50,7 @@ export const MetricWeeklyView: React.FC<MetricWeeklyViewProps> = ({
         <WeekMetricBarChart data={weekData} color={color} />
       ) : (
         <div className="py-2 text-center">
-          <p className="text-sm text-gray-500">
-            No data this week yet.
-          </p>
+          <p className="text-sm text-gray-500">No data this week yet.</p>
         </div>
       )}
       {positiveCorrelations.length > 0 && formatCorrelationString && (
@@ -78,4 +69,4 @@ export const MetricWeeklyView: React.FC<MetricWeeklyViewProps> = ({
       )}
     </div>
   );
-}; 
+};

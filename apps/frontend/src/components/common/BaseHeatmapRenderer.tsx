@@ -1,4 +1,4 @@
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useActivities } from "@/contexts/activities";
 import { Activity } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
 import { format } from "date-fns";
@@ -90,10 +90,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
       )
     : undefined;
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const userData = currentUserDataQuery.data;
-  const userActivities = userData?.activities;
+  const { activities: userActivities } = useActivities();
+
   const isOwnActivity = (activity: Activity) => {
     return userActivities?.some(
       (userActivity) => userActivity.id === activity.id
@@ -138,10 +136,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                         key={intensityIdx}
                         className="w-4 h-4"
                         style={{
-                          backgroundColor: hexToRgba(
-                            activity.colorHex!,
-                            alpha
-                          ),
+                          backgroundColor: hexToRgba(activity.colorHex!, alpha),
                         }}
                         title={`${activity.title} - Intensity ${
                           intensityIdx + 1

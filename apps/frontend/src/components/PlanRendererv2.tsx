@@ -1,25 +1,12 @@
 import { useApiWithAuth } from "@/api";
+import { useActivities } from "@/contexts/activities";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import {
-  CompletePlan,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { CompletePlan, usePlans } from "@/contexts/plans";
+import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { Activity, Plan, PlanSession } from "@tsw/prisma";
-import {
-  addWeeks,
-  endOfWeek,
-  format,
-  isSameWeek,
-  subDays
-} from "date-fns";
-import {
-  ChartArea,
-  Maximize2,
-  Minimize2,
-  PlusSquare
-} from "lucide-react";
+import { addWeeks, endOfWeek, format, isSameWeek, subDays } from "date-fns";
+import { ChartArea, Maximize2, Minimize2, PlusSquare } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CoachOverviewCard } from "./CoachOverviewCard";
@@ -44,10 +31,10 @@ interface PlanRendererv2Props {
 }
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
-  const { useCurrentUserDataQuery, useMultipleUsersDataQuery } =
-    useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
+  const { currentUser } = useCurrentUser();
+  const { plans } = usePlans();
+  const { activities, activityEntries } = useActivities();
+
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
@@ -85,101 +72,100 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     return undefined;
   }, [timeRange, selectedPlan.sessions]);
 
-  const memberUsernames = useMemo(() => {
-    if (!selectedPlan.planGroupId || !userData?.username) return [];
+  // const memberUsernames = useMemo(() => {
+  //   if (!selectedPlan.planGroupId || !currentUser?.username) return [];
 
-    const group = userData?.plans
-      .map((p) => p.planGroup)
-      .find((group) => group?.id === selectedPlan.planGroupId);
+  //   const group = plans
+  //     ?.map((p) => p.planGroup)
+  //     .find((group) => group?.id === selectedPlan.planGroupId);
 
-    return (group?.members || [])
-      .map((member) => member.username)
-      .filter((username) => username !== null && username !== undefined && username !== userData?.username);
-  }, [selectedPlan.planGroupId, userData]);
+  //   return (group?.members || [])
+  //     .map((member) => member.username)
+  //     .filter(
+  //       (username) =>
+  //         username !== null &&
+  //         username !== undefined &&
+  //         username !== currentUser?.username
+  //     );
+  // }, [selectedPlan.planGroupId, currentUser]);
 
-  const { data: membersData } = useMultipleUsersDataQuery(memberUsernames as string[]);
+  // // const {data: membersData} = useUsers(
+  // //   memberUsernames
+  // //     .filter((username) => username !== null)
+  // //     .map((username) => ({ username }))
+  // // );
 
-  const getMemberData = (username: string) => {
-    if (username === userData?.username) return userData;
-    return membersData?.[username];
-  };
+  // // const getMemberData = (username: string) => {
+  // //   if (username === currentUser?.username) return currentUser;
+  // //   return membersData?.find((m) => m.username === username);
+  // // };
 
-  const activities = useMemo(() => {
-    return userData?.activities || [];
-  }, [userData]);
+  // // const { planGroupMembers, memberPlans } = useMemo(() => {
+  // //   if (!selectedPlan.planGroupId)
+  // //     return { planGroupMembers: [], memberPlans: new Map() };
 
-  const activityEntries = useMemo(() => {
-    return userData?.activityEntries || [];
-  }, [userData]);
+  // //   const group = plans
+  // //     ?.map((p) => p.planGroup)
+  // //     .find((group) => group?.id === selectedPlan.planGroupId);
 
-  const { planGroupMembers, memberPlans } = useMemo(() => {
-    if (!selectedPlan.planGroupId)
-      return { planGroupMembers: [], memberPlans: new Map() };
+  // //   const memberPlans = new Map<string, Plan>();
+  // //   group?.members?.forEach((member) => {
+  // //     if (member.username === null || member.username === undefined) return;
 
-    const group = userData?.plans
-      .map((p) => p.planGroup)
-      .find((group) => group?.id === selectedPlan.planGroupId);
+  // //     const memberData = getMemberData(member.username);
+  // //     const memberPlan = memberData?.plans.find(
+  // //       (p) => p.planGroupId === selectedPlan.planGroupId
+  // //     );
+  // //     if (memberPlan) {
+  // //       memberPlans.set(member.username, memberPlan);
+  // //     }
+  // //   });
 
-    const memberPlans = new Map<string, Plan>();
-    group?.members?.forEach((member) => {
-      if (member.username === null || member.username === undefined) return;
+  // //   return {
+  // //     planGroupMembers: group?.members || [],
+  // //     memberPlans,
+  // //   };
+  // // }, [selectedPlan, currentUser?.plans, membersData]);
 
-      const memberData = getMemberData(member.username);
-      const memberPlan = memberData?.plans.find(
-        (p) => p.planGroupId === selectedPlan.planGroupId
-      );
-      if (memberPlan) {
-        memberPlans.set(member.username, memberPlan);
-      }
-    });
+  // const getCompletedSessionsForPlan = useCallback(
+  //   (
+  //     plan: Plan & {
+  //       sessions: PlanSession[];
+  //       activities: Activity[];
+  //     },
+  //     startDate?: Date,
+  //     endDate?: Date
+  //   ) => {
+  //     const userId = plan.userId;
+  //     const username = planGroupMembers.find((m) => m.id === userId)?.username;
+  //     if (!username) return [];
 
-    return {
-      planGroupMembers: group?.members || [],
-      memberPlans,
-    };
-  }, [selectedPlan, userData?.plans, membersData]);
+  //     const memberData = getMemberData(username);
+  //     if (!memberData) return [];
 
-  const getCompletedSessionsForPlan = useCallback(
-    (
-      plan: Plan & {
-        sessions: PlanSession[];
-        activities: Activity[];
-      },
-      startDate?: Date,
-      endDate?: Date
-    ) => {
-      const userId = plan.userId;
-      const username = planGroupMembers.find(
-        (m) => m.id === userId
-      )?.username;
-      if (!username) return [];
+  //     let completedEntries = memberData.activityEntries.filter((entry) =>
+  //       plan.activities.map((a) => a.id).includes(entry.activityId)
+  //     );
 
-      const memberData = getMemberData(username);
-      if (!memberData) return [];
+  //     if (startDate && endDate) {
+  //       completedEntries = completedEntries.filter((entry) => {
+  //         const entryDate = entry.date;
+  //         return entryDate >= startDate && entryDate <= endDate;
+  //       });
+  //     }
 
-      let completedEntries = memberData.activityEntries.filter((entry) =>
-        plan.activities.map((a) => a.id).includes(entry.activityId)
-      );
+  //     const entriesByDate = completedEntries.reduce((acc, entry) => {
+  //       const dateKey = format(entry.date, "yyyy-MM-dd");
+  //       if (!acc[dateKey]) {
+  //         acc[dateKey] = entry;
+  //       }
+  //       return acc;
+  //     }, {} as { [key: string]: (typeof completedEntries)[0] });
 
-      if (startDate && endDate) {
-        completedEntries = completedEntries.filter((entry) => {
-          const entryDate = entry.date;
-          return entryDate >= startDate && entryDate <= endDate;
-        });
-      }
-
-      const entriesByDate = completedEntries.reduce((acc, entry) => {
-        const dateKey = format(entry.date, "yyyy-MM-dd");
-        if (!acc[dateKey]) {
-          acc[dateKey] = entry;
-        }
-        return acc;
-      }, {} as { [key: string]: (typeof completedEntries)[0] });
-
-      return Object.values(entriesByDate);
-    },
-    [userData, planGroupMembers, membersData]
-  );
+  //     return Object.values(entriesByDate);
+  //   },
+  //   [currentUser, planGroupMembers, membersData]
+  // );
 
   // Filter weeks to show current and next week, or all weeks based on showAllWeeks state
   const weeksToDisplay = useMemo(() => {
@@ -287,7 +273,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   //   };
 
   //   calculateSessionData();
-  // }, [selectedPlan, userData, membersData, timeRange, getStartDate]);
+  // }, [selectedPlan, currentUser, membersData, timeRange, getStartDate]);
 
   // const areAllWeeklyActivitiesCompleted = useCallback(() => {
   //   const currentWeekStart = startOfWeek(new Date());
@@ -355,7 +341,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <CoachOverviewCard
           selectedPlan={selectedPlan}
           activities={activities}
-          onRefetch={() => currentUserDataQuery.refetch()}
         />
         {weeksToDisplay.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
@@ -535,21 +520,21 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 ...planGroupMembers
                   .filter(
                     (member) =>
-                      member.username !== userData?.username && member.username
+                      member.username !== currentUser?.username && member.username
                   )
                   .map((member, index) => ({
                     dataKey: member.username,
                     name: `${member.name}'s Sessions`,
                     color: `hsl(var(--chart-${index + 2}))`,
                   })),
-                ...(userData?.username
+                ...(currentUser?.username
                   ? [
                       {
-                        dataKey: userData.username,
+                        dataKey: currentUser.username,
                         name: "Your Sessions",
                         color: `hsl(var(--chart-${
                           planGroupMembers.filter(
-                            (member) => member.username !== userData?.username
+                            (member) => member.username !== currentUser?.username
                           ).length + 2
                         }))`,
                       },
@@ -566,11 +551,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         )
       )} */}
 
-      {planGroupMembers && planGroupMembers.length >= 2 && (
+      {selectedPlan.planGroup?.members && selectedPlan.planGroup.members.length >= 2 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
           <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
           <div className="flex flex-row flex-wrap gap-6">
-            {planGroupMembers.map((member) => (
+            {selectedPlan.planGroup.members.map((member) => (
               <div
                 key={member.id}
                 className="flex flex-row flex-nowrap gap-2 items-center"
@@ -585,7 +570,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   </Avatar>
                 </Link>
                 <div className="text-lg text-gray-800">
-                  {userData?.username === member.username ? "You" : member.name}
+                  {currentUser?.username === member.username
+                    ? "You"
+                    : member.name}
                 </div>
               </div>
             ))}

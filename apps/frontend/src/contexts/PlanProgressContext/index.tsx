@@ -1,10 +1,8 @@
-import {
-  CompletePlan,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
 import { isAfter } from "date-fns";
 import React, { createContext, useContext, useMemo } from "react";
+import { useActivities } from "../activities";
+import { CompletePlan, usePlans } from "../plans";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
 
 export interface PlanAchievementResult {
@@ -46,21 +44,17 @@ const PlanProgressContext = createContext<PlanProgressContextType | undefined>(
 export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserQuery = useCurrentUserDataQuery();
-
-  const userData = currentUserQuery.data;
+  const { plans } = usePlans();
+  const { activities, activityEntries } = useActivities();
 
   const plansProgress = useMemo(() => {
     if (
-      !userData?.plans ||
-      !userData?.activities ||
-      !userData?.activityEntries
+      !plans ||
+      !activities ||
+      !activityEntries
     ) {
       return [];
     }
-
-    const { plans, activities, activityEntries } = userData;
 
     const planProgress = plans.filter((p) => p.deletedAt === null && (p.finishingDate ? isAfter(p.finishingDate, new Date()) : true)).map((plan): PlanProgressData => {
       // const convertedPlan = plan;
@@ -85,7 +79,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       };
     });
     return planProgress;
-  }, [userData?.plans, userData?.activities, userData?.activityEntries]);
+  }, [plans, activities, activityEntries]);
 
   const getPlanProgress = (
     planId: string

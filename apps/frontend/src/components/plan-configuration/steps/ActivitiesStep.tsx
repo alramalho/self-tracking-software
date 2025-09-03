@@ -1,5 +1,5 @@
 import ActivityEditor from "@/components/ActivityEditor";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useActivities } from "@/contexts/activities";
 import { Activity } from "@tsw/prisma";
 import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
@@ -15,9 +15,7 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
   onActivitiesChange,
   initialActivities = [],
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
+  const {activities} = useActivities();
   const [showActivityEditor, setShowActivityEditor] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<Activity[]>(initialActivities);
 
@@ -48,7 +46,7 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
           data-testid="existing-activities"
           className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4"
         >
-          {userData?.activities?.map((activity) => (
+          {activities?.map((activity) => (
             <ActivityItem
               key={activity.id}
               activity={activity}

@@ -1,6 +1,6 @@
+import { differenceInWeeks } from "date-fns";
 import { Metadata, ResolvingMetadata } from "next";
 import ClientPage from "./ClientPage";
-import { differenceInWeeks } from "date-fns";
 
 type Props = {
   params: { plan_invitation_id: string }

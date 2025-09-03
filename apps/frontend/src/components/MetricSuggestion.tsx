@@ -1,10 +1,8 @@
-import React from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useMetrics } from '@/contexts/metrics';
 import { Check, X } from 'lucide-react';
-import { useApiWithAuth } from '@/api';
-import { useUserPlan } from '@/contexts/UserGlobalContext';
-import toast from 'react-hot-toast';
+import React from 'react';
 
 interface MetricSuggestionProps {
   metric: {
@@ -28,26 +26,7 @@ const MetricSuggestion: React.FC<MetricSuggestionProps> = ({
   disabled,
   onSuggestionHandled,
 }) => {
-  const api = useApiWithAuth();
-  const { useMetricsAndEntriesQuery } = useUserPlan();
-  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-
-  const handleAccept = async () => {
-    try {
-      await api.post('/log-metric', {
-        metric_id: entry.metric_id,
-        rating: entry.rating,
-        date: entry.date,
-      });
-      
-      metricsAndEntriesQuery.refetch();
-      toast.success('Metric logged successfully');
-      onSuggestionHandled();
-    } catch (error) {
-      console.error('Error logging metric:', error);
-      toast.error('Failed to log metric');
-    }
-  };
+  const {logMetrics} = useMetrics();
 
   const handleReject = () => {
     onSuggestionHandled();
@@ -77,7 +56,13 @@ const MetricSuggestion: React.FC<MetricSuggestionProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleAccept}
+            onClick={() => {
+              logMetrics([{
+                metricId: metric.id,
+                rating: entry.rating,
+                date: new Date(entry.date),
+              }]);
+            }}
             disabled={disabled}
           >
             <Check className="h-4 w-4" />

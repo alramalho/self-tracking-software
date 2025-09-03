@@ -1,5 +1,5 @@
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { cn } from "@/lib/utils";
 import { isSameWeek } from "date-fns";

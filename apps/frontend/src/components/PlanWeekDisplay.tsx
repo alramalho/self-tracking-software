@@ -1,21 +1,17 @@
-import { PlanProgressData, usePlanProgress } from "@/contexts/PlanProgressContext";
+import { useActivities } from "@/contexts/activities";
+import {
+  PlanProgressData,
+  usePlanProgress,
+} from "@/contexts/PlanProgressContext";
 import {
   isWeekCompleted as checkIsWeekCompleted,
   getCompletedOn,
   isSessionCompleted,
 } from "@/contexts/PlanProgressContext/lib";
-import {
-  CompletePlan,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { cn } from "@/lib/utils";
 import { Activity, PlanSession } from "@tsw/prisma";
-import {
-  endOfWeek,
-  format,
-  isAfter,
-  isSameWeek
-} from "date-fns";
+import { endOfWeek, format, isAfter, isSameWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import Confetti from "react-confetti-boom";
@@ -30,9 +26,20 @@ interface PlanWeekDisplayProps {
   planProgress?: PlanProgressData; // Optional plan progress data for demo mode
 }
 
-export const MiniActivityCard = ({ activity, className }: { activity: Activity, className?: string }) => {
+export const MiniActivityCard = ({
+  activity,
+  className,
+}: {
+  activity: Activity;
+  className?: string;
+}) => {
   return (
-    <div className={cn("flex flex-col items-center gap-2 p-2 bg-gray-100 rounded-md text-center min-w-16", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-center gap-2 p-2 bg-gray-100 rounded-md text-center min-w-16",
+        className
+      )}
+    >
       <span className="text-xl">{activity.emoji}</span>
       <span className="text-xs text-gray-700">{activity.title}</span>
     </div>
@@ -48,11 +55,11 @@ export const PlanWeekDisplay = ({
 }: PlanWeekDisplayProps) => {
   // Always call hooks to maintain consistent order
   const { plansProgress } = usePlanProgress();
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
-  
+  const { activities, activityEntries } = useActivities();
+
   // Use provided plan progress if available, otherwise find from hook
-  const planProgress = providedPlanProgress || plansProgress.find((p) => p.plan.id === plan.id);
+  const planProgress =
+    providedPlanProgress || plansProgress.find((p) => p.plan.id === plan.id);
   const week = planProgress?.weeks.find((w) => isSameWeek(w.startDate, date));
 
   const [animatedCompletedActivities, setAnimatedCompletedActivities] =
@@ -69,13 +76,12 @@ export const PlanWeekDisplay = ({
     plan.outlineType === "TIMES_PER_WEEK"
       ? (week?.plannedActivities as number)
       : (week?.plannedActivities as PlanSession[])?.length || 0;
-      
+
   const uniqueDaysWithActivities = new Set(
     week?.completedActivities.map((entry) =>
       format(new Date(entry.date), "yyyy-MM-dd")
     )
   );
-
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
@@ -84,9 +90,10 @@ export const PlanWeekDisplay = ({
     : false;
 
   const isCurrentWeek = week ? isSameWeek(week.startDate, new Date()) : false;
-  const isFutureWeek = week ? isAfter(week.startDate, endOfWeek(new Date())) : false
+  const isFutureWeek = week
+    ? isAfter(week.startDate, endOfWeek(new Date()))
+    : false;
   const showConfetti = isCurrentWeek && isWeekCompleted;
-
 
   // // Helper function to check if a streak was achieved this week
   // const wasStreakAchievedThisWeek = (planProgressData: any) => {
@@ -104,7 +111,7 @@ export const PlanWeekDisplay = ({
   //     currentWeek.completedActivities.length > 0
   //   );
   // };
-  
+
   useEffect(() => {
     if (inView) {
       const timer = setInterval(() => {
@@ -127,7 +134,7 @@ export const PlanWeekDisplay = ({
     totalCompletedActivities,
     totalPlannedActivities,
     isWeekCompleted,
-    plan.id
+    plan.id,
   ]);
 
   // Reset animation when plan changes
@@ -148,13 +155,12 @@ export const PlanWeekDisplay = ({
         className
       )}
     >
-      {title && (
-        typeof title === "string" ? (
+      {title &&
+        (typeof title === "string" ? (
           <h2 className="text-md font-semibold text-gray-800">{title}</h2>
         ) : (
           title
-        )
-      )}
+        ))}
 
       <div className="flex gap-1 mt-3">
         {Array.from({ length: totalPlannedActivities }, (_, index) => (
@@ -216,18 +222,18 @@ export const PlanWeekDisplay = ({
                 return isSameWeek(session.date, date);
               })
               .map((session) => {
-                const activity = userData?.activities.find(
+                const activity = activities.find(
                   (a) => a.id === session.activityId
                 );
                 const completed = isSessionCompleted(
                   session,
                   plan,
-                  userData?.activityEntries || []
+                  activityEntries || []
                 );
                 const completedOn = getCompletedOn(
                   session,
                   plan,
-                  userData?.activityEntries || []
+                  activityEntries || []
                 );
                 if (!activity) return null;
 

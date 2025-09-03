@@ -60,6 +60,7 @@ model User {
   planGroupMemberships    PlanGroup[]
   recommendations         Recommendation[]
   reactionsSent           Reaction[]
+  commentsSent            Comment[]
 
   // Connection relationships (replaces friend system)
   connectionsFrom Connection[] @relation("ConnectionFrom")
@@ -177,6 +178,7 @@ model Comment {
 
   // Relations
   activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([activityEntryId, deletedAt])
   @@index([createdAt])
@@ -221,7 +223,6 @@ model MetricEntry {
   @@index([createdAt])
   @@map("metric_entries")
 }
-
 
 model Plan {
   id                         String            @id @default(cuid())
@@ -286,7 +287,7 @@ model PlanMilestone {
   date        DateTime @db.Date
   description String
   progress    Int?
-  criteria    Json? 
+  criteria    Json?
   createdAt   DateTime @default(now())
 
   plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
@@ -353,19 +354,19 @@ model MessageEmotion {
 }
 
 model Notification {
-  id           String                  @id @default(cuid())
-  userId       String
-  message      String
-  createdAt    DateTime                @default(now())
-  sentAt       DateTime?
-  processedAt  DateTime?
-  openedAt     DateTime?
-  concludedAt  DateTime?
-  promptTag    String?
-  status       NotificationStatus      @default(PENDING)
-  type         NotificationType        @default(INFO)
-  relatedId    String?
-  relatedData  Json?
+  id          String             @id @default(cuid())
+  userId      String
+  message     String
+  createdAt   DateTime           @default(now())
+  sentAt      DateTime?
+  processedAt DateTime?
+  openedAt    DateTime?
+  concludedAt DateTime?
+  promptTag   String?
+  status      NotificationStatus @default(PENDING)
+  type        NotificationType   @default(INFO)
+  relatedId   String?
+  relatedData Json?
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

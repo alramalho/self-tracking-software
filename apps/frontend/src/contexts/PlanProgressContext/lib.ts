@@ -11,7 +11,7 @@ import {
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { PlanAchievementResult, PlanWeek } from ".";
-import { CompletePlan } from "../UserGlobalContext";
+import { CompletePlan } from "../plans";
 
 export const ACHIEVEMENT_WEEKS = 9;
 export const LIFESTYLE_START_COUNTING_DATE = subDays(

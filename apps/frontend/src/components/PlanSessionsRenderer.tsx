@@ -1,4 +1,4 @@
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { Activity } from "@tsw/prisma";
 import { format } from "date-fns";
 import React, { useState } from "react";

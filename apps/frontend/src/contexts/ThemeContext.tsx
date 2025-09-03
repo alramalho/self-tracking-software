@@ -1,13 +1,24 @@
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
-import { useUserPlan } from './UserGlobalContext';
-import { BaseThemeColor, ThemeColor, getThemeVariants } from '@/utils/theme';
-import { getStoredRandomColor, generateAndStoreRandomColor, useRandomColorCountdown } from '@/hooks/useThemeColors';
+import {
+  generateAndStoreRandomColor,
+  getStoredRandomColor,
+  useRandomColorCountdown,
+} from "@/hooks/useThemeColors";
+import {
+  BaseLoweredThemeColor,
+  getThemeVariants,
+  LowerThemeColor
+} from "@/utils/theme";
+import { ThemeColor } from "@tsw/prisma";
+import React, { createContext, useContext, useMemo } from "react";
+import { useCurrentUser } from "./users";
 
 interface ThemeContextType {
-  currentTheme: ThemeColor;
-  effectiveTheme: BaseThemeColor;
-  updateTheme: (color: ThemeColor) => Promise<void>;
-  getThemeClass: (type: 'primary' | 'secondary' | 'accent' | 'hover' | 'border' | 'background') => string;
+  currentTheme: LowerThemeColor;
+  effectiveTheme: BaseLoweredThemeColor;
+  updateTheme: (color: LowerThemeColor) => Promise<void>;
+  getThemeClass: (
+    type: "primary" | "secondary" | "accent" | "hover" | "border" | "background"
+  ) => string;
   getTextClass: () => string;
   randomTimeLeft?: string;
 }
@@ -15,36 +26,41 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // Utility to get computed color from a Tailwind class
-const getComputedColor = (className: string): string => {
-  // Create a temporary element
-  const temp = document.createElement('div');
-  temp.className = className;
-  document.body.appendChild(temp);
-  
-  // Get the computed background color
-  const computedColor = window.getComputedStyle(temp).backgroundColor;
-  
-  // Clean up
-  document.body.removeChild(temp);
-  return computedColor;
-};
+// const getComputedColor = (className: string): string => {
+//   // Create a temporary element
+//   const temp = document.createElement("div");
+//   temp.className = className;
+//   document.body.appendChild(temp);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentTheme: userTheme, updateTheme } = useUserPlan();
-  
+//   // Get the computed background color
+//   const computedColor = window.getComputedStyle(temp).backgroundColor;
+
+//   // Clean up
+//   document.body.removeChild(temp);
+//   return computedColor;
+// };
+
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { currentUser, updateUser } = useCurrentUser();
+  const userTheme =
+    currentUser?.themeBaseColor.toLowerCase() as LowerThemeColor;
+
   // Get the effective theme color (either user's choice or resolved random color)
-  const effectiveTheme = useMemo<BaseThemeColor>(() => {
-    if (userTheme !== 'random') return userTheme as BaseThemeColor;
-    
+  const effectiveTheme = useMemo<BaseLoweredThemeColor>(() => {
+    if (currentUser?.themeBaseColor.toLowerCase() !== "random")
+      return userTheme as BaseLoweredThemeColor;
+
     const storedRandom = getStoredRandomColor();
     if (storedRandom) return storedRandom.color;
-    
+
     return generateAndStoreRandomColor();
-  }, [userTheme]);
+  }, [userTheme, currentUser?.themeBaseColor]);
 
   // Get countdown for random theme
   const randomTimeLeft = useRandomColorCountdown(
-    userTheme === 'random' ? getStoredRandomColor()?.expiresAt || null : null
+    userTheme === "random" ? getStoredRandomColor()?.expiresAt || null : null
   );
 
   const themeVariants = getThemeVariants(effectiveTheme);
@@ -58,7 +74,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   //   });
   // }, [effectiveTheme, themeVariants]);
 
-  const getThemeClass = (type: 'primary' | 'secondary' | 'accent' | 'hover' | 'border' | 'background') => {
+  const getThemeClass = (
+    type: "primary" | "secondary" | "accent" | "hover" | "border" | "background"
+  ) => {
     return themeVariants[type];
   };
 
@@ -69,23 +87,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const value = {
     currentTheme: userTheme,
     effectiveTheme,
-    updateTheme,
+    updateTheme: async (color: LowerThemeColor) => {
+      await updateUser({ themeBaseColor: color.toUpperCase() as ThemeColor });
+    },
     getThemeClass,
     getTextClass,
-    randomTimeLeft: userTheme === 'random' ? randomTimeLeft : undefined,
+    randomTimeLeft: userTheme === "random" ? randomTimeLeft : undefined,
   };
 
   return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 };
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
-}; 
+};

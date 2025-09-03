@@ -1,6 +1,4 @@
-import { useApiWithAuth } from "@/api";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { useQuery } from "@tanstack/react-query";
+import { useCurrentUser } from "@/contexts/users";
 
 export type PaidPlanType = "PLUS" | "FREE";
 
@@ -16,14 +14,13 @@ const PLAN_LIMITS = {
 } as const;
 
 export function usePaidPlan() {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const { currentUser } = useCurrentUser();
 
   return {
-    isUserFree: userData?.planType === "FREE",
-    isUserPremium: userData?.planType === "PLUS",
-    userPlanType: userData?.planType,
-    maxMetrics: PLAN_LIMITS[userData?.planType || "FREE"].maxMetrics,
-    maxPlans: PLAN_LIMITS[userData?.planType || "FREE"].maxPlans,
+    isUserFree: currentUser?.planType === "FREE",
+    isUserPremium: currentUser?.planType === "PLUS",
+    userPlanType: currentUser?.planType,
+    maxMetrics: PLAN_LIMITS[currentUser?.planType || "FREE"].maxMetrics,
+    maxPlans: PLAN_LIMITS[currentUser?.planType || "FREE"].maxPlans,
   };
 }

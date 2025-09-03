@@ -1,6 +1,6 @@
+import { CompletePlan } from "@/contexts/plans";
 import AppleLikePopover from "./AppleLikePopover";
 import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
 
 interface PlanEditModalProps {
   plan: CompletePlan;

@@ -1,8 +1,8 @@
-import { useApiWithAuth } from "@/api";
 import Divider from "@/components/Divider";
 import { MetricRater } from "@/components/MetricRater";
 import { Card } from "@/components/ui/card";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useMetrics } from "@/contexts/metrics";
+import { useCurrentUser } from "@/contexts/users";
 import { Metric } from "@tsw/prisma";
 import { isToday } from "date-fns";
 import { useState } from "react";
@@ -18,20 +18,14 @@ export function MetricRaters({
 }: {
   onAllRatingsSubmitted: () => void;
 }) {
-  const { useMetricsAndEntriesQuery, useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
-  const user = userData;
-  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData } = metricsAndEntriesQuery;
-  const metrics = metricsAndEntriesData?.metrics || [];
-  const entries = metricsAndEntriesData?.entries || [];
+  const { currentUser } = useCurrentUser();
+  const { metrics, entries, logMetrics } = useMetrics();
+  const user = currentUser;
   const [ratings, setRatings] = useState<Record<string, MetricRating>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const api = useApiWithAuth();
 
   const metricLoggingDisabled = (metric: Metric) => {
     const today = new Date().toISOString().split("T")[0];
-    return entries.some(
+    return entries?.some(
       (entry) =>
         entry.metricId === metric.id && isToday(entry.date)
     );
@@ -45,42 +39,37 @@ export function MetricRaters({
   };
 
   const handleSubmitAllRatings = async (description: string) => {
-    setIsSubmitting(true);
     try {
-      // Submit all ratings in sequence with the same description
-      for (const [metricId, ratingData] of Object.entries(ratings)) {
-        await api.post("/metrics/log-metric", {
-          metric_id: metricId,
-          rating: ratingData.rating,
-          description,
-        });
-      }
+      const ratingsToSubmit = Object.entries(ratings).map(([metricId, ratingData]) => ({
+        metricId,
+        rating: ratingData.rating,
+        date: new Date(),
+        description,
+      }));
 
-      toast.success("All ratings submitted successfully");
-      metricsAndEntriesQuery.refetch();
-      // Clear ratings and description after successful submission
+      await logMetrics(ratingsToSubmit);
+      
+      // Clear ratings after successful submission
       setRatings({});
       onAllRatingsSubmitted();
     } catch (error) {
       console.error("Error submitting ratings:", error);
       toast.error("Failed to submit ratings");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const hasUnloggedMetrics = metrics.some(
+  const hasUnloggedMetrics = metrics?.some(
     (metric) => !metricLoggingDisabled(metric)
   );
-  const unloggedMetrics = metrics.filter(
+  const unloggedMetrics = metrics?.filter(
     (metric) => !metricLoggingDisabled(metric)
   );
   const allMetricsRated =
-    hasUnloggedMetrics && unloggedMetrics.every((metric) => ratings[metric.id]);
+    hasUnloggedMetrics && unloggedMetrics?.every((metric) => ratings[metric.id]);
 
   return (
     <div className="space-y-8">
-      {metrics.map((metric) => {
+      {metrics?.map((metric) => {
         const isDisabled = metricLoggingDisabled(metric);
         return (
           <Card

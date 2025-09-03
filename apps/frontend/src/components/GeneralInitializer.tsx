@@ -1,6 +1,7 @@
 "use client";
 
-import { hasCacheData, useUserPlan } from "@/contexts/UserGlobalContext";
+import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
+import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
@@ -19,24 +20,22 @@ export default function GeneralInitializer({
   children: React.ReactNode;
 }) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useSession();
-  const { useCurrentUserDataQuery, hasLoadedUserData, isWaitingForData } =
-    useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
+  const { currentUser, hasLoadedUserData, updateUser } = useCurrentUser();
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const { hasCacheData } = useGlobalDataOperations();
   const [initialCacheExists] = useState(() => hasCacheData());
   const router = useRouter();
-  const isOnboardingCompleted = userData?.onboardingCompletedAt != null;
+  const isOnboardingCompleted = currentUser?.onboardingCompletedAt != null;
 
   const onboardingNecessary = useMemo(() => {
-    return currentUserDataQuery.isFetched && !isOnboardingCompleted;
+    return hasLoadedUserData && !isOnboardingCompleted;
   }, [isOnboardingCompleted]);
 
-  const email = userData?.email || "";
+  const email = currentUser?.email || "";
 
   useEffect(() => {
     if (onboardingNecessary) {
@@ -45,22 +44,29 @@ export default function GeneralInitializer({
   }, [onboardingNecessary, router]);
 
   useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && userData && !hasRanPosthogIdentify) {
-      posthog.identify(userData.id, {
-        email: userData.email,
-        name: userData.name,
-        username: userData.username,
-        is_app_installed: isAppInstalled,
-        is_looking_for_ap: userData.lookingForAp,
-        friend_count: userData.friends?.length,
-        is_push_granted: isPushGranted,
-      });
-      setHasRanPosthogIdentify(true);
+    if (isSignedIn && hasLoadedUserData && currentUser) {
+      if (!hasRanPosthogIdentify) {
+        posthog.identify(currentUser.id, {
+          email: currentUser.email,
+          name: currentUser.name,
+          username: currentUser.username,
+          is_app_installed: isAppInstalled,
+          is_looking_for_ap: currentUser.lookingForAp,
+          friend_count: currentUser.friends?.length,
+          is_push_granted: isPushGranted,
+        });
+        setHasRanPosthogIdentify(true);
+      }
+      if (currentUser.timezone !== Intl.DateTimeFormat().resolvedOptions().timeZone) {
+        updateUser({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }).catch((err) => {
+          console.error("Failed to update timezone on initial load:", err);
+        });
+      }
     }
   }, [
     isSignedIn,
     hasLoadedUserData,
-    userData,
+    currentUser,
     hasRanPosthogIdentify,
     isAppInstalled,
     isPushGranted,
@@ -85,7 +91,7 @@ export default function GeneralInitializer({
 
   if (
     !isClerkLoaded ||
-    (isSignedIn && currentUserDataQuery.isFetched && !initialCacheExists)
+    (isSignedIn && hasLoadedUserData && !initialCacheExists)
   ) {
     console.log("showGenericLoader", {
       isClerkLoaded,

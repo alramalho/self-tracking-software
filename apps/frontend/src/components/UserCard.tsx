@@ -1,26 +1,24 @@
-import { useApiWithAuth } from "@/api";
 import PlanStreak from "@/components/PlanStreak";
 import { Button } from "@/components/ui/button";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
 import { Textarea } from "@/components/ui/textarea";
 import { useTheme } from "@/contexts/ThemeContext";
-import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { getThemeVariants } from "@/utils/theme";
 import { Avatar, AvatarFallback } from "@radix-ui/react-avatar";
-import { Activity, ActivityEntry, User } from "@tsw/prisma";
+import { Activity, ActivityEntry, Plan, User } from "@tsw/prisma";
 import { differenceInDays, formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { posthog } from "posthog-js";
 import React, { useState } from "react";
-import toast from "react-hot-toast";
 
 interface UserCardProps {
   user: User;
   score?: number;
-  plan?: CompletePlan;
-  plans?: CompletePlan[];
+  plan?: { emoji?: string; goal: string };
+  plans?: Plan[];
   activities?: Activity[];
   activityEntries?: ActivityEntry[];
   showFriendRequest?: boolean;
@@ -35,58 +33,36 @@ const UserCard: React.FC<UserCardProps> = ({
   plan,
   plans = [],
   activities = [],
-  activityEntries = [],
   showFriendRequest = true,
   showScore = true,
   showStreaks = true,
   className = "",
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserQuery = useCurrentUserDataQuery();
-  const { data: userData, isLoading: isLoadingUser } = currentUserQuery;
-  const currentUser = userData;
+  const { currentUser, sendFriendRequest, isSendingFriendRequest } =
+    useCurrentUser();
   const isOwnUser = currentUser?.id === user.id;
-  const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [message, setMessage] = useState("");
-  const api = useApiWithAuth();
   const router = useRouter();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
   const [sentFriendRequest, setSentFriendRequest] = useState(false);
-  
+
   const isOlderThan30Days = (date: Date) => {
     return differenceInDays(new Date(), date) > 30;
   };
 
   const handleSendFriendRequest = async () => {
-    try {
-      setIsSendingRequest(true);
-      posthog.capture("ap_friend_request_sent", {
-        sent_from_userId: currentUser?.id,
-        sent_from_user_username: currentUser?.username,
-        sent_to_userId: user.id,
-        sent_to_user_username: user.username,
-        message: message || undefined,
-      });
+    posthog.capture("ap_friend_request_sent", {
+      sent_from_userId: currentUser?.id,
+      sent_from_user_username: currentUser?.username,
+      sent_to_userId: user.id,
+      sent_to_user_username: user.username,
+      message: message || undefined,
+    });
 
-      const payload: any = {};
-      if (message.trim()) {
-        payload.message = message.trim();
-      }
-
-      await api.post(`/users/send-connection-request/${user.id}`, payload);
-
-      currentUserQuery.refetch();
-      setSentFriendRequest(true);
-      toast.success("Friend request sent successfully!");
-      setMessage(""); // Clear message after sending
-    } catch (error) {
-      console.error("[UserCard] Error sending friend request:", error);
-      toast.error("Failed to send friend request. Please try again.");
-    } finally {
-      setIsSendingRequest(false);
-    }
+    await sendFriendRequest(user.id);
+    setSentFriendRequest(true);
   };
 
   const handleProfileClick = () => router.push(`/profile/${user.username}`);
@@ -165,9 +141,7 @@ const UserCard: React.FC<UserCardProps> = ({
   );
 
   return (
-    <div
-      className={`border rounded-2xl overflow-hidden relative ${className}`}
-    >
+    <div className={`border rounded-2xl overflow-hidden relative ${className}`}>
       <ProfileImageArea />
 
       <div className="p-4 flex flex-col space-y-4">
@@ -265,10 +239,8 @@ const UserCard: React.FC<UserCardProps> = ({
                         </span>
                       </div>
                       {showStreaks && activities.length > 0 && (
-                        // just working for current user bc this component gets activities from current user 
-                        <PlanStreak
-                          plan={planItem}
-                        />
+                        // just working for current user bc this component gets activities from current user
+                        <PlanStreak plan={planItem} />
                       )}
                     </div>
                   </div>
@@ -312,13 +284,15 @@ const UserCard: React.FC<UserCardProps> = ({
 
             {/* Send friend request button */}
             <Button
-              loading={isSendingRequest}
-              disabled={isSendingRequest || sentFriendRequest}
+              loading={isSendingFriendRequest}
+              disabled={isSendingFriendRequest || sentFriendRequest}
               className={`w-full rounded-xl p-5 ${variants.button.glass}`}
               onClick={handleSendFriendRequest}
             >
               <Send className="mr-2" />
-              {sentFriendRequest ? "Friend Request Sent" : "Send Friend Request"}
+              {sentFriendRequest
+                ? "Friend Request Sent"
+                : "Send Friend Request"}
             </Button>
           </>
         )}

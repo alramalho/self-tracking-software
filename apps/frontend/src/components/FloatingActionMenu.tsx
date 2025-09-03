@@ -1,67 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
-import { HelpCircle, MessageSquarePlus, Bug, X, ChevronUp } from "lucide-react";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
+import { useFeedback } from "@/hooks/useFeedback";
+import { Bug, ChevronUp, HelpCircle, MessageSquarePlus } from "lucide-react";
+import { useState } from "react";
 import FeedbackForm from "./FeedbackForm";
-import { toast } from "react-hot-toast";
-import { useApiWithAuth } from "@/api";
 
 const FloatingActionMenu = ({ className }: { className?: string }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showBugForm, setShowBugForm] = useState(false);
   const [showHelpForm, setShowHelpForm] = useState(false);
   const [showFeatureForm, setShowFeatureForm] = useState(false);
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-  const email = userData?.email || "";
-  const api = useApiWithAuth();
-
-  const reportBug = async (text: string, email: string) => {
-    await toast.promise(
-      api.post("/report-feedback", {
-        email,
-        text,
-        type: "bug_report",
-      }),
-      {
-        loading: "Sending bug report...",
-        success: "Bug report sent successfully!",
-        error: "Failed to send bug report",
-      }
-    );
-  };
-
-  const getHelp = async (text: string, email: string) => {
-    await toast.promise(
-      api.post("/report-feedback", {
-        email,
-        text,
-        type: "help_request",
-      }),
-      {
-        loading: "Sending help request...",
-        success: "Help request sent successfully!",
-        error: "Failed to send help request",
-      }
-    );
-  };
-
-  const suggestFeature = async (text: string, email: string) => {
-    await toast.promise(
-      api.post("/report-feedback", {
-        email,
-        text,
-        type: "feature_request",
-      }),
-      {
-        loading: "Sending feature request...",
-        success: "Feature request sent successfully!",
-        error: "Failed to send feature request",
-      }
-    );
-  };
+  const { currentUser } = useCurrentUser();
+  const email = currentUser?.email || "";
+  const { sendFeedback } = useFeedback();
 
   const buttonContainerClasses = "flex items-center gap-3 group";
   const buttonClasses =
@@ -174,7 +126,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
           title="🐞 Report a Bug"
           email={email}
           placeholder="Please describe the bug you encountered..."
-          onSubmit={reportBug}
+          onSubmit={(text) => sendFeedback({ text, type: "bug_report" })}
           onClose={() => setShowBugForm(false)}
         />
       )}
@@ -184,7 +136,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
           title="💬 Have a question?"
           email={email}
           placeholder="What do you want to know?"
-          onSubmit={getHelp}
+          onSubmit={(text) => sendFeedback({ text, type: "help_request" })}
           onClose={() => setShowHelpForm(false)}
         />
       )}
@@ -194,7 +146,7 @@ const FloatingActionMenu = ({ className }: { className?: string }) => {
           title="✨ Suggest Feature"
           email={email}
           placeholder="What feature would you like to see? Please describe how it would help you."
-          onSubmit={suggestFeature}
+          onSubmit={(text) => sendFeedback({ text, type: "feature_request" })}
           onClose={() => setShowFeatureForm(false)}
         />
       )}

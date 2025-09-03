@@ -3,9 +3,7 @@
 import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { useUser } from "@clerk/nextjs";
 import { Activity, User } from "@tsw/prisma";
 import { Plan } from "@tsw/prisma/types";
@@ -18,9 +16,8 @@ export default function ClientPage() {
   const params = useParams();
   const router = useRouter();
   const api = useApiWithAuth();
-  const { useCurrentUserDataQuery, hasLoadedUserData } = useUserPlan();
-  const { data: currentUser } = useCurrentUserDataQuery();
   const { isSignedIn } = useUser();
+  const { currentUser, hasLoadedUserData } = useCurrentUser();
   const [inviterData, setInviterData] = useState<{
     user: User;
     plans: Plan[];
@@ -95,7 +92,7 @@ export default function ClientPage() {
       return;
     } else if (referrer) {
       if (currentUser?.username === referrer) {
-        toast("You can't refer yourself", {icon: "😅"});
+        toast("You can't refer yourself", { icon: "😅" });
         router.push(`/`);
         return;
       }

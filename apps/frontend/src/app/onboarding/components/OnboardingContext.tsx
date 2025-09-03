@@ -1,10 +1,7 @@
 "use client";
 
-import { updateUser } from "@/app/actions";
-import {
-  CompletePlan as Plan,
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
+import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Activity } from "@tsw/prisma";
 import { useRouter } from "next/navigation";
@@ -36,8 +33,8 @@ interface OnboardingContextValue {
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
-  plans: Plan[] | null;
-  selectedPlan: Plan | null;
+  plans: CompletePlan[] | null;
+  selectedPlan: CompletePlan | null;
   planGoal: string | null;
   planActivities: Activity[];
   planType: string | null;
@@ -49,7 +46,7 @@ interface OnboardingContextValue {
   setPlanActivities: (activities: Activity[]) => void;
   setPlanType: (type: string) => void;
   setPlanTimesPerWeek: (times: number) => void;
-  setSelectedPlan: (plan: Plan) => void;
+  setSelectedPlan: (plan: CompletePlan) => void;
   setPartnerType: (type: "human" | "ai") => void;
   isStepCompleted: (stepId: string) => boolean;
   updateOnboardingState: (updates: object) => void;
@@ -76,14 +73,14 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   steps,
   initialStepId,
 }) => {
-  const { refetchUserData } = useUserPlan();
+  const { updateUser } = useCurrentUser();
   const [onboardingState, setOnboardingState] = useLocalStorage(
     "onboarding-state",
     {
       currentStep: initialStepId || steps[0]?.id || "",
       completedSteps: [] as string[],
-      plans: null as Plan[] | null,
-      selectedPlan: null as Plan | null,
+      plans: null as CompletePlan[] | null,
+      selectedPlan: null as CompletePlan | null,
       planGoal: null as string | null,
       planEmoji: null as string | null,
       planActivities: [] as Activity[],
@@ -138,7 +135,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     }));
   };
 
-  const setSelectedPlan = (plan: Plan) => {
+  const setSelectedPlan = (plan: CompletePlan) => {
     setOnboardingState((prevState) => ({ ...prevState, selectedPlan: plan }));
   };
 
@@ -244,11 +241,9 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         updateUser({
           onboardingCompletedAt: new Date(),
         }).then(() => {
-          refetchUserData().then( () => {
-            posthog.capture("onboarding-completed");
-            toast.success("Onboarding completed! ");
-            router.push("/");
-          });
+          posthog.capture("onboarding-completed");
+          toast.success("Onboarding completed! ");
+          router.push("/");
         });
       } else {
         // Priority 1: If options.nextStep is provided, go to that specific step

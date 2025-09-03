@@ -197,6 +197,13 @@ backend
 [x] can see recommended users
 [ ] test errors are propagated to telegram
 [ ] AI message regeration
+-- plan invitations
+[] test invite link works 
+  [] people w/o account see the page
+  [] people are able to create the account and auto send the req
+  [] people are able to send the opengraph tags on whatsapp
+-- theme
+[] test theme change
 
 ## missing verticals
 

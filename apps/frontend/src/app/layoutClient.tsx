@@ -1,8 +1,8 @@
 "use client";
 
 import GeneralInitializer from "@/components/GeneralInitializer";
-import { UserPlanProviderWrapper } from "@/components/UserPlanProviderWrapper";
 import { DailyCheckinPopoverProvider } from "@/contexts/DailyCheckinContext";
+import { GlobalDataProvider } from "@/contexts/GlobalDataProvider";
 import { PlanProgressProvider } from "@/contexts/PlanProgressContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { UpgradeProvider } from "@/contexts/UpgradeContext";
@@ -47,7 +47,7 @@ export default function ClientLayout({
       client={queryClient}
       persistOptions={{ persister: localStoragePersister }}
     >
-      <UserPlanProviderWrapper>
+      <GlobalDataProvider>
         <PlanProgressProvider>
           <ThemeProvider>
             <UpgradeProvider>
@@ -74,7 +74,7 @@ export default function ClientLayout({
             </UpgradeProvider>
           </ThemeProvider>
         </PlanProgressProvider>
-      </UserPlanProviderWrapper>
+      </GlobalDataProvider>
     </PersistQueryClientProvider>
   );
 }

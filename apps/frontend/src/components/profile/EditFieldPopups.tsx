@@ -1,12 +1,12 @@
 import { useApiWithAuth } from "@/api";
-import { updateUser } from "@/app/actions";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PhotoUploader from "@/components/ui/PhotoUploader";
 import { Switch } from "@/components/ui/switch";
 import { WheelPicker, WheelPickerWrapper } from "@/components/ui/wheel-picker";
-import { useUser } from "@clerk/nextjs";
+import { useCurrentUser } from "@/contexts/users";
+import { useUser as useClerkUser } from "@clerk/nextjs";
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
@@ -15,29 +15,15 @@ import { twMerge } from "tailwind-merge";
 interface EditFieldPopupProps {
   open: boolean;
   onClose: () => void;
-  onSave?: () => void;
 }
 
 export const EditLookingForApPopup: React.FC<
   EditFieldPopupProps & {
     currentValue: boolean;
   }
-> = ({ open, onClose, onSave, currentValue }) => {
+> = ({ open, onClose, currentValue }) => {
   const [value, setValue] = useState(currentValue);
-  const api = useApiWithAuth();
-
-  const handleSave = async () => {
-    try {
-      await api.post("/users/update-user", {
-        lookingForAp: value,
-      });
-      toast.success("Looking for AP preference updated");
-      onSave?.();
-      onClose();
-    } catch (error) {
-      toast.error("Failed to update preference");
-    }
-  };
+  const { updateUser } = useCurrentUser();
 
   return (
     <AppleLikePopover
@@ -51,7 +37,7 @@ export const EditLookingForApPopup: React.FC<
         </h3>
         <p className="text-sm text-gray-600">
           This will make your profile discoverable and allow us to recommend
-          your profile to people also looking for AP's.
+          your profile to people also looking for AP&apos;s.
         </p>
         <div className="flex items-center gap-3">
           <Switch checked={value} onCheckedChange={setValue} />
@@ -68,7 +54,11 @@ export const EditLookingForApPopup: React.FC<
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} className="flex-1">
+          <Button onClick={() => {
+            updateUser({
+              lookingForAp: value,
+            });
+          }} className="flex-1">
             Save
           </Button>
         </div>
@@ -81,7 +71,7 @@ export const EditAgePopup: React.FC<
   EditFieldPopupProps & {
     currentValue: number | null;
   }
-> = ({ open, onClose, onSave, currentValue }) => {
+> = ({ open, onClose, currentValue }) => {
   const [age, setAge] = useState(currentValue || 18);
   const api = useApiWithAuth();
 
@@ -96,7 +86,6 @@ export const EditAgePopup: React.FC<
         age: age,
       });
       toast.success("Age updated");
-      onSave?.();
       onClose();
     } catch (error) {
       toast.error("Failed to update age");
@@ -132,15 +121,15 @@ export const EditAgePopup: React.FC<
 export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
   open,
   onClose,
-  onSave,
 }) => {
-  const { user } = useUser();
-  const [firstName, setFirstName] = useState(user?.firstName || "");
-  const [lastName, setLastName] = useState(user?.lastName || "");
+  const { user: clerkUser  } = useClerkUser();
+  const [firstName, setFirstName] = useState(clerkUser?.firstName || "");
+  const [lastName, setLastName] = useState(clerkUser?.lastName || "");
+  const { updateUser } = useCurrentUser();
 
   const handleSave = async () => {
     try {
-      await user?.update({
+      await clerkUser?.update({
         firstName: firstName,
         lastName: lastName,
       });
@@ -148,7 +137,6 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
         name: `${firstName} ${lastName}`,
       });
       toast.success("Name updated");
-      onSave?.();
       onClose();
     } catch (error) {
       toast.error("Failed to update name");
@@ -197,11 +185,11 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
 export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
   open,
   onClose,
-  onSave,
 }) => {
-  const { user } = useUser();
+  const { user: clerkUser } = useClerkUser();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { updateUser } = useCurrentUser();
 
   const handleSave = async () => {
     if (!selectedFile) {
@@ -216,12 +204,17 @@ export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
       reader.onload = async () => {
         try {
           const base64 = reader.result as string;
-          const { publicUrl } = await user?.setProfileImage({ file: base64 });
+          const result = await clerkUser?.setProfileImage({ file: base64 });
+          const publicUrl = result?.publicUrl;
+          if (!publicUrl) {
+            toast.error("Failed to update profile picture");
+            setIsUploading(false);
+            return;
+          }
           await updateUser({
             picture: publicUrl,
           });
           toast.success("Profile picture updated");
-          onSave?.();
           onClose();
         } catch (error) {
           console.error("Failed to update profile picture:", error);
@@ -248,7 +241,7 @@ export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
         <div className="flex justify-center py-4">
           <PhotoUploader
             onFileSelect={setSelectedFile}
-            currentImageUrl={user?.imageUrl}
+            currentImageUrl={clerkUser?.imageUrl}
             placeholder="Upload new photo"
             disabled={isUploading}
           />

@@ -1,10 +1,11 @@
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
 import React from "react";
 import FireBadge from "./FireBadge";
 
 interface PlanStreakProps {
-  plan: CompletePlan;
+  plan: {
+    id: string;
+  };
 }
 
 const PlanStreak: React.FC<PlanStreakProps> = ({ plan }) => {

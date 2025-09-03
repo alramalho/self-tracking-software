@@ -1,6 +1,6 @@
 import { MetricRatingSelector } from "@/components/MetricRatingSelector";
 import { Button } from "@/components/ui/button";
-import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { useMetrics } from "@/contexts/metrics";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { CircleCheckBig, Loader2 } from "lucide-react";
@@ -26,7 +26,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
   isSkippedToday = false,
   className,
 }) => {
-  const { logIndividualMetric, skipMetric } = useDailyCheckin();
+  const { logIndividualMetric, skipMetric } = useMetrics();
   const [isLogging, setIsLogging] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const themeColors = useThemeColors();

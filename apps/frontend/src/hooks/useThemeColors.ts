@@ -1,10 +1,11 @@
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { getThemeVariants, ThemeVariants } from "@/utils/theme";
-import { useEffect, useState } from "react";
-import { useLocalStorage } from "./useLocalStorage";
-import { BaseThemeColor, ThemeColor } from "@/utils/theme";
-import { addDays, formatDistanceToNow } from "date-fns";
 import { useTheme } from "@/contexts/ThemeContext";
+import {
+  BaseLoweredThemeColor as BaseThemeColor,
+  getThemeVariants,
+  ThemeVariants,
+} from "@/utils/theme";
+import { addDays, formatDistanceToNow } from "date-fns";
+import { useEffect, useState } from "react";
 
 interface RandomColorState {
   color: BaseThemeColor;

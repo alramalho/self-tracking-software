@@ -2,7 +2,7 @@ import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { Activity, PlanOutlineType, PlanSession } from "@tsw/prisma";
 import React, { useState } from "react";
 import Number from "../Number";

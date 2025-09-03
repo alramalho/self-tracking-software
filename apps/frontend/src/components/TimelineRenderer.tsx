@@ -1,23 +1,18 @@
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
-import {
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { useTimeline } from "@/contexts/timeline";
+import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { User } from "@tsw/prisma";
 import {
-  differenceInDays,
-  endOfWeek,
-  isWithinInterval,
-  startOfWeek,
+  differenceInDays
 } from "date-fns";
 import {
   Bell,
   ChevronDown,
   ChevronRight,
-  Loader2,
   PersonStandingIcon,
   Search,
   Send,
@@ -31,23 +26,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./ui/collapsible";
-
-function isInCurrentWeek(date: string) {
-  const entryDate = new Date(date);
-  const today = new Date();
-  return isWithinInterval(entryDate, {
-    start: startOfWeek(today),
-    end: endOfWeek(today),
-  });
-}
+import { Skeleton } from "./ui/skeleton";
 
 const TimelineRenderer: React.FC<{
   onOpenSearch: () => void;
 }> = ({ onOpenSearch }) => {
-  const { useTimelineDataQuery, useCurrentUserDataQuery } = useUserPlan();
-  const timelineDataQuery = useTimelineDataQuery();
-  const timelineData = timelineDataQuery.data;
-  const { data: userData } = useCurrentUserDataQuery();
+  const { timelineData, isLoadingTimeline } = useTimeline();
+  const { currentUser } = useCurrentUser();
   const router = useRouter();
   const { shareOrCopyReferralLink } = useShareOrCopy();
   const { isAppInstalled, isPushGranted, requestPermission } =
@@ -57,18 +42,36 @@ const TimelineRenderer: React.FC<{
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
 
-  if (!timelineDataQuery.isFetched && !timelineData) {
+  if (isLoadingTimeline && !timelineData) {
     return (
-      <div className="flex justify-center items-center w-full">
-        <Loader2 className="animate-spin text-gray-500" />
-        <p className="text-gray-500 text-lg ml-3">Loading timeline...</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden">
+            <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
+              <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
+                <Skeleton className="w-full h-[300px] rounded-2xl" />
+              </div>
+            </div>
+            <div className="p-4 flex flex-col flex-nowrap items-start justify-between">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div className="flex flex-col space-y-1">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
-
-  if (!userData?.friends?.length) {
-
+  if (!currentUser?.friends?.length) {
     return (
       <>
         {/* <AINotification
@@ -163,7 +166,6 @@ const TimelineRenderer: React.FC<{
               </div>
             </Collapsible>
           </div>
-
         </div>
       </>
     );
@@ -213,7 +215,7 @@ const TimelineRenderer: React.FC<{
         Friend&apos;s last activities
       </h2>
 
-      {timelineDataQuery.isFetched &&
+      {!isLoadingTimeline &&
         timelineData?.recommendedActivities &&
         timelineData?.recommendedUsers &&
         sortedEntries.map((entry) => {
@@ -241,12 +243,15 @@ const TimelineRenderer: React.FC<{
                 activityTitle={activity.title}
                 activityEmoji={activity.emoji || ""}
                 activityEntryQuantity={entry.quantity}
-                activityEntryReactions={entry.reactions.reduce((acc, reaction) => {
-                  if (reaction.user.username) {
-                    acc[reaction.emoji] = [reaction.user.username];
-                  }
-                  return acc;
-                }, {} as Record<string, string[]>)}
+                activityEntryReactions={entry.reactions.reduce(
+                  (acc, reaction) => {
+                    if (reaction.user.username) {
+                      acc[reaction.emoji] = [reaction.user.username];
+                    }
+                    return acc;
+                  },
+                  {} as Record<string, string[]>
+                )}
                 activityEntryTimezone={entry.timezone || undefined}
                 activityEntryComments={entry.comments || []}
                 activityMeasure={activity.measure}

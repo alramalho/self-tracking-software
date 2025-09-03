@@ -1,5 +1,5 @@
 import { useApiWithAuth } from "@/api";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useDataNotifications } from "@/contexts/notifications";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatTimeAgo } from "@/lib/utils";
@@ -13,11 +13,12 @@ import React from "react";
 import toast from "react-hot-toast";
 import { Remark } from "react-remark";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Skeleton } from "./ui/skeleton";
 
 interface NotificationsProps {}
 
 const Notifications: React.FC<NotificationsProps> = () => {
-  const { notificationsData } = useUserPlan();
+  const {concludeNotification, clearAllNotifications, notifications, isLoadingNotifications} = useDataNotifications();
   const router = useRouter();
   const api = useApiWithAuth();
   const themeColors = useThemeColors();
@@ -28,20 +29,13 @@ const Notifications: React.FC<NotificationsProps> = () => {
     notification: Notification,
     action: string
   ) => {
-    const concludeNotification = async (skipToast: boolean = false) => {
-      await api.post(`/notifications/conclude/${notification.id}`);
-      if (!skipToast) {
-        notificationsData.refetch();
-      }
-    };
-
     let skipToast = false;
     const actionPromise = async () => {
       if (notification.type === "INFO") {
-        await concludeNotification();
+        await concludeNotification(notification.id);
       } else if (notification.type === "ENGAGEMENT") {
         if (action === "dismiss") {
-          await concludeNotification();
+          await concludeNotification(notification.id);
         } else if (action === "respond") {
           posthog.capture("engagement-notification-interacted", {
             notification_id: notification.id,
@@ -59,9 +53,9 @@ const Notifications: React.FC<NotificationsProps> = () => {
             toast.error(
               "Something went wrong. Please be so kind and open a bug report."
             );
-          }
+          } 
         }
-        await concludeNotification(skipToast);
+        await concludeNotification(notification.id);
       } else if (notification.type === "PLAN_INVITATION") {
         router.push(`/join-plan/${notification.relatedId}`);
       } else if (notification.type === "FRIEND_REQUEST") {
@@ -70,7 +64,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
             notification.relatedId
           }`
         );
-        await concludeNotification();
+        await concludeNotification(notification.id);
       }
     };
 
@@ -89,7 +83,6 @@ const Notifications: React.FC<NotificationsProps> = () => {
     } else {
       actionPromise();
     }
-    notificationsData.refetch();
   };
 
   const renderActionButtons = (notification: Notification) => {
@@ -149,19 +142,6 @@ const Notifications: React.FC<NotificationsProps> = () => {
     return notification.relatedData && (notification.relatedData as any).username;
   };
 
-  const handleClearAll = async () => {
-    const clearPromise = async () => {
-      await api.post("/notifications/clear-all-notifications");
-      notificationsData.refetch();
-    };
-
-    toast.promise(clearPromise(), {
-      loading: "Clearing all notifications...",
-      success: "All notifications cleared!",
-      error: "Failed to clear notifications",
-    });
-  };
-
   // Get the latest engagement notification
   // const latestEngagementNotification =
   //   notificationsData?.data?.notifications?.find(
@@ -169,12 +149,40 @@ const Notifications: React.FC<NotificationsProps> = () => {
   //   );
 
   // Filter out engagement notifications from the regular notifications
-  const regularNotifications = notificationsData?.data?.notifications?.filter(
+  const regularNotifications = notifications?.filter(
     (n) => n.type !== "ENGAGEMENT"
   );
 
   const unreadNotifications =
     regularNotifications?.filter((n) => n.status !== "CONCLUDED") || [];
+
+  if (isLoadingNotifications) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center mb-4">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-8 w-20 rounded-full" />
+        </div>
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="p-4 rounded-2xl border border-gray-200 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-row items-center gap-3 flex-1">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+              <div className="flex ml-4 gap-2">
+                <Skeleton className="w-8 h-8 rounded-full" />
+                <Skeleton className="w-8 h-8 rounded-full" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   if (unreadNotifications.length === 0) {
     return (
@@ -218,7 +226,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Notifications</h2>
             <button
-              onClick={handleClearAll}
+              onClick={clearAllNotifications}
               className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
             >
               Clear All

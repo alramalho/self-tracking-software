@@ -1,26 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Smile, BadgeCheck } from "lucide-react";
-import { ReactionBarSelector } from "@charkour/react-reactions";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import toast from "react-hot-toast";
 import { useApiWithAuth } from "@/api";
-import {
-  parseISO,
-  format,
-  isToday,
-  isYesterday,
-  differenceInCalendarDays,
-} from "date-fns";
-import { twMerge } from "tailwind-merge";
-import { getThemeVariants } from "@/utils/theme";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "@/contexts/ThemeContext";
+import { TimelineData } from "@/contexts/timeline/actions";
+import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { PlanBadge } from "./PlanBadge";
+import { getThemeVariants } from "@/utils/theme";
+import { ReactionBarSelector } from "@charkour/react-reactions";
+import {
+    differenceInCalendarDays,
+    format,
+    isToday,
+    isYesterday
+} from "date-fns";
+import { Edit, Smile } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { twMerge } from "tailwind-merge";
 import CommentSection from "./CommentSection";
-import Divider from "./Divider";
+import { PlanBadge } from "./PlanBadge";
 import { Separator } from "./ui/separator";
-import { TimelineData } from "@/app/actions";
 
 const getFormattedDate = (date: Date) => {
   const now = new Date();
@@ -107,10 +105,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [reactions, setReactions] = useState<ReactionCount>(
     activityEntryReactions
   );
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
-  const currentUserUsername = userData?.username;
-  const isOwnActivityEntry = userData?.username === userUsername;
+  const {currentUser} = useCurrentUser();
+  const currentUserUsername = currentUser?.username;
+  const isOwnActivityEntry = currentUser?.username === userUsername;
   const api = useApiWithAuth();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
@@ -493,7 +490,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               </Avatar>
               {isUserPremium && (
                 <div className="absolute -bottom-[6px] -right-[6px]">
-                  <PlanBadge planType={userData?.planType || "FREE"} size={18} />
+                  <PlanBadge planType={currentUser?.planType || "FREE"} size={18} />
                 </div>
               )}
             </div>
