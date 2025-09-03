@@ -1,5 +1,5 @@
 import { isWeekCompleted } from "@/contexts/PlanProgressContext/lib";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { Activity, ActivityEntry } from "@tsw/prisma";
 import { format, startOfWeek } from "date-fns";
 import React, { useEffect, useMemo, useState } from "react";

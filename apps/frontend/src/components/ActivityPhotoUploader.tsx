@@ -4,7 +4,7 @@ import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import PhotoUploader from "@/components/ui/PhotoUploader";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useActivities } from "@/contexts/activities";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Info, Loader2 } from "lucide-react";
 import React, { useState } from "react";
@@ -31,42 +31,25 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
   open,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [description, setDescription] = useState("");
-  const { refetchUserData } = useUserPlan();
+  const { logActivity: submitActivity, isLoggingActivity } = useActivities();
   const { addToNotificationCount } = useNotifications();
-  const api = useApiWithAuth();
 
-  const logActivity = async () => {
-    setIsUploading(true);
-
+  const handleLogActivity = async () => {
     try {
-      const formData = new FormData();
-      formData.append("activityId", activityData.activityId);
-      formData.append("iso_date_string", activityData.date.toISOString());
-      formData.append("quantity", activityData.quantity.toString());
-      formData.append("description", description || "");
-      formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+      await submitActivity({
+        activityId: activityData.activityId,
+        date: activityData.date,
+        quantity: activityData.quantity,
+        description,
+        photo: selectedFile || undefined,
+      });
       
-      if (selectedFile) {
-        formData.append("photo", selectedFile);
-      }
-
-      await api.post("/activities/log-activity", formData);
-
-      refetchUserData(false);
-      toast.success(
-        selectedFile
-          ? "Activity logged with photo successfully!"
-          : "Activity logged successfully!"
-      );
       addToNotificationCount(1, 'profile');
       onSuccess();
     } catch (error: any) {
       console.error("Error logging activity:", error);
       toast.error("Failed to log activity. Please try again.");
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -78,7 +61,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           <PhotoUploader
             onFileSelect={setSelectedFile}
             placeholder="Click to upload a photo"
-            disabled={isUploading}
+            disabled={isLoggingActivity}
             className="w-full"
           />
         </div>
@@ -87,7 +70,7 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           value={description}
           onChange={setDescription}
           placeholder="How was your activity? Share your thoughts..."
-          disabled={isUploading}
+          disabled={isLoggingActivity}
         />
         <div className="mb-3">
           <Info className="w-5 h-5 text-gray-500 mb-1 mr-2 inline" />
@@ -98,11 +81,11 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
         </div>
         <Button
           size="lg"
-          onClick={logActivity}
+          onClick={handleLogActivity}
           className="w-full"
-          disabled={isUploading}
+          disabled={isLoggingActivity}
         >
-          {isUploading ? (
+          {isLoggingActivity ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : null}
           {selectedFile ? "Upload" : "Log without photo"}

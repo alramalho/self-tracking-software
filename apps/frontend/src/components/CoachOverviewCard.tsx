@@ -1,9 +1,5 @@
 import { useApiWithAuth } from "@/api";
-import {
-  clearCoachSuggestedSessionsInPlan,
-  upgradeCoachSuggestedSessionsToPlanSessions,
-} from "@/app/actions";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan, usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
@@ -21,7 +17,6 @@ import { Button } from "./ui/button";
 interface CoachOverviewCardProps {
   selectedPlan: CompletePlan;
   activities: any[];
-  onRefetch?: () => void;
   isDemo?: boolean;
   className?: string;
 }
@@ -29,13 +24,13 @@ interface CoachOverviewCardProps {
 export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   selectedPlan,
   activities,
-  onRefetch,
   isDemo = false,
   className,
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const api = useApiWithAuth();
+  const { upsertPlan, clearCoachSuggestedSessionsInPlan, upgradeCoachSuggestedSessionsToPlanSessions } = usePlans();
   const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<
     string | null
   >(null);
@@ -80,18 +75,8 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
           coachNotes: null,
         };
       }
-      await api.post(`/plans/upsert`, {
-        id: selectedPlan.id,
-        ...updateData,
-      });
 
-      onRefetch?.();
-      toast.success(
-        suggestionType === "sessions"
-          ? "Schedule updated successfully!"
-          : "Plan updated successfully!"
-      );
-
+      await upsertPlan({ planId: selectedPlan.id, updates: updateData });
     } catch (error) {
       console.error("Failed to accept suggestion:", error);
       toast.error(
@@ -129,12 +114,13 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
           coachNotes: null,
         };
       }
-      await api.post(`/plans/upsert`, {
-        id: selectedPlan.id,  
-        ...updateData,
+
+      await upsertPlan({
+        planId: selectedPlan.id,
+        updates: updateData,
+        muteNotifications: true,
       });
 
-      onRefetch?.();
       toast.success("Suggestion declined");
     } catch (error) {
       console.error("Failed to decline suggestion:", error);

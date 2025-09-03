@@ -1,26 +1,28 @@
 import { useApiWithAuth } from "@/api";
+import { useDataNotifications } from "@/contexts/notifications";
 import {
-    ACHIEVEMENT_WEEKS,
-    isWeekCompleted as checkIsWeekCompleted,
+  ACHIEVEMENT_WEEKS,
+  isWeekCompleted as checkIsWeekCompleted,
 } from "@/contexts/PlanProgressContext/lib";
-import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
+import { useQueryClient } from "@tanstack/react-query";
 import { Notification } from "@tsw/prisma";
 import { format, isSameWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-    AlertTriangle,
-    BadgeCheck,
-    CircleCheck,
-    Flame,
-    Medal,
-    MoveRight,
-    RefreshCw,
-    TrendingDown,
-    TrendingUp,
+  AlertTriangle,
+  BadgeCheck,
+  CircleCheck,
+  Flame,
+  Medal,
+  MoveRight,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
@@ -87,7 +89,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { notificationsData } = useUserPlan();
+  const { notifications } = useDataNotifications();
+  const queryClient = useQueryClient();
 
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
@@ -137,7 +140,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
       setLastCoachMessage(response.data.message);
       setLastTimeCoachMessageWasGenerated(new Date());
-      notificationsData?.refetch();
+      queryClient.invalidateQueries({ queryKey: ["notifications"] }); // TODO: should we create an ai context?
     } catch (error) {
       console.error("Failed to generate coach message:", error);
     } finally {
@@ -147,8 +150,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   // Initialize coach message from notifications data
   useEffect(() => {
-    if (!isDemo && notificationsData?.data?.notifications) {
-      const initialCoachMessage = notificationsData?.data?.notifications?.find(
+    if (!isDemo && notifications) {
+      const initialCoachMessage = notifications?.find(
         (notification: Notification) => notification.type === "COACH"
       )?.message;
 
@@ -156,7 +159,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
         setLastCoachMessage(initialCoachMessage);
       }
     }
-  }, [notificationsData, isDemo]);
+  }, [notifications, isDemo]);
 
   // Get current week data
   const currentWeek = weeks.find((week) =>

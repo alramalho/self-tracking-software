@@ -3,8 +3,8 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import CreatePlanCardJourney from "@/components/CreatePlanCardJourney";
 import { Button } from "@/components/ui/button";
+import { usePlans } from "@/contexts/plans";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { capitalize } from "lodash";
 import { useRouter } from "next/navigation";
@@ -13,10 +13,8 @@ import { twMerge } from "tailwind-merge";
 
 const CreateNewPlan: React.FC = () => {
   const router = useRouter();
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-  const userPlanCount = userData?.plans?.length || 0;
+  const { plans } = usePlans();
+  const userPlanCount = plans?.length || 0;
   const { maxPlans, userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
@@ -42,7 +40,9 @@ const CreateNewPlan: React.FC = () => {
           >
             On {capitalize(userPaidPlanType || "FREE")} Plan
           </span>
-          <p className="mb-5">You have reached the maximum number of plans for your account.</p>
+          <p className="mb-5">
+            You have reached the maximum number of plans for your account.
+          </p>
           <Button
             className="w-full"
             onClick={() => setShowUpgradePopover(true)}

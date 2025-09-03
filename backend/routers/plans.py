@@ -17,7 +17,7 @@ from shared.utils import exclude_embedding_fields
 from entities.plan_invitation import PlanInvitation
 from constants import URL
 from entities.activity import Activity
-from entities.plan import PlanSession, Plan
+from entities.plan import Plan
 from bson import ObjectId
 from pydantic import BaseModel
 from controllers.milestones_controller import MilestonesController

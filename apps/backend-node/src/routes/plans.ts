@@ -490,13 +490,20 @@ router.post(
         return res.json({ success: true, plan: updatedPlan });
       } else {
         // Create new plan using existing create-plan logic
+        if (!planData.goal) {
+          return res.status(400).json({
+            success: false,
+            error: "Goal is required",
+          });
+        }
+
         const result = await prisma.$transaction(async (tx) => {
           // Create plan with planGroupId reference
           const newPlan = await tx.plan.create({
             data: {
               id: planData.id || undefined,
               userId: req.user!.id,
-              goal: planData.goal,
+              goal: planData.goal!,
               emoji: planData.emoji,
               finishingDate: planData.finishingDate,
               notes: planData.notes,
@@ -568,6 +575,236 @@ router.post(
         success: false,
         error: error instanceof Error ? error.message : "Failed to save plan",
       });
+    }
+  }
+);
+
+// Accept plan invitation
+router.post(
+  "/accept-plan-invitation/:invitationId",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { invitationId } = req.params;
+      const { activity_associations = [] } = req.body;
+
+      let invitation = await prisma.planInvitation.findUnique({
+        where: { id: invitationId },
+        include: {
+          plan: {
+            include: {
+              planGroup: true,
+              activities: true,
+            },
+          },
+        },
+      });
+
+      if (!invitation) {
+        return res.status(404).json({ error: "Invitation not found" });
+      }
+
+      // Handle external invitations by creating a new invitation for the current user
+      if (invitation.recipientId === "external") {
+        logger.info(
+          `Plan invitation recipient is external, creating new invitation for user ${req.user!.id}`
+        );
+
+        // Check if invitation already exists for this user
+        const existingInvitation = await prisma.planInvitation.findFirst({
+          where: {
+            planId: invitation.planId,
+            senderId: invitation.senderId,
+            recipientId: req.user!.id,
+          },
+          include: {
+            plan: {
+              include: {
+                planGroup: true,
+                activities: true,
+              },
+            },
+          },
+        });
+
+        if (existingInvitation) {
+          invitation = existingInvitation;
+        } else {
+          invitation = await prisma.planInvitation.create({
+            data: {
+              planId: invitation.planId,
+              senderId: invitation.senderId,
+              recipientId: req.user!.id,
+              status: "PENDING",
+            },
+            include: {
+              plan: {
+                include: {
+                  planGroup: true,
+                  activities: true,
+                },
+              },
+            },
+          });
+        }
+      }
+
+      // Verify the invitation is for the current user
+      if (invitation.recipientId !== req.user!.id) {
+        return res
+          .status(403)
+          .json({ error: "Not authorized to accept this invitation" });
+      }
+
+      // Accept the invitation using a transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Update invitation status
+        await tx.planInvitation.update({
+          where: { id: invitation!.id },
+          data: { status: "ACCEPTED" },
+        });
+
+        const plan = invitation!.plan;
+
+        // Create a copy of the plan for the new user
+        const newPlan = await tx.plan.create({
+          data: {
+            userId: req.user!.id,
+            goal: plan.goal,
+            emoji: plan.emoji,
+            finishingDate: plan.finishingDate,
+            notes: plan.notes,
+            durationType: plan.durationType,
+            outlineType: plan.outlineType,
+            timesPerWeek: plan.timesPerWeek,
+            sortOrder: 1,
+            planGroupId: plan.planGroupId,
+            // Connect activities based on activity_associations or use original plan's activities
+            activities: {
+              connect:
+                activity_associations.length > 0
+                  ? activity_associations.map((assoc: any) => ({
+                      id: assoc.user_activity_id,
+                    }))
+                  : plan.activities.map((activity: any) => ({
+                      id: activity.id,
+                    })),
+            },
+          },
+          include: {
+            activities: true,
+            sessions: true,
+            milestones: true,
+            planGroup: true,
+          },
+        });
+
+        // Update plan group if it exists to include the new plan
+        if (plan.planGroupId) {
+          await tx.planGroup.update({
+            where: { id: plan.planGroupId },
+            data: {
+              members: {
+                connect: { id: req.user!.id },
+              },
+              plans: {
+                connect: { id: newPlan.id },
+              },
+            },
+          });
+        }
+
+        // Update sort orders for other plans
+        await updateSortOrders(tx, req.user!.id, newPlan.id);
+
+        return newPlan;
+      });
+
+      logger.info(
+        `User ${req.user!.id} accepted plan invitation ${invitationId}`
+      );
+      res.json({
+        message: "Invitation accepted successfully",
+        plan: result,
+      });
+    } catch (error) {
+      logger.error("Error accepting plan invitation:", error);
+      res.status(500).json({ error: "Failed to accept plan invitation" });
+    }
+  }
+);
+
+// Reject plan invitation
+router.post(
+  "/reject-plan-invitation/:invitationId",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { invitationId } = req.params;
+
+      let invitation = await prisma.planInvitation.findUnique({
+        where: { id: invitationId },
+      });
+
+      if (!invitation) {
+        return res.status(404).json({ error: "Invitation not found" });
+      }
+
+      // Handle external invitations by creating a new invitation for the current user
+      if (invitation.recipientId === "external") {
+        logger.info(
+          `Plan invitation recipient is external, creating new invitation for user ${req.user!.id}`
+        );
+
+        // Check if invitation already exists for this user
+        const existingInvitation = await prisma.planInvitation.findFirst({
+          where: {
+            planId: invitation.planId,
+            senderId: invitation.senderId,
+            recipientId: req.user!.id,
+          },
+        });
+
+        if (existingInvitation) {
+          invitation = existingInvitation;
+        } else {
+          invitation = await prisma.planInvitation.create({
+            data: {
+              planId: invitation.planId,
+              senderId: invitation.senderId,
+              recipientId: req.user!.id,
+              status: "PENDING",
+            },
+          });
+        }
+      }
+
+      // Verify the invitation is for the current user
+      if (invitation.recipientId !== req.user!.id) {
+        return res
+          .status(403)
+          .json({ error: "Not authorized to reject this invitation" });
+      }
+
+      // Update invitation status to rejected
+      await prisma.planInvitation.update({
+        where: { id: invitation.id },
+        data: { status: "REJECTED" },
+      });
+
+      logger.info(
+        `User ${req.user!.id} rejected plan invitation ${invitationId}`
+      );
+      res.json({ message: "Invitation rejected successfully" });
+    } catch (error) {
+      logger.error("Error rejecting plan invitation:", error);
+      res.status(500).json({ error: "Failed to reject plan invitation" });
     }
   }
 );

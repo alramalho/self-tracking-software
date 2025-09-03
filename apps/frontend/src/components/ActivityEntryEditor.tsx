@@ -1,12 +1,10 @@
-import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useActivities } from "@/contexts/activities";
 import { format } from "date-fns";
 import { Loader2, Trash2 } from "lucide-react";
 import React, { useState } from "react";
-import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 
@@ -21,64 +19,23 @@ interface ActivityEntry {
 interface ActivityEntryEditorProps {
   activityEntry: ActivityEntry;
   onClose: () => void;
-  onDelete: () => void;
   open: boolean;
 }
 
 const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
   activityEntry,
   onClose,
-  onDelete,
   open,
 }) => {
   const [quantity, setQuantity] = useState(activityEntry.quantity.toString());
   const [date, setDate] = useState(
     format(new Date(activityEntry.date), "yyyy-MM-dd'T'HH:mm")
   );
-  const [description, setDescription] = useState(activityEntry.description || "");
-  const [isSaving, setIsSaving] = useState(false);
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [description, setDescription] = useState(
+    activityEntry.description || ""
+  );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const api = useApiWithAuth();
-
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    setShowDeleteConfirm(false);
-    try {
-      await api.delete(`/activities/activity-entries/${activityEntry.id}`);
-      onDelete();
-      toast.success("Activity entry deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting activity entry:", error);
-      toast.error("Failed to delete activity entry");
-    } finally {
-      setIsDeleting(false);
-      onClose();
-    }
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await api.put(`/activities/activity-entries/${activityEntry.id}`, {
-        quantity: Number(quantity),
-        date: new Date(date).toISOString(),
-        description,
-      });
-      
-      await currentUserDataQuery.refetch();
-      toast.success("Activity entry updated successfully!");
-      onClose();
-    } catch (error) {
-      console.error("Error updating activity entry:", error);
-      toast.error("Failed to update activity entry");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const { upsertActivityEntry, isUpsertingActivityEntry, deleteActivityEntry, isDeletingActivityEntry } = useActivities();
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
@@ -89,7 +46,9 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           <Input
             type="number"
             value={quantity}
-            onChange={(e) => setQuantity(Math.floor(Number(e.target.value)).toString())}
+            onChange={(e) =>
+              setQuantity(Math.floor(Number(e.target.value)).toString())
+            }
             step="1"
             min="0"
           />
@@ -111,16 +70,27 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
             className="min-h-[80px]"
           />
         </div>
-        <Button onClick={handleSave} className="w-full" disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Changes"}
+        <Button
+          onClick={() =>
+            upsertActivityEntry({
+              id: activityEntry.id,
+              quantity: Number(quantity),
+              date: new Date(date),
+              description,
+            })
+          }
+          className="w-full"
+          disabled={isUpsertingActivityEntry}
+        >
+          {isUpsertingActivityEntry ? "Saving..." : "Save Changes"}
         </Button>
         <Button
           onClick={() => setShowDeleteConfirm(true)}
           variant="destructive"
           className="w-full"
-          disabled={isSaving}
+          disabled={isUpsertingActivityEntry || isDeletingActivityEntry}
         >
-          {isDeleting ? (
+          {isDeletingActivityEntry ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <Trash2 className="w-4 h-4 mr-2" />
@@ -130,7 +100,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         <ConfirmDialogOrPopover
           isOpen={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(false)}
-          onConfirm={handleDelete}
+          onConfirm={() => deleteActivityEntry({ id: activityEntry.id })}
           title="Confirm Delete"
           description="Are you sure you want to delete this activity entry?"
           confirmText="Delete"

@@ -1,7 +1,7 @@
 import { ExampleCorrelations } from "@/components/ExampleCorrelations";
 import { MetricRaters } from "@/components/MetricRaters";
 import { Button } from "@/components/ui/button";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useMetrics } from "@/contexts/metrics";
 import { ChevronRight, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import AppleLikePopover from "./AppleLikePopover";
@@ -13,9 +13,8 @@ interface InsightsBannerProps {
 
 export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
   const router = useRouter();
-  const { useMetricsAndEntriesQuery } = useUserPlan();
-  const { data: metricsAndEntriesData } = useMetricsAndEntriesQuery();
-  const hasMetrics = (metricsAndEntriesData?.metrics?.length ?? 0) > 0;
+  const { metrics } = useMetrics();
+  const hasMetrics = (metrics?.length ?? 0) > 0;
   const now = new Date();
   const hours = now.getHours();
   const minutes = now.getMinutes();

@@ -1,12 +1,13 @@
-import React from "react";
-import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { ThemeColor, getThemeVariants } from "@/utils/theme";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
-import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
+import { useCurrentUser } from "@/contexts/users";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { LowerThemeColor as ThemeColor, getThemeVariants } from "@/utils/theme";
+import { Check } from "lucide-react";
+import React from "react";
+import toast from "react-hot-toast";
 
 interface ColorPalette {
   name: string;
@@ -55,7 +56,8 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
   open,
   onClose,
 }) => {
-  const { currentTheme, updateTheme } = useUserPlan();
+  const { currentUser } = useCurrentUser();
+  const { updateTheme } = useTheme();
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
 
@@ -76,7 +78,9 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
         <h3 className="text-lg font-semibold mb-4">Color Themes</h3>
         <div className="grid gap-4">
           {colorPalettes.map((palette) => {
-            const isSelected = currentTheme === palette.color;
+            const isSelected =
+              currentUser?.themeBaseColor.toLowerCase() ===
+              palette.color.toLowerCase();
             const isLocked =
               userPaidPlanType === "FREE" &&
               (palette.color === "random" || palette.color !== "blue");

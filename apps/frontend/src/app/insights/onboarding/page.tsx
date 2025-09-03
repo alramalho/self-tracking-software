@@ -1,27 +1,24 @@
 "use client";
 
+import { useApiWithAuth } from "@/api";
+import Divider from "@/components/Divider";
+import InsightsDemo from "@/components/InsightsDemo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
+import { useMetrics } from "@/contexts/metrics";
+import { MAX_METRICS } from "@/contexts/metrics/lib";
+import { useUpgrade } from "@/contexts/UpgradeContext";
+import { useNotifications } from "@/hooks/useNotifications";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { ChevronRight, ScanFace } from "lucide-react";
 import { useState } from "react";
-import { useNotifications } from "@/hooks/useNotifications";
-import { useApiWithAuth } from "@/api";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import InsightsDemo from "@/components/InsightsDemo";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
-import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
-import Divider from "@/components/Divider";
 import { defaultMetrics } from "../metrics";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useUpgrade } from "@/contexts/UpgradeContext";
-const MAX_METRICS = 2;
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const [step, setStep] = useState(1);
-  const { useMetricsAndEntriesQuery } = useUserPlan();
-  const metricsQuery = useMetricsAndEntriesQuery();
+  const { logMetrics, isLoggingMetrics } = useMetrics();
   const { isPushGranted, requestPermission } = useNotifications();
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
   const [ratings, setRatings] = useState<Record<string, number>>({});
@@ -126,27 +123,12 @@ export default function OnboardingPage() {
       toast.error("Please rate all metrics");
       return;
     }
-
-    setIsLoading(true);
-    try {
-      // Submit all ratings in sequence
-      for (const metricId of createdMetricIds) {
-        await api.post(`/log-metric`, {
-          metric_id: metricId,
-          rating: ratings[metricId],
-          description: description,
-        });
-      }
-
-      toast.success("Ratings submitted successfully");
-      metricsQuery.refetch();
-      router.push("/insights/dashboard");
-    } catch (error) {
-      console.error("Error submitting ratings:", error);
-      toast.error("Failed to submit ratings");
-    } finally {
-      setIsLoading(false);
-    }
+    logMetrics(Object.entries(ratings).map(([metricId, rating]) => ({
+      metricId,
+      rating,
+      date: new Date(),
+      description,
+    })));
   };
 
   const renderStep = () => {
@@ -307,7 +289,8 @@ export default function OnboardingPage() {
                 size="lg"
                 className="w-full"
                 onClick={handleSubmitAllRatings}
-                disabled={isLoading || Object.keys(ratings).length !== selectedMetrics.length}
+                disabled={isLoading || isLoggingMetrics || Object.keys(ratings).length !== selectedMetrics.length}
+                loading={isLoggingMetrics}
               >
                 Submit Ratings
               </Button>

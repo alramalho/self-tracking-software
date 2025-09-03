@@ -1,11 +1,7 @@
-import React from "react";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import {
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import { ACHIEVEMENT_WEEKS } from "@/contexts/PlanProgressContext/lib";
 import { AlertTriangle, Flame, Medal } from "lucide-react";
+import React from "react";
 
 interface PlanProgressPopoverProps {
   open: boolean;
@@ -16,9 +12,6 @@ const PlanProgressPopover: React.FC<PlanProgressPopoverProps> = ({
   open,
   onClose,
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserQuery = useCurrentUserDataQuery();
-  const profileData = currentUserQuery.data;
 
   return (
     <AppleLikePopover open={open} onClose={onClose} title="Streak Details">

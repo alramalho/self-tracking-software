@@ -8,8 +8,8 @@ import { PlanProgressCard } from "@/components/PlanProgressCard";
 import { PlanWeekDisplay } from "@/components/PlanWeekDisplay";
 import { Button } from "@/components/ui/button";
 import { createPlanProgressData } from "@/contexts/PlanProgressContext";
+import { CompletePlan } from "@/contexts/plans";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { Activity } from "@tsw/prisma";
 import {
@@ -330,11 +330,6 @@ const AIPartnerFinder = () => {
                   correlation: 0.45,
                 },
               ]}
-              formatCorrelationString={(correlation) =>
-                `${correlation.activity.emoji || "📊"} ${
-                  correlation.activity.title
-                }`
-              }
               className="bg-white"
             />
             <p className="text-md text-gray-600 mt-3">

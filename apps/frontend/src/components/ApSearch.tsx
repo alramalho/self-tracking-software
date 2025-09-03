@@ -1,33 +1,39 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
-import GenericLoader from "@/components/GenericLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 import UserCard from "@/components/UserCard";
-import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useActivities } from "@/contexts/activities";
+import { usePlans } from "@/contexts/plans";
+import { useRecommendations } from "@/contexts/recommendations";
+import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn, isActivePlan } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { motion, AnimatePresence } from "framer-motion";
+import { User } from "@tsw/prisma";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState } from "react";
-import toast from "react-hot-toast";
 
 export const ApSearchComponent: React.FC = () => {
-  const { useRecommendedUsersQuery, useCurrentUserDataQuery } = useUserPlan();
-  const currentUserQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserQuery;
-  const currentUser = userData;
-  const currentPlan = userData?.plans[0];
-  const api = useApiWithAuth();
+  const { currentUser, isLoadingCurrentUser } = useCurrentUser();
+  const { plans, isLoadingPlans } = usePlans();
+  const currentPlan = plans?.reduce((min, plan) =>
+    !min ||
+    (plan.sortOrder !== null &&
+      (min.sortOrder === null || plan.sortOrder < min.sortOrder))
+      ? plan
+      : min
+  );
+
+  const {
+    recommendations,
+    users: recommendedUsers,
+    plans: recommendedPlans,
+    isLoadingRecommendations,
+  } = useRecommendations();
+  const { activities, activityEntries } = useActivities();
   const [isProfileExpanded, setIsProfileExpanded] = useState(true);
 
-  const { data: recommendationsData, isLoading: isLoadingRecommendations } =
-    useRecommendedUsersQuery();
-  const recommendedUsers = recommendationsData?.users || [];
-  const recommendations = recommendationsData?.recommendations || [];
-  const { isPushGranted, requestPermission: requestNotificationPermission } =
-    useNotifications();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
@@ -38,24 +44,21 @@ export const ApSearchComponent: React.FC = () => {
       return acc;
     }, {} as Record<string, number>);
 
-  const handleSendFriendRequest = async (userId: string) => {
-    await toast.promise(
-      (async () => {
-        await api.post(`/users/send-connection-request/${userId}`);
-        await currentUserQuery.refetch();
-      })(),
-      {
-        loading: "Sending friend request...",
-        success: "Friend request sent successfully",
-        error: "Failed to send friend request",
-      }
-    );
-  };
-
-  if (isLoadingRecommendations) {
+  if (isLoadingRecommendations || isLoadingCurrentUser || isLoadingPlans) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <GenericLoader secondMessage="The first time you run this it might take a while. Hang tight!" />
+      <div className="space-y-6 mt-4">
+        <div>
+          <Skeleton className="h-6 w-32 mb-4" />
+          <div className="grid grid-cols-1 justify-items-center">
+            <Skeleton className="h-48 w-full max-w-sm rounded-lg" />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-48 w-full rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -75,7 +78,7 @@ export const ApSearchComponent: React.FC = () => {
                 <ChevronDown size={20} />
               )}
             </button>
-            
+
             <AnimatePresence>
               {isProfileExpanded && (
                 <motion.div
@@ -88,14 +91,10 @@ export const ApSearchComponent: React.FC = () => {
                   <div className="grid grid-cols-1 justify-items-center">
                     <UserCard
                       user={currentUser}
-                      plan={currentPlan as CompletePlan}
-                      plans={
-                        (userData?.plans.filter((p) =>
-                          isActivePlan(p)
-                        ) as CompletePlan[]) || []
-                      }
-                      activities={userData?.activities || []}
-                      activityEntries={userData?.activityEntries || []}
+                      plan={{emoji: currentPlan?.emoji || undefined, goal: currentPlan?.goal || ""}}
+                      plans={recommendedPlans?.filter((p) => isActivePlan(p)) || []}
+                      activities={activities || []}
+                      activityEntries={activityEntries || []}
                       showFriendRequest={false}
                       showScore={false}
                       showStreaks={false}
@@ -116,11 +115,11 @@ export const ApSearchComponent: React.FC = () => {
             const user = recommendedUsers.find(
               (user) => user.id === recommendation.recommendationObjectId
             );
-            if (!user) {
+            if (!user || !user.id) {
               return null;
             }
-            const plan = recommendationsData?.plans
-              .filter((plan) => plan.userId === user.id)
+            const plan = recommendedPlans
+              ?.filter((plan) => plan.userId === user.id)
               .sort((a, b) => {
                 // Sort by sortOrder, with nulls last, then by createdAt
                 if (a.sortOrder !== null && b.sortOrder !== null) {
@@ -136,14 +135,10 @@ export const ApSearchComponent: React.FC = () => {
             return (
               <UserCard
                 key={user.id}
-                user={user}
+                user={{...user, name: user.name || undefined} as User}
                 score={userScores[user.id] || 0}
-                plan={plan as CompletePlan}
-                plans={
-                  (recommendationsData?.plans.filter(
-                    (p) => p.userId === user.id
-                  ) as CompletePlan[]) || []
-                }
+                plan={{emoji: plan?.emoji || undefined, goal: plan?.goal || ""}}
+                plans={recommendedPlans?.filter((p) => p.userId === user.id) || []}
                 showFriendRequest={true}
                 showScore={true}
                 showStreaks={true}

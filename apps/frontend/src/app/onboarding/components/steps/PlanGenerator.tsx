@@ -2,7 +2,7 @@
 
 import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
-import { CompletePlan as Plan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCheck } from "lucide-react";
@@ -19,7 +19,7 @@ const PlanCard = ({
   onSelect,
   index,
 }: {
-  plan: Plan;
+  plan: CompletePlan;
   icon: React.ReactNode;
   label: React.ReactNode;
   isSelected: boolean;
@@ -141,7 +141,9 @@ const PlanGenerator = () => {
     setSelectedPlan,
   } = useOnboarding();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [generatedPlans, setGeneratedPlans] = useState<Plan[] | null>(plans);
+  const [generatedPlans, setGeneratedPlans] = useState<
+    CompletePlan[] | null
+  >(plans);
   const [generatedActivities, setGeneratedActivities] = useState<Activity[]>(
     []
   );
@@ -149,7 +151,7 @@ const PlanGenerator = () => {
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const api = useApiWithAuth();
 
-  const handlePlanSelect = async (plan: Plan) => {
+  const handlePlanSelect = async (plan: CompletePlan) => {
     setSelectedPlan(plan);
     // Create a Set of activity IDs to avoid duplicates
     const activityIds = new Set(plan.activities.map((activity) => activity.id));

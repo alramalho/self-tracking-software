@@ -1,4 +1,4 @@
-import { CompletePlan } from '@/contexts/UserGlobalContext';
+import { CompletePlan } from '@/contexts/plans';
 import { Check, Loader2, X } from 'lucide-react';
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';

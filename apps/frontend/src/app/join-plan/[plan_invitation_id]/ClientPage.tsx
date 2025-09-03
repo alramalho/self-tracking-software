@@ -1,34 +1,23 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
 import { ActivityCard } from "@/components/ActivityCard";
 import PlanCard from "@/components/PlanCard";
 import PlanSessionsRenderer from "@/components/PlanSessionsRenderer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useActivities } from "@/contexts/activities";
 import {
-    CompletePlan,
-    useUserPlan,
-} from "@/contexts/UserGlobalContext";
+  CompletePlan,
+  usePlan,
+  usePlanInvitation
+} from "@/contexts/plans";
+import { useUser } from "@/contexts/users";
 import { useSession } from "@clerk/clerk-react";
 import { Activity } from "@tsw/prisma";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { toast } from "react-hot-toast";
-
-interface PlanInvitationData {
-  plan: CompletePlan;
-  plan_activities: Activity[];
-  inviter: {
-    id: string;
-    name: string;
-    username: string;
-    picture: string;
-  };
-  invitation: any;
-}
+import { useState } from "react";
 
 export default function ClientPage({
   params,
@@ -36,35 +25,22 @@ export default function ClientPage({
   params: { plan_invitation_id: string };
 }) {
   const router = useRouter();
-  const api = useApiWithAuth();
-  const { useCurrentUserDataQuery } = useUserPlan();
+
   const { isSignedIn } = useSession();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-  const [planData, setPlanData] = useState<PlanInvitationData | null>(null);
+  const {
+    planInvitation,
+    isLoadingPlanInvitation: isLoading,
+    acceptPlanInvitation,
+    rejectPlanInvitation,
+    isAcceptingPlanInvitation,
+  } = usePlanInvitation(params.plan_invitation_id);
+
+  const { data: inviter } = useUser({ id: planInvitation?.data?.senderId! });
   const [activityAssociations, setActivityAssociations] = useState<{
     [key: string]: string;
   }>({});
-  const [loading, setLoading] = useState(true);
-  const [isAcceptingInvitation, setIsAcceptingInvitation] = useState(false);
-
-  useEffect(() => {
-    const fetchPlanData = async () => {
-      try {
-        const response = await api.get(
-          `/get-plan-from-invitation-id/${params.plan_invitation_id}`
-        );
-        setPlanData(response.data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching plan data:", error);
-        toast.error("Failed to load plan data. Please try again.");
-        setLoading(false);
-      }
-    };
-
-    fetchPlanData();
-  }, [params.plan_invitation_id]);
+  const { activities } = useActivities();
+  const { data: plan } = usePlan(planInvitation?.data?.planId!, { includeActivities: true });
 
   const handleActivityAssociation = (
     planActivityId: string,
@@ -76,24 +52,7 @@ export default function ClientPage({
     }));
   };
 
-  const handleAcceptInvitation = async () => {
-    try {
-      setIsAcceptingInvitation(true);
-      await api.post(`/accept-plan-invitation/${params.plan_invitation_id}`, {
-        activity_associations: activityAssociations,
-      });
-      currentUserDataQuery.refetch();
-      toast.success("Plan invitation accepted successfully!");
-      router.push("/plans");
-    } catch (error) {
-      console.error("Error accepting plan invitation:", error);
-      toast.error("Failed to accept plan invitation. Please try again.");
-    } finally {
-      setIsAcceptingInvitation(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -102,8 +61,8 @@ export default function ClientPage({
     );
   }
 
-  if (!planData) {
-    return <div>Error: Plan data not found</div>;
+  if (!plan || !inviter || !planInvitation?.data) {
+    return <div>Error: Data not found</div>;
   }
 
   if (!isSignedIn) {
@@ -113,17 +72,17 @@ export default function ClientPage({
           <div className="flex flex-col items-center mb-8 space-y-4">
             <Avatar className="w-16 h-16 mb-4">
               <AvatarImage
-                src={planData.inviter.picture}
-                alt={planData.inviter.name}
+                src={inviter.picture || undefined}
+                alt={inviter.name || undefined}
               />
-              <AvatarFallback>{planData.inviter.name[0]}</AvatarFallback>
+              <AvatarFallback>{inviter.name?.[0]}</AvatarFallback>
             </Avatar>
             <h1 className="text-2xl font-medium text-center">
-              {planData.inviter.name} just invited you to join their plan
+              {inviter.name} just invited you to join their plan
             </h1>
             <div className="mb-8 w-full">
               <PlanCard
-                plan={planData.plan}
+                plan={plan as CompletePlan}
                 isSelected={false}
                 onSelect={() => {}}
                 onInviteSuccess={() => {}}
@@ -148,37 +107,22 @@ export default function ClientPage({
       </div>
     );
   }
-
-  if (currentUserDataQuery.isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
-        <p className="mt-2">Loading Plan Data</p>
-      </div>
-    );
-  }
-  const hasUserActivities =
-    planData && userData && userData.activities?.length > 0;
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-2xl">
         <div className="flex flex-col items-center mb-8">
           <Avatar className="w-16 h-16 mb-4">
-            <AvatarImage
-              src={planData.inviter.picture}
-              alt={planData.inviter.name}
-            />
-            <AvatarFallback>{planData.inviter.name[0]}</AvatarFallback>
+            <AvatarImage src={inviter.picture || undefined} alt={inviter.name || undefined} />
+            <AvatarFallback>{inviter.name?.[0]}</AvatarFallback>
           </Avatar>
           <h1 className="text-2xl font-medium text-center">
-            {planData.inviter.name} just invited you to join their plan
+            {inviter.name} just invited you to join their plan
           </h1>
         </div>
 
         <div className="mb-8 w-full">
           <PlanCard
-            plan={planData.plan}
+            plan={plan as CompletePlan}
             isSelected={false}
             onSelect={() => {}}
             onInviteSuccess={() => {}}
@@ -189,16 +133,16 @@ export default function ClientPage({
         <div className="w-full space-y-6">
           <h1 className="text-2xl font-medium">Plan Overview</h1>
           <PlanSessionsRenderer
-            plan={planData.plan}
-            activities={planData.plan.activities || []}
+            plan={plan as CompletePlan}
+            activities={plan.activities || []}
           />
           <h1 className="text-2xl font-medium">Activity Associations</h1>
           <h2 className="text-lg font-light text-gray-500 mb-4">
-            {hasUserActivities
+            {plan.activities.length > 0
               ? "Now you need to decide whether to create new plan activities or associate an existing one."
               : "You don't have any activities yet. Please confirm creation for each plan activity:"}
           </h2>
-          {planData?.plan_activities.map((planActivity) => (
+          {plan.activities.map((planActivity: Activity) => (
             <div key={planActivity.id} className="border p-4 rounded-lg">
               <div className="flex flex-row items-center justify-between">
                 <div className="relative">
@@ -242,7 +186,7 @@ export default function ClientPage({
                   <option value="" disabled>
                     Select an activity
                   </option>
-                  {userData?.activities.map((userActivity) => (
+                  {activities?.map((userActivity) => (
                     <option key={userActivity.id} value={userActivity.id}>
                       {userActivity.title}
                     </option>
@@ -252,23 +196,14 @@ export default function ClientPage({
               </div>
             </div>
           ))}
-          {planData?.plan_activities.length === 0 && (
+          {plan.activities.length === 0 && (
             <p>No activities to associate</p>
           )}
         </div>
         <div className="mt-8 w-full flex gap-4">
           <Button
             onClick={async () => {
-              try {
-                await api.post(
-                  `/reject-plan-invitation/${params.plan_invitation_id}`
-                );
-                toast.success("Plan invitation rejected");
-                router.push("/");
-              } catch (error) {
-                console.error("Error rejecting plan invitation:", error);
-                toast.error("Failed to reject plan invitation");
-              }
+              rejectPlanInvitation(params.plan_invitation_id);
             }}
             variant="destructive"
             className="flex-1"
@@ -276,14 +211,14 @@ export default function ClientPage({
             Reject Invitation
           </Button>
           <Button
-            onClick={handleAcceptInvitation}
+            onClick={() => acceptPlanInvitation(params.plan_invitation_id)}
             className="flex-1 bg-black text-white"
             disabled={
               Object.keys(activityAssociations).length !==
-              planData?.plan_activities.length
+              plan.activities.length
             }
           >
-            {isAcceptingInvitation ? (
+            {isAcceptingPlanInvitation ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               "Accept Plan Invitation"

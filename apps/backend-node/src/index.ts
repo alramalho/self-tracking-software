@@ -19,7 +19,6 @@ import { adminRouter } from "./routes/admin";
 import { aiRouter } from "./routes/ai";
 import { clerkRouter } from "./routes/clerk";
 import { messagesRouter } from "./routes/messages";
-import { metricsRouter } from "./routes/metrics";
 import { notificationsRouter } from "./routes/notifications";
 import { onboardingRouter } from "./routes/onboarding";
 import { plansRouter } from "./routes/plans";
@@ -104,7 +103,6 @@ app.get("/400", (_req, _res) => {
 app.use("/users", usersRouter);
 app.use("/activities", activitiesRouter);
 app.use("/plans", plansRouter);
-app.use("/metrics", metricsRouter);
 app.use("/messages", messagesRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/onboarding", onboardingRouter);

@@ -1,14 +1,12 @@
-import { useState } from "react";
+import { useCurrentUser } from "@/contexts/users";
+import { toast } from "sonner";
 import { useClipboard } from "./useClipboard";
 import { useShare } from "./useShare";
-import { toast } from "sonner";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 
 export function useShareOrCopy() {
   const [copied, copyToClipboard] = useClipboard();
   const { share, isSupported: isShareSupported } = useShare();
-  const { useTimelineDataQuery, useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
+  const { currentUser } = useCurrentUser();
 
   const shareOrCopyLink = async (link: string) => {
     if (isShareSupported) {
@@ -22,7 +20,7 @@ export function useShareOrCopy() {
   };
 
   const shareOrCopyReferralLink = async () => {
-    const link = `https://app.tracking.so/join/${userData?.username}`;
+    const link = `https://app.tracking.so/join/${currentUser?.username}`;
 
     await shareOrCopyLink(link);
   };

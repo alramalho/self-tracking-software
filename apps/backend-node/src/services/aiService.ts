@@ -787,7 +787,7 @@ export class AIService {
   async generateCoachNotes(
     plan: { goal: string; outlineType: PlanOutlineType; timesPerWeek?: number },
     newPlanState: "FAILED" | "COMPLETED" | "AT_RISK" | "ON_TRACK",
-    planActivities: Array<{ title: string; measure: string }>,
+    planActivities: Array<{ id: string; title: string; measure: string }>,
     oldSessions?: Array<{
       date: string;
       activityId: string;

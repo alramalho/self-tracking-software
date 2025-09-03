@@ -1,8 +1,8 @@
 "use client";
 
-import { updateUser } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { WheelPicker, WheelPickerOption, WheelPickerWrapper } from "@/components/ui/wheel-picker";
+import { useCurrentUser } from "@/contexts/users";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { withFadeUpAnimation } from "../../lib";
@@ -11,6 +11,7 @@ import { useOnboarding } from "../OnboardingContext";
 const WelcomeStep = () => {
   const { completeStep } = useOnboarding();
   const [selectedAge, setSelectedAge] = useState("25");
+  const { updateUser } = useCurrentUser();
 
   const ageOptions: WheelPickerOption[] = Array.from({ length: 83 }, (_, i) => ({
     label: (i + 18).toString(),

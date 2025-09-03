@@ -1,11 +1,9 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import Divider from "@/components/Divider";
-import GenericLoader from "@/components/GenericLoader";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import { PlanBadge } from "@/components/PlanBadge";
 import { isPlanExpired } from "@/components/PlansRenderer";
@@ -15,10 +13,13 @@ import ProfileSettingsPopover, {
 } from "@/components/profile/ProfileSettingsPopover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useActivities } from "@/contexts/activities";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { usePlans } from "@/contexts/plans";
+import { useCurrentUser, useUser } from "@/contexts/users";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -66,24 +67,18 @@ const ProfilePage: React.FC = () => {
   const [initialActiveView, setInitialActiveView] = useState<string | null>(
     null
   );
-  const { useCurrentUserDataQuery, useUserDataQuery } = useUserPlan();
-  const currentUserQuery = useCurrentUserDataQuery();
+  const { currentUser, sendFriendRequest, acceptFriendRequest, rejectFriendRequest } = useCurrentUser();
+  const { activities, activityEntries} = useActivities();
+  const { plans } = usePlans();
   const params = useParams();
   const searchParams = useSearchParams();
   const username = params.username as string;
-  const currentUser = currentUserQuery.data;
+  const { data: profileData, isLoading: isProfileDataLoading } = useUser({username});
+
   const currentUserSentConnectionRequests = currentUser?.connectionsFrom?.filter(conn => conn.status === 'PENDING');
   const currentUserReceivedConnectionRequests = currentUser?.connectionsTo?.filter(conn => conn.status === 'PENDING');
-  const profileDataQuery = useUserDataQuery(username);
-  const { isSuccess: isProfileDataSuccesfullyLoaded, data: profileData } =
-    profileDataQuery;
-  const { activityEntries, activities, plans } = profileData || {
-    activityEntries: [],
-    activities: [],
-  };
 
   const profileActivePlans = plans?.filter((p) => !isPlanExpired({finishingDate: p.finishingDate}));
-  const api = useApiWithAuth();
   const [showEditActivityEntry, setShowActivityToEdit] = useState<
     ActivityEntry | undefined
   >(undefined);
@@ -109,14 +104,6 @@ const ProfilePage: React.FC = () => {
       window.history.replaceState(null, "", `/profile/${currentUser.username}`);
     }
   }, [currentUser?.username, username]);
-
-  useEffect(() => {
-    if (!profileData) {
-      isOnesOwnProfile
-        ? currentUserQuery.refetch()
-        : profileDataQuery.refetch();
-    }
-  }, [username, currentUserQuery, isOnesOwnProfile, profileDataQuery]);
 
   useEffect(() => {
     const activeView = searchParams.get("activeView");
@@ -147,38 +134,7 @@ const ProfilePage: React.FC = () => {
 
   const handleSendConnectionRequest = async () => {
     if (profileData) {
-      await toast.promise(
-        (async () => {
-          await api.post(`/users/send-connection-request/${profileData!.id}`);
-          await currentUserQuery.refetch();
-        })(),
-        {
-          loading: "Sending connection request...",
-          success: "Connection request sent successfully",
-          error: "Failed to send connection request",
-        }
-      );
-    }
-  };
-
-  const handleConnectionRequest = async (action: "accept" | "reject") => {
-    if (profileData) {
-      const request = currentUserReceivedConnectionRequests?.find(
-        (req) => req.fromId === profileData.id
-      );
-      if (request) {
-        await toast.promise(
-          (async () => {
-            await api.post(`/users/${action}-connection-request/${request.id}`);
-            await currentUserQuery.refetch();
-          })(),
-          {
-            loading: `${action}ing connection request...`,
-            success: `Connection request ${action}ed`,
-            error: `Failed to ${action} connection request`,
-          }
-        );
-      }
+      sendFriendRequest(profileData.id);
     }
   };
 
@@ -228,15 +184,46 @@ const ProfilePage: React.FC = () => {
     );
   };
 
-  if (!isProfileDataSuccesfullyLoaded) {
+  if (isProfileDataLoading) {
     return (
-      <div className="flex flex-col items-center mx-auto my-8">
-        <GenericLoader message="Loading profile..." />
+      <div className="flex flex-col items-center min-h-screen p-2">
+        <div className="w-full max-w-3xl">
+          <div className="flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-2xl bg-white/60 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2 p-2">
+              <Skeleton className="w-20 h-20 rounded-full" />
+              <div className="flex flex-col items-center gap-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <Skeleton className="h-10 w-32" />
+            </div>
+            <div className="flex flex-col items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="text-center">
+                  <Skeleton className="h-8 w-8 mx-auto mb-1" />
+                  <Skeleton className="h-4 w-12" />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 h-13 bg-gray-100 rounded-lg p-1 mb-4">
+            <Skeleton className="h-10 rounded-md" />
+            <Skeleton className="h-10 rounded-md" />
+          </div>
+          
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (isProfileDataSuccesfullyLoaded && !profileData) {
+  if (!profileData) {
     return <div>No profile data available.</div>;
   }
 
@@ -298,7 +285,7 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-green-600 bg-green-50"
-                        onClick={() => handleConnectionRequest("accept")}
+                        onClick={() => acceptFriendRequest(profileData.id)}
                       >
                         <Check className="h-6 w-6" />
                       </Button>
@@ -306,7 +293,7 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-red-600 bg-red-50"
-                        onClick={() => handleConnectionRequest("reject")}
+                        onClick={() => rejectFriendRequest(profileData.id)}
                       >
                         <X className="h-6 w-6" />
                       </Button>
@@ -354,7 +341,7 @@ const ProfilePage: React.FC = () => {
                     className="border-none"
                     onClick={() =>
                       shareOrCopyLink(
-                        `https://app.tracking.so/join/${currentUserQuery.data?.username}`
+                        `https://app.tracking.so/join/${currentUser?.username}`
                       )
                     }
                   >
@@ -684,9 +671,6 @@ const ProfilePage: React.FC = () => {
             date: showEditActivityEntry.date,
             activityId: showEditActivityEntry.activityId,
             description: showEditActivityEntry.description || undefined,
-          }}
-          onDelete={() => {
-            profileDataQuery.refetch();
           }}
           onClose={() => setShowActivityToEdit(undefined)}
         />

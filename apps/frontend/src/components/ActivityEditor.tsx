@@ -1,9 +1,7 @@
-import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { useActivities } from "@/contexts/activities";
+import { useCurrentUser } from "@/contexts/users";
 import { Activity } from "@tsw/prisma";
 import { Loader2, Trash2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
@@ -13,18 +11,6 @@ import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import SteppedColorPicker from "./SteppedColorPicker";
 import { EmojiInput } from "./ui/EmojiInput";
 import { Separator } from "./ui/separator";
-
-// export function toReadablePrivacySetting(privacySetting: VisibilityType) {
-//   switch (privacySetting) {
-//     case "public":
-//       return "Everyone";
-//     case "private":
-//       return "Only me";
-//     case "friends":
-//       return "Only Friends";
-//   }
-// }
-
 interface ActivityEditorProps {
   onClose: () => void;
   activity?: Activity;
@@ -39,18 +25,15 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
-  const { useCurrentUserDataQuery, updateLocalUserData, syncCurrentUserWithProfile } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-  // const [privacySetting, setPrivacySetting] = useState<VisibilityType>(
-  //   activity?.privacy_settings ||
-  //     userData?.defaultActivityVisibility ||
-  //     "public"
-  // );
+  const { currentUser } = useCurrentUser();
+  const {
+    upsertActivity,
+    deleteActivity,
+    isUpsertingActivity,
+    isDeletingActivity,
+  } = useActivities();
+
   const [colorHex, setColorHex] = useState(activity?.colorHex || "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const api = useApiWithAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +51,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       // );
       setColorHex(activity.colorHex || "");
     }
-  }, [activity, userData?.defaultActivityVisibility]);
+  }, [activity]);
 
   useEffect(() => {
     console.log({ activity });
@@ -99,44 +82,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const response = await api.post("/activities/upsert", {
-        ...activity,
-        emoji,
-        title: title.trim(),
-        measure: measure.trim(),
-        // privacy_settings: privacySetting,
-        colorHex: colorHex === "" ? null : colorHex,
-      });
-      
-      const savedActivity = response.data as Activity;
-      updateLocalUserData((currentData) => {
-        if (!activity) {
-          return {
-            ...currentData,
-            activities: [...currentData.activities, savedActivity],
-          };
-        }
-        
-        return {
-          ...currentData,
-          activities: currentData.activities.map((act: Activity) => 
-            act.id === savedActivity.id ? savedActivity : act
-          ),
-        };
-      });
-
-      syncCurrentUserWithProfile();
-      
-      toast.success("Activity saved successfully!");
-      onClose();
-    } catch (error) {
-      console.error("Error saving activity:", error);
-      toast.error("Failed to save activity. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
+    upsertActivity({
+      ...activity,
+      emoji,
+      title: title.trim(),
+      measure: measure.trim(),
+      colorHex: colorHex === "" ? null : colorHex,
+    });
   };
 
   const handleDelete = async () => {
@@ -146,35 +98,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   const confirmDelete = async () => {
     setShowDeleteConfirm(false);
-    setIsDeleting(true);
-    try {
-      await api.delete(`/activities/${activity!.id}`);
-      
-      updateLocalUserData((currentData) => {
-        return {
-          ...currentData,
-          activities: currentData.activities.filter((act: Activity) => act.id !== activity!.id),
-        };
-      });
-      
-      syncCurrentUserWithProfile();
-      toast.success("Activity deleted successfully!");
-      onClose();
-    } catch (error: any) {
-      console.error("Error deleting activity:", error);
-      if (error.response?.status === 400) {
-        toast.error(`Delete failed: ${error.response.data.detail}`);
-      } else {
-        toast.error("Failed to delete activity. Please try again.");
-      }
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const onEmojiClick = (emojiData: any) => {
-    setEmoji(emojiData.emoji);
-    setShowEmojiPicker(false);
+    deleteActivity({ id: activity!.id });
+    onClose();
   };
 
   return (
@@ -219,7 +144,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             <Button
               onClick={handleSave}
               className="w-full py-5"
-              loading={isSaving}
+              loading={isUpsertingActivity}
             >
               Save Activity
             </Button>
@@ -228,9 +153,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 onClick={handleDelete}
                 variant="outline"
                 className="w-full mt-4 text-red-500"
-                disabled={isSaving}
+                disabled={isDeletingActivity}
               >
-                {isDeleting ? (
+                {isDeletingActivity ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
                   <Trash2 className="w-4 h-4 mr-2" />

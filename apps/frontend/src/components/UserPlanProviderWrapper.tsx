@@ -1,15 +1,15 @@
-'use client';
+// 'use client';
 
-import React from 'react';
-import { UserPlanProvider } from '@/contexts/UserGlobalContext';
-import { OfflineActionQueueProvider } from '@/hooks/useOfflineActionQueue';
+// import React from 'react';
+// import { GlobalDataProvider } from '@/contexts/GlobalDataProvider';
+// import { OfflineActionQueueProvider } from '@/hooks/useOfflineActionQueue';
 
-export const UserPlanProviderWrapper: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  return (
-    <OfflineActionQueueProvider>
-      <UserPlanProvider>{children}</UserPlanProvider>
-    </OfflineActionQueueProvider>
-  );
-};
+// export const UserPlanProviderWrapper: React.FC<{ children: React.ReactNode }> = ({
+//   children,
+// }) => {
+//   return (
+//     <OfflineActionQueueProvider>
+//       <GlobalDataProvider>{children}</GlobalDataProvider>
+//     </OfflineActionQueueProvider>
+//   );
+// };

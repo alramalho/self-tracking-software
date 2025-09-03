@@ -1,7 +1,8 @@
+import { useActivities } from "@/contexts/activities";
+import { usePlans } from "@/contexts/plans";
+import { Check, X } from "lucide-react";
 import React from "react";
 import { Button } from "./ui/button";
-import { Check, X } from "lucide-react";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 
 export interface PlanSession {
   date: string;
@@ -27,10 +28,9 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
   onReject,
   disabled,
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-  const plan = userData?.plans.find((p) => p.id === plan_id);
+  const { plans } = usePlans();
+  const plan = plans?.find((p) => p.id === plan_id);
+  const { activities, activityEntries  } = useActivities();
 
   return (
     <div className="w-full max-w-md space-y-4">
@@ -78,7 +78,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               <h4 className="text-sm font-medium text-gray-700">Sessions to be removed:</h4>
               <div className="space-y-2">
                 {old_sessions.map((session) => {
-                  const activity = userData?.activities.find((a) => a.id === session.activityId);
+                  const activity = activities.find((a) => a.id === session.activityId);
                   const formattedDate = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                   return (
                     <div
@@ -101,7 +101,7 @@ const PlanUpdateBanner: React.FC<PlanUpdateBannerProps> = ({
               <h4 className="text-sm font-medium text-gray-700">Sessions to be added:</h4>
               <div className="space-y-2">
                 {sessions.map((session) => {
-                  const activity = userData?.activities.find((a) => a.id === session.activityId);
+                  const activity = activities.find((a) => a.id === session.activityId);
                   const formattedDate = new Date(session.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                   return (
                     <div

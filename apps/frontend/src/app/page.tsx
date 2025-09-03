@@ -9,40 +9,36 @@ import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import { Button } from "@/components/ui/button";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Bell,
-  ChevronDown,
-  ChevronRight,
-  HelpCircle,
-  RefreshCcw,
-  ScanFace,
+    Bell,
+    ChevronDown,
+    ChevronRight,
+    HelpCircle,
+    RefreshCcw,
+    ScanFace,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
 
 import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
+import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
+import { useMetrics } from "@/contexts/metrics";
+import { useDataNotifications } from "@/contexts/notifications";
+import { usePlans } from "@/contexts/plans";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useMetrics } from "@/hooks/useMetrics";
-import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { getUser } from "./actions";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
-  const { useCurrentUserDataQuery, notificationsData, refetchAllData } =
-    useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
-  const { userMetrics } = useMetrics();
-
+  const { notifications, clearAllNotifications } = useDataNotifications();
+  const { plans } = usePlans();
+  const { metrics } = useMetrics();
+  const { refetchAllData } = useGlobalDataOperations();
+  const { currentUser } = useCurrentUser();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
@@ -51,7 +47,6 @@ const HomePage: React.FC = () => {
   );
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { clearGeneralNotifications } = useNotifications();
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
@@ -60,29 +55,16 @@ const HomePage: React.FC = () => {
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
 
   const unreadNotifications =
-    notificationsData.data?.notifications?.filter(
+    notifications?.filter(
       (n) => n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
     ) || [];
+    
   const unreadNotificationsCount = unreadNotifications.length;
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      console.log(`Fetching user ${userData?.id}`);
-      const user = await getUser();
-
-      console.log(`User fetched from prisma! ${user?.id}`);
-    };
-    fetchUser();
-  }, [userData]);
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
-    await clearGeneralNotifications();
-    // Optionally refetch notifications to update the UI
-    await notificationsData.refetch();
+    clearAllNotifications();
   };
-
-
 
   return (
     <PullToRefresh
@@ -176,7 +158,7 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {userData?.plans && userData.plans.length > 0 && (
+        {plans && plans.length > 0 && (
           <div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -220,7 +202,7 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {userMetrics.length > 0 && !isUserOnFreePlan && (
+        {metrics && metrics.length > 0 && !isUserOnFreePlan && (
           <HomepageMetricsSection />
         )}
 
@@ -281,9 +263,9 @@ const HomePage: React.FC = () => {
 
         {/* Feedback Modal */}
         <FeedbackPopover
-          email={userData?.email || ""}
+          email={currentUser?.email || ""}
           onClose={() => setIsFeedbackOpen(false)}
-          isEmailEditable={!userData?.email}
+          isEmailEditable={!currentUser?.email}
           open={isFeedbackOpen}
         />
       </div>

@@ -1,7 +1,6 @@
 import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 

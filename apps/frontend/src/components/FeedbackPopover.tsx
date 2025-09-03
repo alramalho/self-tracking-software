@@ -1,9 +1,8 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
+import { useFeedback } from "@/hooks/useFeedback";
 import { ArrowLeft, Bug, HelpCircle, MessageSquarePlus } from "lucide-react";
 import React, { useState } from "react";
-import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
 import { TextAreaWithVoice } from "./ui/TextAreaWithVoice";
@@ -36,7 +35,7 @@ const FeedbackPopover = ({
   const [text, setText] = useState("");
   const [email, setEmail] = useState(initialEmail);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const api = useApiWithAuth();
+  const { sendFeedback } = useFeedback();
 
   const categories: FeedbackCategory[] = [
     {
@@ -71,18 +70,7 @@ const FeedbackPopover = ({
     setIsSubmitting(true);
     
     try {
-      await toast.promise(
-        api.post("/users/report-feedback", {
-          email,
-          text,
-          type: selectedCategory,
-        }),
-        {
-          loading: "Sending feedback...",
-          success: "Feedback sent successfully!",
-          error: "Failed to send feedback",
-        }
-      );
+      await sendFeedback({ text, type: selectedCategory });
       
       setText("");
       setSelectedCategory(null);

@@ -1,7 +1,7 @@
-import { updatePlans } from "@/app/actions";
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
-import { CompletePlan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CompletePlan, usePlans } from "@/contexts/plans";
 import {
   closestCenter,
   DndContext,
@@ -9,12 +9,12 @@ import {
   MouseSensor,
   TouchSensor,
   useSensor,
-  useSensors
+  useSensors,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
-  verticalListSortingStrategy
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { addMonths, isBefore } from "date-fns";
@@ -26,7 +26,9 @@ import Divider from "./Divider";
 import PlanCard from "./PlanCard";
 
 // Helper function to check if a plan is expired
-export const isPlanExpired = (plan: {finishingDate: Date | null}): boolean => {
+export const isPlanExpired = (plan: {
+  finishingDate: Date | null;
+}): boolean => {
   if (!plan.finishingDate) return false;
   return isBefore(plan.finishingDate, new Date());
 };
@@ -48,26 +50,19 @@ const sortPlansByOrder = (plans: CompletePlan[]): CompletePlan[] => {
 
 interface SortablePlanProps {
   plan: CompletePlan;
-  planGroup?: CompletePlan["planGroup"];
   isSelected: boolean;
   currentUserId?: string;
   onSelect: (planId: string) => void;
   onInviteSuccess: () => void;
-  onPlanRemoved?: () => void;
   priority: number;
-  onReactivate: (planId: string) => Promise<void>;
 }
 
 const SortablePlan: React.FC<SortablePlanProps> = ({
   plan,
-  planGroup,
   isSelected,
-  currentUserId,
   onSelect,
   onInviteSuccess,
-  onPlanRemoved,
   priority,
-  onReactivate,
 }) => {
   const {
     attributes,
@@ -80,6 +75,7 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
 
   const isExpired = isPlanExpired(plan);
   const [isReactivating, setIsReactivating] = useState(false);
+  const { upsertPlan } = usePlans();
 
   const handleReactivate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,7 +83,8 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
 
     setIsReactivating(true);
     try {
-      await onReactivate(plan.id!);
+      const oneMonthLater = addMonths(new Date(), 1);
+      await upsertPlan({ planId: plan.id!, updates: { finishingDate: oneMonthLater } });
     } finally {
       setIsReactivating(false);
     }
@@ -108,12 +105,9 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
       <div ref={setNodeRef} style={style}>
         <PlanCard
           plan={plan}
-          planGroup={planGroup}
           isSelected={isSelected}
-          currentUserId={currentUserId}
           onSelect={onSelect}
           onInviteSuccess={onInviteSuccess}
-          onPlanRemoved={onPlanRemoved}
           priority={priority}
           isDragging={isDragging}
           dragHandleProps={{ ...attributes, ...listeners }}
@@ -148,9 +142,7 @@ interface PlansRendererProps {
 const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
 }) => {
-  const { useCurrentUserDataQuery, refetchUserData } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
+  const { plans, updatePlans, isLoadingPlans } = usePlans();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
     initialSelectedPlanId || null
   );
@@ -172,11 +164,11 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const sensors = useSensors(mouseSensor, touchSensor);
 
   useEffect(() => {
-    if (userData?.plans) {
+    if (plans) {
       // Sort plans by sortOrder field
-      setOrderedPlans(sortPlansByOrder(userData.plans as CompletePlan[]));
+      setOrderedPlans(sortPlansByOrder(plans as CompletePlan[]));
     }
-  }, [userData?.plans]);
+  }, [plans]);
 
   useEffect(() => {
     if (
@@ -190,27 +182,17 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   }, [orderedPlans, initialSelectedPlanId]);
 
-  const handleReactivatePlan = async (planId: string) => {
-    try {
-      const oneMonthLater = addMonths(new Date(), 1);
-      const result = await updatePlans([{
-        planId,
-        updates: { finishingDate: oneMonthLater }
-      }]);
-      
-      if (result.success) {
-        await refetchUserData(false);
-        toast.success("Plan reactivated successfully");
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error("Failed to reactivate plan:", error);
-      toast.error("Failed to reactivate plan");
-    }
-  };
+  if (isLoadingPlans) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+      </div>
+    );
+  }
 
-  if (userData?.plans && userData.plans.length === 0) {
+  if (plans && plans.length === 0) {
     return (
       <>
         <Link href="/create-new-plan" passHref>
@@ -226,18 +208,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     );
   }
 
-  const { plans = [] } = userData || {};
-
-  const getPlanGroup = (planId: string): CompletePlan["planGroup"] | undefined => {
-    return plans.find((p) => p.id === planId)?.planGroup || undefined;
-  };
-
-  const handleInviteSuccess = () => {
-    refetchUserData();
-  };
-
-  const handlePlanRemoved = () => {
-    refetchUserData();
+  const getPlanGroup = (
+    planId: string
+  ): CompletePlan["planGroup"] | undefined => {
+    return plans?.find((p) => p.id === planId)?.planGroup || undefined;
   };
 
   const handlePlanSelect = (planId: string) => {
@@ -271,10 +245,9 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
         updates: { sortOrder: index + 1 },
       }));
 
-      const result = await updatePlans(updates);
-      
+      const result = await updatePlans({ updates, muteNotifications: true });
+
       if (result.success) {
-        currentUserDataQuery.refetch();
         toast.success("Plan priority updated");
       } else {
         throw new Error(result.error);
@@ -283,7 +256,9 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       toast.error("Failed to update plan priority");
       console.error("Failed to update plan priority:", error);
       // Revert the local state change
-      setOrderedPlans(sortPlansByOrder(userData?.plans as CompletePlan[] || []));
+      setOrderedPlans(
+        sortPlansByOrder((plans as CompletePlan[]) || [])
+      );
     }
   };
 
@@ -304,14 +279,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
               <SortablePlan
                 key={plan.id}
                 plan={plan}
-                planGroup={getPlanGroup(plan.id!)}
                 isSelected={selectedPlanId === plan.id}
-                currentUserId={userData?.id}
                 onSelect={handlePlanSelect}
-                onInviteSuccess={handleInviteSuccess}
-                onPlanRemoved={handlePlanRemoved}
+                onInviteSuccess={() => {}}
                 priority={index + 1}
-                onReactivate={handleReactivatePlan}
               />
             ))}
           </SortableContext>

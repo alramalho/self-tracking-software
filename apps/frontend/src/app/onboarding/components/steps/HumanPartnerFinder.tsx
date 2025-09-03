@@ -3,7 +3,6 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { ApSearchComponent } from "@/components/ApSearch";
 import { Button } from "@/components/ui/button";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -131,11 +130,7 @@ const OptionCard = ({
 
 const HumanPartnerFinder = () => {
   const { completeStep, } = useOnboarding();
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
-  const hasProfile = userData?.profile !== undefined;
   const { shareOrCopyReferralLink } = useShareOrCopy();
-  const [profileSetupPopupOpen, setProfileSetupPopoverOpen] = useState(false);
   const [apSearchPopupOpen, setApSearchPopupOpen] = useState(false);
   const [hasShared, setHasShared] = useState(false);
   const [hasOpenedCommunitySearch, setHasOpenedCommunitySearch] = useState(false);

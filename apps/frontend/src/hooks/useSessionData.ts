@@ -1,4 +1,4 @@
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { addWeeks, format, isAfter, parseISO, startOfWeek } from "date-fns";
 import { useEffect, useState } from "react";
 

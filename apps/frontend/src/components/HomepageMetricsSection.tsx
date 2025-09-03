@@ -9,9 +9,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
+import { useActivities } from "@/contexts/activities";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
+import { useMetrics } from "@/contexts/metrics";
+import {
+  getMetricWeekData,
+  getPositiveCorrelations,
+} from "@/contexts/metrics/lib";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useMetrics } from "@/hooks/useMetrics";
 import { MetricEntry } from "@tsw/prisma";
 import { isToday } from "date-fns";
 import { ChevronDown, ChevronRight, CircleCheckBig } from "lucide-react";
@@ -36,25 +41,18 @@ const getMetricColor = (index: number) => {
 
 export const HomepageMetricsSection: React.FC = () => {
   const router = useRouter();
-  const {
-    userMetrics,
-    entries,
-    getMetricWeekData,
-    getPositiveCorrelations,
-    formatCorrelationString,
-  } = useMetrics();
-  
+  const { metrics, entries: metricEntries } = useMetrics();
+  const { activities, activityEntries } = useActivities();
   const [isMetricsCollapsed, setIsMetricsCollapsed] = useLocalStorage<boolean>(
     "metrics-section-collapsed",
     false
   );
-  
+
   const { areAllMetricsCompleted } = useDailyCheckin();
 
   // Calculate unlogged metrics count
-  const unloggedMetricsCount = userMetrics.slice(0, 3).filter((metric) => {
-    const today = new Date().toISOString().split("T")[0];
-    const todaysEntry = entries.find(
+  const unloggedMetricsCount = metrics?.slice(0, 3).filter((metric) => {
+    const todaysEntry = metricEntries?.find(
       (entry: MetricEntry) =>
         entry.metricId === metric.id && isToday(entry.date)
     );
@@ -77,9 +75,7 @@ export const HomepageMetricsSection: React.FC = () => {
               <button
                 className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
                 aria-label={
-                  isMetricsCollapsed
-                    ? "Expand metrics"
-                    : "Collapse metrics"
+                  isMetricsCollapsed ? "Expand metrics" : "Collapse metrics"
                 }
               >
                 {isMetricsCollapsed ? (
@@ -89,11 +85,15 @@ export const HomepageMetricsSection: React.FC = () => {
                 )}
               </button>
             </CollapsibleTrigger>
-            
-            {isMetricsCollapsed && unloggedMetricsCount > 0 && isAfter2PM ? (
+
+            {isMetricsCollapsed &&
+            unloggedMetricsCount &&
+            unloggedMetricsCount > 0 &&
+            isAfter2PM ? (
               <div className="flex items-center gap-2">
                 <span className="text-md font-semibold text-gray-900">
-                  {unloggedMetricsCount} metric{unloggedMetricsCount > 1 ? "s" : ""} to log today
+                  {unloggedMetricsCount} metric
+                  {unloggedMetricsCount > 1 ? "s" : ""} to log today
                 </span>
                 <PulsatingCirclePill variant="yellow" size="md" />
               </div>
@@ -115,28 +115,29 @@ export const HomepageMetricsSection: React.FC = () => {
         <CollapsibleContent>
           <div className="space-y-4 pt-1">
             <div className="flex flex-col gap-3 flex-wrap px-1 pb-1">
-              {userMetrics.slice(0, 3).map((metric, index) => {
+              {metrics?.slice(0, 3).map((metric, index) => {
                 const today = new Date().toISOString().split("T")[0];
-                const todaysEntry = entries.find(
+                const todaysEntry = metricEntries?.find(
                   (entry: MetricEntry) =>
                     entry.metricId === metric.id && isToday(entry.date)
                 );
-                const isLoggedToday =
-                  !!todaysEntry && todaysEntry.rating > 0;
+                const isLoggedToday = !!todaysEntry && todaysEntry.rating > 0;
                 const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
                 const todaysRating = todaysEntry?.rating;
 
-                const weekData = getMetricWeekData(metric.id);
+                const weekData = getMetricWeekData(metric.id, metricEntries || []);
                 const hasAnyData = weekData.some((val) => val > 0);
                 const positiveCorrelations = getPositiveCorrelations(
-                  metric.id
+                  metric.id,
+                  metricEntries || [],
+                  activities || [],
+                  activityEntries || []
                 );
 
                 return (
                   <div key={`${metric.id}-${index}-homepage`}>
-                    {(isLoggedToday || isSkippedToday) ? (
+                    {isLoggedToday || isSkippedToday ? (
                       <div className="my-2 bg-white/60 ring-1 ring-gray-200 rounded-3xl p-4 border border-white/50">
-                        
                         {/* Weekly chart */}
                         <MetricWeeklyView
                           metric={metric}
@@ -144,10 +145,9 @@ export const HomepageMetricsSection: React.FC = () => {
                           color={getMetricColor(index)}
                           hasAnyData={hasAnyData}
                           positiveCorrelations={positiveCorrelations}
-                          formatCorrelationString={formatCorrelationString}
                           className="!bg-transparent !ring-0 !border-0 !p-0 !m-0"
                         />
-                        
+
                         {/* Muted logged indicator at bottom */}
                         {isLoggedToday && (
                           <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-gray-100">
@@ -157,7 +157,7 @@ export const HomepageMetricsSection: React.FC = () => {
                             </span>
                           </div>
                         )}
-                        
+
                         {isSkippedToday && (
                           <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-gray-100">
                             <span className="text-xs text-gray-400 font-medium">
@@ -181,13 +181,13 @@ export const HomepageMetricsSection: React.FC = () => {
               {areAllMetricsCompleted && <TodaysNoteSection />}
             </div>
 
-            {userMetrics.length > 3 && (
+            {metrics?.length && metrics.length > 3 && (
               <div className="text-center">
                 <button
                   onClick={() => router.push("/insights/dashboard")}
                   className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  +{userMetrics.length - 3} more metrics
+                  +{metrics.length - 3} more metrics
                 </button>
               </div>
             )}

@@ -1,13 +1,13 @@
-import { useInView } from "react-intersection-observer";
-import Confetti from "react-confetti-boom";
-import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
-import { parseISO, startOfWeek, endOfWeek } from "date-fns";
-import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
-import { motion, AnimatePresence } from "framer-motion";
 import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/PlanProgressContext/lib";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
+import { cn } from "@/lib/utils";
+import { startOfWeek } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import Confetti from "react-confetti-boom";
+import { useInView } from "react-intersection-observer";
+import { WeeklyCompletionCard } from "./WeeklyCompletionCard";
 
 interface WeeklySessionsChecklistProps {
   plan: CompletePlan;

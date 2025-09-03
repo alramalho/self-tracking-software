@@ -1,30 +1,21 @@
-import { leavePlan } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { CompletePlan as Plan, useUserPlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan, usePlans } from "@/contexts/plans";
+import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import {
-  BadgeCheck,
-  GripHorizontal,
-  Pencil,
-  Trash2
-} from "lucide-react";
+import { BadgeCheck, GripHorizontal, Pencil, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import InviteButton from "./InviteButton";
 import { PlanEditModal } from "./PlanEditModal";
 
-type PlanGroup = Plan["planGroup"];
 interface PlanCardProps {
-  plan: Plan  ;
-  planGroup?: PlanGroup;
+  plan: CompletePlan;
   isSelected: boolean;
-  currentUserId?: string;
   onSelect: (planId: string) => void;
   onInviteSuccess: () => void;
   hideInviteButton?: boolean;
@@ -36,24 +27,23 @@ interface PlanCardProps {
 
 const PlanCard: React.FC<PlanCardProps> = ({
   plan,
-  planGroup,
   isSelected,
-  currentUserId,
   onSelect,
   onInviteSuccess,
   hideInviteButton = false,
-  onPlanRemoved,
   priority,
   isDragging = false,
   dragHandleProps,
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: currentUserData } = currentUserDataQuery;
+  const { plans, upsertPlan } = usePlans();
   const { isUserPremium } = usePaidPlan();
+  const { currentUser } = useCurrentUser();
   const isCoached =
     isUserPremium &&
-    currentUserData?.plans?.findIndex((p) => p.id === plan.id) === 0;
+    plans?.find(
+      (p) =>
+        p.sortOrder === Math.min(...plans.map((p) => p.sortOrder ?? Infinity))
+    )?.id === plan.id;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -74,20 +64,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   };
 
   const handleDeletePlan = async () => {
-    toast.promise(
-      leavePlan(plan.id!).then((result) => {
-        if (!result.success) {
-          throw new Error(result.error || "Failed to leave plan");
-        }
-        setShowDeleteConfirm(false);
-        onPlanRemoved?.();
-      }),
-      {
-        loading: "Leaving plan...",
-        success: "You have left the plan",
-        error: "Failed to leave plan",
-      }
-    );
+    await upsertPlan({ planId: plan.id!, updates: { deletedAt: new Date() } });
   };
 
   return (
@@ -149,10 +126,10 @@ const PlanCard: React.FC<PlanCardProps> = ({
               no end date
             </span>
           )}
-          {planGroup && planGroup.members && (
+          {plan.planGroup?.members && (
             <div className="flex items-center space-x-1 mt-2">
-              {planGroup.members.map((member) => {
-                if (!currentUserId || member.id === currentUserId) {
+              {plan.planGroup.members.map((member) => {
+                if (!currentUser?.id || member.id === currentUser?.id) {
                   return null;
                 }
                 return (
@@ -162,7 +139,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
                       alt={member.name || member.username || ""}
                     />
                     <AvatarFallback>
-                      {member.name?.[0] || member.username?.[0] || "U"} 
+                      {member.name?.[0] || member.username?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
                 );
@@ -198,12 +175,15 @@ const PlanCard: React.FC<PlanCardProps> = ({
         </div>
       </div>
 
-
       <ConfirmDialogOrPopover
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeletePlan}
-        title={<div className="flex items-center justify-center gap-2"><Trash2 className="h-6 w-6 text-red-400" /> Delete Plan</div>}
+        title={
+          <div className="flex items-center justify-center gap-2">
+            <Trash2 className="h-6 w-6 text-red-400" /> Delete Plan
+          </div>
+        }
         description="Are you sure you want to delete this plan? This action cannot be undone."
         confirmText="Delete Plan"
         cancelText="Cancel"

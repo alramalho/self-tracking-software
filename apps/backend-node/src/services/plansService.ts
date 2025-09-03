@@ -1,3 +1,4 @@
+import { TZDate } from "@date-fns/tz";
 import {
   Plan,
   PlanOutlineType,
@@ -6,11 +7,9 @@ import {
   User,
 } from "@tsw/prisma";
 import { endOfWeek, isThisWeek, startOfWeek } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
-
 export class PlansService {
   async getUserFirstPlan(userId: string) {
     try {
@@ -52,7 +51,7 @@ export class PlansService {
     const currentDate = new Date();
 
     // Convert to user's timezone for accurate week calculation
-    const userCurrentDate = toZonedTime(currentDate, timezone);
+    const userCurrentDate = new TZDate(currentDate, timezone);
 
     // Get start of the week (Sunday) to match Python logic
     const weekStart = startOfWeek(userCurrentDate, { weekStartsOn: 0 }); // 0 = Sunday

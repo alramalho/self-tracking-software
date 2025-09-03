@@ -1,6 +1,5 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
 import AINotification from "@/components/AINotification";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
@@ -10,37 +9,33 @@ import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useActivities } from "@/contexts/activities";
+import { useMetrics } from "@/contexts/metrics";
+import { ACTIVITY_WINDOW_DAYS, MINIMUM_ENTRIES } from "@/contexts/metrics/lib";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import {
-  useUserPlan,
-} from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import {
-  Activity,
-  Metric,
-  MetricEntry
-} from "@tsw/prisma";
+import { Activity, Metric, MetricEntry } from "@tsw/prisma";
 import { subDays } from "date-fns";
 import { ArrowDown, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "react-hot-toast";
 import { defaultMetrics } from "../metrics";
 
-// Configuration constants
-const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation
-const MINIMUM_ENTRIES = 7;
 export default function InsightsDashboardPage() {
-  const { useCurrentUserDataQuery, useMetricsAndEntriesQuery } = useUserPlan();
-  const { data: userData } = useCurrentUserDataQuery();
-  const metricsAndEntriesQuery = useMetricsAndEntriesQuery();
-  const { data: metricsAndEntriesData, isLoading } = metricsAndEntriesQuery;
-  const userMetrics = metricsAndEntriesData?.metrics || [];
-  const entries = metricsAndEntriesData?.entries || [];
-  const activities = userData?.activities || [];
-  const activityEntries = userData?.activityEntries || [];
+  const {
+    metrics: userMetrics,
+    entries,
+    createMetric,
+    hasLoadedMetricsAndEntries,
+    isLoadingEntries,
+    isLoadingMetrics,
+  } = useMetrics();
+  const { activities, activityEntries } = useActivities();
+  const { currentUser } = useCurrentUser();
+
   const router = useRouter();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -50,60 +45,33 @@ export default function InsightsDashboardPage() {
     null
   );
   const [aiMessage, setAIMessage] = useState<string | null>(null);
-  const [isCreatingMetric, setIsCreatingMetric] = useState(false);
-  const api = useApiWithAuth();
   const { setShowUpgradePopover } = useUpgrade();
-  const hasLoadedMetricsAndEntries =
-    metricsAndEntriesQuery.isSuccess && !!metricsAndEntriesData;
-  const { userPlanType: userPaidPlanType } = usePaidPlan();
-  const isUserOnFreePlan = userPaidPlanType === "FREE";
+  const { isUserFree } = usePaidPlan();
+  const isUserOnFreePlan = isUserFree;
 
-  if (isUserOnFreePlan) {
-    router.push("/insights/onboarding")
+  if (isUserOnFreePlan && (hasLoadedMetricsAndEntries && userMetrics?.length === 0)) {
+    router.push("/insights/onboarding");
   }
 
-  const addMetric = async ({
-    title,
-    emoji,
-  }: {
-    title: string;
-    emoji: string;
-  }) => {
-    try {
-      await api.post("/metrics", {
-        title,
-        emoji,
-      });
-
-      metricsAndEntriesQuery.refetch();
-      // setIsAddMetricOpen(false);
-      // setSelectedNewMetric(null);
-      toast.success("Metric added successfully");
-    } catch (error) {
-      console.error("Error creating metric:", error);
-      toast.error("Failed to add metric");
-    } finally {
-      setIsCreatingMetric(false);
-    }
-  };
-
   const addDefaultMetrics = async () => {
-    const hasProductivity = userMetrics.find((m) => m.title === "Productivity");
-    const hasEnergy = userMetrics.find((m) => m.title === "Energy");
-    const hasHappiness = userMetrics.find((m) => m.title === "Happiness");
+    const hasProductivity = userMetrics?.find(
+      (m) => m.title === "Productivity"
+    );
+    const hasEnergy = userMetrics?.find((m) => m.title === "Energy");
+    const hasHappiness = userMetrics?.find((m) => m.title === "Happiness");
 
     if (!hasProductivity) {
       const productivityMetric = defaultMetrics.find(
         (m) => m.title === "Productivity"
       );
       if (productivityMetric) {
-        await addMetric(productivityMetric);
+        await createMetric(productivityMetric);
       }
     }
     if (!hasEnergy) {
       const energyMetric = defaultMetrics.find((m) => m.title === "Energy");
       if (energyMetric) {
-        await addMetric(energyMetric);
+        await createMetric(energyMetric);
       }
     }
     if (!hasHappiness) {
@@ -111,19 +79,19 @@ export default function InsightsDashboardPage() {
         (m) => m.title === "Happiness"
       );
       if (happinessMetric) {
-        await addMetric(happinessMetric);
+        await createMetric(happinessMetric);
       }
     }
   };
 
-  if (hasLoadedMetricsAndEntries && userMetrics.length === 0) {
+  if (hasLoadedMetricsAndEntries && userMetrics?.length === 0) {
     return (
       <div className="mx-auto p-2 max-w-md space-y-8">
         <div className="p-2">
           <AINotification
             messages={[
               `Hey ${
-                userData?.username ?? "there"
+                currentUser?.username ?? "there"
               }! Welcome to your insights page.`,
               "Here you can track how your activities affect metrics like happiness, energy and productivity.",
               "You can easily log your day by sending me a voice message about how you felt!",
@@ -172,38 +140,42 @@ export default function InsightsDashboardPage() {
               ]}
               thisWeekAvg={7.5}
               lastWeekAvg={6.5}
-              thisWeekEntries={[
-                {
-                  id: "demo1",
-                  metricId: "demo",
-                  rating: 8,
-                  date: new Date("2024-03-09"),
-                  createdAt: new Date("2024-03-09T00:00:00Z"),
-                },
-                {
-                  id: "demo2",
-                  metricId: "demo",
-                  rating: 7,
-                  date: new Date("2024-03-07"),
-                  createdAt: new Date("2024-03-07T00:00:00Z"),
-                },
-              ] as MetricEntry[]}
-              lastWeekEntries={[
-                {
-                  id: "demo3",
-                  metricId: "demo",
-                  rating: 6,
-                  date: new Date("2024-03-03"),
-                  createdAt: new Date("2024-03-03T00:00:00Z"),
-                },
-                {
-                  id: "demo4",
-                  metricId: "demo",
-                  rating: 7,
-                  date: new Date("2024-03-01"),
-                  createdAt: new Date("2024-03-01T00:00:00Z"),
-                },
-              ] as MetricEntry[]}
+              thisWeekEntries={
+                [
+                  {
+                    id: "demo1",
+                    metricId: "demo",
+                    rating: 8,
+                    date: new Date("2024-03-09"),
+                    createdAt: new Date("2024-03-09T00:00:00Z"),
+                  },
+                  {
+                    id: "demo2",
+                    metricId: "demo",
+                    rating: 7,
+                    date: new Date("2024-03-07"),
+                    createdAt: new Date("2024-03-07T00:00:00Z"),
+                  },
+                ] as MetricEntry[]
+              }
+              lastWeekEntries={
+                [
+                  {
+                    id: "demo3",
+                    metricId: "demo",
+                    rating: 6,
+                    date: new Date("2024-03-03"),
+                    createdAt: new Date("2024-03-03T00:00:00Z"),
+                  },
+                  {
+                    id: "demo4",
+                    metricId: "demo",
+                    rating: 7,
+                    date: new Date("2024-03-01"),
+                    createdAt: new Date("2024-03-01T00:00:00Z"),
+                  },
+                ] as MetricEntry[]
+              }
               onHelpClick={() => setTrendHelpMetricId("demo")}
             />
 
@@ -262,7 +234,7 @@ export default function InsightsDashboardPage() {
         <div className="px-4 pb-10">
           <Button
             className={`w-full ${
-              userPaidPlanType === "FREE"
+              isUserOnFreePlan
                 ? "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
                 : ""
             }`}
@@ -270,14 +242,14 @@ export default function InsightsDashboardPage() {
               setAIMessage(
                 "Great! Let's get started with a checkin. Just tell me how your day went!"
               );
-              if (userPaidPlanType === "FREE") {
+              if (isUserOnFreePlan) {
                 setShowUpgradePopover(true);
               } else {
                 addDefaultMetrics();
               }
             }}
           >
-            {userPaidPlanType === "FREE" ? "Try the coaching freely" : "Start"}
+            {isUserOnFreePlan ? "Try the coaching freely" : "Start"}
           </Button>
         </div>
       </div>
@@ -285,9 +257,9 @@ export default function InsightsDashboardPage() {
   }
 
   // Find the metric with the most entries
-  const metricEntryCounts = userMetrics.map((metric) => ({
+  const metricEntryCounts = userMetrics?.map((metric) => ({
     metric,
-    count: entries.filter((entry) => entry.metricId === metric.id).length,
+    count: entries?.filter((entry) => entry.metricId === metric.id).length,
   }));
 
   const renderProgressUI = (targetEntries: number, specificMetric?: Metric) => {
@@ -295,7 +267,7 @@ export default function InsightsDashboardPage() {
       ? [
           {
             metric: specificMetric,
-            count: entries.filter((e) => e.metricId === specificMetric.id)
+            count: entries?.filter((e) => e.metricId === specificMetric.id)
               .length,
           },
         ]
@@ -316,8 +288,8 @@ export default function InsightsDashboardPage() {
           </div>
 
           <div className="space-y-6">
-            {metricsToShow.map(({ metric, count }) => {
-              const progressPercent = (count / targetEntries) * 100;
+            {metricsToShow?.map(({ metric, count }) => {
+              const progressPercent = ((count || 0) / targetEntries) * 100;
               return (
                 <div key={metric.id} className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -345,7 +317,7 @@ export default function InsightsDashboardPage() {
     );
   };
 
-  if (isLoading) {
+  if (isLoadingMetrics || isLoadingEntries) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin mr-3" />
@@ -375,7 +347,7 @@ export default function InsightsDashboardPage() {
 
   // Check if an activity happened within the configured window before a date
   const activityHappenedWithinWindow = (
-    activityId: string, 
+    activityId: string,
     targetDate: Date
   ): boolean => {
     const windowStart = new Date(targetDate);
@@ -395,15 +367,13 @@ export default function InsightsDashboardPage() {
 
   // note to self 1: we were fixing improper metric correlations
   const calculateMetricCorrelations = (metricId: string) => {
-
     const metricEntries = entries
-      .filter((entry) => entry.metricId === metricId)
+      ?.filter((entry) => entry.metricId === metricId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const correlations = activities
       .map((activity) => {
-
-        const binaryActivityArray = metricEntries.map((entry) => {
+        const binaryActivityArray = metricEntries?.map((entry) => {
           const didActivity = activityHappenedWithinWindow(
             activity.id,
             new Date(entry.date)
@@ -412,11 +382,11 @@ export default function InsightsDashboardPage() {
         });
 
         // Only calculate correlation if the activity has some occurrences
-        if (binaryActivityArray.some((v) => v === 1)) {
-          const ratings = metricEntries.map((e) => e.rating);
+        if (binaryActivityArray?.some((v) => v === 1)) {
+          const ratings = metricEntries?.map((e) => e.rating);
 
           const correlation = calculatePearsonCorrelation(
-            ratings,
+            ratings || [],
             binaryActivityArray
           );
 
@@ -490,11 +460,11 @@ export default function InsightsDashboardPage() {
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
     const metricEntries = entries
-      .filter((entry) => entry.metricId === metricId)
+      ?.filter((entry) => entry.metricId === metricId)
       .filter((entry) => new Date(entry.date) >= fourteenDaysAgo)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    return metricEntries.map((entry) => ({
+    return metricEntries?.map((entry) => ({
       date: new Date(entry.date).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -508,7 +478,11 @@ export default function InsightsDashboardPage() {
     <div className="mx-auto p-6 max-w-2xl space-y-8">
       <div>
         <h3 className="text-lg font-semibold my-4">Check-ins</h3>
-        <DailyCheckinViewer entries={entries.map((entry) => ({ date: new Date(entry.date).toISOString() }))} />
+        <DailyCheckinViewer
+          entries={entries?.map((entry) => ({
+            date: new Date(entry.date).toISOString(),
+          })) || []}
+        />
         {/* <div className="mt-4">
           <DailyCheckinCard aiMessage={aiMessage} />
         </div> */}
@@ -537,12 +511,12 @@ export default function InsightsDashboardPage() {
       /> */}
 
         <div className="space-y-4">
-          {userMetrics.map((metric) => {
-            const count = entries.filter(
+          {userMetrics?.map((metric) => {
+            const count = entries?.filter(
               (e) => e.metricId === metric.id
             ).length;
             const correlations =
-              count >= MINIMUM_ENTRIES
+              count && count >= MINIMUM_ENTRIES
                 ? calculateMetricCorrelations(metric.id)
                     .filter(
                       (c): c is { activity: Activity; correlation: number } =>
@@ -558,7 +532,7 @@ export default function InsightsDashboardPage() {
             const hasCorrelations = correlations.length > 0;
             const chartData = prepareChartData(metric.id);
             const trend = calculateMetricTrend(
-              entries.filter((e) => e.metricId === metric.id)
+              entries?.filter((e) => e.metricId === metric.id) || []
             );
 
             // Calculate weekly averages for display
@@ -568,29 +542,29 @@ export default function InsightsDashboardPage() {
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
             const recentEntries = entries
-              .filter((e) => e.metricId === metric.id)
+              ?.filter((e) => e.metricId === metric.id)
               .filter((entry) => new Date(entry.date) >= twoWeeksAgo)
               .sort(
                 (a, b) =>
                   new Date(a.date).getTime() - new Date(b.date).getTime()
               );
 
-            const thisWeekEntries = recentEntries.filter(
+            const thisWeekEntries = recentEntries?.filter(
               (entry) => new Date(entry.date) >= oneWeekAgo
             );
-            const lastWeekEntries = recentEntries.filter(
+            const lastWeekEntries = recentEntries?.filter(
               (entry) => new Date(entry.date) < oneWeekAgo
             );
 
             const thisWeekAvg =
-              thisWeekEntries.length > 0
+              (thisWeekEntries?.length || 0) > 0 && thisWeekEntries
                 ? thisWeekEntries.reduce(
                     (sum, entry) => sum + entry.rating,
                     0
                   ) / thisWeekEntries.length
                 : 0;
             const lastWeekAvg =
-              lastWeekEntries.length > 0
+              (lastWeekEntries?.length || 0) > 0 && lastWeekEntries
                 ? lastWeekEntries.reduce(
                     (sum, entry) => sum + entry.rating,
                     0
@@ -598,7 +572,7 @@ export default function InsightsDashboardPage() {
                 : 0;
 
             if (!hasCorrelations) {
-              const nextMilestone = getNextMilestone(count);
+              const nextMilestone = getNextMilestone(count || 0);
               return renderProgressUI(nextMilestone, metric);
             }
 
@@ -607,11 +581,11 @@ export default function InsightsDashboardPage() {
                 <MetricTrendCard
                   metric={metric}
                   trend={trend}
-                  chartData={chartData}
+                  chartData={chartData || []}
                   thisWeekAvg={thisWeekAvg}
                   lastWeekAvg={lastWeekAvg}
-                  thisWeekEntries={thisWeekEntries}
-                  lastWeekEntries={lastWeekEntries}
+                  thisWeekEntries={thisWeekEntries || []}
+                  lastWeekEntries={lastWeekEntries || []}
                   onHelpClick={() => setTrendHelpMetricId(metric.id)}
                 />
 

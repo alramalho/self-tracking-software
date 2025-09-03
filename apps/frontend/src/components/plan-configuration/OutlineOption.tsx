@@ -1,7 +1,7 @@
-import { Check } from "lucide-react";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants, ThemeColor } from "@/utils/theme";
 import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
+import { Check } from "lucide-react";
 
 interface OutlineOptionProps {
   title: string;

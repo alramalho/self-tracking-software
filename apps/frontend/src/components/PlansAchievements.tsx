@@ -2,7 +2,7 @@ import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import {
     ACHIEVEMENT_WEEKS,
 } from "@/contexts/PlanProgressContext/lib";
-import { CompletePlan } from "@/contexts/UserGlobalContext";
+import { CompletePlan } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Activity, ActivityEntry } from "@tsw/prisma";

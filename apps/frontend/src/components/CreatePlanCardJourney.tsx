@@ -1,6 +1,6 @@
 "use client";
 
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { Loader2 } from "lucide-react";
 import React from "react";
 import toast from "react-hot-toast";
@@ -15,10 +15,8 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
   children,
   onComplete,
 }) => {
-  const { useCurrentUserDataQuery } = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: userData } = currentUserDataQuery;
-
+  const { currentUser, isLoadingCurrentUser } = useCurrentUser();
+  
   const handlePlanCreated = () => {
     onComplete();
   };
@@ -31,7 +29,7 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 z-[51]">
       {children}
-      {currentUserDataQuery.isLoading ? (
+      {isLoadingCurrentUser ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin">
           Loading your progress..
         </Loader2>
@@ -39,7 +37,7 @@ const CreatePlanCardJourney: React.FC<CreatePlanCardJourneyProps> = ({
         <PlanConfigurationForm
           onSuccess={handlePlanCreated}
           onFailure={handlePlanCreationFailure}
-          title={`${userData?.name}'s New Plan`}
+          title={`${currentUser?.name}'s New Plan`}
         />
       )}
     </div>

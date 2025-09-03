@@ -1,17 +1,11 @@
-export type BaseThemeColor =
-  | "slate"
-  | "blue"
-  | "violet"
-  | "amber"
-  | "emerald"
-  | "rose";
+import { ThemeColor } from "@tsw/prisma";
 
-export type ThemeColor = BaseThemeColor | "random";
-
+export type BaseLoweredThemeColor = Exclude<Lowercase<ThemeColor>, "random">;
+export type LowerThemeColor = Lowercase<ThemeColor>;
 // All possible theme variants
 export interface ThemeVariants {
   // Basic colors
-  raw: ThemeColor; // Raw color name
+  raw: BaseLoweredThemeColor; // Raw color name
   hex: string;
   bg: string;
   veryFadedBg: string;
@@ -57,7 +51,10 @@ export interface ThemeVariants {
 }
 
 // Force Tailwind to generate all theme classes
-export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
+export const themeVariants: Record<
+  Exclude<BaseLoweredThemeColor, "random">,
+  ThemeVariants
+> = {
   slate: {
     raw: "slate",
     hex: "#64748b",
@@ -342,9 +339,9 @@ export const themeVariants: Record<BaseThemeColor, ThemeVariants> = {
   },
 };
 
-export const getThemeVariants = (color: ThemeColor): ThemeVariants => {
+export const getThemeVariants = (color: LowerThemeColor): ThemeVariants => {
   if (color === "random") {
-    const colors: BaseThemeColor[] = [
+    const colors: BaseLoweredThemeColor[] = [
       "slate",
       "blue",
       "violet",
@@ -359,13 +356,13 @@ export const getThemeVariants = (color: ThemeColor): ThemeVariants => {
 };
 
 // Utility function to get text color classes
-export const getTextColorClass = (color: ThemeColor): string => {
+export const getTextColorClass = (color: BaseLoweredThemeColor): string => {
   return `text-${color}-500`;
 };
 
 // Utility function to get background color classes
 export const getBgColorClass = (
-  color: ThemeColor,
+  color: BaseLoweredThemeColor,
   shade: number = 500
 ): string => {
   return `bg-${color}-${shade}`;

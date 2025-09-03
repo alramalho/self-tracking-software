@@ -1,12 +1,11 @@
-import { updateUser } from "@/app/actions";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { useUpgrade } from "@/contexts/UpgradeContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import { capitalize } from "lodash";
 import {
@@ -20,7 +19,6 @@ import {
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import React, { useRef, useState } from "react";
-import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
 import { TextAreaWithVoice } from "../ui/TextAreaWithVoice";
@@ -69,19 +67,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
   const { isUserFree, userPlanType } = usePaidPlan();
   const { signOut } = useClerk();
-  const { user } = useUser();
-  const { useCurrentUserDataQuery} = useUserPlan();
-  const currentUserDataQuery = useCurrentUserDataQuery();
-  const { data: currentUserData } = currentUserDataQuery;
+  const { currentUser, updateUser } = useCurrentUser();
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
-  const [lookingForAp, setLookingForAp] = useState(
-    currentUserData?.lookingForAp || false
-  );
   const themeColors = useThemeColors();
   const themeVariants = getThemeVariants(themeColors.raw);
   const [temporaryProfileDescription, setTemporaryProfileDescription] =
-    useState(currentUserData?.profile || "");
+    useState(currentUser?.profile || "");
 
   // Edit popup states
   const [showEditLookingForAp, setShowEditLookingForAp] = useState(false);
@@ -184,9 +176,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <p className="text-sm font-medium text-gray-900">Looking for Accountability Partner</p>
                           <p className={twMerge(
                             "text-xs text-gray-500",
-                            currentUserData?.lookingForAp ? "text-green-600" : "text-gray-500"
+                            currentUser?.lookingForAp ? "text-green-600" : "text-gray-500"
                           )}>
-                            {currentUserData?.lookingForAp ? "Yes" : "No"}
+                            {currentUser?.lookingForAp ? "Yes" : "No"}
                           </p>
                         </div>
                         <Button
@@ -204,7 +196,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">Age</p>
                           <p className="text-xs text-gray-500">
-                            {currentUserData?.age ? `${currentUserData.age} years old` : "No age set"}
+                            {currentUser?.age ? `${currentUser.age} years old` : "No age set"}
                           </p>
                         </div>
                         <Button
@@ -222,9 +214,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">Full Name</p>
                           <p className="text-xs text-gray-500">
-                            {user?.firstName && user?.lastName 
-                              ? `${user.firstName} ${user.lastName}` 
-                              : "No name set"}
+                            {currentUser?.name || "No name set"}
                           </p>
                         </div>
                         <Button
@@ -242,7 +232,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">Username</p>
                           <p className="text-xs text-gray-500">
-                            {user?.username || "No username set"}
+                            {currentUser?.username || "No username set"}
                           </p>
                         </div>
                         <div className="text-xs text-gray-400 px-2">
@@ -255,7 +245,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">Email</p>
                           <p className="text-xs text-gray-500">
-                            {user?.primaryEmailAddress?.emailAddress || "No email"}
+                            {currentUser?.email || "No email"}
                           </p>
                         </div>
                         <div className="text-xs text-gray-400 px-2">
@@ -267,7 +257,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1 flex items-center gap-3">
                           <img 
-                            src={user?.imageUrl || "/default-avatar.png"} 
+                            src={currentUser?.picture || "/default-avatar.png"} 
                             alt="Profile" 
                             width={40}
                             height={40}
@@ -324,8 +314,6 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           await updateUser({
                             profile: temporaryProfileDescription,
                           });
-                          toast.success("Profile updated");
-                          currentUserDataQuery.refetch();
                           navigateTo("userSummary");
                         }}
                       >
@@ -466,34 +454,23 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
       <EditLookingForApPopup
         open={showEditLookingForAp}
         onClose={() => setShowEditLookingForAp(false)}
-        currentValue={currentUserData?.lookingForAp || false}
-        onSave={() => {
-          currentUserDataQuery.refetch();
-          setLookingForAp(currentUserData?.lookingForAp || false);
-        }}
+        currentValue={currentUser?.lookingForAp || false}
       />
 
       <EditAgePopup
         open={showEditAge}
         onClose={() => setShowEditAge(false)}
-        currentValue={currentUserData?.age || null}
-        onSave={() => currentUserDataQuery.refetch()}
+        currentValue={currentUser?.age || null}
       />
 
       <EditFullNamePopup
         open={showEditFullName}
         onClose={() => setShowEditFullName(false)}
-        onSave={() => {
-          // Clerk data updates automatically
-        }}
       />
 
       <EditProfilePicturePopup
         open={showEditProfilePicture}
         onClose={() => setShowEditProfilePicture(false)}
-        onSave={() => {
-          // Clerk data updates automatically
-        }}
       />
     </>
   );

@@ -1,13 +1,12 @@
 "use client";
 
-import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useUserPlan } from "@/contexts/UserGlobalContext";
+import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
-import { BaseThemeColor } from "@/utils/theme";
+import { BaseLoweredThemeColor } from "@/utils/theme";
 import {
   ChartArea,
   Home,
@@ -18,11 +17,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Badge } from "./ui/badge";
+import { useEffect, useState } from "react";
 
 // This forces Tailwind to include these classes in the build
-const themeTextClasses: Record<BaseThemeColor, string> = {
+const themeTextClasses: Record<BaseLoweredThemeColor, string> = {
   slate: "text-slate-500",
   blue: "text-blue-500",
   violet: "text-violet-500",
@@ -38,14 +36,11 @@ const BottomNav = () => {
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const { useCurrentUserDataQuery, isWaitingForData } = useUserPlan();
-  const userDataQuery = useCurrentUserDataQuery();
-  const userData = userDataQuery.data;
-  const userUsername = userData?.username;
+  const { currentUser } = useCurrentUser();
+  const userUsername = currentUser?.username;
   const pathname = usePathname();
   const themeColors = useThemeColors();
   const { effectiveTheme } = useTheme();
-  const { shouldShowNotification: hasCheckinNotification } = useDailyCheckin();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const isActiveRoute = (route: string) => {
@@ -53,13 +48,6 @@ const BottomNav = () => {
     return pathname.startsWith(route);
   };
 
-  const showGlobalLoader = useMemo(() => ({
-    home: isWaitingForData && isActiveRoute("/"),
-    plans: isWaitingForData && isActiveRoute("/plans"),
-    add: isWaitingForData && isActiveRoute("/add"),
-    search: isWaitingForData && isActiveRoute("/ap-search"),
-    profile: isWaitingForData && isActiveRoute("/profile"),
-  }), [isWaitingForData, pathname]);
 
 
   useEffect(() => {
@@ -113,7 +101,7 @@ const BottomNav = () => {
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {(isLoadingFeed || showGlobalLoader.home) ? (
+              {isLoadingFeed ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
                 <Home size={24} strokeWidth={2.5} />
@@ -160,7 +148,7 @@ const BottomNav = () => {
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {(isLoadingPlans || showGlobalLoader.plans) ? (
+              {isLoadingPlans ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
                 <ChartArea size={24} strokeWidth={2.5} />
@@ -199,7 +187,7 @@ const BottomNav = () => {
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {(isLoadingLog || showGlobalLoader.add) ? (
+              {isLoadingLog ? (
                 <Loader2 size={30} className="animate-spin" />
               ) : isDesktop ? (
                 <PlusSquare size={24} strokeWidth={2.5} className={cn(isDesktop ? "" : activeThemeClass)} />
@@ -246,7 +234,7 @@ const BottomNav = () => {
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {(isLoadingInsights || showGlobalLoader.search) ? (
+              {isLoadingInsights ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
                 <Search size={24} strokeWidth={2.5} />
@@ -285,7 +273,7 @@ const BottomNav = () => {
             }}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {(isLoadingProfile || showGlobalLoader.profile) ? (
+              {isLoadingProfile ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
                 <User size={24} strokeWidth={2.5} />
