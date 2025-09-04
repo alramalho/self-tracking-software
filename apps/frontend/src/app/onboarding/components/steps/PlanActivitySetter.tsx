@@ -82,7 +82,7 @@ function PlanActivitySetter() {
       <DynamicUISuggester<PlanActivitySetterResponse>
         id="plan-creator"
         headerIcon={<BicepsFlexed className="w-[10rem] h-[10rem] text-blue-600" />}
-        title="Which activities would like to include?"
+        title="Which activities would you like to include?"
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
         canSubmit={() => true}
