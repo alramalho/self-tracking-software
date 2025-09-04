@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
+import toast from "react-hot-toast";
 import { ActivitiesProvider } from "./activities";
 import { MetricsProvider } from "./metrics";
 import {
@@ -35,6 +36,7 @@ export const useGlobalDataOperations = () => {
       const userData = await queryClient.refetchQueries({
         queryKey: ["userData", "current"],
       });
+      toast.success("Data refreshed!")
       return userData;
     } catch (err) {
       console.error("Failed to refresh all data:", err);
