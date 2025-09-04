@@ -95,7 +95,6 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
 
-
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
   const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
@@ -355,16 +354,18 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                   exit={{ opacity: 0, height: 0, marginTop: 0 }}
                   transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
                   className="overflow-hidden"
-                  onClick={() => {
-                    confettiRef.current?.fire({});
-                  }}
                 >
                   <Confetti
                     className="absolute left-0 top-0 z-0 size-full"
                     ref={confettiRef}
                     manualstart
                   />
-                  <div className="relative p-3 rounded-lg backdrop-blur-sm bg-gradient-to-br from-green-200/40 via-green-100/40 to-emerald-200/40 border border-green-200 animate-background-position-spin bg-[length:200%_200%]">
+                  <div
+                    className="relative p-3 rounded-lg backdrop-blur-sm bg-gradient-to-br from-green-200/40 via-green-100/40 to-emerald-200/40 border border-green-200 animate-background-position-spin bg-[length:200%_200%]"
+                    onClick={() => {
+                      confettiRef.current?.fire({});
+                    }}
+                  >
                     <div className="relative z-10 flex items-center justify-center">
                       <span className="text-md font-semibold text-green-700 pointer-events-none select-none animate-pulse">
                         🎉 Fantastic work this week!
