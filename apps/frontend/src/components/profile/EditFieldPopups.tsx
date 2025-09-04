@@ -219,7 +219,10 @@ export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
             return;
           }
           await updateUser({
-            picture: publicUrl,
+            updates:{
+              picture: publicUrl,
+            },
+            muteNotifications: true,
           });
           toast.success("Profile picture updated");
           onClose();
