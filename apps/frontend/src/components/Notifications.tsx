@@ -60,7 +60,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
         router.push(`/join-plan/${notification.relatedId}`);
       } else if (notification.type === "FRIEND_REQUEST") {
         await api.post(
-          `/${action}-${notification.type.replace("_", "-")}/${
+          `/users/${action}-connection-request/${
             notification.relatedId
           }`
         );
