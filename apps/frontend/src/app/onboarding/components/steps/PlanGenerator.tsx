@@ -1,13 +1,14 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
-import { Button } from "@/components/ui/button";
 import { BarProgressLoader } from "@/components/ui/BarProgressLoader";
-import { CompletePlan } from "@/contexts/plans";
+import { Button } from "@/components/ui/button";
+import { useActivities } from "@/contexts/activities";
+import { CompletePlan, usePlans } from "@/contexts/plans";
 import { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { withFadeUpAnimation } from "../../lib";
 import { useOnboarding } from "../OnboardingContext";
@@ -33,7 +34,6 @@ const PlanCard = ({
     const today = new Date();
     const diffTime = Math.abs(finishDate.getTime() - today.getTime());
     const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-    console.log({ finishDate, today, diffTime, diffWeeks });
     return diffWeeks;
   };
 
@@ -141,6 +141,8 @@ const PlanGenerator = () => {
     updateOnboardingState,
     setSelectedPlan,
   } = useOnboarding();
+  const {upsertPlan} = usePlans()
+  const {upsertActivity} = useActivities()
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [generatedPlans, setGeneratedPlans] = useState<
     CompletePlan[] | null
@@ -159,19 +161,20 @@ const PlanGenerator = () => {
     await Promise.all(
       Array.from(activityIds).map((id) => {
         const activity = plan.activities.find((a) => a.id === id);
-        return api.post("/activities/upsert", activity);
+        if (!activity) return
+        return upsertActivity(activity);
       })
     );
-    await api
-      .post("/plans/upsert", {
+    upsertPlan({
+      planId: plan.id,
+      updates: {
         ...plan,
-      })
-      .then((res) => {
-        console.log("res", res);
-      })
-      .catch((err) => {
-        console.error("err", err);
-      });
+        planGroup: undefined,
+        activities: plan.activities,
+        sessions: plan.sessions,
+        milestones: plan.milestones,
+      }
+    });
     completeStep("plan-generator", {
       selectedPlan: plan,
       plans: generatedPlans,

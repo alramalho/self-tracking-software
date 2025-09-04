@@ -11,7 +11,7 @@ export const PlanTypeSelector = () => {
 
   const handlePlanSelect = (selectedType: PlanOutlineType) => {
     if (selectedType === "SPECIFIC") {
-      completeStep("plan-type-selection", { planType: selectedType });
+      completeStep("plan-type-selector", { planType: selectedType });
     } else {
       setPlanType(selectedType);
     }
@@ -58,11 +58,6 @@ export const PlanTypeSelector = () => {
           const Icon = option.icon;
           const isSelected = planType === option.id;
           
-          console.log({
-            planType,
-            optionId: option.id,
-            isSelected,
-          });
           return (
             <div key={option.id} className={`rounded-xl border-2 transition-all duration-200 ${
               isSelected

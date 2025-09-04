@@ -1,8 +1,8 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
+import { usePlans } from "@/contexts/plans";
 import { ArrowRight, Route } from "lucide-react";
 import { useState } from "react";
 import { withFadeUpAnimation } from "../../lib";
@@ -11,6 +11,7 @@ import { useOnboarding } from "../OnboardingContext";
 const PlanProgressInitiator = () => {
   const {
     completeStep,
+    planId,
     planGoal,
     planEmoji,
     planType,
@@ -18,18 +19,21 @@ const PlanProgressInitiator = () => {
     planTimesPerWeek,
     planActivities,
   } = useOnboarding();
+  const { upsertPlan } = usePlans();
   const [text, setText] = useState<string>(planProgress ?? "");
-  const api = useApiWithAuth();
 
   const handleComplete = async (progress: string) => {
     let nextStep;
     if (planType == "TIMES_PER_WEEK") {
-      await api.post("/plans/upsert", {
-        goal: planGoal,
-        emoji: planEmoji,
-        activities: planActivities,
-        outlineType: planType,
-        timesPerWeek: planTimesPerWeek,
+      upsertPlan({
+        planId: planId,
+        updates: {
+          goal: planGoal!,
+          emoji: planEmoji,
+          activities: planActivities,
+          outlineType: "TIMES_PER_WEEK",
+          timesPerWeek: planTimesPerWeek,
+        },
       });
       nextStep = "partner-selection";
     }

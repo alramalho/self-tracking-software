@@ -18,8 +18,8 @@ import PlanActivitySetter from "./components/steps/PlanActivitySetter";
 import PlanGenerator from "./components/steps/PlanGenerator";
 import PlanGoalSetter from "./components/steps/PlanGoalSetter";
 import PlanProgressInitiator from "./components/steps/PlanProgressInitiator";
-import WelcomeStep from "./components/steps/WelcomeStep";
 import { PlanTypeSelector } from "./components/steps/PlanTypeSelector";
+import WelcomeStep from "./components/steps/WelcomeStep";
 
 const OnboardingStepRenderer = () => {
   const {
@@ -104,6 +104,7 @@ export default function OnboardingPage() {
     {
       id: "partner-selection",
       component: PartnerTypeSelector,
+      previous: "plan-progress-initiator",
     },
     {
       id: "notifications-selector",
