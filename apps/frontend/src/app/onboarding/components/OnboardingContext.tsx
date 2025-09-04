@@ -2,6 +2,7 @@
 
 import { CompletePlan } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
+import useConfetti from "@/hooks/useConfetti";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Activity } from "@tsw/prisma";
 import { useRouter } from "next/navigation";
@@ -76,6 +77,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   initialStepId,
 }) => {
   const { updateUser, refetchCurrentUser, currentUser } = useCurrentUser();
+  const { sideCannons } = useConfetti();
   const [onboardingState, setOnboardingState] = useLocalStorage(
     "onboarding-state",
     {
@@ -244,12 +246,12 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
             onboardingCompletedAt: new Date(),
           },
           muteNotifications: true,
-        })
-          .then(() => {
-            posthog.capture("onboarding-completed");
-            toast.success("Onboarding completed! ");
-            router.push("/");
-          });
+        }).then(() => {
+          posthog.capture("onboarding-completed");
+          sideCannons({ duration: 500 });
+          toast.success("Onboarding Completed! 🎉");
+          router.push("/");
+        });
       } else {
         // Priority 1: If options.nextStep is provided, go to that specific step
         if (options?.nextStep) {
