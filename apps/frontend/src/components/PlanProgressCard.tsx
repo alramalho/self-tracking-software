@@ -25,11 +25,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
+import { Confetti, ConfettiRef } from "./ui/confetti";
 
 export const PlanStatus = ({ plan }: { plan: CompletePlan }) => {
   if (!plan?.currentWeekState) {
@@ -91,6 +92,9 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const variants = getThemeVariants(themeColors.raw);
   const { notifications } = useDataNotifications();
   const queryClient = useQueryClient();
+  const [isFullyDone, setIsFullyDone] = useState(false);
+  const confettiRef = useRef<ConfettiRef>(null);
+
 
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
@@ -321,6 +325,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               goal={<Flame size={19} className="text-orange-400" />}
               onAnimationCompleted={() => setIsAnimationCompleted(true)}
               className="w-full"
+              onFullyDone={() => setIsFullyDone(true)}
             />
 
             {/* Lifestyle achievement progress */}
@@ -341,6 +346,34 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                 }
               />
             </div>
+
+            <AnimatePresence>
+              {showConfetti && isFullyDone && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+                  className="overflow-hidden"
+                  onClick={() => {
+                    confettiRef.current?.fire({});
+                  }}
+                >
+                  <Confetti
+                    className="absolute left-0 top-0 z-0 size-full"
+                    ref={confettiRef}
+                    manualstart
+                  />
+                  <div className="relative p-3 rounded-lg backdrop-blur-sm bg-gradient-to-br from-green-200/40 via-green-100/40 to-emerald-200/40 border border-green-200 animate-background-position-spin bg-[length:200%_200%]">
+                    <div className="relative z-10 flex items-center justify-center">
+                      <span className="text-md font-semibold text-green-700 pointer-events-none select-none animate-pulse">
+                        🎉 Fantastic work this week!
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Confetti animation for completed weeks */}
             {/* <AnimatePresence>

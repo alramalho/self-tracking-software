@@ -114,17 +114,6 @@ export const PlanWeekDisplay = ({
   // };
 
   useEffect(() => {
-    if (showConfetti && isFullyDone) {
-      // Randomly choose between stars and shapes
-      if (Math.random() < 0.5) {
-        stars();
-      } else {
-        shapes();
-      }
-    }
-  }, [showConfetti, isFullyDone]);
-
-  useEffect(() => {
     if (inView) {
       const timer = setInterval(() => {
         setAnimatedCompletedActivities((prev) => {
@@ -197,21 +186,35 @@ export const PlanWeekDisplay = ({
               {totalCompletedActivities}/{totalPlannedActivities}
             </span>
           </span>
-          <AnimatePresence>
-            {isFullyDone && showConfetti && (
-              <motion.span
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ delay: 0.3, duration: 0.4 }}
-                className="mt-1 text-sm font-normal text-green-600"
-              >
-                🎉 Fantastic work this week!
-              </motion.span>
-            )}
-          </AnimatePresence>
         </span>
       </div>
+
+      <AnimatePresence>
+        {isFullyDone && showConfetti && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+            className="overflow-hidden"
+            onClick={() => {
+              if (Math.random() < 0.5) {
+                stars();
+              } else {
+                shapes();
+              }
+            }}
+          >
+            <div className="relative p-3 rounded-lg backdrop-blur-sm bg-gradient-to-br from-green-200/40 via-green-100/40 to-emerald-200/40 border border-green-200 animate-background-position-spin bg-[length:200%_200%]">
+              <div className="relative z-10 flex items-center justify-center">
+                <span className="text-md font-semibold text-green-700 animate-pulse">
+                  🎉 Fantastic work this week!
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* coming up section, wherewe either display  */}
       {plan.outlineType == "TIMES_PER_WEEK" && !isWeekCompleted && (
