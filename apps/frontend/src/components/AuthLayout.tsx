@@ -1,5 +1,7 @@
 import React from "react";
+import Lottie from "react-lottie";
 import Image from "next/image";
+import fireAnimation from "../../public/animations/fire.lottie.json";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -15,18 +17,18 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="mx-auto w-fit -translate-x-[2px]">
-            <picture>
-              <source
-                srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.webp"
-                type="image/webp"
-              />
-              <img
-                src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif"
-                alt="🔥"
-                width="150"
-                height="150"
-              />
-            </picture>
+            <Lottie
+              options={{
+                loop: true,
+                autoplay: true,
+                animationData: fireAnimation,
+                rendererSettings: {
+                  preserveAspectRatio: "xMidYMid slice"
+                }
+              }}
+              height={150}
+              width={150}
+            />
           </div>
           <h2 className="mt-10 text-3xl font-bold tracking-tight text-gray-900">
             Welcome to your{" "}
