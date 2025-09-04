@@ -110,6 +110,7 @@ export const PlanTypeSelector = () => {
                     <div className="px-6 pb-6 space-y-4">
                       <div className="border-t border-blue-200 pt-4">
                         <NumberInput
+                          title="Times per Week"
                           value={planTimesPerWeek}
                           onChange={setPlanTimesPerWeek}
                           min={1}

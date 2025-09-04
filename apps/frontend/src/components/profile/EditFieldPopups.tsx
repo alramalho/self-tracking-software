@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PhotoUploader from "@/components/ui/PhotoUploader";
 import { Switch } from "@/components/ui/switch";
-import { WheelPicker, WheelPickerWrapper } from "@/components/ui/wheel-picker";
 import { useCurrentUser } from "@/contexts/users";
 import { useUser as useClerkUser } from "@clerk/nextjs";
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
+import NumberInput from "../plan-configuration/NumberInput";
 
 interface EditFieldPopupProps {
   open: boolean;
@@ -101,13 +101,14 @@ export const EditAgePopup: React.FC<
       <div className="p-4 space-y-4">
         <h3 className="text-lg font-semibold">Select Your Age</h3>
         <div className="flex justify-center py-4">
-          <WheelPickerWrapper>
-            <WheelPicker
-              options={ageOptions}
-              value={age.toString()}
-              onValueChange={(value: string) => setAge(parseInt(value))}
-            />
-          </WheelPickerWrapper>
+          <NumberInput
+            title="years old"
+            value={age}
+            onChange={setAge}
+            min={12}
+            max={100}
+            tenIncrements
+          />
         </div>
         <div className="flex gap-2 pt-4">
           <Button variant="outline" onClick={onClose} className="flex-1">

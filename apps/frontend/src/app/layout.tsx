@@ -1,6 +1,5 @@
 import { validateEnv } from "@/lib/env";
 import { ClerkProvider } from "@clerk/nextjs";
-import "@ncdai/react-wheel-picker/style.css";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";

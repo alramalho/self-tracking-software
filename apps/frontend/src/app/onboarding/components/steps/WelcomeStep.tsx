@@ -1,11 +1,7 @@
 "use client";
 
+import NumberInput from "@/components/plan-configuration/NumberInput";
 import { Button } from "@/components/ui/button";
-import {
-  WheelPicker,
-  WheelPickerOption,
-  WheelPickerWrapper,
-} from "@/components/ui/wheel-picker";
 import { useCurrentUser } from "@/contexts/users";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
@@ -14,21 +10,13 @@ import { useOnboarding } from "../OnboardingContext";
 
 const WelcomeStep = () => {
   const { completeStep } = useOnboarding();
-  const [selectedAge, setSelectedAge] = useState("25");
+  const [selectedAge, setSelectedAge] = useState(25);
   const { updateUser } = useCurrentUser();
-
-  const ageOptions: WheelPickerOption[] = Array.from(
-    { length: 83 },
-    (_, i) => ({
-      label: (i + 18).toString(),
-      value: (i + 18).toString(),
-    })
-  );
 
   const handleGetStarted = async () => {
     try {
       await updateUser({
-        updates: { age: parseInt(selectedAge) },
+        updates: { age: selectedAge },
         muteNotifications: true,
       });
       completeStep("welcome");
@@ -69,13 +57,14 @@ const WelcomeStep = () => {
           </p> */}
         </div>
 
-        <WheelPickerWrapper className="mx-auto max-w-xs h-48">
-          <WheelPicker
-            options={ageOptions}
-            value={selectedAge}
-            onValueChange={setSelectedAge}
-          />
-        </WheelPickerWrapper>
+        <NumberInput
+          value={selectedAge}
+          onChange={setSelectedAge}
+          min={12}
+          max={100}
+          tenIncrements={true}
+          title="years old"
+        />
       </div>
 
       <div className="mx-auto w-fit">
