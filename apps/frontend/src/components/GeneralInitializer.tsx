@@ -30,17 +30,20 @@ export default function GeneralInitializer({
     const router = useRouter();
 
   const email = currentUser?.email || "";
+  const isOnboardingPage = pathname.startsWith("/onboarding");
 
   useEffect(() => {
     if (
       isClerkLoaded &&
       isSignedIn &&
       hasLoadedUserData &&
-      currentUser?.onboardingCompletedAt == null
+      currentUser?.onboardingCompletedAt == null 
+      && !isOnboardingPage
     ) {
+      console.log("pushing")
       router.push("/onboarding");
     }
-  }, [currentUser, router, isClerkLoaded, isSignedIn, hasLoadedUserData, pathname]);
+  }, [currentUser, router, isClerkLoaded, isSignedIn, hasLoadedUserData, pathname, isOnboardingPage]);
 
   useEffect(() => {
     if (isSignedIn && hasLoadedUserData && currentUser) {
@@ -96,15 +99,7 @@ export default function GeneralInitializer({
     );
   };
 
-  const isOnboardingPage = pathname.startsWith("/onboarding");
 
-  console.log("–––––––");
-  console.log("isOnboardingPage", isOnboardingPage);
-  console.log("isClerkLoaded", isClerkLoaded);
-  console.log("isSignedIn", isSignedIn);
-  console.log("hasLoadedUserData", hasLoadedUserData);
-  console.log("currentUser?.onboardingCompletedAt", currentUser?.onboardingCompletedAt);
-  console.log("isOnboardingPage", isOnboardingPage);
   if (
     !isClerkLoaded ||
     (isSignedIn && !hasLoadedUserData) || 
