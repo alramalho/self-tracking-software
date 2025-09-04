@@ -6,6 +6,8 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import React, { ReactNode, useEffect, useState } from "react";
+import Lottie from "react-lottie";
+import rocketAnimation from "../../public/animations/rocket.lottie.json";
 import Divider from "./Divider";
 import { Avatar, AvatarImage } from "./ui/avatar";
 
@@ -28,8 +30,12 @@ const PLUS_QUARTERLY = 20.99;
 const PLUS_YEARLY = 59.99;
 
 // Calculate savings
-const QUARTERLY_MONTHLY_EQUIVALENT = PLUS_MONTHLY * 3;
-const YEARLY_MONTHLY_EQUIVALENT = PLUS_MONTHLY * 12;
+const QUARTERLY_MONTHLY_EQUIVALENT = OG_MONTHLY * 3;
+const YEARLY_MONTHLY_EQUIVALENT = OG_MONTHLY * 12;
+
+const MONTHLY_SAVINGS = Math.round(
+  ((OG_MONTHLY - PLUS_MONTHLY) / OG_MONTHLY) * 100
+);
 
 const QUARTERLY_SAVINGS = Math.round(
   ((QUARTERLY_MONTHLY_EQUIVALENT - PLUS_QUARTERLY) /
@@ -72,6 +78,7 @@ const pricingTiers: PricingTier[] = [
     ogPrice: OG_MONTHLY,
     ogMonthlyEquivalent: OG_MONTHLY,
     price: PLUS_MONTHLY,
+    savings: MONTHLY_SAVINGS,
     period: "month",
     positioning: "Try it out",
     paymentLink: "https://buy.stripe.com/fZu28reqL7BlaI6eorcfK0e",
@@ -80,7 +87,7 @@ const pricingTiers: PricingTier[] = [
     id: "quarterly",
     title: "Quarterly",
     subtitle: "Most Popular",
-    ogPrice: OG_QUARTERLY,
+    ogPrice: OG_MONTHLY,
     ogMonthlyEquivalent: Math.floor((OG_QUARTERLY / 3) * 100) / 100,
     price: PLUS_QUARTERLY,
     period: "3 months",
@@ -96,7 +103,7 @@ const pricingTiers: PricingTier[] = [
     id: "yearly",
     title: "Yearly",
     subtitle: "Best Value",
-    ogPrice: OG_YEARLY,
+    ogPrice: OG_MONTHLY,
     ogMonthlyEquivalent: Math.floor((OG_YEARLY / 12) * 100) / 100,
     price: PLUS_YEARLY,
     period: "year",
@@ -238,27 +245,27 @@ const RocketSection = () => {
   return (
     <div className="text-center bg-white/70 space-y-2 border-2 border-gray-200 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center">
       <div className="flex items-center justify-center gap-2">
-        <picture>
-          <source
-            srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.webp"
-            type="image/webp"
-          />
-          <img
-            src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.gif"
-            alt="🚀"
-            width="52"
-            height="52"
-          />
-        </picture>
+        <Lottie
+          options={{
+            loop: true,
+            autoplay: true,
+            animationData: rocketAnimation,
+            rendererSettings: {
+              preserveAspectRatio: "xMidYMid slice",
+            },
+          }}
+          height={60}
+          width={60}
+        />
         <h2 className="text-xl font-bold">Launching discount!</h2>
       </div>
       <div className="text-center space-y-2 pb-4">
         <h2 className="text-md font-normal text-gray-700 pt-2">
           We&apos;re offering a{" "}
           <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
-            {YEARLY_OG_SAVINGS}%{" "}
+            big discount{" "}
           </span>
-          discount for early supporters until our launch date!
+          for early supporters until our launch date!
         </h2>
       </div>
       <CountdownTimer targetDate={launchDate} />
@@ -339,7 +346,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               <div className="space-y-1">
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl font-normal line-through text-gray-500">
-                    €{currentTier.ogMonthlyEquivalent}
+                    €{currentTier.ogPrice}
                   </span>
                   <span className="text-gray-500">/ month</span>
                 </div>
@@ -379,7 +386,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               </div>
 
               {isUserPremium ? (
-                <Button 
+                <Button
                   className="w-full rounded-xl bg-green-500 hover:bg-emerald-700 text-lg py-6"
                   onClick={() => {
                     onClose();
@@ -432,17 +439,24 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               </span>
             </div>
             <div className="text-sm text-gray-500 space-y-4 mt-4">
-              <p>Tracking Software is my attempt at creating a better social network, where
-                comparison can be used as leverage to improve your life, not just to make you feel worse.
+              <p>
+                Tracking Software is my attempt at creating a better social
+                network, where comparison can be used as leverage to improve
+                your life, not just to make you feel worse.
               </p>
               <p>
-                I truly believe social networks should be fully transparent, and that&apos;s why 
-                , despite not being the best commercial decision, <span className="underline">tracking.so{" "}</span>
-                is <b>the only habit based social network that is fully open source</b>.
+                I truly believe social networks should be fully transparent, and
+                that&apos;s why , despite not being the best commercial
+                decision, <span className="underline">tracking.so </span>
+                is{" "}
+                <b>
+                  the only habit based social network that is fully open source
+                </b>
+                .
               </p>
               <p>
-                Together we can make a better internet, where social apps
-                make you feel better, not worse.
+                Together we can make a better internet, where social apps make
+                you feel better, not worse.
               </p>
               <p>Thank you for considering upgrading.</p>
 
