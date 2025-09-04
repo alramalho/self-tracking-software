@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import React, { createContext, useCallback, useContext, useMemo } from "react";
 import toast from "react-hot-toast";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 export interface OnboardingStep {
   id: string;
@@ -75,7 +75,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   steps,
   initialStepId,
 }) => {
-  const { updateUser } = useCurrentUser();
+  const { updateUser, refetchCurrentUser, currentUser } = useCurrentUser();
   const [onboardingState, setOnboardingState] = useLocalStorage(
     "onboarding-state",
     {
@@ -244,11 +244,12 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
             onboardingCompletedAt: new Date(),
           },
           muteNotifications: true,
-        }).then(() => {
-          posthog.capture("onboarding-completed");
-          toast.success("Onboarding completed! ");
-          router.push("/");
-        });
+        })
+          .then(() => {
+            posthog.capture("onboarding-completed");
+            toast.success("Onboarding completed! ");
+            router.push("/");
+          });
       } else {
         // Priority 1: If options.nextStep is provided, go to that specific step
         if (options?.nextStep) {
