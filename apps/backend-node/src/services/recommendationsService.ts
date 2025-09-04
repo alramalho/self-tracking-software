@@ -302,7 +302,11 @@ export class RecommendationsService {
       const userPlans = await Promise.all(
         recommendedUserIds.map(async (id) => {
           return prisma.plan.findMany({
-            where: { userId: id },
+            where: {
+              userId: id,
+              deletedAt: null,
+              finishingDate: { gt: new Date() },
+            },
           });
         })
       );
