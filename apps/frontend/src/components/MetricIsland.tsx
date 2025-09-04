@@ -26,7 +26,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
   isSkippedToday = false,
   className,
 }) => {
-  const { logIndividualMetric, skipMetric } = useMetrics();
+  const { logMetrics, skipMetric } = useMetrics();
   const [isLogging, setIsLogging] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const themeColors = useThemeColors();
@@ -38,7 +38,9 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
   const handleRatingSelect = async (rating: number) => {
     setIsLogging(true);
     try {
-      await logIndividualMetric(metric.id, rating);
+      await logMetrics([
+        { metricId: metric.id, rating, date: new Date()},
+      ]);
     } catch (error) {
       console.error("Failed to log metric:", error);
     } finally {
