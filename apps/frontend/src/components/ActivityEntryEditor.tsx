@@ -100,7 +100,11 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         <ConfirmDialogOrPopover
           isOpen={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(false)}
-          onConfirm={() => deleteActivityEntry({ id: activityEntry.id })}
+          onConfirm={() => {
+            deleteActivityEntry({ id: activityEntry.id });
+            setShowDeleteConfirm(false);
+            onClose?.();
+          }}
           title="Confirm Delete"
           description="Are you sure you want to delete this activity entry?"
           confirmText="Delete"

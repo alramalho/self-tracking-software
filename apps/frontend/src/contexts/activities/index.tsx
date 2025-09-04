@@ -92,6 +92,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: (_, variables) => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });
+      queryClient.refetchQueries({ queryKey: ["activity-entries"] });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       queryClient.refetchQueries({ queryKey: ["notifications"] });
       queryClient.refetchQueries({ queryKey: ["metrics"] });
@@ -161,7 +162,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.delete(`/activities/activity-entries/${data.id}`);
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["activities"] });
+      queryClient.refetchQueries({ queryKey: ["activity-entries"] });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Activity deleted successfully!");
     },
