@@ -245,6 +245,7 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     const planToSave = createPlanToConfirm();
     upsertPlan({ planId: plan?.id || "", updates: planToSave, muteNotifications: true });
+    onClose?.();
   };
 
   const stepRefs = {

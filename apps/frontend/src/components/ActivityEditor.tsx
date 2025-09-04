@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useActivities } from "@/contexts/activities";
-import { useCurrentUser } from "@/contexts/users";
 import { Activity } from "@tsw/prisma";
 import { Loader2, Trash2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
@@ -25,7 +24,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [title, setTitle] = useState(activity?.title || "");
   const [measure, setMeasure] = useState(activity?.measure || "");
   const [emoji, setEmoji] = useState(activity?.emoji || "");
-  const { currentUser } = useCurrentUser();
   const {
     upsertActivity,
     deleteActivity,
@@ -89,6 +87,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       measure: measure.trim(),
       colorHex: colorHex === "" ? null : colorHex,
     });
+    onClose?.()
   };
 
   const handleDelete = async () => {
@@ -96,10 +95,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     setShowDeleteConfirm(true);
   };
 
+
   const confirmDelete = async () => {
+    await deleteActivity({ id: activity!.id });
     setShowDeleteConfirm(false);
-    deleteActivity({ id: activity!.id });
-    onClose();
+    onClose?.();
   };
 
   return (
