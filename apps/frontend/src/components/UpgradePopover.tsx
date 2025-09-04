@@ -2,7 +2,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { useCurrentUser } from "@/contexts/users";
 import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import React, { ReactNode, useEffect, useState } from "react";
@@ -171,7 +171,6 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
     const calculateTimeLeft = () => {
       const now = new Date();
       const difference = Math.abs(target.getTime() - now.getTime());
-      console.log({ difference });
 
       if (difference > 0) {
         setTimeLeft({
@@ -280,8 +279,17 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   const [selectedTier, setSelectedTier] = useState<
     "monthly" | "quarterly" | "yearly"
   >("quarterly");
+  const {currentUser, refetchCurrentUser} = useCurrentUser();
 
-  const { isUserPremium } = usePaidPlan();
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchCurrentUser(false);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [refetchCurrentUser]);
+  
+  const isUserPremium = currentUser?.planType === 'PLUS';
 
   const planFeatures: FeatureItem[] = [
     { emoji: "✔️", title: <span>Unlimited plans & activities</span> },
