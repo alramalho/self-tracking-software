@@ -92,7 +92,7 @@ export const ApSearchComponent: React.FC = () => {
                     <UserCard
                       user={currentUser}
                       plan={{emoji: currentPlan?.emoji || undefined, goal: currentPlan?.goal || ""}}
-                      plans={recommendedPlans?.filter((p) => isActivePlan(p)) || []}
+                      plans={plans?.filter((p) => isActivePlan(p)) || []}
                       activities={activities || []}
                       activityEntries={activityEntries || []}
                       showFriendRequest={false}
