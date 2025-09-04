@@ -9,12 +9,12 @@ import {
   isSessionCompleted,
 } from "@/contexts/PlanProgressContext/lib";
 import { CompletePlan } from "@/contexts/plans";
+import useConfetti from "@/hooks/useConfetti";
 import { cn } from "@/lib/utils";
 import { Activity, PlanSession } from "@tsw/prisma";
 import { endOfWeek, format, isAfter, isSameWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import Confetti from "react-confetti-boom";
 import { useInView } from "react-intersection-observer";
 import { SmallActivityEntryCard } from "./SmallActivityEntryCard";
 
@@ -56,6 +56,7 @@ export const PlanWeekDisplay = ({
   // Always call hooks to maintain consistent order
   const { plansProgress } = usePlanProgress();
   const { activities, activityEntries } = useActivities();
+  const { stars, shapes } = useConfetti();
 
   // Use provided plan progress if available, otherwise find from hook
   const planProgress =
@@ -111,6 +112,17 @@ export const PlanWeekDisplay = ({
   //     currentWeek.completedActivities.length > 0
   //   );
   // };
+
+  useEffect(() => {
+    if (showConfetti && isFullyDone) {
+      // Randomly choose between stars and shapes
+      if (Math.random() < 0.5) {
+        stars();
+      } else {
+        shapes();
+      }
+    }
+  }, [showConfetti, isFullyDone]);
 
   useEffect(() => {
     if (inView) {
@@ -260,14 +272,6 @@ export const PlanWeekDisplay = ({
           </div>
         </div>
       )}
-
-      <AnimatePresence>
-        {isFullyDone && showConfetti && (
-          <div className="fixed top-1/2 left-0 w-screen h-screen pointer-events-none z-[101]">
-            <Confetti mode="boom" particleCount={150} />
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
