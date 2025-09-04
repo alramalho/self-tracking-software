@@ -10,7 +10,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useEffect
 } from "react";
 import { toast } from "react-hot-toast";
 import {
@@ -90,26 +90,17 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
     queryFn: async () => {
-      return await getCurrentUserBasicData();
+      const result = await getCurrentUserBasicData();
+      return result
     },
     enabled: isLoaded && isSignedIn,
     retry: 5,
-    refetchInterval: 1000
+    retryDelay: 1000
   });
 
   if (currentUserQuery.error) {
     handleAuthError("could not load current user");
   }
-
-  const polledCurrentUserQuery = useQuery({
-    queryKey: ["current-user-polled"],
-    queryFn: async () => {
-      return await getCurrentUserBasicData();
-    },
-    enabled: isLoaded && isSignedIn,
-    retry: 3,
-    refetchInterval: 1000
-  });
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: {
