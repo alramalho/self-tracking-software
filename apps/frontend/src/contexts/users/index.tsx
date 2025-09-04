@@ -90,6 +90,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
     queryFn: async () => {
+      console.log("fetching user")
       const result = await getCurrentUserBasicData();
       return result
     },
@@ -113,8 +114,8 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
         throw error;
       }
     },
-    onSuccess: (_, { muteNotifications }) => {
-      queryClient.refetchQueries({ queryKey: ["current-user"] });
+    onSuccess: (_, { muteNotifications, updates }) => {
+      queryClient.setQueryData(["current-user"], {...currentUserQuery.data, ...updates });
       if (!muteNotifications) {
         toast.success("User updated successfully");
       }
@@ -132,6 +133,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.post(`/users/send-connection-request/${userId}`);
     },
     onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
       toast.success("Friend request sent successfully");
     },
     onError: (error) => {
@@ -145,6 +147,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.post(`/users/accept-connection-request/${userId}`);
     },
     onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
       toast.success("Friend request accepted successfully");
     },
   });
@@ -154,6 +157,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.post(`/users/reject-connection-request/${userId}`);
     },
     onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
       toast.success("Friend request rejected successfully");
     },
   });
