@@ -76,6 +76,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
         const result = await getCurrentUserBasicData();
         return result;
       } catch (error) {
+        handleAuthError(error);
         throw error;
       }
     },

@@ -32,10 +32,15 @@ export default function GeneralInitializer({
   const email = currentUser?.email || "";
 
   useEffect(() => {
-    if (isClerkLoaded && isSignedIn && hasLoadedUserData && currentUser?.onboardingCompletedAt == null) {
+    if (
+      isClerkLoaded &&
+      isSignedIn &&
+      hasLoadedUserData &&
+      currentUser?.onboardingCompletedAt == null
+    ) {
       router.push("/onboarding");
     }
-  }, [currentUser, router]);
+  }, [currentUser, router, isClerkLoaded, isSignedIn, hasLoadedUserData, pathname]);
 
   useEffect(() => {
     if (isSignedIn && hasLoadedUserData && currentUser) {
@@ -93,14 +98,8 @@ export default function GeneralInitializer({
 
   if (
     !isClerkLoaded ||
-    (isSignedIn && hasLoadedUserData && !initialCacheExists) ||
-    (isSignedIn && hasLoadedUserData && currentUser?.onboardingCompletedAt == null)
+    (isSignedIn && hasLoadedUserData && !initialCacheExists)
   ) {
-    console.log("showGenericLoader", {
-      isClerkLoaded,
-      isSignedIn,
-      initialCacheExists,
-    });
     return (
       <>
         {showBugDialog && (
