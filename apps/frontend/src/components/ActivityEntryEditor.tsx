@@ -35,7 +35,12 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
     activityEntry.description || ""
   );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { upsertActivityEntry, isUpsertingActivityEntry, deleteActivityEntry, isDeletingActivityEntry } = useActivities();
+  const {
+    upsertActivityEntry,
+    isUpsertingActivityEntry,
+    deleteActivityEntry,
+    isDeletingActivityEntry,
+  } = useActivities();
 
   return (
     <AppleLikePopover open={open} onClose={onClose}>
@@ -73,10 +78,12 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         <Button
           onClick={() =>
             upsertActivityEntry({
-              id: activityEntry.id,
-              quantity: Number(quantity),
-              date: new Date(date),
-              description,
+              entry: {
+                id: activityEntry.id,
+                quantity: Number(quantity),
+                date: new Date(date),
+                description,
+              },
             })
           }
           className="w-full"

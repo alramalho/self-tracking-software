@@ -80,13 +80,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       return;
     }
 
-    upsertActivity({
+    upsertActivity({activity: {
       ...activity,
       emoji,
       title: title.trim(),
       measure: measure.trim(),
       colorHex: colorHex === "" ? null : colorHex,
-    });
+    }});
     onClose?.()
   };
 

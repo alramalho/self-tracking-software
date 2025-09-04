@@ -5,7 +5,6 @@ import {
 } from "@/components/DynamicUISuggester";
 import { Activity } from "@tsw/prisma";
 import { AlertCircle, BicepsFlexed } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { withFadeUpAnimation } from "../../lib";
 import { useOnboarding } from "../OnboardingContext";
@@ -17,7 +16,6 @@ interface PlanActivitySetterResponse extends BaseExtractionResponse {
 function PlanActivitySetter() {
   const { planGoal, completeStep } = useOnboarding();
   const api = useApiWithAuth();
-  const [text, setText] = useState("");
   const questionChecks = {
     "Does the message mention specific activities to be done, and their unit of measurement? (for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers'). You may suggest the unit of measurement to the user, given the relevant context you have available.":
       {
@@ -38,8 +36,6 @@ function PlanActivitySetter() {
         plan_goal: planGoal,
         question_checks: Object.keys(questionChecks),
       });
-
-      console.log(response.data);
 
       return response.data;
     } catch (error) {

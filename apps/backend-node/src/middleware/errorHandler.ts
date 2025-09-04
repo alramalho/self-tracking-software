@@ -39,13 +39,11 @@ export const responseMonitor = (
   };
 
   res.send = function (body) {
-    console.log("sending body", body);
     sendTelegramNotification();
     return originalSend.call(this, body);
   };
 
   res.json = function (body) {
-    console.log("sending json", body);
     sendTelegramNotification();
     return originalJson.call(this, body);
   };
