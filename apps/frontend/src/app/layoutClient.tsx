@@ -47,7 +47,7 @@ export default function ClientLayout({
       client={queryClient}
       persistOptions={{ persister: localStoragePersister }}
     >
-      <GlobalDataProvider>
+        <GlobalDataProvider>
         <PlanProgressProvider>
           <ThemeProvider>
             <UpgradeProvider>
@@ -74,7 +74,7 @@ export default function ClientLayout({
             </UpgradeProvider>
           </ThemeProvider>
         </PlanProgressProvider>
-      </GlobalDataProvider>
+        </GlobalDataProvider>
     </PersistQueryClientProvider>
   );
 }
