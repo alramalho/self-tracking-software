@@ -93,7 +93,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
       return await getCurrentUserBasicData();
     },
     enabled: isLoaded && isSignedIn,
-    retry: 3,
+    retry: 5,
     refetchInterval: 1000
   });
 

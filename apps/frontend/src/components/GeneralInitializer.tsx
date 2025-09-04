@@ -9,8 +9,11 @@ import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import Lottie from "react-lottie";
+import targetAnimation from "../../public/animations/target.lottie.json";
 import BottomNav from "./BottomNav";
 import FeedbackForm from "./FeedbackForm";
+import { BarProgressLoader } from "./ui/BarProgressLoader";
 
 export default function GeneralInitializer({
   children,
@@ -119,19 +122,20 @@ export default function GeneralInitializer({
             isEmailEditable={true}
           />
         )}
-        <div className="fixed inset-0 flex items-center justify-center">
-          <picture>
-            <source
-              srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3af/512.webp"
-              type="image/webp"
-            />
-            <img
-              src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3af/512.gif"
-              alt="🎯"
-              width="130"
-              height="130"
-            />
-          </picture>
+        <div className="fixed inset-0 flex flex-col items-center justify-center gap-8">
+          <Lottie
+            options={{
+              loop: true,
+              autoplay: true,
+              animationData: targetAnimation,
+              rendererSettings: {
+                preserveAspectRatio: "xMidYMid slice"
+              }
+            }}
+            height={130}
+            width={130}
+          />
+          <BarProgressLoader durationSeconds={20} />
         </div>
       </>
     );

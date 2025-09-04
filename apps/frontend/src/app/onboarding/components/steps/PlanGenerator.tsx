@@ -2,6 +2,7 @@
 
 import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
+import { BarProgressLoader } from "@/components/ui/BarProgressLoader";
 import { CompletePlan } from "@/contexts/plans";
 import { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
@@ -147,8 +148,6 @@ const PlanGenerator = () => {
   const [generatedActivities, setGeneratedActivities] = useState<Activity[]>(
     []
   );
-  const [progress, setProgress] = useState<number>(0);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const api = useApiWithAuth();
 
   const handlePlanSelect = async (plan: CompletePlan) => {
@@ -179,48 +178,10 @@ const PlanGenerator = () => {
     });
   };
 
-  const startProgressAnimation = () => {
-    const startTime = Date.now();
-    const targetProgress = 99;
-    const duration = 90000;
-
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
-
-    progressIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const timeRatio = elapsed / duration;
-
-      // Logarithmic progress: fast at start, slows down towards target
-      const logarithmicProgress =
-        targetProgress * (1 - Math.exp(-timeRatio * 3));
-
-      if (logarithmicProgress >= targetProgress || elapsed >= duration) {
-        setProgress(targetProgress);
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
-          progressIntervalRef.current = null;
-        }
-      } else {
-        setProgress(Math.floor(logarithmicProgress));
-      }
-    }, 100); // Update every 100ms
-  };
-
-  const stopProgressAnimation = () => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-    setProgress(100);
-  };
 
   async function generatePlans() {
     try {
       setIsLoading(true);
-      setProgress(0);
-      startProgressAnimation();
       const response = await api.post(
         "/onboarding/generate-plans",
         {
@@ -239,7 +200,6 @@ const PlanGenerator = () => {
         if (response.data.activities) {
           setGeneratedActivities(response.data.activities);
         }
-        stopProgressAnimation();
         setIsLoading(false);
         updateOnboardingState({
           plans: response.data.plans,
@@ -250,7 +210,6 @@ const PlanGenerator = () => {
     } catch (error) {
       toast.error("Failed to generate plans. Please try again.");
       console.error(error);
-      stopProgressAnimation();
     } finally {
       setIsLoading(false);
     }
@@ -268,14 +227,6 @@ const PlanGenerator = () => {
     }
   }, [plans, planActivities]);
 
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    };
-  }, []);
 
   return (
     <div className="w-full max-w-md space-y-8">
@@ -337,21 +288,7 @@ const PlanGenerator = () => {
                   This may take up to a few minutes.
                 </motion.p>
 
-                <motion.div
-                  className="w-full max-w-xs mt-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                >
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <motion.div
-                      className="bg-blue-600 h-2 rounded-full"
-                      initial={{ width: "0%" }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                    />
-                  </div>
-                </motion.div>
+                <BarProgressLoader durationSeconds={90} />
               </motion.div>
             ) : (
               <motion.div
