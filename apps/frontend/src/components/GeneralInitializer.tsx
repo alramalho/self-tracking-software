@@ -1,6 +1,5 @@
 "use client";
 
-import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -25,9 +24,7 @@ export default function GeneralInitializer({
   const [showBugDialog, setShowBugDialog] = useState(false);
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const { hasCacheData } = useGlobalDataOperations();
-  const [initialCacheExists] = useState(() => hasCacheData());
-  const router = useRouter();
+    const router = useRouter();
 
   const email = currentUser?.email || "";
 
@@ -98,10 +95,16 @@ export default function GeneralInitializer({
 
   const isOnboardingPage = pathname.startsWith("/onboarding");
 
+  console.log("–––––––");
+  console.log("isOnboardingPage", isOnboardingPage);
+  console.log("isClerkLoaded", isClerkLoaded);
+  console.log("isSignedIn", isSignedIn);
+  console.log("hasLoadedUserData", hasLoadedUserData);
+  console.log("currentUser?.onboardingCompletedAt", currentUser?.onboardingCompletedAt);
+  console.log("isOnboardingPage", isOnboardingPage);
   if (
     !isClerkLoaded ||
     (isSignedIn && !hasLoadedUserData) || 
-    (isSignedIn && hasLoadedUserData && !initialCacheExists) || 
     (isSignedIn && hasLoadedUserData && currentUser?.onboardingCompletedAt == null && !isOnboardingPage)
   ) {
     return (

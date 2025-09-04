@@ -69,18 +69,46 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
 
+  const handleAuthError = useCallback(
+    (err?: unknown) => {
+      console.error("[UsersProvider] Auth error:", err);
+      router.push("/signin");
+      toast.error(
+        "You are not authorized to access this page. Please login again.",
+        {
+          icon: "🔒",
+          duration: 5000,
+        }
+      );
+      queryClient.clear();
+      signOut({ redirectUrl: window.location.pathname });
+      throw err;
+    },
+    [router, queryClient, signOut]
+  );
+
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
     queryFn: async () => {
-      try {
-        const result = await getCurrentUserBasicData();
-        return result;
-      } catch (error) {
-        handleAuthError(error);
-        throw error;
-      }
+      return await getCurrentUserBasicData();
     },
     enabled: isLoaded && isSignedIn,
+    retry: 3,
+    refetchInterval: 1000
+  });
+
+  if (currentUserQuery.error) {
+    handleAuthError("could not load current user");
+  }
+
+  const polledCurrentUserQuery = useQuery({
+    queryKey: ["current-user-polled"],
+    queryFn: async () => {
+      return await getCurrentUserBasicData();
+    },
+    enabled: isLoaded && isSignedIn,
+    retry: 3,
+    refetchInterval: 1000
   });
 
   const updateUserMutation = useMutation({
@@ -139,23 +167,6 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
-  const handleAuthError = useCallback(
-    (err: unknown) => {
-      console.error("[UsersProvider] Auth error:", err);
-      router.push("/signin");
-      toast.error(
-        "You are not authorized to access this page. Please login again.",
-        {
-          icon: "🔒",
-          duration: 5000,
-        }
-      );
-      queryClient.clear();
-      signOut({ redirectUrl: window.location.pathname });
-      throw err;
-    },
-    [router, queryClient, signOut]
-  );
 
   const refetchCurrentUser = useCallback(
     async (notify = true) => {

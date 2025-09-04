@@ -5,13 +5,12 @@ import React from "react";
 import { ActivitiesProvider } from "./activities";
 import { MetricsProvider } from "./metrics";
 import {
-  DataNotificationsProvider,
-  useDataNotifications,
+  DataNotificationsProvider
 } from "./notifications";
 import { PlansProvider } from "./plans";
 import { RecommendationsProvider } from "./recommendations";
-import { TimelineProvider, useTimeline } from "./timeline";
-import { UsersProvider, useCurrentUser } from "./users";
+import { TimelineProvider } from "./timeline";
+import { UsersProvider } from "./users";
 
 interface GlobalDataProviderProps {
   children: React.ReactNode;
@@ -20,9 +19,6 @@ interface GlobalDataProviderProps {
 // Global data operations that work across contexts
 export const useGlobalDataOperations = () => {
   const queryClient = useQueryClient();
-  const { currentUser, isLoadingCurrentUser } = useCurrentUser();
-  const { isLoadingTimeline } = useTimeline();
-  const { isLoadingNotifications } = useDataNotifications();
 
   const refetchAllData = async () => {
     try {
@@ -46,37 +42,9 @@ export const useGlobalDataOperations = () => {
     }
   };
 
-  // Function to check if we have any cached query data
-  const hasCacheData = () => {
-    if (typeof window === "undefined") return false;
-    try {
-      const cachedData = localStorage.getItem("TRACKING_SO_QUERY_CACHE");
-      if (!cachedData) return false;
-
-      const parsedCache = JSON.parse(cachedData);
-      const queries = parsedCache?.clientState?.queries;
-      const mutations = parsedCache?.clientState?.mutations;
-      return (
-        (Array.isArray(queries) && queries.length > 0) ||
-        (Array.isArray(mutations) && mutations.length > 0)
-      );
-    } catch (error) {
-      console.warn("Error checking for cached user data:", error);
-      return false;
-    }
-  };
-
-  // Status calculation similar to original UserGlobalContext
-  const isWaitingForData =
-    !hasCacheData() &&
-    !isLoadingCurrentUser &&
-    !isLoadingTimeline &&
-    !isLoadingNotifications;
 
   return {
     refetchAllData,
-    hasCacheData,
-    isWaitingForData,
   };
 };
 
