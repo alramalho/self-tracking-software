@@ -281,7 +281,13 @@ export class RecommendationsService {
 
       // Get recommended users
       const recommendedUsers = await prisma.user.findMany({
-        where: { id: { in: recommendedUserIds } },
+        where: {
+          id: { in: recommendedUserIds },
+          OR: [
+            { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+            { email: { not: { startsWith: "lia.borges+" } } },
+          ],
+        },
         select: {
           id: true,
           username: true,
