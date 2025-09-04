@@ -1,7 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 export interface UserSearchResult {
@@ -73,10 +73,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
       <div className="relative">
         <Input
           type="text"
-          placeholder="🔍 Search users..."
+          startIcon={Search}
+          placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="bg-white"
+          className="rounded-xl bg-white h-12 text-lg"
         />
         {isLoading && (
           <div className="absolute right-2 top-1/2 -translate-y-1/2">

@@ -12,7 +12,6 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import BottomNav from "./BottomNav";
 import FeedbackForm from "./FeedbackForm";
-import GenericLoader from "./GenericLoader";
 
 export default function GeneralInitializer({
   children,
@@ -57,8 +56,16 @@ export default function GeneralInitializer({
         });
         setHasRanPosthogIdentify(true);
       }
-      if (currentUser.timezone !== Intl.DateTimeFormat().resolvedOptions().timeZone) {
-        updateUser({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }).catch((err) => {
+      if (
+        currentUser.timezone !==
+        Intl.DateTimeFormat().resolvedOptions().timeZone
+      ) {
+        updateUser({
+          updates: {
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
+          muteNotifications: true,
+        }).catch((err) => {
           console.error("Failed to update timezone on initial load:", err);
         });
       }
@@ -111,7 +118,18 @@ export default function GeneralInitializer({
           />
         )}
         <div className="fixed inset-0 flex items-center justify-center">
-          <GenericLoader onReportBug={() => setShowBugDialog(true)} />
+          <picture>
+            <source
+              srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3af/512.webp"
+              type="image/webp"
+            />
+            <img
+              src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3af/512.gif"
+              alt="🎯"
+              width="130"
+              height="130"
+            />
+          </picture>
         </div>
       </>
     );

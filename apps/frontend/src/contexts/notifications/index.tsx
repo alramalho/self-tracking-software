@@ -67,7 +67,7 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
     },
     onSuccess: () => {
       toast.success("Notification concluded!");
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
     },
     onError: (error) => {
       console.error("Error concluding notification:", error);
@@ -81,8 +81,8 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
       await api.post(`/notifications/accept-friend-request/${notificationId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["user", "current"] });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
+      queryClient.refetchQueries({ queryKey: ["user", "current"] });
       toast.success("Friend request accepted!");
     },
     onError: (error) => {
@@ -97,7 +97,7 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
       await api.post(`/notifications/reject-friend-request/${notificationId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
       toast.success("Friend request rejected.");
     },
     onError: (error) => {
@@ -112,7 +112,7 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
       await api.post("/notifications/clear-all-notifications");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
       toast.success("All notifications cleared!");
     },
     onError: (error) => {

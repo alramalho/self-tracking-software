@@ -54,11 +54,15 @@ export const EditLookingForApPopup: React.FC<
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={() => {
-            updateUser({
-              lookingForAp: value,
-            });
-          }} className="flex-1">
+          <Button
+            onClick={() => {
+              updateUser({
+                updates: { lookingForAp: value },
+                muteNotifications: true,
+              });
+            }}
+            className="flex-1"
+          >
             Save
           </Button>
         </div>
@@ -122,7 +126,7 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
   open,
   onClose,
 }) => {
-  const { user: clerkUser  } = useClerkUser();
+  const { user: clerkUser } = useClerkUser();
   const [firstName, setFirstName] = useState(clerkUser?.firstName || "");
   const [lastName, setLastName] = useState(clerkUser?.lastName || "");
   const { updateUser } = useCurrentUser();
@@ -134,7 +138,10 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
         lastName: lastName,
       });
       await updateUser({
-        name: `${firstName} ${lastName}`,
+        updates: {
+          name: `${firstName} ${lastName}`,
+        },
+        muteNotifications: true,
       });
       toast.success("Name updated");
       onClose();

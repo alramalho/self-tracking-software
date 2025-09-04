@@ -48,8 +48,6 @@ const BottomNav = () => {
     return pathname.startsWith(route);
   };
 
-
-
   useEffect(() => {
     setIsLoadingFeed(false);
     setIsLoadingPlans(false);

@@ -51,12 +51,24 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const activitiesQuery = useQuery({
     queryKey: ["activities"],
-    queryFn: getActivities,
+    queryFn: async () => {
+      try {
+        return await getActivities();
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isSignedIn && isLoaded,
   });
   const activitiesEntriesQuery = useQuery({
     queryKey: ["activity-entries"],
-    queryFn: getActivitiyEntries,
+    queryFn: async () => {
+      try {
+        return await getActivitiyEntries();
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isSignedIn && isLoaded,
   });
 
@@ -79,10 +91,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.post("/activities/log-activity", formData);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["current-user"] });
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
+      queryClient.refetchQueries({ queryKey: ["timeline"] });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
+      queryClient.refetchQueries({ queryKey: ["metrics"] });
 
       const hasPhoto = !!variables.photo;
       toast.success(
@@ -102,8 +114,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.post("/activities/upsert", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.refetchQueries({ queryKey: ["activities"] });
+      queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Activity updated successfully!");
     },
     onError: (error) => {
@@ -120,8 +132,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+      queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Activity updated successfully!");
     },
     onError: (error) => {
@@ -135,8 +147,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.delete(`/activities/${data.id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.refetchQueries({ queryKey: ["activities"] });
+      queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Activity deleted successfully!");
     },
     onError: (error) => {
@@ -149,8 +161,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       await api.delete(`/activities/activity-entries/${data.id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.refetchQueries({ queryKey: ["activities"] });
+      queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Activity deleted successfully!");
     },
     onError: (error) => {

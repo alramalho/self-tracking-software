@@ -4,8 +4,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import { ActivitiesProvider } from "./activities";
 import { MetricsProvider } from "./metrics";
-import { DataNotificationsProvider, useDataNotifications } from "./notifications";
+import {
+  DataNotificationsProvider,
+  useDataNotifications,
+} from "./notifications";
 import { PlansProvider } from "./plans";
+import { RecommendationsProvider } from "./recommendations";
 import { TimelineProvider, useTimeline } from "./timeline";
 import { UsersProvider, useCurrentUser } from "./users";
 
@@ -19,7 +23,7 @@ export const useGlobalDataOperations = () => {
   const { currentUser, isLoadingCurrentUser } = useCurrentUser();
   const { isLoadingTimeline } = useTimeline();
   const { isLoadingNotifications } = useDataNotifications();
-  
+
   const refetchAllData = async () => {
     try {
       await Promise.all([
@@ -31,8 +35,10 @@ export const useGlobalDataOperations = () => {
         queryClient.refetchQueries({ queryKey: ["multipleUsersData"] }),
         queryClient.refetchQueries({ queryKey: ["metricsAndEntries"] }),
       ]);
-      
-      const userData = await queryClient.refetchQueries({ queryKey: ["userData", "current"] });
+
+      const userData = await queryClient.refetchQueries({
+        queryKey: ["userData", "current"],
+      });
       return userData;
     } catch (err) {
       console.error("Failed to refresh all data:", err);
@@ -61,7 +67,7 @@ export const useGlobalDataOperations = () => {
   };
 
   // Status calculation similar to original UserGlobalContext
-  const isWaitingForData = 
+  const isWaitingForData =
     !hasCacheData() &&
     !isLoadingCurrentUser &&
     !isLoadingTimeline &&
@@ -84,7 +90,7 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
           <TimelineProvider>
             <PlansProvider>
               <ActivitiesProvider>
-                {children}
+                <RecommendationsProvider>{children}</RecommendationsProvider>
               </ActivitiesProvider>
             </PlansProvider>
           </TimelineProvider>

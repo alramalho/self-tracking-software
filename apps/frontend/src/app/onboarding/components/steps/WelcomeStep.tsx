@@ -1,7 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { WheelPicker, WheelPickerOption, WheelPickerWrapper } from "@/components/ui/wheel-picker";
+import {
+  WheelPicker,
+  WheelPickerOption,
+  WheelPickerWrapper,
+} from "@/components/ui/wheel-picker";
 import { useCurrentUser } from "@/contexts/users";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
@@ -13,14 +17,20 @@ const WelcomeStep = () => {
   const [selectedAge, setSelectedAge] = useState("25");
   const { updateUser } = useCurrentUser();
 
-  const ageOptions: WheelPickerOption[] = Array.from({ length: 83 }, (_, i) => ({
-    label: (i + 18).toString(),
-    value: (i + 18).toString(),
-  }));
+  const ageOptions: WheelPickerOption[] = Array.from(
+    { length: 83 },
+    (_, i) => ({
+      label: (i + 18).toString(),
+      value: (i + 18).toString(),
+    })
+  );
 
   const handleGetStarted = async () => {
     try {
-      await updateUser({ age: parseInt(selectedAge) });
+      await updateUser({
+        updates: { age: parseInt(selectedAge) },
+        muteNotifications: true,
+      });
       completeStep("welcome");
     } catch (error) {
       console.error("Error updating user age:", error);
@@ -48,7 +58,7 @@ const WelcomeStep = () => {
           The most effective app to improve your lifestyle.
         </p>
       </div>
-      
+
       <div className="space-y-3">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -58,7 +68,7 @@ const WelcomeStep = () => {
             This helps us personalize your experience
           </p> */}
         </div>
-        
+
         <WheelPickerWrapper className="mx-auto max-w-xs h-48">
           <WheelPicker
             options={ageOptions}
@@ -67,7 +77,7 @@ const WelcomeStep = () => {
           />
         </WheelPickerWrapper>
       </div>
-      
+
       <div className="mx-auto w-fit">
         <Button
           size="lg"

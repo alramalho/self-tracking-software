@@ -42,7 +42,10 @@ interface UsersContextType {
   // Auth helpers
   handleAuthError: (err: unknown) => void;
   // Actions
-  updateUser: (data: Prisma.UserUpdateInput) => Promise<User>;
+  updateUser: (data: {
+    updates: Prisma.UserUpdateInput;
+    muteNotifications?: boolean;
+  }) => Promise<User>;
   isUpdatingUser: boolean;
 
   sendFriendRequest: (userId: string) => Promise<void>;
@@ -68,19 +71,39 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
-    queryFn: getCurrentUserBasicData,
+    queryFn: async () => {
+      try {
+        const result = await getCurrentUserBasicData();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isLoaded && isSignedIn,
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: updateUserAction,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["current-user"] });
-      toast.success("User updated successfully");
+    mutationFn: async (data: {
+      updates: Prisma.UserUpdateInput;
+      muteNotifications?: boolean;
+    }) => {
+      try {
+        return await updateUserAction(data.updates);
+      } catch (error) {
+        throw error;
+      }
     },
-    onError: (error) => {
+    onSuccess: ({}, { muteNotifications }) => {
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
+      if (!muteNotifications) {
+        toast.success("User updated successfully");
+      }
+    },
+    onError: (error, { muteNotifications }) => {
       console.error("Error updating user:", error);
-      toast.error("Failed to update user");
+      if (!muteNotifications) {
+        toast.error("Failed to update user");
+      }
     },
   });
 
@@ -135,7 +158,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refetchCurrentUser = useCallback(
     async (notify = true) => {
-      await queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      await queryClient.refetchQueries({ queryKey: ["current-user"] });
       if (notify) {
         toast.success("User data refreshed");
       }

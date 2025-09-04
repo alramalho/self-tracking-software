@@ -25,9 +25,14 @@ export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const timelineQuery = useQuery({
     queryKey: ["timeline"],
-    queryFn: () => getTimelineData(),
+    queryFn: async() => {
+      try {
+        return await getTimelineData();
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isLoaded && isSignedIn,
-    staleTime: 1000 * 60 * 2,
   });
 
   const context: TimelineContextType = {
