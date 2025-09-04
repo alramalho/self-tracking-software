@@ -68,7 +68,9 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["plans"],
     queryFn: async () => {
       try {
-        return await getPlans();
+        console.log("fetching plans")
+        const result = await getPlans();
+        return result;
       } catch (error) {
         throw error;
       }
@@ -83,7 +85,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     }) => {
       return await updatePlans(data.updates);
     },
-    onSuccess: ({}, { muteNotifications }) => {
+    onSuccess: (_, { muteNotifications }) => {
       if (!muteNotifications) {
         toast.success("Plans updated successfully!");
       }
@@ -109,16 +111,20 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       muteNotifications?: boolean;
     }) => {
       if (!isSignedIn) throw new Error("Not signed in");
+      console.log("upserting plan", data)
       await api.post(`/plans/upsert`, {
         id: data.planId,
         ...data.updates,
       });
     },
-    onSuccess: ({}, { muteNotifications }) => {
+    onSuccess: (_, { muteNotifications }) => {
       if (!muteNotifications) {
         toast.success("Plan updated successfully!");
       }
       queryClient.refetchQueries({ queryKey: ["plans"] });
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["recommendations"] });
+      }, 1000);
     },
     onError: (error, { muteNotifications }) => {
       console.error("Error updating plan:", error);

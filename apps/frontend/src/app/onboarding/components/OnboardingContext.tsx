@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import React, { createContext, useCallback, useContext, useMemo } from "react";
 import toast from "react-hot-toast";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface OnboardingStep {
   id: string;
@@ -36,6 +37,7 @@ interface OnboardingContextValue {
   plans: CompletePlan[] | null;
   selectedPlan: CompletePlan | null;
   planGoal: string | null;
+  planId: string;
   planActivities: Activity[];
   planType: string | null;
   planEmoji: string | null;
@@ -86,6 +88,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       planActivities: [] as Activity[],
       planProgress: null as string | null,
       planType: null as string | null,
+      planId: uuidv4(),
       partnerType: null as "human" | "ai" | null,
       planTimesPerWeek: 3 as number,
     }
@@ -94,6 +97,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     currentStep,
     completedSteps,
     planGoal,
+    planId,
     planEmoji,
     planActivities,
     planType,
@@ -199,9 +203,6 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     });
     if (currentStepIndex > 0 && currentStepIndex !== -1) {
       const prevStepId = steps[currentStepIndex - 1]?.id;
-      console.log({
-        prevStepId,
-      });
       if (prevStepId) {
         setCurrentStep(prevStepId);
       }
@@ -296,6 +297,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     progress,
     plans,
     selectedPlan,
+    planId,
     planGoal,
     planEmoji,
     partnerType,

@@ -31,6 +31,7 @@ export const RecommendationsProvider: React.FC<{
   const recommendationsQuery = useQuery<RecommendedUsersResponse>({
     queryKey: ["recommendations"],
     queryFn: async () => {
+      console.log("fetching recommendations")
       const response = await api.get(`/users/recommended-users`);
       return response.data;
     },
