@@ -12,6 +12,7 @@ import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { ChevronRight, ScanFace } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { defaultMetrics } from "../metrics";
@@ -29,6 +30,7 @@ export default function OnboardingPage() {
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
   const { setShowUpgradePopover } = useUpgrade();
+  const router = useRouter()
   
   const requestNotificationPermission = async () => {
     try {
@@ -55,7 +57,7 @@ export default function OnboardingPage() {
     if (isUserOnFreePlan) {
       setShowUpgradePopover(true);
     } else {
-      requestNotificationPermission();
+      router.push("/insights/dashboard");
     }
   };
 
