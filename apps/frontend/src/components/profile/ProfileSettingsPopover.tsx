@@ -15,7 +15,7 @@ import {
   Paintbrush,
   Pencil,
   SquareArrowUp,
-  User
+  User,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import React, { useRef, useState } from "react";
@@ -23,7 +23,12 @@ import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
 import { TextAreaWithVoice } from "../ui/TextAreaWithVoice";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
-import { EditAgePopup, EditFullNamePopup, EditLookingForApPopup, EditProfilePicturePopup } from "./EditFieldPopups";
+import {
+  EditAgePopup,
+  EditFullNamePopup,
+  EditLookingForApPopup,
+  EditProfilePicturePopup,
+} from "./EditFieldPopups";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -168,16 +173,22 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <h2 className="text-lg font-semibold mb-6">
                       User Settings
                     </h2>
-                    
+
                     <div className="space-y-4">
                       {/* Looking for AP */}
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">Looking for Accountability Partner</p>
-                          <p className={twMerge(
-                            "text-xs text-gray-500",
-                            currentUser?.lookingForAp ? "text-green-600" : "text-gray-500"
-                          )}>
+                          <p className="text-sm font-medium text-gray-900">
+                            Looking for Accountability Partner
+                          </p>
+                          <p
+                            className={twMerge(
+                              "text-xs text-gray-500",
+                              currentUser?.lookingForAp
+                                ? "text-green-600"
+                                : "text-gray-500"
+                            )}
+                          >
                             {currentUser?.lookingForAp ? "Yes" : "No"}
                           </p>
                         </div>
@@ -194,9 +205,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       {/* Age */}
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">Age</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Age
+                          </p>
                           <p className="text-xs text-gray-500">
-                            {currentUser?.age ? `${currentUser.age} years old` : "No age set"}
+                            {currentUser?.age
+                              ? `${currentUser.age} years old`
+                              : "No age set"}
                           </p>
                         </div>
                         <Button
@@ -212,7 +227,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       {/* Full Name */}
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">Full Name</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Full Name
+                          </p>
                           <p className="text-xs text-gray-500">
                             {currentUser?.name || "No name set"}
                           </p>
@@ -230,7 +247,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       {/* Username (Read Only) */}
                       <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">Username</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Username
+                          </p>
                           <p className="text-xs text-gray-500">
                             {currentUser?.username || "No username set"}
                           </p>
@@ -243,7 +262,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       {/* Email (Read Only) */}
                       <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">Email</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Email
+                          </p>
                           <p className="text-xs text-gray-500">
                             {currentUser?.email || "No email"}
                           </p>
@@ -256,16 +277,20 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       {/* Profile Picture */}
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1 flex items-center gap-3">
-                          <img 
-                            src={currentUser?.picture || "/default-avatar.png"} 
-                            alt="Profile" 
+                          <img
+                            src={currentUser?.picture || "/default-avatar.png"}
+                            alt="Profile"
                             width={40}
                             height={40}
                             className="w-10 h-10 rounded-full object-cover"
                           />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">Profile Picture</p>
-                            <p className="text-xs text-gray-500">Click to update your photo</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              Profile Picture
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Click to update your photo
+                            </p>
                           </div>
                         </div>
                         <Button
@@ -277,7 +302,6 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <Pencil size={16} />
                         </Button>
                       </div>
-
                     </div>
                   </div>
                 );
@@ -296,7 +320,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       Update Your Profile Description
                     </h2>
                     <p>
-                      You may use this space to talk about who you are, as this will be showed to other users in the discovery tab and used in the matchmaking algorithm.
+                      You may use this space to talk about who you are, as this
+                      will be showed to other users in the discovery tab and
+                      used in the matchmaking algorithm.
                     </p>
                     <div className="p-2">
                       <TextAreaWithVoice
@@ -312,7 +338,9 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         variant="outline"
                         onClick={async () => {
                           await updateUser({
-                            profile: temporaryProfileDescription,
+                            updates: {
+                              profile: temporaryProfileDescription,
+                            },
                           });
                           navigateTo("userSummary");
                         }}
@@ -438,7 +466,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
         {/* Keep ConfirmDialog outside the main navigation flow */}
       </AppleLikePopover>
-      
+
       <ConfirmDialogOrPopover
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}

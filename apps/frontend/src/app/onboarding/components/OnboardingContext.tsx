@@ -239,7 +239,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       // Check if this step should mark onboarding as complete
       if (options?.complete) {
         updateUser({
-          onboardingCompletedAt: new Date(),
+          updates: {
+            onboardingCompletedAt: new Date(),
+          },
+          muteNotifications: true,
         }).then(() => {
           posthog.capture("onboarding-completed");
           toast.success("Onboarding completed! ");

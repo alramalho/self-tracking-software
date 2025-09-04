@@ -140,7 +140,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
       setLastCoachMessage(response.data.message);
       setLastTimeCoachMessageWasGenerated(new Date());
-      queryClient.invalidateQueries({ queryKey: ["notifications"] }); // TODO: should we create an ai context?
+      queryClient.refetchQueries({ queryKey: ["notifications"] }); // TODO: should we create an ai context?
     } catch (error) {
       console.error("Failed to generate coach message:", error);
     } finally {

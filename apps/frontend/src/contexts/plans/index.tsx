@@ -66,7 +66,13 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const plans = useQuery({
     queryKey: ["plans"],
-    queryFn: () => getPlans(),
+    queryFn: async () => {
+      try {
+        return await getPlans();
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isLoaded && isSignedIn,
   });
 
@@ -81,7 +87,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!muteNotifications) {
         toast.success("Plans updated successfully!");
       }
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.refetchQueries({ queryKey: ["plans"] });
     },
     onError: (error, { muteNotifications }) => {
       console.error("Error updating plans:", error);
@@ -112,7 +118,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!muteNotifications) {
         toast.success("Plan updated successfully!");
       }
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.refetchQueries({ queryKey: ["plans"] });
     },
     onError: (error, { muteNotifications }) => {
       console.error("Error updating plan:", error);
@@ -154,7 +160,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: () => {
       toast.success("Milestone updated successfully!");
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.refetchQueries({ queryKey: ["plans"] });
     },
     onError: (error) => {
       console.error("Error modifying manual milestone:", error);
@@ -202,7 +208,13 @@ export const usePlan = (
 
   const plan = useQuery({
     queryKey: ["plan", id],
-    queryFn: () => fetchPlan(id),
+    queryFn: async () => {
+      try {
+        return await fetchPlan(id);
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isLoaded && isSignedIn && !!id,
   });
 
@@ -228,7 +240,13 @@ export const usePlanInvitation = (id: string) => {
 
   const planInvitation = useQuery({
     queryKey: ["plan-invitation", id],
-    queryFn: () => fetchPlanInvitation(id),
+    queryFn: async () => {
+      try {
+        return await fetchPlanInvitation(id);
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isLoaded && isSignedIn && !!id,
   });
 
@@ -237,8 +255,8 @@ export const usePlanInvitation = (id: string) => {
       await api.post(`/plans/accept-plan-invitation/${planInvitationId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["current-user"] });
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
+      queryClient.refetchQueries({ queryKey: ["plans"] });
       toast.success("Plan invitation accepted successfully!");
     },
     onError: (error) => {
@@ -252,8 +270,8 @@ export const usePlanInvitation = (id: string) => {
       await api.post(`/plans/reject-plan-invitation/${planInvitationId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["current-user"] });
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
+      queryClient.refetchQueries({ queryKey: ["plans"] });
       toast.success("Plan invitation rejected successfully!");
     },
     onError: (error) => {

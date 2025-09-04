@@ -10,6 +10,7 @@ import {
 } from "@/utils/theme";
 import { ThemeColor } from "@tsw/prisma";
 import React, { createContext, useContext, useMemo } from "react";
+import toast from "react-hot-toast";
 import { useCurrentUser } from "./users";
 
 interface ThemeContextType {
@@ -49,6 +50,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Get the effective theme color (either user's choice or resolved random color)
   const effectiveTheme = useMemo<BaseLoweredThemeColor>(() => {
+    if (!currentUser) return "blue";
+
     if (currentUser?.themeBaseColor.toLowerCase() !== "random")
       return userTheme as BaseLoweredThemeColor;
 
@@ -88,7 +91,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     currentTheme: userTheme,
     effectiveTheme,
     updateTheme: async (color: LowerThemeColor) => {
-      await updateUser({ themeBaseColor: color.toUpperCase() as ThemeColor });
+      await updateUser({
+        updates: { themeBaseColor: color.toUpperCase() as ThemeColor },
+        muteNotifications: true,
+      });
+      toast.success("Theme updated successfully");
     },
     getThemeClass,
     getTextClass,

@@ -9,12 +9,12 @@ import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
 import { Button } from "@/components/ui/button";
 import {
-    Bell,
-    ChevronDown,
-    ChevronRight,
-    HelpCircle,
-    RefreshCcw,
-    ScanFace,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  HelpCircle,
+  RefreshCcw,
+  ScanFace,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";

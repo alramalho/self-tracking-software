@@ -55,13 +55,25 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const metricsQuery = useQuery({
     queryKey: ["metrics"],
-    queryFn: getMetrics,
+    queryFn: async () => {
+      try {
+        return await getMetrics();
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
   const metricsEntriesQuery = useQuery({
     queryKey: ["metricsEntries"],
-    queryFn: getMetricEntries,
+    queryFn: async () => {
+      try {
+        return await getMetricEntries();
+      } catch (error) {
+        throw error;
+      }
+    },
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
@@ -71,8 +83,8 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       return await upsertMetric(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      queryClient.refetchQueries({ queryKey: ["metrics"] });
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
       toast.success("Metric created successfully!");
     },
     onError: (error) => {
@@ -102,8 +114,8 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["metricsEntries"] });
-      queryClient.invalidateQueries({ queryKey: ["current-user"] });
+      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
       toast.success("Metrics logged successfully!");
     },
     onError: (error) => {
@@ -121,7 +133,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["metricsEntries"] });
+      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
       toast.success("Metric logged successfully!");
     },
     onError: (error) => {
@@ -139,7 +151,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["metricsEntries"] });
+      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
       toast.success("Metric skipped successfully!");
     },
     onError: (error) => {
@@ -153,7 +165,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       return await logTodaysNote(note);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["metricsEntries"] });
+      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
       toast.success("Note added to today's entries!");
     },
     onError: (error) => {
@@ -167,7 +179,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       return await skipTodaysNote();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["metricsEntries"] });
+      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
       toast.success("Today's note skipped successfully!");
     },
     onError: (error) => {
@@ -181,8 +193,8 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       return await deleteMetric(metricId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["metricsEntries"] });
+      queryClient.refetchQueries({ queryKey: ["metrics"] });
+      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
       toast.success("Metric deleted successfully!");
     },
     onError: (error) => {

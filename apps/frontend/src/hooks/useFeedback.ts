@@ -12,7 +12,7 @@ export const useFeedback = () => {
       text: string;
       type: "feature_request" | "help_request" | "bug_report";
     }) => {
-      await api.post("/report-feedback", {
+      await api.post("/users/report-feedback", {
         email: currentUser?.email,
         text: data.text,
         type: data.type,
