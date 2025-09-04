@@ -96,9 +96,13 @@ export default function GeneralInitializer({
     );
   };
 
+  const isOnboardingPage = pathname.startsWith("/onboarding");
+
   if (
     !isClerkLoaded ||
-    (isSignedIn && hasLoadedUserData && !initialCacheExists)
+    (isSignedIn && !hasLoadedUserData) || 
+    (isSignedIn && hasLoadedUserData && !initialCacheExists) || 
+    (isSignedIn && hasLoadedUserData && currentUser?.onboardingCompletedAt == null && !isOnboardingPage)
   ) {
     return (
       <>
@@ -129,7 +133,6 @@ export default function GeneralInitializer({
       </>
     );
   }
-  const isOnboardingPage = pathname.startsWith("/onboarding");
 
   return (
     <>
