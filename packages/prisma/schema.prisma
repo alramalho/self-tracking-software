@@ -27,7 +27,7 @@ model User {
   deletedAt                       DateTime?
   isPwaInstalled                  Boolean            @default(false)
   isPwaNotificationsEnabled       Boolean            @default(false)
-  lookingForAp                    Boolean?           @default(false)
+  lookingForAp                    Boolean?           @default(true)
   pwaSubscriptionEndpoint         String?
   pwaSubscriptionKey              String?
   pwaSubscriptionAuthToken        String?
