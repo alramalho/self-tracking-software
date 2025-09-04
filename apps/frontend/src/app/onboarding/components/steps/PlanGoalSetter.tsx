@@ -96,6 +96,7 @@ function PlanGoalSetter() {
         questionsChecks={questionChecks}
         onSubmit={handleSubmit}
         onAccept={handleAccept}
+        disableEmptySubmit
         renderChildren={renderExtractedData}
         shouldRenderChildren={allAnswered}
         placeholder="For example, 'I want to read 12 books this year'"

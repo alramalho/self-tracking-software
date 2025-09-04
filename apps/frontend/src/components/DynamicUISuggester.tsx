@@ -1,16 +1,16 @@
-import { Check, ScanFace, X } from "lucide-react";
-import AppleLikePopover from "./AppleLikePopover";
-import { TextAreaWithVoice } from "./ui/TextAreaWithVoice";
-import { useMutation } from "@tanstack/react-query";
 import { useApiWithAuth } from "@/api";
-import { useState, useRef, useEffect } from "react";
-import { Button } from "./ui/button";
-import { motion, AnimatePresence } from "framer-motion";
-import { getThemeVariants } from "@/utils/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import { useMutation } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, ScanFace, X } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
+import { useRef, useState } from "react";
 import { Remark } from "react-remark";
+import AppleLikePopover from "./AppleLikePopover";
 import { QuestionChecks, QuestionsChecks } from "./QuestionChecks";
+import { Button } from "./ui/button";
+import { TextAreaWithVoice } from "./ui/TextAreaWithVoice";
 
 const waveVariants = {
   initial: { rotate: 0 },
@@ -52,6 +52,7 @@ export type DynamicUISuggesterProps<T extends BaseExtractionResponse> = {
   title?: string;
   description?: string;
   wave?: boolean;
+  disableEmptySubmit?: boolean;
   onSkip?: () => void;
 };
 
@@ -75,6 +76,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
   title,
   description,
   wave = false,
+  disableEmptySubmit = false,
   onSkip,
   canSubmit,
 }: DynamicUISuggesterProps<T>) {
@@ -372,6 +374,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             className={`w-full rounded-xl ${allQuestionsChecked ? "bg-white" : ""}`}
             onClick={() => submitMutation.mutateAsync(text)}
             disabled={
+              (disableEmptySubmit && text.length === 0) || 
               ((canSubmit && !canSubmit()) && !text) ||
               isRecording ||
               isLoading ||
