@@ -162,7 +162,10 @@ const PlanGenerator = () => {
       Array.from(activityIds).map((id) => {
         const activity = plan.activities.find((a) => a.id === id);
         if (!activity) return
-        return upsertActivity(activity);
+        return upsertActivity({
+          activity: activity,
+          muteNotification: true,
+        });
       })
     );
     upsertPlan({

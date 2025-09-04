@@ -2,7 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
+import { useActivities } from "@/contexts/activities";
 import { usePlans } from "@/contexts/plans";
+import { useCurrentUser } from "@/contexts/users";
 import { ArrowRight, Route } from "lucide-react";
 import { useState } from "react";
 import { withFadeUpAnimation } from "../../lib";
@@ -20,11 +22,24 @@ const PlanProgressInitiator = () => {
     planActivities,
   } = useOnboarding();
   const { upsertPlan } = usePlans();
+  const { upsertActivity } = useActivities();
+  const { currentUser } = useCurrentUser();
   const [text, setText] = useState<string>(planProgress ?? "");
 
   const handleComplete = async (progress: string) => {
     let nextStep;
     if (planType == "TIMES_PER_WEEK") {
+      await Promise.all(
+        planActivities.map((activity) =>
+          upsertActivity({
+            activity: {
+              ...activity,
+              userId: currentUser?.id,
+            },
+            muteNotification: true,
+          })
+        )
+      );
       upsertPlan({
         planId: planId,
         updates: {

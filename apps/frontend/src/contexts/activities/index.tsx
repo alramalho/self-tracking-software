@@ -8,7 +8,9 @@ import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import { getActivities, getActivitiyEntries } from "./actions";
 
-type ReturnedActivityEntriesType = Awaited<ReturnType<typeof getActivitiyEntries>>;
+type ReturnedActivityEntriesType = Awaited<
+  ReturnType<typeof getActivitiyEntries>
+>;
 type ReturnedActivitiesType = Awaited<ReturnType<typeof getActivities>>;
 interface ActivityLogData {
   activityId: string;
@@ -27,8 +29,14 @@ interface ActivitiesContextType {
   logActivity: (data: ActivityLogData) => Promise<void>;
   isLoggingActivity: boolean;
 
-  upsertActivity: (data: Partial<Activity>) => Promise<void>;
-  upsertActivityEntry: (data: Partial<ActivityEntry>) => Promise<void>;
+  upsertActivity: (data: {
+    activity: Partial<Activity>;
+    muteNotification?: boolean;
+  }) => Promise<void>;
+  upsertActivityEntry: (data: {
+    entry: Partial<ActivityEntry>;
+    muteNotification?: boolean;
+  }) => Promise<void>;
   isUpsertingActivityEntry: boolean;
   isUpsertingActivity: boolean;
 
@@ -111,35 +119,49 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const upsertActivityMutation = useMutation({
-    mutationFn: async (data: Partial<Activity>) => {
-      await api.post("/activities/upsert", data);
+    mutationFn: async (data: {
+      activity: Partial<Activity>;
+      muteNotification?: boolean;
+    }) => {
+      await api.post("/activities/upsert", data.activity);
     },
-    onSuccess: () => {
+    onSuccess: (_, { muteNotification }) => {
       queryClient.refetchQueries({ queryKey: ["activities"] });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
-      toast.success("Activity updated successfully!");
+      if (!muteNotification) {
+        toast.success("Activity updated successfully!");
+      }
     },
-    onError: (error) => {
+    onError: (error, { muteNotification }) => {
       console.error("Error updating activity:", error);
-      toast.error("Failed to update activity. Please try again.");
+      if (!muteNotification) {
+        toast.error("Failed to update activity. Please try again.");
+      }
     },
   });
   const upsertActivityEntryMutation = useMutation({
-    mutationFn: async (data: Partial<ActivityEntry>) => {
-      await api.put(`/activities/activity-entries/${data.id}`, {
-        quantity: Number(data.quantity),
-        date: data.date,
-        description: data.description || "",
+    mutationFn: async (data: {
+      entry: Partial<ActivityEntry>;
+      muteNotification?: boolean;
+    }) => {
+      await api.put(`/activities/activity-entries/${data.entry.id}`, {
+        quantity: Number(data.entry.quantity),
+        date: data.entry.date,
+        description: data.entry.description || "",
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, { muteNotification }) => {
       queryClient.refetchQueries({ queryKey: ["activity-entries"] });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
-      toast.success("Activity updated successfully!");
+      if (!muteNotification) {
+        toast.success("Activity updated successfully!");
+      }
     },
-    onError: (error) => {
+    onError: (error, { muteNotification }) => {
       console.error("Error updating activity:", error);
-      toast.error("Failed to update activity. Please try again.");
+      if (!muteNotification) {
+        toast.error("Failed to update activity. Please try again.");
+      }
     },
   });
 

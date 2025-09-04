@@ -11,7 +11,6 @@ export function useShareOrCopy() {
   const shareOrCopyLink = async (link: string) => {
     if (isShareSupported) {
       const success = await share(link);
-      if (!success) toast("Sharing not carried through");
     } else {
       const success = await copyToClipboard(link);
       if (!success) toast.error("Failed to copy");
