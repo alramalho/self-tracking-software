@@ -80,7 +80,9 @@ export async function upsertMetricEntry(data: {
     const existingEntry = await prisma.metricEntry.findFirst({
       where: {
         metricId: data.metricId,
-        date: entryDate,
+        date: {
+          equals: new Date(entryDate),
+        },
       },
     });
 
@@ -105,7 +107,7 @@ export async function upsertMetricEntry(data: {
           userId: user.id,
           metricId: data.metricId,
           rating: data.rating || 0,
-          date: entryDate,
+          date: new Date(entryDate),
           description: data.description,
           skipped: data.skipped || false,
           descriptionSkipped: data.descriptionSkipped || false,
