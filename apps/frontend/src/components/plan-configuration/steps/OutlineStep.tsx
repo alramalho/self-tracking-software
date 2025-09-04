@@ -90,6 +90,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
         <div className="space-y-4">
           <Label>How many times per week?</Label>
           <NumberInput
+            title="Times per Week"
             value={timesPerWeek}
             onChange={setTimesPerWeek}
             min={1}
