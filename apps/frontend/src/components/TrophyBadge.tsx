@@ -1,5 +1,7 @@
 import React from "react";
+import Lottie from "react-lottie";
 import { Badge } from "./ui/badge";
+import trophyAnimation from "../../public/animations/trophy.lottie.json";
 
 interface TrophyBadgeProps {
   children: React.ReactNode;
@@ -9,18 +11,18 @@ interface TrophyBadgeProps {
 const TrophyBadge: React.FC<TrophyBadgeProps> = ({ children, ...props }) => {
   return (
     <div className="relative">
-    <picture>
-      <source
-        srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3c6/512.webp"
-        type="image/webp"
-      />
-      <img
-        src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f3c6/512.gif"
-        alt="🏆"
-        width="60"
-        height="60"
-      />
-    </picture>
+    <Lottie
+      options={{
+        loop: true,
+        autoplay: true,
+        animationData: trophyAnimation,
+        rendererSettings: {
+          preserveAspectRatio: "xMidYMid slice"
+        }
+      }}
+      height={60}
+      width={60}
+    />
     <Badge className="absolute -bottom-[10px] -right-[10px] text-2xl bg-transparent">
       {children}
     </Badge>
