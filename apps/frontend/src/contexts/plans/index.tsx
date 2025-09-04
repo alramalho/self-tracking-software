@@ -85,11 +85,19 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     }) => {
       return await updatePlans(data.updates);
     },
-    onSuccess: (_, { muteNotifications }) => {
-      if (!muteNotifications) {
-        toast.success("Plans updated successfully!");
+    onSuccess: (result, { muteNotifications, updates }) => {
+      if (result.success) {
+        // Smartly update only the changed plans in the existing array
+        queryClient.setQueryData(["plans"], (oldPlans: CompletePlan[] = []) => {
+          return oldPlans.map(plan => {
+            const updateForPlan = updates.find(u => u.planId === plan.id);
+            return updateForPlan ? { ...plan, ...updateForPlan.updates } : plan;
+          });
+        });
+        if (!muteNotifications) {
+          toast.success("Plans updated successfully!");
+        }
       }
-      queryClient.refetchQueries({ queryKey: ["plans"] });
     },
     onError: (error, { muteNotifications }) => {
       console.error("Error updating plans:", error);
@@ -117,11 +125,20 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
         ...data.updates,
       });
     },
-    onSuccess: (_, { muteNotifications }) => {
+    onSuccess: (_, { muteNotifications, planId, updates }) => {
+      // Smartly update the specific plan in the cache
+      queryClient.setQueryData(["plans"], (oldPlans: CompletePlan[] = []) => {
+        return oldPlans.map(plan => 
+          plan.id === planId ? { ...plan, ...updates } : plan
+        );
+      });
+      // Also update individual plan cache if it exists
+      queryClient.setQueryData(["plan", planId], (oldPlan: any) => 
+        oldPlan ? { ...oldPlan, ...updates } : oldPlan
+      );
       if (!muteNotifications) {
         toast.success("Plan updated successfully!");
       }
-      queryClient.refetchQueries({ queryKey: ["plans"] });
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: ["recommendations"] });
       }, 1000);
