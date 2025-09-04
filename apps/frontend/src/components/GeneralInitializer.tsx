@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import BottomNav from "./BottomNav";
 import FeedbackForm from "./FeedbackForm";
@@ -28,19 +28,14 @@ export default function GeneralInitializer({
   const { hasCacheData } = useGlobalDataOperations();
   const [initialCacheExists] = useState(() => hasCacheData());
   const router = useRouter();
-  const isOnboardingCompleted = currentUser?.onboardingCompletedAt != null;
-
-  const onboardingNecessary = useMemo(() => {
-    return hasLoadedUserData && !isOnboardingCompleted;
-  }, [isOnboardingCompleted]);
 
   const email = currentUser?.email || "";
 
   useEffect(() => {
-    if (onboardingNecessary) {
+    if (isClerkLoaded && isSignedIn && hasLoadedUserData && currentUser?.onboardingCompletedAt == null) {
       router.push("/onboarding");
     }
-  }, [onboardingNecessary, router]);
+  }, [currentUser, router]);
 
   useEffect(() => {
     if (isSignedIn && hasLoadedUserData && currentUser) {
@@ -98,7 +93,8 @@ export default function GeneralInitializer({
 
   if (
     !isClerkLoaded ||
-    (isSignedIn && hasLoadedUserData && !initialCacheExists)
+    (isSignedIn && hasLoadedUserData && !initialCacheExists) ||
+    (isSignedIn && hasLoadedUserData && currentUser?.onboardingCompletedAt == null)
   ) {
     console.log("showGenericLoader", {
       isClerkLoaded,
