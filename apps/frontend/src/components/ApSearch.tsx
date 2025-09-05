@@ -17,13 +17,13 @@ import React, { useState } from "react";
 export const ApSearchComponent: React.FC = () => {
   const { currentUser, isLoadingCurrentUser } = useCurrentUser();
   const { plans, isLoadingPlans } = usePlans();
-  const currentPlan = plans?.reduce((min, plan) =>
+  const currentPlan = plans && plans.length > 0 ? plans?.reduce((min, plan) =>
     !min ||
     (plan.sortOrder !== null &&
       (min.sortOrder === null || plan.sortOrder < min.sortOrder))
       ? plan
       : min
-  );
+  ) : null;
 
   const {
     recommendations,
