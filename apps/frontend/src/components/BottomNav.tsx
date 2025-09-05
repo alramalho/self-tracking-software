@@ -79,6 +79,7 @@ const BottomNav = () => {
         )}>
           <Link
             href="/"
+            prefetch={true}
             data-testid="nav-home"
             className={cn(
               "transition-all duration-200 relative",
@@ -126,6 +127,7 @@ const BottomNav = () => {
 
           <Link
             href="/plans"
+            prefetch={true}
             data-testid="nav-plans"
             className={cn(
               "transition-all duration-200",
@@ -165,6 +167,7 @@ const BottomNav = () => {
 
           <Link
             href="/add"
+            prefetch={true}
             data-testid="nav-add"
             className={cn(
               "transition-all duration-200 relative",
@@ -212,6 +215,7 @@ const BottomNav = () => {
 
           <Link
             href="/ap-search"
+            prefetch={true}
             data-testid="nav-search"
             className={cn(
               "relative transition-all duration-200",
@@ -251,6 +255,7 @@ const BottomNav = () => {
 
           <Link
             href={`/profile/${userUsername}`}
+            prefetch={true}
             data-testid="nav-profile"
             className={cn(
               "relative transition-all duration-200",
