@@ -96,12 +96,14 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     enabled: isLoaded && isSignedIn,
     retry: 5,
-    retryDelay: 1000
+    retryDelay: 1000,
   });
 
-  if (currentUserQuery.error) {
-    handleAuthError("could not load current user");
-  }
+  useEffect(() => {
+    if (currentUserQuery.error) {
+      handleAuthError("could not load current user");
+    }
+  }, [currentUserQuery.error, handleAuthError]);
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: {
