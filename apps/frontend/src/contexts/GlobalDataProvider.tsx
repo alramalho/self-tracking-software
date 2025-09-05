@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import React from "react";
 import toast from "react-hot-toast";
 import { ActivitiesProvider } from "./activities";
@@ -20,8 +21,10 @@ interface GlobalDataProviderProps {
 // Global data operations that work across contexts
 export const useGlobalDataOperations = () => {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
-  const refetchAllData = async () => {
+  const refetchAllData = async (options: { preloadPages?: boolean; notify?: boolean } = {}) => {
+    const { preloadPages = false, notify = true } = options;
     try {
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ["userData"] }),
@@ -36,7 +39,25 @@ export const useGlobalDataOperations = () => {
       const userData = await queryClient.refetchQueries({
         queryKey: ["userData", "current"],
       });
-      toast.success("Data refreshed!")
+
+      // Preload navigation pages if requested
+      if (preloadPages) {
+        const routes = [
+          "/",
+          "/plans", 
+          "/add",
+          "/ap-search",
+        ];
+        
+        routes.forEach(route => {
+          router.prefetch(route);
+        });
+      }
+
+      if (notify) {
+        toast.success("Data refreshed!");
+      }
+      
       return userData;
     } catch (err) {
       console.error("Failed to refresh all data:", err);
