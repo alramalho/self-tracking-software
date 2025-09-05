@@ -1,5 +1,6 @@
 "use client";
 
+import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -23,6 +24,7 @@ export default function GeneralInitializer({
   const { isSignedIn, isLoaded: isClerkLoaded } = useSession();
   const { currentUser, hasLoadedUserData, updateUser } = useCurrentUser();
   const { isAppInstalled, isPushGranted } = useNotifications();
+  const { refetchAllData } = useGlobalDataOperations();
   const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
   const pathname = usePathname();
@@ -58,6 +60,7 @@ export default function GeneralInitializer({
           is_push_granted: isPushGranted,
         });
         setHasRanPosthogIdentify(true);
+        refetchAllData();
       }
       if (
         currentUser.timezone !==
