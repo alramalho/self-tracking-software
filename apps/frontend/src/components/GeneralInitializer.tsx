@@ -30,6 +30,7 @@ export default function GeneralInitializer({
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
     const router = useRouter();
+  const [hasUpdatedTimezone, setHasUpdatedTimezone] = useState(false);
 
   const email = currentUser?.email || "";
   const isOnboardingPage = pathname.startsWith("/onboarding");
@@ -60,12 +61,14 @@ export default function GeneralInitializer({
           is_push_granted: isPushGranted,
         });
         setHasRanPosthogIdentify(true);
-        refetchAllData({preloadPages: true, notify: false});
+        // refetchAllData({preloadPages: true, notify: false});
       }
       if (
+        !hasUpdatedTimezone &&
         currentUser.timezone !==
         Intl.DateTimeFormat().resolvedOptions().timeZone
       ) {
+        setHasUpdatedTimezone(true);
         updateUser({
           updates: {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -82,6 +85,7 @@ export default function GeneralInitializer({
     currentUser,
     hasRanPosthogIdentify,
     isAppInstalled,
+    hasUpdatedTimezone,
     isPushGranted,
   ]);
 

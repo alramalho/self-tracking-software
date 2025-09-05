@@ -282,12 +282,14 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
   const {currentUser, refetchCurrentUser} = useCurrentUser();
 
   useEffect(() => {
+    if (!open) return;
+    
     const interval = setInterval(() => {
       refetchCurrentUser(false);
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [refetchCurrentUser]);
+  }, [refetchCurrentUser, open]);
   
   const isUserPremium = currentUser?.planType === 'PLUS';
 
