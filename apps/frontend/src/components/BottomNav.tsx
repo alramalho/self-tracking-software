@@ -10,14 +10,11 @@ import { BaseLoweredThemeColor } from "@/utils/theme";
 import {
   ChartArea,
   Home,
-  Loader2,
   PlusSquare,
   Search,
   User,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 // This forces Tailwind to include these classes in the build
 const themeTextClasses: Record<BaseLoweredThemeColor, string> = {
@@ -31,14 +28,10 @@ const themeTextClasses: Record<BaseLoweredThemeColor, string> = {
 
 const BottomNav = () => {
   const { notificationCount } = useNotifications();
-  const [isLoadingFeed, setIsLoadingFeed] = useState(false);
-  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
-  const [isLoadingLog, setIsLoadingLog] = useState(false);
-  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const { currentUser } = useCurrentUser();
   const userUsername = currentUser?.username;
   const pathname = usePathname();
+  const router = useRouter();
   const themeColors = useThemeColors();
   const { effectiveTheme } = useTheme();
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -47,14 +40,6 @@ const BottomNav = () => {
     if (route === "/") return pathname === "/";
     return pathname.startsWith(route);
   };
-
-  useEffect(() => {
-    setIsLoadingFeed(false);
-    setIsLoadingPlans(false);
-    setIsLoadingLog(false);
-    setIsLoadingInsights(false);
-    setIsLoadingProfile(false);
-  }, [pathname]);
 
   if (!userUsername) {
     return null;
@@ -77,8 +62,7 @@ const BottomNav = () => {
             ? "flex flex-col justify-start items-stretch h-full px-4 space-y-2"
             : "flex justify-around items-center py-2 px-4"
         )}>
-          <Link
-            href="/"
+          <button
             data-testid="nav-home"
             className={cn(
               "transition-all duration-200 relative",
@@ -92,18 +76,10 @@ const BottomNav = () => {
                   )
                 : "text-gray-500 hover:text-gray-700"
             )}
-            onClick={() => {
-              if (pathname !== "/") {
-                setIsLoadingFeed(true);
-              }
-            }}
+            onClick={() => router.push("/", { scroll: false })}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingFeed ? (
-                <Loader2 size={24} className="animate-spin" />
-              ) : (
-                <Home size={24} strokeWidth={2.5} />
-              )}
+              <Home size={24} strokeWidth={2.5} />
             </div>
             {notificationCount > 0 && (
               <div className={cn(
@@ -122,10 +98,9 @@ const BottomNav = () => {
             )}>
               Home
             </span>
-          </Link>
+          </button>
 
-          <Link
-            href="/plans"
+          <button
             data-testid="nav-plans"
             className={cn(
               "transition-all duration-200",
@@ -139,18 +114,10 @@ const BottomNav = () => {
                   )
                 : "text-gray-500 hover:text-gray-700"
             )}
-            onClick={() => {
-              if (pathname !== "/plans") {
-                setIsLoadingPlans(true);
-              }
-            }}
+            onClick={() => router.push("/plans", { scroll: false })}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingPlans ? (
-                <Loader2 size={24} className="animate-spin" />
-              ) : (
-                <ChartArea size={24} strokeWidth={2.5} />
-              )}
+              <ChartArea size={24} strokeWidth={2.5} />
             </div>
             <span className={cn(
               "font-medium",
@@ -161,10 +128,9 @@ const BottomNav = () => {
             )}>
               Plans
             </span>
-          </Link>
+          </button>
 
-          <Link
-            href="/add"
+          <button
             data-testid="nav-add"
             className={cn(
               "transition-all duration-200 relative",
@@ -178,16 +144,10 @@ const BottomNav = () => {
                   )
                 : "text-gray-500 hover:text-gray-700"
             )}
-            onClick={() => {
-              if (pathname !== "/add") {
-                setIsLoadingLog(true);
-              }
-            }}
+            onClick={() => router.push("/add", { scroll: false })}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingLog ? (
-                <Loader2 size={30} className="animate-spin" />
-              ) : isDesktop ? (
+              {isDesktop ? (
                 <PlusSquare size={24} strokeWidth={2.5} className={cn(isDesktop ? "" : activeThemeClass)} />
               ) : (
                 <div className={`${!isDesktop ? themeColors.primary : "bg-gray-100/80"} rounded-full p-2`}>
@@ -208,10 +168,9 @@ const BottomNav = () => {
             )}>
               Add
             </span>
-          </Link>
+          </button>
 
-          <Link
-            href="/ap-search"
+          <button
             data-testid="nav-search"
             className={cn(
               "relative transition-all duration-200",
@@ -225,18 +184,10 @@ const BottomNav = () => {
                   )
                 : "text-gray-500 hover:text-gray-700"
             )}
-            onClick={() => {
-              if (!pathname.startsWith("/ap-search")) {
-                setIsLoadingInsights(true);
-              }
-            }}
+            onClick={() => router.push("/ap-search", { scroll: false })}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingInsights ? (
-                <Loader2 size={24} className="animate-spin" />
-              ) : (
-                <Search size={24} strokeWidth={2.5} />
-              )}
+              <Search size={24} strokeWidth={2.5} />
             </div>
             <span className={cn(
               "font-medium",
@@ -247,10 +198,9 @@ const BottomNav = () => {
             )}>
               Search
             </span>
-          </Link>
+          </button>
 
-          <Link
-            href={`/profile/${userUsername}`}
+          <button
             data-testid="nav-profile"
             className={cn(
               "relative transition-all duration-200",
@@ -264,18 +214,10 @@ const BottomNav = () => {
                   )
                 : "text-gray-500 hover:text-gray-700"
             )}
-            onClick={() => {
-              if (!pathname.startsWith(`/profile/${userUsername}`)) {
-                setIsLoadingProfile(true);
-              }
-            }}
+            onClick={() => router.push(`/profile/${userUsername}`, { scroll: false })}
           >
             <div className={cn(isDesktop ? "mr-3" : "")}>
-              {isLoadingProfile ? (
-                <Loader2 size={24} className="animate-spin" />
-              ) : (
-                <User size={24} strokeWidth={2.5} />
-              )}
+              <User size={24} strokeWidth={2.5} />
             </div>
             <span className={cn(
               "font-medium",
@@ -286,7 +228,7 @@ const BottomNav = () => {
             )}>
               Profile
             </span>
-          </Link>
+          </button>
         </div>
       </nav>
     </>

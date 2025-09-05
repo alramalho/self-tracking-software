@@ -60,7 +60,7 @@ export default function GeneralInitializer({
           is_push_granted: isPushGranted,
         });
         setHasRanPosthogIdentify(true);
-        // refetchAllData();
+        refetchAllData({preloadPages: true, notify: false});
       }
       if (
         currentUser.timezone !==
