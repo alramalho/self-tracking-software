@@ -221,6 +221,8 @@ model MetricEntry {
   @@index([userId])
   @@index([metricId])
   @@index([createdAt])
+  @@index([userId, date])
+  @@index([metricId, date])
   @@map("metric_entries")
 }
 
@@ -278,6 +280,7 @@ model PlanSession {
   @@index([planId])
   @@index([planId, isCoachSuggested])
   @@index([activityId])
+  @@index([planId, isCoachSuggested, date])
   @@map("plan_sessions")
 }
 
