@@ -37,6 +37,7 @@
     "@tsw/prisma": "workspace:*",
     "@types/node": "^20.4.0",
     "@types/stripe": "^8.0.416",
+    "@types/web-push": "^3.6.4",
     "ai": "^5.0.22",
     "axios": "^1.4.0",
     "bcrypt": "^5.1.0",
