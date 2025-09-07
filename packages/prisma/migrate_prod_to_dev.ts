@@ -1,5 +1,5 @@
+import * as readline from "readline";
 import { PrismaClient } from "./index";
-import * as readline from 'readline';
 
 // Source database (production)
 const sourcePrisma = new PrismaClient({
@@ -19,68 +19,78 @@ const targetPrisma = new PrismaClient({
   },
 });
 
-const isDevelopment = () => process.env.NODE_ENV === 'development';
+const isDevelopment = () => process.env.NODE_ENV === "development";
 
 function maskDatabaseUrl(url: string): string {
-  if (!url) return 'undefined';
+  if (!url) return "undefined";
   // Keep only the protocol, host, and database name visible
-  const urlParts = url.match(/^(postgresql:\/\/)([^:]+:[^@]+@)?([^\/]+)\/(.+)$/);
+  const urlParts = url.match(
+    /^(postgresql:\/\/)([^:]+:[^@]+@)?([^\/]+)\/(.+)$/
+  );
   if (urlParts) {
     const [, protocol, credentials, host, dbName] = urlParts;
-    const maskedCredentials = credentials ? '***:***@' : '';
+    const maskedCredentials = credentials ? "***:***@" : "";
     return `${protocol}${maskedCredentials}${host}/${dbName}`;
   }
-  return url.substring(0, 20) + '...';
+  return url.substring(0, 20) + "...";
 }
 
 async function confirmMigration(): Promise<boolean> {
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
 
-  console.log('\n⚠️  DATABASE MIGRATION WARNING ⚠️');
-  console.log('=====================================\n');
-  
-  console.log('This operation will:');
-  console.log('1. ❌ COMPLETELY WIPE the target database');
-  console.log('2. 📋 Copy ALL data from production to development');
-  console.log('3. 🔄 This action CANNOT be undone\n');
-  
-  console.log('Source (PROD):  ', maskDatabaseUrl(process.env.PROD_DATABASE_URL!));
-  console.log('Target (DEV):   ', maskDatabaseUrl(process.env.DEV_DATABASE_URL!));
-  console.log('\n⚠️  ALL DATA in the DEV database will be PERMANENTLY DELETED!\n');
+  console.log("\n⚠️  DATABASE MIGRATION WARNING ⚠️");
+  console.log("=====================================\n");
+
+  console.log("This operation will:");
+  console.log("1. ❌ COMPLETELY WIPE the target database");
+  console.log("2. 📋 Copy ALL data from production to development");
+  console.log("3. 🔄 This action CANNOT be undone\n");
+
+  console.log(
+    "Source (PROD):  ",
+    maskDatabaseUrl(process.env.PROD_DATABASE_URL!)
+  );
+  console.log(
+    "Target (DEV):   ",
+    maskDatabaseUrl(process.env.DEV_DATABASE_URL!)
+  );
+  console.log(
+    "\n⚠️  ALL DATA in the DEV database will be PERMANENTLY DELETED!\n"
+  );
 
   return new Promise((resolve) => {
     rl.question('Type "CONFIRM" to proceed with the migration: ', (answer) => {
       rl.close();
-      resolve(answer.trim() === 'CONFIRM');
+      resolve(answer.trim() === "CONFIRM");
     });
   });
 }
 
 async function clearTargetDatabase() {
   console.info("Clearing target database...");
-  
+
   // Clear in reverse dependency order to avoid foreign key constraints
   const tables = [
-    'message_emotions',
-    'recommendations', 
-    'notifications',
-    'messages',
-    'plan_invitations',
-    'plan_milestones',
-    'plan_sessions',
-    'plans',
-    'connections',
-    'comments',
-    'reactions', 
-    'activity_entries',
-    'metric_entries',
-    'activities',
-    'metrics',
-    'users',
-    'plan_groups'
+    "message_emotions",
+    "recommendations",
+    "notifications",
+    "messages",
+    "plan_invitations",
+    "plan_milestones",
+    "plan_sessions",
+    "plans",
+    "connections",
+    "comments",
+    "reactions",
+    "activity_entries",
+    "metric_entries",
+    "activities",
+    "metrics",
+    "users",
+    "plan_groups",
   ];
 
   for (const table of tables) {
@@ -106,31 +116,32 @@ async function migrateData() {
       include: {
         referredBy: true,
         referredUsers: true,
-      }
+      },
     });
-    
-    // First pass: Create all users without referral relationships
-    const userIdMap = new Map<string, string>();
+
+    // First pass: Upsert all users without referral relationships
     for (const user of users) {
       const { id, referredBy, referredUsers, ...userData } = user;
-      const newUser = await targetPrisma.user.create({
-        data: {
+      await targetPrisma.user.upsert({
+        where: { id },
+        create: {
+          id,
+          ...userData,
+          referredById: null, // Will be updated in second pass
+        },
+        update: {
           ...userData,
           referredById: null, // Will be updated in second pass
         },
       });
-      userIdMap.set(id, newUser.id);
     }
 
     // Second pass: Update referral relationships
     for (const user of users) {
-      if (user.referredById && userIdMap.has(user.referredById)) {
-        const newUserId = userIdMap.get(user.id)!;
-        const newReferredById = userIdMap.get(user.referredById)!;
-        
+      if (user.referredById) {
         await targetPrisma.user.update({
-          where: { id: newUserId },
-          data: { referredById: newReferredById },
+          where: { id: user.id },
+          data: { referredById: user.referredById },
         });
       }
     }
@@ -140,110 +151,132 @@ async function migrateData() {
     // Step 3: Migrate PlanGroups
     console.info("Migrating plan groups...");
     const planGroups = await sourcePrisma.planGroup.findMany({
-      include: { members: true }
+      include: { members: true },
     });
-    
-    const planGroupIdMap = new Map<string, string>();
+
     for (const planGroup of planGroups) {
       const { id, members, ...planGroupData } = planGroup;
-      const newPlanGroup = await targetPrisma.planGroup.create({
-        data: {
+      await targetPrisma.planGroup.upsert({
+        where: { id },
+        create: {
+          id,
           ...planGroupData,
           members: {
-            connect: members.map(member => ({ id: userIdMap.get(member.id)! }))
-          }
+            connect: members.map((member) => ({ id: member.id })),
+          },
+        },
+        update: {
+          ...planGroupData,
+          members: {
+            set: members.map((member) => ({ id: member.id })),
+          },
         },
       });
-      planGroupIdMap.set(id, newPlanGroup.id);
     }
     console.info(`Migrated ${planGroups.length} plan groups`);
 
     // Step 4: Migrate Activities
     console.info("Migrating activities...");
     const activities = await sourcePrisma.activity.findMany();
-    const activityIdMap = new Map<string, string>();
-    
+
     for (const activity of activities) {
       const { id, ...activityData } = activity;
-      const newActivity = await targetPrisma.activity.create({
-        data: {
+      await targetPrisma.activity.upsert({
+        where: { id },
+        create: {
+          id,
           ...activityData,
-          userId: userIdMap.get(activity.userId)!,
+        },
+        update: {
+          ...activityData,
         },
       });
-      activityIdMap.set(id, newActivity.id);
     }
     console.info(`Migrated ${activities.length} activities`);
 
     // Step 5: Migrate Metrics
     console.info("Migrating metrics...");
     const metrics = await sourcePrisma.metric.findMany();
-    const metricIdMap = new Map<string, string>();
-    
+
     for (const metric of metrics) {
       const { id, ...metricData } = metric;
-      const newMetric = await targetPrisma.metric.create({
-        data: {
+      await targetPrisma.metric.upsert({
+        where: { id },
+        create: {
+          id,
           ...metricData,
-          userId: userIdMap.get(metric.userId)!,
+        },
+        update: {
+          ...metricData,
         },
       });
-      metricIdMap.set(id, newMetric.id);
     }
     console.info(`Migrated ${metrics.length} metrics`);
 
     // Step 6: Migrate Plans
     console.info("Migrating plans...");
     const plans = await sourcePrisma.plan.findMany({
-      include: { activities: true }
+      include: { activities: true },
     });
-    const planIdMap = new Map<string, string>();
-    
+
     for (const plan of plans) {
       const { id, activities: planActivities, ...planData } = plan;
-      const newPlan = await targetPrisma.plan.create({
-        data: {
+      await targetPrisma.plan.upsert({
+        where: { id },
+        create: {
+          id,
           ...planData,
-          userId: userIdMap.get(plan.userId)!,
-          planGroupId: plan.planGroupId ? planGroupIdMap.get(plan.planGroupId)! : null,
           activities: {
-            connect: planActivities.map(activity => ({ id: activityIdMap.get(activity.id)! }))
-          }
+            connect: planActivities.map((activity) => ({
+              id: activity.id,
+            })),
+          },
+        },
+        update: {
+          ...planData,
+          activities: {
+            set: planActivities.map((activity) => ({
+              id: activity.id,
+            })),
+          },
         },
       });
-      planIdMap.set(id, newPlan.id);
     }
     console.info(`Migrated ${plans.length} plans`);
 
     // Step 7: Migrate Activity Entries
     console.info("Migrating activity entries...");
     const activityEntries = await sourcePrisma.activityEntry.findMany();
-    const activityEntryIdMap = new Map<string, string>();
-    
+
     for (const entry of activityEntries) {
       const { id, ...entryData } = entry;
-      const newEntry = await targetPrisma.activityEntry.create({
-        data: {
+      await targetPrisma.activityEntry.upsert({
+        where: { id },
+        create: {
+          id,
           ...entryData,
-          userId: userIdMap.get(entry.userId)!,
-          activityId: activityIdMap.get(entry.activityId)!,
+        },
+        update: {
+          ...entryData,
         },
       });
-      activityEntryIdMap.set(id, newEntry.id);
     }
     console.info(`Migrated ${activityEntries.length} activity entries`);
 
     // Step 8: Migrate Metric Entries
     console.info("Migrating metric entries...");
     const metricEntries = await sourcePrisma.metricEntry.findMany();
-    
+
     for (const entry of metricEntries) {
       const { id, ...entryData } = entry;
-      await targetPrisma.metricEntry.create({
-        data: {
+      await targetPrisma.metricEntry.upsert({
+        where: { id },
+        create: {
+          id,
           ...entryData,
-          userId: userIdMap.get(entry.userId)!,
-          metricId: metricIdMap.get(entry.metricId)!,
+        },
+        update: {
+          ...entryData,
         },
       });
     }
@@ -252,14 +285,17 @@ async function migrateData() {
     // Step 9: Migrate Plan Sessions
     console.info("Migrating plan sessions...");
     const planSessions = await sourcePrisma.planSession.findMany();
-    
+
     for (const session of planSessions) {
       const { id, ...sessionData } = session;
-      await targetPrisma.planSession.create({
-        data: {
+      await targetPrisma.planSession.upsert({
+        where: { id },
+        create: {
+          id,
           ...sessionData,
-          planId: planIdMap.get(session.planId)!,
-          activityId: activityIdMap.get(session.activityId)!,
+        },
+        update: {
+          ...sessionData,
         },
       });
     }
@@ -268,13 +304,18 @@ async function migrateData() {
     // Step 10: Migrate Plan Milestones
     console.info("Migrating plan milestones...");
     const planMilestones = await sourcePrisma.planMilestone.findMany();
-    
+
     for (const milestone of planMilestones) {
-      const { id, planId, ...milestoneData } = milestone;
-      await targetPrisma.planMilestone.create({
-        data: {
+      const { id, ...milestoneData } = milestone;
+      await targetPrisma.planMilestone.upsert({
+        where: { id },
+        create: {
+          id,
           ...milestoneData,
-          planId: planIdMap.get(planId)!,
+          criteria: milestone.criteria as any, // Handle JsonValue type
+        },
+        update: {
+          ...milestoneData,
           criteria: milestone.criteria as any, // Handle JsonValue type
         },
       });
@@ -284,14 +325,17 @@ async function migrateData() {
     // Step 11: Migrate Connections
     console.info("Migrating connections...");
     const connections = await sourcePrisma.connection.findMany();
-    
+
     for (const connection of connections) {
       const { id, ...connectionData } = connection;
-      await targetPrisma.connection.create({
-        data: {
+      await targetPrisma.connection.upsert({
+        where: { id },
+        create: {
+          id,
           ...connectionData,
-          fromId: userIdMap.get(connection.fromId)!,
-          toId: userIdMap.get(connection.toId)!,
+        },
+        update: {
+          ...connectionData,
         },
       });
     }
@@ -300,33 +344,36 @@ async function migrateData() {
     // Step 12: Migrate Plan Invitations
     console.info("Migrating plan invitations...");
     const planInvitations = await sourcePrisma.planInvitation.findMany();
-    const planInvitationIdMap = new Map<string, string>();
-    
+
     for (const invitation of planInvitations) {
       const { id, ...invitationData } = invitation;
-      const newInvitation = await targetPrisma.planInvitation.create({
-        data: {
+      await targetPrisma.planInvitation.upsert({
+        where: { id },
+        create: {
+          id,
           ...invitationData,
-          planId: planIdMap.get(invitation.planId)!,
-          senderId: userIdMap.get(invitation.senderId)!,
-          recipientId: userIdMap.get(invitation.recipientId)!,
+        },
+        update: {
+          ...invitationData,
         },
       });
-      planInvitationIdMap.set(id, newInvitation.id);
     }
     console.info(`Migrated ${planInvitations.length} plan invitations`);
 
     // Step 13: Migrate Reactions
     console.info("Migrating reactions...");
     const reactions = await sourcePrisma.reaction.findMany();
-    
+
     for (const reaction of reactions) {
       const { id, ...reactionData } = reaction;
-      await targetPrisma.reaction.create({
-        data: {
+      await targetPrisma.reaction.upsert({
+        where: { id },
+        create: {
+          id,
           ...reactionData,
-          userId: userIdMap.get(reaction.userId)!,
-          activityEntryId: activityEntryIdMap.get(reaction.activityEntryId)!,
+        },
+        update: {
+          ...reactionData,
         },
       });
     }
@@ -335,42 +382,67 @@ async function migrateData() {
     // Step 14: Migrate Comments
     console.info("Migrating comments...");
     const comments = await sourcePrisma.comment.findMany();
-    
+    let migratedComments = 0;
+    let skippedComments = 0;
+
     for (const comment of comments) {
-      const { id, ...commentData } = comment;
-      await targetPrisma.comment.create({
-        data: {
-          ...commentData,
-          activityEntryId: activityEntryIdMap.get(comment.activityEntryId)!,
-        },
-      });
+      try {
+        const { id, ...commentData } = comment;
+        await targetPrisma.comment.upsert({
+          where: { id },
+          create: {
+            id,
+            ...commentData,
+          },
+          update: {
+            ...commentData,
+          },
+        });
+        migratedComments++;
+      } catch (error) {
+        console.warn(
+          `Skipping comment ${comment.id} due to constraint violation:`,
+          error instanceof Error ? error.message : String(error)
+        );
+        skippedComments++;
+      }
     }
-    console.info(`Migrated ${comments.length} comments`);
+    console.info(
+      `Migrated ${migratedComments} comments, skipped ${skippedComments} due to constraint violations`
+    );
 
     // Step 15: Migrate Messages
     console.info("Migrating messages...");
     const messages = await sourcePrisma.message.findMany({
-      include: { emotions: true }
+      include: { emotions: true },
     });
-    const messageIdMap = new Map<string, string>();
-    
+
     for (const message of messages) {
       const { id, emotions, ...messageData } = message;
-      const newMessage = await targetPrisma.message.create({
-        data: {
+      await targetPrisma.message.upsert({
+        where: { id },
+        create: {
+          id,
           ...messageData,
-          userId: userIdMap.get(message.userId)!,
+        },
+        update: {
+          ...messageData,
         },
       });
-      messageIdMap.set(id, newMessage.id);
 
       // Migrate message emotions
       for (const emotion of emotions) {
         const { id: emotionId, ...emotionData } = emotion;
-        await targetPrisma.messageEmotion.create({
-          data: {
+        await targetPrisma.messageEmotion.upsert({
+          where: { id: emotionId },
+          create: {
+            id: emotionId,
             ...emotionData,
-            messageId: newMessage.id,
+            messageId: message.id,
+          },
+          update: {
+            ...emotionData,
+            messageId: message.id,
           },
         });
       }
@@ -380,13 +452,18 @@ async function migrateData() {
     // Step 16: Migrate Notifications
     console.info("Migrating notifications...");
     const notifications = await sourcePrisma.notification.findMany();
-    
+
     for (const notification of notifications) {
       const { id, ...notificationData } = notification;
-      await targetPrisma.notification.create({
-        data: {
+      await targetPrisma.notification.upsert({
+        where: { id },
+        create: {
+          id,
           ...notificationData,
-          userId: userIdMap.get(notification.userId)!,
+          relatedData: notification.relatedData as any, // Handle JsonValue type
+        },
+        update: {
+          ...notificationData,
           relatedData: notification.relatedData as any, // Handle JsonValue type
         },
       });
@@ -396,13 +473,18 @@ async function migrateData() {
     // Step 17: Migrate Recommendations
     console.info("Migrating recommendations...");
     const recommendations = await sourcePrisma.recommendation.findMany();
-    
+
     for (const recommendation of recommendations) {
       const { id, ...recommendationData } = recommendation;
-      await targetPrisma.recommendation.create({
-        data: {
+      await targetPrisma.recommendation.upsert({
+        where: { id },
+        create: {
+          id,
           ...recommendationData,
-          userId: userIdMap.get(recommendation.userId)!,
+          metadata: recommendation.metadata as any, // Handle JsonValue type
+        },
+        update: {
+          ...recommendationData,
           metadata: recommendation.metadata as any, // Handle JsonValue type
         },
       });
@@ -412,23 +494,26 @@ async function migrateData() {
     // Post-processing: Update alex user with specific Clerk ID
     console.info("Post-processing: Updating alex user with Clerk ID...");
     const alexUser = await targetPrisma.user.findUnique({
-      where: { username: "alex" }
+      where: { username: "alex" },
     });
-    
+
     if (alexUser) {
       await targetPrisma.user.update({
         where: { id: alexUser.id },
         data: {
-          clerkId: "user_30bDMTLDj4WYYD4h7VpYoQm9gAD"
-        }
+          clerkId: "user_30bDMTLDj4WYYD4h7VpYoQm9gAD",
+        },
       });
-      console.info("✅ Updated alex user with Clerk ID: user_30bDMTLDj4WYYD4h7VpYoQm9gAD");
+      console.info(
+        "✅ Updated alex user with Clerk ID: user_30bDMTLDj4WYYD4h7VpYoQm9gAD"
+      );
     } else {
-      console.warn("⚠️  User with username 'alex' not found - skipping Clerk ID update");
+      console.warn(
+        "⚠️  User with username 'alex' not found - skipping Clerk ID update"
+      );
     }
 
     console.info("Migration completed successfully! 🎉");
-    
   } catch (error) {
     console.error("Error during migration:", error);
     throw error;
@@ -454,11 +539,11 @@ async function main() {
   // Show confirmation prompt
   const confirmed = await confirmMigration();
   if (!confirmed) {
-    console.log('\n❌ Migration cancelled by user.');
+    console.log("\n❌ Migration cancelled by user.");
     process.exit(0);
   }
 
-  console.log('\n✅ Migration confirmed. Starting data transfer...\n');
+  console.log("\n✅ Migration confirmed. Starting data transfer...\n");
 
   try {
     await migrateData();
