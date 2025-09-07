@@ -300,36 +300,26 @@ export class RecommendationsService {
       });
 
       const userPlans = await Promise.all(
-        recommendedUserIds.map(async (id) => {
-          return prisma.plan.findMany({
+        recommendedUsers.map(async (user) => {
+          const activePlans = await prisma.plan.findMany({
             where: {
-              userId: id,
+              userId: user.id,
               deletedAt: null,
-              finishingDate: { gt: new Date() },
+              OR: [
+                { finishingDate: null },
+                { finishingDate: { gt: new Date() } },
+              ],
             },
           });
+
+          return activePlans;
         })
       );
-      const planIds = userPlans.flat().map((p) => p.id);
-
-      const plans = await prisma.plan.findMany({
-        where: { id: { in: planIds } },
-        include: {
-          activities: {
-            select: {
-              id: true,
-              title: true,
-              emoji: true,
-              measure: true,
-            },
-          },
-        },
-      });
 
       return {
         recommendations: recommendations as any,
         users: recommendedUsers,
-        plans,
+        plans: userPlans.flat(),
       };
     } catch (error) {
       logger.error("Error getting recommended users:", error);
