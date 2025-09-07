@@ -22,7 +22,7 @@ const PlanActivityEntriesRenderer: React.FC<
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
 
   const planActivityEntries = activityEntries.filter((e) =>
-    plan.activities.map((a) => a.id).includes(e.activityId)
+    plan.activities?.map((a) => a.id).includes(e.activityId)
   );
 
   const beginingOfWeekOfFirstActivityEntry = useMemo(() => {

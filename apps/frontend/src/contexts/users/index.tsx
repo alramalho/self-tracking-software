@@ -15,7 +15,7 @@ import React, {
 import { toast } from "react-hot-toast";
 import {
   getCurrentUserBasicData,
-  getUserBasicDataByUserNameOrId,
+  getUserFullDataByUserNameOrId,
   HydratedCurrentUser,
   updateUser as updateUserAction,
 } from "./actions";
@@ -235,7 +235,7 @@ export const useUsers = (
 
   const query = useQuery({
     queryKey,
-    queryFn: () => getUserBasicDataByUserNameOrId(data),
+    queryFn: () => getUserFullDataByUserNameOrId(data),
     enabled: isSignedIn && identifier.length > 0,
     staleTime: 1000 * 60 * 5,
   });
@@ -257,7 +257,7 @@ export const useUser = (
   const query = useQuery({
     queryKey: ["user", identifier],
     queryFn: async () => {
-      const users = await getUserBasicDataByUserNameOrId([data]);
+      const users = await getUserFullDataByUserNameOrId([data]);
       return users[0];
     },
     enabled: isSignedIn && !!identifier,

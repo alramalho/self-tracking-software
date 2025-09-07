@@ -127,7 +127,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         <span className="text-sm font-semibold">Today / Selected</span>
 
         {!noActivityLegend &&
-          activities.map((activity, index) => (
+          activities?.map((activity, index) => (
             <React.Fragment key={index}>
               <div className="flex flex-row gap-0 items-center">
                 {activity.colorHex

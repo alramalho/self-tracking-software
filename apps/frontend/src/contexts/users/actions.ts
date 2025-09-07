@@ -8,7 +8,7 @@ export type HydratedCurrentUser = Awaited<
   ReturnType<typeof getCurrentUserBasicData>
 >;
 export type HydratedUser = Awaited<
-  ReturnType<typeof getUserBasicDataByUserNameOrId>
+  ReturnType<typeof getUserFullDataByUserNameOrId>
 >;
 
 export async function getCurrentUserBasicData() {
@@ -52,7 +52,7 @@ export async function getCurrentUserBasicData() {
   };
 }
 
-export async function getUserBasicDataByUserNameOrId(
+export async function getUserFullDataByUserNameOrId(
   data: Array<{
     username?: string;
     id?: string;
@@ -76,6 +76,25 @@ export async function getUserBasicDataByUserNameOrId(
       OR: where,
     },
     include: {
+      plans: {
+        where: {
+          deletedAt: null,
+          OR: [{ finishingDate: { gt: new Date() } }, { finishingDate: null }],
+        },
+        include: {
+          activities: true,
+        },
+      },
+      activities: {
+        where: {
+          deletedAt: null,
+        },
+      },
+      activityEntries: {
+        where: {
+          deletedAt: null,
+        },
+      },
       connectionsFrom: {
         where: { status: "ACCEPTED" },
         include: {
@@ -92,7 +111,6 @@ export async function getUserBasicDataByUserNameOrId(
           },
         },
       },
-      plans: true,
     },
   });
 
@@ -126,5 +144,5 @@ export async function updateUser(data: Prisma.UserUpdateInput) {
 
 export type UserBasicData = Awaited<ReturnType<typeof getCurrentUserBasicData>>;
 export type PublicUserData = Awaited<
-  ReturnType<typeof getUserBasicDataByUserNameOrId>
+  ReturnType<typeof getUserFullDataByUserNameOrId>
 >;
