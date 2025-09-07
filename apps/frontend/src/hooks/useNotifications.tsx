@@ -4,6 +4,7 @@ import { useApiWithAuth } from "@/api";
 import { isNotifySupported } from "@/app/swSupport";
 import { useDailyCheckin } from "@/contexts/DailyCheckinContext";
 import { useDataNotifications } from "@/contexts/notifications";
+import { useCurrentUser } from "@/contexts/users";
 import { arrayBufferToBase64Async } from "@/lib/utils";
 import { useSession } from "@clerk/nextjs";
 import { Notification as PrismaNotification } from "@tsw/prisma";
@@ -47,6 +48,7 @@ export const NotificationsProvider = ({
   children: ReactNode;
 }) => {
   const { notifications } = useDataNotifications();
+  const { updateUser } = useCurrentUser();
   const { isSignedIn } = useSession();
   const [notificationCount, setNotificationCount] = useState(0);
   const { shouldShowNotification } = useDailyCheckin();
@@ -285,12 +287,16 @@ export const NotificationsProvider = ({
         const auth = await arrayBufferToBase64Async(
           subscription.getKey("auth")!
         );
-        await api.post("/notifications/update-pwa-status", {
-          is_pwa_installed: true,
-          is_pwa_notifications_enabled: true,
-          pwa_subscription_endpoint: subscription.endpoint,
-          pwa_subscription_key: p256dh,
-          pwa_subscription_auth_token: auth,
+        
+        await updateUser({
+          updates: {
+            isPwaInstalled: true,
+            isPwaNotificationsEnabled: true,
+            pwaSubscriptionEndpoint: subscription.endpoint,
+            pwaSubscriptionKey: p256dh,
+            pwaSubscriptionAuthToken: auth,
+          },
+          muteNotifications: true,
         });
       } catch (error) {
         console.error("Failed to update PWA status:", error);
