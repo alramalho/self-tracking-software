@@ -25,7 +25,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -113,12 +113,13 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
     undefined
   );
 
-  const canGenerateNewMessage = useMemo(() => {
-    if (isDemo) return false;
-    if (!lastTimeCoachMessageWasGenerated) return true;
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    return new Date(lastTimeCoachMessageWasGenerated) < twoHoursAgo;
-  }, [lastTimeCoachMessageWasGenerated, isDemo]);
+  const canGenerateNewMessage = true
+  // const canGenerateNewMessage = useMemo(() => {
+  //   if (isDemo) return false;
+  //   if (!lastTimeCoachMessageWasGenerated) return true;
+  //   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  //   return new Date(lastTimeCoachMessageWasGenerated) < twoHoursAgo;
+  // }, [lastTimeCoachMessageWasGenerated, isDemo]);
 
   // Function to generate coach message
   const generateCoachMessage = async () => {

@@ -11,6 +11,10 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
 export class PlansService {
+  constructor() {
+    // Inject this service into aiService to avoid circular dependency
+    aiService.setPlansService(this);
+  }
   async getUserFirstPlan(userId: string) {
     try {
       const plans = await prisma.plan.findMany({

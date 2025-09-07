@@ -19,7 +19,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 import { Button } from "./ui/button";
 import {
   Collapsible,
@@ -41,10 +41,6 @@ const TimelineRenderer: React.FC<{
   const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] =
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    console.log("isLoadingTimeline", isLoadingTimeline);
-  }, [isLoadingTimeline]);
 
   if (isLoadingTimeline && !timelineData) {
     return (
