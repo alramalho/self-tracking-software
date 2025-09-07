@@ -17,10 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { ActivityEntry } from "@tsw/prisma";
@@ -146,8 +146,6 @@ const ProfilePage: React.FC = () => {
   };
 
   const activitiesNotInPlans = useMemo(() => {
-    console.log("profileActivePlans", profileActivePlans);
-
     const plansActivityIds = new Set(
       profileActivePlans?.flatMap((plan) => plan.activities?.map((a) => a.id)) ||
         []
