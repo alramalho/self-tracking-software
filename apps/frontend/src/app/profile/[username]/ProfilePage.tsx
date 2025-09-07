@@ -16,10 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useActivities } from "@/contexts/activities";
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import { usePlans } from "@/contexts/plans";
-import { useCurrentUser, useUser } from "@/contexts/users";
+import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -67,18 +65,28 @@ const ProfilePage: React.FC = () => {
   const [initialActiveView, setInitialActiveView] = useState<string | null>(
     null
   );
-  const { currentUser, sendFriendRequest, acceptFriendRequest, rejectFriendRequest } = useCurrentUser();
-  const { activities, activityEntries} = useActivities();
-  const { plans } = usePlans();
   const params = useParams();
   const searchParams = useSearchParams();
   const username = params.username as string;
-  const { data: profileData, isLoading: isProfileDataLoading } = useUser({username});
+  const { 
+    profileData, 
+    isLoading: isProfileDataLoading, 
+    isOwnProfile,
+    sendFriendRequest,
+    acceptFriendRequest,
+    rejectFriendRequest,
+    currentUser
+  } = useUnifiedProfileData(username);
+  
+  // Extract activities and activityEntries from profileData for consistency
+  const activities = profileData?.activities || [];
+  const activityEntries = profileData?.activityEntries || [];
 
-  const currentUserSentConnectionRequests = currentUser?.connectionsFrom?.filter(conn => conn.status === 'PENDING');
-  const currentUserReceivedConnectionRequests = currentUser?.connectionsTo?.filter(conn => conn.status === 'PENDING');
+  // For connection requests, we always use the current user data regardless of profile being viewed
+  const currentUserSentConnectionRequests = currentUser?.connectionsFrom?.filter(conn => conn.status === 'PENDING') || [];
+  const currentUserReceivedConnectionRequests = currentUser?.connectionsTo?.filter(conn => conn.status === 'PENDING') || [];
 
-  const profileActivePlans = plans?.filter((p) => !isPlanExpired({finishingDate: p.finishingDate}));
+  const profileActivePlans = profileData?.plans?.filter((p) => !isPlanExpired({finishingDate: p.finishingDate}));
   const [showEditActivityEntry, setShowActivityToEdit] = useState<
     ActivityEntry | undefined
   >(undefined);
@@ -90,7 +98,6 @@ const ProfilePage: React.FC = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
-  const isOnesOwnProfile = currentUser?.id === profileData?.id;
   const profilePaidPlanType = profileData?.planType;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -100,18 +107,18 @@ const ProfilePage: React.FC = () => {
   );
 
   useEffect(() => {
-    if (currentUser?.username && !username) {
-      window.history.replaceState(null, "", `/profile/${currentUser.username}`);
+    if (profileData?.username && !username && isOwnProfile) {
+      window.history.replaceState(null, "", `/profile/${profileData.username}`);
     }
-  }, [currentUser?.username, username]);
+  }, [profileData?.username, username, isOwnProfile]);
 
   useEffect(() => {
     const activeView = searchParams.get("activeView");
-    if (activeView && isOnesOwnProfile) {
+    if (activeView && isOwnProfile) {
       setShowUserProfile(true);
       setInitialActiveView(activeView);
     }
-  }, [searchParams, isOnesOwnProfile]);
+  }, [searchParams, isOwnProfile]);
 
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
@@ -139,19 +146,21 @@ const ProfilePage: React.FC = () => {
   };
 
   const activitiesNotInPlans = useMemo(() => {
+    console.log("profileActivePlans", profileActivePlans);
+
     const plansActivityIds = new Set(
-      profileActivePlans?.flatMap((plan) => plan.activities.map((a) => a.id)) ||
+      profileActivePlans?.flatMap((plan) => plan.activities?.map((a) => a.id)) ||
         []
     );
 
-    const activitiesNotInPlans = activities.filter(
+    const activitiesNotInPlans = profileData?.activities?.filter(
       (activity) =>
         !plansActivityIds.has(activity.id) &&
-        activityEntries.some((entry) => entry.activityId === activity.id)
+        profileData?.activityEntries?.some((entry) => entry.activityId === activity.id)
     );
 
     return activitiesNotInPlans;
-  }, [profileData?.plans, activities, activityEntries]);
+  }, [profileActivePlans, profileData?.activities, profileData?.activityEntries]);
 
   const handleTimeRangeChange = (value: TimeRange) => {
     setTimeRange(value);
@@ -179,6 +188,10 @@ const ProfilePage: React.FC = () => {
   };
 
   const isFriend = () => {
+    // This only makes sense when looking at external profiles
+    // When viewing own profile, we can't be friends with ourselves
+    if (isOwnProfile) return false;
+    
     return currentUser?.friends?.some(
       (friend) => friend.id === profileData?.id
     );
@@ -233,7 +246,7 @@ const ProfilePage: React.FC = () => {
         <div
           className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-2xl bg-white/60 backdrop-blur-sm`}
         >
-          {!isOnesOwnProfile && (
+          {!isOwnProfile && (
             <button
               className="absolute -left-1 -top-1 p-2 rounded-full hover:bg-gray-100"
               onClick={() => window.history.back()}
@@ -273,7 +286,7 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col items-center gap-4">
-            {!isOnesOwnProfile && !isFriend() && (
+            {!isOwnProfile && !isFriend() && (
               <>
                 {hasPendingReceivedConnectionRequest() ? (
                   <div className="flex flex-col items-center gap-2">
@@ -333,7 +346,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               </Link>
 
-              {isOnesOwnProfile && (
+              {isOwnProfile && (
                 <>
                   <Button
                     variant="ghost"
@@ -341,7 +354,7 @@ const ProfilePage: React.FC = () => {
                     className="border-none"
                     onClick={() =>
                       shareOrCopyLink(
-                        `https://app.tracking.so/join/${currentUser?.username}`
+                        `https://app.tracking.so/join/${profileData?.username}`
                       )
                     }
                   >
@@ -428,7 +441,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {isOnesOwnProfile && (
+        {isOwnProfile && (
           <>
             <ProfileSettingsPopover
               open={showUserProfile}
@@ -544,12 +557,12 @@ const ProfilePage: React.FC = () => {
                 })}
               {(!profileActivePlans || profileActivePlans.length === 0) && (
                 <div className="text-center text-gray-500 py-8">
-                  {isOnesOwnProfile
+                  {isOwnProfile
                     ? "You haven't created any plans yet."
                     : `${profileData?.name} hasn't got any public plans available.`}
                 </div>
               )}
-              {activitiesNotInPlans.length > 0 && (
+              {activitiesNotInPlans && activitiesNotInPlans.length > 0 && (
                 <>
                   <Divider className="w-full" text="Activities 👇" />
                   <ActivityGridRenderer
@@ -586,16 +599,16 @@ const ProfilePage: React.FC = () => {
                         activityTitle={activity?.title || "Unknown Activity"}
                         activityEmoji={activity?.emoji || ""}
                         activityEntryQuantity={entry.quantity}
-                        activityEntryReactions={entry.reactions.reduce((acc, reaction) => {
+                        activityEntryReactions={(entry as any).reactions?.reduce((acc: Record<string, string[]>, reaction: any) => {
                           if (!acc[reaction.emoji] && reaction.user.username) {
                             acc[reaction.emoji] = [reaction.user.username];
                           } else if (reaction.user.username) {
                             acc[reaction.emoji].push(reaction.user.username);
                           }
                           return acc;
-                        }, {} as Record<string, string[]>)}
+                        }, {} as Record<string, string[]>) || {}}
                         activityEntryTimezone={entry.timezone || undefined}
-                        activityEntryComments={entry.comments}
+                        activityEntryComments={(entry as any).comments || []}
                         activityMeasure={activity?.measure || ""}
                         date={entry.date}
                         description={entry.description || undefined}
@@ -614,7 +627,7 @@ const ProfilePage: React.FC = () => {
                         userPicture={profileData?.picture || undefined}
                         userName={profileData?.name || undefined}
                         userUsername={profileData?.username || undefined}
-                        editable={isOnesOwnProfile}
+                        editable={isOwnProfile}
                         onEditClick={() => {
                           const activityToEdit = activityEntries.find((e) => e.id === entry.id);
                           if (activityToEdit) {
@@ -631,7 +644,7 @@ const ProfilePage: React.FC = () => {
             ) : (
               <div className="text-center text-gray-500 py-8">
                 {activityEntries?.length === 0
-                  ? isOnesOwnProfile
+                  ? isOwnProfile
                     ? "You haven't completed any activities yet."
                     : `${profileData?.name} hasn't got any public activities.`
                   : `${profileData?.name}'s ${activities.length} past activities photos have expired.`}
@@ -662,7 +675,7 @@ const ProfilePage: React.FC = () => {
           )} */}
         </Tabs>
       </div>
-      {showEditActivityEntry && isOnesOwnProfile && (
+      {showEditActivityEntry && isOwnProfile && (
         <ActivityEntryEditor
           open={!!showEditActivityEntry}
           activityEntry={{
