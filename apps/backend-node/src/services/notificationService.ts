@@ -2,16 +2,7 @@ import { Notification, NotificationType } from "@tsw/prisma";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
-// Temporary mock for web-push until package is available
-const webpush = {
-  setVapidDetails: (subject: string, publicKey: string, privateKey: string) => {
-    logger.info("VAPID details configured (mock)");
-  },
-  sendNotification: async (subscription: any, payload: string) => {
-    logger.info("Mock push notification sent:", { subscription, payload });
-    return { statusCode: 200 };
-  },
-};
+import * as webpush from "web-push";
 
 export interface CreateNotificationData {
   userId: string;
@@ -244,14 +235,15 @@ export class NotificationService {
     url?: string,
     icon?: string
   ): Promise<{ message: string }> {
-    const environment = process.env.NODE_ENV || "development";
+    const environment =
+      process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
 
-    if (environment.startsWith("dev")) {
-      logger.warn(
-        `Skipping push notification for '${userId}' in '${environment}' environment`
-      );
-      return { message: "Push notification skipped in development" };
-    }
+    // if (environment === "dev" || environment === "development") {
+    //   logger.warn(
+    //     `Skipping push notification for '${userId}' in '${environment}' environment`
+    //   );
+    //   return { message: "Push notification skipped in development" };
+    // }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -293,7 +285,14 @@ export class NotificationService {
     try {
       const response = await webpush.sendNotification(
         subscriptionInfo,
-        JSON.stringify(payload)
+        JSON.stringify(payload),
+        {
+          vapidDetails: {
+            subject: "mailto:alexandre.ramalho.1998@gmail.com",
+            publicKey: this.vapidPublicKey,
+            privateKey: this.vapidPrivateKey,
+          },
+        }
       );
 
       // TODO: Add PostHog analytics when implemented
@@ -301,6 +300,18 @@ export class NotificationService {
       return { message: "Push notification sent successfully" };
     } catch (error: any) {
       logger.error("WebPush error:", error);
+
+      // Handle specific web-push errors similar to Python's WebPushException
+      if (error.statusCode === 410) {
+        logger.warn(
+          `Subscription expired for user ${userId}, should remove subscription`
+        );
+      } else if (error.statusCode === 413) {
+        logger.error(`Payload too large for user ${userId}`);
+      } else if (error.statusCode === 429) {
+        logger.warn(`Rate limited for user ${userId}`);
+      }
+
       throw error;
     }
   }
