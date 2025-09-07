@@ -238,12 +238,12 @@ export class NotificationService {
     const environment =
       process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
 
-    // if (environment === "dev" || environment === "development") {
-    //   logger.warn(
-    //     `Skipping push notification for '${userId}' in '${environment}' environment`
-    //   );
-    //   return { message: "Push notification skipped in development" };
-    // }
+    if (environment === "dev" || environment === "development") {
+      logger.warn(
+        `Skipping push notification for '${userId}' in '${environment}' environment`
+      );
+      return { message: "Push notification skipped in development" };
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
