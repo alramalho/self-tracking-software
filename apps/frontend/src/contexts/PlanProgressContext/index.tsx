@@ -1,10 +1,14 @@
 import { useApiWithAuth } from "@/api";
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
+import { useQuery } from "@tanstack/react-query";
 import { isAfter } from "date-fns";
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { useActivities } from "../activities";
 import { CompletePlan, usePlans } from "../plans";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
+
+// Re-export the new simplified API
+export { usePlansProgress } from "../PlansProgressContext";
 
 export interface PlanAchievementResult {
   streak: number;
@@ -59,67 +63,48 @@ export interface PlanProgressContextType {
     initialDate?: Date
   ) => PlanAchievementResult;
   plansProgress: PlanProgressData[];
-  planProgressData: Record<string, BackendPlanProgress>;
   getPlanProgress: (planId: string) => PlanAchievementResult | undefined;
   getPlanProgressFromBackend: (planId: string) => BackendPlanProgress | undefined;
-  refreshPlanProgress: (planId: string) => Promise<void>;
+  usePlanProgressQuery: (planId: string) => {
+    data: BackendPlanProgress | undefined;
+    isLoading: boolean;
+    error: any;
+    refetch: () => void;
+  };
 }
 
+// Legacy context (deprecated, kept for backward compatibility)
 const PlanProgressContext = createContext<PlanProgressContextType | undefined>(
   undefined
 );
+
 export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { plans } = usePlans();
   const { activities, activityEntries } = useActivities();
-  const [planProgressData, setPlanProgressData] = useState<Record<string, BackendPlanProgress>>({});
   const api = useApiWithAuth();
 
-  // Fetch plan progress from backend
-  const fetchPlanProgress = async (planId: string): Promise<BackendPlanProgress | null> => {
-    try {
-      const response = await api.get(`/plans/${planId}/progress`);
-
-      if (response.status !== 200) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: BackendPlanProgress = await response.data;
-      return data;
-    } catch (error) {
-      console.error(`Error fetching progress for plan ${planId}:`, error);
-      return null;
+  const fetchPlanProgress = async (planId: string): Promise<BackendPlanProgress> => {
+    const response = await api.get(`/plans/${planId}/progress`);
+    if (response.status !== 200) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+    return response.data;
   };
 
-  const refreshPlanProgress = async (planId: string) => {
-    const progress = await fetchPlanProgress(planId);
-    if (progress) {
-      setPlanProgressData(prev => ({
-        ...prev,
-        [planId]: progress,
-      }));
-    }
-  };
-
-  // Load progress for all active plans
-  useEffect(() => {
-    if (!plans) return;
-
-    const activePlans = plans.filter(p => p.deletedAt === null && (p.finishingDate ? isAfter(p.finishingDate, new Date()) : true));
-    
-    activePlans.forEach(plan => {
-      refreshPlanProgress(plan.id);
+  const usePlanProgressQuery = (planId: string) => {
+    return useQuery({
+      queryKey: ['planProgress', planId],
+      queryFn: () => fetchPlanProgress(planId),
+      enabled: !!planId,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
     });
-  }, [plans]);
+  };
 
   const plansProgress = useMemo(() => {
-    if (
-      !plans ||
-      !activities ||
-      !activityEntries
-    ) {
+    if (!plans || !activities || !activityEntries) {
       return [];
     }
 
@@ -147,18 +132,18 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getPlanProgressFromBackend = (
-    planId: string
+    _planId: string
   ): BackendPlanProgress | undefined => {
-    return planProgressData[planId];
+    console.warn("getPlanProgressFromBackend is deprecated, use usePlansProgress([planId]) instead");
+    return undefined;
   };
 
   const context: PlanProgressContextType = {
     calculatePlanAchievement,
     plansProgress,
-    planProgressData,
     getPlanProgress,
     getPlanProgressFromBackend,
-    refreshPlanProgress,
+    usePlanProgressQuery,
   };
 
   return (
@@ -168,6 +153,7 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// Legacy hook (deprecated, kept for backward compatibility)
 export const usePlanProgress = () => {
   const context = useContext(PlanProgressContext);
   if (context === undefined) {

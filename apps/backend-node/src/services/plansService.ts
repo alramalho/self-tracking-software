@@ -1,12 +1,12 @@
 import { TZDate } from "@date-fns/tz";
 import {
+  Activity,
+  ActivityEntry,
   Plan,
   PlanOutlineType,
   PlanSession,
   PlanState,
   User,
-  Activity,
-  ActivityEntry,
 } from "@tsw/prisma";
 import {
   addWeeks,
@@ -18,7 +18,6 @@ import {
   isThisWeek,
   min,
   startOfWeek,
-  subDays,
 } from "date-fns";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -362,7 +361,9 @@ export class PlansService {
       });
 
       const uniqueDaysWithActivities = new Set(
-        entriesThisWeek.map((entry) => format(new Date(entry.date), "yyyy-MM-dd"))
+        entriesThisWeek.map((entry) =>
+          format(new Date(entry.date), "yyyy-MM-dd")
+        )
       );
 
       const isCompleted =
@@ -432,8 +433,8 @@ export class PlansService {
       },
     });
 
-    const planActivityEntries = activityEntries.filter(
-      (entry) => plan.activities.some((a) => a.id === entry.activityId)
+    const planActivityEntries = activityEntries.filter((entry) =>
+      plan.activities.some((a) => a.id === entry.activityId)
     );
 
     if (planActivityEntries.length === 0) {
@@ -470,7 +471,11 @@ export class PlansService {
     ) {
       totalWeeks += 1;
       const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
-      const wasCompleted = this.isWeekCompleted(weekStart, plan, planActivityEntries);
+      const wasCompleted = this.isWeekCompleted(
+        weekStart,
+        plan,
+        planActivityEntries
+      );
 
       if (wasCompleted) {
         streak += 1;
@@ -553,7 +558,10 @@ export class PlansService {
     };
   }
 
-  async getPlanProgress(planId: string, userId: string): Promise<{
+  async getPlanProgress(
+    planId: string,
+    userId: string
+  ): Promise<{
     planId: string;
     achievement: {
       streak: number;
@@ -588,8 +596,8 @@ export class PlansService {
       include: { activities: true },
     });
 
-    if (!plan || plan.userId !== userId) {
-      throw new Error(`Plan ${planId} not found or not owned by user ${userId}`);
+    if (!plan) {
+      throw new Error(`Plan ${planId} not found.`);
     }
 
     // Get user for timezone info
@@ -609,7 +617,8 @@ export class PlansService {
 
     // Calculate habit and lifestyle achievements
     const habitAchievement = this.calculateHabitAchievement(achievement);
-    const lifestyleAchievement = this.calculateLifestyleAchievement(achievement);
+    const lifestyleAchievement =
+      this.calculateLifestyleAchievement(achievement);
 
     return {
       planId,

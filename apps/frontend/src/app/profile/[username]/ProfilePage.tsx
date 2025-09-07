@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -33,6 +33,7 @@ import {
   History,
   Medal,
   Settings,
+  Sprout,
   UserPlus,
   X,
 } from "lucide-react";
@@ -94,7 +95,8 @@ const ProfilePage: React.FC = () => {
     ? profileData.name.split(" ")[0]
     : profileData?.username;
 
-  const { plansProgress } = usePlanProgress();
+  const planIds = profileActivePlans?.map(plan => plan.id) || [];
+  const { data: plansProgressData } = usePlansProgress(planIds);
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
@@ -119,6 +121,8 @@ const ProfilePage: React.FC = () => {
       setInitialActiveView(activeView);
     }
   }, [searchParams, isOwnProfile]);
+
+  // No longer needed - useQuery handles data fetching automatically
 
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
@@ -374,6 +378,47 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
 
+            {/* Achievement badges */}
+            {profileActivePlans && profileActivePlans.length > 0 && (
+              <div className="flex justify-start gap-2 mb-4">
+                {profileActivePlans.map((plan) => {
+                  const backendProgress = plansProgressData?.find(p => p.planId === plan.id);
+                  const habitAchieved = backendProgress?.habitAchievement?.isAchieved ?? false;
+                  const lifestyleAchieved = backendProgress?.lifestyleAchievement?.isAchieved ?? false;
+                  
+                  // Only render if we have at least one achievement
+                  if (!habitAchieved && !lifestyleAchieved) return null;
+                  
+                  return (
+                    <div key={plan.id} className="flex gap-2">
+                      {habitAchieved && (
+                        <div className={cn(
+                          "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                          "ring-2 ring-lime-400 bg-gradient-to-r from-lime-50 to-green-50",
+                          "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        )}>
+                          <Sprout size={14} className="text-lime-600" />
+                          <span className="text-lime-700">Habit</span>
+                          <span className="opacity-60">{plan.emoji}</span>
+                        </div>
+                      )}
+                      {lifestyleAchieved && (
+                        <div className={cn(
+                          "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                          "ring-2 ring-orange-400 bg-gradient-to-r from-orange-50 to-amber-50",
+                          "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        )}>
+                          <Medal size={14} className="text-orange-600" />
+                          <span className="text-orange-700">Lifestyle</span>
+                          <span className="opacity-60">{plan.emoji}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* <div className="relative overflow-x-scroll w-full pb-3 h-full">
               <div className="flex justify-start gap-2 cursor-pointer hover:opacity-90 transition-opacity">
                 {isOnesOwnProfile && profileData?.plans && (
@@ -498,22 +543,36 @@ const ProfilePage: React.FC = () => {
               {profileActivePlans &&
                 profileActivePlans.length > 0 &&
                 profileActivePlans.map((plan) => {
-                  const planProgress = plansProgress.find(
-                    (p) => p.plan.id === plan.id
-                  );
+                  const backendProgress = plansProgressData?.find(p => p.planId === plan.id);
+                  
+                  // Check achievements
+                  const habitAchieved = backendProgress?.habitAchievement?.isAchieved ?? false;
+                  const lifestyleAchieved = backendProgress?.lifestyleAchievement?.isAchieved ?? false;
+                  
+                  // Determine neon color based on highest achievement
+                  let neonClass = "bg-white ring-gray-200";
+                  if (lifestyleAchieved) {
+                    // Lifestyle achieved - orange neon
+                    neonClass = cn(
+                      "ring-offset-2 ring-offset-white",
+                      "ring-orange-400 ring-2",
+                      "bg-gradient-to-br from-orange-50/80 via-orange-100/60 to-amber-50/80",
+                      "shadow-lg shadow-orange-200/50"
+                    );
+                  } else if (habitAchieved) {
+                    // Habit achieved - lime neon
+                    neonClass = cn(
+                      "ring-offset-2 ring-offset-white",
+                      "ring-lime-400 ring-2",
+                      "bg-gradient-to-br from-lime-50/80 via-lime-100/60 to-green-50/80",
+                      "shadow-lg shadow-lime-200/50"
+                    );
+                  }
+                  
                   return (
                     <div
                       key={plan.id}
-                      className={`p-4 ring-2 rounded-2xl ${
-                        planProgress?.achievement.isAchieved
-                          ? cn(
-                              "ring-offset-2 ring-offset-white",
-                              variants.card.selected.border,
-                              variants.ringBright,
-                              variants.verySoftGrandientBg
-                            )
-                          : "bg-white ring-gray-200"
-                      }`}
+                      className={`p-4 rounded-2xl ${neonClass}`}
                     >
                       <div className="flex flex-row items-center gap-2 mb-6">
                         <span className="text-4xl">{plan.emoji}</span>
@@ -532,15 +591,26 @@ const ProfilePage: React.FC = () => {
                         </div>
                       </div>
 
-                      {planProgress?.achievement.isAchieved && (
-                        <div className="flex flex-row items-center gap-2">
-                          <Medal size={32} className="text-yellow-500" />
-                          <span className="text-sm text-gray-500">
-                            Part of {userInformalName}&apos;s lifestyle for{" "}
-                            {planProgress?.achievement.streak} weeks
-                          </span>
-                        </div>
-                      )}
+                      {/* Achievement displays */}
+                      <div className="space-y-2 mb-4">
+                        {habitAchieved && (
+                          <div className="flex flex-row items-center gap-2">
+                            <Sprout size={32} className="text-lime-500" />
+                            <span className="text-sm text-gray-600">
+                              It&apos;s a habit for {userInformalName}!
+                            </span>
+                          </div>
+                        )}
+                        {lifestyleAchieved && (
+                          <div className="flex flex-row items-center gap-2">
+                            <Medal size={32} className="text-orange-500" />
+                            <span className="text-sm text-gray-600">
+                              Part of {userInformalName}&apos;s lifestyle for{" "}
+                              {backendProgress?.achievement?.streak ?? 0} weeks
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       <PlanActivityEntriesRenderer
                         plan={plan as any}
                         activities={activities}
