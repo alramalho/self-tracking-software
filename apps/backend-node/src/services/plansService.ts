@@ -5,8 +5,21 @@ import {
   PlanSession,
   PlanState,
   User,
+  Activity,
+  ActivityEntry,
 } from "@tsw/prisma";
-import { endOfWeek, isThisWeek, startOfWeek } from "date-fns";
+import {
+  addWeeks,
+  endOfWeek,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  isThisWeek,
+  min,
+  startOfWeek,
+  subDays,
+} from "date-fns";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
@@ -327,6 +340,284 @@ export class PlansService {
       );
       throw error;
     }
+  }
+
+  // Streak and achievement calculation methods moved from frontend
+  private readonly HABIT_WEEKS = 4;
+  private readonly LIFESTYLE_WEEKS = 9;
+
+  private isWeekCompleted(
+    weekStartDate: Date,
+    plan: Plan & { activities: Activity[]; sessions: PlanSession[] },
+    planActivityEntries: ActivityEntry[]
+  ): boolean {
+    const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
+    const weekStart = startOfWeek(weekStartDate, { weekStartsOn: 0 });
+
+    if (plan.outlineType === PlanOutlineType.TIMES_PER_WEEK) {
+      const entriesThisWeek = planActivityEntries.filter((entry) => {
+        return (
+          isAfter(entry.date, weekStart) && isBefore(entry.date, weekEndDate)
+        );
+      });
+
+      const uniqueDaysWithActivities = new Set(
+        entriesThisWeek.map((entry) => format(new Date(entry.date), "yyyy-MM-dd"))
+      );
+
+      const isCompleted =
+        uniqueDaysWithActivities.size >= (plan.timesPerWeek || 0);
+
+      return isCompleted;
+    } else {
+      const plannedSessionsThisWeek = plan.sessions.filter((session) => {
+        const sessionDate = new Date(session.date);
+        return (
+          isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEndDate)
+        );
+      });
+
+      if (plannedSessionsThisWeek.length === 0) {
+        return false;
+      }
+
+      const allSessionsCompleted = plannedSessionsThisWeek.every((session) => {
+        const sessionDate = new Date(session.date);
+        const weekStart = startOfWeek(sessionDate, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(sessionDate, { weekStartsOn: 0 });
+
+        const completedSessionsThisWeek = planActivityEntries.filter(
+          (entry) =>
+            entry.activityId === session.activityId &&
+            isAfter(new Date(entry.date), weekStart) &&
+            isBefore(new Date(entry.date), weekEnd)
+        );
+
+        return completedSessionsThisWeek.length > 0;
+      });
+
+      return allSessionsCompleted;
+    }
+  }
+
+  async calculatePlanAchievement(
+    planId: string,
+    initialDate?: Date
+  ): Promise<{
+    streak: number;
+    completedWeeks: number;
+    incompleteWeeks: number;
+    isAchieved: boolean;
+    totalWeeks: number;
+    weeksToAchieve?: number;
+  }> {
+    // Get plan with activities and sessions
+    const plan = await prisma.plan.findUnique({
+      where: { id: planId },
+      include: {
+        activities: true,
+        sessions: true,
+      },
+    });
+
+    if (!plan) {
+      throw new Error(`Plan ${planId} not found`);
+    }
+
+    // Get activity entries for this plan's activities
+    const activityEntries = await prisma.activityEntry.findMany({
+      where: {
+        activityId: { in: plan.activities.map((a) => a.id) },
+        deletedAt: null,
+      },
+    });
+
+    const planActivityEntries = activityEntries.filter(
+      (entry) => plan.activities.some((a) => a.id === entry.activityId)
+    );
+
+    if (planActivityEntries.length === 0) {
+      return {
+        streak: 0,
+        completedWeeks: 0,
+        incompleteWeeks: 0,
+        isAchieved: false,
+        totalWeeks: 0,
+      };
+    }
+
+    const firstEntryDate = initialDate
+      ? initialDate
+      : min(planActivityEntries.map((entry) => new Date(entry.date)));
+
+    const now = new Date();
+    const currentWeekStart = startOfWeek(now, {
+      weekStartsOn: 0,
+    });
+
+    let weekStart = startOfWeek(firstEntryDate, {
+      weekStartsOn: 0,
+    });
+
+    let streak = 0;
+    let completedWeeks = 0;
+    let incompleteWeeks = 0;
+    let totalWeeks = 0;
+
+    while (
+      isAfter(currentWeekStart, weekStart) ||
+      isSameDay(weekStart, currentWeekStart)
+    ) {
+      totalWeeks += 1;
+      const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
+      const wasCompleted = this.isWeekCompleted(weekStart, plan, planActivityEntries);
+
+      if (wasCompleted) {
+        streak += 1;
+        completedWeeks += 1;
+        if (!isCurrentWeek) {
+          incompleteWeeks = 0;
+        }
+      } else if (!isCurrentWeek) {
+        incompleteWeeks += 1;
+        if (incompleteWeeks > 1) {
+          streak = Math.max(0, streak - 1);
+        }
+      }
+
+      weekStart = addWeeks(weekStart, 1);
+    }
+
+    const isAchieved = streak >= this.LIFESTYLE_WEEKS;
+    const weeksToAchieve = this.LIFESTYLE_WEEKS - streak;
+
+    return {
+      streak,
+      completedWeeks,
+      incompleteWeeks,
+      isAchieved,
+      totalWeeks,
+      weeksToAchieve,
+    };
+  }
+
+  private calculateHabitAchievement(achievement: {
+    streak: number;
+    completedWeeks: number;
+    incompleteWeeks: number;
+    isAchieved: boolean;
+    totalWeeks: number;
+    weeksToAchieve?: number;
+  }): {
+    progressValue: number;
+    maxValue: number;
+    isAchieved: boolean;
+    progressPercentage: number;
+  } {
+    const maxValue = this.HABIT_WEEKS; // 4 weeks
+    const progressValue = Math.min(maxValue, achievement.streak);
+    const isAchieved = achievement.streak >= maxValue;
+    const progressPercentage = Math.round((progressValue / maxValue) * 100);
+
+    return {
+      progressValue,
+      maxValue,
+      isAchieved,
+      progressPercentage,
+    };
+  }
+
+  private calculateLifestyleAchievement(achievement: {
+    streak: number;
+    completedWeeks: number;
+    incompleteWeeks: number;
+    isAchieved: boolean;
+    totalWeeks: number;
+    weeksToAchieve?: number;
+  }): {
+    progressValue: number;
+    maxValue: number;
+    isAchieved: boolean;
+    progressPercentage: number;
+  } {
+    const maxValue = this.LIFESTYLE_WEEKS; // 9 weeks
+    const progressValue = Math.min(maxValue, achievement.streak);
+    const isAchieved = achievement.streak >= maxValue;
+    const progressPercentage = Math.round((progressValue / maxValue) * 100);
+
+    return {
+      progressValue,
+      maxValue,
+      isAchieved,
+      progressPercentage,
+    };
+  }
+
+  async getPlanProgress(planId: string, userId: string): Promise<{
+    planId: string;
+    achievement: {
+      streak: number;
+      completedWeeks: number;
+      incompleteWeeks: number;
+      isAchieved: boolean;
+      totalWeeks: number;
+      weeksToAchieve?: number;
+    };
+    currentWeekStats: {
+      numActiveDaysInTheWeek: number;
+      numLeftDaysInTheWeek: number;
+      numActiveDaysLeftInTheWeek: number;
+      daysCompletedThisWeek: number;
+    };
+    habitAchievement: {
+      progressValue: number;
+      maxValue: number;
+      isAchieved: boolean;
+      progressPercentage: number;
+    };
+    lifestyleAchievement: {
+      progressValue: number;
+      maxValue: number;
+      isAchieved: boolean;
+      progressPercentage: number;
+    };
+  }> {
+    // Verify plan ownership
+    const plan = await prisma.plan.findUnique({
+      where: { id: planId },
+      include: { activities: true },
+    });
+
+    if (!plan || plan.userId !== userId) {
+      throw new Error(`Plan ${planId} not found or not owned by user ${userId}`);
+    }
+
+    // Get user for timezone info
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+
+    // Get achievement data
+    const achievement = await this.calculatePlanAchievement(planId);
+
+    // Get current week stats
+    const currentWeekStats = await this.getPlanWeekStats(plan, user);
+
+    // Calculate habit and lifestyle achievements
+    const habitAchievement = this.calculateHabitAchievement(achievement);
+    const lifestyleAchievement = this.calculateLifestyleAchievement(achievement);
+
+    return {
+      planId,
+      achievement,
+      currentWeekStats,
+      habitAchievement,
+      lifestyleAchievement,
+    };
   }
 }
 

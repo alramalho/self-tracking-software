@@ -1,6 +1,7 @@
+import { useApiWithAuth } from "@/api";
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
 import { isAfter } from "date-fns";
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useActivities } from "../activities";
 import { CompletePlan, usePlans } from "../plans";
 import { calculatePlanAchievement, getPlanWeeks } from "./lib";
@@ -22,6 +23,29 @@ export interface PlanWeek {
   weekActivities: Activity[];
 }
 
+export interface BackendPlanProgress {
+  planId: string;
+  achievement: PlanAchievementResult;
+  currentWeekStats: {
+    numActiveDaysInTheWeek: number;
+    numLeftDaysInTheWeek: number;
+    numActiveDaysLeftInTheWeek: number;
+    daysCompletedThisWeek: number;
+  };
+  habitAchievement: {
+    progressValue: number;
+    maxValue: number;
+    isAchieved: boolean;
+    progressPercentage: number;
+  };
+  lifestyleAchievement: {
+    progressValue: number;
+    maxValue: number;
+    isAchieved: boolean;
+    progressPercentage: number;
+  };
+}
+
 export interface PlanProgressData {
   plan: CompletePlan;
   weeks: PlanWeek[];
@@ -35,7 +59,10 @@ export interface PlanProgressContextType {
     initialDate?: Date
   ) => PlanAchievementResult;
   plansProgress: PlanProgressData[];
+  planProgressData: Record<string, BackendPlanProgress>;
   getPlanProgress: (planId: string) => PlanAchievementResult | undefined;
+  getPlanProgressFromBackend: (planId: string) => BackendPlanProgress | undefined;
+  refreshPlanProgress: (planId: string) => Promise<void>;
 }
 
 const PlanProgressContext = createContext<PlanProgressContextType | undefined>(
@@ -46,6 +73,46 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { plans } = usePlans();
   const { activities, activityEntries } = useActivities();
+  const [planProgressData, setPlanProgressData] = useState<Record<string, BackendPlanProgress>>({});
+  const api = useApiWithAuth();
+
+  // Fetch plan progress from backend
+  const fetchPlanProgress = async (planId: string): Promise<BackendPlanProgress | null> => {
+    try {
+      const response = await api.get(`/plans/${planId}/progress`);
+
+      if (response.status !== 200) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: BackendPlanProgress = await response.data;
+      return data;
+    } catch (error) {
+      console.error(`Error fetching progress for plan ${planId}:`, error);
+      return null;
+    }
+  };
+
+  const refreshPlanProgress = async (planId: string) => {
+    const progress = await fetchPlanProgress(planId);
+    if (progress) {
+      setPlanProgressData(prev => ({
+        ...prev,
+        [planId]: progress,
+      }));
+    }
+  };
+
+  // Load progress for all active plans
+  useEffect(() => {
+    if (!plans) return;
+
+    const activePlans = plans.filter(p => p.deletedAt === null && (p.finishingDate ? isAfter(p.finishingDate, new Date()) : true));
+    
+    activePlans.forEach(plan => {
+      refreshPlanProgress(plan.id);
+    });
+  }, [plans]);
 
   const plansProgress = useMemo(() => {
     if (
@@ -57,19 +124,11 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     const planProgress = plans.filter((p) => p.deletedAt === null && (p.finishingDate ? isAfter(p.finishingDate, new Date()) : true)).map((plan): PlanProgressData => {
-      // const convertedPlan = plan;
-      // const planStartDate = convertedPlan.outlineType === "SPECIFIC" 
-      //   ? (convertedPlan.sessions.length > 0 
-      //       ? convertedPlan.sessions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date
-      //       : new Date())
-      //   : undefined
-      
       return {
         plan: plan as CompletePlan,
         achievement: calculatePlanAchievement(
           plan as CompletePlan,
           activityEntries,
-          // planStartDate
         ),
         weeks: getPlanWeeks(
           plan as CompletePlan,
@@ -87,10 +146,19 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     return plansProgress.find((p) => p.plan.id === planId)?.achievement;
   };
 
+  const getPlanProgressFromBackend = (
+    planId: string
+  ): BackendPlanProgress | undefined => {
+    return planProgressData[planId];
+  };
+
   const context: PlanProgressContextType = {
     calculatePlanAchievement,
     plansProgress,
+    planProgressData,
     getPlanProgress,
+    getPlanProgressFromBackend,
+    refreshPlanProgress,
   };
 
   return (

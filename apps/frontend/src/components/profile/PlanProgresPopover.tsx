@@ -1,5 +1,5 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { ACHIEVEMENT_WEEKS } from "@/contexts/PlanProgressContext/lib";
+// ACHIEVEMENT_WEEKS moved to backend
 import { AlertTriangle, Flame, Medal } from "lucide-react";
 import React from "react";
 
@@ -44,7 +44,7 @@ const PlanProgressPopover: React.FC<PlanProgressPopoverProps> = ({
           <h4 className="font-medium mb-2 flex items-center gap-2"><Medal className="text-yellow-500 inline-block" size={24} /> How lifestyle badges are calculated:</h4>
           <ul className="text-sm text-gray-600 space-y-2">
             <li>
-              • You get a lifetyle badge if you achieve a streak of {ACHIEVEMENT_WEEKS} weeks!
+              • You get a lifetyle badge if you achieve a streak of 9 weeks!
             </li>
             <li>
               • <AlertTriangle size={16} className="text-amber-500 inline-block" /> You lose the badge if you drop your streak!

@@ -1,7 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import { useDataNotifications } from "@/contexts/notifications";
+import { usePlanProgress } from "@/contexts/PlanProgressContext";
 import {
-  ACHIEVEMENT_WEEKS,
   isWeekCompleted as checkIsWeekCompleted,
 } from "@/contexts/PlanProgressContext/lib";
 import { CompletePlan } from "@/contexts/plans";
@@ -21,11 +21,12 @@ import {
   Medal,
   MoveRight,
   RefreshCw,
+  Sprout,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -91,6 +92,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { notifications } = useDataNotifications();
+  const { getPlanProgressFromBackend } = usePlanProgress();
   const queryClient = useQueryClient();
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
@@ -113,13 +115,13 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
     undefined
   );
 
-  const canGenerateNewMessage = true
-  // const canGenerateNewMessage = useMemo(() => {
-  //   if (isDemo) return false;
-  //   if (!lastTimeCoachMessageWasGenerated) return true;
-  //   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-  //   return new Date(lastTimeCoachMessageWasGenerated) < twoHoursAgo;
-  // }, [lastTimeCoachMessageWasGenerated, isDemo]);
+  // const canGenerateNewMessage = true
+  const canGenerateNewMessage = useMemo(() => {
+    if (isDemo) return false;
+    if (!lastTimeCoachMessageWasGenerated) return true;
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    return new Date(lastTimeCoachMessageWasGenerated) < twoHoursAgo;
+  }, [lastTimeCoachMessageWasGenerated, isDemo]);
 
   // Function to generate coach message
   const generateCoachMessage = async () => {
@@ -186,11 +188,24 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
-  // Calculate lifestyle achievement progress
-  const lifestyleProgressValue = Math.min(
-    ACHIEVEMENT_WEEKS,
-    achievement.streak
-  );
+  // Get habit and lifestyle achievement from backend or fallback to local calculation
+  const backendProgress = !isDemo ? getPlanProgressFromBackend(plan.id) : null;
+  const FALLBACK_HABIT_WEEKS = 4; // Fallback for demos/offline
+  const FALLBACK_LIFESTYLE_WEEKS = 9; // Fallback for demos/offline
+  
+  // Habit achievement (4 weeks)
+  const habitProgressValue = backendProgress?.habitAchievement?.progressValue ?? 
+    Math.min(FALLBACK_HABIT_WEEKS, achievement.streak);
+  const habitMaxValue = backendProgress?.habitAchievement?.maxValue ?? FALLBACK_HABIT_WEEKS;
+  const habitIsAchieved = backendProgress?.habitAchievement?.isAchieved ?? 
+    (achievement.streak >= FALLBACK_HABIT_WEEKS);
+    
+  // Lifestyle achievement (9 weeks)
+  const lifestyleProgressValue = backendProgress?.lifestyleAchievement?.progressValue ?? 
+    Math.min(FALLBACK_LIFESTYLE_WEEKS, achievement.streak);
+  const lifestyleMaxValue = backendProgress?.lifestyleAchievement?.maxValue ?? FALLBACK_LIFESTYLE_WEEKS;
+  const lifestyleIsAchieved = backendProgress?.lifestyleAchievement?.isAchieved ?? 
+    (achievement.streak >= FALLBACK_LIFESTYLE_WEEKS);
 
   const isWeekCompleted = checkIsWeekCompleted(
     currentWeek.startDate,
@@ -328,24 +343,49 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               onFullyDone={() => setIsFullyDone(true)}
             />
 
-            {/* Lifestyle achievement progress */}
+            {/* Habit achievement progress (4 weeks) */}
             <div className="space-y-1">
               <SteppedBarProgress
-                value={lifestyleProgressValue}
-                maxValue={ACHIEVEMENT_WEEKS}
-                goal={<Medal size={19} className="text-amber-400" />}
+                value={habitProgressValue}
+                maxValue={habitMaxValue}
+                goal={<Sprout size={19} className="text-lime-500" />}
                 className={cn("w-full")}
-                color={variants.bg}
+                color="bg-lime-400"
                 celebration={
-                  <span className="flex items-center gap-1">
-                    <CircleCheck size={19} className="text-green-500" />
-                    <span className="text-xs font-normal text-gray-500">
-                      Part of your lifestyle!
+                  habitIsAchieved ? (
+                    <span className="flex items-center gap-1">
+                      <CircleCheck size={19} className="text-green-500" />
+                      <span className="text-xs font-normal text-gray-500">
+                        It&apos;s a habit!
+                      </span>
                     </span>
-                  </span>
+                  ) : undefined
                 }
               />
             </div>
+
+            {/* Lifestyle achievement progress (9 weeks) - only show after habit is achieved */}
+            {achievement.streak >= habitMaxValue && (
+              <div className="space-y-1">
+                <SteppedBarProgress
+                  value={lifestyleProgressValue}
+                  maxValue={lifestyleMaxValue}
+                  goal={<Medal size={19} className="text-amber-400" />}
+                  className={cn("w-full")}
+                  color={variants.bg}
+                  celebration={
+                    lifestyleIsAchieved ? (
+                      <span className="flex items-center gap-1">
+                        <CircleCheck size={19} className="text-green-500" />
+                        <span className="text-xs font-normal text-gray-500">
+                          Part of your lifestyle!
+                        </span>
+                      </span>
+                    ) : undefined
+                  }
+                />
+              </div>
+            )}
 
             <AnimatePresence>
               {showConfetti && isFullyDone && (

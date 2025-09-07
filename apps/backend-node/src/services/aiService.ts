@@ -458,6 +458,7 @@ export class AIService {
 
   async generateCoachMessage(
     user: {
+      id: string;
       name?: string | null;
       username?: string | null;
       profile?: string | null;
@@ -476,45 +477,48 @@ export class AIService {
     const userName = user.name || user.username || "there";
     const userProfile = user.profile || `User working towards: ${plan.goal}`;
 
-    // Use plansService to get real completion data instead of hardcoded values
-    let completedSessions = 0;
-    let totalSessions = plan.sessions?.length || 0;
-    let progressPercentage = 0;
+    // Get comprehensive progress data including streaks
+    let streakData: {
+      streak: number;
+      completedWeeks: number;
+      incompleteWeeks: number;
+      isAchieved: boolean;
+      totalWeeks: number;
+      weeksToAchieve?: number;
+    } | null = null;
+    let currentWeekStats: {
+      numActiveDaysInTheWeek: number;
+      numLeftDaysInTheWeek: number;
+      numActiveDaysLeftInTheWeek: number;
+      daysCompletedThisWeek: number;
+    } | null = null;
 
     if (this.plansService) {
       try {
-        // Get real stats from plansService
-        const planWithActivities = {
-          ...plan,
-          activities: plan.activities || [],
-        };
-        const stats = await (this.plansService as any).getPlanWeekStats(
-          planWithActivities,
-          user
-        );
-        completedSessions = stats.daysCompletedThisWeek;
-        totalSessions = stats.numActiveDaysInTheWeek;
-        progressPercentage =
-          totalSessions > 0
-            ? Math.round((completedSessions / totalSessions) * 100)
-            : 0;
+        // Get comprehensive progress data including streaks
+        const progressData = await (this.plansService as any).getPlanProgress(plan.id, user.id);
+        streakData = progressData.achievement;
+        currentWeekStats = progressData.currentWeekStats;
       } catch (error) {
-        logger.debug("Could not get plan stats, using fallback values:", error);
-        // Fallback to original logic if plansService fails
-        progressPercentage =
-          totalSessions > 0
-            ? Math.round((completedSessions / totalSessions) * 100)
-            : 0;
+        logger.debug("Could not get plan progress data, using fallback:", error);
+        // Fallback to basic week stats
+        try {
+          const planWithActivities = {
+            ...plan,
+            activities: plan.activities || [],
+          };
+          const stats = await (this.plansService as any).getPlanWeekStats(
+            planWithActivities,
+            user
+          );
+          currentWeekStats = stats;
+        } catch (fallbackError) {
+          logger.debug("Fallback stats also failed:", fallbackError);
+        }
       }
-    } else {
-      // Fallback when no plansService is provided
-      progressPercentage =
-        totalSessions > 0
-          ? Math.round((completedSessions / totalSessions) * 100)
-          : 0;
     }
 
-    // Determine time context
+    // Determine time context for this week
     let timeContext = "";
     const now = new Date();
     const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 }); // Sunday = 0
@@ -522,17 +526,29 @@ export class AIService {
       (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
     if (daysLeft > 0) {
-      timeContext = `with ${daysLeft} out of 7 days remaining (Today is ${now.toLocaleDateString("en-US", { weekday: "long" })}, last day of the week being next Saturday) `;
+      timeContext = `with ${daysLeft} out of 7 days remaining this week`;
     } else if (daysLeft === 0) {
-      timeContext = "on the final day";
-    } else {
-      timeContext = `${Math.abs(daysLeft)} days past the target date`;
+      timeContext = "on the final day of the week";
+    }
+
+    // Build streak context with forward-looking motivation
+    let streakContext = "";
+    if (streakData) {
+      if (streakData.streak > 0) {
+        const nextStreak = streakData.streak + 1;
+        streakContext = `Currently on ${streakData.streak}-week streak, next milestone: ${nextStreak}-week streak`;
+      } else {
+        streakContext = "Opportunity to start a new streak this week";
+      }
     }
 
     const systemPrompt =
       `You are an encouraging but realistic personal coach. Generate a coaching message that is:` +
       `- Personal and addresses the user by name` +
-      `- Specific to their current progress and situation` +
+      `- Mentions current week progress first` +
+      `- Forward-looking: focus on what they can achieve (next streak milestone)` +
+      `- Use motivational language about "just one more" or "close to"` +
+      `- Include a single fire emoji (🔥) when appropriate` +
       `- Encouraging but not overly optimistic` +
       `- Warm and supportive in tone` +
       `- Brief (1-2 sentences max)`;
@@ -543,10 +559,11 @@ export class AIService {
       `Context:` +
       `- User profile: ${userProfile}` +
       `- Plan goal: ${plan.goal}` +
-      `- Progress: ${completedSessions}/${totalSessions} sessions completed (${progressPercentage}%)` +
+      `${currentWeekStats ? `- This week: ${currentWeekStats.daysCompletedThisWeek}/${currentWeekStats.numActiveDaysInTheWeek} days completed` : ""}` +
       `${timeContext ? `- Timeline: ${timeContext}` : ""}` +
+      `${streakContext ? `- Current streak: ${streakContext}` : ""}` +
       `` +
-      `Create a personalized, encouraging message. Finish off with a strong hook.`;
+      `Focus primarily on this week's progress, with a brief positive mention of their streak if they have one.`;
 
     return this.generateText(prompt, systemPrompt);
   }
