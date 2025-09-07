@@ -7,47 +7,6 @@ import { prisma } from "../utils/prisma";
 
 const router = Router();
 
-// Update PWA status for push notifications
-router.post(
-  "/update-pwa-status",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const updateData = req.body;
-
-      // Filter out undefined/null values
-      const filteredData: any = {};
-      if (updateData.is_pwa_installed !== undefined)
-        filteredData.isPwaInstalled = updateData.is_pwa_installed;
-      if (updateData.is_pwa_notifications_enabled !== undefined)
-        filteredData.isPwaNotificationsEnabled =
-          updateData.is_pwa_notifications_enabled;
-      if (updateData.pwa_subscription_endpoint !== undefined)
-        filteredData.pwaSubscriptionEndpoint =
-          updateData.pwa_subscription_endpoint;
-      if (updateData.pwa_subscription_key !== undefined)
-        filteredData.pwaSubscriptionKey = updateData.pwa_subscription_key;
-      if (updateData.pwa_subscription_auth_token !== undefined)
-        filteredData.pwaSubscriptionAuthToken =
-          updateData.pwa_subscription_auth_token;
-
-      const updatedUser = await prisma.user.update({
-        where: { id: req.user!.id },
-        data: filteredData,
-      });
-
-      logger.info(`Updated PWA status for user ${req.user!.id}`);
-      res.json({
-        message: "PWA status updated successfully",
-        user: updatedUser,
-      });
-    } catch (error) {
-      logger.error("Error updating PWA status:", error);
-      res.status(500).json({ error: "Failed to update PWA status" });
-    }
-  }
-);
-
 // Process scheduled notification
 router.post(
   "/process-scheduled-notification",
