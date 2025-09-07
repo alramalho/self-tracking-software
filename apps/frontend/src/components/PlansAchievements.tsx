@@ -1,7 +1,5 @@
 import { usePlanProgress } from "@/contexts/PlanProgressContext";
-import {
-    ACHIEVEMENT_WEEKS,
-} from "@/contexts/PlanProgressContext/lib";
+// ACHIEVEMENT_WEEKS moved to backend
 import { CompletePlan } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
@@ -135,8 +133,8 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
                   achievement.totalWeeks > 0
                     ? Math.min(
                         100,
-                        (achievement.completedWeeks / ACHIEVEMENT_WEEKS) * 100
-                      ) // 12 weeks = 100%
+                        (achievement.completedWeeks / 9) * 100 // Use backend data instead
+                      ) // 9 weeks = 100%
                     : 0;
 
                 return (

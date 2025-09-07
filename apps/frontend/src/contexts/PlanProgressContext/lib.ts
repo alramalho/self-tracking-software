@@ -1,23 +1,11 @@
-import {
-  addWeeks,
-  format,
-  isAfter,
-  isBefore,
-  isSameDay,
-  min,
-  subDays,
-} from "date-fns";
+import { addWeeks, format, isAfter, isBefore, isSameDay, min } from "date-fns";
 
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { PlanAchievementResult, PlanWeek } from ".";
 import { CompletePlan } from "../plans";
 
-export const ACHIEVEMENT_WEEKS = 9;
-export const LIFESTYLE_START_COUNTING_DATE = subDays(
-  new Date(),
-  ACHIEVEMENT_WEEKS * 7
-);
+// ACHIEVEMENT_WEEKS moved to backend - use backend data instead
 
 export const countTimesPerWeekPlanCompletedWeekSessions = (
   plan: CompletePlan,
@@ -228,8 +216,11 @@ export const calculatePlanAchievement = (
     weekStart = addWeeks(weekStart, 1);
   }
 
-  const isAchieved = streak >= ACHIEVEMENT_WEEKS;
-  const weeksToAchieve = ACHIEVEMENT_WEEKS - streak;
+  // Note: Achievement logic moved to backend
+  // Frontend should use backend data instead of calculating locally
+  const LEGACY_ACHIEVEMENT_WEEKS = 9; // Temporary fallback for local calculations
+  const isAchieved = streak >= LEGACY_ACHIEVEMENT_WEEKS;
+  const weeksToAchieve = LEGACY_ACHIEVEMENT_WEEKS - streak;
 
   return {
     streak,
@@ -319,8 +310,9 @@ export function getPlanWeeks(
 ): PlanWeek[] {
   const weeks: PlanWeek[] = [];
   let weekStart = startOfWeek(startDate ?? new Date(), { weekStartsOn: 0 });
+  const LEGACY_ACHIEVEMENT_WEEKS = 9; // Temporary fallback
   const planEndDate = new Date(
-    plan.finishingDate || addWeeks(weekStart, ACHIEVEMENT_WEEKS)
+    plan.finishingDate || addWeeks(weekStart, LEGACY_ACHIEVEMENT_WEEKS)
   );
   while (isBefore(weekStart, planEndDate)) {
     weeks.push(

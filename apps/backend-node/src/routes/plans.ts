@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { plansPineconeService } from "../services/pineconeService";
+import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
@@ -267,6 +268,33 @@ router.get(
     } catch (error) {
       logger.error("Error getting user plans:", error);
       res.status(500).json({ error: "Failed to get user plans" });
+    }
+  }
+);
+
+// Get plan progress including streaks and achievement data
+router.get(
+  "/:planId/progress",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const userId = req.user!.id;
+
+      const progress = await plansService.getPlanProgress(planId, userId);
+
+      logger.info(`Retrieved progress for plan ${planId}`);
+      res.json(progress);
+    } catch (error) {
+      logger.error("Error getting plan progress:", error);
+      if (error instanceof Error && error.message.includes('not found')) {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to get plan progress" });
+      }
     }
   }
 );
