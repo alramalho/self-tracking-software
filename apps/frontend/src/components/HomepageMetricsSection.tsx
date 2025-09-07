@@ -45,7 +45,7 @@ export const HomepageMetricsSection: React.FC = () => {
   const { activities, activityEntries } = useActivities();
   const [isMetricsCollapsed, setIsMetricsCollapsed] = useLocalStorage<boolean>(
     "metrics-section-collapsed",
-    false
+    true
   );
 
   const { areAllMetricsCompleted } = useDailyCheckin();
