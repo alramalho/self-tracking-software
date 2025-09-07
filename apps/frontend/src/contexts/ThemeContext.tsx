@@ -10,7 +10,6 @@ import {
 } from "@/utils/theme";
 import { ThemeColor } from "@tsw/prisma";
 import React, { createContext, useContext, useMemo } from "react";
-import toast from "react-hot-toast";
 import { useCurrentUser } from "./users";
 
 interface ThemeContextType {
@@ -95,7 +94,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
         updates: { themeBaseColor: color.toUpperCase() as ThemeColor },
         muteNotifications: true,
       });
-      toast.success("Theme updated successfully");
     },
     getThemeClass,
     getTextClass,
