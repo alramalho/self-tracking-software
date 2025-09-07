@@ -1,6 +1,6 @@
 import { useApiWithAuth } from "@/api";
 import { useDataNotifications } from "@/contexts/notifications";
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import {
   isWeekCompleted as checkIsWeekCompleted,
 } from "@/contexts/PlanProgressContext/lib";
@@ -92,7 +92,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { notifications } = useDataNotifications();
-  const { getPlanProgressFromBackend } = usePlanProgress();
+  const { data: plansProgressData } = usePlansProgress([plan.id]);
   const queryClient = useQueryClient();
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
@@ -189,7 +189,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
   // Get habit and lifestyle achievement from backend or fallback to local calculation
-  const backendProgress = !isDemo ? getPlanProgressFromBackend(plan.id) : null;
+  const backendProgress = !isDemo ? plansProgressData?.find(p => p.planId === plan.id) : null;
   const FALLBACK_HABIT_WEEKS = 4; // Fallback for demos/offline
   const FALLBACK_LIFESTYLE_WEEKS = 9; // Fallback for demos/offline
   
