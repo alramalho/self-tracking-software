@@ -4,10 +4,11 @@ import {
 } from "@openrouter/ai-sdk-provider";
 import { PlanOutlineType } from "@tsw/prisma";
 import { generateObject, generateText } from "ai";
-import { format } from "date-fns";
+import { endOfWeek, format } from "date-fns";
 import { z } from "zod/v4";
 import { logger } from "../utils/logger";
 import { getCurrentUser } from "../utils/requestContext";
+import type { PlansService } from "./plansService";
 const DEFAULT_WEEKS = 8;
 
 // note to self 2:
@@ -20,8 +21,10 @@ const DEFAULT_WEEKS = 8;
 export class AIService {
   private model: string;
   // private openai;
+  private plansService?: PlansService;
 
-  constructor() {
+  constructor(plansService?: PlansService) {
+    this.plansService = plansService;
     this.model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-mini";
 
     if (!process.env.OPENROUTER_API_KEY || !process.env.HELICONE_API_KEY) {
@@ -72,6 +75,9 @@ export class AIService {
 
   async generateText(prompt: string, systemPrompt?: string): Promise<string> {
     try {
+      console.log("Generating text with model:", this.model);
+      console.log("Prompt:", prompt);
+      console.log("System prompt:", systemPrompt);
       const openrouter = this.getOpenRouterWithUserId();
       const result = await generateText({
         model: openrouter.chat(this.model),
@@ -331,6 +337,11 @@ export class AIService {
     return this.generateText(prompt, systemPrompt);
   }
 
+  // Method to inject plansService after initialization to avoid circular dependency
+  setPlansService(plansService: PlansService): void {
+    this.plansService = plansService;
+  }
+
   // Extract activities for plan creation
   async extractActivitiesForPlan(
     message: string,
@@ -450,44 +461,72 @@ export class AIService {
       name?: string | null;
       username?: string | null;
       profile?: string | null;
+      timezone?: string | null;
     },
     plan: {
+      id: string;
       goal: string;
       emoji?: string | null;
       sessions?: any[];
       createdAt: Date;
       finishingDate?: Date | null;
+      activities?: any[];
     }
   ): Promise<string> {
     const userName = user.name || user.username || "there";
     const userProfile = user.profile || `User working towards: ${plan.goal}`;
-    const planAge = Math.floor(
-      (Date.now() - plan.createdAt.getTime()) / (24 * 60 * 60 * 1000)
-    );
 
-    // Calculate plan progress
-    const totalSessions = plan.sessions?.length || 0;
-    // Note: PlanSession model doesn't have completedAt field yet
-    const completedSessions = 0; // Placeholder until completion tracking is implemented
-    const progressPercentage =
-      totalSessions > 0
-        ? Math.round((completedSessions / totalSessions) * 100)
-        : 0;
+    // Use plansService to get real completion data instead of hardcoded values
+    let completedSessions = 0;
+    let totalSessions = plan.sessions?.length || 0;
+    let progressPercentage = 0;
+
+    if (this.plansService) {
+      try {
+        // Get real stats from plansService
+        const planWithActivities = {
+          ...plan,
+          activities: plan.activities || [],
+        };
+        const stats = await (this.plansService as any).getPlanWeekStats(
+          planWithActivities,
+          user
+        );
+        completedSessions = stats.daysCompletedThisWeek;
+        totalSessions = stats.numActiveDaysInTheWeek;
+        progressPercentage =
+          totalSessions > 0
+            ? Math.round((completedSessions / totalSessions) * 100)
+            : 0;
+      } catch (error) {
+        logger.debug("Could not get plan stats, using fallback values:", error);
+        // Fallback to original logic if plansService fails
+        progressPercentage =
+          totalSessions > 0
+            ? Math.round((completedSessions / totalSessions) * 100)
+            : 0;
+      }
+    } else {
+      // Fallback when no plansService is provided
+      progressPercentage =
+        totalSessions > 0
+          ? Math.round((completedSessions / totalSessions) * 100)
+          : 0;
+    }
 
     // Determine time context
     let timeContext = "";
-    if (plan.finishingDate) {
-      const daysLeft = Math.ceil(
-        (new Date(plan.finishingDate).getTime() - Date.now()) /
-          (24 * 60 * 60 * 1000)
-      );
-      if (daysLeft > 0) {
-        timeContext = `with ${daysLeft} days remaining`;
-      } else if (daysLeft === 0) {
-        timeContext = "on the final day";
-      } else {
-        timeContext = `${Math.abs(daysLeft)} days past the target date`;
-      }
+    const now = new Date();
+    const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 }); // Sunday = 0
+    const daysLeft = Math.ceil(
+      (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysLeft > 0) {
+      timeContext = `with ${daysLeft} out of 7 days remaining (Today is ${now.toLocaleDateString("en-US", { weekday: "long" })}, last day of the week being next Saturday) `;
+    } else if (daysLeft === 0) {
+      timeContext = "on the final day";
+    } else {
+      timeContext = `${Math.abs(daysLeft)} days past the target date`;
     }
 
     const systemPrompt =
@@ -495,11 +534,8 @@ export class AIService {
       `- Personal and addresses the user by name` +
       `- Specific to their current progress and situation` +
       `- Encouraging but not overly optimistic` +
-      `- Actionable with a gentle nudge toward the next step` +
       `- Warm and supportive in tone` +
-      `- Brief (1-2 sentences max)` +
-      `` +
-      `Avoid generic motivational phrases and focus on their specific journey.`;
+      `- Brief (1-2 sentences max)`;
 
     const prompt =
       `Generate a coaching message for ${userName}.` +
@@ -507,11 +543,10 @@ export class AIService {
       `Context:` +
       `- User profile: ${userProfile}` +
       `- Plan goal: ${plan.goal}` +
-      `- Plan started ${planAge} days ago` +
       `- Progress: ${completedSessions}/${totalSessions} sessions completed (${progressPercentage}%)` +
       `${timeContext ? `- Timeline: ${timeContext}` : ""}` +
       `` +
-      `Create a personalized, encouraging message that acknowledges their current state and motivates them for the next step.`;
+      `Create a personalized, encouraging message. Finish off with a strong hook.`;
 
     return this.generateText(prompt, systemPrompt);
   }
@@ -1033,4 +1068,5 @@ export class AIService {
   }
 }
 
+// Note: plansService will be injected when needed to avoid circular dependency
 export const aiService = new AIService();
