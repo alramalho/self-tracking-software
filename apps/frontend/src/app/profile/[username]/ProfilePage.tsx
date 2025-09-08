@@ -579,7 +579,7 @@ const ProfilePage: React.FC = () => {
                   return (
                     <div
                       key={plan.id}
-                      className={`p-4 rounded-2xl ${neonClass}`}
+                      className={`p-4 rounded-2xl ${neonClass} relative`}
                     >
                       <div className="flex flex-row items-center gap-2 mb-6">
                         <span className="text-4xl">{plan.emoji}</span>
@@ -599,22 +599,22 @@ const ProfilePage: React.FC = () => {
                       </div>
 
                       {/* Achievement displays */}
-                      <div className="space-y-2 mb-4">
+                      <div className="space-y-2 mb-4 absolute top-2 right-2 flex flex-col gap-2">
                         {habitAchieved && (
                           <div className="flex flex-row items-center gap-2">
-                            <Sprout size={32} className="text-lime-500" />
-                            <span className="text-sm text-gray-600">
-                              It&apos;s a habit for {userInformalName}!
-                            </span>
+                            <Sprout size={42} className="text-lime-500 animate-pulse" />
+                            {/* <span className="text-sm text-gray-600">
+                              It&apos;s a habit for {userInformalName}
+                            </span> */}
                           </div>
                         )}
                         {lifestyleAchieved && (
                           <div className="flex flex-row items-center gap-2">
-                            <Medal size={32} className="text-orange-500" />
-                            <span className="text-sm text-gray-600">
+                            <Medal size={42} className="text-orange-500 animate-pulse" />
+                            {/* <span className="text-sm text-gray-600">
                               Part of {userInformalName}&apos;s lifestyle for{" "}
                               {backendProgress?.achievement?.streak ?? 0} weeks
-                            </span>
+                            </span> */}
                           </div>
                         )}
                       </div>
