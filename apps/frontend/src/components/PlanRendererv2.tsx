@@ -18,11 +18,11 @@ import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "./ui/select";
 import { Switch } from "./ui/switch";
 
@@ -236,7 +236,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   //       if (selectedPlan.outlineType === "TIMES_PER_WEEK") {
   //         weeklyData[weekKey].planned = selectedPlan.timesPerWeek || 0;
   //       } else {
-  //         const plannedThisWeek = selectedPlan.sessions.filter((session) => {
+  //         const plannedThisWeek = selectedplan.sessions?.filter((session) => {
   //           const sessionDate = parseISO(session.date);
   //           return sessionDate >= currentWeekStart && sessionDate <= weekEnd;
   //         }).length;
@@ -279,7 +279,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   //   const currentWeekStart = startOfWeek(new Date());
   //   const currentWeekEnd = endOfWeek(new Date());
 
-  //   const thisWeekSessions = selectedPlan.sessions.filter((session) => {
+  //   const thisWeekSessions = selectedplan.sessions?.filter((session) => {
   //     const sessionDate = parseISO(session.date);
   //     return sessionDate >= currentWeekStart && sessionDate <= currentWeekEnd;
   //   });

@@ -1,10 +1,10 @@
 import { useApiWithAuth } from "@/api";
 import { useDataNotifications } from "@/contexts/notifications";
-import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import {
   isWeekCompleted as checkIsWeekCompleted,
 } from "@/contexts/PlanProgressContext/lib";
 import { CompletePlan } from "@/contexts/plans";
+import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
