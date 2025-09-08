@@ -1,3 +1,4 @@
+import { TelegramService } from "@/services/telegramService";
 import { User } from "@tsw/prisma";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
@@ -9,6 +10,7 @@ import { userService } from "../services/userService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
+const telegramService = new TelegramService();
 interface AdminRequest extends Request {
   adminVerified?: boolean;
 }
@@ -256,6 +258,7 @@ router.get(
 const ALLOWED_ORIGINS = new Set([
   "https://tracking.so",
   "https://app.tracking.so",
+  "http://localhost:3001",
 ]);
 
 const BLACKLISTED_IPS = new Set<string>();
@@ -326,9 +329,14 @@ router.post(
       // Log the error
       logger.error("Client Error", { extra: context });
 
-      // TODO: Add PostHog tracking
-      // TODO: Add Telegram notifications
-      // TODO: Add email notifications for production
+      telegramService.sendErrorNotification({
+        errorMessage: `ERROR IN FRONTEND: ${errorData.error_message}`,
+        userUsername: user?.username || "unknown",
+        userId: user?.id || "unknown",
+        method: "POST",
+        path: errorData.url,
+        statusCode: "400",
+      });
 
       res.json({ status: "success" });
     } catch (error) {

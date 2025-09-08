@@ -1,3 +1,4 @@
+import { getUserFullDataByUserNameOrId } from "@/contexts/users/actions";
 import { Metadata, ResolvingMetadata } from "next";
 import ProfilePage from "./ProfilePage";
 
@@ -12,30 +13,34 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
-    const userData = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/get-user-profile/${params.username}`
-    ).then((res) => {
-      if (!res.ok) throw new Error("Failed to fetch user data");
-      return res.json();
-    });
-    const user = userData.user;
-    if (!user) throw new Error("User not found");
+    
+    const users = await getUserFullDataByUserNameOrId([{username: params.username}])
+    if (!users || users.length === 0) throw new Error("User not found");
+    const user = users[0];
 
     const title = `${user.name}'s profile on tracking.so`;
     const description = `Check out ${user.name}'s (@${user.username}) profile on tracking.so`;
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://tracking.so";
     const ogImageUrl = new URL("/api/join/og", baseUrl);
-    ogImageUrl.searchParams.append("name", user.name);
-    ogImageUrl.searchParams.append("username", user.username);
-    ogImageUrl.searchParams.append("picture", user.picture);
-    ogImageUrl.searchParams.append("planCount", user.plan_ids.length.toString());
-    ogImageUrl.searchParams.append("friendCount", user.friend_ids.length.toString());
-
-    
-    if (userData.plans && userData.plans.length > 0) {
-      ogImageUrl.searchParams.append("currentlyWorkingOnEmoji", userData.plans[0]?.emoji);
-      ogImageUrl.searchParams.append("currentlyWorkingOnGoal", userData.plans[0]?.goal);
+    if (user.name) {
+      ogImageUrl.searchParams.append("name", user.name);
+    }
+    if (user.username) {  
+      ogImageUrl.searchParams.append("username", user.username);
+    }
+    if (user.picture) {
+      ogImageUrl.searchParams.append("picture", user.picture);
+    }
+    if (user.plans) {
+      ogImageUrl.searchParams.append("planCount", user.plans.length.toString());
+    }
+    if (user.friends) {
+      ogImageUrl.searchParams.append("friendCount", user.friends.length.toString());
+    }    
+    if (user.plans && user.plans.length > 0 && user.plans[0]?.goal) {
+      ogImageUrl.searchParams.append("currentlyWorkingOnEmoji", user.plans[0]?.emoji || "🔥");
+      ogImageUrl.searchParams.append("currentlyWorkingOnGoal", user.plans[0]?.goal);
     }
     
     return {
