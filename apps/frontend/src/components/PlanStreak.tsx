@@ -10,7 +10,7 @@ interface PlanStreakProps {
 
 const PlanStreak: React.FC<PlanStreakProps> = ({ plan }) => {
   const { plansProgress } = usePlanProgress();
-  const planProgress = plansProgress.find((p) => p.plan.id === plan.id);
+  const planProgress = plansProgress.find((p) => p.plan?.id === plan.id);
 
   if (!planProgress) {
     return null;

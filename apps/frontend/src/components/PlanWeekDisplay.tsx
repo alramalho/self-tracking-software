@@ -60,7 +60,7 @@ export const PlanWeekDisplay = ({
 
   // Use provided plan progress if available, otherwise find from hook
   const planProgress =
-    providedPlanProgress || plansProgress.find((p) => p.plan.id === plan.id);
+    providedPlanProgress || plansProgress.find((p) => p.plan?.id === plan.id);
   const week = planProgress?.weeks.find((w) => isSameWeek(w.startDate, date));
 
   const [animatedCompletedActivities, setAnimatedCompletedActivities] =
