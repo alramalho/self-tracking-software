@@ -1,9 +1,12 @@
 import { Request, Response, Router } from "express";
 import { Webhook } from "svix";
+import { TelegramService } from "../services/telegramService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
 const router = Router();
+
+const telegramService = new TelegramService();
 
 const verifyWebhook = async (req: Request): Promise<boolean> => {
   const headers = req.headers;
@@ -110,6 +113,7 @@ router.post("/webhook", async (req: Request, res: Response) => {
         await prisma.user.create({
           data: userData,
         });
+        telegramService.sendMessage(`🎉 New user! (${emailAddress})`);
       }
       return res.json({
         status: "success",
