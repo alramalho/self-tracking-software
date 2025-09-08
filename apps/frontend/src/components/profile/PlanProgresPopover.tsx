@@ -1,6 +1,6 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 // ACHIEVEMENT_WEEKS moved to backend
-import { AlertTriangle, Flame, Medal } from "lucide-react";
+import { AlertTriangle, Flame, Medal, Sprout } from "lucide-react";
 import React from "react";
 
 interface PlanProgressPopoverProps {
@@ -12,14 +12,16 @@ const PlanProgressPopover: React.FC<PlanProgressPopoverProps> = ({
   open,
   onClose,
 }) => {
-
   return (
     <AppleLikePopover open={open} onClose={onClose} title="Streak Details">
       <div className="p-4 space-y-6">
         <h3 className="text-xl font-semibold mb-4"> Plan progress Breakdown</h3>
 
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium mb-2 flex items-center gap-2" ><Flame className="text-red-500 inline-block" size={24} /> How streaks are calculated:</h4>
+          <h4 className="font-medium mb-2 flex items-center gap-2">
+            <Flame className="text-red-500 inline-block" size={24} /> How
+            streaks are calculated:
+          </h4>
           <ul className="text-sm text-gray-600 space-y-2">
             <li>
               • Each completed week adds <span className="font-bold">+1</span>{" "}
@@ -41,15 +43,33 @@ const PlanProgressPopover: React.FC<PlanProgressPopoverProps> = ({
         </div>
 
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium mb-2 flex items-center gap-2"><Medal className="text-yellow-500 inline-block" size={24} /> How lifestyle badges are calculated:</h4>
+          <h4 className="font-medium mb-2 flex items-center gap-2">
+            <Sprout className="text-lime-500 inline-block" size={24} /> How
+            habit badges are calculated:
+          </h4>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>• You get a habit badge if you achieve a streak of 4 weeks!</li>
+          </ul>
+        </div>
+
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium mb-2 flex items-center gap-2">
+            <Medal className="text-yellow-500 inline-block" size={24} /> How
+            lifestyle badges are calculated:
+          </h4>
           <ul className="text-sm text-gray-600 space-y-2">
             <li>
               • You get a lifetyle badge if you achieve a streak of 9 weeks!
             </li>
-            <li>
-              • <AlertTriangle size={16} className="text-amber-500 inline-block" /> You lose the badge if you drop your streak!
-            </li>
           </ul>
+        </div>
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 text-yellow-600" />
+            <div className="text-sm text-yellow-800">
+              You lose the habit and lifestyle badges if you drop your streak!
+            </div>
+          </div>
         </div>
 
         {/* <div className="space-y-4">
