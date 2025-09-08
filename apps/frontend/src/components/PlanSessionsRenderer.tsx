@@ -49,7 +49,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   };
 
   const getIntensityForDate = (dateStr: string) => {
-    const sessionsOnDate = plan.sessions.filter(
+    const sessionsOnDate = plan.sessions?.filter(
       (s) => format(s.date, "yyyy-MM-dd") === dateStr
     );
 
@@ -79,7 +79,7 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   const renderActivityViewer = () => {
     if (!focusedDate) return null;
 
-    const sessionsOnDate = plan.sessions.filter(
+    const sessionsOnDate = plan.sessions?.filter(
       (session) =>
         format(session.date, "yyyy-MM-dd") === format(focusedDate, "yyyy-MM-dd")
     );

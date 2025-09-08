@@ -125,12 +125,13 @@ export const isWeekCompleted = (
 
     return isCompleted;
   } else {
-    const plannedSessionsThisWeek = plan.sessions.filter((session) => {
-      const sessionDate = new Date(session.date);
-      return (
-        isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEndDate)
-      );
-    });
+    const plannedSessionsThisWeek =
+      plan.sessions?.filter((session) => {
+        const sessionDate = new Date(session.date);
+        return (
+          isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEndDate)
+        );
+      }) ?? [];
 
     if (plannedSessionsThisWeek.length === 0) {
       return false;
@@ -141,12 +142,13 @@ export const isWeekCompleted = (
       const weekStart = startOfWeek(sessionDate, { weekStartsOn: 0 });
       const weekEnd = endOfWeek(sessionDate, { weekStartsOn: 0 });
 
-      const completedSessionsThisWeek = planActivityEntries.filter(
-        (entry) =>
-          entry.activityId === session.activityId &&
-          isAfter(new Date(entry.date), weekStart) &&
-          isBefore(new Date(entry.date), weekEnd)
-      );
+      const completedSessionsThisWeek =
+        planActivityEntries.filter(
+          (entry) =>
+            entry.activityId === session.activityId &&
+            isAfter(new Date(entry.date), weekStart) &&
+            isBefore(new Date(entry.date), weekEnd)
+        ) ?? [];
 
       return completedSessionsThisWeek.length > 0;
     });
@@ -267,7 +269,7 @@ export function getPlanWeek(
     plannedActivities = plan.timesPerWeek ?? 0;
   } else {
     // If scheduled, return the plan.sessions for this specific week
-    const sessionsThisWeek = plan.sessions.filter((session) => {
+    const sessionsThisWeek = plan.sessions?.filter((session) => {
       const sessionDate = new Date(session.date);
       return isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEnd);
     });
@@ -279,7 +281,7 @@ export function getPlanWeek(
   if (plan.outlineType === "TIMES_PER_WEEK") {
     weekActivities = planActivities;
   } else {
-    const sessionsThisWeek = plan.sessions.filter((session) => {
+    const sessionsThisWeek = plan.sessions?.filter((session) => {
       const sessionDate = new Date(session.date);
       return isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEnd);
     });

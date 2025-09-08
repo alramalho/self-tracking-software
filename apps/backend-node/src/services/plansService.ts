@@ -371,14 +371,14 @@ export class PlansService {
 
       return isCompleted;
     } else {
-      const plannedSessionsThisWeek = plan.sessions.filter((session) => {
+      const plannedSessionsThisWeek = plan.sessions?.filter((session) => {
         const sessionDate = new Date(session.date);
         return (
           isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEndDate)
         );
       });
 
-      if (plannedSessionsThisWeek.length === 0) {
+      if (!plannedSessionsThisWeek || plannedSessionsThisWeek.length === 0) {
         return false;
       }
 
@@ -394,7 +394,9 @@ export class PlansService {
             isBefore(new Date(entry.date), weekEnd)
         );
 
-        return completedSessionsThisWeek.length > 0;
+        return (
+          completedSessionsThisWeek && completedSessionsThisWeek.length > 0
+        );
       });
 
       return allSessionsCompleted;
