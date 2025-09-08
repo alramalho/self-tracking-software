@@ -29,10 +29,15 @@ async function getAllRoutes(simplify: boolean = false): Promise<string[]> {
   );
 
   if (simplify) {
-    // Simplify routes to just base path + {any}
+    // Simplify routes to just base path + {any}, but preserve specific admin routes for security
     routes = routes.map((route: string) => {
       const segments = route.split("/");
       const basePath = segments[1]; // Get first segment after /
+
+      // Preserve full admin routes for security - don't simplify admin endpoints
+      if (basePath === "admin") {
+        return route;
+      }
 
       // If route has parameters or multiple segments, simplify to /{basePath}/{any}
       if (segments.length > 2 || route.includes("{")) {
