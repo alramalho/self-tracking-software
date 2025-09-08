@@ -1,22 +1,25 @@
 import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { TimelineData } from "@/contexts/timeline/actions";
-import { useCurrentUser } from "@/contexts/users";
+import { useCurrentUser, useUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { getThemeVariants } from "@/utils/theme";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import {
-    differenceInCalendarDays,
-    format,
-    isToday,
-    isYesterday
+  differenceInCalendarDays,
+  format,
+  isToday,
+  isYesterday,
 } from "date-fns";
-import { Edit, Smile } from "lucide-react";
+import { Edit, Medal, Smile, Sprout } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
+import BadgeExplainerPopover from "./BadgeExplainerPopover";
 import CommentSection from "./CommentSection";
+import NeonCard from "./NeonGradientCard";
 import { PlanBadge } from "./PlanBadge";
 import { Separator } from "./ui/separator";
 
@@ -34,10 +37,7 @@ const getFormattedDate = (date: Date) => {
   const diffInCalendarDays = differenceInCalendarDays(now, date);
 
   if (diffInCalendarDays <= 7) {
-    return `last ${format(date, "EEEE")} at ${format(
-      date,
-      "HH:mm"
-    )}`;
+    return `last ${format(date, "EEEE")} at ${format(date, "HH:mm")}`;
   }
 
   return format(date, "MMM d HH:mm");
@@ -63,6 +63,7 @@ interface ActivityEntryPhotoCardProps {
   onUsernameClick?: () => void;
   activityEntryId: string;
   description?: string;
+  activityId: string;
 }
 
 interface ReactionCount {
@@ -100,12 +101,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   onUsernameClick,
   activityEntryId,
   description,
+  activityId,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>(
     activityEntryReactions
   );
-  const {currentUser} = useCurrentUser();
+  const { currentUser } = useCurrentUser();
   const currentUserUsername = currentUser?.username;
   const isOwnActivityEntry = currentUser?.username === userUsername;
   const api = useApiWithAuth();
@@ -117,8 +119,23 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
-
+  const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
   const { isUserPremium } = usePaidPlan();
+  const { data: ownerUser } = useUser({ username: userUsername || "" });
+  const { data: plansProgressData } = usePlansProgress(
+    ownerUser?.plans?.map((plan) => plan.id) || []
+  );
+  const habitAchieved = plansProgressData?.some(
+    (plan) => plan.habitAchievement.isAchieved
+  );
+  const lifestyleAchieved = plansProgressData?.some(
+    (plan) => plan.lifestyleAchievement.isAchieved
+  );
+  const achievedPlan =
+    plansProgressData?.find(
+      (plan) =>
+        plan.lifestyleAchievement.isAchieved || plan.habitAchievement.isAchieved
+    );
 
   const [comments, setComments] = useState<
     TimelineData["recommendedActivityEntries"][number]["comments"]
@@ -343,9 +360,28 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   };
 
   const hasImage = imageUrl && !hasImageExpired;
+  const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
-  return (
-    <div className="bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden relative">
+  // Define neon colors based on plan type priority (LIFESTYLE > HABIT)
+  const getNeonColors = () => {
+    if (lifestyleAchieved) {
+      console.log("amber");
+      return "amber";
+    } else if (habitAchieved) {
+      console.log("lime");
+      return "lime";
+    }
+    return "none"; // default
+  };
+
+  const cardContent = (
+    <div
+      className={
+        shouldShowNeonEffect
+          ? ""
+          : "bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden relative"
+      }
+    >
       {hasImage && (
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
@@ -479,8 +515,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <Avatar
                 className={twMerge(
                   "w-8 h-8",
-                  isUserPremium &&
-                    "ring-2 ring-offset-2 ring-offset-white",
+                  isUserPremium && "ring-2 ring-offset-2 ring-offset-white",
                   isUserPremium && variants.ring
                 )}
                 onClick={onAvatarClick}
@@ -490,7 +525,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               </Avatar>
               {isUserPremium && (
                 <div className="absolute -bottom-[6px] -right-[6px]">
-                  <PlanBadge planType={currentUser?.planType || "FREE"} size={18} />
+                  <PlanBadge
+                    planType={currentUser?.planType || "FREE"}
+                    size={18}
+                  />
                 </div>
               )}
             </div>
@@ -576,6 +614,52 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         </div>
       </div>
     </div>
+  );
+
+  return shouldShowNeonEffect ? (
+    <NeonCard color={"none"} className={`${lifestyleAchieved ? "bg-amber-50/50" :  "none"}`}>
+      {" "}
+      {/* dont show neon effect */}
+      {cardContent}
+      {!editable && ( // dont show in profile page
+        <div
+          onClick={() => setShowBadgeExplainer(true)}
+          className={`space-y-2 mb-4 absolute ${
+            hasImage ? "bottom-0 right-2" : "top-2 right-2"
+          } flex flex-col gap-2`}
+        >
+          {habitAchieved && !lifestyleAchieved && (
+            <div className="flex flex-row items-center gap-2">
+              <Sprout size={42} className="text-lime-500 animate-pulse" />
+            </div>
+          )}
+          {lifestyleAchieved && (
+            <div className="flex flex-row items-center gap-2">
+              <Medal size={42} className="text-amber-500 animate-pulse" />
+            </div>
+          )}
+        </div>
+      )}
+      <BadgeExplainerPopover
+        open={showBadgeExplainer}
+        onClose={() => setShowBadgeExplainer(false)}
+        achiever={{
+          user: {
+            username: userUsername || "",
+            name: userName || "",
+            picture: userPicture || "",
+          },
+          plan: {
+            type: lifestyleAchieved ? "lifestyle" : habitAchieved ? "habit" : undefined,
+            emoji: achievedPlan?.plan.emoji || "",
+            goal: achievedPlan?.plan.goal || "",
+            streak: achievedPlan?.achievement.streak || 0,
+          },
+        }}
+      />
+    </NeonCard>
+  ) : (
+    cardContent
   );
 };
 

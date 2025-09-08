@@ -189,7 +189,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
   // Get habit and lifestyle achievement from backend or fallback to local calculation
-  const backendProgress = !isDemo ? plansProgressData?.find(p => p.planId === plan.id) : null;
+  const backendProgress = !isDemo ? plansProgressData?.find(p => p.plan.id === plan.id) : null;
   const FALLBACK_HABIT_WEEKS = 4; // Fallback for demos/offline
   const FALLBACK_LIFESTYLE_WEEKS = 9; // Fallback for demos/offline
   
