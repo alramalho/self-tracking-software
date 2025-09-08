@@ -114,6 +114,13 @@ export const PlanWeekDisplay = ({
   // };
 
   useEffect(() => {
+    if (isFullyDone) {
+      stars()
+      shapes()
+    }
+  }, [isFullyDone]);
+
+  useEffect(() => {
     if (inView) {
       const timer = setInterval(() => {
         setAnimatedCompletedActivities((prev) => {
