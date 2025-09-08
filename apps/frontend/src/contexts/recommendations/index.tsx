@@ -1,5 +1,6 @@
 "use client";
 import { useApiWithAuth } from "@/api";
+import { handleQueryError } from "@/lib/utils";
 import { useSession } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import { Plan, Recommendation, User } from "@tsw/prisma";
@@ -39,6 +40,11 @@ export const RecommendationsProvider: React.FC<{
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
+
+  if (recommendationsQuery.error) {
+    let customErrorMessage = `Failed to get recommendations`;
+    handleQueryError(recommendationsQuery.error, customErrorMessage);
+  }
 
   return (
     <RecommendationsContext.Provider

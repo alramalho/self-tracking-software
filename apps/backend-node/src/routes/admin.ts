@@ -333,9 +333,9 @@ router.post(
         errorMessage: `ERROR IN FRONTEND: ${errorData.error_message}`,
         userUsername: user?.username || "unknown",
         userId: user?.id || "unknown",
-        method: "POST",
+        method: "?",
         path: errorData.url,
-        statusCode: "400",
+        statusCode: "?",
       });
 
       res.json({ status: "success" });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { handleQueryError } from "@/lib/utils";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, PlanSession, Prisma } from "@tsw/prisma";
@@ -78,6 +79,12 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     enabled: isLoaded && isSignedIn,
   });
 
+  if (plans.error) {
+    let customErrorMessage = `Failed to get plans`;
+    handleQueryError(plans.error, customErrorMessage);
+    toast.error(customErrorMessage);
+  }
+
   const updatePlansMutation = useMutation({
     mutationFn: async (data: {
       updates: Array<{ planId: string; updates: Prisma.PlanUpdateInput }>;
@@ -144,9 +151,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       }, 1000);
     },
     onError: (error, { muteNotifications }) => {
-      console.error("Error updating plan:", error);
+      let customErrorMessage = `Failed to update plan`;
+      handleQueryError(error, customErrorMessage);
       if (!muteNotifications) {
-        toast.error("Failed to update plan. Please try again.");
+        toast.error(customErrorMessage);
       }
     },
   });
@@ -158,6 +166,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     onSuccess: () => {
       toast.success("Coach suggested sessions cleared successfully!");
     },
+    onError: (error) => {
+      let customErrorMessage = `Failed to clear coach suggested sessions in plan`;
+      handleQueryError(error, customErrorMessage);
+    },
   });
 
   const upgradeCoachSuggestedSessionsToPlanSessionsMutation = useMutation({
@@ -168,6 +180,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success(
         "Coach suggested sessions upgraded to plan sessions successfully!"
       );
+    },
+    onError: (error) => {
+      let customErrorMessage = `Failed to upgrade coach suggested sessions to plan sessions`;
+      handleQueryError(error, customErrorMessage);
     },
   });
 
@@ -186,8 +202,8 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.refetchQueries({ queryKey: ["plans"] });
     },
     onError: (error) => {
-      console.error("Error modifying manual milestone:", error);
-      toast.error("Failed to modify manual milestone. Please try again.");
+      let customErrorMessage = `Failed to modify manual milestone`;
+      handleQueryError(error, customErrorMessage);
     },
   });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { handleQueryError } from "@/lib/utils";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Metric, MetricEntry } from "@tsw/prisma";
@@ -8,7 +9,6 @@ import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import {
   deleteMetric,
-  getMetricEntries,
   getMetrics,
   logTodaysNote,
   skipTodaysNote,
@@ -69,7 +69,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["metricsEntries"],
     queryFn: async () => {
       try {
-        return await getMetricEntries();
+        throw Error("test");//await getMetricEntries();
       } catch (error) {
         throw error;
       }
@@ -88,8 +88,9 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Metric created successfully!");
     },
     onError: (error) => {
-      console.error("Error creating metric:", error);
-      toast.error("Failed to create metric. Please try again.");
+      let customErrorMessage = `Failed to create metric`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
     },
   });
 
@@ -119,8 +120,9 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Metrics logged successfully!");
     },
     onError: (error) => {
-      console.error("Error logging metric:", error);
-      toast.error("Failed to log metric. Please try again.");
+      let customErrorMessage = `Failed to log metric`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
     },
   });
 
@@ -137,8 +139,9 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Metric logged successfully!");
     },
     onError: (error) => {
-      console.error("Error logging metric:", error);
-      toast.error("Failed to log metric. Please try again.");
+      let customErrorMessage = `Failed to log metric`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
     },
   });
 
@@ -155,8 +158,9 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Metric skipped successfully!");
     },
     onError: (error) => {
-      console.error("Error skipping metric:", error);
-      toast.error("Failed to skip metric. Please try again.");
+      let customErrorMessage = `Failed to skip metric`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
     },
   });
 
@@ -169,8 +173,9 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Note added to today's entries!");
     },
     onError: (error) => {
-      console.error("Error logging today's note:", error);
-      toast.error("Failed to add note. Please try again.");
+      let customErrorMessage = `Failed to log today's note`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
     },
   });
 
@@ -183,8 +188,9 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Today's note skipped successfully!");
     },
     onError: (error) => {
-      console.error("Error skipping today's note:", error);
-      toast.error("Failed to skip today's note. Please try again.");
+      let customErrorMessage = `Failed to skip today's note`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
     },
   });
 
@@ -198,8 +204,9 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Metric deleted successfully!");
     },
     onError: (error) => {
-      console.error("Error deleting metric:", error);
-      toast.error("Failed to delete metric. Please try again.");
+      let customErrorMessage = `Failed to delete metric`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
     },
   });
 
