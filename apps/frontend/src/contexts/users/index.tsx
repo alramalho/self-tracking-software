@@ -1,6 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { handleQueryError } from "@/lib/utils";
 import { useSession } from "@clerk/clerk-react";
 import { useClerk } from "@clerk/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -102,6 +103,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (currentUserQuery.error) {
       handleAuthError("could not load current user");
+      handleQueryError(currentUserQuery.error, `Failed to get current user`);
     }
   }, [currentUserQuery.error, handleAuthError]);
 
@@ -242,7 +244,9 @@ export const useUsers = (
 
   // Handle errors manually
   if (query.error) {
-    toast.error(`Failed to get users ${queryKey.join(",")}`);
+    let customErrorMessage = `Failed to get users ${queryKey.join(",")}`;
+    handleQueryError(query.error, customErrorMessage);
+    toast.error(customErrorMessage);
   }
 
   return query;
@@ -265,7 +269,9 @@ export const useUser = (
   });
 
   if (query.error) {
-    toast.error(`Failed to get user ${identifier}`);
+    let customErrorMessage = `Failed to get user ${identifier}`;
+    handleQueryError(query.error, customErrorMessage);
+    toast.error(customErrorMessage);
   }
 
   return query;

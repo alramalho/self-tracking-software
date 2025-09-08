@@ -1,6 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { handleQueryError } from "@/lib/utils";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, ActivityEntry } from "@tsw/prisma";
@@ -80,6 +81,18 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     enabled: isSignedIn && isLoaded,
   });
 
+  if (activitiesQuery.error) {
+    let customErrorMessage = `Failed to get activities`;
+    handleQueryError(activitiesQuery.error, customErrorMessage);
+    toast.error(customErrorMessage);
+  }
+
+  if (activitiesEntriesQuery.error) {
+    let customErrorMessage = `Failed to get activity entries`;
+    handleQueryError(activitiesEntriesQuery.error, customErrorMessage);
+    toast.error(customErrorMessage);
+  }
+
   const logActivityMutation = useMutation({
     mutationFn: async (data: ActivityLogData) => {
       const formData = new FormData();
@@ -113,8 +126,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       );
     },
     onError: (error) => {
-      console.error("Error logging activity:", error);
-      toast.error("Failed to log activity. Please try again.");
+      let customErrorMessage = `Failed to log activity`;
+      handleQueryError(error, customErrorMessage);
     },
   });
 
@@ -133,7 +146,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     onError: (error, { muteNotification }) => {
-      console.error("Error updating activity:", error);
+      let customErrorMessage = `Failed to update activity`;
+      handleQueryError(error, customErrorMessage);
       if (!muteNotification) {
         toast.error("Failed to update activity. Please try again.");
       }
@@ -158,7 +172,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     onError: (error, { muteNotification }) => {
-      console.error("Error updating activity:", error);
+      let customErrorMessage = `Failed to update activity`;
+      handleQueryError(error, customErrorMessage);
       if (!muteNotification) {
         toast.error("Failed to update activity. Please try again.");
       }
@@ -175,7 +190,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Activity deleted successfully!");
     },
     onError: (error) => {
-      console.error("Error deleting activity:", error);
+      let customErrorMessage = `Failed to delete activity`;
+      handleQueryError(error, customErrorMessage);
       toast.error("Failed to delete activity. Please try again.");
     },
   });
@@ -189,7 +205,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success("Activity deleted successfully!");
     },
     onError: (error) => {
-      console.error("Error deleting activity:", error);
+      let customErrorMessage = `Failed to delete activity entry`;
+      handleQueryError(error, customErrorMessage);
       toast.error("Failed to delete activity. Please try again.");
     },
   });

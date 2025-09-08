@@ -35,6 +35,7 @@ import {
   Settings,
   Sprout,
   UserPlus,
+  UserX,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -239,7 +240,13 @@ const ProfilePage: React.FC = () => {
   }
 
   if (!profileData) {
-    return <div>No profile data available.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[200px] p-4">
+        <UserX className="w-12 h-12 text-gray-400 mb-2" />
+        <div className="text-gray-600">No profile data available. Does this user exist?</div>
+        <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
+      </div>
+    );
   }
 
   return (

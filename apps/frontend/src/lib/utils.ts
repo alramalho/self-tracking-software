@@ -6,6 +6,57 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const handleQueryError = (
+  error: Error & { digest?: string },
+  customErrorMessage: string
+) => {
+  customErrorMessage;
+  let customError = {
+    ...error,
+    digest: error.digest || "",
+    message: "(useQuery Error)" + customErrorMessage + +error.message || "",
+  };
+  console.error(customError);
+  logError(customError);
+};
+
+export const logError = async (
+  error: Error & { digest?: string },
+  url?: string
+) => {
+  try {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!backendUrl) {
+      console.error("Backend URL not configured");
+      return;
+    }
+
+    await fetch(`${backendUrl}/admin/public/log-error`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        error_message: error.message,
+        error_digest: error.digest,
+        url:
+          url || (typeof window !== "undefined" ? window.location.href : null),
+        referrer:
+          typeof document !== "undefined"
+            ? document.referrer || "direct"
+            : null,
+        user_agent:
+          typeof window !== "undefined" ? window.navigator.userAgent : null,
+        timestamp: new Date().toISOString(),
+        user_clerk_id: null,
+      }),
+    });
+  } catch (e) {
+    // Silently fail if we can't log the error
+    console.error("Failed to log error:", e);
+  }
+};
+
 export const isActivePlan = (plan: {
   finishingDate: Date | string | null;
   deletedAt: Date | string | null;
