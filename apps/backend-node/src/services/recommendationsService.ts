@@ -107,6 +107,10 @@ export class RecommendationsService {
         where: {
           lookingForAp: true,
           id: { not: currentUserId },
+          AND: [
+            { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+            { email: { not: { startsWith: "lia.borges+" } } },
+          ],
         },
       });
 
@@ -283,7 +287,7 @@ export class RecommendationsService {
       const recommendedUsers = await prisma.user.findMany({
         where: {
           id: { in: recommendedUserIds },
-          OR: [
+          AND: [
             { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
             { email: { not: { startsWith: "lia.borges+" } } },
           ],

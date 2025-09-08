@@ -13,7 +13,7 @@ export class UserService {
     return prisma.user.findMany({
       where: {
         deletedAt: null,
-        OR: [
+        AND: [
           { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
           { email: { not: { startsWith: "lia.borges+" } } },
         ],
@@ -75,7 +75,7 @@ export class UserService {
           not: currentUserId,
         },
         deletedAt: null,
-        OR: [
+        AND: [
           { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
           { email: { not: { startsWith: "lia.borges+" } } },
         ],

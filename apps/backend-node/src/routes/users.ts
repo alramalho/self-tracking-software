@@ -238,6 +238,41 @@ usersRouter.get(
   }
 );
 
+usersRouter.post(
+  "/compute-recommendations",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Update user embedding
+      await userService.updateUserEmbedding(user);
+
+      // Compute recommendations
+      const recommendations =
+        await recommendationsService.computeRecommendedUsers(user.id);
+
+      res.json({
+        message: `Recommendations computed successfully for user ${req.user!.username}`,
+        user_id: user.id,
+        recommendations,
+      });
+    } catch (error) {
+      logger.error("Error computing recommendations:", error);
+      res.status(500).json({ error: "Failed to compute recommendations" });
+    }
+  }
+);
+
 // Get user profile
 usersRouter.get(
   "/user/:username_or_id",

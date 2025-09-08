@@ -1,8 +1,12 @@
 "use client";
 
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { ApSearchComponent } from "@/components/ApSearch";
+import { CollapsibleSelfUserCard } from "@/components/CollapsibleSelfUserCard";
+import { RecommendedUsers } from "@/components/RecommendedUsers";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentUser } from "@/contexts/users";
+import { usePlans } from "@/contexts/plans";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -134,7 +138,9 @@ const HumanPartnerFinder = () => {
   const [apSearchPopupOpen, setApSearchPopupOpen] = useState(false);
   const [hasShared, setHasShared] = useState(false);
   const [hasOpenedCommunitySearch, setHasOpenedCommunitySearch] = useState(false);
-  const [ isContinuing, setIsContinuing]  = useState(false)
+  const [ isContinuing, setIsContinuing]  = useState(false);
+  const { isLoadingCurrentUser } = useCurrentUser();
+  const { isLoadingPlans } = usePlans();
 
   const handleContinueToApp = () => {
     setIsContinuing(true)
@@ -207,7 +213,27 @@ const HumanPartnerFinder = () => {
           setHasOpenedCommunitySearch(true);
         }}
       >
-        <ApSearchComponent />
+        {isLoadingCurrentUser || isLoadingPlans ? (
+          <div className="space-y-6 mt-4">
+            <div>
+              <Skeleton className="h-6 w-32 mb-4" />
+              <div className="grid grid-cols-1 justify-items-center">
+                <Skeleton className="h-48 w-full max-w-sm rounded-lg" />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="h-48 w-full rounded-lg" />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6 mt-4">
+            <CollapsibleSelfUserCard />
+            <RecommendedUsers />
+          </div>
+        )}
       </AppleLikePopover>
     </>
   );
