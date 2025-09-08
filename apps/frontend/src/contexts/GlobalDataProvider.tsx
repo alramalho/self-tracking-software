@@ -1,5 +1,6 @@
 "use client";
 
+import { useApiWithAuth } from "@/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -22,6 +23,7 @@ interface GlobalDataProviderProps {
 export const useGlobalDataOperations = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const api = useApiWithAuth();
 
   const refetchAllData = async (options: { preloadPages?: boolean; notify?: boolean } = {}) => {
     const { preloadPages = false, notify = true } = options;

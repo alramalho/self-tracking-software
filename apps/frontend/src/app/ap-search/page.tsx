@@ -1,17 +1,29 @@
 "use client";
 
+import { useApiWithAuth } from "@/api";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { ApSearchComponent } from "@/components/ApSearch";
+import { CollapsibleSelfUserCard } from "@/components/CollapsibleSelfUserCard";
+import { RecommendedUsers } from "@/components/RecommendedUsers";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import UserSearch, { UserSearchResult } from "@/components/UserSearch";
+import { usePlans } from "@/contexts/plans";
+import { useRecommendations } from "@/contexts/recommendations";
+import { useCurrentUser } from "@/contexts/users";
 import { useNotifications } from "@/hooks/useNotifications";
-import { Bell } from "lucide-react";
+import { Bell, RefreshCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
+import toast from "react-hot-toast";
+import PullToRefresh from "react-simple-pull-to-refresh";
 
 const ApSearchPage: React.FC = () => {
   const { isPushGranted, requestPermission } = useNotifications();
   const router = useRouter();
+  const api = useApiWithAuth();
+  const { isLoadingCurrentUser } = useCurrentUser();
+  const { isLoadingPlans } = usePlans();
+  const { refetchRecommendations } = useRecommendations();
 
   const handleUserClick = (user: UserSearchResult) => {
     router.push(`/profile/${user.username}`);
@@ -55,14 +67,59 @@ const ApSearchPage: React.FC = () => {
     );
   }
   return (
-    <div className="container mx-auto py-4 px-4 max-w-3xl space-y-6">
-      {/* Search Section */}
+    <>
+      <PullToRefresh
+        onRefresh={async () => {
+          await api.post("/users/compute-recommendations");
+          await refetchRecommendations();
+          toast.success("Recommendations refreshed!");
+        }}
+        pullingContent={
+          <div className="flex items-center justify-center my-4">
+            <RefreshCcw size={24} className="text-gray-500" />
+          </div>
+        }
+        refreshingContent={
+          <div className="flex items-center justify-center my-4">
+            <RefreshCcw size={24} className="text-gray-500 animate-spin" />
+          </div>
+        }
+        className="!h-fit"
+      >
+        <div className="container mx-auto py-4 px-4 max-w-3xl space-y-6">
+          {/* Search Section */}
 
-      <UserSearch onUserClick={handleUserClick} />
+          <UserSearch onUserClick={handleUserClick} />
 
-      {/* Recommendations Section */}
-      <ApSearchComponent />
-    </div>
+          {/* Recommendations Section */}
+          {isLoadingCurrentUser || isLoadingPlans ? (
+            <div className="space-y-6 mt-4">
+              <div>
+                <Skeleton className="h-6 w-32 mb-4" />
+                <div className="grid grid-cols-1 justify-items-center">
+                  <Skeleton className="h-48 w-full max-w-sm rounded-lg" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-48 w-full rounded-lg" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4">
+              <CollapsibleSelfUserCard />
+            </div>
+          )}
+        </div>
+      </PullToRefresh>
+      {!isLoadingCurrentUser && !isLoadingPlans && (
+        <div className="mt-4">
+          <RecommendedUsers />
+        </div>
+      )}
+    </>
   );
 };
 

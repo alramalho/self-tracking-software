@@ -14,6 +14,7 @@ export interface RecommendedUsersResponse {
 
 interface RecommendationsContextType {
   recommendations: Recommendation[];
+  refetchRecommendations: () => void;
   users: Partial<User>[];
   plans: Plan[];
   isLoadingRecommendations: boolean;
@@ -50,6 +51,7 @@ export const RecommendationsProvider: React.FC<{
     <RecommendationsContext.Provider
       value={{
         recommendations: recommendationsQuery.data?.recommendations || [],
+        refetchRecommendations: recommendationsQuery.refetch,
         users: recommendationsQuery.data?.users || [],
         plans: recommendationsQuery.data?.plans || [],
         isLoadingRecommendations: recommendationsQuery.isLoading,
