@@ -411,7 +411,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex justify-start gap-2 mb-4">
                 {profileActivePlans.map((plan) => {
                   const backendProgress = plansProgressData?.find(
-                    (p) => p.plan.id === plan.id
+                    (p) => p.plan?.id === plan.id
                   );
                   const habitAchieved =
                     backendProgress?.habitAchievement?.isAchieved ?? false;
@@ -602,7 +602,7 @@ const ProfilePage: React.FC = () => {
                 profileActivePlans.length > 0 &&
                 profileActivePlans.map((plan) => {
                   const backendProgress = plansProgressData?.find(
-                    (p) => p.plan.id === plan.id
+                    (p) => p.plan?.id === plan.id
                   );
 
                   // Check achievements
