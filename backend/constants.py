@@ -62,7 +62,8 @@ AXIOM_BATCH_SIZE = os.getenv("AXIOM_BATCH_SIZE", "10")
 AXIOM_FLUSH_INTERVAL = os.getenv("AXIOM_FLUSH_INTERVAL", "5")
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_CHAT_IDS = os.getenv("TELEGRAM_CHAT_IDS", "").split(",") if os.getenv("TELEGRAM_CHAT_IDS") else []
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")  # Keep for backward compatibility
 
 
 STRIPE_PLUS_PRODUCT_ID = os.getenv("STRIPE_PLUS_PRODUCT_ID")
