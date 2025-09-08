@@ -2,10 +2,13 @@
 
 import { useApiWithAuth } from "@/api";
 import { useQueries } from "@tanstack/react-query";
-import React from "react";
 
 export interface PlanProgress {
-  planId: string;
+  plan: {
+    id: string;
+    goal: string;
+    emoji: string;
+  };
   achievement: {
     streak: number;
     completedWeeks: number;

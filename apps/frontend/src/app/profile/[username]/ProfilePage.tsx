@@ -3,7 +3,9 @@
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
+import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
 import Divider from "@/components/Divider";
+import NeonCard from "@/components/NeonGradientCard";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import { PlanBadge } from "@/components/PlanBadge";
 import { isPlanExpired } from "@/components/PlansRenderer";
@@ -70,25 +72,31 @@ const ProfilePage: React.FC = () => {
   const params = useParams();
   const searchParams = useSearchParams();
   const username = params.username as string;
-  const { 
-    profileData, 
-    isLoading: isProfileDataLoading, 
+  const {
+    profileData,
+    isLoading: isProfileDataLoading,
     isOwnProfile,
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
-    currentUser
+    currentUser,
   } = useUnifiedProfileData(username);
-  
+
   // Extract activities and activityEntries from profileData for consistency
   const activities = profileData?.activities || [];
   const activityEntries = profileData?.activityEntries || [];
 
   // For connection requests, we always use the current user data regardless of profile being viewed
-  const currentUserSentConnectionRequests = currentUser?.connectionsFrom?.filter(conn => conn.status === 'PENDING') || [];
-  const currentUserReceivedConnectionRequests = currentUser?.connectionsTo?.filter(conn => conn.status === 'PENDING') || [];
+  const currentUserSentConnectionRequests =
+    currentUser?.connectionsFrom?.filter((conn) => conn.status === "PENDING") ||
+    [];
+  const currentUserReceivedConnectionRequests =
+    currentUser?.connectionsTo?.filter((conn) => conn.status === "PENDING") ||
+    [];
 
-  const profileActivePlans = profileData?.plans?.filter((p) => !isPlanExpired({finishingDate: p.finishingDate}));
+  const profileActivePlans = profileData?.plans?.filter(
+    (p) => !isPlanExpired({ finishingDate: p.finishingDate })
+  );
   const [showEditActivityEntry, setShowActivityToEdit] = useState<
     ActivityEntry | undefined
   >(undefined);
@@ -96,7 +104,7 @@ const ProfilePage: React.FC = () => {
     ? profileData.name.split(" ")[0]
     : profileData?.username;
 
-  const planIds = profileActivePlans?.map(plan => plan.id) || [];
+  const planIds = profileActivePlans?.map((plan) => plan.id) || [];
   const { data: plansProgressData } = usePlansProgress(planIds);
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
@@ -108,6 +116,10 @@ const ProfilePage: React.FC = () => {
   const [showStreakDetails, setShowStreakDetails] = useState(
     redirectTo === "streak-details"
   );
+  const [badgeExplainer, setBadgeExplainer] = useState<{
+    open: boolean;
+    achiever: any;
+  }>({ open: false, achiever: undefined });
 
   useEffect(() => {
     if (profileData?.username && !username && isOwnProfile) {
@@ -152,18 +164,25 @@ const ProfilePage: React.FC = () => {
 
   const activitiesNotInPlans = useMemo(() => {
     const plansActivityIds = new Set(
-      profileActivePlans?.flatMap((plan) => plan.activities?.map((a) => a.id)) ||
-        []
+      profileActivePlans?.flatMap((plan) =>
+        plan.activities?.map((a) => a.id)
+      ) || []
     );
 
     const activitiesNotInPlans = profileData?.activities?.filter(
       (activity) =>
         !plansActivityIds.has(activity.id) &&
-        profileData?.activityEntries?.some((entry) => entry.activityId === activity.id)
+        profileData?.activityEntries?.some(
+          (entry) => entry.activityId === activity.id
+        )
     );
 
     return activitiesNotInPlans;
-  }, [profileActivePlans, profileData?.activities, profileData?.activityEntries]);
+  }, [
+    profileActivePlans,
+    profileData?.activities,
+    profileData?.activityEntries,
+  ]);
 
   const handleTimeRangeChange = (value: TimeRange) => {
     setTimeRange(value);
@@ -178,15 +197,13 @@ const ProfilePage: React.FC = () => {
 
   const hasPendingReceivedConnectionRequest = () => {
     return currentUserReceivedConnectionRequests?.some(
-      (request) =>
-        request.fromId === profileData?.id
+      (request) => request.fromId === profileData?.id
     );
   };
 
   const hasPendingSentConnectionRequest = () => {
     return currentUserSentConnectionRequests?.some(
-      (request) =>
-        request.toId === profileData?.id
+      (request) => request.toId === profileData?.id
     );
   };
 
@@ -194,7 +211,7 @@ const ProfilePage: React.FC = () => {
     // This only makes sense when looking at external profiles
     // When viewing own profile, we can't be friends with ourselves
     if (isOwnProfile) return false;
-    
+
     return currentUser?.friends?.some(
       (friend) => friend.id === profileData?.id
     );
@@ -224,12 +241,12 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4 h-13 bg-gray-100 rounded-lg p-1 mb-4">
             <Skeleton className="h-10 rounded-md" />
             <Skeleton className="h-10 rounded-md" />
           </div>
-          
+
           <div className="space-y-4">
             <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-32 w-full rounded-2xl" />
@@ -243,8 +260,12 @@ const ProfilePage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-4">
         <UserX className="w-12 h-12 text-gray-400 mb-2" />
-        <div className="text-gray-600">No profile data available. Does this user exist?</div>
-        <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
+        <div className="text-gray-600">
+          No profile data available. Does this user exist?
+        </div>
+        <Button variant="outline" onClick={() => window.history.back()}>
+          Go Back
+        </Button>
       </div>
     );
   }
@@ -389,38 +410,68 @@ const ProfilePage: React.FC = () => {
             {profileActivePlans && profileActivePlans.length > 0 && (
               <div className="flex justify-start gap-2 mb-4">
                 {profileActivePlans.map((plan) => {
-                  const backendProgress = plansProgressData?.find(p => p.planId === plan.id);
-                  const habitAchieved = backendProgress?.habitAchievement?.isAchieved ?? false;
-                  const lifestyleAchieved = backendProgress?.lifestyleAchievement?.isAchieved ?? false;
-                  
+                  const backendProgress = plansProgressData?.find(
+                    (p) => p.plan.id === plan.id
+                  );
+                  const habitAchieved =
+                    backendProgress?.habitAchievement?.isAchieved ?? false;
+                  const lifestyleAchieved =
+                    backendProgress?.lifestyleAchievement?.isAchieved ?? false;
+
                   // Only render if we have at least one achievement
                   if (!habitAchieved && !lifestyleAchieved) return null;
-                  
+
                   return (
-                    <div key={plan.id} className="flex gap-2">
-                      {habitAchieved && (
-                        <div className={cn(
-                          "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
-                          "ring-2 ring-lime-400 bg-gradient-to-r from-lime-50 to-green-50",
-                          "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        )}>
-                          <Sprout size={14} className="text-lime-600" />
-                          <span className="text-lime-700">Habit</span>
-                          <span className="opacity-60">{plan.emoji}</span>
-                        </div>
-                      )}
-                      {lifestyleAchieved && (
-                        <div className={cn(
-                          "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
-                          "ring-2 ring-orange-400 bg-gradient-to-r from-orange-50 to-amber-50",
-                          "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        )}>
-                          <Medal size={14} className="text-orange-600" />
-                          <span className="text-orange-700">Lifestyle</span>
-                          <span className="opacity-60">{plan.emoji}</span>
-                        </div>
-                      )}
-                    </div>
+                    <>
+                      <div
+                        key={plan.id}
+                        className="flex gap-2"
+                        onClick={() => setBadgeExplainer({ open: true, achiever: {
+                          user: {
+                            username: profileData?.username || "",
+                            name: profileData?.name || "",
+                            picture: profileData?.picture || "",
+                          },
+                          plan: {
+                            type: lifestyleAchieved
+                              ? "lifestyle"
+                              : habitAchieved
+                              ? "habit"
+                              : undefined,
+                            emoji: plan.emoji || "",
+                            goal: plan.goal,
+                            streak: backendProgress?.achievement.streak || 0,
+                          },
+                        }})}
+                      >
+                        {habitAchieved && (
+                          <div
+                            className={cn(
+                              "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                              "ring-2 ring-lime-400 bg-gradient-to-r from-lime-50 to-green-50",
+                              "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                            )}
+                          >
+                            <Sprout size={14} className="text-lime-600" />
+                            <span className="text-lime-700">Habit</span>
+                            <span className="opacity-60">{plan.emoji}</span>
+                          </div>
+                        )}
+                        {lifestyleAchieved && (
+                          <div
+                            className={cn(
+                              "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                              "ring-2 ring-amber-400 bg-gradient-to-r from-amber-50 to-amber-50",
+                              "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                            )}
+                          >
+                            <Medal size={14} className="text-amber-600" />
+                            <span className="text-amber-700">Lifestyle</span>
+                            <span className="opacity-60">{plan.emoji}</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   );
                 })}
               </div>
@@ -550,36 +601,26 @@ const ProfilePage: React.FC = () => {
               {profileActivePlans &&
                 profileActivePlans.length > 0 &&
                 profileActivePlans.map((plan) => {
-                  const backendProgress = plansProgressData?.find(p => p.planId === plan.id);
-                  
+                  const backendProgress = plansProgressData?.find(
+                    (p) => p.plan.id === plan.id
+                  );
+
                   // Check achievements
-                  const habitAchieved = backendProgress?.habitAchievement?.isAchieved ?? false;
-                  const lifestyleAchieved = backendProgress?.lifestyleAchievement?.isAchieved ?? false;
-                  
-                  // Determine neon color based on highest achievement
-                  let neonClass = "bg-white ring-gray-200";
-                  if (lifestyleAchieved) {
-                    // Lifestyle achieved - orange neon
-                    neonClass = cn(
-                      "ring-offset-2 ring-offset-white",
-                      "ring-orange-400 ring-2",
-                      "bg-gradient-to-br from-orange-50/80 via-orange-100/60 to-amber-50/80",
-                      "shadow-lg shadow-orange-200/50"
-                    );
-                  } else if (habitAchieved) {
-                    // Habit achieved - lime neon
-                    neonClass = cn(
-                      "ring-offset-2 ring-offset-white",
-                      "ring-lime-400 ring-2",
-                      "bg-gradient-to-br from-lime-50/80 via-lime-100/60 to-green-50/80",
-                      "shadow-lg shadow-lime-200/50"
-                    );
-                  }
-                  
+                  const habitAchieved =
+                    backendProgress?.habitAchievement?.isAchieved ?? false;
+                  const lifestyleAchieved =
+                    backendProgress?.lifestyleAchievement?.isAchieved ?? false;
+
                   return (
-                    <div
+                    <NeonCard
                       key={plan.id}
-                      className={`p-4 rounded-2xl ${neonClass} relative`}
+                      color={
+                        lifestyleAchieved
+                          ? "amber"
+                          : habitAchieved
+                          ? "lime"
+                          : "none"
+                      }
                     >
                       <div className="flex flex-row items-center gap-2 mb-6">
                         <span className="text-4xl">{plan.emoji}</span>
@@ -599,10 +640,32 @@ const ProfilePage: React.FC = () => {
                       </div>
 
                       {/* Achievement displays */}
-                      <div className="space-y-2 mb-4 absolute top-2 right-2 flex flex-col gap-2">
+                      <div
+                        className="space-y-2 mb-4 absolute top-2 right-2 flex flex-col gap-2"
+                        onClick={() => setBadgeExplainer({ open: true, achiever: {
+                          user: {
+                            username: profileData?.username || "",
+                            name: profileData?.name || "",
+                            picture: profileData?.picture || "",
+                          },
+                          plan: {
+                            type: lifestyleAchieved
+                              ? "lifestyle"
+                              : habitAchieved
+                              ? "habit"
+                              : undefined,
+                            emoji: plan.emoji || "",
+                            goal: plan.goal,
+                            streak: backendProgress?.achievement.streak || 0,
+                          },
+                        }})}
+                      >
                         {habitAchieved && (
                           <div className="flex flex-row items-center gap-2">
-                            <Sprout size={42} className="text-lime-500 animate-pulse" />
+                            <Sprout
+                              size={42}
+                              className="text-lime-500 animate-pulse"
+                            />
                             {/* <span className="text-sm text-gray-600">
                               It&apos;s a habit for {userInformalName}
                             </span> */}
@@ -610,7 +673,10 @@ const ProfilePage: React.FC = () => {
                         )}
                         {lifestyleAchieved && (
                           <div className="flex flex-row items-center gap-2">
-                            <Medal size={42} className="text-orange-500 animate-pulse" />
+                            <Medal
+                              size={42}
+                              className="text-amber-500 animate-pulse"
+                            />
                             {/* <span className="text-sm text-gray-600">
                               Part of {userInformalName}&apos;s lifestyle for{" "}
                               {backendProgress?.achievement?.streak ?? 0} weeks
@@ -627,7 +693,7 @@ const ProfilePage: React.FC = () => {
                           getTimeRangeDays(timeRange)
                         )}
                       />
-                    </div>
+                    </NeonCard>
                   );
                 })}
               {(!profileActivePlans || profileActivePlans.length === 0) && (
@@ -674,25 +740,33 @@ const ProfilePage: React.FC = () => {
                         activityTitle={activity?.title || "Unknown Activity"}
                         activityEmoji={activity?.emoji || ""}
                         activityEntryQuantity={entry.quantity}
-                        activityEntryReactions={(entry as any).reactions?.reduce((acc: Record<string, string[]>, reaction: any) => {
-                          if (!acc[reaction.emoji] && reaction.user.username) {
-                            acc[reaction.emoji] = [reaction.user.username];
-                          } else if (reaction.user.username) {
-                            acc[reaction.emoji].push(reaction.user.username);
-                          }
-                          return acc;
-                        }, {} as Record<string, string[]>) || {}}
+                        activityEntryReactions={
+                          (entry as any).reactions?.reduce(
+                            (acc: Record<string, string[]>, reaction: any) => {
+                              if (
+                                !acc[reaction.emoji] &&
+                                reaction.user.username
+                              ) {
+                                acc[reaction.emoji] = [reaction.user.username];
+                              } else if (reaction.user.username) {
+                                acc[reaction.emoji].push(
+                                  reaction.user.username
+                                );
+                              }
+                              return acc;
+                            },
+                            {} as Record<string, string[]>
+                          ) || {}
+                        }
                         activityEntryTimezone={entry.timezone || undefined}
                         activityEntryComments={(entry as any).comments || []}
                         activityMeasure={activity?.measure || ""}
                         date={entry.date}
                         description={entry.description || undefined}
+                        activityId={entry.activityId}
                         daysUntilExpiration={
                           entry.imageExpiresAt
-                            ? differenceInDays(
-                                entry.imageExpiresAt,
-                                new Date()
-                              )
+                            ? differenceInDays(entry.imageExpiresAt, new Date())
                             : -1
                         }
                         hasImageExpired={
@@ -704,12 +778,18 @@ const ProfilePage: React.FC = () => {
                         userUsername={profileData?.username || undefined}
                         editable={isOwnProfile}
                         onEditClick={() => {
-                          const activityToEdit = activityEntries.find((e) => e.id === entry.id);
+                          const activityToEdit = activityEntries.find(
+                            (e) => e.id === entry.id
+                          );
                           if (activityToEdit) {
                             setShowActivityToEdit(activityToEdit);
                           } else {
-                            console.error(`Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`);
-                            toast.error("Activity to edit not found! Please contact support");
+                            console.error(
+                              `Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`
+                            );
+                            toast.error(
+                              "Activity to edit not found! Please contact support"
+                            );
                           }
                         }}
                       />
@@ -763,6 +843,11 @@ const ProfilePage: React.FC = () => {
           onClose={() => setShowActivityToEdit(undefined)}
         />
       )}
+      <BadgeExplainerPopover
+        open={badgeExplainer.open}
+        onClose={() => setBadgeExplainer((prev) => ({ ...prev, open: false }))}
+        achiever={badgeExplainer.achiever}
+      />
     </div>
   );
 };

@@ -495,6 +495,8 @@ export class PlansService {
       weekStart = addWeeks(weekStart, 1);
     }
 
+    console.log("streak", streak);
+
     const isAchieved = streak >= this.LIFESTYLE_WEEKS;
     const weeksToAchieve = this.LIFESTYLE_WEEKS - streak;
 
@@ -564,7 +566,11 @@ export class PlansService {
     planId: string,
     userId: string
   ): Promise<{
-    planId: string;
+    plan: {
+      emoji: string;
+      goal: string;
+      id: string;
+    };
     achievement: {
       streak: number;
       completedWeeks: number;
@@ -623,7 +629,11 @@ export class PlansService {
       this.calculateLifestyleAchievement(achievement);
 
     return {
-      planId,
+      plan: {
+        emoji: plan.emoji || "🔥",
+        goal: plan.goal,
+        id: plan.id,
+      },
       achievement,
       currentWeekStats,
       habitAchievement,

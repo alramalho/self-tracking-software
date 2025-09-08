@@ -257,6 +257,7 @@ const TimelineRenderer: React.FC<{
                 activityMeasure={activity.measure}
                 date={entry.date}
                 description={entry.description || undefined}
+                activityId={entry.activityId}
                 userPicture={user?.picture || undefined}
                 daysUntilExpiration={daysUntilExpiration}
                 hasImageExpired={hasImageExpired}

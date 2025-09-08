@@ -36,6 +36,7 @@ export const useGlobalDataOperations = () => {
         queryClient.refetchQueries({ queryKey: ["recommendedUsers"] }),
         queryClient.refetchQueries({ queryKey: ["multipleUsersData"] }),
         queryClient.refetchQueries({ queryKey: ["metricsAndEntries"] }),
+        queryClient.refetchQueries({ queryKey: ["planProgress"], type: "all" }),
       ]);
 
       const userData = await queryClient.refetchQueries({
