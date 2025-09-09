@@ -22,7 +22,8 @@ export const handleQueryError = (
 
 export const logError = async (
   error: Error & { digest?: string },
-  url?: string
+  url?: string,
+  clerkId?: string
 ) => {
   try {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -48,7 +49,7 @@ export const logError = async (
         user_agent:
           typeof window !== "undefined" ? window.navigator.userAgent : null,
         timestamp: new Date().toISOString(),
-        user_clerk_id: null,
+        user_clerk_id: clerkId,
       }),
     });
   } catch (e) {
