@@ -128,11 +128,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         formData.append("photo", data.photo);
       }
 
-      await api.post("/activities/log-activity", formData);
+      const response = await api.post("/activities/log-activity", formData);
+      return response.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (entry, variables) => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });
-      queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+      queryClient.setQueryData(["activity-entries"], (old: ReturnedActivityEntriesType) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+        return [...old, entry];
+      });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       queryClient.refetchQueries({ queryKey: ["notifications"] });
       queryClient.refetchQueries({ queryKey: ["metrics"] });
@@ -202,9 +206,13 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const deleteActivityMutation = useMutation({
     mutationFn: async (data: { id: string }) => {
       await api.delete(`/activities/${data.id}`);
+      return data.id
     },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["activities"] });
+    onSuccess: (id) => {
+      queryClient.setQueryData(["activities"], (old: ReturnedActivitiesType) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["activities"] });
+        return old.filter((activity) => activity.id !== id);
+      });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Activity deleted successfully!");
     },
@@ -217,10 +225,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const deleteActivityEntryMutation = useMutation({
     mutationFn: async (data: { id: string }) => {
       await api.delete(`/activities/activity-entries/${data.id}`);
+      return data.id
     },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["activity-entries"] });
-      queryClient.refetchQueries({ queryKey: ["timeline"] });
+    onSuccess: (id) => {
+      queryClient.setQueryData(["activity-entries"], (old: ReturnedActivityEntriesType) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["activity-entries"] });
+        return old.filter((entry) => entry.id !== id);
+      });
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
+        return { ...old, recommendedActivityEntries: old.recommendedActivityEntries.filter((entry) => entry.id !== id) };
+      });
       toast.success("Activity deleted successfully!");
     },
     onError: (error) => {
@@ -256,7 +271,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       );
 
       queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return old;
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
         return {
           ...old,
           recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
@@ -287,7 +302,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: (comments, input) => {
       queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return old;
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
         return {
           ...old,
           recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
@@ -317,7 +332,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: (comments, input) => {
       queryClient.setQueryData(["timeline"], (old: TimelineData) => {
-        if (!old) return old;
+        if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
         return {
           ...old,
           recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {

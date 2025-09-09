@@ -1,11 +1,12 @@
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
+import { useActivities } from "@/contexts/activities";
 import { useTimeline } from "@/contexts/timeline";
 import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
-import { User } from "@tsw/prisma";
+import { Activity, User } from "@tsw/prisma";
 import {
   Bell,
   ChevronDown,
@@ -16,7 +17,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import {
   Collapsible,
@@ -38,14 +39,16 @@ const TimelineRenderer: React.FC<{
   const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] =
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const { activities } = useActivities();
 
-  const sortedEntries = useMemo(() => {
-    return [
-      ...(timelineData?.recommendedActivityEntries || []),
-    ].sort((a, b) => {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
-  }, [timelineData?.recommendedActivityEntries]);
+  useEffect(() => {
+    console.log("timelineData changed");
+
+    if (timelineData?.recommendedActivityEntries.find(e => e.description == "grun")) {
+      console.log("grun found");
+    }
+  }, [timelineData]);
+
 
 
   if (isLoadingTimeline && !timelineData) {
@@ -177,7 +180,7 @@ const TimelineRenderer: React.FC<{
     );
   }
 
-  if (sortedEntries.length === 0) {
+  if (timelineData?.recommendedActivityEntries.length === 0) {
     return (
       <div className="text-start text-gray-500 pt-2">
         Your friends have not logged anything yet...
@@ -218,12 +221,23 @@ const TimelineRenderer: React.FC<{
       {!isLoadingTimeline &&
         timelineData?.recommendedActivities &&
         timelineData?.recommendedUsers &&
-        sortedEntries.map((entry) => {
-          const activity = entry.activity;
-          const user: User | undefined = timelineData?.recommendedUsers?.find(
+        timelineData?.recommendedActivityEntries.map((entry) => {
+          const allActivities = [...(timelineData?.recommendedActivities || []), ...activities];
+          const activity = allActivities?.find(
+            (a: Activity) => a.id === entry.activityId
+          );
+          const allUsers = [...(timelineData?.recommendedUsers || []), currentUser];
+          const user: User | undefined = allUsers?.find(
             (u: User) => u.id === activity?.userId
           );
+          if (entry.description == "grun") {
+            console.log("grun found trying to be rendered in sorted entries");
+          }
           if (!activity || !user) return null;
+          if (entry.description == "grun") {
+            console.log("grun will indeed be rendered");
+          }
+          
           return (
             <React.Fragment key={entry.id}>
               <ActivityEntryPhotoCard
