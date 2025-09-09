@@ -26,7 +26,7 @@ import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { ActivityEntry } from "@tsw/prisma";
-import { differenceInDays, subDays } from "date-fns";
+import { subDays } from "date-fns";
 import {
   Bell,
   ChartArea,
@@ -735,47 +735,9 @@ const ProfilePage: React.FC = () => {
                     return (
                       <ActivityEntryPhotoCard
                         key={entry.id}
-                        imageUrl={entry.imageUrl || undefined}
-                        activityEntryId={entry.id}
-                        activityTitle={activity?.title || "Unknown Activity"}
-                        activityEmoji={activity?.emoji || ""}
-                        activityEntryQuantity={entry.quantity}
-                        activityEntryReactions={
-                          (entry as any).reactions?.reduce(
-                            (acc: Record<string, string[]>, reaction: any) => {
-                              if (
-                                !acc[reaction.emoji] &&
-                                reaction.user.username
-                              ) {
-                                acc[reaction.emoji] = [reaction.user.username];
-                              } else if (reaction.user.username) {
-                                acc[reaction.emoji].push(
-                                  reaction.user.username
-                                );
-                              }
-                              return acc;
-                            },
-                            {} as Record<string, string[]>
-                          ) || {}
-                        }
-                        activityEntryTimezone={entry.timezone || undefined}
-                        activityEntryComments={(entry as any).comments || []}
-                        activityMeasure={activity?.measure || ""}
-                        date={entry.date}
-                        description={entry.description || undefined}
-                        activityId={entry.activityId}
-                        daysUntilExpiration={
-                          entry.imageExpiresAt
-                            ? differenceInDays(entry.imageExpiresAt, new Date())
-                            : -1
-                        }
-                        hasImageExpired={
-                          !entry.imageExpiresAt ||
-                          new Date(entry.imageExpiresAt) < new Date()
-                        }
-                        userPicture={profileData?.picture || undefined}
-                        userName={profileData?.name || undefined}
-                        userUsername={profileData?.username || undefined}
+                        activity={activity as any}
+                        activityEntry={entry as any}
+                        user={profileData as any}
                         editable={isOwnProfile}
                         onEditClick={() => {
                           const activityToEdit = activityEntries.find(

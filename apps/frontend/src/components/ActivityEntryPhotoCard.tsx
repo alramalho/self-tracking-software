@@ -1,5 +1,5 @@
-import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useActivities } from "@/contexts/activities";
 import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { TimelineData } from "@/contexts/timeline/actions";
@@ -7,6 +7,7 @@ import { useCurrentUser, useUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { getThemeVariants } from "@/utils/theme";
 import { ReactionBarSelector } from "@charkour/react-reactions";
+import { Activity, ActivityEntry, Comment, Reaction, User } from "@tsw/prisma";
 import {
   differenceInCalendarDays,
   format,
@@ -43,27 +44,16 @@ const getFormattedDate = (date: Date) => {
   return format(date, "MMM d HH:mm");
 };
 interface ActivityEntryPhotoCardProps {
-  imageUrl?: string;
-  activityTitle: string;
-  activityEntryQuantity: number;
-  activityMeasure: string;
-  activityEmoji: string;
-  activityEntryTimezone?: string;
-  activityEntryReactions: Record<string, string[]>;
-  activityEntryComments?: TimelineData["recommendedActivityEntries"][number]["comments"]; // Initial comments if available
-  date: Date;
-  daysUntilExpiration: number;
-  hasImageExpired?: boolean;
-  userPicture?: string;
-  userName?: string;
-  userUsername?: string;
+  activity: Activity;
+  activityEntry: ActivityEntry & {
+    reactions: (Reaction & { user: { username: string } })[];
+    comments: Comment[];
+  };
+  user: User;
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
   onUsernameClick?: () => void;
-  activityEntryId: string;
-  description?: string;
-  activityId: string;
 }
 
 interface ReactionCount {
@@ -81,36 +71,28 @@ const REACTION_EMOJI_MAPPING = {
 };
 
 const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
-  imageUrl,
-  activityTitle,
-  activityEntryQuantity,
-  activityMeasure,
-  activityEmoji,
-  activityEntryReactions,
-  activityEntryTimezone,
-  activityEntryComments,
-  date,
-  daysUntilExpiration,
-  hasImageExpired,
-  userPicture,
-  userName,
-  userUsername,
   editable,
   onAvatarClick,
   onEditClick,
   onUsernameClick,
-  activityEntryId,
-  description,
-  activityId,
+  activity,
+  activityEntry,
+  user,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>(
-    activityEntryReactions
+    activityEntry.reactions.reduce((acc, reaction) => {
+      if (acc[reaction.emoji]) {
+        acc[reaction.emoji] = [...acc[reaction.emoji], reaction.user.username];
+      } else {
+        acc[reaction.emoji] = [reaction.user.username];
+      }
+      return acc;
+    }, {} as ReactionCount)
   );
   const { currentUser } = useCurrentUser();
   const currentUserUsername = currentUser?.username;
-  const isOwnActivityEntry = currentUser?.username === userUsername;
-  const api = useApiWithAuth();
+  const isOwnActivityEntry = currentUser?.username === user.username;
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const [showUserList, setShowUserList] = useState<{ [key: string]: boolean }>(
@@ -121,7 +103,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const textRef = useRef<HTMLParagraphElement>(null);
   const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
   const { isUserPremium } = usePaidPlan();
-  const { data: ownerUser } = useUser({ username: userUsername || "" });
+  const { data: ownerUser } = useUser({ username: user.username || "" });
   const { data: plansProgressData } = usePlansProgress(
     ownerUser?.plans?.map((plan) => plan.id) || []
   );
@@ -131,16 +113,16 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const lifestyleAchieved = plansProgressData?.some(
     (plan) => plan.lifestyleAchievement.isAchieved
   );
-  const achievedPlan =
-    plansProgressData?.find(
-      (plan) =>
-        plan.lifestyleAchievement.isAchieved || plan.habitAchievement.isAchieved
-    );
+  const achievedPlan = plansProgressData?.find(
+    (plan) =>
+      plan.lifestyleAchievement.isAchieved || plan.habitAchievement.isAchieved
+  );
 
   const [comments, setComments] = useState<
     TimelineData["recommendedActivityEntries"][number]["comments"]
-  >(activityEntryComments || []);
+  >(activityEntry.comments || []);
   const [showAllComments, setShowAllComments] = useState(false);
+  const { modifyReactions, isModifyingReactions } = useActivities();
 
   useEffect(() => {
     if (textRef.current) {
@@ -151,35 +133,21 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       const lines = height / lineHeight;
       setShouldShowReadMore(lines > 3);
     }
-  }, [description]);
+  }, [activityEntry.description]);
 
-  // Add new state and refs for debounced reactions
+  // Add new state and refs for debounced reactions with unified queue
   const pendingReactionsRef = useRef<{
-    adds: Set<string>;
-    removes: Set<string>;
+    queue: Map<string, "add" | "remove">;
     timer: NodeJS.Timeout | null;
   }>({
-    adds: new Set<string>(),
-    removes: new Set<string>(),
+    queue: new Map<string, "add" | "remove">(),
     timer: null,
   });
 
-  // todo: use react query
-  async function getReactions() {
-    const response = await api.get(
-      `/activities/activity-entries/${activityEntryId}/reactions`
-    );
-    setReactions(response.data.reactions);
-  }
-
-  useEffect(() => {
-    setReactions(activityEntryReactions);
-  }, [activityEntryId, activityEntryReactions]);
-
-  // Debounced method to process pending reactions
+  // Debounced method to process pending reactions using unified queue
   const processPendingReactions = useCallback(async () => {
     console.log("processing pending reactions");
-    const { adds, removes } = pendingReactionsRef.current;
+    const { queue } = pendingReactionsRef.current;
 
     // Clear timer
     if (pendingReactionsRef.current.timer) {
@@ -187,45 +155,30 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       pendingReactionsRef.current.timer = null;
     }
 
-    // Process adds if there are any
-    if (adds.size > 0) {
-      const emojisToAdd = Array.from(adds);
-      adds.clear(); // Clear pending adds
+    // Process queue if there are any pending reactions
+    if (queue.size > 0) {
+      const reactionsToModify = Array.from(queue.entries()).map(
+        ([emoji, operation]) => ({
+          emoji,
+          operation,
+        })
+      );
+
+      queue.clear(); // Clear the queue
 
       await toast.promise(
-        api.post(`/activities/activity-entries/${activityEntryId}/reactions`, {
-          operation: "add",
-          emojis: emojisToAdd,
+        modifyReactions({
+          activityEntryId: activityEntry.id,
+          reactions: reactionsToModify,
         }),
         {
-          loading: "Adding reactions...",
-          success: "Reactions added successfully!",
-          error: "Failed to add reactions",
+          loading: "Updating reactions...",
+          success: "Reactions updated successfully!",
+          error: "Failed to update reactions",
         }
       );
     }
-
-    // Process removes if there are any
-    if (removes.size > 0) {
-      const emojisToRemove = Array.from(removes);
-      removes.clear(); // Clear pending removes
-
-      await toast.promise(
-        api.post(`/activities/activity-entries/${activityEntryId}/reactions`, {
-          operation: "remove",
-          emojis: emojisToRemove,
-        }),
-        {
-          loading: "Removing reactions...",
-          success: "Reactions removed successfully!",
-          error: "Failed to remove reactions",
-        }
-      );
-    }
-
-    // Refresh the reactions after processing
-    getReactions();
-  }, [activityEntryId, api]);
+  }, [activityEntry.id, modifyReactions]);
 
   // Create stable references to functions to avoid dependency issues
   const processPendingReactionsRef = useRef(processPendingReactions);
@@ -246,23 +199,15 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }, 2500);
   }, []); // No dependencies - using ref instead
 
-  // Queue a reaction instead of sending immediately
+  // Queue a reaction using unified queue system
   const queueReaction = useCallback(
     (emoji: string, operation: "add" | "remove") => {
       setShowEmojiPicker(false);
 
       console.log(`Queueing ${operation} reaction for emoji: ${emoji}`);
 
-      // Add to the appropriate queue and schedule processing
-      if (operation === "add") {
-        pendingReactionsRef.current.adds.add(emoji);
-        // If this emoji is in the removes queue, remove it
-        pendingReactionsRef.current.removes.delete(emoji);
-      } else {
-        pendingReactionsRef.current.removes.add(emoji);
-        // If this emoji is in the adds queue, remove it
-        pendingReactionsRef.current.adds.delete(emoji);
-      }
+      // Add to unified queue - this automatically replaces any previous operation for the same emoji
+      pendingReactionsRef.current.queue.set(emoji, operation);
 
       // Optimistically update UI for better UX
       setReactions((prevReactions) => {
@@ -294,42 +239,32 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     [currentUserUsername, scheduleReactionProcessing]
   );
 
-  // Clean up timer on unmount and process any pending reactions
   useEffect(() => {
     return () => {
       if (pendingReactionsRef.current.timer) {
         clearTimeout(pendingReactionsRef.current.timer);
       }
 
-      // If there are any pending reactions, process them immediately
-      if (
-        pendingReactionsRef.current.adds.size > 0 ||
-        pendingReactionsRef.current.removes.size > 0
-      ) {
+      if (pendingReactionsRef.current.queue.size > 0) {
         processPendingReactionsRef.current();
       }
     };
-  }, []); // No dependencies since we're using refs
+  }, []);
 
-  // Replace original methods with queued versions
-  const addReaction = useCallback(
+  const addReactionToQueue = useCallback(
     (emoji: string) => {
       queueReaction(emoji, "add");
     },
     [queueReaction]
   );
 
-  const removeReaction = useCallback(
+  const addRemoveReactionToQueue = useCallback(
     (emoji: string) => {
       queueReaction(emoji, "remove");
     },
     [queueReaction]
   );
 
-  // own profile
-  // numbers -> usernames -> numbers
-  // not own profile
-  // numbers -> add reaction (if not reacted) (goes back to numbers) -> list (if reacted) -> remove reaction.
   const handleReactionClick = async (emoji: string) => {
     if (isOwnActivityEntry) {
       setShowUserList((prev) => ({ ...prev, [emoji]: !prev[emoji] }));
@@ -340,12 +275,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
       if (hasUserReacted) {
         if (showUserList[emoji]) {
-          removeReaction(emoji);
+          addRemoveReactionToQueue(emoji);
         } else {
           setShowUserList((prev) => ({ ...prev, [emoji]: true }));
         }
       } else {
-        addReaction(emoji);
+        addReactionToQueue(emoji);
       }
     }
   };
@@ -359,20 +294,15 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }`;
   };
 
-  const hasImage = imageUrl && !hasImageExpired;
+  const hasImageExpired = activityEntry.imageExpiresAt && new Date(activityEntry.imageExpiresAt) < new Date();
+  const hasImage = activityEntry.imageUrl && !hasImageExpired;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
-  // Define neon colors based on plan type priority (LIFESTYLE > HABIT)
-  const getNeonColors = () => {
-    if (lifestyleAchieved) {
-      console.log("amber");
-      return "amber";
-    } else if (habitAchieved) {
-      console.log("lime");
-      return "lime";
-    }
-    return "none"; // default
-  };
+  if (activityEntry.description == "hiit!"){
+    // console.log(`hasImage? ${hasImage} dscription ${activityEntry.description}: image ${activityEntry.imageUrl} expires at ${activityEntry.imageExpiresAt}`);
+    console.log(`reactions: ${JSON.stringify(reactions)}`);
+
+  }
 
   const cardContent = (
     <div
@@ -386,8 +316,8 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
           <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
             <img
-              src={imageUrl}
-              alt={activityTitle}
+              src={activityEntry.imageUrl || ""}
+              alt={activity.title}
               className="w-full h-full max-h-[400px] object-cover rounded-2xl"
             />
             <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
@@ -420,7 +350,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <>
                 <div
                   className={`absolute bottom-0 right-2 z-30 ${
-                    description ? "mb-8" : "mb-2"
+                    activityEntry.description ? "mb-8" : "mb-2"
                   }`}
                 >
                   {showEmojiPicker ? (
@@ -461,7 +391,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               </>
             )}
           </div>
-          {hasImage && description && (
+          {hasImage && activityEntry.description && (
             <div className="relative -mt-6 mx-2">
               <div
                 className={`relative rounded-2xl overflow-hidden ${variants.card.glassBg} backdrop-blur-lg shadow-lg border border-white/20 p-4`}
@@ -475,7 +405,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     ref={textRef}
                     className="text-gray-800 font-medium text-sm relative z-10"
                   >
-                    {description}
+                    {activityEntry.description}
                   </p>
                   {shouldShowReadMore && !isExpanded && (
                     <div className="absolute bottom-0 right-0 left-0 h-6" />
@@ -497,7 +427,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           {hasImage && (
             <div className="mx-2 mt-2">
               <CommentSection
-                activityEntryId={activityEntryId}
+                activityEntryId={activityEntry.id}
                 comments={comments}
                 setComments={setComments}
                 hasImage={true}
@@ -520,47 +450,47 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 )}
                 onClick={onAvatarClick}
               >
-                <AvatarImage src={userPicture} alt={userName || ""} />
-                <AvatarFallback>{(userName || "U")[0]}</AvatarFallback>
+                <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+                <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
               </Avatar>
               {isUserPremium && (
                 <div className="absolute -bottom-[6px] -right-[6px]">
                   <PlanBadge
-                    planType={currentUser?.planType || "FREE"}
+                    planType={user.planType || "FREE"}
                     size={18}
                   />
                 </div>
               )}
             </div>
             <span className="text-5xl h-full text-gray-400">
-              {activityEmoji}
+              {activity.emoji}
             </span>
             <div className="flex flex-col">
               <span
                 className="text-sm text-gray-500 hover:underline cursor-pointer"
                 onClick={onUsernameClick}
               >
-                @{userUsername}
+                @{user.username}
               </span>
               <span className="font-semibold">
-                {activityTitle} – {activityEntryQuantity} {activityMeasure}
+                {activity.title} – {activityEntry.quantity} {activity.measure}
               </span>
               <span className="text-xs text-gray-500">
-                {getFormattedDate(date)}{" "}
-                {activityEntryTimezone && `– 📍 ${activityEntryTimezone}`}
+                {getFormattedDate(activityEntry.date)}{" "}
+                {activityEntry.timezone && `– 📍 ${activityEntry.timezone}`}
               </span>
             </div>
           </div>
         </div>
 
-        {!hasImage && description && (
+        {!hasImage && activityEntry.description && (
           <div
             className={`mt-3 ${!isExpanded && "max-h-[4.5em]"} ${
               shouldShowReadMore && !isExpanded && "overflow-hidden"
             } relative`}
           >
             <p ref={textRef} className="text-gray-700 text-sm">
-              {description}
+              {activityEntry.description}
             </p>
             {shouldShowReadMore && !isExpanded && (
               <div className="absolute bottom-0 right-0 left-0 h-6" />
@@ -581,7 +511,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
             <Separator className="my-2 bg-gray-100" />
             <div className="mt-3 w-full">
               <CommentSection
-                activityEntryId={activityEntryId}
+                activityEntryId={activityEntry.id}
                 comments={comments}
                 setComments={setComments}
                 hasImage={false}
@@ -593,11 +523,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           </>
         )}
 
-        {hasImage && (
+        {hasImage && !hasImageExpired && (
           <span className="text-xs text-gray-400 mt-2">
             Image expires{" "}
-            {daysUntilExpiration > 0
-              ? `in ${daysUntilExpiration} days`
+            {activityEntry.imageExpiresAt && differenceInCalendarDays(activityEntry.imageExpiresAt, new Date()) > 0
+              ? `in ${differenceInCalendarDays(activityEntry.imageExpiresAt, new Date())} days`
               : "today"}
           </span>
         )}
@@ -617,7 +547,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   );
 
   return shouldShowNeonEffect ? (
-    <NeonCard color={"none"} className={`${lifestyleAchieved ? "bg-amber-50/50" :  "none"}`}>
+    <NeonCard
+      color={"none"}
+      className={`${lifestyleAchieved ? "bg-amber-50/50" : "none"}`}
+    >
       {" "}
       {/* dont show neon effect */}
       {cardContent}
@@ -645,12 +578,16 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         onClose={() => setShowBadgeExplainer(false)}
         achiever={{
           user: {
-            username: userUsername || "",
-            name: userName || "",
-            picture: userPicture || "",
+            username: user.username || "",
+            name: user.name || "",
+            picture: user.picture || "",
           },
           plan: {
-            type: lifestyleAchieved ? "lifestyle" : habitAchieved ? "habit" : undefined,
+            type: lifestyleAchieved
+              ? "lifestyle"
+              : habitAchieved
+              ? "habit"
+              : undefined,
             emoji: achievedPlan?.plan.emoji || "",
             goal: achievedPlan?.plan.goal || "",
             streak: achievedPlan?.achievement.streak || 0,

@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, ActivityEntry } from "@tsw/prisma";
 import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
+import { TimelineData } from "../timeline/actions";
 import { getActivities, getActivitiyEntries } from "./actions";
 
 type ReturnedActivityEntriesType = Awaited<
@@ -45,6 +46,13 @@ interface ActivitiesContextType {
   deleteActivityEntry: (data: { id: string }) => Promise<void>;
   isDeletingActivity: boolean;
   isDeletingActivityEntry: boolean;
+
+  modifyReactions: (data: {
+    activityEntryId: string;
+    reactions: { emoji: string; operation: "add" | "remove" }[];
+  }) => Promise<void>;
+  isModifyingReactions: boolean;
+
 }
 
 const ActivitiesContext = createContext<ActivitiesContextType | undefined>(
@@ -211,6 +219,51 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const modifyReactionsMutation = useMutation({
+    mutationFn: async (data: {
+      activityEntryId: string;
+      reactions: { emoji: string; operation: "add" | "remove" }[];
+    }) => {
+      const response = await api.post(
+        `/activities/activity-entries/${data.activityEntryId}/modify-reactions`,
+        {
+          reactions: data.reactions,
+        }
+      );
+      return response.data.reactions;
+    },
+    onSuccess: (reactions, input) => {
+      queryClient.setQueryData(
+        ["activity-entries"],
+        (old: ReturnedActivityEntriesType) => {
+          return old.map((entry) => {
+            return entry.id === input.activityEntryId
+              ? { ...entry, reactions: reactions }
+              : entry;
+          });
+        }
+      );
+
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return old;
+        return {
+          ...old,
+          recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
+            return entry.id === input.activityEntryId
+              ? { ...entry, reactions: reactions }
+              : entry;
+          }),
+        };
+      });
+    },
+    onError: (error) => {
+      let customErrorMessage = `Failed to modify reactions`;
+      handleQueryError(error, customErrorMessage);
+      toast.error("Failed to modify reactions. Please try again.");
+    },
+  });
+
+
   const context: ActivitiesContextType = {
     activities: activitiesQuery.data || [],
     activityEntries: activitiesEntriesQuery.data || [],
@@ -229,6 +282,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     isDeletingActivity: deleteActivityMutation.isPending,
     deleteActivityEntry: deleteActivityEntryMutation.mutateAsync,
     isDeletingActivityEntry: deleteActivityEntryMutation.isPending,
+
+    modifyReactions: modifyReactionsMutation.mutateAsync,
+    isModifyingReactions: modifyReactionsMutation.isPending,
+
   };
 
   return (
