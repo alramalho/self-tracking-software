@@ -66,7 +66,6 @@ const HomePage: React.FC = () => {
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
-    clearAllNotifications();
   };
 
   if (isLoaded && isSignedIn && (!hasLoadedUserData || !currentUser?.onboardingCompletedAt)) {
