@@ -46,7 +46,7 @@ const nextConfig = {
   },
 };
 
-// export default process.env.NODE_ENV === "production"
-//   ? withSerwist(nextConfig)
-//   : nextConfig;
-export default withSerwist(nextConfig);
+export default process.env.NODE_ENV === "production"
+  ? withSerwist(nextConfig)
+  : nextConfig;
+// export default withSerwist(nextConfig);

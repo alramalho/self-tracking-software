@@ -116,7 +116,6 @@ export const HomepageMetricsSection: React.FC = () => {
           <div className="space-y-4 pt-1">
             <div className="flex flex-col gap-3 flex-wrap px-1 pb-1">
               {metrics?.slice(0, 3).map((metric, index) => {
-                const today = new Date().toISOString().split("T")[0];
                 const todaysEntry = metricEntries?.find(
                   (entry: MetricEntry) =>
                     entry.metricId === metric.id && isToday(entry.date)
@@ -125,7 +124,10 @@ export const HomepageMetricsSection: React.FC = () => {
                 const isSkippedToday = !!todaysEntry && todaysEntry.skipped;
                 const todaysRating = todaysEntry?.rating;
 
-                const weekData = getMetricWeekData(metric.id, metricEntries || []);
+                const weekData = getMetricWeekData(
+                  metric.id,
+                  metricEntries || []
+                );
                 const hasAnyData = weekData.some((val) => val > 0);
                 const positiveCorrelations = getPositiveCorrelations(
                   metric.id,
@@ -167,13 +169,15 @@ export const HomepageMetricsSection: React.FC = () => {
                         )}
                       </div>
                     ) : (
-                      <MetricIsland
-                        key={metric.id}
-                        metric={metric}
-                        isLoggedToday={isLoggedToday}
-                        todaysRating={todaysRating}
-                        isSkippedToday={isSkippedToday}
-                      />
+                      <>
+                        <MetricIsland
+                          key={metric.id}
+                          metric={metric}
+                          isLoggedToday={isLoggedToday}
+                          todaysRating={todaysRating}
+                          isSkippedToday={isSkippedToday}
+                        />
+                      </>
                     )}
                   </div>
                 );

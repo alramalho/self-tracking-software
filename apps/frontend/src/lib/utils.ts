@@ -1,10 +1,14 @@
 import { type ClassValue, clsx } from "clsx";
-import { isAfter } from "date-fns";
+import { format, isAfter } from "date-fns";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export const todaysLocalDate = () => {
+  return new Date(format(new Date(), "yyyy-MM-dd") + "T00:00:00.000Z");
+};
 
 export const isActivePlan = (plan: {
   finishingDate: Date | string | null;

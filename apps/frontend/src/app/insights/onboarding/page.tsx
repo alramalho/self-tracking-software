@@ -11,6 +11,7 @@ import { MAX_METRICS } from "@/contexts/metrics/lib";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { todaysLocalDate } from "@/lib/utils";
 import { ChevronRight, ScanFace } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -31,27 +32,7 @@ export default function OnboardingPage() {
   const isUserOnFreePlan = userPaidPlanType === "FREE";
   const { setShowUpgradePopover } = useUpgrade();
   const router = useRouter()
-  
-  const requestNotificationPermission = async () => {
-    try {
-      setIsLoading(true);
-      const timeoutId = setTimeout(() => {
-        setIsLoading(false);
-      }, 3000);
 
-      if (isPushGranted) {
-        setStep(2);
-      } else {
-        await requestPermission();
-      }
-
-      clearTimeout(timeoutId);
-    } catch (error) {
-      console.error("Error requesting notification permission:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleContinue = () => {
     if (isUserOnFreePlan) {
@@ -73,20 +54,6 @@ export default function OnboardingPage() {
     }
 
     setSelectedMetrics(prev => [...prev, title]);
-  };
-
-  const handleRatingSubmitted = (metricId: string) => {
-    // When a rating is submitted via MetricRater, we'll intercept it here
-    // instead of letting it submit to the API
-    const ratingButton = document.querySelector(`[data-metric-id="${metricId}"] .ring-primary`);
-    if (ratingButton) {
-      const rating = parseInt(ratingButton.textContent || "0", 10);
-      if (rating > 0) {
-        setRatings(prev => ({ ...prev, [metricId]: rating }));
-      }
-    }
-    // Don't actually submit to API yet
-    return Promise.resolve();
   };
 
   const handleMetricSubmit = async () => {
@@ -128,7 +95,7 @@ export default function OnboardingPage() {
     logMetrics(Object.entries(ratings).map(([metricId, rating]) => ({
       metricId,
       rating,
-      date: new Date(),
+      date: todaysLocalDate(),
       description,
     })));
   };
