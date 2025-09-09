@@ -5,7 +5,6 @@ const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",
   swDest: "public/sw.js",
   register: false, // we'll do this manually
-  cacheOnFrontEndNav: true,
 });
 
 const nextConfig = {
@@ -47,6 +46,7 @@ const nextConfig = {
   },
 };
 
-export default process.env.NODE_ENV === "production"
-  ? withSerwist(nextConfig)
-  : nextConfig;
+// export default process.env.NODE_ENV === "production"
+//   ? withSerwist(nextConfig)
+//   : nextConfig;
+export default withSerwist(nextConfig);
