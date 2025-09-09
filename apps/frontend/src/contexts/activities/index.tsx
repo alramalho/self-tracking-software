@@ -53,6 +53,17 @@ interface ActivitiesContextType {
   }) => Promise<void>;
   isModifyingReactions: boolean;
 
+  addComment: (data: {
+    activityEntryId: string;
+    text: string;
+  }) => Promise<void>;
+  removeComment: (data: {
+    activityEntryId: string;
+    commentId: string;
+  }) => Promise<void>;
+  isAddingComment: boolean;
+  isRemovingComment: boolean;
+
 }
 
 const ActivitiesContext = createContext<ActivitiesContextType | undefined>(
@@ -263,6 +274,67 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const addCommentMutation = useMutation({
+    mutationFn: async (data: {
+      activityEntryId: string;
+      text: string;
+    }) => {
+      const response = await api.post(
+        `/activities/activity-entries/${data.activityEntryId}/comments`,
+        { text: data.text }
+      );
+      return response.data.comments;
+    },
+    onSuccess: (comments, input) => {
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return old;
+        return {
+          ...old,
+          recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
+            return entry.id === input.activityEntryId
+              ? { ...entry, comments: comments }
+              : entry;
+          }),
+        };
+      });
+    },
+    onError: (error) => {
+      let customErrorMessage = `Failed to add comment`;
+      handleQueryError(error, customErrorMessage);
+      toast.error("Failed to add comment. Please try again.");
+    },
+  });
+
+  const removeCommentMutation = useMutation({
+    mutationFn: async (data: {
+      activityEntryId: string;
+      commentId: string;
+    }) => {
+      const response = await api.delete(
+        `/activities/activity-entries/${data.activityEntryId}/comments/${data.commentId}`
+      );
+      return response.data.comments;
+    },
+    onSuccess: (comments, input) => {
+      queryClient.setQueryData(["timeline"], (old: TimelineData) => {
+        if (!old) return old;
+        return {
+          ...old,
+          recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
+            return entry.id === input.activityEntryId
+              ? { ...entry, comments: comments }
+              : entry;
+          }),
+        };
+      });
+    },
+    onError: (error) => {
+      let customErrorMessage = `Failed to remove comment`;
+      handleQueryError(error, customErrorMessage);
+      toast.error("Failed to remove comment. Please try again.");
+    },
+  });
+
 
   const context: ActivitiesContextType = {
     activities: activitiesQuery.data || [],
@@ -285,6 +357,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
 
     modifyReactions: modifyReactionsMutation.mutateAsync,
     isModifyingReactions: modifyReactionsMutation.isPending,
+
+    addComment: addCommentMutation.mutateAsync,
+    removeComment: removeCommentMutation.mutateAsync,
+    isAddingComment: addCommentMutation.isPending,
+    isRemovingComment: removeCommentMutation.isPending,
 
   };
 

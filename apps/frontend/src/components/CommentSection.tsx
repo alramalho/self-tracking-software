@@ -1,4 +1,3 @@
-import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useCurrentUser } from "@/contexts/users";
@@ -12,12 +11,15 @@ import toast from "react-hot-toast";
 
 interface CommentSectionProps {
   activityEntryId: string;
-  comments: Comment[];  // Comments now come from parent
-  setComments: React.Dispatch<React.SetStateAction<Comment[]>>; // Setter from parent
+  comments: Comment[];
+  onAddComment: (text: string) => Promise<void>;
+  onRemoveComment: (commentId: string) => Promise<void>;
   hasImage?: boolean;
   fullWidth?: boolean;
-  showAllComments?: boolean; // External control for expanded state
-  onToggleShowAll?: (shown: boolean) => void; // Callback when toggling
+  showAllComments?: boolean;
+  onToggleShowAll?: (shown: boolean) => void;
+  isAddingComment?: boolean;
+  isRemovingComment?: boolean;
 }
 
 const getFormattedDate = (date: Date) => {
@@ -44,17 +46,18 @@ const getFormattedDate = (date: Date) => {
 export const CommentSection: React.FC<CommentSectionProps> = ({
   activityEntryId,
   comments,
-  setComments,
+  onAddComment,
+  onRemoveComment,
   hasImage = false,
   fullWidth = false,
   showAllComments: externalShowAllState,
   onToggleShowAll,
+  isAddingComment = false,
+  isRemovingComment = false,
 }) => {
   const [newComment, setNewComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   const { currentUser } = useCurrentUser();
-  const api = useApiWithAuth();
   const { effectiveTheme } = useTheme();
   const variants = getThemeVariants(effectiveTheme);
   const router = useRouter();
@@ -74,15 +77,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     
     if (!newComment.trim()) return;
     
-    setIsSubmitting(true);
-    
     try {
-      const response = await api.post(`/activities/activity-entries/${activityEntryId}/comments`, {
-        text: newComment.trim()
-      });
-      
-      // Add the new comment to the list
-      setComments(currentComments => [...currentComments, response.data]);
+      await onAddComment(newComment.trim());
       setNewComment("");
       
       // Automatically expand comments when posting
@@ -93,20 +89,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     } catch (error) {
       console.error("Error submitting comment:", error);
       toast.error("Failed to post comment");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleDeleteComment = async (commentId: string) => {
     try {
-      await api.delete(`/activities/activity-entries/${activityEntryId}/comments/${commentId}`);
-      
-      // Remove the comment from the list
-      setComments(currentComments => 
-        currentComments.filter(comment => comment.id !== commentId)
-      );
-      
+      await onRemoveComment(commentId);
       toast.success("Comment deleted");
     } catch (error) {
       console.error("Error deleting comment:", error);
@@ -221,12 +209,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Add a comment..."
               className="flex-1 bg-transparent outline-none text-[16px]"
-              disabled={isSubmitting}
+              disabled={isAddingComment}
             />
             
             <button
               type="submit"
-              disabled={!newComment.trim() || isSubmitting}
+              disabled={!newComment.trim() || isAddingComment}
               className={`text-gray-400 ${newComment.trim() ? 'hover:text-blue-500' : ''} disabled:opacity-50`}
             >
               <Send className="h-4 w-4" />
