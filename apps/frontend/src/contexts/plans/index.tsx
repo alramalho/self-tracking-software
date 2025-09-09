@@ -1,7 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
-import { handleQueryError } from "@/lib/utils";
+import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, PlanSession, Prisma } from "@tsw/prisma";
@@ -64,7 +64,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
-
+  const { handleQueryError } = useLogError();
   const plans = useQuery({
     queryKey: ["plans"],
     queryFn: async () => {
@@ -276,6 +276,7 @@ export const usePlanInvitation = (id: string) => {
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
+  const { handleQueryError } = useLogError();
 
   const planInvitation = useQuery({
     queryKey: ["plan-invitation", id],

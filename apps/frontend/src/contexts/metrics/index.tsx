@@ -1,7 +1,6 @@
 "use client";
 
-import { useApiWithAuth } from "@/api";
-import { handleQueryError } from "@/lib/utils";
+import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Metric, MetricEntry } from "@tsw/prisma";
@@ -51,8 +50,8 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
-  const api = useApiWithAuth();
-
+  const { handleQueryError } = useLogError();
+  
   const metricsQuery = useQuery({
     queryKey: ["metrics"],
     queryFn: async () => {
