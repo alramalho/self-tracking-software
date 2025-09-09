@@ -2,6 +2,7 @@ import { MetricRatingSelector } from "@/components/MetricRatingSelector";
 import { Button } from "@/components/ui/button";
 import { useMetrics } from "@/contexts/metrics";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { todaysLocalDate } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { CircleCheckBig, Loader2 } from "lucide-react";
 import React, { useState } from "react";
@@ -39,7 +40,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
     setIsLogging(true);
     try {
       await logMetrics([
-        { metricId: metric.id, rating, date: new Date()},
+        { metricId: metric.id, rating, date: todaysLocalDate()},
       ]);
     } catch (error) {
       console.error("Failed to log metric:", error);

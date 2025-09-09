@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useActivities } from "@/contexts/activities";
+import { todaysLocalDate } from "@/lib/utils";
 import { format } from "date-fns";
 import { Loader2, Trash2 } from "lucide-react";
 import React, { useState } from "react";
@@ -81,7 +82,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
               entry: {
                 id: activityEntry.id,
                 quantity: Number(quantity),
-                date: new Date(date),
+                date: todaysLocalDate(),
                 description,
               },
             })

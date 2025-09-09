@@ -29,14 +29,9 @@ export const useGlobalDataOperations = () => {
     const { preloadPages = false, notify = true } = options;
     try {
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["userData"] }),
-        queryClient.refetchQueries({ queryKey: ["timelineData"] }),
-        queryClient.refetchQueries({ queryKey: ["notificationsData"] }),
-        queryClient.refetchQueries({ queryKey: ["messagesData"] }),
-        queryClient.refetchQueries({ queryKey: ["recommendedUsers"] }),
-        queryClient.refetchQueries({ queryKey: ["multipleUsersData"] }),
-        queryClient.refetchQueries({ queryKey: ["metricsAndEntries"] }),
-        queryClient.refetchQueries({ queryKey: ["planProgress"], type: "all" }),
+        localStorage.removeItem("TRACKING_SO_QUERY_CACHE"),
+        // can we force a page rerender?
+        window.location.reload(),
       ]);
 
       const userData = await queryClient.refetchQueries({

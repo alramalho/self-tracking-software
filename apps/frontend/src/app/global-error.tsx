@@ -17,6 +17,7 @@ export default function GlobalError({
   useEffect(() => {
     console.error("Global Error: ", error);
     logError(error, typeof window !== 'undefined' ? window.location.href : undefined);
+    localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
   }, [error]);
 
   return (

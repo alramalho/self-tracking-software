@@ -17,7 +17,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 import { Button } from "./ui/button";
 import {
   Collapsible,
@@ -40,15 +40,6 @@ const TimelineRenderer: React.FC<{
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const { activities } = useActivities();
-
-  useEffect(() => {
-    console.log("timelineData changed");
-
-    if (timelineData?.recommendedActivityEntries.find(e => e.description == "grun")) {
-      console.log("grun found");
-    }
-  }, [timelineData]);
-
 
 
   if (isLoadingTimeline && !timelineData) {
@@ -230,13 +221,7 @@ const TimelineRenderer: React.FC<{
           const user: User | undefined = allUsers?.find(
             (u: User) => u.id === activity?.userId
           );
-          if (entry.description == "grun") {
-            console.log("grun found trying to be rendered in sorted entries");
-          }
           if (!activity || !user) return null;
-          if (entry.description == "grun") {
-            console.log("grun will indeed be rendered");
-          }
           
           return (
             <React.Fragment key={entry.id}>

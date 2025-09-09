@@ -4,13 +4,14 @@ import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Metric, MetricEntry } from "@tsw/prisma";
+import { isSameDay } from "date-fns";
 import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import {
   deleteMetric,
+  getMetricEntries,
   getMetrics,
-  logTodaysNote,
-  skipTodaysNote,
+  updateTodaysNote,
   upsertMetric,
   upsertMetricEntry
 } from "./actions";
@@ -51,7 +52,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
   const { handleQueryError } = useLogError();
-  
+
   const metricsQuery = useQuery({
     queryKey: ["metrics"],
     queryFn: async () => {
@@ -68,7 +69,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["metricsEntries"],
     queryFn: async () => {
       try {
-        throw Error("test");//await getMetricEntries();
+        return await getMetricEntries();
       } catch (error) {
         throw error;
       }
@@ -81,8 +82,14 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     mutationFn: async (data: { title: string; emoji: string }) => {
       return await upsertMetric(data);
     },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["metrics"] });
+    onSuccess: (newMetric) => {
+      queryClient.setQueryData(["metrics"], (old: Metric[]) => {
+        if (!old || !Array.isArray(old)) {
+          queryClient.refetchQueries({ queryKey: ["metrics"] });
+          return old; // Keep existing data, let refetch handle the update
+        }
+        return [newMetric, ...old];
+      });
       queryClient.refetchQueries({ queryKey: ["current-user"] });
       toast.success("Metric created successfully!");
     },
@@ -93,101 +100,71 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
-  const logMetricsMutation = useMutation({
+  const upsertMetricEntriesMutation = useMutation({
     mutationFn: async (
       data: Array<{
         metricId: string;
-        rating: number;
-        date: Date;
+        rating?: number;
+        date?: Date;
         description?: string;
+        skipped?: boolean;
       }>
     ) => {
-      await Promise.all(
+      console.log("upserting metric entries", data);
+      const result = await Promise.all(
         data.map((metric) =>
           upsertMetricEntry({
             metricId: metric.metricId,
             rating: metric.rating,
-            date: metric.date.toISOString().split("T")[0],
+            date: metric.date,
             description: metric.description,
+            skipped: metric.skipped,
           })
         )
       );
+      return result;
     },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
+    onSuccess: (newEntries) => {
+      queryClient.setQueryData(["metricsEntries"], (old: MetricEntry[]) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
+        let updated = [...old];
+        newEntries.forEach(newEntry => {
+          const existingIndex = updated.findIndex(entry => 
+            entry.metricId === newEntry.metricId && 
+            isSameDay(entry.date, newEntry.date)
+          );
+          if (existingIndex >= 0) {
+            updated[existingIndex] = newEntry;
+          } else {
+            updated = [newEntry, ...updated];
+          }
+        });
+        return updated;
+      });
       queryClient.refetchQueries({ queryKey: ["current-user"] });
-      toast.success("Metrics logged successfully!");
     },
     onError: (error) => {
-      let customErrorMessage = `Failed to log metric`;
+      let customErrorMessage = `Failed to update metric entries`;
       handleQueryError(error, customErrorMessage);
       toast.error(customErrorMessage);
     },
   });
 
-  const logIndividualMetricMutation = useMutation({
-    mutationFn: async (data: { metricId: string; rating: number; description?: string }) => {
-      return await upsertMetricEntry({
-        metricId: data.metricId,
-        rating: data.rating,
-        description: data.description,
-      });
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
-      toast.success("Metric logged successfully!");
-    },
-    onError: (error) => {
-      let customErrorMessage = `Failed to log metric`;
-      handleQueryError(error, customErrorMessage);
-      toast.error(customErrorMessage);
-    },
-  });
 
-  const skipMetricMutation = useMutation({
-    mutationFn: async (data: { metricId: string; date?: string }) => {
-      return await upsertMetricEntry({
-        metricId: data.metricId,
-        date: data.date,
-        skipped: true,
-      });
+  const updateTodaysNoteMutation = useMutation({
+    mutationFn: async (data: { note?: string; skip?: boolean }) => {
+      return await updateTodaysNote(data);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
-      toast.success("Metric skipped successfully!");
+      if (variables.note !== undefined) {
+        toast.success("Note added to today's entries!");
+      } else if (variables.skip) {
+        toast.success("Today's note skipped successfully!");
+      }
     },
     onError: (error) => {
-      let customErrorMessage = `Failed to skip metric`;
-      handleQueryError(error, customErrorMessage);
-      toast.error(customErrorMessage);
-    },
-  });
-
-  const logTodaysNoteMutation = useMutation({
-    mutationFn: async (note: string) => {
-      return await logTodaysNote(note);
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
-      toast.success("Note added to today's entries!");
-    },
-    onError: (error) => {
-      let customErrorMessage = `Failed to log today's note`;
-      handleQueryError(error, customErrorMessage);
-      toast.error(customErrorMessage);
-    },
-  });
-
-  const skipTodaysNoteMutation = useMutation({
-    mutationFn: async () => {
-      return await skipTodaysNote();
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
-      toast.success("Today's note skipped successfully!");
-    },
-    onError: (error) => {
-      let customErrorMessage = `Failed to skip today's note`;
+      let customErrorMessage = `Failed to update today's note`;
       handleQueryError(error, customErrorMessage);
       toast.error(customErrorMessage);
     },
@@ -195,11 +172,18 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const deleteMetricMutation = useMutation({
     mutationFn: async (metricId: string) => {
-      return await deleteMetric(metricId);
+      await deleteMetric(metricId);
+      return metricId;
     },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["metrics"] });
-      queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
+    onSuccess: (metricId) => {
+      queryClient.setQueryData(["metrics"], (old: Metric[]) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["metrics"] });
+        return old.filter((metric) => metric.id !== metricId);
+      });
+      queryClient.setQueryData(["metricsEntries"], (old: MetricEntry[]) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
+        return old.filter((entry) => entry.metricId !== metricId);
+      });
       toast.success("Metric deleted successfully!");
     },
     onError: (error) => {
@@ -225,21 +209,25 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     isCreatingMetric: createMetricMutation.isPending,
 
     logMetrics: async (data: Array<{metricId: string; rating: number; date: Date; description?: string}>) => {
-      await logMetricsMutation.mutateAsync(data);
+      await upsertMetricEntriesMutation.mutateAsync(data);
+      toast.success("Metrics logged successfully!");
     },
-    isLoggingMetrics: logMetricsMutation.isPending,
+    isLoggingMetrics: upsertMetricEntriesMutation.isPending,
 
     logIndividualMetric: async (metricId: string, rating: number, description?: string) => {
-      await logIndividualMetricMutation.mutateAsync({ metricId, rating, description });
+      await upsertMetricEntriesMutation.mutateAsync([{ metricId, rating, description }]);
+      toast.success("Metric logged successfully!");
     },
     skipMetric: async (metricId: string, date?: string) => {
-      await skipMetricMutation.mutateAsync({ metricId, date });
+      const dateObj = date ? new Date(date) : undefined;
+      await upsertMetricEntriesMutation.mutateAsync([{ metricId, date: dateObj, skipped: true }]);
+      toast.success("Metric skipped successfully!");
     },
     logTodaysNote: async (note: string) => {
-      await logTodaysNoteMutation.mutateAsync(note);
+      await updateTodaysNoteMutation.mutateAsync({ note });
     },
     skipTodaysNote: async () => {
-      await skipTodaysNoteMutation.mutateAsync();
+      await updateTodaysNoteMutation.mutateAsync({ skip: true });
     },
     deleteMetric: async (metricId: string) => {
       await deleteMetricMutation.mutateAsync(metricId);

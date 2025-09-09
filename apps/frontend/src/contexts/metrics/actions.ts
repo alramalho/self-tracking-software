@@ -1,6 +1,7 @@
 "use server";
 
 import { validateUser } from "@/lib/server-utils";
+import { todaysLocalDate } from "@/lib/utils";
 import { prisma } from "@tsw/prisma";
 
 export async function getMetrics() {
@@ -66,7 +67,7 @@ export async function upsertMetric(data: { title: string; emoji: string }) {
 export async function upsertMetricEntry(data: {
   metricId: string;
   rating?: number;
-  date?: string;
+  date?: Date;
   description?: string;
   skipped?: boolean;
   descriptionSkipped?: boolean;
@@ -74,14 +75,14 @@ export async function upsertMetricEntry(data: {
   const user = await validateUser();
 
   try {
-    const entryDate = data.date || new Date().toISOString().split("T")[0];
+    const entryDate = data.date || todaysLocalDate();
 
     // Check if an entry already exists for this date
     const existingEntry = await prisma.metricEntry.findFirst({
       where: {
         metricId: data.metricId,
         date: {
-          equals: new Date(entryDate),
+          equals: entryDate,
         },
       },
     });
@@ -107,7 +108,7 @@ export async function upsertMetricEntry(data: {
           userId: user.id,
           metricId: data.metricId,
           rating: data.rating || 0,
-          date: new Date(entryDate),
+          date: entryDate,
           description: data.description,
           skipped: data.skipped || false,
           descriptionSkipped: data.descriptionSkipped || false,
@@ -120,16 +121,19 @@ export async function upsertMetricEntry(data: {
   }
 }
 
-export async function logTodaysNote(note: string) {
+export async function updateTodaysNote(data: {
+  note?: string;
+  skip?: boolean;
+}) {
   const user = await validateUser();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todaysLocalDate();
 
   try {
     // Get all metric entries for today
     const todaysEntries = await prisma.metricEntry.findMany({
       where: {
         userId: user.id,
-        date: new Date(today),
+        date: today,
       },
     });
 
@@ -137,43 +141,27 @@ export async function logTodaysNote(note: string) {
       throw new Error("No metric entries found for today");
     }
 
-    // Update all today's entries with the note
+    // Prepare update data based on parameters
+    const updateData: any = {};
+    if (data.note !== undefined) {
+      updateData.description = data.note;
+    }
+    if (data.skip !== undefined) {
+      updateData.descriptionSkipped = data.skip;
+    }
+
+    // Update all today's entries
     const updateResult = await prisma.metricEntry.updateMany({
       where: {
         userId: user.id,
-        date: new Date(today),
+        date: today,
       },
-      data: {
-        description: note,
-      },
+      data: updateData,
     });
 
     return updateResult;
   } catch (error) {
-    console.error("Error logging today's note:", error);
-    throw error;
-  }
-}
-
-export async function skipTodaysNote() {
-  const user = await validateUser();
-  const today = new Date().toISOString().split("T")[0];
-
-  try {
-    // Update all today's entries to mark description as skipped
-    const updateResult = await prisma.metricEntry.updateMany({
-      where: {
-        userId: user.id,
-        date: new Date(today),
-      },
-      data: {
-        descriptionSkipped: true,
-      },
-    });
-
-    return updateResult;
-  } catch (error) {
-    console.error("Error skipping today's note:", error);
+    console.error("Error updating today's note:", error);
     throw error;
   }
 }
