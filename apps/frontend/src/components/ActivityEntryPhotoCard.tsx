@@ -118,11 +118,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       plan.lifestyleAchievement.isAchieved || plan.habitAchievement.isAchieved
   );
 
-  const [comments, setComments] = useState<
-    TimelineData["recommendedActivityEntries"][number]["comments"]
-  >(activityEntry.comments || []);
   const [showAllComments, setShowAllComments] = useState(false);
-  const { modifyReactions, isModifyingReactions } = useActivities();
+  const { modifyReactions, isModifyingReactions, addComment, removeComment, isAddingComment, isRemovingComment } = useActivities();
+  const comments = activityEntry.comments || [];
 
   useEffect(() => {
     if (textRef.current) {
@@ -429,10 +427,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <CommentSection
                 activityEntryId={activityEntry.id}
                 comments={comments}
-                setComments={setComments}
+                onAddComment={(text) => addComment({ activityEntryId: activityEntry.id, text })}
+                onRemoveComment={(commentId) => removeComment({ activityEntryId: activityEntry.id, commentId })}
                 hasImage={true}
                 showAllComments={showAllComments}
                 onToggleShowAll={setShowAllComments}
+                isAddingComment={isAddingComment}
+                isRemovingComment={isRemovingComment}
               />
             </div>
           )}
@@ -513,11 +514,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <CommentSection
                 activityEntryId={activityEntry.id}
                 comments={comments}
-                setComments={setComments}
+                onAddComment={(text) => addComment({ activityEntryId: activityEntry.id, text })}
+                onRemoveComment={(commentId) => removeComment({ activityEntryId: activityEntry.id, commentId })}
                 hasImage={false}
                 fullWidth={true}
                 showAllComments={showAllComments}
                 onToggleShowAll={setShowAllComments}
+                isAddingComment={isAddingComment}
+                isRemovingComment={isRemovingComment}
               />
             </div>
           </>

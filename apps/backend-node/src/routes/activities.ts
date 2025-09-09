@@ -734,13 +734,29 @@ router.post(
         });
       }
 
+      // Get all comments for this activity entry to return the updated list
+      const allComments = await prisma.comment.findMany({
+        where: { 
+          activityEntryId,
+        },
+        include: {
+          user: { select: { username: true, picture: true, name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const commentsWithUserData = allComments.map(c => ({
+        id: c.id,
+        userId: c.userId,
+        username: c.username,
+        text: c.text,
+        createdAt: c.createdAt,
+        picture: c.user.picture,
+      }));
+
       res.json({
-        id: comment.id,
-        userId: comment.userId,
-        username: comment.username,
-        text: comment.text,
-        createdAt: comment.createdAt,
-        picture: req.user!.picture,
+        message: "Comment added successfully",
+        comments: commentsWithUserData,
       });
     } catch (error) {
       logger.error("Error adding comment:", error);
@@ -777,7 +793,30 @@ router.delete(
         where: { id: commentId },
       });
 
-      res.json({ message: "Comment removed successfully" });
+      // Get all remaining comments for this activity entry to return the updated list
+      const allComments = await prisma.comment.findMany({
+        where: { 
+          activityEntryId,
+        },
+        include: {
+          user: { select: { username: true, picture: true, name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const commentsWithUserData = allComments.map(c => ({
+        id: c.id,
+        userId: c.userId,
+        username: c.username,
+        text: c.text,
+        createdAt: c.createdAt,
+        picture: c.user.picture,
+      }));
+
+      res.json({ 
+        message: "Comment removed successfully",
+        comments: commentsWithUserData,
+      });
     } catch (error) {
       logger.error("Error removing comment:", error);
       res.status(500).json({ error: "Failed to remove comment" });
