@@ -333,7 +333,7 @@ router.post(
         errorMessage: `ERROR IN FRONTEND: ${errorData.error_message}`,
         userUsername: user?.username || "unknown",
         userId: user?.id || "unknown",
-        method: "?",
+        method: "–",
         path: errorData.url,
         statusCode: "?",
       });
