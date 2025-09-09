@@ -4,7 +4,7 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import UserSearch, { UserSearchResult } from "@/components/UserSearch";
-import { useCurrentUser } from "@/contexts/users";
+import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
 import { ChevronLeft, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,13 +13,13 @@ import React, { useState } from "react";
 const FriendsPage: React.FC<{ params: { username: string } }> = ({
   params,
 }) => {
-  const { currentUser, isLoadingCurrentUser } = useCurrentUser();
+  const { profileData, isLoading } = useUnifiedProfileData(params.username);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const router = useRouter();
 
   const isOwnProfile =
-    params.username === currentUser?.username;
+    params.username === profileData?.username;
 
   const handleUserClick = (user: UserSearchResult) => {
     setIsSearchOpen(false);
@@ -46,9 +46,9 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
           </button>
         )}
       </div>
-      {currentUser?.friends?.length && currentUser?.friends?.length > 0 ? (
+      {profileData?.friends?.length && profileData?.friends?.length > 0 ? (
         <ul className="space-y-4">
-          {currentUser?.friends?.map((friend) => (
+          {profileData?.friends?.map((friend) => (
             <li key={friend.username} className="border-b pb-4">
               <Link
                 href={`/profile/${friend.username}`}
@@ -66,7 +66,7 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
             </li>
           ))}
         </ul>
-      ) : isLoadingCurrentUser ? (
+      ) : isLoading ? (
         <ul className="space-y-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <li key={`skeleton-${index}`} className="border-b pb-4">
