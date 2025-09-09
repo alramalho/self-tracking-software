@@ -1,6 +1,6 @@
 "use client";
 import { useApiWithAuth } from "@/api";
-import { handleQueryError } from "@/lib/utils";
+import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import { Plan, Recommendation, User } from "@tsw/prisma";
@@ -29,7 +29,7 @@ export const RecommendationsProvider: React.FC<{
 }> = ({ children }) => {
   const { isSignedIn, isLoaded } = useSession();
   const api = useApiWithAuth();
-
+  const { handleQueryError } = useLogError();
   const recommendationsQuery = useQuery<RecommendedUsersResponse>({
     queryKey: ["recommendations"],
     queryFn: async () => {

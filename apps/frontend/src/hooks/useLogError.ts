@@ -1,0 +1,56 @@
+import { useUser } from "@clerk/nextjs";
+
+export const useLogError = () => {
+  const { user } = useUser();
+
+  const handleQueryError = (
+    error: Error & { digest?: string },
+    customErrorMessage: string
+  ) => {
+    customErrorMessage;
+    let customError = {
+      ...error,
+      digest: error.digest || "",
+      message:
+        "(useQuery Error) " + customErrorMessage + " / " + error.message || "",
+    };
+    console.error(customError);
+    logError(customError);
+  };
+
+  const logError = async (
+    error: Error & { digest?: string },
+    url?: string,
+    clerkId?: string
+  ) => {
+    const userClerkId = clerkId || user?.id;
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        console.error("Backend URL not configured");
+        return;
+      }
+
+      await fetch(`${backendUrl}/admin/public/log-error`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          error_message: error.message,
+          error_digest: error.digest,
+          url: url || window.location.href,
+          referrer: document.referrer || "direct",
+          user_agent: window.navigator.userAgent,
+          timestamp: new Date().toISOString(),
+          user_clerk_id: userClerkId,
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to log error:", e);
+    }
+  };
+
+  return { logError, handleQueryError };
+};

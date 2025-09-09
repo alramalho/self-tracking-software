@@ -1,7 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
-import { handleQueryError } from "@/lib/utils";
+import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, ActivityEntry } from "@tsw/prisma";
@@ -76,6 +76,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
+  const { handleQueryError } = useLogError();
 
   const activitiesQuery = useQuery({
     queryKey: ["activities"],
@@ -114,6 +115,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logActivityMutation = useMutation({
     mutationFn: async (data: ActivityLogData) => {
+      handleQueryError(new Error("test error"), "test error");
       const formData = new FormData();
       formData.append("activityId", data.activityId);
       formData.append("iso_date_string", data.date.toISOString());

@@ -1,7 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
-import { handleQueryError } from "@/lib/utils";
+import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useClerk } from "@clerk/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -69,6 +69,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   const { signOut } = useClerk();
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
+  const { handleQueryError } = useLogError();
 
   const handleAuthError = useCallback(
     (err?: unknown) => {
@@ -228,6 +229,7 @@ export const useUsers = (
   >
 ) => {
   const { isSignedIn } = useSession();
+  const { handleQueryError } = useLogError();
   const identifier = data
     .map((d) => d.username || d.id)
     .sort()
@@ -255,6 +257,7 @@ export const useUsers = (
 export const useUser = (
   data: { username: string; id?: string } | { username?: string; id: string }
 ) => {
+  const { handleQueryError } = useLogError();
   const identifier = data.username || data.id;
   const { isSignedIn } = useSession();
 
