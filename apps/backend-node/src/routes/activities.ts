@@ -596,10 +596,10 @@ router.get(
       // Group reactions by emoji
       const reactionsGrouped: { [emoji: string]: string[] } = {};
       reactions.forEach((reaction) => {
-        if (!reactionsGrouped[reaction.emoji]) {
-          reactionsGrouped[reaction.emoji] = [];
+        if (!reactionsGrouped[reaction?.emoji]) {
+          reactionsGrouped[reaction?.emoji] = [];
         }
-        reactionsGrouped[reaction.emoji].push(reaction.user.username!);
+        reactionsGrouped[reaction?.emoji].push(reaction?.user?.username!);
       });
 
       res.json({ reactions: reactionsGrouped });

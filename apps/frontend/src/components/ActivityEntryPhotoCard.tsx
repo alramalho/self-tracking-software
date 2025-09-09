@@ -81,10 +81,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>(
     activityEntry.reactions?.reduce((acc, reaction) => {
-      if (acc[reaction.emoji]) {
-        acc[reaction.emoji] = [...acc[reaction.emoji], reaction.user.username];
+      if (acc[reaction?.emoji]) {
+        acc[reaction?.emoji] = [...acc[reaction?.emoji], reaction?.user?.username];
       } else {
-        acc[reaction.emoji] = [reaction.user.username];
+        acc[reaction?.emoji] = [reaction?.user?.username];
       }
       return acc;
     }, {} as ReactionCount)
