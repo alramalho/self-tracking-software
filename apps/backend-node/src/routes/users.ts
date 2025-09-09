@@ -449,24 +449,6 @@ usersRouter.post(
   }
 );
 
-// Get timeline data
-usersRouter.get(
-  "/timeline",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const timelineData = await userService.getTimelineData(req.user!.id);
-      res.json(timelineData);
-    } catch (error) {
-      logger.error("Failed to get timeline data:", error);
-      res.status(500).json({
-        success: false,
-        error: { message: "An error occurred while fetching timeline data" },
-      });
-    }
-  }
-);
-
 // Report feedback
 usersRouter.post(
   "/report-feedback",

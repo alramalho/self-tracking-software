@@ -51,9 +51,14 @@ export async function getTimelineData() {
         userId: { in: userIds },
         deletedAt: null,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: [
+        {
+          date: "desc",
+        },
+        {
+          createdAt: "desc",
+        },
+      ],
       take: 50,
       include: {
         activity: true,

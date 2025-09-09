@@ -44,6 +44,7 @@ export function ActivityLoggerPopover({
 
     setIsSubmitting(true);
     try {
+      console.log({selectedDate});
       onSubmit({
         date: selectedDate,
         quantity,

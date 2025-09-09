@@ -28,7 +28,7 @@ const NeonCard = ({
   const neonClass = neonClasses[color || "none"];
 
   return (
-    <div className={`p-4 rounded-2xl relative ${neonClass} ${className}`}>
+    <div className={`rounded-2xl relative ${neonClass} ${className}`}>
       {children}
     </div>
   );

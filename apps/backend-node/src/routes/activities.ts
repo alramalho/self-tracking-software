@@ -1,6 +1,6 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
 import { plansService } from "@/services/plansService";
-import { ActivityVisibility } from "@tsw/prisma";
+import { ActivityEntry, ActivityVisibility } from "@tsw/prisma";
 import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
@@ -109,7 +109,7 @@ router.post(
         },
       });
 
-      let entry;
+      let entry: ActivityEntry;
       if (existingEntry) {
         // Update existing entry by adding quantity
         entry = await prisma.activityEntry.update({
@@ -238,12 +238,7 @@ router.post(
         }
       }
 
-      res.json({
-        id: entry.id,
-        activityId: entry.activityId,
-        quantity: entry.quantity,
-        date: entry.date,
-      });
+      res.json(entry);
     } catch (error) {
       logger.error("Error logging activity:", error);
       res.status(500).json({ error: "Failed to log activity" });
@@ -736,16 +731,16 @@ router.post(
 
       // Get all comments for this activity entry to return the updated list
       const allComments = await prisma.comment.findMany({
-        where: { 
+        where: {
           activityEntryId,
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
       });
 
-      const commentsWithUserData = allComments.map(c => ({
+      const commentsWithUserData = allComments.map((c) => ({
         id: c.id,
         userId: c.userId,
         username: c.username,
@@ -795,16 +790,16 @@ router.delete(
 
       // Get all remaining comments for this activity entry to return the updated list
       const allComments = await prisma.comment.findMany({
-        where: { 
+        where: {
           activityEntryId,
         },
         include: {
           user: { select: { username: true, picture: true, name: true } },
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
       });
 
-      const commentsWithUserData = allComments.map(c => ({
+      const commentsWithUserData = allComments.map((c) => ({
         id: c.id,
         userId: c.userId,
         username: c.username,
@@ -813,7 +808,7 @@ router.delete(
         picture: c.user.picture,
       }));
 
-      res.json({ 
+      res.json({
         message: "Comment removed successfully",
         comments: commentsWithUserData,
       });

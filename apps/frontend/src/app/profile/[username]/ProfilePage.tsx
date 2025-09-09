@@ -621,6 +621,7 @@ const ProfilePage: React.FC = () => {
                           ? "lime"
                           : "none"
                       }
+                      className="p-4"
                     >
                       <div className="flex flex-row items-center gap-2 mb-6">
                         <span className="text-4xl">{plan.emoji}</span>
