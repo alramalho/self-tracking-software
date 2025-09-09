@@ -7,9 +7,6 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { User } from "@tsw/prisma";
 import {
-  differenceInDays
-} from "date-fns";
-import {
   Bell,
   ChevronDown,
   ChevronRight,
@@ -19,7 +16,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import { Button } from "./ui/button";
 import {
   Collapsible,
@@ -41,6 +38,15 @@ const TimelineRenderer: React.FC<{
   const [isPartnerSectionCollapsed, setIsPartnerSectionCollapsed] =
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  const sortedEntries = useMemo(() => {
+    return [
+      ...(timelineData?.recommendedActivityEntries || []),
+    ].sort((a, b) => {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+  }, [timelineData?.recommendedActivityEntries]);
+
 
   if (isLoadingTimeline && !timelineData) {
     return (
@@ -171,12 +177,6 @@ const TimelineRenderer: React.FC<{
     );
   }
 
-  const sortedEntries = [
-    ...(timelineData?.recommendedActivityEntries || []),
-  ].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
-
   if (sortedEntries.length === 0) {
     return (
       <div className="text-start text-gray-500 pt-2">
@@ -223,46 +223,14 @@ const TimelineRenderer: React.FC<{
           const user: User | undefined = timelineData?.recommendedUsers?.find(
             (u: User) => u.id === activity?.userId
           );
-          if (!activity) return null;
-
-          const daysUntilExpiration =
-            entry.imageUrl && entry.imageExpiresAt
-              ? differenceInDays(new Date(entry.imageExpiresAt), new Date())
-              : 0;
-          const hasImageExpired =
-            !entry.imageUrl ||
-            !entry.imageExpiresAt ||
-            new Date(entry.imageExpiresAt) < new Date();
-
+          if (!activity || !user) return null;
           return (
             <React.Fragment key={entry.id}>
               <ActivityEntryPhotoCard
                 key={entry.id}
-                imageUrl={entry.imageUrl || undefined}
-                activityEntryId={entry.id}
-                activityTitle={activity.title}
-                activityEmoji={activity.emoji || ""}
-                activityEntryQuantity={entry.quantity}
-                activityEntryReactions={entry.reactions.reduce(
-                  (acc, reaction) => {
-                    if (reaction.user.username) {
-                      acc[reaction.emoji] = [reaction.user.username];
-                    }
-                    return acc;
-                  },
-                  {} as Record<string, string[]>
-                )}
-                activityEntryTimezone={entry.timezone || undefined}
-                activityEntryComments={entry.comments || []}
-                activityMeasure={activity.measure}
-                date={entry.date}
-                description={entry.description || undefined}
-                activityId={entry.activityId}
-                userPicture={user?.picture || undefined}
-                daysUntilExpiration={daysUntilExpiration}
-                hasImageExpired={hasImageExpired}
-                userName={user?.name || undefined}
-                userUsername={user?.username || undefined}
+                activity={activity}
+                activityEntry={entry as any}
+                user={user}
                 onAvatarClick={() => {
                   router.push(`/profile/${user?.username}`);
                 }}

@@ -375,7 +375,108 @@ router.put(
   }
 );
 
-// Add reaction to activity entry
+// Modify reactions for activity entry (unified add/remove)
+router.post(
+  "/activity-entries/:activityEntryId/modify-reactions",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { activityEntryId } = req.params;
+      const { reactions } = req.body;
+
+      if (!Array.isArray(reactions) || !reactions.length) {
+        return res.status(400).json({ error: "No reactions provided" });
+      }
+
+      // Process each reaction operation
+      const addedEmojis: string[] = [];
+      const removedEmojis: string[] = [];
+
+      for (const { emoji, operation } of reactions) {
+        if (!emoji || !operation) {
+          continue;
+        }
+
+        if (operation === "add") {
+          await prisma.reaction.upsert({
+            where: {
+              activityEntryId_userId_emoji: {
+                activityEntryId,
+                userId: req.user!.id,
+                emoji,
+              },
+            },
+            update: {},
+            create: {
+              activityEntryId,
+              userId: req.user!.id,
+              emoji,
+            },
+          });
+          addedEmojis.push(emoji);
+        } else if (operation === "remove") {
+          await prisma.reaction.deleteMany({
+            where: {
+              activityEntryId,
+              userId: req.user!.id,
+              emoji,
+            },
+          });
+          removedEmojis.push(emoji);
+        }
+      }
+
+      // Create notification only for added reactions
+      if (addedEmojis.length > 0) {
+        const activityEntry = await prisma.activityEntry.findUnique({
+          where: { id: activityEntryId },
+          include: { user: true },
+        });
+
+        if (activityEntry && activityEntry.userId !== req.user!.id) {
+          const emojiText =
+            addedEmojis.length <= 3
+              ? addedEmojis.join(" ")
+              : `${addedEmojis.slice(0, 3).join(" ")} and ${addedEmojis.length - 3} more`;
+
+          await notificationService.createAndProcessNotification({
+            userId: activityEntry.userId,
+            message: `@${req.user!.username} reacted to your activity with ${emojiText}`,
+            type: "INFO",
+            relatedData: {
+              picture: req.user!.picture,
+              name: req.user!.name,
+              username: req.user!.username,
+            },
+          });
+        }
+      }
+
+      // Get updated reactions
+      const activityEntryReactions = await prisma.reaction.findMany({
+        where: {
+          activityEntryId,
+        },
+        include: {
+          user: { select: { username: true, picture: true, name: true } },
+        },
+      });
+
+      res.json({
+        message: "Reactions modified successfully",
+        reactions: activityEntryReactions,
+      });
+    } catch (error) {
+      logger.error("Error modifying reactions:", error);
+      res.status(500).json({ error: "Failed to modify reactions" });
+    }
+  }
+);
+
+// Add reaction to activity entry (legacy endpoint - kept for backwards compatibility)
 router.post(
   "/activity-entries/:activityEntryId/reactions",
   requireAuth,
@@ -436,7 +537,18 @@ router.post(
           });
         }
 
-        res.json({ message: "Reactions added successfully" });
+        const activityEntryReactions = await prisma.reaction.findMany({
+          where: {
+            activityEntryId,
+          },
+          include: {
+            user: { select: { username: true, picture: true, name: true } },
+          },
+        });
+        res.json({
+          message: "Reactions added successfully",
+          reactions: activityEntryReactions,
+        });
       } else if (operation === "remove") {
         for (const e of emojiList) {
           await prisma.reaction.deleteMany({
@@ -448,7 +560,18 @@ router.post(
           });
         }
 
-        res.json({ message: "Reactions removed successfully" });
+        const activityEntryReactions = await prisma.reaction.findMany({
+          where: {
+            activityEntryId,
+          },
+          include: {
+            user: { select: { username: true, picture: true, name: true } },
+          },
+        });
+        res.json({
+          message: "Reactions removed successfully",
+          reactions: activityEntryReactions,
+        });
       } else {
         res.status(400).json({ error: "Invalid operation" });
       }
