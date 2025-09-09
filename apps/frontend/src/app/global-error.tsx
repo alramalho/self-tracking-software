@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { logError } from "@/lib/utils";
+import { useUser } from "@clerk/clerk-react";
 import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 
@@ -12,9 +13,11 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const {user} = useUser();
+  
   useEffect(() => {
     console.error("Global Error: ", error);
-    logError(error, typeof window !== 'undefined' ? window.location.href : undefined);
+    logError(error, typeof window !== 'undefined' ? window.location.href : undefined, user?.id);
   }, [error]);
 
   return (

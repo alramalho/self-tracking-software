@@ -42,8 +42,8 @@ interface ActivitiesContextType {
   isUpsertingActivityEntry: boolean;
   isUpsertingActivity: boolean;
 
-  deleteActivity: (data: { id: string }) => Promise<void>;
-  deleteActivityEntry: (data: { id: string }) => Promise<void>;
+  deleteActivity: (data: { id: string }) => Promise<string>;
+  deleteActivityEntry: (data: { id: string }) => Promise<string>;
   isDeletingActivity: boolean;
   isDeletingActivityEntry: boolean;
 
