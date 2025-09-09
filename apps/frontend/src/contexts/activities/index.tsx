@@ -115,7 +115,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logActivityMutation = useMutation({
     mutationFn: async (data: ActivityLogData) => {
-      handleQueryError(new Error("test error"), "test error");
       const formData = new FormData();
       formData.append("activityId", data.activityId);
       formData.append("iso_date_string", data.date.toISOString());
