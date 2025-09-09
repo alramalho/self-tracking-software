@@ -2,7 +2,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivities } from "@/contexts/activities";
 import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { TimelineData } from "@/contexts/timeline/actions";
 import { useCurrentUser, useUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { getThemeVariants } from "@/utils/theme";
@@ -28,20 +27,20 @@ const getFormattedDate = (date: Date) => {
   const now = new Date();
 
   if (isToday(date)) {
-    return `today at ${format(date, "HH:mm")}`;
+    return "today";
   }
 
   if (isYesterday(date)) {
-    return `yesterday at ${format(date, "HH:mm")}`;
+    return "yesterday";
   }
 
   const diffInCalendarDays = differenceInCalendarDays(now, date);
 
   if (diffInCalendarDays <= 7) {
-    return `last ${format(date, "EEEE")} at ${format(date, "HH:mm")}`;
+    return `last ${format(date, "EEEE")}`;
   }
 
-  return format(date, "MMM d HH:mm");
+  return format(date, "MMM d");
 };
 interface ActivityEntryPhotoCardProps {
   activity: Activity;
@@ -81,7 +80,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>(
-    activityEntry.reactions.reduce((acc, reaction) => {
+    activityEntry.reactions?.reduce((acc, reaction) => {
       if (acc[reaction.emoji]) {
         acc[reaction.emoji] = [...acc[reaction.emoji], reaction.user.username];
       } else {
@@ -121,6 +120,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [showAllComments, setShowAllComments] = useState(false);
   const { modifyReactions, isModifyingReactions, addComment, removeComment, isAddingComment, isRemovingComment } = useActivities();
   const comments = activityEntry.comments || [];
+
 
   useEffect(() => {
     if (textRef.current) {
@@ -296,11 +296,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const hasImage = activityEntry.imageUrl && !hasImageExpired;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
-  if (activityEntry.description == "hiit!"){
-    // console.log(`hasImage? ${hasImage} dscription ${activityEntry.description}: image ${activityEntry.imageUrl} expires at ${activityEntry.imageExpiresAt}`);
-    console.log(`reactions: ${JSON.stringify(reactions)}`);
-
-  }
+  if (!activity || !activityEntry) return null;
 
   const cardContent = (
     <div
@@ -319,7 +315,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               className="w-full h-full max-h-[400px] object-cover rounded-2xl"
             />
             <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
-              {Object.entries(reactions).map(([emoji, usernames]) => {
+              {reactions && Object.entries(reactions).map(([emoji, usernames]) => {
                 return (
                   <button
                     key={emoji}
