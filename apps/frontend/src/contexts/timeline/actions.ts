@@ -15,14 +15,26 @@ export async function getTimelineData() {
         connectionsFrom: {
           include: {
             to: {
-              select: { id: true, username: true, name: true, picture: true },
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                picture: true,
+                planType: true,
+              },
             },
           },
         },
         connectionsTo: {
           include: {
             from: {
-              select: { id: true, username: true, name: true, picture: true },
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                picture: true,
+                planType: true,
+              },
             },
           },
         },
@@ -79,7 +91,12 @@ export async function getTimelineData() {
         reactions: {
           include: {
             user: {
-              select: { id: true, username: true, picture: true },
+              select: {
+                id: true,
+                username: true,
+                picture: true,
+                planType: true,
+              },
             },
           },
         },

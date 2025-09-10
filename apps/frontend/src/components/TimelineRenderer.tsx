@@ -6,7 +6,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
-import { Activity, User } from "@tsw/prisma";
+import { Activity, PlanType } from "@tsw/prisma";
 import {
   Bell,
   ChevronDown,
@@ -14,10 +14,10 @@ import {
   PersonStandingIcon,
   Search,
   Send,
-  UserPlus
+  UserPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import { Button } from "./ui/button";
 import {
   Collapsible,
@@ -41,12 +41,25 @@ const TimelineRenderer: React.FC<{
   const timelineRef = useRef<HTMLDivElement>(null);
   const { activities } = useActivities();
 
+  const friends = useMemo(() => {
+    return [
+      ...(currentUser?.connectionsFrom
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.to) || []),
+      ...(currentUser?.connectionsTo
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.from) || []),
+    ];
+  }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]);
 
   if (isLoadingTimeline && !timelineData) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden">
+          <div
+            key={index}
+            className="bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden"
+          >
             <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
               <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
                 <Skeleton className="w-full h-[300px] rounded-2xl" />
@@ -71,7 +84,7 @@ const TimelineRenderer: React.FC<{
     );
   }
 
-  if (!currentUser?.friends?.length) {
+  if (!friends?.length) {
     return (
       <>
         {/* <AINotification
@@ -213,23 +226,35 @@ const TimelineRenderer: React.FC<{
         timelineData?.recommendedActivities &&
         timelineData?.recommendedUsers &&
         timelineData?.recommendedActivityEntries.map((entry) => {
-          const allActivities = [...(timelineData?.recommendedActivities || []), ...activities];
+          const allActivities = [
+            ...(timelineData?.recommendedActivities || []),
+            ...activities,
+          ];
           const activity = allActivities?.find(
             (a: Activity) => a.id === entry.activityId
           );
-          const allUsers = [...(timelineData?.recommendedUsers || []), currentUser];
-          const user: User | undefined = allUsers?.find(
-            (u: User) => u.id === activity?.userId
-          );
-          if (!activity || !user) return null;
-          
+          const allUsers = [
+            ...(timelineData?.recommendedUsers || []),
+            currentUser,
+          ];
+          const user = allUsers?.find((u: any) => u.id === activity?.userId);
+          // wacky casting, should be dealt in the query level
+          if (!activity || !user || user.username === null) return null;
+
           return (
             <React.Fragment key={entry.id}>
               <ActivityEntryPhotoCard
                 key={entry.id}
                 activity={activity}
                 activityEntry={entry as any}
-                user={user}
+                user={
+                  user as {
+                    username: string;
+                    name: string;
+                    picture: string;
+                    planType: PlanType;
+                  }
+                }
                 onAvatarClick={() => {
                   router.push(`/profile/${user?.username}`);
                 }}
