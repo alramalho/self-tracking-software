@@ -26,6 +26,7 @@ interface UserCardProps {
   showScore?: boolean;
   showStreaks?: boolean;
   className?: string;
+  connectionStatus?: "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED" | null;
 }
 
 const UserCard: React.FC<UserCardProps> = ({
@@ -38,6 +39,7 @@ const UserCard: React.FC<UserCardProps> = ({
   showScore = true,
   showStreaks = true,
   className = "",
+  connectionStatus = null,
 }) => {
   const { currentUser, sendFriendRequest, isSendingFriendRequest } =
     useCurrentUser();
@@ -278,13 +280,17 @@ const UserCard: React.FC<UserCardProps> = ({
             {/* Send friend request button */}
             <Button
               loading={isSendingFriendRequest}
-              disabled={isSendingFriendRequest || sentFriendRequest}
+              disabled={isSendingFriendRequest || sentFriendRequest || connectionStatus === "PENDING" || connectionStatus === "ACCEPTED"}
               className={`w-full rounded-xl p-5 ${variants.button.glass}`}
               onClick={() => setShowMessagePopover(true)}
             >
               <Send className="mr-2" />
               {sentFriendRequest
                 ? "Friend Added"
+                : connectionStatus === "PENDING"
+                ? "Request sent"
+                : connectionStatus === "ACCEPTED"
+                ? "Friends"
                 : "Add Friend"}
             </Button>
 
@@ -313,7 +319,7 @@ const UserCard: React.FC<UserCardProps> = ({
 
                 <Button
                   loading={isSendingFriendRequest}
-                  disabled={isSendingFriendRequest || sentFriendRequest}
+                  disabled={isSendingFriendRequest || sentFriendRequest || connectionStatus === "PENDING" || connectionStatus === "ACCEPTED"}
                   className="w-full"
                   onClick={async () => {
                     await handleSendFriendRequest();
@@ -321,7 +327,13 @@ const UserCard: React.FC<UserCardProps> = ({
                   }}
                 >
                   <Send className="mr-2" />
-                  {sentFriendRequest ? "Added" : "Add Friend"}
+                  {sentFriendRequest 
+                    ? "Added" 
+                    : connectionStatus === "PENDING"
+                    ? "Request sent"
+                    : connectionStatus === "ACCEPTED"
+                    ? "Friends"
+                    : "Add Friend"}
                 </Button>
               </div>
             </AppleLikePopover>

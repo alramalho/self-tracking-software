@@ -3,6 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import UserCard from "@/components/UserCard";
 import { useRecommendations } from "@/contexts/recommendations";
+import { useCurrentUser } from "@/contexts/users";
 import { User } from "@tsw/prisma";
 import React from "react";
 
@@ -13,6 +14,7 @@ export const RecommendedUsers: React.FC = () => {
     plans: recommendedPlans,
     isLoadingRecommendations,
   } = useRecommendations();
+  const { currentUser } = useCurrentUser();
 
   const userRecommendations = recommendations
     .filter((rec) => rec.recommendationObjectType === "USER");
@@ -30,6 +32,21 @@ export const RecommendedUsers: React.FC = () => {
       acc[rec.recommendationObjectId] = rec.score;
       return acc;
     }, {} as Record<string, number>);
+
+  // Helper function to get connection status with a recommended user
+  const getConnectionStatus = (userId: string): "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED" | null => {
+    if (!currentUser) return null;
+    
+    // Check connections from current user to recommended user
+    const connectionFrom = currentUser.connectionsFrom?.find(conn => conn.toId === userId);
+    if (connectionFrom) return connectionFrom.status as any;
+    
+    // Check connections from recommended user to current user
+    const connectionTo = currentUser.connectionsTo?.find(conn => conn.fromId === userId);
+    if (connectionTo) return connectionTo.status as any;
+    
+    return null;
+  };
 
   if (isLoadingRecommendations) {
     return (
@@ -75,6 +92,7 @@ export const RecommendedUsers: React.FC = () => {
             showScore={true}
             showStreaks={true}
             className={`bg-white/50`}
+            connectionStatus={getConnectionStatus(user.id)}
           />
         );
       })}
