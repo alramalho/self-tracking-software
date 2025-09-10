@@ -14,8 +14,18 @@ export const RecommendedUsers: React.FC = () => {
     isLoadingRecommendations,
   } = useRecommendations();
 
-  const userScores = recommendations
-    .filter((rec) => rec.recommendationObjectType === "USER")
+  const userRecommendations = recommendations
+    .filter((rec) => rec.recommendationObjectType === "USER");
+
+  const deduplicatedRecommendations = userRecommendations.reduce((acc, rec) => {
+    const existing = acc.find(r => r.recommendationObjectId === rec.recommendationObjectId);
+    if (!existing || rec.score > existing.score) {
+      return acc.filter(r => r.recommendationObjectId !== rec.recommendationObjectId).concat(rec);
+    }
+    return acc;
+  }, [] as typeof userRecommendations);
+
+  const userScores = deduplicatedRecommendations
     .reduce((acc, rec) => {
       acc[rec.recommendationObjectId] = rec.score;
       return acc;
@@ -33,7 +43,7 @@ export const RecommendedUsers: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {recommendations.map((recommendation) => {
+      {deduplicatedRecommendations.map((recommendation) => {
         const user = recommendedUsers.find(
           (user) => user.id === recommendation.recommendationObjectId
         );

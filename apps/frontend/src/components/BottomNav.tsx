@@ -214,7 +214,7 @@ const BottomNav = () => {
           </Link>
 
           <Link
-            href="/ap-search"
+            href="/search"
             prefetch={true}
             data-testid="nav-search"
             className={cn(
@@ -222,7 +222,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
                 : "flex flex-col justify-center items-center p-2",
-              isActiveRoute("/ap-search")
+              isActiveRoute("/search")
                 ? cn(
                     activeThemeClass,
                     isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
@@ -230,7 +230,7 @@ const BottomNav = () => {
                 : "text-gray-500 hover:text-gray-700"
             )}
             onClick={() => {
-              if (!pathname.startsWith("/ap-search")) {
+              if (!pathname.startsWith("/search")) {
                 setIsLoadingInsights(true);
               }
             }}
@@ -247,7 +247,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/ap-search") && "hidden"
+              !isDesktop && !isActiveRoute("/search") && "hidden"
             )}>
               Search
             </span>
