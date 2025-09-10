@@ -68,6 +68,8 @@ interface PlanProgressCardProps {
   isExpanded?: boolean;
   className?: string;
   isDemo?: boolean;
+  onAnimationDone?: () => void;
+  skipAnimation?: boolean;
 }
 
 export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
@@ -78,6 +80,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   isExpanded = true,
   className,
   isDemo = false,
+  onAnimationDone,
+  skipAnimation = false,
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -88,6 +92,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
+  const [completedAnimations, setCompletedAnimations] = useState<Set<string>>(new Set());
 
   const currentWeek = weeks.find((week) =>
     isSameWeek(week.startDate, new Date())
@@ -140,6 +145,48 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
+  // Calculate total number of animations that will run
+  const totalProgressBars = 2 + (achievement.streak >= habitMaxValue ? 1 : 0); // week + habit + (lifestyle if applicable)
+  const totalAnimations = totalProgressBars + (isCoached ? 1 : 0); // + PlanStatus motion if coached
+  
+  const handleAnimationComplete = (animationId: string) => {
+    if (skipAnimation) {
+      // If skipping animation, call onAnimationDone immediately
+      setIsAnimationCompleted(true);
+      onAnimationDone?.();
+      return;
+    }
+    
+    setCompletedAnimations(prev => {
+      const newSet = new Set(prev);
+      newSet.add(animationId);
+      
+      // Check if all progress bar animations are complete
+      if (newSet.size >= totalProgressBars) {
+        setIsAnimationCompleted(true);
+        
+        // If not coached, we're done. If coached, wait for PlanStatus animation
+        if (!isCoached) {
+          onAnimationDone?.();
+        } else {
+          // Wait for PlanStatus animation to complete (0.5s)
+          setTimeout(() => {
+            setCompletedAnimations(prev => {
+              const finalSet = new Set(prev);
+              finalSet.add('planStatus');
+              if (finalSet.size >= totalAnimations) {
+                onAnimationDone?.();
+              }
+              return finalSet;
+            });
+          }, 500);
+        }
+      }
+      
+      return newSet;
+    });
+  };
+
   return (
     <Collapsible open={isExpanded} className="relative">
       <CollapsibleContent className="space-y-0 overflow-visible">
@@ -172,7 +219,9 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               )}
             >
               {achievement.streak > 1 && (
-                <span className="text-lg font-cursive">x{achievement.streak}</span>
+                <span className="text-lg font-cursive">
+                  x{achievement.streak}
+                </span>
               )}
               <FireAnimation height={40} width={40} className="pb-2" />
             </div>
@@ -234,10 +283,10 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               <AnimatePresence>
                 {isAnimationCompleted && (
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={skipAnimation ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    transition={skipAnimation ? { duration: 0 } : { duration: 0.5, ease: "easeOut" }}
                   >
                     <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
                       <span className="text-xs text-gray-400/80">
@@ -266,9 +315,14 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               value={totalCompletedActivities}
               maxValue={totalPlannedActivities}
               goal={<Flame size={19} className="text-orange-400" />}
-              onAnimationCompleted={() => setIsAnimationCompleted(true)}
+              onAnimationCompleted={() => handleAnimationComplete('week')}
               className="w-full"
-              onFullyDone={() => setIsFullyDone(true)}
+              onFullyDone={() => {
+                setTimeout(() => {
+                  setIsFullyDone(true);
+                }, 500);
+              }}
+              skipAnimation={skipAnimation}
             />
 
             {/* Habit achievement progress (4 weeks) */}
@@ -289,6 +343,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                     </span>
                   ) : undefined
                 }
+                onAnimationCompleted={() => handleAnimationComplete('habit')}
+                skipAnimation={skipAnimation}
               />
             </div>
 
@@ -311,6 +367,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                       </span>
                     ) : undefined
                   }
+                  onAnimationCompleted={() => handleAnimationComplete('lifestyle')}
+                  skipAnimation={skipAnimation}
                 />
               </div>
             )}

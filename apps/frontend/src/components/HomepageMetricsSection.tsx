@@ -62,6 +62,23 @@ export const HomepageMetricsSection: React.FC = () => {
   }).length;
 
   const isAfter2PM = new Date().getHours() >= 14;
+  const canLogMetrics =
+    unloggedMetricsCount && unloggedMetricsCount > 0 && isAfter2PM;
+
+  if (!canLogMetrics) {
+    return (
+      <>
+        <h3 className="text-md font-semibold text-gray-900">Your Metrics</h3>
+        <div className="bg-white/60 ring-1 ring-gray-200 rounded-xl p-2 border border-white/50 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-sm text-gray-500">
+              Come back after 2PM to log your metrics
+            </span>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="">
@@ -86,10 +103,7 @@ export const HomepageMetricsSection: React.FC = () => {
               </button>
             </CollapsibleTrigger>
 
-            {isMetricsCollapsed &&
-            unloggedMetricsCount &&
-            unloggedMetricsCount > 0 &&
-            isAfter2PM ? (
+            {isMetricsCollapsed && canLogMetrics ? (
               <div className="flex items-center gap-2">
                 <span className="text-md font-semibold text-gray-900">
                   {unloggedMetricsCount} metric
