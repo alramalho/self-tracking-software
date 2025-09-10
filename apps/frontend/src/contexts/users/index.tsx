@@ -150,10 +150,10 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const acceptFriendRequestMutation = useMutation({
     mutationFn: async (user: { id: string, username: string }) => {
-      const repsonse = await api.post(
+      const response = await api.post(
         `/users/accept-connection-request/${user.id}`
       );
-      return repsonse.data.connection;
+      return response.data.connection;
     },
     onSuccess: (newConnection, user) => {
       queryClient.setQueryData(["current-user"], (old: HydratedCurrentUser) => {
@@ -178,6 +178,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       });
       queryClient.refetchQueries({ queryKey: ["notifications"] });
+      queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Friend request accepted!");
     },
     onError: (error) => {

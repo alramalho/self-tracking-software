@@ -1,5 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import { useDataNotifications } from "@/contexts/notifications";
+import { useCurrentUser } from "@/contexts/users";
+import { useLogError } from "@/hooks/useLogError";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatTimeAgo } from "@/lib/utils";
@@ -18,71 +20,92 @@ import { Skeleton } from "./ui/skeleton";
 interface NotificationsProps {}
 
 const Notifications: React.FC<NotificationsProps> = () => {
-  const {concludeNotification, clearAllNotifications, notifications, isLoadingNotifications} = useDataNotifications();
+  const {
+    concludeNotification,
+    clearAllNotifications,
+    notifications,
+    isLoadingNotifications,
+  } = useDataNotifications();
   const router = useRouter();
   const api = useApiWithAuth();
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { isPushGranted, requestPermission } = useNotifications();
+  const {
+    currentUser,
+    acceptFriendRequest,
+    isAcceptingFriendRequest,
+    rejectFriendRequest,
+    isRejectingFriendRequest,
+  } = useCurrentUser();
+  const { logError } = useLogError();
 
   const handleNotificationAction = async (
     notification: Notification,
     action: string
   ) => {
-    let skipToast = false;
     const actionPromise = async () => {
       if (notification.type === "INFO") {
-        await concludeNotification(notification.id);
+        await concludeNotification({ notificationId: notification.id });
       } else if (notification.type === "ENGAGEMENT") {
         if (action === "dismiss") {
-          await concludeNotification(notification.id);
+          await concludeNotification({ notificationId: notification.id });
         } else if (action === "respond") {
           posthog.capture("engagement-notification-interacted", {
             notification_id: notification.id,
           });
-          skipToast = true;
           if (
             notification.relatedData &&
             (notification.relatedData as any).messageId &&
             (notification.relatedData as any).messageText
           ) {
             router.push(
-              `/ai?assistantType=activity-extraction&messageId=${(notification.relatedData as any).messageId}&messageText=${(notification.relatedData as any).messageText}`
+              `/ai?assistantType=activity-extraction&messageId=${
+                (notification.relatedData as any).messageId
+              }&messageText=${(notification.relatedData as any).messageText}`
             );
           } else {
             toast.error(
               "Something went wrong. Please be so kind and open a bug report."
             );
-          } 
+          }
         }
-        await concludeNotification(notification.id);
+        await concludeNotification({ notificationId: notification.id });
       } else if (notification.type === "PLAN_INVITATION") {
         router.push(`/join-plan/${notification.relatedId}`);
       } else if (notification.type === "FRIEND_REQUEST") {
-        await api.post(
-          `/users/${action}-connection-request/${
-            notification.relatedId
-          }`
-        );
-        await concludeNotification(notification.id);
+        const relatedData = notification.relatedData as {
+          id: string;
+          username: string;
+        } | null;
+        if (!relatedData?.id || !relatedData?.username) {
+          logError(
+            new Error(
+              `No related data found when ${
+                currentUser?.username ?? "'unknown user'"
+              } was about about to ${action} a friend request ${
+                notification.id
+              }`
+            )
+          );
+          return;
+        }
+        if (action === "accept") {
+          await acceptFriendRequest({
+            id: relatedData.id,
+            username: relatedData.username,
+          });
+        } else if (action === "reject") {
+          await rejectFriendRequest({
+            id: relatedData.id,
+            username: relatedData.username,
+          });
+        }
+        await concludeNotification({ notificationId: notification.id, mute: true });
       }
     };
 
-    if (!skipToast) {
-      toast.promise(actionPromise(), {
-        loading: `Processing ${notification.type.replace("_", " ")}...`,
-        success: `${notification.type
-          .toLowerCase()
-          .replace("_", " ")
-          .charAt(0)
-          .toUpperCase()}${notification.type
-          .replace("_", " ")
-          .slice(1)} ${action}ed successfully!`,
-        error: `Failed to ${action} ${notification.type.replace("_", " ")}`,
-      });
-    } else {
-      actionPromise();
-    }
+    actionPromise();
   };
 
   const renderActionButtons = (notification: Notification) => {
@@ -136,10 +159,14 @@ const Notifications: React.FC<NotificationsProps> = () => {
   };
 
   const hasPictureData = (notification: Notification) => {
-    return notification.relatedData && (notification.relatedData as any).picture;
+    return (
+      notification.relatedData && (notification.relatedData as any).picture
+    );
   };
   const hasUsernameData = (notification: Notification) => {
-    return notification.relatedData && (notification.relatedData as any).username;
+    return (
+      notification.relatedData && (notification.relatedData as any).username
+    );
   };
 
   // Get the latest engagement notification
@@ -164,7 +191,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
           <Skeleton className="h-8 w-20 rounded-full" />
         </div>
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="p-4 rounded-2xl border border-gray-200 bg-white">
+          <div
+            key={index}
+            className="p-4 rounded-2xl border border-gray-200 bg-white"
+          >
             <div className="flex items-center justify-between">
               <div className="flex flex-row items-center gap-3 flex-1">
                 <Skeleton className="w-10 h-10 rounded-full" />
@@ -193,7 +223,10 @@ const Notifications: React.FC<NotificationsProps> = () => {
         <h2 className="text-xl font-semibold text-gray-700">All up to date!</h2>
         {!isPushGranted && (
           <p className="text-gray-500 text-sm">
-            <button className="underline" onClick={requestPermission}>Click here</button> to be notified of new notifications.
+            <button className="underline" onClick={requestPermission}>
+              Click here
+            </button>{" "}
+            to be notified of new notifications.
           </p>
         )}
         {isPushGranted && (
@@ -247,7 +280,7 @@ const Notifications: React.FC<NotificationsProps> = () => {
               >
                 <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
                   {[
-                      "FRIEND_REQUEST",
+                    "FRIEND_REQUEST",
                     "PLAN_INVITATION",
                     "INFO",
                     "COACH",
