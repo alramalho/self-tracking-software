@@ -18,7 +18,6 @@ export async function getCurrentUserBasicData() {
     where: { id: user.id },
     include: {
       connectionsFrom: {
-        where: { status: "ACCEPTED" },
         include: {
           to: {
             select: { id: true, username: true, name: true, picture: true },
@@ -26,7 +25,6 @@ export async function getCurrentUserBasicData() {
         },
       },
       connectionsTo: {
-        where: { status: "ACCEPTED" },
         include: {
           from: {
             select: { id: true, username: true, name: true, picture: true },
@@ -40,16 +38,7 @@ export async function getCurrentUserBasicData() {
     throw new Error("User not found");
   }
 
-  // Combine friends from both directions
-  const friends = [
-    ...(userData.connectionsFrom?.map((conn) => conn.to) || []),
-    ...(userData.connectionsTo?.map((conn) => conn.from) || []),
-  ];
-
-  return {
-    ...userData,
-    friends,
-  };
+  return userData;
 }
 
 export async function getUserFullDataByUserNameOrId(
@@ -71,7 +60,7 @@ export async function getUserFullDataByUserNameOrId(
     throw new Error("Username or id is required for each item");
   });
 
-  const usersData = await prisma.user.findMany({
+  const usersData = await prisma.user.findFirst({
     where: {
       OR: where,
     },
@@ -96,7 +85,6 @@ export async function getUserFullDataByUserNameOrId(
         },
       },
       connectionsFrom: {
-        where: { status: "ACCEPTED" },
         include: {
           to: {
             select: { id: true, username: true, name: true, picture: true },
@@ -104,7 +92,6 @@ export async function getUserFullDataByUserNameOrId(
         },
       },
       connectionsTo: {
-        where: { status: "ACCEPTED" },
         include: {
           from: {
             select: { id: true, username: true, name: true, picture: true },
@@ -114,22 +101,11 @@ export async function getUserFullDataByUserNameOrId(
     },
   });
 
-  if (!usersData.length) {
-    throw new Error("No users found");
+  if (!usersData) {
+    throw new Error("No user found");
   }
 
-  return usersData.map((userData) => {
-    // Combine friends from both directions for each user
-    const friends = [
-      ...(userData.connectionsFrom?.map((conn) => conn.to) || []),
-      ...(userData.connectionsTo?.map((conn) => conn.from) || []),
-    ];
-
-    return {
-      ...userData,
-      friends,
-    };
-  });
+  return usersData;
 }
 
 export async function updateUser(data: Prisma.UserUpdateInput) {

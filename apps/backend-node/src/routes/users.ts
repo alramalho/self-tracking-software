@@ -366,22 +366,24 @@ usersRouter.post(
 
 // Accept connection request
 usersRouter.post(
-  "/accept-connection-request/:request_id",
+  "/accept-connection-request/:senderId",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { request_id } = req.params;
+      const { senderId } = req.params;
 
-      const { from, to } =
-        await userService.acceptConnectionRequest(request_id);
+      const connection = await userService.acceptConnectionRequest(
+        senderId,
+        req.user!.id
+      );
 
       // Send notification to sender
       try {
         await notificationService.createAndProcessNotification({
-          userId: from.id,
+          userId: senderId,
           message: `${req.user!.name} accepted your connection request. You can now see their activities!`,
           type: "INFO",
-          relatedId: request_id,
+          relatedId: connection.id,
           relatedData: {
             id: req.user!.id,
             name: req.user!.name,
@@ -395,7 +397,7 @@ usersRouter.post(
 
       res.json({
         message: "Connection request accepted",
-        recipient: to,
+        connection,
       });
     } catch (error) {
       logger.error("Failed to accept connection request:", error);
@@ -409,26 +411,28 @@ usersRouter.post(
 
 // Reject connection request
 usersRouter.post(
-  "/reject-connection-request/:request_id",
+  "/reject-connection-request/:senderId",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { request_id } = req.params;
+      const { senderId } = req.params;
 
-      const sender = await userService.rejectConnectionRequest(request_id);
+      const connection = await userService.rejectConnectionRequest(
+        senderId,
+        req.user!.id
+      );
 
-      // Send notification to sender
       try {
         await notificationService.createAndProcessNotification({
-          userId: sender.id,
+          userId: senderId,
           message: `${req.user!.name} rejected your connection request.`,
           type: "INFO",
-          relatedId: request_id,
+          relatedId: connection.id,
           relatedData: {
-            id: sender.id,
-            name: sender.name,
-            username: sender.username,
-            picture: sender.picture,
+            id: req.user!.id,
+            name: req.user!.name,
+            username: req.user!.username,
+            picture: req.user!.picture,
           },
         });
       } catch (notificationError) {
@@ -437,7 +441,7 @@ usersRouter.post(
 
       res.json({
         message: "Connection request rejected",
-        sender,
+        connection,
       });
     } catch (error) {
       logger.error("Failed to reject connection request:", error);

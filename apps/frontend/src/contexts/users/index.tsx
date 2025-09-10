@@ -18,6 +18,7 @@ import {
   getCurrentUserBasicData,
   getUserFullDataByUserNameOrId,
   HydratedCurrentUser,
+  HydratedUser,
   updateUser as updateUserAction,
 } from "./actions";
 
@@ -52,10 +53,10 @@ interface UsersContextType {
   sendFriendRequest: (userId: string) => Promise<void>;
   isSendingFriendRequest: boolean;
 
-  acceptFriendRequest: (requestId: string) => Promise<void>;
+  acceptFriendRequest: (user: { id: string, username: string }) => Promise<void>;
   isAcceptingFriendRequest: boolean;
 
-  rejectFriendRequest: (requestId: string) => Promise<void>;
+  rejectFriendRequest: (user: { id: string, username: string }) => Promise<void>;
   isRejectingFriendRequest: boolean;
 }
 
@@ -148,25 +149,79 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const acceptFriendRequestMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      await api.post(`/users/accept-connection-request/${userId}`);
+    mutationFn: async (user: { id: string, username: string }) => {
+      const repsonse = await api.post(
+        `/users/accept-connection-request/${user.id}`
+      );
+      return repsonse.data.connection;
     },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["current-user"] });
-      toast.success("Friend request accepted successfully");
+    onSuccess: (newConnection, user) => {
+      queryClient.setQueryData(["current-user"], (old: HydratedCurrentUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["current-user"] });
+        // replace the connection of id into the connectionsTo array
+        return {
+          ...old,
+          connectionsTo: old.connectionsTo?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.setQueryData(["user", user.username], (old: HydratedUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["users", user.username] });
+        return {
+          ...old,
+          connectionsFrom: old.connectionsFrom?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
+      toast.success("Friend request accepted!");
+    },
+    onError: (error) => {
+      console.error("Error accepting friend request:", error);
+      toast.error("Failed to accept friend request.");
     },
   });
 
   const rejectFriendRequestMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      await api.post(`/users/reject-connection-request/${userId}`);
+    mutationFn: async (user: { id: string, username: string }) => {
+      const repsonse = await api.post(
+        `/users/reject-connection-request/${user.id}`
+      );
+      return repsonse.data.connection;
     },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["current-user"] });
-      toast.success("Friend request rejected successfully");
+    onSuccess: (newConnection, user) => {
+      queryClient.setQueryData(["current-user"], (old: HydratedCurrentUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["current-user"] });
+        return {
+          ...old,
+          connectionsTo: old.connectionsTo?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.setQueryData(["user", user.username], (old: HydratedUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["user", user.username] });
+        return {
+          ...old,
+          connectionsFrom: old.connectionsFrom?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
+      toast.success("Friend request rejected.");
+    },
+    onError: (error) => {
+      console.error("Error rejecting friend request:", error);
+      toast.error("Failed to reject friend request.");
     },
   });
-
 
   const refetchCurrentUser = useCallback(
     async (notify = true) => {
@@ -264,8 +319,7 @@ export const useUser = (
   const query = useQuery({
     queryKey: ["user", identifier],
     queryFn: async () => {
-      const users = await getUserFullDataByUserNameOrId([data]);
-      return users[0];
+      return await getUserFullDataByUserNameOrId([data]);
     },
     enabled: isSignedIn && !!identifier,
     staleTime: 1000 * 60 * 5,

@@ -87,12 +87,19 @@ const ProfilePage: React.FC = () => {
   const activityEntries = profileData?.activityEntries || [];
 
   // For connection requests, we always use the current user data regardless of profile being viewed
-  const currentUserSentConnectionRequests =
-    currentUser?.connectionsFrom?.filter((conn) => conn.status === "PENDING") ||
-    [];
-  const currentUserReceivedConnectionRequests =
-    currentUser?.connectionsTo?.filter((conn) => conn.status === "PENDING") ||
-    [];
+  const currentUserSentConnectionRequests = useMemo(
+    () =>
+      currentUser?.connectionsFrom?.filter(
+        (conn) => conn.status === "PENDING"
+      ) || [],
+    [currentUser?.connectionsFrom]
+  );
+  const currentUserReceivedConnectionRequests = useMemo(
+    () =>
+      currentUser?.connectionsTo?.filter((conn) => conn.status === "PENDING") ||
+      [],
+    [currentUser?.connectionsTo]
+  );
 
   const profileActivePlans = profileData?.plans?.filter(
     (p) => !isPlanExpired({ finishingDate: p.finishingDate })
@@ -195,27 +202,36 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const hasPendingReceivedConnectionRequest = () => {
-    return currentUserReceivedConnectionRequests?.some(
-      (request) => request.fromId === profileData?.id
-    );
-  };
+  const hasPendingReceivedConnectionRequest = useMemo(() => {
+    return currentUserReceivedConnectionRequests?.some((request) => {
+      return request.fromId === profileData?.id;
+    });
+  }, [currentUserReceivedConnectionRequests, profileData?.id]);
 
-  const hasPendingSentConnectionRequest = () => {
-    return currentUserSentConnectionRequests?.some(
-      (request) => request.toId === profileData?.id
-    );
-  };
+  const hasPendingSentConnectionRequest = useMemo(() => {
+    return currentUserSentConnectionRequests?.some((request) => {
+      return request.toId === profileData?.id;
+    });
+  }, [currentUserSentConnectionRequests, profileData?.id]);
 
-  const isFriend = () => {
-    // This only makes sense when looking at external profiles
-    // When viewing own profile, we can't be friends with ourselves
+  const friends = useMemo(
+    () => [
+      ...(profileData?.connectionsFrom
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.to) || []),
+      ...(profileData?.connectionsTo
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.from) || []),
+    ],
+    [profileData?.connectionsFrom, profileData?.connectionsTo]
+  );
+  const isFriend = useMemo(() => {
     if (isOwnProfile) return false;
 
-    return currentUser?.friends?.some(
-      (friend) => friend.id === profileData?.id
+    return friends?.some(
+      (friend) => friend.id === currentUser?.id
     );
-  };
+  }, [friends, currentUser?.id]);
 
   if (isProfileDataLoading) {
     return (
@@ -316,9 +332,9 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col items-center gap-4">
-            {!isOwnProfile && !isFriend() && (
+            {!isOwnProfile && !isFriend && (
               <>
-                {hasPendingReceivedConnectionRequest() ? (
+                {hasPendingReceivedConnectionRequest ? (
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-sm text-muted-foreground">
                       has sent you a friend request
@@ -328,7 +344,12 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-green-600 bg-green-50"
-                        onClick={() => acceptFriendRequest(profileData.id)}
+                        onClick={() =>
+                          acceptFriendRequest({
+                            id: profileData.id,
+                            username: profileData.username || "",
+                          })
+                        }
                       >
                         <Check className="h-6 w-6" />
                       </Button>
@@ -336,7 +357,12 @@ const ProfilePage: React.FC = () => {
                         size="icon"
                         variant="outline"
                         className="h-10 w-10 text-red-600 bg-red-50"
-                        onClick={() => rejectFriendRequest(profileData.id)}
+                        onClick={() =>
+                          rejectFriendRequest({
+                            id: profileData.id,
+                            username: profileData.username || "",
+                          })
+                        }
                       >
                         <X className="h-6 w-6" />
                       </Button>
@@ -347,9 +373,9 @@ const ProfilePage: React.FC = () => {
                     variant="outline"
                     className="flex items-center space-x-2"
                     onClick={handleSendConnectionRequest}
-                    disabled={hasPendingSentConnectionRequest()}
+                    disabled={hasPendingSentConnectionRequest}
                   >
-                    {hasPendingSentConnectionRequest() ? (
+                    {hasPendingSentConnectionRequest ? (
                       <>
                         <Check size={20} />
                         <span>Request Sent</span>
@@ -370,7 +396,7 @@ const ProfilePage: React.FC = () => {
               <Link href={`/friends/${profileData?.username}`}>
                 <div className="text-center">
                   <p className="text-2xl font-bold">
-                    {profileData?.friends?.length || 0}
+                    {friends?.length || 0}
                   </p>
                   <p className="text-sm text-gray-500">Friends</p>
                 </div>
@@ -426,23 +452,29 @@ const ProfilePage: React.FC = () => {
                       <div
                         key={plan.id}
                         className="flex gap-2"
-                        onClick={() => setBadgeExplainer({ open: true, achiever: {
-                          user: {
-                            username: profileData?.username || "",
-                            name: profileData?.name || "",
-                            picture: profileData?.picture || "",
-                          },
-                          plan: {
-                            type: lifestyleAchieved
-                              ? "lifestyle"
-                              : habitAchieved
-                              ? "habit"
-                              : undefined,
-                            emoji: plan.emoji || "",
-                            goal: plan.goal,
-                            streak: backendProgress?.achievement.streak || 0,
-                          },
-                        }})}
+                        onClick={() =>
+                          setBadgeExplainer({
+                            open: true,
+                            achiever: {
+                              user: {
+                                username: profileData?.username || "",
+                                name: profileData?.name || "",
+                                picture: profileData?.picture || "",
+                              },
+                              plan: {
+                                type: lifestyleAchieved
+                                  ? "lifestyle"
+                                  : habitAchieved
+                                  ? "habit"
+                                  : undefined,
+                                emoji: plan.emoji || "",
+                                goal: plan.goal,
+                                streak:
+                                  backendProgress?.achievement.streak || 0,
+                              },
+                            },
+                          })
+                        }
                       >
                         {habitAchieved && (
                           <div
@@ -643,23 +675,29 @@ const ProfilePage: React.FC = () => {
                       {/* Achievement displays */}
                       <div
                         className="space-y-2 mb-4 absolute top-2 right-2 flex flex-col gap-2"
-                        onClick={() => setBadgeExplainer({ open: true, achiever: {
-                          user: {
-                            username: profileData?.username || "",
-                            name: profileData?.name || "",
-                            picture: profileData?.picture || "",
-                          },
-                          plan: {
-                            type: lifestyleAchieved
-                              ? "lifestyle"
-                              : habitAchieved
-                              ? "habit"
-                              : undefined,
-                            emoji: plan.emoji || "",
-                            goal: plan.goal,
-                            streak: backendProgress?.achievement.streak || 0,
-                          },
-                        }})}
+                        onClick={() =>
+                          setBadgeExplainer({
+                            open: true,
+                            achiever: {
+                              user: {
+                                username: profileData?.username || "",
+                                name: profileData?.name || "",
+                                picture: profileData?.picture || "",
+                              },
+                              plan: {
+                                type: lifestyleAchieved
+                                  ? "lifestyle"
+                                  : habitAchieved
+                                  ? "habit"
+                                  : undefined,
+                                emoji: plan.emoji || "",
+                                goal: plan.goal,
+                                streak:
+                                  backendProgress?.achievement.streak || 0,
+                              },
+                            },
+                          })
+                        }
                       >
                         {habitAchieved && (
                           <div className="flex flex-row items-center gap-2">

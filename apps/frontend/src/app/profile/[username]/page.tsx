@@ -15,8 +15,17 @@ export async function generateMetadata(
   try {
     
     const users = await getUserFullDataByUserNameOrId([{username: params.username}])
-    if (!users || users.length === 0) throw new Error("User not found");
-    const user = users[0];
+    if (!users) throw new Error("User not found");
+    const user = users;
+
+    const friends = [
+      ...(user.connectionsFrom
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.to) || []),
+      ...(user.connectionsTo
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.from) || []),
+    ];
 
     const title = `${user.name}'s profile on tracking.so`;
     const description = `Check out ${user.name}'s (@${user.username}) profile on tracking.so`;
@@ -35,8 +44,8 @@ export async function generateMetadata(
     if (user.plans) {
       ogImageUrl.searchParams.append("planCount", user.plans.length.toString());
     }
-    if (user.friends) {
-      ogImageUrl.searchParams.append("friendCount", user.friends.length.toString());
+    if (friends) {
+      ogImageUrl.searchParams.append("friendCount", friends.length.toString());
     }    
     if (user.plans && user.plans.length > 0 && user.plans[0]?.goal) {
       ogImageUrl.searchParams.append("currentlyWorkingOnEmoji", user.plans[0]?.emoji || "🔥");
