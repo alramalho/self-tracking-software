@@ -125,6 +125,29 @@ export class RecommendationsService {
                 },
               },
             },
+            // Exclude users who are already connected
+            {
+              NOT: {
+                OR: [
+                  {
+                    connectionsTo: {
+                      some: {
+                        fromId: currentUserId,
+                        status: "ACCEPTED",
+                      },
+                    },
+                  },
+                  {
+                    connectionsFrom: {
+                      some: {
+                        toId: currentUserId,
+                        status: "ACCEPTED",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
           ],
         },
       });
