@@ -312,6 +312,7 @@ export class RecommendationsService {
           age: true,
           timezone: true,
           profile: true,
+          lastActiveAt: true,
         },
       });
 

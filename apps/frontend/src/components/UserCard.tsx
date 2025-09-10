@@ -1,3 +1,4 @@
+import AppleLikePopover from "@/components/AppleLikePopover";
 import PlanStreak from "@/components/PlanStreak";
 import { Button } from "@/components/ui/button";
 import { PulsatingCirclePill } from "@/components/ui/pulsating-circle-pill";
@@ -12,7 +13,7 @@ import { motion } from "framer-motion";
 import { Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { posthog } from "posthog-js";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface UserCardProps {
   user: User;
@@ -47,6 +48,15 @@ const UserCard: React.FC<UserCardProps> = ({
   const variants = getThemeVariants(effectiveTheme);
   const [activityTooltipOpen, setActivityTooltipOpen] = useState(true);
   const [sentFriendRequest, setSentFriendRequest] = useState(false);
+  const [showMessagePopover, setShowMessagePopover] = useState(false);
+
+  useEffect(() => {
+    if (user.lastActiveAt) {
+      console.log(`user ${user.username} last active at ${formatDistanceToNow(user.lastActiveAt)}`);
+    } else {
+      console.log(`user ${user.username} has no last active at`);
+    }
+  }, [user]);
 
   const isOlderThan30Days = (date: Date) => {
     return differenceInDays(new Date(), date) > 30;
@@ -265,35 +275,56 @@ const UserCard: React.FC<UserCardProps> = ({
 
         {showFriendRequest && (
           <>
-            {/* Message section */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Message (optional)
-              </label>
-              <Textarea
-                placeholder="Write a message to introduce yourself..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                className="min-h-[80px] resize-none"
-                maxLength={500}
-              />
-              <div className="text-xs text-gray-500 text-right">
-                {message.length}/500
-              </div>
-            </div>
-
             {/* Send friend request button */}
             <Button
               loading={isSendingFriendRequest}
               disabled={isSendingFriendRequest || sentFriendRequest}
               className={`w-full rounded-xl p-5 ${variants.button.glass}`}
-              onClick={handleSendFriendRequest}
+              onClick={() => setShowMessagePopover(true)}
             >
               <Send className="mr-2" />
               {sentFriendRequest
-                ? "Friend Request Sent"
-                : "Send Friend Request"}
+                ? "Friend Added"
+                : "Add Friend"}
             </Button>
+
+            {/* Message Popover */}
+            <AppleLikePopover
+              open={showMessagePopover}
+              onClose={() => setShowMessagePopover(false)}
+              title="Add Friend"
+            >
+              <div className="space-y-4 p-4">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Want to add a message for {user.name || user.username}?
+                  </h3>
+                  <Textarea
+                    placeholder="Write a message to introduce yourself..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="min-h-[80px] resize-none"
+                    maxLength={500}
+                  />
+                  <div className="text-xs text-gray-500 text-right">
+                    {message.length}/500
+                  </div>
+                </div>
+
+                <Button
+                  loading={isSendingFriendRequest}
+                  disabled={isSendingFriendRequest || sentFriendRequest}
+                  className="w-full"
+                  onClick={async () => {
+                    await handleSendFriendRequest();
+                    setShowMessagePopover(false);
+                  }}
+                >
+                  <Send className="mr-2" />
+                  {sentFriendRequest ? "Added" : "Add Friend"}
+                </Button>
+              </div>
+            </AppleLikePopover>
           </>
         )}
       </div>
