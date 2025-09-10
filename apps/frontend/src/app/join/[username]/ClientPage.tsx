@@ -9,7 +9,7 @@ import { Activity, User } from "@tsw/prisma";
 import { Plan } from "@tsw/prisma/types";
 import { Loader2 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 
 export default function ClientPage() {
@@ -28,7 +28,14 @@ export default function ClientPage() {
   const searchParams = useSearchParams();
   const referrer = searchParams.get("referrer");
 
-  const areFriends = currentUser?.friends?.some(
+  const friends = useMemo(() => {
+    return [
+      ...(currentUser?.connectionsFrom.filter((conn) => conn.status === "ACCEPTED")?.map((conn) => conn.to) || []),
+      ...(currentUser?.connectionsTo.filter((conn) => conn.status === "ACCEPTED")?.map((conn) => conn.from) || []),
+    ];
+  }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]); 
+
+  const areFriends = friends?.some(
     (friend) => friend.id === inviterData?.user?.id
   );
 

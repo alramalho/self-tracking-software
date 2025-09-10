@@ -6,7 +6,7 @@ import { useCurrentUser, useUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { getThemeVariants } from "@/utils/theme";
 import { ReactionBarSelector } from "@charkour/react-reactions";
-import { Activity, ActivityEntry, Comment, Reaction, User } from "@tsw/prisma";
+import { Activity, ActivityEntry, Comment, PlanType, Reaction } from "@tsw/prisma";
 import {
   differenceInCalendarDays,
   format,
@@ -48,7 +48,7 @@ interface ActivityEntryPhotoCardProps {
     reactions: (Reaction & { user: { username: string } })[];
     comments: Comment[];
   };
-  user: User;
+  user: { username: string, name: string, picture: string, planType: PlanType };
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;

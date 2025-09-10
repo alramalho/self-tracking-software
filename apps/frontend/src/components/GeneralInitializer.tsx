@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import Lottie from "react-lottie";
 import targetAnimation from "../../public/animations/target.lottie.json";
@@ -35,6 +35,13 @@ export default function GeneralInitializer({
   const email = currentUser?.email || "";
   const isOnboardingPage = pathname.startsWith("/onboarding");
 
+  const friends = useMemo(() => {
+    return [
+      ...(currentUser?.connectionsFrom.filter((conn) => conn.status === "ACCEPTED")?.map((conn) => conn.to) || []),
+      ...(currentUser?.connectionsTo.filter((conn) => conn.status === "ACCEPTED")?.map((conn) => conn.from) || []),
+    ];
+  }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]);
+
   useEffect(() => {
     if (
       isClerkLoaded &&
@@ -57,7 +64,7 @@ export default function GeneralInitializer({
           username: currentUser.username,
           is_app_installed: isAppInstalled,
           is_looking_for_ap: currentUser.lookingForAp,
-          friend_count: currentUser.friends?.length,
+          friend_count: friends?.length,
           is_push_granted: isPushGranted,
         });
         setHasRanPosthogIdentify(true);
