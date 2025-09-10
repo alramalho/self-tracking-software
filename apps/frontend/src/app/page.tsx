@@ -11,9 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Bell,
-  ChevronDown,
   ChevronRight,
-  HelpCircle,
   RefreshCcw,
   ScanFace,
 } from "lucide-react";
@@ -21,7 +19,6 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
 
-import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
@@ -43,17 +40,11 @@ const HomePage: React.FC = () => {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
-    "plans-section-collapsed",
-    false
-  );
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
-  const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
-    useState(false);
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
   const { isLoaded, isSignedIn } = useSession();
 
@@ -68,8 +59,12 @@ const HomePage: React.FC = () => {
     setIsNotificationsOpen(false);
   };
 
-  if (isLoaded && isSignedIn && (!hasLoadedUserData || !currentUser?.onboardingCompletedAt)) {
-     // todo: this !currentUser?.onboardingCompletedAt should not be necessary, but somehow general initializer letting it go through to get here?
+  if (
+    isLoaded &&
+    isSignedIn &&
+    (!hasLoadedUserData || !currentUser?.onboardingCompletedAt)
+  ) {
+    // todo: this !currentUser?.onboardingCompletedAt should not be necessary, but somehow general initializer letting it go through to get here?
 
     return (
       <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
@@ -100,7 +95,7 @@ const HomePage: React.FC = () => {
             </div>
             <Skeleton className="h-4 w-20" />
           </div>
-          
+
           {/* Plan Progress Cards Skeleton */}
           <div className="space-y-2">
             <Skeleton className="h-16 w-full rounded-lg" />
@@ -213,35 +208,10 @@ const HomePage: React.FC = () => {
 
           {plans && plans.length > 0 && (
             <div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsPlansCollapsed((prev) => !prev)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
-                    aria-label={
-                      isPlansCollapsed ? "Expand streaks" : "Collapse streaks"
-                    }
-                  >
-                    {isPlansCollapsed ? (
-                      <ChevronRight size={16} className="text-gray-600" />
-                    ) : (
-                      <ChevronDown size={16} className="text-gray-600" />
-                    )}
-                  </button>
-                  <div className="flex flex-row items-center justify-between gap-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Your Plans
-                    </h3>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowPlanProgressExplainer(true)}
-                    >
-                      <HelpCircle className="h-4 w-4 text-gray-400" />
-                    </Button>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Your Plans
+                </h3>
                 <button
                   onClick={() => router.push(`/plans`)}
                   className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
@@ -250,8 +220,7 @@ const HomePage: React.FC = () => {
                   <ChevronRight size={16} />
                 </button>
               </div>
-
-              <PlansProgressDisplay isExpanded={!isPlansCollapsed} />
+              <PlansProgressDisplay isExpanded={true} />
             </div>
           )}
         </div>
@@ -275,13 +244,6 @@ const HomePage: React.FC = () => {
       </AppleLikePopover>
 
       {/* <DailyCheckinBanner/> */}
-
-      <PlanProgressPopover
-        open={showPlanProgressExplainer}
-        onClose={() => {
-          setShowPlanProgressExplainer(false);
-        }}
-      />
 
       {/* AI Coach Popover */}
       <AppleLikePopover
