@@ -3,11 +3,11 @@ import { logger } from "../utils/logger";
 
 interface ErrorNotificationData {
   errorMessage: string;
-  userUsername: string;
-  userId: string;
-  path: string;
-  method: string;
-  statusCode: string;
+  userUsername?: string;
+  userId?: string;
+  path?: string;
+  method?: string;
+  statusCode?: string;
 }
 
 export class TelegramService {
@@ -29,15 +29,18 @@ export class TelegramService {
       return;
     }
 
-    const message = `
-🚨 *Error Alert*
+    let message = `🚨 *Error on user ${data.userUsername || data.userId || "unknown"}*\n${data.errorMessage}`;
 
-*Error:* ${data.errorMessage}
-*User:* ${data.userUsername} (${data.userId})
-*Endpoint:* ${data.method} ${data.path}
-*Status Code:* ${data.statusCode}
-*Time:* ${new Date().toISOString()}
-    `.trim();
+    if (data.method || data.path) {
+      let endpoint = "*Endpoint:*";
+      if (data.method) {
+        endpoint += ` ${data.method}`;
+      }
+      if (data.path) {
+        endpoint += ` ${data.path}`;
+      }
+      message += `\n${endpoint}`;
+    }
 
     await this.sendToAllChats(message, "Markdown");
   }

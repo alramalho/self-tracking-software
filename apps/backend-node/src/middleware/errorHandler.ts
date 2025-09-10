@@ -25,12 +25,9 @@ export const responseMonitor = (
         const userId = authenticatedReq.user?.id || "unknown";
 
         await telegramService.sendErrorNotification({
-          errorMessage: `HTTP ${res.statusCode} response on ${req.url}`,
+          errorMessage: `HTTP ${res.statusCode} response on ${req.method} ${req.url}`,
           userUsername,
           userId,
-          path: req.url,
-          method: req.method,
-          statusCode: res.statusCode.toString(),
         });
       } catch (telegramError) {
         logger.error("Failed to send Telegram notification:", telegramError);
