@@ -115,7 +115,7 @@ const ApSearchPage: React.FC = () => {
         </div>
       </PullToRefresh>
       {!isLoadingCurrentUser && !isLoadingPlans && (
-        <div className="mt-4">
+        <div className="mt-4 p-4">
           <RecommendedUsers />
         </div>
       )}
