@@ -6,7 +6,13 @@ import { useCurrentUser, useUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { getThemeVariants } from "@/utils/theme";
 import { ReactionBarSelector } from "@charkour/react-reactions";
-import { Activity, ActivityEntry, Comment, PlanType, Reaction } from "@tsw/prisma";
+import {
+  Activity,
+  ActivityEntry,
+  Comment,
+  PlanType,
+  Reaction,
+} from "@tsw/prisma";
 import {
   differenceInCalendarDays,
   format,
@@ -48,7 +54,7 @@ interface ActivityEntryPhotoCardProps {
     reactions: (Reaction & { user: { username: string } })[];
     comments: Comment[];
   };
-  user: { username: string, name: string, picture: string, planType: PlanType };
+  user: { username: string; name: string; picture: string; planType: PlanType };
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
@@ -79,16 +85,23 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   user,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [reactions, setReactions] = useState<ReactionCount>(
-    activityEntry.reactions?.reduce((acc, reaction) => {
-      if (acc[reaction?.emoji]) {
-        acc[reaction?.emoji] = [...acc[reaction?.emoji], reaction?.user?.username];
-      } else {
-        acc[reaction?.emoji] = [reaction?.user?.username];
-      }
-      return acc;
-    }, {} as ReactionCount)
-  );
+  const [reactions, setReactions] = useState<ReactionCount>({});
+
+  useEffect(() => {
+    setReactions(
+      activityEntry.reactions?.reduce((acc, reaction) => {
+        if (acc[reaction?.emoji]) {
+          acc[reaction?.emoji] = [
+            ...acc[reaction?.emoji],
+            reaction?.user?.username,
+          ];
+        } else {
+          acc[reaction?.emoji] = [reaction?.user?.username];
+        }
+        return acc;
+      }, {} as ReactionCount) || {}
+    );
+  }, [activityEntry.reactions]);
   const { currentUser } = useCurrentUser();
   const currentUserUsername = currentUser?.username;
   const isOwnActivityEntry = currentUser?.username === user.username;
@@ -118,9 +131,15 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   );
 
   const [showAllComments, setShowAllComments] = useState(false);
-  const { modifyReactions, isModifyingReactions, addComment, removeComment, isAddingComment, isRemovingComment } = useActivities();
+  const {
+    modifyReactions,
+    isModifyingReactions,
+    addComment,
+    removeComment,
+    isAddingComment,
+    isRemovingComment,
+  } = useActivities();
   const comments = activityEntry.comments || [];
-
 
   useEffect(() => {
     if (textRef.current) {
@@ -167,6 +186,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       await toast.promise(
         modifyReactions({
           activityEntryId: activityEntry.id,
+          userUsername: user.username || "",
           reactions: reactionsToModify,
         }),
         {
@@ -238,6 +258,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   );
 
   useEffect(() => {
+    console.log(`reactions: ${JSON.stringify(reactions)}`);
+  }, [reactions]);
+
+  useEffect(() => {
     return () => {
       if (pendingReactionsRef.current.timer) {
         clearTimeout(pendingReactionsRef.current.timer);
@@ -292,7 +316,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     }`;
   };
 
-  const hasImageExpired = activityEntry.imageExpiresAt && new Date(activityEntry.imageExpiresAt) < new Date();
+  const hasImageExpired =
+    activityEntry.imageExpiresAt &&
+    new Date(activityEntry.imageExpiresAt) < new Date();
   const hasImage = activityEntry.imageUrl && !hasImageExpired;
   const shouldShowNeonEffect = habitAchieved || lifestyleAchieved;
 
@@ -315,30 +341,31 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               className="w-full h-full max-h-[400px] object-cover rounded-2xl"
             />
             <div className="absolute top-2 left-2 flex flex-col flex-nowrap items-start gap-2 z-30">
-              {reactions && Object.entries(reactions).map(([emoji, usernames]) => {
-                return (
-                  <button
-                    key={emoji}
-                    onClick={() => handleReactionClick(emoji)}
-                    className={`inline-flex border  border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
-                      usernames.includes(currentUserUsername || "")
-                        ? variants.card.selected.glassBg
-                        : variants.card.glassBg
-                    }`}
-                  >
-                    <span className="text-base">{emoji}</span>
-                    {showUserList[emoji] ? (
-                      <span className="text-gray-800 font-medium">
-                        {formatUserList(usernames)}
-                      </span>
-                    ) : (
-                      <span className="text-gray-800 font-medium">
-                        {usernames.length}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {reactions &&
+                Object.entries(reactions).map(([emoji, usernames]) => {
+                  return (
+                    <button
+                      key={emoji}
+                      onClick={() => handleReactionClick(emoji)}
+                      className={`inline-flex border  border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
+                        usernames.includes(currentUserUsername || "")
+                          ? variants.card.selected.glassBg
+                          : variants.card.glassBg
+                      }`}
+                    >
+                      <span className="text-base">{emoji}</span>
+                      {showUserList[emoji] ? (
+                        <span className="text-gray-800 font-medium">
+                          {formatUserList(usernames)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-800 font-medium">
+                          {usernames.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
             {hasImage && !isOwnActivityEntry && (
               <>
@@ -423,8 +450,20 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <CommentSection
                 activityEntryId={activityEntry.id}
                 comments={comments}
-                onAddComment={(text) => addComment({ activityEntryId: activityEntry.id, text })}
-                onRemoveComment={(commentId) => removeComment({ activityEntryId: activityEntry.id, commentId })}
+                onAddComment={(text) =>
+                  addComment({
+                    activityEntryId: activityEntry.id,
+                    userUsername: user.username,
+                    text,
+                  })
+                }
+                onRemoveComment={(commentId) =>
+                  removeComment({
+                    activityEntryId: activityEntry.id,
+                    userUsername: user.username,
+                    commentId,
+                  })
+                }
                 hasImage={true}
                 showAllComments={showAllComments}
                 onToggleShowAll={setShowAllComments}
@@ -452,10 +491,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               </Avatar>
               {isUserPremium && (
                 <div className="absolute -bottom-[6px] -right-[6px]">
-                  <PlanBadge
-                    planType={user.planType || "FREE"}
-                    size={18}
-                  />
+                  <PlanBadge planType={user.planType || "FREE"} size={18} />
                 </div>
               )}
             </div>
@@ -510,8 +546,20 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <CommentSection
                 activityEntryId={activityEntry.id}
                 comments={comments}
-                onAddComment={(text) => addComment({ activityEntryId: activityEntry.id, text })}
-                onRemoveComment={(commentId) => removeComment({ activityEntryId: activityEntry.id, commentId })}
+                onAddComment={(text) =>
+                  addComment({
+                    activityEntryId: activityEntry.id,
+                    userUsername: user.username,
+                    text,
+                  })
+                }
+                onRemoveComment={(commentId) =>
+                  removeComment({
+                    activityEntryId: activityEntry.id,
+                    userUsername: user.username,
+                    commentId,
+                  })
+                }
                 hasImage={false}
                 fullWidth={true}
                 showAllComments={showAllComments}
@@ -526,8 +574,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         {hasImage && !hasImageExpired && (
           <span className="text-xs text-gray-400 mt-2">
             Image expires{" "}
-            {activityEntry.imageExpiresAt && differenceInCalendarDays(activityEntry.imageExpiresAt, new Date()) > 0
-              ? `in ${differenceInCalendarDays(activityEntry.imageExpiresAt, new Date())} days`
+            {activityEntry.imageExpiresAt &&
+            differenceInCalendarDays(activityEntry.imageExpiresAt, new Date()) >
+              0
+              ? `in ${differenceInCalendarDays(
+                  activityEntry.imageExpiresAt,
+                  new Date()
+                )} days`
               : "today"}
           </span>
         )}
