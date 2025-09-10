@@ -18,11 +18,11 @@ import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "./ui/select";
 import { Switch } from "./ui/switch";
 
@@ -51,6 +51,18 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const currentWeekRef = useRef<HTMLDivElement>(null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+
+  const isPlanCoached = useCallback((selectedPlan: CompletePlan) => {
+    if (!plans) return false;
+    // we must check if the plan has the minimum .sortOrder of plans
+    const minSortOrder = plans.reduce((min, plan) => {
+      if (!plan.sortOrder) return Infinity;
+      return plan.sortOrder < min ? plan.sortOrder : min;
+    }, Infinity) ?? 0;
+
+    return selectedPlan.sortOrder === minSortOrder;
+    
+  }, [selectedPlan, plans]);
 
   // Auto-scroll to current week when weeks data loads
   useEffect(() => {
@@ -322,7 +334,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <div className="flex flex-row items-center justify-between mb-2">
           <div className="flex flex-row items-center justify-start gap-2">
             <ChartArea className={`h-10 w-10 -mt-1 ${variants.text}`} />
-            <h2 className="text-xl font-semibold">Coach Overview</h2>
+            <h2 className="text-xl font-semibold">{isPlanCoached(selectedPlan) ? "Coach Overview" : "Plan Overview"}</h2>
           </div>
           <Button
             variant="ghost"
@@ -338,10 +350,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             {showAllWeeks ? "Show Current + Next" : "Show All Weeks"}
           </Button>
         </div>
-        <CoachOverviewCard
-          selectedPlan={selectedPlan}
-          activities={activities}
-        />
+        {isPlanCoached(selectedPlan) && (
+          <CoachOverviewCard
+            selectedPlan={selectedPlan}
+            activities={activities}
+          />
+        )}
         {weeksToDisplay.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
             weekStartsOn: 0,
@@ -551,34 +565,35 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         )
       )} */}
 
-      {selectedPlan.planGroup?.members && selectedPlan.planGroup.members.length >= 2 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
-          <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
-          <div className="flex flex-row flex-wrap gap-6">
-            {selectedPlan.planGroup.members.map((member) => (
-              <div
-                key={member.id}
-                className="flex flex-row flex-nowrap gap-2 items-center"
-              >
-                <Link href={`/profile/${member.username}`}>
-                  <Avatar className="w-12 h-12 text-2xl">
-                    <AvatarImage
-                      src={member.picture || ""}
-                      alt={member.name || member.username || ""}
-                    />
-                    <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
-                  </Avatar>
-                </Link>
-                <div className="text-lg text-gray-800">
-                  {currentUser?.username === member.username
-                    ? "You"
-                    : member.name}
+      {selectedPlan.planGroup?.members &&
+        selectedPlan.planGroup.members.length >= 2 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
+            <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
+            <div className="flex flex-row flex-wrap gap-6">
+              {selectedPlan.planGroup.members.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex flex-row flex-nowrap gap-2 items-center"
+                >
+                  <Link href={`/profile/${member.username}`}>
+                    <Avatar className="w-12 h-12 text-2xl">
+                      <AvatarImage
+                        src={member.picture || ""}
+                        alt={member.name || member.username || ""}
+                      />
+                      <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
+                    </Avatar>
+                  </Link>
+                  <div className="text-lg text-gray-800">
+                    {currentUser?.username === member.username
+                      ? "You"
+                      : member.name}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       <Link href="/add" passHref>
         <Button

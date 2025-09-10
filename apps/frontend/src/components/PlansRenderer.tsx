@@ -176,10 +176,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       orderedPlans.some((plan) => plan.id === initialSelectedPlanId)
     ) {
       setSelectedPlanId(initialSelectedPlanId);
-    } else if (!selectedPlanId && orderedPlans && orderedPlans.length > 0) {
-      const firstPlan = orderedPlans[0];
-      setSelectedPlanId(firstPlan.id || null);
-    }
+    } 
   }, [orderedPlans, initialSelectedPlanId]);
 
   if (isLoadingPlans) {
