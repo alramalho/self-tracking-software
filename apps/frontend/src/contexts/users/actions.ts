@@ -83,6 +83,24 @@ export async function getUserFullDataByUserNameOrId(
         where: {
           deletedAt: null,
         },
+        include: {
+          comments: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "desc" },
+          },
+          reactions: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  picture: true,
+                  planType: true,
+                },
+              },
+            },
+          },
+        },
       },
       connectionsFrom: {
         include: {

@@ -8,6 +8,7 @@ import { Activity, ActivityEntry } from "@tsw/prisma";
 import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import { TimelineData } from "../timeline/actions";
+import { HydratedUser } from "../users/actions";
 import { getActivities, getActivitiyEntries } from "./actions";
 
 type ReturnedActivityEntriesType = Awaited<
@@ -49,16 +50,19 @@ interface ActivitiesContextType {
 
   modifyReactions: (data: {
     activityEntryId: string;
+    userUsername: string;
     reactions: { emoji: string; operation: "add" | "remove" }[];
   }) => Promise<void>;
   isModifyingReactions: boolean;
 
   addComment: (data: {
     activityEntryId: string;
+    userUsername: string;
     text: string;
   }) => Promise<void>;
   removeComment: (data: {
     activityEntryId: string;
+    userUsername: string;
     commentId: string;
   }) => Promise<void>;
   isAddingComment: boolean;
@@ -249,6 +253,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const modifyReactionsMutation = useMutation({
     mutationFn: async (data: {
       activityEntryId: string;
+      userUsername: string;
       reactions: { emoji: string; operation: "add" | "remove" }[];
     }) => {
       const response = await api.post(
@@ -282,6 +287,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
           }),
         };
       });
+      queryClient.setQueryData(["user", input.userUsername], (old: HydratedUser) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["user", input.userUsername] });
+        return {
+          ...old,
+          activityEntries: old.activityEntries?.map((entry) => {
+            return entry.id === input.activityEntryId
+              ? { ...entry, reactions: reactions }
+              : entry;
+          }),
+        };
+      });
     },
     onError: (error) => {
       let customErrorMessage = `Failed to modify reactions`;
@@ -293,6 +309,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const addCommentMutation = useMutation({
     mutationFn: async (data: {
       activityEntryId: string;
+      userUsername: string;
       text: string;
     }) => {
       const response = await api.post(
@@ -313,6 +330,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
           }),
         };
       });
+      queryClient.setQueryData(["user", input.userUsername], (old: HydratedUser) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["user", input.userUsername] });
+        return {
+          ...old,
+          activityEntries: old.activityEntries?.map((entry) => {
+            return entry.id === input.activityEntryId
+              ? { ...entry, comments: comments }
+              : entry;
+          }),
+        };
+      });
     },
     onError: (error) => {
       let customErrorMessage = `Failed to add comment`;
@@ -324,6 +352,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const removeCommentMutation = useMutation({
     mutationFn: async (data: {
       activityEntryId: string;
+      userUsername: string;
       commentId: string;
     }) => {
       const response = await api.delete(
@@ -337,6 +366,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         return {
           ...old,
           recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
+            return entry.id === input.activityEntryId
+              ? { ...entry, comments: comments }
+              : entry;
+          }),
+        };
+      });
+      queryClient.setQueryData(["user", input.userUsername], (old: HydratedUser) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["user", input.userUsername] });
+        return {
+          ...old,
+          activityEntries: old.activityEntries?.map((entry) => {
             return entry.id === input.activityEntryId
               ? { ...entry, comments: comments }
               : entry;
