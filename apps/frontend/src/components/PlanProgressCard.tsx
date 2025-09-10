@@ -1,8 +1,6 @@
 import { useApiWithAuth } from "@/api";
 import { useDataNotifications } from "@/contexts/notifications";
-import {
-  isWeekCompleted as checkIsWeekCompleted,
-} from "@/contexts/PlanProgressContext/lib";
+import { isWeekCompleted as checkIsWeekCompleted } from "@/contexts/PlanProgressContext/lib";
 import { CompletePlan } from "@/contexts/plans";
 import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -92,7 +90,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { notifications } = useDataNotifications();
-  const { data: plansProgressData } = usePlansProgress([plan.id]);
+  const { data: plansProgressData } = usePlansProgress(isDemo ? [] : [plan.id]);
   const queryClient = useQueryClient();
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
@@ -189,23 +187,31 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
   // Get habit and lifestyle achievement from backend or fallback to local calculation
-  const backendProgress = !isDemo ? plansProgressData?.find(p => p.plan?.id === plan.id) : null;
+  const backendProgress = !isDemo
+    ? plansProgressData?.find((p) => p.plan?.id === plan.id)
+    : null;
   const FALLBACK_HABIT_WEEKS = 4; // Fallback for demos/offline
   const FALLBACK_LIFESTYLE_WEEKS = 9; // Fallback for demos/offline
-  
+
   // Habit achievement (4 weeks)
-  const habitProgressValue = backendProgress?.habitAchievement?.progressValue ?? 
+  const habitProgressValue =
+    backendProgress?.habitAchievement?.progressValue ??
     Math.min(FALLBACK_HABIT_WEEKS, achievement.streak);
-  const habitMaxValue = backendProgress?.habitAchievement?.maxValue ?? FALLBACK_HABIT_WEEKS;
-  const habitIsAchieved = backendProgress?.habitAchievement?.isAchieved ?? 
-    (achievement.streak >= FALLBACK_HABIT_WEEKS);
-    
+  const habitMaxValue =
+    backendProgress?.habitAchievement?.maxValue ?? FALLBACK_HABIT_WEEKS;
+  const habitIsAchieved =
+    backendProgress?.habitAchievement?.isAchieved ??
+    achievement.streak >= FALLBACK_HABIT_WEEKS;
+
   // Lifestyle achievement (9 weeks)
-  const lifestyleProgressValue = backendProgress?.lifestyleAchievement?.progressValue ?? 
+  const lifestyleProgressValue =
+    backendProgress?.lifestyleAchievement?.progressValue ??
     Math.min(FALLBACK_LIFESTYLE_WEEKS, achievement.streak);
-  const lifestyleMaxValue = backendProgress?.lifestyleAchievement?.maxValue ?? FALLBACK_LIFESTYLE_WEEKS;
-  const lifestyleIsAchieved = backendProgress?.lifestyleAchievement?.isAchieved ?? 
-    (achievement.streak >= FALLBACK_LIFESTYLE_WEEKS);
+  const lifestyleMaxValue =
+    backendProgress?.lifestyleAchievement?.maxValue ?? FALLBACK_LIFESTYLE_WEEKS;
+  const lifestyleIsAchieved =
+    backendProgress?.lifestyleAchievement?.isAchieved ??
+    achievement.streak >= FALLBACK_LIFESTYLE_WEEKS;
 
   const isWeekCompleted = checkIsWeekCompleted(
     currentWeek.startDate,
