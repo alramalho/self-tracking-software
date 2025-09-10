@@ -11,9 +11,9 @@ import {
   ChartArea,
   Home,
   Loader2,
-  PlusSquare,
+  Plus,
   Search,
-  User,
+  User
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -64,9 +64,8 @@ const BottomNav = () => {
 
   return (
     <>
-      {/* <FloatingActionMenu /> */}
       <nav className={cn(
-        "box-border bg-transparent backdrop-blur-xl z-[50]",
+        "box-border bg-transparent backdrop-blur-xl z-[50] m-4 rounded-3xl border border-white/30",
         isDesktop 
           ? "fixed left-0 top-0 bottom-0 w-64 py-6 border-l border-gray-200 border-2"
           : "fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-1"
@@ -119,7 +118,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/") && "hidden"
+              (!isDesktop && !isActiveRoute("/")) || isActiveRoute("/") ? "hidden" : ""
             )}>
               Home
             </span>
@@ -159,7 +158,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/plans") && "hidden"
+              (!isDesktop && !isActiveRoute("/plans")) || isActiveRoute("/plans") ? "hidden" : ""
             )}>
               Plans
             </span>
@@ -191,13 +190,17 @@ const BottomNav = () => {
               {isLoadingLog ? (
                 <Loader2 size={30} className="animate-spin" />
               ) : isDesktop ? (
-                <PlusSquare size={24} strokeWidth={2.5} className={cn(isDesktop ? "" : activeThemeClass)} />
+                <Plus size={24} strokeWidth={2.5} className={cn(isDesktop ? "" : activeThemeClass)} />
               ) : (
-                <div className={`${!isDesktop ? themeColors.primary : "bg-gray-100/80"} rounded-full p-2`}>
-                  <PlusSquare
+                <div className={cn(
+                  `rounded-full p-2 ${themeColors.primary}`,
+                  isActiveRoute("/add") 
+                    && `ring-2 ring-offset-2 ${themeColors.ring}`
+                )}>
+                  <Plus
                     size={24}
                     strokeWidth={2.5}
-                    className="text-white"
+                    className={"text-white"}
                   />
                 </div>
               )}
@@ -207,7 +210,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/add") && "hidden"
+              (!isDesktop && !isActiveRoute("/add")) || isActiveRoute("/add") ? "hidden" : ""
             )}>
               Add
             </span>
@@ -247,7 +250,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/search") && "hidden"
+              (!isDesktop && !isActiveRoute("/search")) || isActiveRoute("/search") ? "hidden" : ""
             )}>
               Search
             </span>
@@ -287,7 +290,7 @@ const BottomNav = () => {
               isDesktop 
                 ? "text-sm" 
                 : "text-[10px] mt-1",
-              !isDesktop && !isActiveRoute("/profile") && "hidden"
+              (!isDesktop && !isActiveRoute("/profile")) || isActiveRoute("/profile") ? "hidden" : ""
             )}>
               Profile
             </span>
