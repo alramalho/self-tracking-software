@@ -437,7 +437,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         {selectedPlan.outlineType === "specific" && (
           <>
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">This week</h2>
+              <h2 className="text-lg font-semibold text-gfrom './EmblaCarouselSelecteay-800">This week</h2>
 
               <span className="text-sm text-gray-500 ">
                 Completed activities are calculated on a per week count basis.

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import React, { useState } from "react";
 import { PlanProgressCard } from "./PlanProgressCard";
 import PlansCarousel from "./PlansCarousel";
+import PlanProgressPopover from "./profile/PlanProgresPopover";
 
 interface PlansProgressDisplayProps {
   isExpanded: boolean;
@@ -18,6 +19,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { plansProgress } = usePlanProgress();
   const [animationDone, setAnimationDone] = useState(false);
+  const [openPlanProgressPopover, setOpenPlanProgressPopover] = useState(false);
 
   if (!animationDone && plansProgress.length > 0) {
     const firstPlanData = plansProgress[0];
@@ -34,7 +36,16 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
           isExpanded={true}
           className="shadow-sm"
           onAnimationDone={() => {
-            setAnimationDone(true)
+            setAnimationDone(true);
+          }}
+          onFireClick={() => {
+            setOpenPlanProgressPopover(true);
+          }}
+        />
+        <PlanProgressPopover
+          open={openPlanProgressPopover}
+          onClose={() => {
+            setOpenPlanProgressPopover(false);
           }}
         />
       </div>
@@ -61,11 +72,20 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
                 isExpanded={true}
                 className="shadow-sm"
                 skipAnimation={true}
+                onFireClick={() => {
+                  setOpenPlanProgressPopover(true);
+                }}
               />
             </div>
           );
         })}
       </PlansCarousel>
+      <PlanProgressPopover
+        open={openPlanProgressPopover}
+        onClose={() => {
+          setOpenPlanProgressPopover(false);
+        }}
+      />
     </div>
   );
 };
