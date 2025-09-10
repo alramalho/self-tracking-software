@@ -1,7 +1,7 @@
 import { Plan, Recommendation, User } from "@tsw/prisma";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
-import { plansPineconeService, usersPineconeService } from "./pineconeService";
+import { plansPineconeService } from "./pineconeService";
 import { userService } from "./userService";
 
 export interface RecommendationScore {
