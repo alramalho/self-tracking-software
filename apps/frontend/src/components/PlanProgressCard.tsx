@@ -1,14 +1,9 @@
-import { useApiWithAuth } from "@/api";
-import { useDataNotifications } from "@/contexts/notifications";
 import { isWeekCompleted as checkIsWeekCompleted } from "@/contexts/PlanProgressContext/lib";
 import { CompletePlan } from "@/contexts/plans";
 import { usePlansProgress } from "@/contexts/PlansProgressContext";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { useQueryClient } from "@tanstack/react-query";
-import { Notification } from "@tsw/prisma";
 import { format, isSameWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -18,16 +13,13 @@ import {
   Flame,
   Medal,
   MoveRight,
-  RefreshCw,
   Sprout,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import Link from "next/link";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { MessageBubble } from "./MessageBubble";
+import { useRouter } from "next/navigation";
+import React, { useRef, useState } from "react";
 import { SteppedBarProgress } from "./SteppedBarProgress";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import { Confetti, ConfettiRef } from "./ui/confetti";
 
@@ -89,81 +81,80 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { notifications } = useDataNotifications();
   const { data: plansProgressData } = usePlansProgress(isDemo ? [] : [plan.id]);
-  const queryClient = useQueryClient();
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
+  const router = useRouter();
 
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
-  const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
-    isDemo
-      ? "Great progress this week! You're building a consistent habit. Keep it up!"
-      : undefined
-  );
-  const [isGeneratingCoachMessage, setIsGeneratingCoachMessage] =
-    useState(false);
-  const api = useApiWithAuth();
-  const [
-    lastTimeCoachMessageWasGenerated,
-    setLastTimeCoachMessageWasGenerated,
-  ] = useLocalStorage<Date | undefined>(
-    "last-coach-message-generated-at",
-    undefined
-  );
+  // const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
+  //   isDemo
+  //     ? "Great progress this week! You're building a consistent habit. Keep it up!"
+  //     : undefined
+  // );
+  // const [isGeneratingCoachMessage, setIsGeneratingCoachMessage] =
+  //   useState(false);
+  // const api = useApiWithAuth();
+  // const [
+  //   lastTimeCoachMessageWasGenerated,
+  //   setLastTimeCoachMessageWasGenerated,
+  // ] = useLocalStorage<Date | undefined>(
+  //   "last-coach-message-generated-at",
+  //   undefined
+  // );
 
   // const canGenerateNewMessage = true
-  const canGenerateNewMessage = useMemo(() => {
-    if (isDemo) return false;
-    if (!lastTimeCoachMessageWasGenerated) return true;
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    return new Date(lastTimeCoachMessageWasGenerated) < twoHoursAgo;
-  }, [lastTimeCoachMessageWasGenerated, isDemo]);
+  // const canGenerateNewMessage = useMemo(() => {
+  //   if (isDemo) return false;
+  //   if (!lastTimeCoachMessageWasGenerated) return true;
+  //   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  //   return new Date(lastTimeCoachMessageWasGenerated) < twoHoursAgo;
+  // }, [lastTimeCoachMessageWasGenerated, isDemo]);
 
   // Function to generate coach message
-  const generateCoachMessage = async () => {
-    if (isDemo || isGeneratingCoachMessage || !api) return;
+  // const generateCoachMessage = async () => {
+  //   if (isDemo || isGeneratingCoachMessage || !api) return;
 
-    if (!canGenerateNewMessage) {
-      console.log("Must wait 2 hours between coach message generations");
-      return;
-    }
+  //   if (!canGenerateNewMessage) {
+  //     console.log("Must wait 2 hours between coach message generations");
+  //     return;
+  //   }
 
-    try {
-      setIsGeneratingCoachMessage(true);
-      const response = await api.post(
-        "/ai/generate-coach-message",
-        {},
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  //   try {
+  //     setIsGeneratingCoachMessage(true);
+  //     const response = await api.post(
+  //       "/ai/generate-coach-message",
+  //       {},
+  //       {
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
 
-      setLastCoachMessage(response.data.message);
-      setLastTimeCoachMessageWasGenerated(new Date());
-      queryClient.refetchQueries({ queryKey: ["notifications"] }); // TODO: should we create an ai context?
-    } catch (error) {
-      console.error("Failed to generate coach message:", error);
-    } finally {
-      setIsGeneratingCoachMessage(false);
-    }
-  };
+  //     setLastCoachMessage(response.data.message);
+  //     setLastTimeCoachMessageWasGenerated(new Date());
+  //     queryClient.refetchQueries({ queryKey: ["notifications"] }); // TODO: should we create an ai context?
+  //   } catch (error) {
+  //     console.error("Failed to generate coach message:", error);
+  //   } finally {
+  //     setIsGeneratingCoachMessage(false);
+  //   }
+  // };
 
   // Initialize coach message from notifications data
-  useEffect(() => {
-    if (!isDemo && notifications) {
-      const initialCoachMessage = notifications?.find(
-        (notification: Notification) => notification.type === "COACH"
-      )?.message;
+  // useEffect(() => {
+  //   if (!isDemo && notifications) {
+  //     const initialCoachMessage = notifications?.find(
+  //       (notification: Notification) => notification.type === "COACH"
+  //     )?.message;
 
-      if (initialCoachMessage) {
-        setLastCoachMessage(initialCoachMessage);
-      }
-    }
-  }, [notifications, isDemo]);
+  //     if (initialCoachMessage) {
+  //       setLastCoachMessage(initialCoachMessage);
+  //     }
+  //   }
+  // }, [notifications, isDemo]);
 
   // Get current week data
   const currentWeek = weeks.find((week) =>
@@ -237,27 +228,25 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
             className
           )}
         >
-          <div className="px-3">
-            <div className="flex items-center gap-2 pr-[5rem]">
-              <span className="text-xl">{plan.emoji || "📋"}</span>
-              <div className="flex flex-col gap-1">
-                <span className="text-md font-semibold text-gray-800">
-                  {plan.goal}
-                </span>
+          <div className="flex items-center gap-2 pr-[5rem]">
+            <span className="text-4xl">{plan.emoji || "📋"}</span>
+            <div className="flex flex-col gap-1">
+              <span className="text-md font-semibold text-gray-800">
+                {plan.goal}
+              </span>
+            </div>
+          </div>
+          {isCoached && (
+            <div className="absolute top-1 right-1 opacity-40">
+              <div className="flex items-center gap-1 p-2">
+                <BadgeCheck className={cn("h-5 w-5", variants.text)} />
               </div>
             </div>
-            {isCoached && (
-              <div className="absolute top-1 right-1 opacity-40">
-                <div className="flex items-center gap-1 p-2">
-                  <BadgeCheck className={cn("h-5 w-5", variants.text)} />
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {isCoached && (
             <>
-              <div className="flex flex-col items-center gap-1 py-2">
+              {/* <div className="flex flex-col items-center gap-1 py-2">
                 <MessageBubble
                   direction="left"
                   className="bg-white/60 backdrop-blur-sm ring-1 ring-white/50 shadow-lg"
@@ -307,7 +296,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                     </button>
                   </div>
                 </MessageBubble>
-              </div>
+              </div> */}
               <AnimatePresence>
                 {isAnimationCompleted && (
                   <motion.div
@@ -320,17 +309,16 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                       <span className="text-xs text-gray-400/80">
                         This week
                       </span>
-                      <PlanStatus plan={plan} />
-                      {["COMPLETED", "FAILED"].includes(
-                        plan?.currentWeekState || ""
-                      ) && (
-                        <Link
-                          href={`/plans?selectedPlan=${plan.id}`}
-                          className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors p-1 px-3"
-                        >
-                          Coach notes <MoveRight className="h-4 w-4 inline" />
-                        </Link>
-                      )}
+                      <div
+                        onClick={() => {
+                          router.push(`/plans?selectedPlan=${plan.id}`);
+                        }}
+                      >
+                        <div className="flex flex-row items-center gap-2">
+                          <PlanStatus plan={plan} />
+                          <MoveRight className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 )}

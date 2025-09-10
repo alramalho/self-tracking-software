@@ -1,5 +1,6 @@
 import { useApiWithAuth } from "@/api";
 import { CompletePlan, usePlans } from "@/contexts/plans";
+import { useCoachMessages } from "@/hooks/useCoachMessages";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
@@ -30,7 +31,12 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const api = useApiWithAuth();
-  const { upsertPlan, clearCoachSuggestedSessionsInPlan, upgradeCoachSuggestedSessionsToPlanSessions } = usePlans();
+  const {
+    upsertPlan,
+    clearCoachSuggestedSessionsInPlan,
+    upgradeCoachSuggestedSessionsToPlanSessions,
+  } = usePlans();
+  const { getLastCoachMessage, shouldUseCoachMessage } = useCoachMessages();
   const [selectedSuggestedSession, setSelectedSuggestedSession] = useState<
     string | null
   >(null);
@@ -130,9 +136,19 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
     }
   };
 
+  // Get coach message data
+  const useCoachMessage = shouldUseCoachMessage(selectedPlan);
+  const lastCoachMessage = useCoachMessage
+    ? getLastCoachMessage(selectedPlan)
+    : null;
+
   // Don't render if no coach data to show
+  const hasCoachNotes = !useCoachMessage && selectedPlan.coachNotes;
+  const hasCoachMessage = useCoachMessage && lastCoachMessage;
+
   if (
-    !selectedPlan.coachNotes &&
+    !hasCoachNotes &&
+    !hasCoachMessage &&
     !coachSuggestedSessions.length &&
     !selectedPlan.coachSuggestedTimesPerWeek
   ) {
@@ -145,31 +161,41 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
       className={cn(
         variants.veryFadedBg,
         variants.ringBright,
-        "backdrop-blur-sm ring-1",
+        "backdrop-blur-sm ring-1 p-4",
         className
       )}
     >
-      <div className="flex flex-col items-start gap-4">
-        {selectedPlan.coachNotes && (
+      <div className="flex flex-row items-center gap-4">
+        {(hasCoachNotes || hasCoachMessage) && (
           <>
-            <div className="flex flex-row items-center gap-2 justify-between w-full">
-              <Avatar>
-                <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
-              <PlanStatus plan={selectedPlan} />
-            </div>
+            <Avatar>
+              <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
             <div className="flex flex-col gap-1 flex-1">
               <span className={`text-sm italic text-gray-600`}>
-                {selectedPlan.coachNotes}
+                {hasCoachMessage
+                  ? lastCoachMessage?.message
+                  : selectedPlan.coachNotes}
               </span>
-              <span className="text-[10px] italic text-gray-500">
-                Coach Oli,{" "}
-                {selectedPlan.suggestedByCoachAt &&
-                  formatDistance(selectedPlan.suggestedByCoachAt, new Date(), {
-                    addSuffix: true,
-                  })}
-              </span>
+              <div className="flex flex-row items-center justify-between gap-2 mt-1">
+                <span className="text-[10px] italic text-gray-500">
+                  Coach Oli,{" "}
+                  {hasCoachMessage && lastCoachMessage
+                    ? formatDistance(lastCoachMessage.createdAt, new Date(), {
+                        addSuffix: true,
+                      })
+                    : selectedPlan.suggestedByCoachAt &&
+                      formatDistance(
+                        selectedPlan.suggestedByCoachAt,
+                        new Date(),
+                        {
+                          addSuffix: true,
+                        }
+                      )}
+                </span>
+                <PlanStatus plan={selectedPlan} />
+              </div>
             </div>
           </>
         )}
@@ -178,7 +204,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
           <div className="flex flex-col justify-start gap-4 w-full">
             <div className="flex flex-col gap-3">
               <div className="flex flex-row gap-2">
-                {!selectedPlan.coachNotes && (
+                {!hasCoachNotes && !hasCoachMessage && (
                   <Avatar>
                     <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
                     <AvatarFallback>CN</AvatarFallback>
@@ -273,77 +299,79 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
           </div>
         )}
 
-        {selectedPlan.coachSuggestedTimesPerWeek && (
-          <div className="flex flex-col justify-start gap-4 w-full">
-            <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
-              <div className="flex flex-col items-center text-center flex-shrink-0">
-                <span className="text-4xl md:text-5xl font-light text-gray-800">
-                  {selectedPlan.timesPerWeek}
-                </span>
-                <span className="text-xs text-gray-400 font-medium mt-1">
-                  CURRENT
-                </span>
+        {selectedPlan.coachSuggestedTimesPerWeek != undefined &&
+          selectedPlan.coachSuggestedTimesPerWeek != null &&
+          selectedPlan.coachSuggestedTimesPerWeek > 0 && (
+            <div className="flex flex-col justify-start gap-4 w-full">
+              <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
+                <div className="flex flex-col items-center text-center flex-shrink-0">
+                  <span className="text-4xl md:text-5xl font-light text-gray-800">
+                    {selectedPlan.timesPerWeek}
+                  </span>
+                  <span className="text-xs text-gray-400 font-medium mt-1">
+                    CURRENT
+                  </span>
+                </div>
+
+                <div className="flex items-center flex-shrink-0">
+                  <div className="w-8 md:w-16 h-px bg-gray-300"></div>
+                  <ArrowBigRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
+                  <div className="w-8 md:w-16 h-px bg-gray-300"></div>
+                </div>
+
+                <div className="flex flex-col items-center text-center flex-shrink-0">
+                  <span
+                    className={`text-4xl md:text-5xl font-light ${variants.text}`}
+                  >
+                    {selectedPlan.coachSuggestedTimesPerWeek}
+                  </span>
+                  <span className="text-xs text-gray-400 font-medium mt-1">
+                    SUGGESTED
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-center flex-shrink-0">
-                <div className="w-8 md:w-16 h-px bg-gray-300"></div>
-                <ArrowBigRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
-                <div className="w-8 md:w-16 h-px bg-gray-300"></div>
-              </div>
-
-              <div className="flex flex-col items-center text-center flex-shrink-0">
-                <span
-                  className={`text-4xl md:text-5xl font-light ${variants.text}`}
-                >
-                  {selectedPlan.coachSuggestedTimesPerWeek}
-                </span>
-                <span className="text-xs text-gray-400 font-medium mt-1">
-                  SUGGESTED
-                </span>
-              </div>
+              {!isDemo && (
+                <div className="flex flex-row gap-3 justify-center">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
+                    disabled={
+                      loadingStates.decliningTimesPerWeek ||
+                      loadingStates.acceptingTimesPerWeek
+                    }
+                    onClick={async () => {
+                      await handleDeclineSuggestion("timesPerWeek");
+                    }}
+                  >
+                    {loadingStates.decliningTimesPerWeek ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4 mr-2" />
+                    )}
+                    Decline
+                  </Button>
+                  <Button
+                    className={`flex-1 h-10 text-sm font-medium ${variants.bg}`}
+                    disabled={
+                      loadingStates.acceptingTimesPerWeek ||
+                      loadingStates.decliningTimesPerWeek
+                    }
+                    onClick={async () => {
+                      await handleAcceptSuggestion("timesPerWeek");
+                    }}
+                  >
+                    {loadingStates.acceptingTimesPerWeek ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Accept
+                  </Button>
+                </div>
+              )}
             </div>
-
-            {!isDemo && (
-              <div className="flex flex-row gap-3 justify-center">
-                <Button
-                  variant="outline"
-                  className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
-                  disabled={
-                    loadingStates.decliningTimesPerWeek ||
-                    loadingStates.acceptingTimesPerWeek
-                  }
-                  onClick={async () => {
-                    await handleDeclineSuggestion("timesPerWeek");
-                  }}
-                >
-                  {loadingStates.decliningTimesPerWeek ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <X className="h-4 w-4 mr-2" />
-                  )}
-                  Decline
-                </Button>
-                <Button
-                  className={`flex-1 h-10 text-sm font-medium ${variants.bg}`}
-                  disabled={
-                    loadingStates.acceptingTimesPerWeek ||
-                    loadingStates.decliningTimesPerWeek
-                  }
-                  onClick={async () => {
-                    await handleAcceptSuggestion("timesPerWeek");
-                  }}
-                >
-                  {loadingStates.acceptingTimesPerWeek ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4 mr-2" />
-                  )}
-                  Accept
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
       </div>
     </MessageBubble>
   );
