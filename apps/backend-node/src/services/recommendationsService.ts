@@ -106,7 +106,7 @@ export class RecommendationsService {
         throw new Error("Current user not found");
       }
 
-      // Get all users looking for accountability partners
+      // Get all users looking for accountability partners who have at least one active plan
       const usersLookingForPartners = await prisma.user.findMany({
         where: {
           lookingForAp: true,
@@ -114,6 +114,17 @@ export class RecommendationsService {
           AND: [
             { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
             { email: { not: { startsWith: "lia.borges+" } } },
+            {
+              plans: {
+                some: {
+                  deletedAt: null,
+                  OR: [
+                    { finishingDate: null },
+                    { finishingDate: { gt: new Date() } },
+                  ],
+                },
+              },
+            },
           ],
         },
       });
