@@ -13,12 +13,18 @@ export async function getTimelineData() {
       where: { id: user.id },
       include: {
         connectionsFrom: {
-          where: { status: "ACCEPTED" },
-          include: { to: true },
+          include: {
+            to: {
+              select: { id: true, username: true, name: true, picture: true },
+            },
+          },
         },
         connectionsTo: {
-          where: { status: "ACCEPTED" },
-          include: { from: true },
+          include: {
+            from: {
+              select: { id: true, username: true, name: true, picture: true },
+            },
+          },
         },
       },
     });
@@ -32,8 +38,12 @@ export async function getTimelineData() {
     }
 
     const connectedUsers = [
-      ...updatedUser.connectionsFrom.map((conn) => conn.to),
-      ...updatedUser.connectionsTo.map((conn) => conn.from),
+      ...updatedUser.connectionsFrom
+        .filter((conn) => conn.status === "ACCEPTED")
+        .map((conn) => conn.to),
+      ...updatedUser.connectionsTo
+        .filter((conn) => conn.status === "ACCEPTED")
+        .map((conn) => conn.from),
     ];
 
     if (connectedUsers.length === 0) {

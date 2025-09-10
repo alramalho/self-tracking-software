@@ -2,16 +2,9 @@
 
 import { useApiWithAuth } from "@/api";
 import { useSession } from "@clerk/clerk-react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Notification } from "@tsw/prisma";
-import React, {
-  createContext,
-  useContext,
-} from "react";
+import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import { getNotifications } from "./actions";
 
@@ -20,27 +13,22 @@ interface DataNotificationsContextType {
   notifications: Notification[] | undefined;
   isLoadingNotifications: boolean;
   notificationsError: Error | null;
-  
+
   // Actions
   concludeNotification: (notificationId: string) => Promise<void>;
   isConcludingNotification: boolean;
-  
-  acceptFriendRequest: (notificationId: string) => Promise<void>;
-  isAcceptingFriendRequest: boolean;
-  
-  rejectFriendRequest: (notificationId: string) => Promise<void>;
-  isRejectingFriendRequest: boolean;
-  
+
   clearAllNotifications: () => Promise<void>;
   isClearingNotifications: boolean;
-  
 }
 
-const DataNotificationsContext = createContext<DataNotificationsContextType | undefined>(undefined);
+const DataNotificationsContext = createContext<
+  DataNotificationsContextType | undefined
+>(undefined);
 
-export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const DataNotificationsProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
@@ -52,7 +40,10 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
       try {
         return await getNotifications();
       } catch (err) {
-        console.error("[DataNotificationsProvider] Error fetching notifications:", err);
+        console.error(
+          "[DataNotificationsProvider] Error fetching notifications:",
+          err
+        );
         throw err;
       }
     },
@@ -75,36 +66,6 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
     },
   });
 
-  // Accept friend request mutation
-  const acceptFriendRequestMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      await api.post(`/notifications/accept-friend-request/${notificationId}`);
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["notifications"] });
-      queryClient.refetchQueries({ queryKey: ["user", "current"] });
-      toast.success("Friend request accepted!");
-    },
-    onError: (error) => {
-      console.error("Error accepting friend request:", error);
-      toast.error("Failed to accept friend request.");
-    },
-  });
-
-  // Reject friend request mutation
-  const rejectFriendRequestMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      await api.post(`/notifications/reject-friend-request/${notificationId}`);
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["notifications"] });
-      toast.success("Friend request rejected.");
-    },
-    onError: (error) => {
-      console.error("Error rejecting friend request:", error);
-      toast.error("Failed to reject friend request.");
-    },
-  });
 
   // Clear all notifications mutation
   const clearAllNotificationsMutation = useMutation({
@@ -126,17 +87,11 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
     notifications: notificationsQuery.data,
     isLoadingNotifications: notificationsQuery.isLoading,
     notificationsError: notificationsQuery.error,
-    
+
     // Actions
     concludeNotification: concludeNotificationMutation.mutateAsync,
     isConcludingNotification: concludeNotificationMutation.isPending,
-    
-    acceptFriendRequest: acceptFriendRequestMutation.mutateAsync,
-    isAcceptingFriendRequest: acceptFriendRequestMutation.isPending,
-    
-    rejectFriendRequest: rejectFriendRequestMutation.mutateAsync,
-    isRejectingFriendRequest: rejectFriendRequestMutation.isPending,
-    
+
     clearAllNotifications: clearAllNotificationsMutation.mutateAsync,
     isClearingNotifications: clearAllNotificationsMutation.isPending,
   };
@@ -151,7 +106,9 @@ export const DataNotificationsProvider: React.FC<{ children: React.ReactNode }> 
 export const useDataNotifications = () => {
   const context = useContext(DataNotificationsContext);
   if (context === undefined) {
-    throw new Error("useDataNotifications must be used within a DataNotificationsProvider");
+    throw new Error(
+      "useDataNotifications must be used within a DataNotificationsProvider"
+    );
   }
   return context;
 };

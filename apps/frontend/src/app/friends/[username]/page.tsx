@@ -16,16 +16,26 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
   const { profileData, isLoading } = useUnifiedProfileData(params.username);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  const friends = React.useMemo(
+    () => [
+      ...(profileData?.connectionsFrom
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.to) || []),
+      ...(profileData?.connectionsTo
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.from) || []),
+    ],
+    [profileData?.connectionsFrom, profileData?.connectionsTo]
+  );
+
   const router = useRouter();
 
-  const isOwnProfile =
-    params.username === profileData?.username;
+  const isOwnProfile = params.username === profileData?.username;
 
   const handleUserClick = (user: UserSearchResult) => {
     setIsSearchOpen(false);
     router.push(`/profile/${user.username}`);
   };
-
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -46,16 +56,19 @@ const FriendsPage: React.FC<{ params: { username: string } }> = ({
           </button>
         )}
       </div>
-      {profileData?.friends?.length && profileData?.friends?.length > 0 ? (
+      {friends?.length && friends?.length > 0 ? (
         <ul className="space-y-4">
-          {profileData?.friends?.map((friend) => (
+          {friends?.map((friend) => (
             <li key={friend.username} className="border-b pb-4">
               <Link
                 href={`/profile/${friend.username}`}
                 className="flex items-center space-x-4 hover:bg-gray-50 p-2 rounded-lg"
               >
                 <Avatar>
-                  <AvatarImage src={friend.picture || ""} alt={friend.name || ""} />
+                  <AvatarImage
+                    src={friend.picture || ""}
+                    alt={friend.name || ""}
+                  />
                   <AvatarFallback>{(friend.name || "U")?.[0]}</AvatarFallback>
                 </Avatar>
                 <div>

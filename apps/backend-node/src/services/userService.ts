@@ -172,10 +172,11 @@ export class UserService {
   }
 
   async acceptConnectionRequest(
-    connectionId: string
-  ): Promise<{ from: User; to: User }> {
+    senderId: string,
+    recipientId: string
+  ): Promise<Connection> {
     const connection = await prisma.connection.update({
-      where: { id: connectionId },
+      where: { fromId_toId: { fromId: senderId, toId: recipientId } },
       data: { status: "ACCEPTED" },
       include: {
         from: true,
@@ -183,22 +184,22 @@ export class UserService {
       },
     });
 
-    return {
-      from: connection.from,
-      to: connection.to,
-    };
+    return connection;
   }
 
-  async rejectConnectionRequest(connectionId: string): Promise<User> {
+  async rejectConnectionRequest(
+    senderId: string,
+    recipientId: string
+  ): Promise<Connection> {
     const connection = await prisma.connection.update({
-      where: { id: connectionId },
+      where: { fromId_toId: { fromId: senderId, toId: recipientId } },
       data: { status: "REJECTED" },
       include: {
         from: true,
       },
     });
 
-    return connection.from;
+    return connection;
   }
 
   async getPendingSentConnectionRequests(
