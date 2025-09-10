@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Bell,
+  ChevronDown,
   ChevronRight,
+  HelpCircle,
   RefreshCcw,
   ScanFace,
 } from "lucide-react";
@@ -19,6 +21,7 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
 
+import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
 import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
@@ -30,21 +33,33 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { useSession } from "@clerk/clerk-react";
+import { isAfter } from "date-fns";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
   const { notifications, clearAllNotifications } = useDataNotifications();
   const { plans } = usePlans();
+  const activePlans = plans?.filter(
+    (plan) =>
+      plan.deletedAt === null &&
+      (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
+  );
   const { metrics } = useMetrics();
   const { refetchAllData } = useGlobalDataOperations();
   const { currentUser, hasLoadedUserData } = useCurrentUser();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
+    "plans-section-collapsed",
+    false
+  );
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
+  const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
+    useState(false);
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
   const { isLoaded, isSignedIn } = useSession();
 
@@ -206,12 +221,39 @@ const HomePage: React.FC = () => {
             </div>
           )}
 
-          {plans && plans.length > 0 && (
+          {activePlans && activePlans.length > 0 && (
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Your Plans
-                </h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {activePlans.length > 1 && (
+                    <button
+                      onClick={() => setIsPlansCollapsed((prev) => !prev)}
+                      className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
+                      aria-label={
+                        isPlansCollapsed ? "Expand streaks" : "Collapse streaks"
+                      }
+                    >
+                      {isPlansCollapsed ? (
+                        <ChevronRight size={16} className="text-gray-600" />
+                      ) : (
+                        <ChevronDown size={16} className="text-gray-600" />
+                      )}
+                    </button>
+                  )}
+                  <div className="flex flex-row items-center justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Your Plans
+                    </h3>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowPlanProgressExplainer(true)}
+                    >
+                      <HelpCircle className="h-4 w-4 text-gray-400" />
+                    </Button>
+                  </div>
+                </div>
                 <button
                   onClick={() => router.push(`/plans`)}
                   className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
@@ -220,7 +262,9 @@ const HomePage: React.FC = () => {
                   <ChevronRight size={16} />
                 </button>
               </div>
-              <PlansProgressDisplay isExpanded={true} />
+              <div className="mt-2">
+                <PlansProgressDisplay isExpanded={!isPlansCollapsed} />
+              </div>
             </div>
           )}
         </div>
@@ -244,6 +288,13 @@ const HomePage: React.FC = () => {
       </AppleLikePopover>
 
       {/* <DailyCheckinBanner/> */}
+
+      <PlanProgressPopover
+        open={showPlanProgressExplainer}
+        onClose={() => {
+          setShowPlanProgressExplainer(false);
+        }}
+      />
 
       {/* AI Coach Popover */}
       <AppleLikePopover
