@@ -15,7 +15,7 @@ interface DataNotificationsContextType {
   notificationsError: Error | null;
 
   // Actions
-  concludeNotification: (notificationId: string) => Promise<void>;
+  concludeNotification: ( data: { notificationId: string, mute?: boolean }) => Promise<void>;
   isConcludingNotification: boolean;
 
   clearAllNotifications: () => Promise<void>;
@@ -53,11 +53,13 @@ export const DataNotificationsProvider: React.FC<{
   });
 
   const concludeNotificationMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      await api.post(`/notifications/conclude/${notificationId}`);
+    mutationFn: async (data: { notificationId: string; mute?: boolean }) => {
+      await api.post(`/notifications/conclude/${data.notificationId}`);
     },
-    onSuccess: () => {
-      toast.success("Notification concluded!");
+    onSuccess: (_, { mute }) => {
+      if (!mute) {
+        toast.success("Notification concluded!");
+      }
       queryClient.refetchQueries({ queryKey: ["notifications"] });
     },
     onError: (error) => {
@@ -65,7 +67,6 @@ export const DataNotificationsProvider: React.FC<{
       toast.error("Failed to update notification.");
     },
   });
-
 
   // Clear all notifications mutation
   const clearAllNotificationsMutation = useMutation({
