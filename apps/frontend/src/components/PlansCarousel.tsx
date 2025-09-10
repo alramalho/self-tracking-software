@@ -1,4 +1,5 @@
 import { EmblaOptionsType } from 'embla-carousel'
+import AutoHeight from 'embla-carousel-auto-height'
 import useEmblaCarousel from 'embla-carousel-react'
 import React, { useCallback, useEffect, useState } from 'react'
 
@@ -13,7 +14,7 @@ const PlansCarousel: React.FC<PropType> = (props) => {
     align: 'start',
     containScroll: 'trimSnaps',
     ...options
-  })
+  }, [AutoHeight()])
   
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([])

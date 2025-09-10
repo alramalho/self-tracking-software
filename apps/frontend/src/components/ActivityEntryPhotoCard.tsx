@@ -258,10 +258,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   );
 
   useEffect(() => {
-    console.log(`reactions: ${JSON.stringify(reactions)}`);
-  }, [reactions]);
-
-  useEffect(() => {
     return () => {
       if (pendingReactionsRef.current.timer) {
         clearTimeout(pendingReactionsRef.current.timer);

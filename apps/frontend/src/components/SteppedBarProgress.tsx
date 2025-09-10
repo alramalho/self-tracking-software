@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { useInView } from "react-intersection-observer";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import React, { useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
 
 interface SteppedBarProgressProps {
   value: number;
@@ -13,6 +12,7 @@ interface SteppedBarProgressProps {
   onFullyDone?: () => void;
   color?: string;
   celebration?: string | React.ReactNode;
+  skipAnimation?: boolean;
 }
 
 export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
@@ -24,9 +24,11 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   color = "bg-green-500",
   onAnimationCompleted,
   onFullyDone,
+  skipAnimation = false,
 }) => {
-  const [animatedValue, setAnimatedValue] = useState(0);
-  const [isFullyDone, setIsFullyDone] = useState(false);
+  const [animatedValue, setAnimatedValue] = useState(skipAnimation ? value : 0);
+  const [isFullyDone, setIsFullyDone] = useState(skipAnimation && value >= maxValue);
+  const [shouldCallCompleted, setShouldCallCompleted] = useState(skipAnimation);
 
   const { ref, inView } = useInView({
     threshold: 0.5,
@@ -34,6 +36,10 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
   });
 
   useEffect(() => {
+    if (skipAnimation) {
+      return;
+    }
+    
     if (inView) {
       const timer = setInterval(() => {
         setAnimatedValue((prev) => {
@@ -41,7 +47,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
             return prev + 1;
           }
           clearInterval(timer);
-          onAnimationCompleted?.();
+          setShouldCallCompleted(true);
           if (prev >= maxValue) {
             setIsFullyDone(true);
             onFullyDone?.();
@@ -52,7 +58,14 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
 
       return () => clearInterval(timer);
     }
-  }, [inView, value, maxValue, onAnimationCompleted]);
+  }, [inView, value, maxValue, onFullyDone, skipAnimation]);
+
+  useEffect(() => {
+    if (shouldCallCompleted) {
+      onAnimationCompleted?.();
+      setShouldCallCompleted(false);
+    }
+  }, [shouldCallCompleted, onAnimationCompleted]);
 
   return (
     <div ref={ref} className={cn("flex flex-col gap-0", className)}>
