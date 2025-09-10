@@ -5,7 +5,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Activity, ActivityEntry } from "@tsw/prisma";
 import {
-    isSameWeek
+  isSameWeek
 } from "date-fns";
 import React from "react";
 import { default as FireBadge, default as TrophyBadge } from "./FireBadge";
