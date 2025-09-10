@@ -4,6 +4,7 @@ import { useApiWithAuth } from "@/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/contexts/users";
+import { useLogError } from "@/hooks/useLogError";
 import { useUser } from "@clerk/nextjs";
 import { Activity, User } from "@tsw/prisma";
 import { Plan } from "@tsw/prisma/types";
@@ -38,6 +39,7 @@ export default function ClientPage() {
   const areFriends = friends?.some(
     (friend) => friend.id === inviterData?.user?.id
   );
+  const { logError } = useLogError();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -74,8 +76,9 @@ export default function ClientPage() {
   }
 
   if (!inviterData) {
-    console.error("[ClientPage] No inviter data found");
-    return <div>Error: User profile not found</div>;
+    logError(new Error(`No inviter data found for ${params.username}`));
+    router.push('https://tracking.so');
+    return null;
   }
 
   const handleSendFriendRequest = async () => {
