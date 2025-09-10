@@ -5,7 +5,6 @@ import { plansPineconeService } from "./pineconeService";
 import { userService } from "./userService";
 
 export interface RecommendationScore {
-  profileSimScore?: number;
   planSimScore?: number;
   geoSimScore?: number;
   ageSimScore?: number;
@@ -18,6 +17,11 @@ export interface RecommendedUsersResponse {
   users: Partial<User>[];
   plans: Plan[];
 }
+
+const PLAN_SIM_WEIGHT = 0.33;
+const RECENT_ACTIVITY_WEIGHT = 0.33;
+const GEO_SIM_WEIGHT = 0.1666;
+const AGE_SIM_WEIGHT = 0.1666;
 
 /**
  * Calculate age similarity using exponential decay
@@ -123,26 +127,26 @@ export class RecommendationsService {
       const userIds = usersLookingForPartners.map((u) => u.id);
 
       // Calculate profile similarity using Pinecone
-      if (currentUser.profile) {
-        try {
-          const profileSearchResults = await usersPineconeService.query(
-            currentUser.profile,
-            50,
-            { user_id: { $in: userIds } }
-          );
+      // if (currentUser.profile) {
+      //   try {
+      //     const profileSearchResults = await usersPineconeService.query(
+      //       currentUser.profile,
+      //       50,
+      //       { user_id: { $in: userIds } }
+      //     );
 
-          for (const result of profileSearchResults) {
-            const userId = result.fields.user_id;
-            if (!results[userId]) results[userId] = {};
-            results[userId].profileSimScore = result.score;
-          }
-        } catch (error) {
-          logger.warn(
-            "Failed to get profile similarities from Pinecone:",
-            error
-          );
-        }
-      }
+      //     for (const result of profileSearchResults) {
+      //       const userId = result.fields.user_id;
+      //       if (!results[userId]) results[userId] = {};
+      //       results[userId].profileSimScore = result.score;
+      //     }
+      //   } catch (error) {
+      //     logger.warn(
+      //       "Failed to get profile similarities from Pinecone:",
+      //       error
+      //     );
+      //   }
+      // }
 
       // Calculate plan similarity using Pinecone
       const userPlans = await prisma.plan.findMany({
@@ -200,17 +204,11 @@ export class RecommendationsService {
 
       // Calculate final scores and create recommendations
       for (const [targetUserId, scores] of Object.entries(results)) {
-        const scoresArray = [
-          scores.profileSimScore || 0,
-          scores.planSimScore || 0,
-          scores.geoSimScore || 0,
-          scores.ageSimScore || 0,
-          scores.recentActivityScore || 0,
-        ];
-
         const finalScore =
-          scoresArray.reduce((sum, score) => sum + score, 0) /
-          scoresArray.length;
+          (scores.planSimScore || 0) * PLAN_SIM_WEIGHT +
+          (scores.recentActivityScore || 0) * RECENT_ACTIVITY_WEIGHT +
+          (scores.geoSimScore || 0) * GEO_SIM_WEIGHT +
+          (scores.ageSimScore || 0) * AGE_SIM_WEIGHT;
 
         // Only create recommendations above a minimum threshold
         if (finalScore > 0.1) {
@@ -221,11 +219,14 @@ export class RecommendationsService {
               recommendationObjectId: targetUserId,
               score: finalScore,
               metadata: {
-                profileSimScore: scores.profileSimScore,
                 planSimScore: scores.planSimScore,
+                planSimWeight: PLAN_SIM_WEIGHT,
                 geoSimScore: scores.geoSimScore,
+                geoSimWeight: GEO_SIM_WEIGHT,
                 ageSimScore: scores.ageSimScore,
+                ageSimWeight: AGE_SIM_WEIGHT,
                 recentActivityScore: scores.recentActivityScore,
+                recentActivityWeight: RECENT_ACTIVITY_WEIGHT,
               },
             },
           });

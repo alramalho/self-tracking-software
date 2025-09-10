@@ -1,6 +1,21 @@
 import * as readline from "readline";
 import { PrismaClient } from "./index";
 
+// Parse command line arguments
+function parseArgs(): { impersonateUser: string } {
+  const args = process.argv.slice(2);
+  let impersonateUser = "alex"; // default
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--impersonate" && i + 1 < args.length) {
+      impersonateUser = args[i + 1];
+      break;
+    }
+  }
+
+  return { impersonateUser };
+}
+
 // Source database (production)
 const sourcePrisma = new PrismaClient({
   datasources: {
@@ -491,25 +506,26 @@ async function migrateData() {
     }
     console.info(`Migrated ${recommendations.length} recommendations`);
 
-    // Post-processing: Update alex user with specific Clerk ID
-    console.info("Post-processing: Updating alex user with Clerk ID...");
-    const alexUser = await targetPrisma.user.findUnique({
-      where: { username: "alex" },
+    // Post-processing: Update specified user with specific Clerk ID
+    const { impersonateUser } = parseArgs();
+    console.info(`Post-processing: Updating ${impersonateUser} user with Clerk ID...`);
+    const targetUser = await targetPrisma.user.findUnique({
+      where: { username: impersonateUser },
     });
 
-    if (alexUser) {
+    if (targetUser) {
       await targetPrisma.user.update({
-        where: { id: alexUser.id },
+        where: { id: targetUser.id },
         data: {
           clerkId: "user_30bDMTLDj4WYYD4h7VpYoQm9gAD",
         },
       });
       console.info(
-        "✅ Updated alex user with Clerk ID: user_30bDMTLDj4WYYD4h7VpYoQm9gAD"
+        `✅ Updated ${impersonateUser} user with Clerk ID: user_30bDMTLDj4WYYD4h7VpYoQm9gAD`
       );
     } else {
       console.warn(
-        "⚠️  User with username 'alex' not found - skipping Clerk ID update"
+        `⚠️  User with username '${impersonateUser}' not found - skipping Clerk ID update`
       );
     }
 

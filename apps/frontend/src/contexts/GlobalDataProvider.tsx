@@ -44,7 +44,7 @@ export const useGlobalDataOperations = () => {
           "/",
           "/plans", 
           "/add",
-          "/ap-search",
+          "/search",
         ];
         
         routes.forEach(route => {

@@ -262,7 +262,7 @@ const HomePage: React.FC = () => {
       )}
 
       <div className="mb-6">
-        <TimelineRenderer onOpenSearch={() => router.push("/ap-search")} />
+        <TimelineRenderer onOpenSearch={() => router.push("/search")} />
       </div>
 
       <AppleLikePopover

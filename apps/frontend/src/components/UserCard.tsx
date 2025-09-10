@@ -201,7 +201,7 @@ const UserCard: React.FC<UserCardProps> = ({
             )}
           </div>
 
-          {user.age && user.age > 0 && (
+          {user.age !== null && user.age !== undefined && user.age > 0 && (
             <div className="mt-2">
               <p className="text-gray-700 text-sm line-clamp-3">
                 {user.age} years old
@@ -209,13 +209,13 @@ const UserCard: React.FC<UserCardProps> = ({
             </div>
           )}
 
-          {user.profile && user.profile.length > 0 && (
+          {/* {user.profile && user.profile.length > 0 && (
             <div className="mt-2">
               <p className="text-gray-700 text-sm line-clamp-3">
                 {user.profile}
               </p>
             </div>
-          )}
+          )} */}
 
           {/* Show plans with streaks inline */}
           {plans.length > 0 && (
