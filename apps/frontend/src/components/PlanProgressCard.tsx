@@ -8,7 +8,6 @@ import { format, isSameWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
-  BadgeCheck,
   CircleCheck,
   Flame,
   Medal,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useRef, useState } from "react";
+import { FireAnimation } from "./FireBadge";
 import { SteppedBarProgress } from "./SteppedBarProgress";
 import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import { Confetti, ConfettiRef } from "./ui/confetti";
@@ -88,82 +88,13 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
-  // const [lastCoachMessage, setLastCoachMessage] = useState<string | undefined>(
-  //   isDemo
-  //     ? "Great progress this week! You're building a consistent habit. Keep it up!"
-  //     : undefined
-  // );
-  // const [isGeneratingCoachMessage, setIsGeneratingCoachMessage] =
-  //   useState(false);
-  // const api = useApiWithAuth();
-  // const [
-  //   lastTimeCoachMessageWasGenerated,
-  //   setLastTimeCoachMessageWasGenerated,
-  // ] = useLocalStorage<Date | undefined>(
-  //   "last-coach-message-generated-at",
-  //   undefined
-  // );
 
-  // const canGenerateNewMessage = true
-  // const canGenerateNewMessage = useMemo(() => {
-  //   if (isDemo) return false;
-  //   if (!lastTimeCoachMessageWasGenerated) return true;
-  //   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-  //   return new Date(lastTimeCoachMessageWasGenerated) < twoHoursAgo;
-  // }, [lastTimeCoachMessageWasGenerated, isDemo]);
-
-  // Function to generate coach message
-  // const generateCoachMessage = async () => {
-  //   if (isDemo || isGeneratingCoachMessage || !api) return;
-
-  //   if (!canGenerateNewMessage) {
-  //     console.log("Must wait 2 hours between coach message generations");
-  //     return;
-  //   }
-
-  //   try {
-  //     setIsGeneratingCoachMessage(true);
-  //     const response = await api.post(
-  //       "/ai/generate-coach-message",
-  //       {},
-  //       {
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     setLastCoachMessage(response.data.message);
-  //     setLastTimeCoachMessageWasGenerated(new Date());
-  //     queryClient.refetchQueries({ queryKey: ["notifications"] }); // TODO: should we create an ai context?
-  //   } catch (error) {
-  //     console.error("Failed to generate coach message:", error);
-  //   } finally {
-  //     setIsGeneratingCoachMessage(false);
-  //   }
-  // };
-
-  // Initialize coach message from notifications data
-  // useEffect(() => {
-  //   if (!isDemo && notifications) {
-  //     const initialCoachMessage = notifications?.find(
-  //       (notification: Notification) => notification.type === "COACH"
-  //     )?.message;
-
-  //     if (initialCoachMessage) {
-  //       setLastCoachMessage(initialCoachMessage);
-  //     }
-  //   }
-  // }, [notifications, isDemo]);
-
-  // Get current week data
   const currentWeek = weeks.find((week) =>
     isSameWeek(week.startDate, new Date())
   );
 
   if (!currentWeek) return null;
 
-  // Calculate weekly progress
   const totalPlannedActivities =
     plan.outlineType === "TIMES_PER_WEEK"
       ? (currentWeek.plannedActivities as number)
@@ -177,14 +108,12 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
-  // Get habit and lifestyle achievement from backend or fallback to local calculation
   const backendProgress = !isDemo
     ? plansProgressData?.find((p) => p.plan?.id === plan.id)
     : null;
-  const FALLBACK_HABIT_WEEKS = 4; // Fallback for demos/offline
-  const FALLBACK_LIFESTYLE_WEEKS = 9; // Fallback for demos/offline
+  const FALLBACK_HABIT_WEEKS = 4;
+  const FALLBACK_LIFESTYLE_WEEKS = 9;
 
-  // Habit achievement (4 weeks)
   const habitProgressValue =
     backendProgress?.habitAchievement?.progressValue ??
     Math.min(FALLBACK_HABIT_WEEKS, achievement.streak);
@@ -194,7 +123,6 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
     backendProgress?.habitAchievement?.isAchieved ??
     achievement.streak >= FALLBACK_HABIT_WEEKS;
 
-  // Lifestyle achievement (9 weeks)
   const lifestyleProgressValue =
     backendProgress?.lifestyleAchievement?.progressValue ??
     Math.min(FALLBACK_LIFESTYLE_WEEKS, achievement.streak);
@@ -213,7 +141,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
   return (
-    <Collapsible open={isExpanded}>
+    <Collapsible open={isExpanded} className="relative">
       <CollapsibleContent className="space-y-0 overflow-visible">
         <div
           className={cn(
@@ -228,21 +156,27 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
             className
           )}
         >
-          <div className="flex items-center gap-2 pr-[5rem]">
-            <span className="text-4xl">{plan.emoji || "📋"}</span>
-            <div className="flex flex-col gap-1">
-              <span className="text-md font-semibold text-gray-800">
-                {plan.goal}
-              </span>
-            </div>
-          </div>
-          {isCoached && (
-            <div className="absolute top-1 right-1 opacity-40">
-              <div className="flex items-center gap-1 p-2">
-                <BadgeCheck className={cn("h-5 w-5", variants.text)} />
+          <div className="flex items-center justify-between gap-2 ">
+            <div className="flex items-center gap-2">
+              <span className="text-4xl">{plan.emoji || "📋"}</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-md font-semibold text-gray-800">
+                  {plan.goal}
+                </span>
               </div>
             </div>
-          )}
+            <div
+              className={cn(
+                "flex items-center transition-all duration-300 relative",
+                achievement.streak == 0 ? "grayscale opacity-50" : ""
+              )}
+            >
+              {achievement.streak > 1 && (
+                <span className="text-lg font-cursive">x{achievement.streak}</span>
+              )}
+              <FireAnimation height={40} width={40} className="pb-2" />
+            </div>
+          </div>
 
           {isCoached && (
             <>
