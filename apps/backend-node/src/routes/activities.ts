@@ -704,7 +704,6 @@ router.post(
         data: {
           activityEntryId,
           userId: req.user!.id,
-          username: req.user!.username!,
           text,
         },
       });
@@ -743,7 +742,7 @@ router.post(
       const commentsWithUserData = allComments.map((c) => ({
         id: c.id,
         userId: c.userId,
-        username: c.username,
+        username: c.user.username,
         text: c.text,
         createdAt: c.createdAt,
         picture: c.user.picture,
@@ -802,7 +801,7 @@ router.delete(
       const commentsWithUserData = allComments.map((c) => ({
         id: c.id,
         userId: c.userId,
-        username: c.username,
+        username: c.user.username,
         text: c.text,
         createdAt: c.createdAt,
         picture: c.user.picture,
