@@ -32,6 +32,7 @@ interface PlanConfigurationFormProps {
 
 const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
   plan,
+  onSuccess,
   onClose,
   title,
   isEdit = false,
@@ -245,7 +246,8 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
 
     const planToSave = createPlanToConfirm();
     upsertPlan({ planId: plan?.id || "", updates: planToSave, muteNotifications: true });
-    onClose?.();
+    toast.success(`${isEdit ? "Plan updated" : "Plan created"} successfully!`);
+    onSuccess?.();
   };
 
   const stepRefs = {
