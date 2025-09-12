@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   PersonStandingIcon,
+  RefreshCcw,
   Search,
   Send,
   UserPlus,
@@ -218,9 +219,12 @@ const TimelineRenderer: React.FC<{
 
   return (
     <div ref={timelineRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <h2 className="text-lg font-semibold mt-4">
-        Friend&apos;s last activities
-      </h2>
+      <div className="flex items-center justify-start mt-4">
+        <h2 className="mt-0 text-lg font-semibold">
+          Friend&apos;s last activities
+        </h2>
+        {isLoadingTimeline && <span><RefreshCcw className={`w-4 h-4 ml-2 animate-spin`} /></span>}
+      </div>
 
       {!isLoadingTimeline &&
         timelineData?.recommendedActivities &&
