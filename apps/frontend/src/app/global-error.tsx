@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useLogError } from "@/hooks/useLogError";
+import { logGlobalError } from "@/utils/errorLogger";
 import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 
@@ -12,11 +12,9 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const { logError } = useLogError();
-  
   useEffect(() => {
     console.error("Global Error: ", error);
-    logError(error, typeof window !== 'undefined' ? window.location.href : undefined);
+    logGlobalError(error, typeof window !== 'undefined' ? window.location.href : undefined);
     localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
   }, [error]);
 
