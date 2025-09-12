@@ -86,7 +86,12 @@ export async function getTimelineData() {
         activity: true,
         comments: {
           where: { deletedAt: null },
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: {
+              select: { id: true, username: true, picture: true },
+            },
+          },
         },
         reactions: {
           include: {

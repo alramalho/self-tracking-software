@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 
 interface CommentSectionProps {
   activityEntryId: string;
-  comments: Comment[];
+  comments: (Comment & { user: { username: string; picture: string } })[];
   onAddComment: (text: string) => Promise<void>;
   onRemoveComment: (commentId: string) => Promise<void>;
   hasImage?: boolean;
@@ -158,19 +158,19 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
               <div className="flex items-start gap-2">
                 <Avatar 
                   className="w-6 h-6 mt-1 cursor-pointer"
-                  onClick={() => navigateToProfile(comment.username)}
+                  onClick={() => navigateToProfile(comment.user.username)}
                 >
-                  <AvatarImage src={comment.picture || undefined} alt={comment.username} />
-                  <AvatarFallback>{comment.username[0].toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={comment.user.picture || undefined} alt={comment.user.username} />
+                  <AvatarFallback>{comment.user.username[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span 
                       className="font-medium text-sm hover:underline cursor-pointer"
-                      onClick={() => navigateToProfile(comment.username)}
+                      onClick={() => navigateToProfile(comment.user.username)}
                     >
-                      @{comment.username}
+                      @{comment.user.username}
                     </span>
                     <span className="text-xs text-gray-400">
                       {getFormattedDate(comment.createdAt)}

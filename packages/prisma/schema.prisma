@@ -170,11 +170,9 @@ model Comment {
   id              String    @id @default(cuid())
   activityEntryId String
   userId          String
-  username        String
   text            String
   createdAt       DateTime  @default(now())
   deletedAt       DateTime?
-  picture         String?
 
   // Relations
   activityEntry ActivityEntry @relation(fields: [activityEntryId], references: [id], onDelete: Cascade)

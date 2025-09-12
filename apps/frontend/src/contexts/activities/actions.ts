@@ -27,6 +27,7 @@ export async function getActivitiyEntries() {
             },
           },
         },
+        orderBy: { createdAt: "asc" },
       },
       reactions: {
         include: {
