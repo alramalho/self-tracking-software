@@ -1,6 +1,5 @@
 import React, { ChangeEvent } from "react";
 import { Input } from "./input";
-import { cn } from "@/lib/utils";
 
 type EmojiInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
   value: string;
