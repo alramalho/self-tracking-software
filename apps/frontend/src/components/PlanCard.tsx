@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { BadgeCheck, GripHorizontal, Pencil, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import InviteButton from "./InviteButton";
@@ -65,6 +66,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   const handleDeletePlan = async () => {
     await upsertPlan({ planId: plan.id!, updates: { deletedAt: new Date() } });
+    toast.success("Plan deleted successfully!");
     setShowDeleteConfirm(false);
   };
 
