@@ -55,6 +55,7 @@ const PlanUpsertSchema = z.object({
   coachNotes: z.string().nullable().optional(),
   suggestedByCoachAt: z.date().nullable().optional(),
   coachSuggestedTimesPerWeek: z.number().positive().nullable().optional(),
+  deletedAt: z.iso.datetime().nullable().optional(),
 });
 
 /**
@@ -290,7 +291,7 @@ router.get(
       res.json(progress);
     } catch (error) {
       logger.error("Error getting plan progress:", error);
-      if (error instanceof Error && error.message.includes('not found')) {
+      if (error instanceof Error && error.message.includes("not found")) {
         res.status(404).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Failed to get plan progress" });
@@ -471,7 +472,7 @@ router.post(
           where: { id: planData.id },
           data: {
             ...plan,
-            deletedAt: null,
+            deletedAt: planData.deletedAt,
             ...(planData.milestones && {
               milestones: {
                 deleteMany: {}, // Clear existing milestones

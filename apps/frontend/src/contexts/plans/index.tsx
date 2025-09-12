@@ -123,39 +123,52 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
         milestones?: PlanMilestone[];
         activities?: Activity[];
       };
-      muteNotifications?: boolean;
     }) => {
       if (!isSignedIn) throw new Error("Not signed in");
       console.log("upserting plan", data)
-      await api.post(`/plans/upsert`, {
+      const response = await api.post(`/plans/upsert`, {
         id: data.planId,
         ...data.updates,
       });
+      return response.data;
     },
-    onSuccess: (_, { muteNotifications, planId, updates }) => {
-      // Smartly update the specific plan in the cache
+    onSuccess: (result, { planId, updates }) => {
+      const upsertedPlan = result.plan;
+      
+      // Handle cache updates based on operation type
       queryClient.setQueryData(["plans"], (oldPlans: CompletePlan[] = []) => {
-        return oldPlans.map(plan => 
-          plan.id === planId ? { ...plan, ...updates } : plan
-        );
+        const planExists = oldPlans.some(plan => plan.id === planId);
+        
+        if (upsertedPlan.deletedAt !== null) {
+          // Deletion: Remove plan from cache
+          return oldPlans.filter(plan => plan.id !== planId);
+        } else if (!planExists) {
+          // Creation: Add new plan to cache
+          return [...oldPlans, upsertedPlan];
+        } else {
+          // Update: Modify existing plan in cache
+          return oldPlans.map(plan => 
+            plan.id === planId ? { ...plan, ...upsertedPlan } : plan
+          );
+        }
       });
-      // Also update individual plan cache if it exists
-      queryClient.setQueryData(["plan", planId], (oldPlan: any) => 
-        oldPlan ? { ...oldPlan, ...updates } : oldPlan
-      );
-      if (!muteNotifications) {
-        toast.success("Plan updated successfully!");
+      
+      // Update individual plan cache
+      if (upsertedPlan) {
+        queryClient.setQueryData(["plan", planId], upsertedPlan);
+      } else {
+        // Remove from individual plan cache if deleted
+        queryClient.removeQueries({ queryKey: ["plan", planId] });
       }
+      
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: ["recommendations"] });
       }, 1000);
     },
-    onError: (error, { muteNotifications }) => {
+    onError: (error) => {
       let customErrorMessage = `Failed to update plan`;
       handleQueryError(error, customErrorMessage);
-      if (!muteNotifications) {
-        toast.error(customErrorMessage);
-      }
+      toast.error(customErrorMessage);
     },
   });
 
