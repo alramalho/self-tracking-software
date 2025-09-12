@@ -52,7 +52,7 @@ interface ActivityEntryPhotoCardProps {
   activity: Activity;
   activityEntry: ActivityEntry & {
     reactions: (Reaction & { user: { username: string } })[];
-    comments: Comment[];
+    comments:( Comment & { user: { username: string; picture: string } })[];
   };
   user: { username: string; name: string; picture: string; planType: PlanType };
   editable?: boolean;
