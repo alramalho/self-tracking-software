@@ -37,7 +37,7 @@ export const RecommendationsProvider: React.FC<{
       const response = await api.get(`/users/recommended-users`);
       return response.data;
     },
-    enabled: isSignedIn && isLoaded,
+    enabled: !!isSignedIn && isLoaded,
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
