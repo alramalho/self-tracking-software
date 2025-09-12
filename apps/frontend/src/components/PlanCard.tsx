@@ -65,6 +65,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
   const handleDeletePlan = async () => {
     await upsertPlan({ planId: plan.id!, updates: { deletedAt: new Date() } });
+    setShowDeleteConfirm(false);
   };
 
   return (
