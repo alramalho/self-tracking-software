@@ -73,6 +73,10 @@ const REACTION_EMOJI_MAPPING = {
   aubergine: "🍆",
   peach: "🍑",
   surprise: "😮",
+  surprise: "😮",
+  surprise: "😮",
+  surprise: "😮",
+  surprise: "😮",
 };
 
 const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({

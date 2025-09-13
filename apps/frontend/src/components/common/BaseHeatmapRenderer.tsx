@@ -221,6 +221,14 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   return dateObj.getTime() === selectedUTC.getTime();
                 })();
 
+              
+              // note to self:
+              // we were refactoring plan prgoress, right now its scatteres throughout the frontend,
+              // making it hard to iterate, and prone to bugs
+              // we must centralize as we are doing in SimplifiedPlanProgressContext
+              // like here below, we'd just change the getWeekCompeltionStatus for something that get's current week based
+              // on data and then .isCompleted (where each week has startDate, endDate, and isCompleted)
+
               // Check if this is the last day of the week (Saturday)
               const isLastDayOfWeek = dateObj.getUTCDay() === 6;
 
