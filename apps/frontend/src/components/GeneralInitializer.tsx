@@ -34,6 +34,7 @@ export default function GeneralInitializer({
 
   const email = currentUser?.email || "";
   const isOnboardingPage = pathname.startsWith("/onboarding");
+  const isDownloadPage = pathname.startsWith("/download");
 
   const friends = useMemo(() => {
     return [
@@ -165,7 +166,7 @@ export default function GeneralInitializer({
           >
             {children}
           </div>
-          {isSignedIn && <BottomNav />}
+          {isSignedIn && !isDownloadPage && <BottomNav />}
         </>
       )}
     </>
