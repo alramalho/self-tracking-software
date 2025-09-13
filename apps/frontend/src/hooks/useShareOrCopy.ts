@@ -24,5 +24,16 @@ export function useShareOrCopy() {
     await shareOrCopyLink(link);
   };
 
-  return { shareOrCopyLink, shareOrCopyReferralLink, isShareSupported };
+  const copyLink = async (link: string) => {
+    const success = await copyToClipboard(link);
+    if (!success) toast.error("Failed to copy");
+    toast.success("Link copied to clipboard");
+  };
+
+  return {
+    shareOrCopyLink,
+    shareOrCopyReferralLink,
+    copyLink,
+    isShareSupported,
+  };
 }
