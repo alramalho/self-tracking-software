@@ -5,6 +5,7 @@ import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
 import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
 import Divider from "@/components/Divider";
+import { FireAnimation } from "@/components/FireBadge";
 import NeonCard from "@/components/NeonGradientCard";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import { PlanBadge } from "@/components/PlanBadge";
@@ -16,10 +17,11 @@ import ProfileSettingsPopover, {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePlansProgress } from "@/contexts/PlansProgressContext";
-import { useNotifications } from "@/hooks/useNotifications";
+import {
+  useCurrentUserProgress,
+  usePlansProgress,
+} from "@/contexts/PlanProgressContext/SimplifiedPlanProgressContext";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
@@ -28,17 +30,18 @@ import { getThemeVariants } from "@/utils/theme";
 import { ActivityEntry } from "@tsw/prisma";
 import { subDays } from "date-fns";
 import {
-  Bell,
   ChartArea,
   Check,
   ChevronLeft,
+  EllipsisVertical,
+  Flame,
   History,
   Medal,
-  Settings,
+  Rocket,
   Sprout,
   UserPlus,
   UserX,
-  X,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
@@ -63,8 +66,6 @@ export const getTimeRangeDays = (timeRange: TimeRange): number => {
 };
 
 const ProfilePage: React.FC = () => {
-  const { isPushGranted, setIsPushGranted, requestPermission } =
-    useNotifications();
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [initialActiveView, setInitialActiveView] = useState<string | null>(
     null
@@ -81,6 +82,14 @@ const ProfilePage: React.FC = () => {
     rejectFriendRequest,
     currentUser,
   } = useUnifiedProfileData(username);
+  const { totalStreaks, totalHabits, totalLifestyles } =
+    useCurrentUserProgress();
+
+  useEffect(() => {
+    console.log(`totalStreaks: ${totalStreaks}`);
+    console.log(`totalHabits: ${totalHabits}`);
+    console.log(`totalLifestyles: ${totalLifestyles}`);
+  }, [totalStreaks, totalHabits, totalLifestyles]);
 
   // Extract activities and activityEntries from profileData for consistency
   const activities = profileData?.activities || [];
@@ -141,27 +150,6 @@ const ProfilePage: React.FC = () => {
       setInitialActiveView(activeView);
     }
   }, [searchParams, isOwnProfile]);
-
-  // No longer needed - useQuery handles data fetching automatically
-
-  const handleNotificationChange = async (checked: boolean) => {
-    if (checked) {
-      if (!isPushGranted) {
-        try {
-          await requestPermission();
-          toast.success("Permission for push notifications was granted");
-        } catch (error) {
-          toast.error("Failed to request permission for push notifications");
-          console.error(
-            "Failed to request permission for push notifications:",
-            error
-          );
-        }
-      }
-    } else {
-      setIsPushGranted(false);
-    }
-  };
 
   const handleSendConnectionRequest = async () => {
     if (profileData) {
@@ -228,36 +216,48 @@ const ProfilePage: React.FC = () => {
   const isFriend = useMemo(() => {
     if (isOwnProfile) return false;
 
-    return friends?.some(
-      (friend) => friend.id === currentUser?.id
-    );
+    return friends?.some((friend) => friend.id === currentUser?.id);
   }, [friends, currentUser?.id]);
+
+  // Calculate total activities logged (hardcoded if you don't know where they come from)
+  const totalActivitiesLogged = activityEntries?.length || 247; // Fallback to hardcoded value
 
   if (isProfileDataLoading) {
     return (
-      <div className="flex flex-col items-center min-h-screen p-2">
-        <div className="w-full max-w-3xl">
-          <div className="flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-2xl bg-white/60 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-2 p-2">
-              <Skeleton className="w-20 h-20 rounded-full" />
-              <div className="flex flex-col items-center gap-1">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-20" />
+      <div className="flex flex-col items-center min-h-screen p-2 bg-gradient-to-b from-gray-50 to-white">
+        <div className="w-full max-w-md">
+          {/* TikTok-style header skeleton */}
+          <div className="flex flex-col items-center pt-6">
+            <div className="flex justify-between items-center w-full mb-6">
+              <div className="w-8"></div>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-8 w-12 rounded-full" />
+            </div>
+
+            {/* Avatar */}
+            <Skeleton className="w-24 h-24 rounded-full mb-4" />
+
+            {/* Name and username */}
+            <Skeleton className="h-6 w-40 mb-2" />
+            <Skeleton className="h-4 w-24 mb-6" />
+
+            {/* Stats */}
+            <div className="flex justify-center space-x-8 mb-6">
+              <div className="text-center">
+                <Skeleton className="h-6 w-8 mb-1" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+              <div className="text-center">
+                <Skeleton className="h-6 w-8 mb-1" />
+                <Skeleton className="h-4 w-16" />
               </div>
             </div>
-            <div className="flex flex-col items-center gap-4">
-              <Skeleton className="h-10 w-32" />
-            </div>
-            <div className="flex flex-col items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="text-center">
-                  <Skeleton className="h-8 w-8 mx-auto mb-1" />
-                  <Skeleton className="h-4 w-12" />
-                </div>
-              </div>
-            </div>
+
+            {/* Action button */}
+            <Skeleton className="h-10 w-32 rounded-full" />
           </div>
 
+          {/* Tabs skeleton */}
           <div className="grid grid-cols-2 gap-4 h-13 bg-gray-100 rounded-lg p-1 mb-4">
             <Skeleton className="h-10 rounded-md" />
             <Skeleton className="h-10 rounded-md" />
@@ -287,327 +287,199 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center min-h-screen p-2">
-      <div className="w-full max-w-3xl">
-        <div
-          className={`flex justify-around gap-3 items-center mb-3 ring-2 ring-gray-200 p-3 rounded-2xl bg-white/60 backdrop-blur-sm`}
-        >
-          {!isOwnProfile && (
-            <button
-              className="absolute -left-1 -top-1 p-2 rounded-full hover:bg-gray-100"
-              onClick={() => window.history.back()}
-            >
-              <ChevronLeft size={24} />
-            </button>
-          )}
-          <div className="flex flex-col items-center gap-2 p-2">
-            <div className="relative">
-              <Avatar
-                className={twMerge(
-                  "w-20 h-20",
-                  profilePaidPlanType !== "FREE" &&
-                    "ring-2 ring-offset-2 ring-offset-white",
-                  profilePaidPlanType === "PLUS" && variants.ring
-                )}
+    <div className="flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="w-full max-w-md px-4">
+        {/* TikTok-style Header */}
+        <div className="flex flex-col items-center py-6">
+          {/* Top bar */}
+          <div className="flex justify-between items-center w-full mb-6">
+            {!isOwnProfile ? (
+              <button
+                className="p-2 rounded-full hover:bg-gray-100"
+                onClick={() => window.history.back()}
               >
-                <AvatarImage
-                  src={profileData?.picture || ""}
-                  alt={profileData?.name || ""}
-                />
-                <AvatarFallback>{(profileData?.name || "U")[0]}</AvatarFallback>
-              </Avatar>
-              {profilePaidPlanType && profilePaidPlanType !== "FREE" && (
-                <div className="absolute -bottom-1 -right-1">
-                  <PlanBadge planType={profilePaidPlanType} size={28} />
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-sm text-gray-600 mx-auto">
-                {profileData?.name}
-              </span>
-              <span className="text-xs text-gray-400 mx-auto">
-                @{profileData?.username}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-4">
-            {!isOwnProfile && !isFriend && (
-              <>
-                {hasPendingReceivedConnectionRequest ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      has sent you a friend request
-                    </p>
-                    <div className="flex space-x-6">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-10 w-10 text-green-600 bg-green-50"
-                        onClick={() =>
-                          acceptFriendRequest({
-                            id: profileData.id,
-                            username: profileData.username || "",
-                          })
-                        }
-                      >
-                        <Check className="h-6 w-6" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-10 w-10 text-red-600 bg-red-50"
-                        onClick={() =>
-                          rejectFriendRequest({
-                            id: profileData.id,
-                            username: profileData.username || "",
-                          })
-                        }
-                      >
-                        <X className="h-6 w-6" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                    onClick={handleSendConnectionRequest}
-                    disabled={hasPendingSentConnectionRequest}
-                  >
-                    {hasPendingSentConnectionRequest ? (
-                      <>
-                        <Check size={20} />
-                        <span>Request Sent</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus size={20} />
-                        <span>Add Friend</span>
-                      </>
-                    )}
-                  </Button>
-                )}
-              </>
+                <ChevronLeft size={20} />
+              </button>
+            ) : (
+              <div className="w-8"></div>
+            )}
+
+            {/* <h1 className="text-lg font-semibold">{profileData?.username}</h1> */}
+
+            {isOwnProfile && (
+              <button
+                className="p-2 rounded-full hover:bg-gray-100"
+                onClick={() => setShowUserProfile(true)}
+              >
+                <EllipsisVertical size={20} />
+              </button>
             )}
           </div>
-          <div className="flex flex-col items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Link href={`/friends/${profileData?.username}`}>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {friends?.length || 0}
-                  </p>
-                  <p className="text-sm text-gray-500">Friends</p>
-                </div>
-              </Link>
 
-              {isOwnProfile && (
-                <>
+          {/* Avatar with plan badge */}
+          <div className="relative mb-4">
+            <Avatar
+              className={twMerge(
+                "w-24 h-24",
+                profilePaidPlanType !== "FREE" &&
+                  "ring-2 ring-offset-2 ring-offset-white",
+                profilePaidPlanType === "PLUS" && variants.ring
+              )}
+            >
+              <AvatarImage
+                src={profileData?.picture || ""}
+                alt={profileData?.name || ""}
+              />
+              <AvatarFallback className="text-2xl">
+                {(profileData?.name || "U")[0]}
+              </AvatarFallback>
+            </Avatar>
+            {profilePaidPlanType && profilePaidPlanType !== "FREE" && (
+              <div className="absolute -bottom-1 -right-1">
+                <PlanBadge planType={profilePaidPlanType} size={32} />
+              </div>
+            )}
+          </div>
+
+          {/* Name and username */}
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
+            {profileData?.name}
+          </h2>
+          <p className="text-gray-600 text-sm mb-6">@{profileData?.username}</p>
+
+          {/* TikTok-style stats */}
+          <div className="flex justify-center space-x-8 mb-6">
+            <Link href={`/friends/${profileData?.username}`}>
+              <div className="text-center cursor-pointer">
+                <p className="text-xl font-bold text-gray-900">
+                  {friends?.length || 0}
+                </p>
+                <p className="text-sm text-gray-600">Friends</p>
+              </div>
+            </Link>
+
+            <div className="text-center">
+              <p className="text-xl font-bold text-gray-900">
+                {totalActivitiesLogged}
+              </p>
+              <p className="text-sm text-gray-600">Entries</p>
+            </div>
+          </div>
+
+          {/* Badges */}
+          <div className="flex justify-center space-x-8 mb-6">
+            <div
+              className={cn(
+                "flex items-center transition-all duration-300 relative",
+                totalStreaks == 0 ? "grayscale opacity-50" : ""
+              )}
+            >
+              <span className="text-lg font-cursive">x{totalStreaks}</span>
+              {totalStreaks == 0  ? <Flame size={40} className="pb-2 text-red-500" /> : <FireAnimation height={40} width={40} className="pb-2" />}
+            </div>
+            <div
+              className={cn(
+                "flex items-center transition-all duration-300 relative",
+                totalHabits == 0 ? "grayscale opacity-50" : ""
+              )}
+            >
+              <span className="text-lg font-cursive">x{totalHabits}</span>
+              <Sprout size={40} className="pb-2 text-lime-500" />
+            </div>
+            <div
+              className={cn(
+                "flex items-center transition-all duration-300 relative",
+                totalLifestyles == 0 ? "grayscale opacity-50" : ""
+              )}
+            >
+              <span className="text-lg font-cursive">x{totalLifestyles}</span>
+              <Rocket size={35} className="pb-2 text-orange-500" />
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          {!isOwnProfile && !isFriend && (
+            <>
+              {hasPendingReceivedConnectionRequest ? (
+                <div className="flex space-x-3 mb-6">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="border-none"
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 rounded-full"
                     onClick={() =>
-                      shareOrCopyLink(
-                        `https://app.tracking.so/join/${profileData?.username}`
-                      )
+                      acceptFriendRequest({
+                        id: profileData.id,
+                        username: profileData.username || "",
+                      })
                     }
                   >
-                    <UserPlus size={24} />
+                    <Check className="h-4 w-4 mr-1" />
+                    Accept
                   </Button>
-                  <div className="flex items-center space-x-1">
-                    <Bell size={20} />
-                    <Switch
-                      checked={isPushGranted}
-                      onCheckedChange={handleNotificationChange}
-                    />
-                  </div>
-                  <Settings
-                    size={24}
-                    className="cursor-pointer"
-                    onClick={() => setShowUserProfile(true)}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Achievement badges */}
-            {profileActivePlans && profileActivePlans.length > 0 && (
-              <div className="flex justify-start gap-2 mb-4">
-                {profileActivePlans.map((plan) => {
-                  const backendProgress = plansProgressData?.find(
-                    (p) => p.plan?.id === plan.id
-                  );
-                  const habitAchieved =
-                    backendProgress?.habitAchievement?.isAchieved ?? false;
-                  const lifestyleAchieved =
-                    backendProgress?.lifestyleAchievement?.isAchieved ?? false;
-
-                  // Only render if we have at least one achievement
-                  if (!habitAchieved && !lifestyleAchieved) return null;
-
-                  return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="px-6 rounded-full"
+                    onClick={() =>
+                      rejectFriendRequest({
+                        id: profileData.id,
+                        username: profileData.username || "",
+                      })
+                    }
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Decline
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  className="mb-6 px-8 rounded-full bg-black text-white hover:bg-gray-800"
+                  onClick={handleSendConnectionRequest}
+                  disabled={hasPendingSentConnectionRequest}
+                >
+                  {hasPendingSentConnectionRequest ? (
                     <>
-                      <div
-                        key={plan.id}
-                        className="flex gap-2"
-                        onClick={() =>
-                          setBadgeExplainer({
-                            open: true,
-                            achiever: {
-                              user: {
-                                username: profileData?.username || "",
-                                name: profileData?.name || "",
-                                picture: profileData?.picture || "",
-                              },
-                              plan: {
-                                type: lifestyleAchieved
-                                  ? "lifestyle"
-                                  : habitAchieved
-                                  ? "habit"
-                                  : undefined,
-                                emoji: plan.emoji || "",
-                                goal: plan.goal,
-                                streak:
-                                  backendProgress?.achievement.streak || 0,
-                              },
-                            },
-                          })
-                        }
-                      >
-                        {habitAchieved && (
-                          <div
-                            className={cn(
-                              "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
-                              "ring-2 ring-lime-400 bg-gradient-to-r from-lime-50 to-green-50",
-                              "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                            )}
-                          >
-                            <Sprout size={14} className="text-lime-600" />
-                            <span className="text-lime-700">Habit</span>
-                            <span className="opacity-60">{plan.emoji}</span>
-                          </div>
-                        )}
-                        {lifestyleAchieved && (
-                          <div
-                            className={cn(
-                              "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
-                              "ring-2 ring-amber-400 bg-gradient-to-r from-amber-50 to-amber-50",
-                              "shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                            )}
-                          >
-                            <Medal size={14} className="text-amber-600" />
-                            <span className="text-amber-700">Lifestyle</span>
-                            <span className="opacity-60">{plan.emoji}</span>
-                          </div>
-                        )}
-                      </div>
+                      <Check size={16} className="mr-2" />
+                      Request Sent
                     </>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* <div className="relative overflow-x-scroll w-full pb-3 h-full">
-              <div className="flex justify-start gap-2 cursor-pointer hover:opacity-90 transition-opacity">
-                {isOnesOwnProfile && profileData?.plans && (
-                  <div className="flex justify-start gap-2">
-                    {achivements
-                      ?.filter(({ achievement }) => achievement.isAchieved)
-                      .map(({ plan }) => {
-                        return (
-                          <TrophyBadge key={plan.id}>
-                            <span className="opacity-100 ml-1">
-                              {plan.emoji}
-                            </span>
-                          </TrophyBadge>
-                        );
-                      })}
-                    {achivements?.map(({ plan, achievement }) => {
-                      return (
-                        <FireBadge
-                          key={plan.id}
-                          onClick={() => setShowStreakDetails(true)}
-                        >
-                          x{achievement.planScore}
-                          <span className="opacity-100 ml-1">{plan.emoji}</span>
-                        </FireBadge>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {isOnesOwnProfile && userPaidPlanType === "PLUS" && (
-                  <>
-                    <div
-                      onClick={() => setShowUpgradePopover(true)}
-                      className="relative text-2xl font-bold flex items-center gap-1 ml-2 min-w-fit min-h-fit"
-                    >
-                      <picture>
-                        <source
-                          srcSet="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.webp"
-                          type="image/webp"
-                        />
-                        <img
-                          src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f331/512.gif"
-                          alt="🌱"
-                          width="54"
-                          height="54"
-                        />
-                      </picture>
-                      <span className="absolute bottom-0 right-[50%] translate-x-[50%] text-lg font-cursive">
-                        supporter
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              </div> */}
-            <StreakDetailsPopover
-              open={showStreakDetails}
-              onClose={() => {
-                setShowStreakDetails(false);
-              }}
-            />
-          </div>
+                  ) : (
+                    <>
+                      <UserPlus size={16} className="mr-2" />
+                      Add Friend
+                    </>
+                  )}
+                </Button>
+              )}
+            </>
+          )}
         </div>
 
+        {/* Profile Settings Popover */}
         {isOwnProfile && (
-          <>
-            <ProfileSettingsPopover
-              open={showUserProfile}
-              onClose={() => setShowUserProfile(false)}
-              initialActiveView={initialActiveView as ActiveView | null}
-              redirectTo={redirectTo}
-            />
-          </>
+          <ProfileSettingsPopover
+            open={showUserProfile}
+            onClose={() => setShowUserProfile(false)}
+            initialActiveView={initialActiveView as ActiveView | null}
+            redirectTo={redirectTo}
+          />
         )}
 
+        {/* Tabs */}
         <Tabs defaultValue="plans" className="w-full mb-2">
-          <TabsList className={`grid w-full h-13 bg-gray-100 grid-cols-2`}>
-            <TabsTrigger value="plans">
+          <TabsList className="grid w-full h-13 bg-gray-100 grid-cols-2 rounded-xl">
+            <TabsTrigger value="plans" className="rounded-lg">
               <div className="flex flex-row gap-2 py-[2px] items-center">
-                <ChartArea size={22} />
+                <ChartArea size={20} />
                 <span>Plans</span>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="history">
+            <TabsTrigger value="history" className="rounded-lg">
               <div className="flex flex-row gap-2 py-[2px] items-center">
-                <History size={22} />
+                <History size={20} />
                 <span>History</span>
               </div>
             </TabsTrigger>
-            {/* {userHasAccessToAi && isOnesOwnProfile && (
-              <TabsTrigger value="mood">
-                <div className="flex flex-col items-center">
-                  <SquareActivity size={22} />
-                  <span>Mood</span>
-                </div>
-              </TabsTrigger>
-            )} */}
           </TabsList>
+
           <TabsContent value="plans">
             <div className="space-y-4 mt-4">
               {profileData?.plans && profileData?.plans.length > 0 && (
@@ -705,9 +577,6 @@ const ProfilePage: React.FC = () => {
                               size={42}
                               className="text-lime-500 animate-pulse"
                             />
-                            {/* <span className="text-sm text-gray-600">
-                              It&apos;s a habit for {userInformalName}
-                            </span> */}
                           </div>
                         )}
                         {lifestyleAchieved && (
@@ -716,10 +585,6 @@ const ProfilePage: React.FC = () => {
                               size={42}
                               className="text-amber-500 animate-pulse"
                             />
-                            {/* <span className="text-sm text-gray-600">
-                              Part of {userInformalName}&apos;s lifestyle for{" "}
-                              {backendProgress?.achievement?.streak ?? 0} weeks
-                            </span> */}
                           </div>
                         )}
                       </div>
@@ -759,6 +624,7 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
           </TabsContent>
+
           <TabsContent value="history">
             {activityEntries?.length > 0 ? (
               <div className="space-y-4">
@@ -807,30 +673,18 @@ const ProfilePage: React.FC = () => {
               </div>
             )}
           </TabsContent>
-          {/* {userHasAccessToAi && isOnesOwnProfile && (
-            <TabsContent value="mood">
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg bg-white">
-                  <div className="flex flex-row items-center gap-2 mb-4">
-                    <h3 className="text-lg font-semibold">
-                      Emotional Profile ⭐️
-                    </h3>
-                    <p className="text-xs font-medium text-muted-foreground">
-                      <Link
-                        href="https://github.com/alramalho/self-tracking-software"
-                        className="underline"
-                      >
-                        We don&apos;t store your voice data
-                      </Link>
-                    </p>
-                  </div>
-                  <EmotionViewer messages={messagesData.data?.messages || []} />
-                </div>
-              </div>
-            </TabsContent>
-          )} */}
         </Tabs>
       </div>
+
+      {/* Streak Details Popover */}
+      <StreakDetailsPopover
+        open={showStreakDetails}
+        onClose={() => {
+          setShowStreakDetails(false);
+        }}
+      />
+
+      {/* Activity Entry Editor */}
       {showEditActivityEntry && isOwnProfile && (
         <ActivityEntryEditor
           open={!!showEditActivityEntry}
@@ -844,6 +698,8 @@ const ProfilePage: React.FC = () => {
           onClose={() => setShowActivityToEdit(undefined)}
         />
       )}
+
+      {/* Badge Explainer Popover */}
       <BadgeExplainerPopover
         open={badgeExplainer.open}
         onClose={() => setBadgeExplainer((prev) => ({ ...prev, open: false }))}

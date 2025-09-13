@@ -1,4 +1,4 @@
-import { isWeekCompleted } from "@/contexts/PlanProgressContext/lib";
+import { usePlanProgress } from "@/contexts/PlanProgressContext/SimplifiedPlanProgressContext";
 import { CompletePlan } from "@/contexts/plans";
 import { Activity, ActivityEntry } from "@tsw/prisma";
 import { format, startOfWeek } from "date-fns";
@@ -20,6 +20,7 @@ const PlanActivityEntriesRenderer: React.FC<
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
+  const { isWeekCompleted } = usePlanProgress(plan.id);
 
   const planActivityEntries = activityEntries.filter((e) =>
     plan.activities?.map((a) => a.id).includes(e.activityId)
@@ -152,7 +153,7 @@ const PlanActivityEntriesRenderer: React.FC<
         onDateClick={setFocusedDate}
         getIntensityForDate={getIntensityForDate}
         getWeekCompletionStatus={(weekStartDate: Date) =>
-          isWeekCompleted(weekStartDate, plan, planActivityEntries)
+          isWeekCompleted(weekStartDate)
         }
         onEditActivity={handleOpenActivityEditor}
       />

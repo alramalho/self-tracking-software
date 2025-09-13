@@ -1,4 +1,4 @@
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { usePlansProgress } from "@/contexts/PlansProgressContext";
 // ACHIEVEMENT_WEEKS moved to backend
 import { CompletePlan } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -32,7 +32,9 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { plansProgress } = usePlanProgress();
+  const activePlans = plans?.filter(p => !p.deletedAt) ?? [];
+  const planIds = activePlans.map(p => p.id);
+  const { data: plansProgress, isLoading } = usePlansProgress(planIds);
 
   // Helper function to check if a streak was achieved this week
   const wasStreakAchievedThisWeek = (planProgressData: any) => {
@@ -50,6 +52,10 @@ const PlansAchievements: React.FC<PlansAchievementsProps> = ({
       currentWeek.completedActivities.length > 0
     );
   };
+
+  if (isLoading || !plansProgress) {
+    return <div className={`flex flex-col gap-3 ${className} w-full`}>Loading achievements...</div>;
+  }
 
   return (
     <div className={`flex flex-col gap-3 ${className} w-full`}>

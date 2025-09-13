@@ -1,13 +1,8 @@
 import { useActivities } from "@/contexts/activities";
 import {
-  PlanProgressData,
   usePlanProgress,
-} from "@/contexts/PlanProgressContext";
-import {
-  isWeekCompleted as checkIsWeekCompleted,
-  getCompletedOn,
-  isSessionCompleted,
-} from "@/contexts/PlanProgressContext/lib";
+} from "@/contexts/PlansProgressContext";
+import type { PlanProgress as PlanProgressData } from "@/contexts/PlansProgressContext";
 import { CompletePlan } from "@/contexts/plans";
 import useConfetti from "@/hooks/useConfetti";
 import { cn } from "@/lib/utils";
@@ -54,13 +49,12 @@ export const PlanWeekDisplay = ({
   planProgress: providedPlanProgress,
 }: PlanWeekDisplayProps) => {
   // Always call hooks to maintain consistent order
-  const { plansProgress } = usePlanProgress();
+  const { data: planProgressData } = usePlanProgress(plan.id);
   const { activities, activityEntries } = useActivities();
   const { stars, shapes } = useConfetti();
 
-  // Use provided plan progress if available, otherwise find from hook
-  const planProgress =
-    providedPlanProgress || plansProgress.find((p) => p.plan?.id === plan.id);
+  // Use provided plan progress if available, otherwise use from hook
+  const planProgress = providedPlanProgress || planProgressData;
   const week = planProgress?.weeks.find((w) => isSameWeek(w.startDate, date));
 
   const [animatedCompletedActivities, setAnimatedCompletedActivities] =
@@ -87,7 +81,9 @@ export const PlanWeekDisplay = ({
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
   const isWeekCompleted = week
-    ? checkIsWeekCompleted(week.startDate, plan, week.completedActivities)
+    ? (plan.outlineType === "TIMES_PER_WEEK" 
+        ? totalCompletedActivities >= totalPlannedActivities
+        : totalCompletedActivities === totalPlannedActivities)
     : false;
 
   const isCurrentWeek = week ? isSameWeek(week.startDate, new Date()) : false;
@@ -247,16 +243,13 @@ export const PlanWeekDisplay = ({
                 const activity = activities.find(
                   (a) => a.id === session.activityId
                 );
-                const completed = isSessionCompleted(
-                  session,
-                  plan,
-                  activityEntries || []
+                // Check if session is completed by looking for activity entries on that date
+                const sessionEntries = (activityEntries || []).filter(entry => 
+                  entry.activityId === session.activityId &&
+                  isSameWeek(entry.date, session.date)
                 );
-                const completedOn = getCompletedOn(
-                  session,
-                  plan,
-                  activityEntries || []
-                );
+                const completed = sessionEntries.length > 0;
+                const completedOn = sessionEntries[0]?.date;
                 if (!activity) return null;
 
                 const sessionId = `${session.date}-${session.activityId}`;

@@ -1,6 +1,5 @@
-import { isWeekCompleted as checkIsWeekCompleted } from "@/contexts/PlanProgressContext/lib";
 import { CompletePlan } from "@/contexts/plans";
-import { usePlansProgress } from "@/contexts/PlansProgressContext";
+import { usePlanProgress } from "@/contexts/PlansProgressContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
@@ -87,7 +86,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { data: plansProgressData } = usePlansProgress(isDemo ? [] : [plan.id]);
+  const { data: planProgressData } = usePlanProgress(isDemo ? "" : plan.id);
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
   const router = useRouter();
@@ -117,9 +116,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
   const totalCompletedActivities = uniqueDaysWithActivities.size;
 
-  const backendProgress = !isDemo
-    ? plansProgressData?.find((p) => p.plan?.id === plan.id)
-    : null;
+  const backendProgress = !isDemo ? planProgressData : null;
   const FALLBACK_HABIT_WEEKS = 4;
   const FALLBACK_LIFESTYLE_WEEKS = 9;
 
@@ -141,11 +138,10 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
     backendProgress?.lifestyleAchievement?.isAchieved ??
     achievement.streak >= FALLBACK_LIFESTYLE_WEEKS;
 
-  const isWeekCompleted = checkIsWeekCompleted(
-    currentWeek.startDate,
-    plan,
-    currentWeek.completedActivities
-  );
+  // Calculate if week is completed from current week data
+  const isWeekCompleted = plan.outlineType === "TIMES_PER_WEEK" 
+    ? totalCompletedActivities >= totalPlannedActivities
+    : totalCompletedActivities === totalPlannedActivities;
   const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
   const showConfetti = isCurrentWeek && isWeekCompleted;
 

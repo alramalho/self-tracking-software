@@ -1,3 +1,12 @@
+/**
+ * @deprecated This entire file is deprecated. All plan progress calculations have been moved to the backend.
+ * Use the simplified hooks from SimplifiedPlanProgressContext instead:
+ * - usePlanProgress(planId) for single plan progress
+ * - usePlansProgress(planIds) for multiple plans progress
+ * 
+ * Backend now provides all necessary data via /plans/:planId/progress endpoint.
+ */
+
 import { addWeeks, format, isAfter, isBefore, isSameDay, min } from "date-fns";
 
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
@@ -7,11 +16,15 @@ import { CompletePlan } from "../plans";
 
 // ACHIEVEMENT_WEEKS moved to backend - use backend data instead
 
+/**
+ * @deprecated Use backend data from usePlanProgress instead
+ */
 export const countTimesPerWeekPlanCompletedWeekSessions = (
   plan: CompletePlan,
   userActivityEntries: ActivityEntry[],
   date: Date
 ) => {
+  console.warn('[DEPRECATED] countTimesPerWeekPlanCompletedWeekSessions is deprecated. Use backend data from usePlanProgress instead.');
   const completedSessionsThisWeek = userActivityEntries
     .filter((entry) =>
       plan.activities?.some((activity) => activity.id === entry.activityId)
@@ -32,11 +45,15 @@ export const countTimesPerWeekPlanCompletedWeekSessions = (
   return completedSessionsThisWeek;
 };
 
+/**
+ * @deprecated Use backend data from usePlanProgress instead
+ */
 export const getCompletedOn = (
   session: PlanSession,
   plan: CompletePlan,
   userActivityEntries: ActivityEntry[]
 ) => {
+  console.warn('[DEPRECATED] getCompletedOn is deprecated. Use backend data from usePlanProgress instead.');
   const weekStart = startOfWeek(session.date, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(session.date, { weekStartsOn: 0 });
 
@@ -68,11 +85,15 @@ export const getCompletedOn = (
     : undefined;
 };
 
+/**
+ * @deprecated Use backend data from usePlanProgress instead
+ */
 export const isSessionCompleted = (
   session: PlanSession,
   plan: CompletePlan,
   userActivityEntries: ActivityEntry[]
 ) => {
+  console.warn('[DEPRECATED] isSessionCompleted is deprecated. Use backend data from usePlanProgress instead.');
   const weekStart = startOfWeek(session.date, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(session.date, { weekStartsOn: 0 });
 
@@ -101,11 +122,15 @@ export const isSessionCompleted = (
   return completedSessionsThisWeek.length > sessionIndex;
 };
 
+/**
+ * @deprecated Use backend data from usePlanProgress instead
+ */
 export const isWeekCompleted = (
   weekStartDate: Date,
   plan: CompletePlan,
   planActivityEntries: ActivityEntry[]
 ) => {
+  console.warn('[DEPRECATED] isWeekCompleted is deprecated. Use backend data from usePlanProgress instead.');
   const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
   const weekStart = startOfWeek(weekStartDate, { weekStartsOn: 0 });
 
@@ -157,11 +182,15 @@ export const isWeekCompleted = (
   }
 };
 
+/**
+ * @deprecated Use backend data from usePlanProgress instead
+ */
 export const calculatePlanAchievement = (
   plan: CompletePlan,
   activityEntries: ActivityEntry[],
   initialDate?: Date
 ): PlanAchievementResult => {
+  console.warn('[DEPRECATED] calculatePlanAchievement is deprecated. Use backend data from usePlanProgress instead.');
   const planActivityEntries = activityEntries.filter(
     (entry) => plan.activities?.some((a) => a.id === entry.activityId) ?? false
   );
@@ -234,12 +263,16 @@ export const calculatePlanAchievement = (
   };
 };
 
+/**
+ * @deprecated Use backend data from usePlanProgress instead
+ */
 export function getPlanWeek(
   date: Date,
   plan: CompletePlan,
   userActivityEntries: ActivityEntry[],
   userActivities: Activity[]
 ): PlanWeek {
+  console.warn('[DEPRECATED] getPlanWeek is deprecated. Use backend data from usePlanProgress instead.');
   // Calculate the date range for the week in question (start on Sunday, finish on Saturday)
   const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
   const weekEnd = endOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
@@ -304,12 +337,16 @@ export function getPlanWeek(
   };
 }
 
+/**
+ * @deprecated Use backend data from usePlanProgress instead
+ */
 export function getPlanWeeks(
   plan: CompletePlan,
   userActivities: Activity[],
   userActivityEntries: ActivityEntry[],
   startDate?: Date
 ): PlanWeek[] {
+  console.warn('[DEPRECATED] getPlanWeeks is deprecated. Use backend data from usePlanProgress instead.');
   const weeks: PlanWeek[] = [];
   let weekStart = startOfWeek(startDate ?? new Date(), { weekStartsOn: 0 });
   const LEGACY_ACHIEVEMENT_WEEKS = 9; // Temporary fallback

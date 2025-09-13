@@ -22,6 +22,15 @@ import {
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
+
+type PlanWeek = {
+  startDate: Date;
+  activities: Activity[];
+  completedActivities: ActivityEntry[];
+  plannedActivities: number | PlanSession[];
+  weekActivities: Activity[];
+  isCompleted: boolean;
+};
 export class PlansService {
   constructor() {
     // Inject this service into aiService to avoid circular dependency
@@ -566,10 +575,12 @@ export class PlansService {
     planId: string,
     userId: string
   ): Promise<{
+    planId: string;
     plan: {
       emoji: string;
       goal: string;
       id: string;
+      type: PlanOutlineType;
     };
     achievement: {
       streak: number;
@@ -597,6 +608,7 @@ export class PlansService {
       isAchieved: boolean;
       progressPercentage: number;
     };
+    weeks: Array<PlanWeek>;
   }> {
     // Verify plan ownership
     const plan = await prisma.plan.findUnique({
@@ -628,17 +640,156 @@ export class PlansService {
     const lifestyleAchievement =
       this.calculateLifestyleAchievement(achievement);
 
+    // Get weeks data
+    const weeks = await this.getPlanWeeks(plan, userId);
+
     return {
+      planId,
       plan: {
         emoji: plan.emoji || "🔥",
         goal: plan.goal,
         id: plan.id,
+        type: plan.outlineType,
       },
       achievement,
       currentWeekStats,
       habitAchievement,
       lifestyleAchievement,
+      weeks,
     };
+  }
+
+  private async getPlanWeek(
+    date: Date,
+    plan: Plan & { activities: Activity[]; sessions?: PlanSession[] },
+    userActivities: Activity[]
+  ): Promise<{
+    startDate: Date;
+    activities: Activity[];
+    completedActivities: ActivityEntry[];
+    plannedActivities: number | PlanSession[];
+    weekActivities: Activity[];
+    isCompleted: boolean;
+  }> {
+    // Calculate the date range for the week in question (start on Sunday, finish on Saturday)
+    const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
+    const weekEnd = endOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
+
+    // Filter to have available only the activities present in the plan.activities
+    const planActivities = userActivities.filter((activity) =>
+      plan.activities?.some((a) => a.id === activity.id)
+    );
+
+    // Get activity entries for this week
+    const planActivityEntriesThisWeek = await prisma.activityEntry.findMany({
+      where: {
+        activityId: { in: plan.activities.map((a) => a.id) },
+        date: {
+          gte: weekStart,
+          lte: weekEnd,
+        },
+        deletedAt: null,
+      },
+    });
+
+    // For completed activities, return the performed activity entries this week for that plan
+    const completedActivities = planActivityEntriesThisWeek;
+
+    // Check whether the plan is times per week or scheduled sessions
+    let plannedActivities: number | PlanSession[];
+
+    if (plan.outlineType === "TIMES_PER_WEEK") {
+      // If times per week, return the plan activities (not entries!)
+      plannedActivities = plan.timesPerWeek ?? 0;
+    } else {
+      // If scheduled, return the plan.sessions for this specific week
+      const sessionsThisWeek = plan.sessions?.filter((session) => {
+        const sessionDate = new Date(session.date);
+        return (
+          isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEnd)
+        );
+      });
+      plannedActivities = sessionsThisWeek ?? 0;
+    }
+
+    let weekActivities: Activity[];
+
+    if (plan.outlineType === "TIMES_PER_WEEK") {
+      weekActivities = planActivities;
+    } else {
+      const sessionsThisWeek = plan.sessions?.filter((session) => {
+        const sessionDate = new Date(session.date);
+        return (
+          isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEnd)
+        );
+      });
+
+      const activityIdsThisWeek = Array.from(
+        new Set(sessionsThisWeek?.map((session) => session.activityId) ?? [])
+      );
+
+      weekActivities = planActivities.filter((activity) =>
+        activityIdsThisWeek.includes(activity.id)
+      );
+    }
+
+    return {
+      startDate: weekStart,
+      activities: planActivities,
+      completedActivities,
+      plannedActivities,
+      weekActivities,
+      isCompleted:
+        completedActivities.length >=
+        (typeof plannedActivities === "number"
+          ? plannedActivities
+          : (plannedActivities?.length ?? 0)),
+    };
+  }
+
+  private async getPlanWeeks(
+    plan: Plan & { activities: Activity[]; sessions?: PlanSession[] },
+    userId: string,
+    startDate?: Date
+  ): Promise<Array<PlanWeek>> {
+    // Get user activities
+    const userActivities = await prisma.activity.findMany({
+      where: { userId },
+    });
+
+    // Get plan with sessions if not already included
+    const planWithSessions = plan.sessions
+      ? plan
+      : await prisma.plan.findUnique({
+          where: { id: plan.id },
+          include: {
+            activities: true,
+            sessions: true,
+          },
+        });
+
+    if (!planWithSessions) {
+      throw new Error(`Plan ${plan.id} not found`);
+    }
+
+    const weeks: Array<PlanWeek> = [];
+
+    let weekStart = startOfWeek(startDate ?? new Date(), { weekStartsOn: 0 });
+    const planEndDate = new Date(
+      plan.finishingDate || addWeeks(weekStart, this.LIFESTYLE_WEEKS)
+    );
+
+    while (isBefore(weekStart, planEndDate)) {
+      const weekData = await this.getPlanWeek(
+        weekStart,
+        planWithSessions,
+        userActivities
+      );
+      weeks.push(weekData);
+      weekStart = addWeeks(weekStart, 1);
+    }
+
+    return weeks;
   }
 }
 

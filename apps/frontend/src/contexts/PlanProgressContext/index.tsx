@@ -1,14 +1,16 @@
 import { useApiWithAuth } from "@/api";
 import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
 import { useQuery } from "@tanstack/react-query";
-import { isAfter } from "date-fns";
 import React, { createContext, useContext, useMemo } from "react";
-import { useActivities } from "../activities";
-import { CompletePlan, usePlans } from "../plans";
-import { calculatePlanAchievement, getPlanWeeks } from "./lib";
+import { CompletePlan } from "../plans";
+// Deprecated: Complex calculation logic moved to backend
+// import { calculatePlanAchievement, getPlanWeeks } from "./lib";
 
 // Re-export the new simplified API
-export { usePlansProgress } from "../PlansProgressContext";
+export { usePlansProgress as useSimplifiedPlansProgress, usePlanProgress as useSimplifiedPlanProgress } from "./SimplifiedPlanProgressContext";
+
+// Re-export types for backward compatibility
+export type { PlanProgressData as SimplifiedPlanProgressData } from "./SimplifiedPlanProgressContext";
 
 export interface PlanAchievementResult {
   streak: number;
@@ -81,8 +83,6 @@ const PlanProgressContext = createContext<PlanProgressContextType | undefined>(
 export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { plans } = usePlans();
-  const { activities, activityEntries } = useActivities();
   const api = useApiWithAuth();
 
   const fetchPlanProgress = async (planId: string): Promise<BackendPlanProgress> => {
@@ -104,31 +104,16 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const plansProgress = useMemo(() => {
-    if (!plans || !activities || !activityEntries) {
-      return [];
-    }
-
-    const planProgress = plans.filter((p) => p.deletedAt === null && (p.finishingDate ? isAfter(p.finishingDate, new Date()) : true)).map((plan): PlanProgressData => {
-      return {
-        plan: plan as CompletePlan,
-        achievement: calculatePlanAchievement(
-          plan as CompletePlan,
-          activityEntries,
-        ),
-        weeks: getPlanWeeks(
-          plan as CompletePlan,
-          activities,
-          activityEntries
-        ),
-      };
-    });
-    return planProgress;
-  }, [plans, activities, activityEntries]);
+    console.warn("[DEPRECATED] PlanProgressContext.plansProgress is deprecated. Use useSimplifiedPlansProgress hook instead.");
+    // Return empty array - components should migrate to use useSimplifiedPlansProgress
+    return [];
+  }, []);
 
   const getPlanProgress = (
-    planId: string
+    _planId: string
   ): PlanAchievementResult | undefined => {
-    return plansProgress.find((p) => p.plan.id === planId)?.achievement;
+    console.warn("[DEPRECATED] getPlanProgress is deprecated. Use useSimplifiedPlanProgress hook instead.");
+    return undefined;
   };
 
   const getPlanProgressFromBackend = (
@@ -139,7 +124,16 @@ export const PlanProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const context: PlanProgressContextType = {
-    calculatePlanAchievement,
+    calculatePlanAchievement: () => {
+      console.warn("[DEPRECATED] calculatePlanAchievement is deprecated. Use backend data via useSimplifiedPlanProgress instead.");
+      return {
+        streak: 0,
+        completedWeeks: 0,
+        incompleteWeeks: 0,
+        isAchieved: false,
+        totalWeeks: 0,
+      };
+    },
     plansProgress,
     getPlanProgress,
     getPlanProgressFromBackend,
@@ -166,15 +160,20 @@ export const usePlanProgress = () => {
 
 // Export a function to create plan progress data independently (for demos)
 export const createPlanProgressData = (
-  plan: CompletePlan,
-  activities: Activity[],
-  activityEntries: ActivityEntry[]
+  _plan: CompletePlan,
+  _activities: Activity[],
+  _activityEntries: ActivityEntry[]
 ): PlanProgressData => {
-  const result = {
-    plan,
-    achievement: calculatePlanAchievement(plan, activityEntries),
-    weeks: getPlanWeeks(plan, activities, activityEntries),
+  console.warn("[DEPRECATED] createPlanProgressData is deprecated. Use backend data via useSimplifiedPlanProgress instead.");
+  return {
+    plan: _plan,
+    achievement: {
+      streak: 0,
+      completedWeeks: 0,
+      incompleteWeeks: 0,
+      isAchieved: false,
+      totalWeeks: 0,
+    },
+    weeks: [],
   };
-  console.log(result);
-  return result;
 };
