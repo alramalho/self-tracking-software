@@ -16,7 +16,7 @@ import { useEffect } from "react";
 import { Button } from "./ui/button";
 
 const DownloadComponent = () => {
-  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
+  const { shareOrCopyLink, copyLink, isShareSupported } = useShareOrCopy();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -77,7 +77,7 @@ const DownloadComponent = () => {
         <div 
           className="bg-gray-900 p-3 px-7 rounded-lg border border-gray-700 flex items-center gap-2 mb-4 cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => {
-            shareOrCopyLink(`https://app.tracking.so/download`);
+            copyLink(`https://app.tracking.so/download`);
           }}
         >
           <span className="font-mono text-gray-100">tracking.so</span>
