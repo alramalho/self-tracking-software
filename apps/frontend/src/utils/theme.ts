@@ -7,6 +7,7 @@ export interface ThemeVariants {
   // Basic colors
   raw: BaseLoweredThemeColor; // Raw color name
   hex: string;
+  brightHex: string;
   bg: string;
   veryFadedBg: string;
   fadedBg: string;
@@ -58,6 +59,7 @@ export const themeVariants: Record<
   slate: {
     raw: "slate",
     hex: "#64748b",
+    brightHex: "#94a3b8",
     bg: "bg-slate-500",
     hardGradientBg: "bg-gradient-to-r from-slate-500 to-slate-600",
     softGradientBg:
@@ -105,6 +107,7 @@ export const themeVariants: Record<
   blue: {
     raw: "blue",
     hex: "#3b82f6",
+    brightHex: "#00bcff",
     bg: "bg-blue-500",
     hardGradientBg: "bg-gradient-to-r from-blue-500 to-blue-600",
     softGradientBg:
@@ -152,6 +155,7 @@ export const themeVariants: Record<
   violet: {
     raw: "violet",
     hex: "#818cf8",
+    brightHex: "#a5b4fc",
     bg: "bg-violet-500",
     hardGradientBg: "bg-gradient-to-r from-violet-500 to-violet-600",
     softGradientBg:
@@ -199,6 +203,7 @@ export const themeVariants: Record<
   amber: {
     raw: "amber",
     hex: "#f59e0b",
+    brightHex: "#fcd34d",
     bg: "bg-amber-500",
     hardGradientBg: "bg-gradient-to-r from-amber-500 to-amber-600",
     softGradientBg:
@@ -246,6 +251,7 @@ export const themeVariants: Record<
   emerald: {
     raw: "emerald",
     hex: "#10b981",
+    brightHex: "#56d364",
     bg: "bg-emerald-500",
     hardGradientBg: "bg-gradient-to-r from-emerald-500 to-emerald-600",
     softGradientBg:
@@ -293,6 +299,7 @@ export const themeVariants: Record<
   rose: {
     raw: "rose",
     hex: "#f43f5e",
+    brightHex: "#fda4af",
     bg: "bg-rose-500",
     hardGradientBg: "bg-gradient-to-r from-rose-500 to-rose-600",
     softGradientBg:

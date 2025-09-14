@@ -17,7 +17,6 @@ const PlansPage: React.FC = () => {
         {currentUser?.name ? `, ${currentUser.name}` : ""}. Here are your
         active plans:
       </h1>
-
       <PlansRenderer initialSelectedPlanId={selectedPlanFromUrl} />
     </div>
   );

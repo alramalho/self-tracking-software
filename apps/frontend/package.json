@@ -69,6 +69,7 @@
     "heic2any": "^0.0.4",
     "idb": "^8.0.3",
     "lucide-react": "^0.451.0",
+    "motion": "^12.23.12",
     "next": "14.2.5",
     "next-themes": "^0.3.0",
     "posthog-js": "^1.181.0",

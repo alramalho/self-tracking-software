@@ -7,14 +7,14 @@ import "./globals.css";
 import PostHogPageView from "./PostHogPageView";
 import { PHProvider } from "./providers";
 
-
 const ClientLayout = dynamic(() => import("./layoutClient"), { ssr: false });
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "the self tracking app that gets you motivated | tracking.so ",
-  description: "improve your consistency and improve your lifestyle. free and open source.",
+  description:
+    "improve your consistency and improve your lifestyle. free and open source.",
   manifest: "/manifest.json",
 };
 

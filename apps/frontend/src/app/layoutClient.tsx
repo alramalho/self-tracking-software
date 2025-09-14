@@ -10,9 +10,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { useSession } from "@clerk/clerk-react";
-import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
-import { QueryClient } from '@tanstack/react-query';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
 
@@ -38,43 +38,52 @@ export default function ClientLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isSignedIn } = useSession(); // Removed isLoaded as it's not used directly here
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-
   return (
     <PersistQueryClientProvider
       // <QueryClientProvider
       client={queryClient}
       persistOptions={{ persister: localStoragePersister }}
     >
-        <GlobalDataProvider>
+      <GlobalDataProvider>
         <PlanProgressProvider>
           <ThemeProvider>
-            <UpgradeProvider>
-              <DailyCheckinPopoverProvider>
-                <NotificationsProvider>
-                  <main
-                    className={cn(
-                      "relative h-[100dvh] [background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4",
-                      isSignedIn && isDesktop ? "ml-64" : ""
-                    )}
-                  >
-                    <GeneralInitializer>{children}</GeneralInitializer>
-                  </main>
-                  <SonnerToaster position="top-center" />
-                  <Toaster
-                    position="top-center"
-                    containerStyle={{
-                      bottom: "5rem",
-                      zIndex: 105,
-                    }}
-                  />
-                </NotificationsProvider>
-              </DailyCheckinPopoverProvider>
-            </UpgradeProvider>
+            <ThemedClientLayout>{children}</ThemedClientLayout>
           </ThemeProvider>
         </PlanProgressProvider>
-        </GlobalDataProvider>
+      </GlobalDataProvider>
     </PersistQueryClientProvider>
   );
 }
+
+const ThemedClientLayout = ({ children }: { children: React.ReactNode }) => {
+  const { isSignedIn } = useSession();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  return (
+    <>
+      {/* Full screen background element with fixed positioning */}
+
+      <UpgradeProvider>
+        <DailyCheckinPopoverProvider>
+          <NotificationsProvider>
+            <main
+              className={cn(
+                "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
+                isSignedIn && isDesktop ? "ml-64" : ""
+              )}
+            >
+              <GeneralInitializer>{children}</GeneralInitializer>
+            </main>
+            <SonnerToaster position="top-center" />
+            <Toaster
+              position="top-center"
+              containerStyle={{
+                bottom: "5rem",
+                zIndex: 105,
+              }}
+            />
+          </NotificationsProvider>
+        </DailyCheckinPopoverProvider>
+      </UpgradeProvider>
+    </>
+  );
+};

@@ -1,11 +1,11 @@
 import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities";
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { usePlanProgress } from "@/contexts/PlanProgressContext/SimplifiedPlanProgressContext";
 import { CompletePlan, usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { addWeeks, endOfWeek, format, isSameWeek, subDays } from "date-fns";
+import { addWeeks, endOfWeek, format, isFuture, isSameWeek, startOfWeek, subDays } from "date-fns";
 import { ChartArea, Maximize2, Minimize2, PlusSquare } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -46,8 +46,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
 
-  const { plansProgress } = usePlanProgress();
-  const planProgress = plansProgress.find((p) => p.plan.id === selectedPlan.id);
+  const { data: planProgress } = usePlanProgress(selectedPlan.id);
   const currentWeekRef = useRef<HTMLDivElement>(null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -181,10 +180,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   // Filter weeks to show current and next week, or all weeks based on showAllWeeks state
   const weeksToDisplay = useMemo(() => {
+    console.log({planProgressWeeks: planProgress?.weeks})
     if (!planProgress?.weeks) return [];
 
+
     if (showAllWeeks) {
-      return planProgress.weeks;
+      return planProgress.weeks.filter(w => isFuture(startOfWeek(w.startDate)) || isSameWeek(startOfWeek(w.startDate), new Date(), { weekStartsOn: 0 }));
     }
 
     const currentWeekIndex = planProgress.weeks.findIndex((week) =>

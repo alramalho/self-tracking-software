@@ -4,7 +4,9 @@ import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
+import { getThemeVariants } from "@/utils/theme";
 import { useSession } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
@@ -29,8 +31,19 @@ export default function GeneralInitializer({
   const [showBugDialog, setShowBugDialog] = useState(false);
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-    const router = useRouter();
+  const router = useRouter();
   const [hasUpdatedTimezone, setHasUpdatedTimezone] = useState(false);
+
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
+
+  // Convert hex to rgba for the gradient
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
 
   const email = currentUser?.email || "";
   const isOnboardingPage = pathname.startsWith("/onboarding");
@@ -38,8 +51,12 @@ export default function GeneralInitializer({
 
   const friends = useMemo(() => {
     return [
-      ...(currentUser?.connectionsFrom.filter((conn) => conn.status === "ACCEPTED")?.map((conn) => conn.to) || []),
-      ...(currentUser?.connectionsTo.filter((conn) => conn.status === "ACCEPTED")?.map((conn) => conn.from) || []),
+      ...(currentUser?.connectionsFrom
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.to) || []),
+      ...(currentUser?.connectionsTo
+        .filter((conn) => conn.status === "ACCEPTED")
+        ?.map((conn) => conn.from) || []),
     ];
   }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]);
 
@@ -48,13 +65,21 @@ export default function GeneralInitializer({
       isClerkLoaded &&
       isSignedIn &&
       hasLoadedUserData &&
-      currentUser?.onboardingCompletedAt == null 
-      && !isOnboardingPage
+      currentUser?.onboardingCompletedAt == null &&
+      !isOnboardingPage
     ) {
-      console.log("pushing")
+      console.log("pushing");
       router.push("/onboarding");
     }
-  }, [currentUser, router, isClerkLoaded, isSignedIn, hasLoadedUserData, pathname, isOnboardingPage]);
+  }, [
+    currentUser,
+    router,
+    isClerkLoaded,
+    isSignedIn,
+    hasLoadedUserData,
+    pathname,
+    isOnboardingPage,
+  ]);
 
   useEffect(() => {
     if (isSignedIn && hasLoadedUserData && currentUser) {
@@ -74,7 +99,7 @@ export default function GeneralInitializer({
       if (
         !hasUpdatedTimezone &&
         currentUser.timezone !==
-        Intl.DateTimeFormat().resolvedOptions().timeZone
+          Intl.DateTimeFormat().resolvedOptions().timeZone
       ) {
         setHasUpdatedTimezone(true);
         updateUser({
@@ -114,11 +139,13 @@ export default function GeneralInitializer({
     );
   };
 
-
   if (
     !isClerkLoaded ||
-    (isSignedIn && !hasLoadedUserData) || 
-    (isSignedIn && hasLoadedUserData && currentUser?.onboardingCompletedAt == null && !isOnboardingPage)
+    (isSignedIn && !hasLoadedUserData) ||
+    (isSignedIn &&
+      hasLoadedUserData &&
+      currentUser?.onboardingCompletedAt == null &&
+      !isOnboardingPage)
   ) {
     return (
       <>
@@ -139,8 +166,8 @@ export default function GeneralInitializer({
               autoplay: true,
               animationData: targetAnimation,
               rendererSettings: {
-                preserveAspectRatio: "xMidYMid slice"
-              }
+                preserveAspectRatio: "xMidYMid slice",
+              },
             }}
             height={130}
             width={130}
@@ -151,6 +178,8 @@ export default function GeneralInitializer({
     );
   }
 
+  const isProfilePage = pathname.startsWith("/profile");
+  const isHomePage = pathname == "/";
   return (
     <>
       {isOnboardingPage ? (
@@ -164,6 +193,30 @@ export default function GeneralInitializer({
               isSignedIn && isDesktop ? "left-0" : ""
             )}
           >
+            {isProfilePage || isHomePage ? (
+              <div
+                className="absolute top-0 left-0 w-full h-screen pointer-events-none z-0"
+                style={{
+                  background: `radial-gradient(ellipse 800px 800px at 60% 5%, ${hexToRgba(
+                    variants.brightHex,
+                    0.3
+                  )} 0%, ${hexToRgba(
+                    variants.brightHex,
+                    0.05
+                  )} 40%, transparent 100%)`,
+                }}
+              />
+            ) : (
+              <>
+              <div
+                 className={cn(
+                   "fixed top-0 left-0 w-full h-screen z-[-1]",
+                   "[background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4"
+                 )}
+               />
+              </>
+            )}
+
             {children}
           </div>
           {isSignedIn && !isDownloadPage && <BottomNav />}

@@ -3,17 +3,18 @@
 import ActivityEntryEditor from "@/components/ActivityEntryEditor";
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import ActivityGridRenderer from "@/components/ActivityGridRenderer";
+import { BadgeCard } from "@/components/BadgeCard";
 import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
 import Divider from "@/components/Divider";
 import { FireAnimation } from "@/components/FireBadge";
+import MedalExplainerPopover from "@/components/MedalExplainerPopover";
 import NeonCard from "@/components/NeonGradientCard";
 import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
-import { PlanBadge } from "@/components/PlanBadge";
 import { isPlanExpired } from "@/components/PlansRenderer";
-import StreakDetailsPopover from "@/components/profile/PlanProgresPopover";
 import ProfileSettingsPopover, {
   ActiveView,
 } from "@/components/profile/ProfileSettingsPopover";
+import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,10 +23,10 @@ import {
   useCurrentUserProgress,
   usePlansProgress,
 } from "@/contexts/PlanProgressContext/SimplifiedPlanProgressContext";
+import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
-import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { ActivityEntry } from "@tsw/prisma";
 import { subDays } from "date-fns";
@@ -41,13 +42,12 @@ import {
   Sprout,
   UserPlus,
   UserX,
-  X
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { twMerge } from "tailwind-merge";
 
 type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
@@ -82,14 +82,9 @@ const ProfilePage: React.FC = () => {
     rejectFriendRequest,
     currentUser,
   } = useUnifiedProfileData(username);
-  const { totalStreaks, totalHabits, totalLifestyles } =
-    useCurrentUserProgress();
-
-  useEffect(() => {
-    console.log(`totalStreaks: ${totalStreaks}`);
-    console.log(`totalHabits: ${totalHabits}`);
-    console.log(`totalLifestyles: ${totalLifestyles}`);
-  }, [totalStreaks, totalHabits, totalLifestyles]);
+  const { totalStreaks, totalHabits, totalLifestyles } = useCurrentUserProgress(
+    profileData?.id
+  );
 
   // Extract activities and activityEntries from profileData for consistency
   const activities = profileData?.activities || [];
@@ -129,9 +124,7 @@ const ProfilePage: React.FC = () => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const redirectTo = searchParams.get("redirectTo");
-  const [showStreakDetails, setShowStreakDetails] = useState(
-    redirectTo === "streak-details"
-  );
+  const [progressExplainerOpen, setProgressExplainerOpen] = useState(false);
   const [badgeExplainer, setBadgeExplainer] = useState<{
     open: boolean;
     achiever: any;
@@ -220,7 +213,9 @@ const ProfilePage: React.FC = () => {
   }, [friends, currentUser?.id]);
 
   // Calculate total activities logged (hardcoded if you don't know where they come from)
-  const totalActivitiesLogged = activityEntries?.length || 247; // Fallback to hardcoded value
+  const totalActivitiesLogged = activityEntries?.length || 0; // Fallback to hardcoded value
+
+  const accountLevel = useAccountLevel(totalActivitiesLogged);
 
   if (isProfileDataLoading) {
     return (
@@ -287,12 +282,12 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="w-full max-w-md px-4">
+    <div className="flex flex-col items-center min-h-screen">
+      <div className="w-full max-w-md">
         {/* TikTok-style Header */}
         <div className="flex flex-col items-center py-6">
           {/* Top bar */}
-          <div className="flex justify-between items-center w-full mb-6">
+          <div className="flex justify-between items-center w-full mb-2">
             {!isOwnProfile ? (
               <button
                 className="p-2 rounded-full hover:bg-gray-100"
@@ -316,36 +311,33 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
 
-          {/* Avatar with plan badge */}
+          {/* Avatar with progress ring */}
           <div className="relative mb-4">
-            <Avatar
-              className={twMerge(
-                "w-24 h-24",
-                profilePaidPlanType !== "FREE" &&
-                  "ring-2 ring-offset-2 ring-offset-white",
-                profilePaidPlanType === "PLUS" && variants.ring
-              )}
+            <ProgressRing
+              size={112}
+              strokeWidth={5}
+              atLeastBronze={accountLevel.atLeastBronze}
+              percentage={accountLevel.percentage}
+              currentLevel={accountLevel.currentLevel}
+              onClick={() => setProgressExplainerOpen(true)}
             >
-              <AvatarImage
-                src={profileData?.picture || ""}
-                alt={profileData?.name || ""}
-              />
-              <AvatarFallback className="text-2xl">
-                {(profileData?.name || "U")[0]}
-              </AvatarFallback>
-            </Avatar>
-            {profilePaidPlanType && profilePaidPlanType !== "FREE" && (
-              <div className="absolute -bottom-1 -right-1">
-                <PlanBadge planType={profilePaidPlanType} size={32} />
-              </div>
-            )}
+              <Avatar className="w-24 h-24">
+                <AvatarImage
+                  src={profileData?.picture || ""}
+                  alt={profileData?.name || ""}
+                />
+                <AvatarFallback className="text-2xl">
+                  {(profileData?.name || "U")[0]}
+                </AvatarFallback>
+              </Avatar>
+            </ProgressRing>
           </div>
 
           {/* Name and username */}
-          <h2 className="text-xl font-bold text-gray-900 mb-1">
+          <h2 className="text-xl font-bold text-gray-900">
             {profileData?.name}
           </h2>
-          <p className="text-gray-600 text-sm mb-6">@{profileData?.username}</p>
+          <p className="text-gray-600 text-sm mb-3">@{profileData?.username}</p>
 
           {/* TikTok-style stats */}
           <div className="flex justify-center space-x-8 mb-6">
@@ -367,17 +359,40 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* Badges */}
-          <div className="flex justify-center space-x-8 mb-6">
-            <div
+          <div
+            className="flex justify-center mb-6 gap-3"
+            onClick={() =>
+              setBadgeExplainer({ open: true, achiever: undefined })
+            }
+          >
+            {/* <div
               className={cn(
                 "flex items-center transition-all duration-300 relative",
                 totalStreaks == 0 ? "grayscale opacity-50" : ""
               )}
             >
               <span className="text-lg font-cursive">x{totalStreaks}</span>
-              {totalStreaks == 0  ? <Flame size={40} className="pb-2 text-red-500" /> : <FireAnimation height={40} width={40} className="pb-2" />}
-            </div>
-            <div
+              {totalStreaks == 0 ? (
+                <Flame size={40} className="pb-2 text-red-500" />
+              ) : (
+                <FireAnimation height={40} width={40} className="pb-2" />
+              )}
+            </div> */}
+            <BadgeCard count={totalStreaks} width={70} height={90}>
+              {totalStreaks == 0 ? (
+                <Flame size={90} className="pb-2 text-red-500 mt-5" />
+              ) : (
+                <FireAnimation
+                  height={100}
+                  width={100}
+                  className="pb-2 w-full h-full"
+                />
+              )}
+            </BadgeCard>
+            <BadgeCard count={totalHabits} width={70} height={90}>
+              <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
+            </BadgeCard>
+            {/* <div
               className={cn(
                 "flex items-center transition-all duration-300 relative",
                 totalHabits == 0 ? "grayscale opacity-50" : ""
@@ -394,7 +409,23 @@ const ProfilePage: React.FC = () => {
             >
               <span className="text-lg font-cursive">x{totalLifestyles}</span>
               <Rocket size={35} className="pb-2 text-orange-500" />
-            </div>
+            </div> */}
+            <BadgeCard count={totalLifestyles} width={70} height={90}>
+              <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
+            </BadgeCard>
+            {/* {accountLevel.atLeastBronze && (
+              <>
+                <Medal
+                  size={40}
+                  className={"animate-pulse"}
+                  style={{
+                    color: accountLevel.atLeastBronze
+                      ? accountLevel.currentLevel?.color
+                      : "#A0A0A0",
+                  }}
+                />
+              </>
+            )} */}
           </div>
 
           {/* Action buttons */}
@@ -453,251 +484,252 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
 
-        {/* Profile Settings Popover */}
-        {isOwnProfile && (
-          <ProfileSettingsPopover
-            open={showUserProfile}
-            onClose={() => setShowUserProfile(false)}
-            initialActiveView={initialActiveView as ActiveView | null}
-            redirectTo={redirectTo}
-          />
-        )}
+        {/* Content */}
+        <div className="p-4">
+          {/* Profile Settings Popover */}
+          {isOwnProfile && (
+            <ProfileSettingsPopover
+              open={showUserProfile}
+              onClose={() => setShowUserProfile(false)}
+              initialActiveView={initialActiveView as ActiveView | null}
+              redirectTo={redirectTo}
+            />
+          )}
 
-        {/* Tabs */}
-        <Tabs defaultValue="plans" className="w-full mb-2">
-          <TabsList className="grid w-full h-13 bg-gray-100 grid-cols-2 rounded-xl">
-            <TabsTrigger value="plans" className="rounded-lg">
-              <div className="flex flex-row gap-2 py-[2px] items-center">
-                <ChartArea size={20} />
-                <span>Plans</span>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-lg">
-              <div className="flex flex-row gap-2 py-[2px] items-center">
-                <History size={20} />
-                <span>History</span>
-              </div>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="plans">
-            <div className="space-y-4 mt-4">
-              {profileData?.plans && profileData?.plans.length > 0 && (
-                <div className="flex flex-row gap-4 justify-between items-center">
-                  <span className="text-sm text-gray-500">Time range</span>
-                  <div className="flex self-center">
-                    <select
-                      className="p-2 border rounded-md font-medium text-gray-800"
-                      value={timeRange}
-                      onChange={(e) =>
-                        handleTimeRangeChange(
-                          e.target.value as "60 Days" | "120 Days" | "180 Days"
-                        )
-                      }
-                    >
-                      <option value="60 Days">Since 60 days ago</option>
-                      <option value="120 Days">Since 120 days ago</option>
-                      <option value="180 Days">Since 180 days ago</option>
-                    </select>
-                  </div>
+          {/* Tabs */}
+          <Tabs defaultValue="plans" className="w-full mb-2">
+            <TabsList className="grid w-full h-13 grid-cols-2">
+              <TabsTrigger value="plans">
+                <div className="flex flex-row gap-2 py-[2px] items-center">
+                  <ChartArea size={20} />
+                  <span>Plans</span>
                 </div>
-              )}
-              {profileActivePlans &&
-                profileActivePlans.length > 0 &&
-                profileActivePlans.map((plan) => {
-                  const backendProgress = plansProgressData?.find(
-                    (p) => p.plan?.id === plan.id
-                  );
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <div className="flex flex-row gap-2 py-[2px] items-center">
+                  <History size={20} />
+                  <span>History</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
 
-                  // Check achievements
-                  const habitAchieved =
-                    backendProgress?.habitAchievement?.isAchieved ?? false;
-                  const lifestyleAchieved =
-                    backendProgress?.lifestyleAchievement?.isAchieved ?? false;
-
-                  return (
-                    <NeonCard
-                      key={plan.id}
-                      color={
-                        lifestyleAchieved
-                          ? "amber"
-                          : habitAchieved
-                          ? "lime"
-                          : "none"
-                      }
-                      className="p-4"
-                    >
-                      <div className="flex flex-row items-center gap-2 mb-6">
-                        <span className="text-4xl">{plan.emoji}</span>
-                        <div className="flex flex-col gap-0">
-                          <h3 className="text-lg font-semibold">{plan.goal}</h3>
-                          {plan.outlineType == "TIMES_PER_WEEK" && (
-                            <span className="text-sm text-gray-500">
-                              {plan.timesPerWeek} times per week
-                            </span>
-                          )}
-                          {plan.outlineType == "SPECIFIC" && (
-                            <span className="text-sm text-gray-500">
-                              Custom plan
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Achievement displays */}
-                      <div
-                        className="space-y-2 mb-4 absolute top-2 right-2 flex flex-col gap-2"
-                        onClick={() =>
-                          setBadgeExplainer({
-                            open: true,
-                            achiever: {
-                              user: {
-                                username: profileData?.username || "",
-                                name: profileData?.name || "",
-                                picture: profileData?.picture || "",
-                              },
-                              plan: {
-                                type: lifestyleAchieved
-                                  ? "lifestyle"
-                                  : habitAchieved
-                                  ? "habit"
-                                  : undefined,
-                                emoji: plan.emoji || "",
-                                goal: plan.goal,
-                                streak:
-                                  backendProgress?.achievement.streak || 0,
-                              },
-                            },
-                          })
+            <TabsContent value="plans">
+              <div className="space-y-4 mt-4">
+                {profileData?.plans && profileData?.plans.length > 0 && (
+                  <div className="flex flex-row gap-4 justify-between items-center">
+                    <span className="text-sm text-gray-500">Time range</span>
+                    <div className="flex self-center">
+                      <select
+                        className="p-2 border rounded-md font-medium text-gray-800"
+                        value={timeRange}
+                        onChange={(e) =>
+                          handleTimeRangeChange(
+                            e.target.value as
+                              | "60 Days"
+                              | "120 Days"
+                              | "180 Days"
+                          )
                         }
                       >
-                        {habitAchieved && (
-                          <div className="flex flex-row items-center gap-2">
-                            <Sprout
-                              size={42}
-                              className="text-lime-500 animate-pulse"
-                            />
-                          </div>
-                        )}
-                        {lifestyleAchieved && (
-                          <div className="flex flex-row items-center gap-2">
-                            <Medal
-                              size={42}
-                              className="text-amber-500 animate-pulse"
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <PlanActivityEntriesRenderer
-                        plan={plan as any}
-                        activities={activities}
-                        activityEntries={activityEntries}
-                        startDate={subDays(
-                          new Date(),
-                          getTimeRangeDays(timeRange)
-                        )}
-                      />
-                    </NeonCard>
-                  );
-                })}
-              {(!profileActivePlans || profileActivePlans.length === 0) && (
-                <div className="text-center text-gray-500 py-8">
-                  {isOwnProfile
-                    ? "You haven't created any plans yet."
-                    : `${profileData?.name} hasn't got any public plans available.`}
-                </div>
-              )}
-              {activitiesNotInPlans && activitiesNotInPlans.length > 0 && (
-                <>
-                  <Divider className="w-full" text="Activities 👇" />
-                  <ActivityGridRenderer
-                    activities={activitiesNotInPlans}
-                    activityEntries={activityEntries.filter((entry) =>
-                      activitiesNotInPlans
-                        .map((a) => a.id)
-                        .includes(entry.activityId)
-                    )}
-                    timeRange={timeRange}
-                    endDate={endDate}
-                  />
-                </>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history">
-            {activityEntries?.length > 0 ? (
-              <div className="space-y-4">
-                {activityEntries
-                  .sort(
-                    (a, b) =>
-                      new Date(b.date).getTime() - new Date(a.date).getTime()
-                  )
-                  .map((entry) => {
-                    const activity = activities.find(
-                      (a) => a.id === entry.activityId
+                        <option value="60 Days">Since 60 days ago</option>
+                        <option value="120 Days">Since 120 days ago</option>
+                        <option value="180 Days">Since 180 days ago</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {profileActivePlans &&
+                  profileActivePlans.length > 0 &&
+                  profileActivePlans.map((plan) => {
+                    const backendProgress = plansProgressData?.find(
+                      (p) => p.plan?.id === plan.id
                     );
+
+                    // Check achievements
+                    const habitAchieved =
+                      backendProgress?.habitAchievement?.isAchieved ?? false;
+                    const lifestyleAchieved =
+                      backendProgress?.lifestyleAchievement?.isAchieved ??
+                      false;
+
                     return (
-                      <ActivityEntryPhotoCard
-                        key={entry.id}
-                        activity={activity as any}
-                        activityEntry={entry as any}
-                        user={profileData as any}
-                        editable={isOwnProfile}
-                        onEditClick={() => {
-                          const activityToEdit = activityEntries.find(
-                            (e) => e.id === entry.id
-                          );
-                          if (activityToEdit) {
-                            setShowActivityToEdit(activityToEdit);
-                          } else {
-                            console.error(
-                              `Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`
-                            );
-                            toast.error(
-                              "Activity to edit not found! Please contact support"
-                            );
+                      <NeonCard
+                        key={plan.id}
+                        color={
+                          lifestyleAchieved
+                            ? "amber"
+                            : habitAchieved
+                            ? "lime"
+                            : "none"
+                        }
+                        className="p-4"
+                      >
+                        <div className="flex flex-row items-center gap-2 mb-6">
+                          <span className="text-4xl">{plan.emoji}</span>
+                          <div className="flex flex-col gap-0">
+                            <h3 className="text-lg font-semibold">
+                              {plan.goal}
+                            </h3>
+                            {plan.outlineType == "TIMES_PER_WEEK" && (
+                              <span className="text-sm text-gray-500">
+                                {plan.timesPerWeek} times per week
+                              </span>
+                            )}
+                            {plan.outlineType == "SPECIFIC" && (
+                              <span className="text-sm text-gray-500">
+                                Custom plan
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Achievement displays */}
+                        <div
+                          className="space-y-2 mb-4 absolute top-2 right-2 flex flex-col gap-2"
+                          onClick={() =>
+                            setBadgeExplainer({
+                              open: true,
+                              achiever: {
+                                user: {
+                                  username: profileData?.username || "",
+                                  name: profileData?.name || "",
+                                  picture: profileData?.picture || "",
+                                },
+                                plan: {
+                                  type: lifestyleAchieved
+                                    ? "lifestyle"
+                                    : habitAchieved
+                                    ? "habit"
+                                    : undefined,
+                                  emoji: plan.emoji || "",
+                                  goal: plan.goal,
+                                  streak:
+                                    backendProgress?.achievement.streak || 0,
+                                },
+                              },
+                            })
                           }
-                        }}
-                      />
+                        >
+                          {habitAchieved && (
+                            <div className="flex flex-row items-center gap-2">
+                              <Sprout
+                                size={42}
+                                className="text-lime-500 animate-pulse"
+                              />
+                            </div>
+                          )}
+                          {lifestyleAchieved && (
+                            <div className="flex flex-row items-center gap-2">
+                              <Medal
+                                size={42}
+                                className="text-amber-500 animate-pulse"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <PlanActivityEntriesRenderer
+                          plan={plan as any}
+                          activities={activities}
+                          activityEntries={activityEntries}
+                          startDate={subDays(
+                            new Date(),
+                            getTimeRangeDays(timeRange)
+                          )}
+                        />
+                      </NeonCard>
                     );
                   })}
+                {(!profileActivePlans || profileActivePlans.length === 0) && (
+                  <div className="text-center text-gray-500 py-8">
+                    {isOwnProfile
+                      ? "You haven't created any plans yet."
+                      : `${profileData?.name} hasn't got any public plans available.`}
+                  </div>
+                )}
+                {activitiesNotInPlans && activitiesNotInPlans.length > 0 && (
+                  <>
+                    <Divider className="w-full" text="Activities 👇" />
+                    <ActivityGridRenderer
+                      activities={activitiesNotInPlans}
+                      activityEntries={activityEntries.filter((entry) =>
+                        activitiesNotInPlans
+                          .map((a) => a.id)
+                          .includes(entry.activityId)
+                      )}
+                      timeRange={timeRange}
+                      endDate={endDate}
+                    />
+                  </>
+                )}
               </div>
-            ) : (
-              <div className="text-center text-gray-500 py-8">
-                {activityEntries?.length === 0
-                  ? isOwnProfile
-                    ? "You haven't completed any activities yet."
-                    : `${profileData?.name} hasn't got any public activities.`
-                  : `${profileData?.name}'s ${activities.length} past activities photos have expired.`}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+
+            <TabsContent value="history">
+              {activityEntries?.length > 0 ? (
+                <div className="space-y-4">
+                  {activityEntries
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                    )
+                    .map((entry) => {
+                      const activity = activities.find(
+                        (a) => a.id === entry.activityId
+                      );
+                      return (
+                        <ActivityEntryPhotoCard
+                          key={entry.id}
+                          activity={activity as any}
+                          activityEntry={entry as any}
+                          user={profileData as any}
+                          editable={isOwnProfile}
+                          onEditClick={() => {
+                            const activityToEdit = activityEntries.find(
+                              (e) => e.id === entry.id
+                            );
+                            if (activityToEdit) {
+                              setShowActivityToEdit(activityToEdit);
+                            } else {
+                              console.error(
+                                `Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`
+                              );
+                              toast.error(
+                                "Activity to edit not found! Please contact support"
+                              );
+                            }
+                          }}
+                        />
+                      );
+                    })}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  {activityEntries?.length === 0
+                    ? isOwnProfile
+                      ? "You haven't completed any activities yet."
+                      : `${profileData?.name} hasn't got any public activities.`
+                    : `${profileData?.name}'s ${activities.length} past activities photos have expired.`}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Activity Entry Editor */}
+        {showEditActivityEntry && isOwnProfile && (
+          <ActivityEntryEditor
+            open={!!showEditActivityEntry}
+            activityEntry={{
+              id: showEditActivityEntry.id,
+              quantity: showEditActivityEntry.quantity,
+              date: showEditActivityEntry.date,
+              activityId: showEditActivityEntry.activityId,
+              description: showEditActivityEntry.description || undefined,
+            }}
+            onClose={() => setShowActivityToEdit(undefined)}
+          />
+        )}
       </div>
-
-      {/* Streak Details Popover */}
-      <StreakDetailsPopover
-        open={showStreakDetails}
-        onClose={() => {
-          setShowStreakDetails(false);
-        }}
-      />
-
-      {/* Activity Entry Editor */}
-      {showEditActivityEntry && isOwnProfile && (
-        <ActivityEntryEditor
-          open={!!showEditActivityEntry}
-          activityEntry={{
-            id: showEditActivityEntry.id,
-            quantity: showEditActivityEntry.quantity,
-            date: showEditActivityEntry.date,
-            activityId: showEditActivityEntry.activityId,
-            description: showEditActivityEntry.description || undefined,
-          }}
-          onClose={() => setShowActivityToEdit(undefined)}
-        />
-      )}
 
       {/* Badge Explainer Popover */}
       <BadgeExplainerPopover
@@ -705,6 +737,13 @@ const ProfilePage: React.FC = () => {
         onClose={() => setBadgeExplainer((prev) => ({ ...prev, open: false }))}
         achiever={badgeExplainer.achiever}
       />
+
+      {isOwnProfile && (
+        <MedalExplainerPopover
+          open={progressExplainerOpen}
+          onClose={() => setProgressExplainerOpen(false)}
+        />
+      )}
     </div>
   );
 };

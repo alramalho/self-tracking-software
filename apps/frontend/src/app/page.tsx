@@ -13,6 +13,7 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
+  Hammer,
   HelpCircle,
   RefreshCcw,
   ScanFace,
@@ -21,13 +22,15 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
 
-import PlanProgressPopover from "@/components/profile/PlanProgresPopover";
+import { ProgressRing } from "@/components/ProgressRing";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePlans } from "@/contexts/plans";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useCurrentUser } from "@/contexts/users";
+import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -37,6 +40,7 @@ import { isAfter } from "date-fns";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
+  const accountLevel = useAccountLevel();
   const { notifications, clearAllNotifications } = useDataNotifications();
   const { plans } = usePlans();
   const activePlans = plans?.filter(
@@ -146,20 +150,27 @@ const HomePage: React.FC = () => {
         }
       >
         <div className="space-y-4 p-[1px]">
-          <div
-            className={`flex justify-between items-center bg-gray-50 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm`}
-          >
+          <div className={`flex justify-between items-center`}>
             <div className="flex flex-row gap-1 items-center text-center">
-              <img
-                src="/icons/icon-transparent.png"
-                alt="Jarvis Logo"
-                className="w-10 h-10"
-              />
-              <h2 className="text-xl font-bold tracking-tight text-gray-900">
-                <span className={`${variants.text} break-normal text-nowrap`}>
-                  tracking.<span className={`${variants.fadedText}`}>so</span>
-                </span>
-              </h2>
+              <ProgressRing
+                size={50}
+                strokeWidth={4}
+                atLeastBronze={accountLevel.atLeastBronze}
+                percentage={accountLevel.percentage}
+                currentLevel={accountLevel.currentLevel}
+                badge={false}
+                onClick={() => router.push(`/profile/${currentUser?.username}`)}
+              >
+                <Avatar className="w-10 h-10">
+                  <AvatarImage
+                    src={currentUser?.picture || ""}
+                    alt={currentUser?.name || ""}
+                  />
+                  <AvatarFallback className="text-2xl">
+                    {(currentUser?.name || "U")[0]}
+                  </AvatarFallback>
+                </Avatar>
+              </ProgressRing>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -198,28 +209,22 @@ const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* AI Coach Banner */}
-          {isUserOnFreePlan && (
-            <div
-              onClick={() => setShowAICoachPopover(true)}
-              className="bg-gradient-to-r from-purple-50 to-blue-50 ring-1 ring-purple-200 backdrop-blur-sm rounded-full py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ScanFace size={24} className="text-purple-500" />
-                  <div>
-                    <span className="text-sm font-semibold text-purple-700">
-                      AI Coach & Insights
-                    </span>
-                    <p className="text-xs text-purple-600">
-                      Get personalized coaching and track daily metrics
-                    </p>
-                  </div>
+          <div onClick={() => setIsFeedbackOpen(true)} className="ring-1 ring-purple-200 backdrop-blur-md bg-white/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Hammer size={40} className="text-gray-500" />
+                <div>
+                  <span className="text-sm font-semibold text-gray-700">
+                    We&apos;re updating the app!
+                  </span>
+                  <p className="text-xs text-gray-600">
+                    If anything is broken,
+                    please let us know.
+                  </p>
                 </div>
-                <ChevronRight size={16} className="text-purple-500" />
               </div>
             </div>
-          )}
+          </div>
 
           {activePlans && activePlans.length > 0 && (
             <div>
@@ -286,15 +291,6 @@ const HomePage: React.FC = () => {
       >
         <Notifications />
       </AppleLikePopover>
-
-      {/* <DailyCheckinBanner/> */}
-
-      <PlanProgressPopover
-        open={showPlanProgressExplainer}
-        onClose={() => {
-          setShowPlanProgressExplainer(false);
-        }}
-      />
 
       {/* AI Coach Popover */}
       <AppleLikePopover

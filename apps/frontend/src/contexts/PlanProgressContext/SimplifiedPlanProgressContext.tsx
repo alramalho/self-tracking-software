@@ -8,9 +8,9 @@ import {
   PlanOutlineType,
   PlanSession,
 } from "@tsw/prisma";
-import { isSameWeek } from "date-fns";
+import { isFuture, isSameWeek } from "date-fns";
 import { useEffect } from "react";
-import { usePlans } from "../plans";
+import { useCurrentUser, useUser } from "../users";
 
 export interface PlanProgressData {
   planId: string;
@@ -67,7 +67,17 @@ export const usePlanProgress = (planId: string) => {
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    
+    // Parse ISO date strings to Date objects
+    const data = response.data;
+    if (data.weeks) {
+      data.weeks = data.weeks.map((week: any) => ({
+        ...week,
+        startDate: new Date(week.startDate),
+      }));
+    }
+    
+    return data;
   };
 
   const { data, isLoading, error } = useQuery({
@@ -78,13 +88,19 @@ export const usePlanProgress = (planId: string) => {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
+  if (data?.plan.goal === "train 4 times a week") {
+    console.log({weeks: data?.weeks})
+  }
+
   return {
     data,
     isLoading,
     error,
     isWeekCompleted: (date: Date) =>
-      data?.weeks?.find((week) => isSameWeek(week.startDate, date))
-        ?.isCompleted ?? false,
+      isFuture(date)
+        ? false
+        : data?.weeks?.find((week) => isSameWeek(week.startDate, date))
+            ?.isCompleted ?? false,
   };
 };
 
@@ -102,7 +118,17 @@ export const usePlansProgress = (planIds: string[]) => {
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    
+    // Parse ISO date strings to Date objects
+    const data = response.data;
+    if (data.weeks) {
+      data.weeks = data.weeks.map((week: any) => ({
+        ...week,
+        startDate: new Date(week.startDate),
+      }));
+    }
+    
+    return data;
   };
 
   const queries = useQueries({
@@ -122,19 +148,20 @@ export const usePlansProgress = (planIds: string[]) => {
     .map((query) => query.data!);
 
   const isLoading = queries.some((query) => query.isLoading);
-  const error = queries.find((query) => query.error)?.error;
 
   return { data, isLoading };
 };
 
-const useCurrentUserProgress = () => {
-  const { plans } = usePlans();
+const useUserProgress = (userId?: string) => {
+  const { currentUser } = useCurrentUser();
+  const userIdToUse = userId || currentUser?.id || "";
+  const { data: userData } = useUser({ id: userIdToUse });
   const { data: planProgressData, isLoading } = usePlansProgress(
-    plans?.map((plan) => plan.id) || []
+    userData?.plans?.map((plan) => plan.id) || []
   );
 
   useEffect(() => {
-    console.log(`plans: ${plans?.map((p) => p.goal).join(", ")}`);
+    console.log(`plans: ${userData?.plans?.map((p) => p.goal).join(", ")}`);
 
     console.log({ planProgressData });
   }, [planProgressData]);
@@ -169,4 +196,4 @@ const useCurrentUserProgress = () => {
   };
 };
 
-export { useCurrentUserProgress };
+export { useUserProgress as useCurrentUserProgress };
