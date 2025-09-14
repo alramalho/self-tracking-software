@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { Badge } from "lucide-react";
 import React from "react";
 import Lottie from "react-lottie";
@@ -14,7 +15,7 @@ export const FireAnimation = (props: {
   className?: string;
 }) => {
   return (
-    <div className={props.className}>
+    <div className={cn(props.className, `w-[${props.width || 60}px] h-[${props.height || 60}px]`)}>
       <Lottie
         options={{
           loop: true,

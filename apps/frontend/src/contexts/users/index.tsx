@@ -314,7 +314,7 @@ export const useUser = (
   data: { username: string; id?: string } | { username?: string; id: string }
 ) => {
   const { handleQueryError } = useLogError();
-  const identifier = data.username || data.id;
+  const identifier = data?.username || data.id;
   const { isSignedIn } = useSession();
 
   const query = useQuery({

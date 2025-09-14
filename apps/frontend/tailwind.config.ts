@@ -140,14 +140,39 @@ const config = {
         },
         float: {
           "0%, 100%": {
-            transform: "translateY(0px)",
+            transform: "translate(0px, 0px) scale(1)",
           },
-          "50%": {
-            transform: "translateY(-10px)",
+          "20%": {
+            transform: "translate(15px, -10px) scale(1.02)",
+          },
+          "40%": {
+            transform: "translate(-8px, -20px) scale(0.98)",
+          },
+          "60%": {
+            transform: "translate(-12px, -5px) scale(1.01)",
+          },
+          "80%": {
+            transform: "translate(10px, -15px) scale(0.99)",
+          },
+        },
+        "float-reverse": {
+          "0%, 100%": {
+            transform: "translate(0px, 0px) scale(1)",
+          },
+          "20%": {
+            transform: "translate(-15px, -10px) scale(0.98)",
+          },
+          "40%": {
+            transform: "translate(8px, -20px) scale(1.02)",
+          },
+          "60%": {
+            transform: "translate(12px, -5px) scale(0.99)",
+          },
+          "80%": {
+            transform: "translate(-10px, -15px) scale(1.01)",
           },
         },
       },
-
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
@@ -156,6 +181,9 @@ const config = {
         wiggle: "wiggle 3s ease-in-out infinite",
         float: "float 3s ease-in-out infinite",
         shine: "shine 5s linear infinite",
+        "float-slow": "float 25s ease-in-out infinite",
+        "float-medium": "float-reverse 18s ease-in-out infinite",
+        "float-fast": "float 22s ease-in-out infinite 0.5s",
       },
     },
     fontFamily: {

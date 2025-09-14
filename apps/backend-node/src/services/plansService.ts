@@ -772,14 +772,40 @@ export class PlansService {
       throw new Error(`Plan ${plan.id} not found`);
     }
 
+    // Find the earliest activity entry date for this plan's activities
+    const activityEntries = await prisma.activityEntry.findMany({
+      where: {
+        activityId: { in: plan.activities.map((a) => a.id) },
+        deletedAt: null,
+      },
+      orderBy: {
+        date: "asc",
+      },
+      take: 1,
+    });
+
+    // Determine the actual start date - either the earliest activity entry or the provided startDate
+    let actualStartDate: Date;
+    if (startDate) {
+      actualStartDate = startDate;
+    } else if (activityEntries.length > 0) {
+      actualStartDate = new Date(activityEntries[0].date);
+    } else {
+      // If no activity entries exist, start from current week
+      actualStartDate = new Date();
+    }
+
     const weeks: Array<PlanWeek> = [];
 
-    let weekStart = startOfWeek(startDate ?? new Date(), { weekStartsOn: 0 });
+    let weekStart = startOfWeek(actualStartDate, { weekStartsOn: 0 });
     const planEndDate = new Date(
-      plan.finishingDate || addWeeks(weekStart, this.LIFESTYLE_WEEKS)
+      plan.finishingDate || addWeeks(new Date(), this.LIFESTYLE_WEEKS)
     );
 
-    while (isBefore(weekStart, planEndDate)) {
+    while (
+      isBefore(weekStart, planEndDate) ||
+      isSameDay(weekStart, startOfWeek(planEndDate, { weekStartsOn: 0 }))
+    ) {
       const weekData = await this.getPlanWeek(
         weekStart,
         planWithSessions,
