@@ -70,12 +70,8 @@ const REACTION_EMOJI_MAPPING = {
   rocket: "🚀",
   love: "♥️",
   laugh: "😂",
-  aubergine: "🍆",
+  oof: "😮‍💨",
   peach: "🍑",
-  surprise: "😮",
-  surprise: "😮",
-  surprise: "😮",
-  surprise: "😮",
   surprise: "😮",
 };
 
