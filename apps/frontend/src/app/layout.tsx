@@ -45,6 +45,12 @@ export default function RootLayout({
             <PostHogPageView />
             <ClientLayout>{children}</ClientLayout>
           </ClerkProvider>
+          <script
+            defer
+            data-website-id="68c60ca54a6df1b68e91aa78"
+            data-domain="tracking.so"
+            src="https://datafa.st/js/script.js"
+          ></script>
         </body>
       </PHProvider>
     </html>
