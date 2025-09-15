@@ -273,32 +273,35 @@ router.get(
   }
 );
 
-// Get plan progress including streaks and achievement data
-router.get(
-  "/:planId/progress",
+// Get progress for multiple plans
+router.post(
+  "/batch-progress",
   requireAuth,
   async (
     req: AuthenticatedRequest,
     res: Response
   ): Promise<Response | void> => {
     try {
-      const { planId } = req.params;
-      const userId = req.user!.id;
-
-      const progress = await plansService.getPlanProgress(planId, userId);
-
-      logger.info(`Retrieved progress for plan ${planId}`);
-      res.json(progress);
-    } catch (error) {
-      logger.error("Error getting plan progress:", error);
-      if (error instanceof Error && error.message.includes("not found")) {
-        res.status(404).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Failed to get plan progress" });
+      const { planIds } = req.body;
+      
+      if (!planIds || !Array.isArray(planIds)) {
+        return res.status(400).json({ 
+          error: "planIds array is required" 
+        });
       }
+
+      const userId = req.user!.id;
+      const progressData = await plansService.getBatchPlanProgress(planIds, userId);
+
+      logger.info(`Retrieved batch progress for ${planIds.length} plans`);
+      res.json({ progress: progressData });
+    } catch (error) {
+      logger.error("Error getting batch plan progress:", error);
+      res.status(500).json({ error: "Failed to get batch plan progress" });
     }
   }
 );
+
 
 // Get specific plan
 router.get(

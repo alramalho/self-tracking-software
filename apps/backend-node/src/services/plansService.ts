@@ -497,7 +497,58 @@ export class PlansService {
     };
   }
 
-  async getPlanProgress(
+  async getBatchPlanProgress(
+    planIds: string[],
+    userId: string
+  ): Promise<{
+    planId: string;
+    plan: {
+      emoji: string;
+      goal: string;
+      id: string;
+      type: PlanOutlineType;
+    };
+    achievement: {
+      streak: number;
+      completedWeeks: number;
+      incompleteWeeks: number;
+      totalWeeks: number;
+    };
+    currentWeekStats: {
+      numActiveDaysInTheWeek: number;
+      numLeftDaysInTheWeek: number;
+      numActiveDaysLeftInTheWeek: number;
+      daysCompletedThisWeek: number;
+    };
+    habitAchievement: {
+      progressValue: number;
+      maxValue: number;
+      isAchieved: boolean;
+      progressPercentage: number;
+    };
+    lifestyleAchievement: {
+      progressValue: number;
+      maxValue: number;
+      isAchieved: boolean;
+      progressPercentage: number;
+    };
+    weeks: Array<PlanWeek>;
+  }[]> {
+    // Execute all plan progress calculations in parallel
+    const progressPromises = planIds.map(planId => 
+      this.getSinglePlanProgress(planId, userId).catch(error => {
+        logger.error(`Failed to get progress for plan ${planId}:`, error);
+        return null; // Return null for failed plans instead of throwing
+      })
+    );
+
+    const results = await Promise.all(progressPromises);
+    
+    // Filter out null results (failed plans)
+    return results.filter((result): result is NonNullable<typeof result> => result !== null);
+  }
+
+  private async getSinglePlanProgress(
     planId: string,
     userId: string
   ): Promise<{

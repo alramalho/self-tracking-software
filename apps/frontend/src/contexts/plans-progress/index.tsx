@@ -4,7 +4,7 @@ import { useApiWithAuth } from "@/api";
 import { dummyPlanProgressData } from "@/app/onboarding/components/steps/AIPartnerFinder";
 import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ActivityEntry,
@@ -93,21 +93,33 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchPlanProgress = async (
     planId: string
   ): Promise<PlanProgressData> => {
-    const response = await api.get(`/plans/${planId}/progress`);
+    // Use batch endpoint with single plan ID
+    const batchData = await fetchBatchPlanProgress([planId]);
+    if (batchData.length === 0) {
+      throw new Error(`Plan ${planId} not found`);
+    }
+    return batchData[0];
+  };
+
+  const fetchBatchPlanProgress = async (
+    planIds: string[]
+  ): Promise<PlanProgressData[]> => {
+    if (planIds.length === 0) return [];
+    
+    const response = await api.post('/plans/batch-progress', { planIds });
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     // Parse ISO date strings to Date objects
-    const data = response.data;
-    if (data.weeks) {
-      data.weeks = data.weeks.map((week: any) => ({
+    const data = response.data.progress;
+    return data.map((planProgress: any) => ({
+      ...planProgress,
+      weeks: planProgress.weeks.map((week: any) => ({
         ...week,
         startDate: new Date(week.startDate),
-      }));
-    }
-    
-    return data;
+      }))
+    }));
   };
 
   // Single plan progress hook
@@ -147,34 +159,25 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Multiple plans progress hook
   const usePlansProgress = (planIds: string[]) => {
-
-    const queries = useQueries({
-      queries: planIds.map((planId) => ({
-        queryKey: ["planProgress", planId],
-        queryFn: () => fetchPlanProgress(planId),
-        enabled: isLoaded && isSignedIn && !!planId,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000, // 10 minutes
-      })),
+    const { data, isLoading, error } = useQuery({
+      queryKey: ["plans-progress", planIds.sort()], // Sort for consistent cache keys
+      queryFn: () => fetchBatchPlanProgress(planIds),
+      enabled: isLoaded && isSignedIn && planIds.length > 0,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
     });
 
-    const data = queries
-      .filter((query) => query.data)
-      .map((query) => query.data!);
-
-    const isLoading = queries.some((query) => query.isLoading);
-    
-    // Handle errors for any failed queries
-    const errors = queries.filter((query) => query.error);
     useEffect(() => {
-      errors.forEach((query, index) => {
-        if (query.error) {
-          handleQueryError(query.error, `Failed to get plan progress for ${planIds[index]}`);
-        }
-      });
-    }, [errors, planIds, handleQueryError]);
+      if (error) {
+        handleQueryError(error, `Failed to get batch plan progress`);
+        toast.error("Failed to load plans progress");
+      }
+    }, [error, handleQueryError]);
 
-    return { data, isLoading };
+    return { 
+      data: data || [], 
+      isLoading 
+    };
   };
 
   const useUserProgress = (userId?: string) => {
