@@ -355,9 +355,7 @@ export class PlansService {
     streak: number;
     completedWeeks: number;
     incompleteWeeks: number;
-    isAchieved: boolean;
     totalWeeks: number;
-    weeksToAchieve?: number;
   }> {
     // Get plan with activities and sessions
     const plan = await prisma.plan.findUnique({
@@ -386,7 +384,6 @@ export class PlansService {
         streak: 0,
         completedWeeks: 0,
         incompleteWeeks: 0,
-        isAchieved: false,
         totalWeeks: 0,
       };
     }
@@ -444,16 +441,11 @@ export class PlansService {
 
     console.log("streak", streak);
 
-    const isAchieved = streak >= this.LIFESTYLE_WEEKS;
-    const weeksToAchieve = this.LIFESTYLE_WEEKS - streak;
-
     return {
       streak: Math.max(0, streak),
       completedWeeks,
       incompleteWeeks,
-      isAchieved,
       totalWeeks,
-      weeksToAchieve,
     };
   }
 
@@ -461,9 +453,7 @@ export class PlansService {
     streak: number;
     completedWeeks: number;
     incompleteWeeks: number;
-    isAchieved: boolean;
     totalWeeks: number;
-    weeksToAchieve?: number;
   }): {
     progressValue: number;
     maxValue: number;
@@ -487,9 +477,7 @@ export class PlansService {
     streak: number;
     completedWeeks: number;
     incompleteWeeks: number;
-    isAchieved: boolean;
     totalWeeks: number;
-    weeksToAchieve?: number;
   }): {
     progressValue: number;
     maxValue: number;
@@ -524,9 +512,7 @@ export class PlansService {
       streak: number;
       completedWeeks: number;
       incompleteWeeks: number;
-      isAchieved: boolean;
       totalWeeks: number;
-      weeksToAchieve?: number;
     };
     currentWeekStats: {
       numActiveDaysInTheWeek: number;

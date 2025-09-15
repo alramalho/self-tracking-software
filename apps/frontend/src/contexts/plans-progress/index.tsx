@@ -28,9 +28,7 @@ export interface PlanProgressData {
     streak: number;
     completedWeeks: number;
     incompleteWeeks: number;
-    isAchieved: boolean;
     totalWeeks: number;
-    weeksToAchieve?: number;
   };
   currentWeekStats: {
     numActiveDaysInTheWeek: number;
