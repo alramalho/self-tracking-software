@@ -1,4 +1,4 @@
-import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/PlanProgressContext/lib";
+import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/plans-progress/lib";
 import { CompletePlan } from "@/contexts/plans";
 import { cn } from "@/lib/utils";
 import { startOfWeek } from "date-fns";

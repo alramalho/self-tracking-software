@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { PlanSession } from "@tsw/prisma";
 import { formatDistance } from "date-fns";
-import { ArrowBigRight, Check, Loader2, X } from "lucide-react";
+import { Check, Loader2, MoveRight, X } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import { MessageBubble } from "./MessageBubble";
@@ -199,7 +199,9 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
             </div>
           </>
         )}
+      </div>
 
+      <div className="flex flex-col gap-4">
         {coachSuggestedSessions && coachSuggestedSessions.length > 0 && (
           <div className="flex flex-col justify-start gap-4 w-full">
             <div className="flex flex-col gap-3">
@@ -302,7 +304,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
         {selectedPlan.coachSuggestedTimesPerWeek != undefined &&
           selectedPlan.coachSuggestedTimesPerWeek != null &&
           selectedPlan.coachSuggestedTimesPerWeek > 0 && (
-            <div className="flex flex-col justify-start gap-4 w-full">
+            <div className="flex flex-col justify-start gap-4 w-full mt-3">
               <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
                 <div className="flex flex-col items-center text-center flex-shrink-0">
                   <span className="text-4xl md:text-5xl font-light text-gray-800">
@@ -315,7 +317,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
 
                 <div className="flex items-center flex-shrink-0">
                   <div className="w-8 md:w-16 h-px bg-gray-300"></div>
-                  <ArrowBigRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
+                  <MoveRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
                   <div className="w-8 md:w-16 h-px bg-gray-300"></div>
                 </div>
 

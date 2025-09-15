@@ -1,4 +1,4 @@
-import { usePlanProgress } from "@/contexts/PlanProgressContext";
+import { usePlanProgress } from "@/contexts/plans-progress";
 import React from "react";
 import FireBadge from "./FireBadge";
 
@@ -9,8 +9,7 @@ interface PlanStreakProps {
 }
 
 const PlanStreak: React.FC<PlanStreakProps> = ({ plan }) => {
-  const { plansProgress } = usePlanProgress();
-  const planProgress = plansProgress.find((p) => p.plan?.id === plan.id);
+  const { data: planProgress } = usePlanProgress(plan.id);
 
   if (!planProgress) {
     return null;
