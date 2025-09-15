@@ -19,10 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  useUserProgress,
-  usePlansProgress,
-} from "@/contexts/plans-progress";
+import { usePlansProgress, useUserProgress } from "@/contexts/plans-progress";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -37,6 +34,7 @@ import {
   EllipsisVertical,
   Flame,
   History,
+  Loader2,
   Medal,
   Rocket,
   Sprout,
@@ -116,7 +114,8 @@ const ProfilePage: React.FC = () => {
     : profileData?.username;
 
   const planIds = profileActivePlans?.map((plan) => plan.id) || [];
-  const { data: plansProgressData } = usePlansProgress(planIds);
+  const { data: plansProgressData, isLoading: isPlansProgressLoading } =
+    usePlansProgress(planIds);
   const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
@@ -373,18 +372,28 @@ const ProfilePage: React.FC = () => {
               )}
             </div> */}
             <BadgeCard count={totalStreaks} width={70} height={90}>
-              {totalStreaks == 0 ? (
-                <Flame size={90} className="pb-2 text-red-500 mt-5" />
+              {isPlansProgressLoading ? (
+                <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
               ) : (
-                <FireAnimation
-                  height={100}
-                  width={100}
-                  className="pb-2 w-full h-full"
-                />
+                <>
+                  {totalStreaks == 0 ? (
+                    <Flame size={90} className="pb-2 text-red-500 mt-5" />
+                  ) : (
+                    <FireAnimation
+                      height={100}
+                      width={100}
+                      className="pb-2 w-full h-full"
+                    />
+                  )}
+                </>
               )}
             </BadgeCard>
             <BadgeCard count={totalHabits} width={70} height={90}>
-              <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
+              {isPlansProgressLoading ? (
+                <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
+              ) : (
+                <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
+              )}
             </BadgeCard>
             {/* <div
               className={cn(
@@ -405,7 +414,11 @@ const ProfilePage: React.FC = () => {
               <Rocket size={35} className="pb-2 text-orange-500" />
             </div> */}
             <BadgeCard count={totalLifestyles} width={70} height={90}>
-              <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
+              {isPlansProgressLoading ? (
+                <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
+              ) : (
+                <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
+              )}
             </BadgeCard>
             {/* {accountLevel.atLeastBronze && (
               <>
