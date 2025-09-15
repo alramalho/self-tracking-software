@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  useCurrentUserProgress,
+  useUserProgress,
   usePlansProgress,
 } from "@/contexts/plans-progress";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
@@ -82,7 +82,7 @@ const ProfilePage: React.FC = () => {
     rejectFriendRequest,
     currentUser,
   } = useUnifiedProfileData(username);
-  const { totalStreaks, totalHabits, totalLifestyles } = useCurrentUserProgress(
+  const { totalStreaks, totalHabits, totalLifestyles } = useUserProgress(
     profileData?.id
   );
 
