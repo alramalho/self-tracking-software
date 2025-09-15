@@ -16,7 +16,6 @@ import {
   isBefore,
   isSameDay,
   isThisWeek,
-  min,
   startOfWeek,
 } from "date-fns";
 import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
@@ -349,64 +348,6 @@ export class PlansService {
   private readonly HABIT_WEEKS = 4;
   private readonly LIFESTYLE_WEEKS = 9;
 
-  private isWeekCompleted(
-    weekStartDate: Date,
-    plan: Plan & { activities: Activity[]; sessions: PlanSession[] },
-    planActivityEntries: ActivityEntry[]
-  ): boolean {
-    const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
-    const weekStart = startOfWeek(weekStartDate, { weekStartsOn: 0 });
-
-    if (plan.outlineType === PlanOutlineType.TIMES_PER_WEEK) {
-      const entriesThisWeek = planActivityEntries.filter((entry) => {
-        return (
-          isAfter(entry.date, weekStart) && isBefore(entry.date, weekEndDate)
-        );
-      });
-
-      const uniqueDaysWithActivities = new Set(
-        entriesThisWeek.map((entry) =>
-          format(new Date(entry.date), "yyyy-MM-dd")
-        )
-      );
-
-      const isCompleted =
-        uniqueDaysWithActivities.size >= (plan.timesPerWeek || 0);
-
-      return isCompleted;
-    } else {
-      const plannedSessionsThisWeek = plan.sessions?.filter((session) => {
-        const sessionDate = new Date(session.date);
-        return (
-          isAfter(sessionDate, weekStart) && isBefore(sessionDate, weekEndDate)
-        );
-      });
-
-      if (!plannedSessionsThisWeek || plannedSessionsThisWeek.length === 0) {
-        return false;
-      }
-
-      const allSessionsCompleted = plannedSessionsThisWeek.every((session) => {
-        const sessionDate = new Date(session.date);
-        const weekStart = startOfWeek(sessionDate, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(sessionDate, { weekStartsOn: 0 });
-
-        const completedSessionsThisWeek = planActivityEntries.filter(
-          (entry) =>
-            entry.activityId === session.activityId &&
-            isAfter(new Date(entry.date), weekStart) &&
-            isBefore(new Date(entry.date), weekEnd)
-        );
-
-        return (
-          completedSessionsThisWeek && completedSessionsThisWeek.length > 0
-        );
-      });
-
-      return allSessionsCompleted;
-    }
-  }
-
   async calculatePlanAchievement(
     planId: string,
     initialDate?: Date
@@ -433,23 +374,14 @@ export class PlansService {
     );
     console.log(`Activities: ${plan?.activities.map((a) => a.title)}`);
 
-    if (!plan) {
-      throw new Error(`Plan ${planId} not found`);
+    if (!plan || !user) {
+      throw new Error(`Plan ${planId} or user not found`);
     }
 
-    // Get activity entries for this plan's activities
-    const activityEntries = await prisma.activityEntry.findMany({
-      where: {
-        activityId: { in: plan.activities.map((a) => a.id) },
-        deletedAt: null,
-      },
-    });
+    // Get weeks data which includes all completion information
+    const weeks = await this.getPlanWeeks(plan, user, initialDate);
 
-    const planActivityEntries = activityEntries.filter((entry) =>
-      plan.activities.some((a) => a.id === entry.activityId)
-    );
-
-    if (planActivityEntries.length === 0) {
+    if (weeks.length === 0) {
       return {
         streak: 0,
         completedWeeks: 0,
@@ -459,19 +391,10 @@ export class PlansService {
       };
     }
 
-    const firstEntryDate = initialDate
-      ? initialDate
-      : min(planActivityEntries.map((entry) => new Date(entry.date)));
-
     const now = new Date();
+
     const currentWeekStart = toMidnightUTCDate(
       startOfWeek(now, {
-        weekStartsOn: 0,
-      })
-    );
-
-    let weekStart = toMidnightUTCDate(
-      startOfWeek(firstEntryDate, {
         weekStartsOn: 0,
       })
     );
@@ -481,17 +404,23 @@ export class PlansService {
     let incompleteWeeks = 0;
     let totalWeeks = 0;
 
-    while (
-      isAfter(currentWeekStart, weekStart) ||
-      isSameDay(weekStart, currentWeekStart)
-    ) {
-      totalWeeks += 1;
-      const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
-      const wasCompleted = this.isWeekCompleted(
-        weekStart,
-        plan,
-        planActivityEntries
+    // Iterate through weeks up to current week
+    for (const week of weeks) {
+      const weekStart = toMidnightUTCDate(
+        startOfWeek(week.startDate, {
+          weekStartsOn: 0,
+        })
       );
+      const isCurrentWeek = isSameDay(weekStart, currentWeekStart);
+      const isBeforeCurrentWeek = isBefore(weekStart, currentWeekStart);
+
+      // Only process weeks up to and including current week
+      if (!isCurrentWeek && !isBeforeCurrentWeek) {
+        break;
+      }
+
+      totalWeeks += 1;
+      const wasCompleted = week.isCompleted;
 
       if (wasCompleted) {
         console.log(
@@ -511,8 +440,6 @@ export class PlansService {
           `week ${weekStart} was not completed. streak -1 = ${streak}`
         );
       }
-
-      weekStart = addWeeks(weekStart, 1);
     }
 
     console.log("streak", streak);
@@ -521,7 +448,7 @@ export class PlansService {
     const weeksToAchieve = this.LIFESTYLE_WEEKS - streak;
 
     return {
-      streak,
+      streak: Math.max(0, streak),
       completedWeeks,
       incompleteWeeks,
       isAchieved,
