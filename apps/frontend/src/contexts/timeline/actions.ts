@@ -19,7 +19,9 @@ export async function getTimelineData() {
               { finishingDate: null },
             ],
           },
-          select: { id: true },
+          include: {
+            activities: { select: { id: true } },
+          },
         },
         connectionsFrom: {
           include: {
@@ -37,7 +39,9 @@ export async function getTimelineData() {
                       { finishingDate: null },
                     ],
                   },
-                  select: { id: true },
+                  include: {
+                    activities: { select: { id: true } },
+                  },
                 }, // Add this
               },
             },
@@ -59,7 +63,9 @@ export async function getTimelineData() {
                       { finishingDate: null },
                     ],
                   },
-                  select: { id: true },
+                  include: {
+                    activities: { select: { id: true } },
+                  },
                 }, // Add this
               },
             },
