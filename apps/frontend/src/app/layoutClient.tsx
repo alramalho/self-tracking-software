@@ -3,7 +3,7 @@
 import GeneralInitializer from "@/components/GeneralInitializer";
 import { DailyCheckinPopoverProvider } from "@/contexts/DailyCheckinContext";
 import { GlobalDataProvider } from "@/contexts/GlobalDataProvider";
-import { PlanProgressProvider } from "@/contexts/PlanProgressContext";
+import { PlansProgressProvider } from "@/contexts/plans-progress";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { UpgradeProvider } from "@/contexts/UpgradeContext";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -45,11 +45,11 @@ export default function ClientLayout({
       persistOptions={{ persister: localStoragePersister }}
     >
       <GlobalDataProvider>
-        <PlanProgressProvider>
+        <PlansProgressProvider>
           <ThemeProvider>
             <ThemedClientLayout>{children}</ThemedClientLayout>
           </ThemeProvider>
-        </PlanProgressProvider>
+        </PlansProgressProvider>
       </GlobalDataProvider>
     </PersistQueryClientProvider>
   );

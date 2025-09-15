@@ -1,7 +1,7 @@
 import { useApiWithAuth } from "@/api";
 import { useActivities } from "@/contexts/activities";
-import { usePlanProgress } from "@/contexts/PlanProgressContext/SimplifiedPlanProgressContext";
 import { CompletePlan, usePlans } from "@/contexts/plans";
+import { usePlanProgress } from "@/contexts/plans-progress";
 import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";

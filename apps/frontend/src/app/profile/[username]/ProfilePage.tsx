@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useCurrentUserProgress,
   usePlansProgress,
-} from "@/contexts/PlanProgressContext/SimplifiedPlanProgressContext";
+} from "@/contexts/plans-progress";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -175,12 +175,6 @@ const ProfilePage: React.FC = () => {
   const handleTimeRangeChange = (value: TimeRange) => {
     setTimeRange(value);
     setEndDate(new Date());
-    // Force a recalculation by closing and reopening the streak details if it's open
-    if (showStreakDetails) {
-      setShowStreakDetails(false);
-      // Small delay to ensure the popover closes before reopening
-      setTimeout(() => setShowStreakDetails(true), 100);
-    }
   };
 
   const hasPendingReceivedConnectionRequest = useMemo(() => {

@@ -101,7 +101,7 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
             <div className="space-y-1">
               <h3 className="font-medium text-foreground">Max Level Reached</h3>
               <p className="text-xs text-muted-foreground">
-                You've unlocked all available levels
+                You&apos;ve unlocked all available levels
               </p>
             </div>
           </div>

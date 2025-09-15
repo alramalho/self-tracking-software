@@ -1,5 +1,5 @@
-import { usePlanProgress } from "@/contexts/PlanProgressContext/SimplifiedPlanProgressContext";
 import { CompletePlan } from "@/contexts/plans";
+import { usePlanProgress } from "@/contexts/plans-progress";
 import { Activity, ActivityEntry } from "@tsw/prisma";
 import { format, startOfWeek } from "date-fns";
 import React, { useEffect, useMemo, useState } from "react";
