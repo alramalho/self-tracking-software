@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivities } from "@/contexts/activities";
-import { usePlansProgress } from "@/contexts/PlansProgressContext";
+import { PlanProgressData, usePlansProgress } from "@/contexts/plans-progress";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useCurrentUser, useUser } from "@/contexts/users";
 import { getAccountLevel } from "@/hooks/useAccountLevel";
@@ -60,6 +60,7 @@ interface ActivityEntryPhotoCardProps {
     comments: (Comment & { user: { username: string; picture: string } })[];
   };
   user: { username: string; name: string; picture: string; planType: PlanType };
+  plansProgressData?: PlanProgressData[];
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
@@ -88,6 +89,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activity,
   activityEntry,
   user,
+  plansProgressData: propPlansProgressData,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
@@ -120,12 +122,16 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const textRef = useRef<HTMLParagraphElement>(null);
   const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
   const { data: ownerUser } = useUser({ username: user.username || "" });
-  const { data: plansProgressData } = usePlansProgress(
+  
+  // Use prop data if available, otherwise fetch via hook
+  const { data: fetchedPlansProgressData } = usePlansProgress(
     useMemo(
-      () => ownerUser?.plans?.map((plan) => plan.id) || [],
-      [ownerUser?.plans]
+      () => propPlansProgressData ? [] : (ownerUser?.plans?.map((plan) => plan.id) || []),
+      [propPlansProgressData, ownerUser?.plans]
     )
   );
+  
+  const plansProgressData = propPlansProgressData || fetchedPlansProgressData;
   const habitAchieved = plansProgressData?.some(
     (plan) => plan.habitAchievement.isAchieved
   );
