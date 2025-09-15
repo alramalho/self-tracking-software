@@ -37,7 +37,7 @@ export const ACCOUNT_LEVELS: AccountLevel[] = [
   createLevel("Diamond", 8192, "#22d3ee", "#0891b2", Gem, "text-cyan-400"),
 ];
 
-export function getAccountLevel(totalActivitiesLogged: number) {
+export function useAccountLevel(totalActivitiesLogged: number) {
   return useMemo(() => {
     // Find current level
     let currentLevel: AccountLevel | null = null;

@@ -3,7 +3,7 @@ import { useActivities } from "@/contexts/activities";
 import { PlanProgressData, usePlansProgress } from "@/contexts/plans-progress";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useCurrentUser, useUser } from "@/contexts/users";
-import { getAccountLevel } from "@/hooks/useAccountLevel";
+import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { getThemeVariants } from "@/utils/theme";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import {
@@ -142,26 +142,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
     () => ownerUser?.activityEntries?.length || 0,
     [ownerUser]
   );
-  // const accountLevel = useMemo(() => {
-  //   if (!plansProgressData) return getAccountLevel(0);
 
-  //   let totalActivities = 0;
-  //   for (const plan of plansProgressData) {
-  //     for (const week of plan.weeks) {
-  //       totalActivities += week.completedActivities.length;
-  //     }
-  //   }
-  //   return getAccountLevel(totalActivities);
-  // }, [plansProgressData]);
-  const accountLevel = getAccountLevel(totalLoggedActivities);
+  const accountLevel = useAccountLevel(totalLoggedActivities);
 
-  useEffect(() => {
-    if (ownerUser?.username == "pino") {
-      console.log("pino");
-      console.log({ plansProgressData });
-      console.log({ accountLevel, totalLoggedActivities });
-    }
-  }, [accountLevel]);
   const [showAllComments, setShowAllComments] = useState(false);
   const {
     modifyReactions,

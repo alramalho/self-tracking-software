@@ -1,6 +1,5 @@
 import { AccountLevel } from "@/hooks/useAccountLevel";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
 
 interface ProgressRingProps {
   size?: number;
@@ -34,7 +33,6 @@ export function ProgressRing({
   const adjustedCircumference = circumference - gapSize;
   const strokeDashoffset = adjustedCircumference - (percentage / 100) * adjustedCircumference;
 
-  useEffect(() => {console.log(currentLevel)}, [currentLevel])
   return (
     <div className={cn("relative inline-flex", className)} onClick={onClick}>
       <svg width={size} height={size} className="transform -rotate-90">
