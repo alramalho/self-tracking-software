@@ -3,7 +3,7 @@ import { useActivities } from "@/contexts/activities";
 import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useCurrentUser, useUser } from "@/contexts/users";
-import { usePaidPlan } from "@/hooks/usePaidPlan";
+import { getAccountLevel } from "@/hooks/useAccountLevel";
 import { getThemeVariants } from "@/utils/theme";
 import { ReactionBarSelector } from "@charkour/react-reactions";
 import {
@@ -20,13 +20,18 @@ import {
   isYesterday,
 } from "date-fns";
 import { Edit, Medal, Smile, Sprout } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import toast from "react-hot-toast";
-import { twMerge } from "tailwind-merge";
 import BadgeExplainerPopover from "./BadgeExplainerPopover";
 import CommentSection from "./CommentSection";
 import NeonCard from "./NeonGradientCard";
-import { PlanBadge } from "./PlanBadge";
+import { ProgressRing } from "./ProgressRing";
 import { Separator } from "./ui/separator";
 
 const getFormattedDate = (date: Date) => {
@@ -52,7 +57,7 @@ interface ActivityEntryPhotoCardProps {
   activity: Activity;
   activityEntry: ActivityEntry & {
     reactions: (Reaction & { user: { username: string } })[];
-    comments:( Comment & { user: { username: string; picture: string } })[];
+    comments: (Comment & { user: { username: string; picture: string } })[];
   };
   user: { username: string; name: string; picture: string; planType: PlanType };
   editable?: boolean;
@@ -114,10 +119,12 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
   const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
-  const { isUserPremium } = usePaidPlan();
   const { data: ownerUser } = useUser({ username: user.username || "" });
   const { data: plansProgressData } = usePlansProgress(
-    ownerUser?.plans?.map((plan) => plan.id) || []
+    useMemo(
+      () => ownerUser?.plans?.map((plan) => plan.id) || [],
+      [ownerUser?.plans]
+    )
   );
   const habitAchieved = plansProgressData?.some(
     (plan) => plan.habitAchievement.isAchieved
@@ -125,11 +132,30 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const lifestyleAchieved = plansProgressData?.some(
     (plan) => plan.lifestyleAchievement.isAchieved
   );
-  const achievedPlan = plansProgressData?.find(
-    (plan) =>
-      plan.lifestyleAchievement.isAchieved || plan.habitAchievement.isAchieved
+  const totalLoggedActivities = useMemo(
+    () => ownerUser?.activityEntries?.length || 0,
+    [ownerUser]
   );
+  // const accountLevel = useMemo(() => {
+  //   if (!plansProgressData) return getAccountLevel(0);
 
+  //   let totalActivities = 0;
+  //   for (const plan of plansProgressData) {
+  //     for (const week of plan.weeks) {
+  //       totalActivities += week.completedActivities.length;
+  //     }
+  //   }
+  //   return getAccountLevel(totalActivities);
+  // }, [plansProgressData]);
+  const accountLevel = getAccountLevel(totalLoggedActivities);
+
+  useEffect(() => {
+    if (ownerUser?.username == "pino") {
+      console.log("pino");
+      console.log({ plansProgressData });
+      console.log({ accountLevel, totalLoggedActivities });
+    }
+  }, [accountLevel]);
   const [showAllComments, setShowAllComments] = useState(false);
   const {
     modifyReactions,
@@ -474,33 +500,45 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-2">
             <div className="relative">
-              <Avatar
-                className={twMerge(
-                  "w-8 h-8",
-                  isUserPremium && "ring-2 ring-offset-2 ring-offset-white",
-                  isUserPremium && variants.ring
-                )}
-                onClick={onAvatarClick}
+              <ProgressRing
+                size={32}
+                strokeWidth={2}
+                percentage={accountLevel.percentage}
+                currentLevel={accountLevel.currentLevel}
+                atLeastBronze={accountLevel.atLeastBronze}
+                badge={false}
+                badgeSize={32}
               >
-                <AvatarImage src={user.picture || ""} alt={user.name || ""} />
-                <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
-              </Avatar>
-              {isUserPremium && (
-                <div className="absolute -bottom-[6px] -right-[6px]">
-                  <PlanBadge planType={user.planType || "FREE"} size={18} />
-                </div>
-              )}
+                <Avatar
+                  className="w-8 h-8"
+                  style={{
+                    boxShadow: `0 0 0 2px white, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
+                  }}
+                  onClick={onAvatarClick}
+                >
+                  <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+                  <AvatarFallback>{(user.name || "U")[0]}</AvatarFallback>
+                </Avatar>
+              </ProgressRing>
             </div>
             <span className="text-5xl h-full text-gray-400">
               {activity.emoji}
             </span>
             <div className="flex flex-col">
-              <span
-                className="text-sm text-gray-500 hover:underline cursor-pointer"
-                onClick={onUsernameClick}
-              >
-                @{user.username}
-              </span>
+              <div className="flex items-center gap-1 flex-row flex-nowrap">
+                <span
+                  className="text-sm text-gray-500 hover:underline cursor-pointer"
+                  onClick={onUsernameClick}
+                  style={{ color: accountLevel.currentLevel?.color }}
+                >
+                  @{user.username}
+                </span>
+                {/* {accountLevel.atLeastBronze &&
+                  accountLevel.currentLevel?.getIcon({
+                    size: 16,
+                    className: "drop-shadow-sm",
+                  })} */}
+              </div>
               <span className="font-semibold">
                 {activity.title} – {activityEntry.quantity} {activity.measure}
               </span>

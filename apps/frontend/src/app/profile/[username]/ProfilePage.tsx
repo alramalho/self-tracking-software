@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePlansProgress, useUserProgress } from "@/contexts/plans-progress";
-import { useAccountLevel } from "@/hooks/useAccountLevel";
+import { getAccountLevel } from "@/hooks/useAccountLevel";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
@@ -209,7 +209,7 @@ const ProfilePage: React.FC = () => {
   // Calculate total activities logged (hardcoded if you don't know where they come from)
   const totalActivitiesLogged = activityEntries?.length || 0; // Fallback to hardcoded value
 
-  const accountLevel = useAccountLevel(totalActivitiesLogged);
+  const accountLevel = getAccountLevel(totalActivitiesLogged);
 
   if (isProfileDataLoading) {
     return (

@@ -1,5 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 
 export async function validateUser() {
   const { userId: clerkId } = await auth();

@@ -53,7 +53,7 @@ export interface PlanProgressData {
     activities: Activity[];
     completedActivities: ActivityEntry[];
     plannedActivities: number | PlanSession[];
-    weekActivities: Activity[];
+    weekActivities: Activity[]; // TODO: remove this BS
     isCompleted: boolean;
   }>;
 }
