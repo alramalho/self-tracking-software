@@ -134,9 +134,6 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }, [error, planId, handleQueryError]);
 
-    if (data?.plan.goal === "train 4 times a week") {
-      console.log({weeks: data?.weeks});
-    }
 
     return {
       data,
@@ -152,7 +149,6 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Multiple plans progress hook
   const usePlansProgress = (planIds: string[]) => {
-    console.log(`usePlansProgress called with planIds: ${planIds}`);
 
     const queries = useQueries({
       queries: planIds.map((planId) => ({
@@ -191,11 +187,6 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       userData?.plans?.map((plan) => plan.id) || []
     );
 
-    useEffect(() => {
-      console.log(`plans: ${userData?.plans?.map((p) => p.goal).join(", ")}`);
-      console.log({ planProgressData });
-    }, [planProgressData]);
-
     if (!planProgressData || isLoading) {
       return {
         totalStreaks: 0,
@@ -207,10 +198,6 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     return {
       totalStreaks: planProgressData.reduce((acc, planProgress) => {
         const newAcc = acc + planProgress.achievement?.streak;
-        console.log(
-          `plan ${planProgress.plan?.goal} has streak ${planProgress.achievement?.streak}`
-        );
-        console.log(`acc ${acc} -> ${newAcc}`);
         return newAcc;
       }, 0),
       totalHabits: planProgressData.reduce(

@@ -19,6 +19,7 @@ import {
   min,
   startOfWeek,
 } from "date-fns";
+import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
@@ -79,8 +80,12 @@ export class PlansService {
     const userCurrentDate = new TZDate(currentDate, timezone);
 
     // Get start of the week (Sunday) to match Python logic
-    const weekStart = startOfWeek(userCurrentDate, { weekStartsOn: 0 }); // 0 = Sunday
-    const weekEnd = endOfWeek(userCurrentDate, { weekStartsOn: 0 });
+    const weekStart = toMidnightUTCDate(
+      startOfWeek(userCurrentDate, { weekStartsOn: 0 })
+    ); // 0 = Sunday
+    const weekEnd = toMidnightUTCDate(
+      endOfWeek(userCurrentDate, { weekStartsOn: 0 })
+    );
 
     const numLeftDaysInTheWeek = Math.max(
       0,
@@ -431,6 +436,7 @@ export class PlansService {
         sessions: true,
       },
     });
+    const user = await prisma.user.findFirst({ where: { id: plan?.userId } });
 
     if (!plan) {
       throw new Error(`Plan ${planId} not found`);
@@ -463,13 +469,17 @@ export class PlansService {
       : min(planActivityEntries.map((entry) => new Date(entry.date)));
 
     const now = new Date();
-    const currentWeekStart = startOfWeek(now, {
-      weekStartsOn: 0,
-    });
+    const currentWeekStart = toMidnightUTCDate(
+      startOfWeek(now, {
+        weekStartsOn: 0,
+      })
+    );
 
-    let weekStart = startOfWeek(firstEntryDate, {
-      weekStartsOn: 0,
-    });
+    let weekStart = toMidnightUTCDate(
+      startOfWeek(firstEntryDate, {
+        weekStartsOn: 0,
+      })
+    );
 
     let streak = 0;
     let completedWeeks = 0;
@@ -503,8 +513,6 @@ export class PlansService {
 
       weekStart = addWeeks(weekStart, 1);
     }
-
-    console.log("streak", streak);
 
     const isAchieved = streak >= this.LIFESTYLE_WEEKS;
     const weeksToAchieve = this.LIFESTYLE_WEEKS - streak;
@@ -641,7 +649,7 @@ export class PlansService {
       this.calculateLifestyleAchievement(achievement);
 
     // Get weeks data
-    const weeks = await this.getPlanWeeks(plan, userId);
+    const weeks = await this.getPlanWeeks(plan, user);
 
     return {
       planId,
@@ -672,8 +680,8 @@ export class PlansService {
     isCompleted: boolean;
   }> {
     // Calculate the date range for the week in question (start on Sunday, finish on Saturday)
-    const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
-    const weekEnd = endOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
+    const weekStart = toMidnightUTCDate(startOfWeek(date, { weekStartsOn: 0 })); // 0 = Sunday
+    const weekEnd = toMidnightUTCDate(endOfWeek(date, { weekStartsOn: 0 })); // 0 = Sunday
 
     // Filter to have available only the activities present in the plan.activities
     const planActivities = userActivities.filter((activity) =>
@@ -694,7 +702,14 @@ export class PlansService {
 
     // For completed activities, return the performed activity entries this week for that plan
     const completedActivities = planActivityEntriesThisWeek;
+    const numberOfDaysCompletedThisWeek = // must be completedActivites but as a set for .date as YYYY-MM-DD
+      new Set(
+        completedActivities.map((activity) =>
+          format(new Date(activity.date), "yyyy-MM-dd")
+        )
+      ).size;
 
+    console.log({ completedActivities, numberOfDaysCompletedThisWeek });
     // Check whether the plan is times per week or scheduled sessions
     let plannedActivities: number | PlanSession[];
 
@@ -740,7 +755,7 @@ export class PlansService {
       plannedActivities,
       weekActivities,
       isCompleted:
-        completedActivities.length >=
+        numberOfDaysCompletedThisWeek >=
         (typeof plannedActivities === "number"
           ? plannedActivities
           : (plannedActivities?.length ?? 0)),
@@ -749,12 +764,12 @@ export class PlansService {
 
   private async getPlanWeeks(
     plan: Plan & { activities: Activity[]; sessions?: PlanSession[] },
-    userId: string,
+    user: User,
     startDate?: Date
   ): Promise<Array<PlanWeek>> {
     // Get user activities
     const userActivities = await prisma.activity.findMany({
-      where: { userId },
+      where: { userId: user.id },
     });
 
     // Get plan with sessions if not already included
@@ -787,24 +802,41 @@ export class PlansService {
     // Determine the actual start date - either the earliest activity entry or the provided startDate
     let actualStartDate: Date;
     if (startDate) {
+      console.log({ startDate });
       actualStartDate = startDate;
     } else if (activityEntries.length > 0) {
-      actualStartDate = new Date(activityEntries[0].date);
+      console.log("activityEntries[0].date", activityEntries[0].date);
+      console.log(
+        "toMidnightUTCDate(activityEntries[0].date)",
+        toMidnightUTCDate(activityEntries[0].date)
+      );
+      actualStartDate = toMidnightUTCDate(activityEntries[0].date);
     } else {
       // If no activity entries exist, start from current week
-      actualStartDate = new Date();
+      console.log("todaysLocalDate", todaysLocalDate());
+      actualStartDate = todaysLocalDate();
     }
+
+    console.log({ actualStartDate });
 
     const weeks: Array<PlanWeek> = [];
 
-    let weekStart = startOfWeek(actualStartDate, { weekStartsOn: 0 });
+    let weekStart = toMidnightUTCDate(
+      startOfWeek(actualStartDate, { weekStartsOn: 0 })
+    );
+
+    console.log({ planGoal: plan.goal });
+    console.log({ weekStart });
     const planEndDate = new Date(
       plan.finishingDate || addWeeks(new Date(), this.LIFESTYLE_WEEKS)
     );
 
     while (
       isBefore(weekStart, planEndDate) ||
-      isSameDay(weekStart, startOfWeek(planEndDate, { weekStartsOn: 0 }))
+      isSameDay(
+        weekStart,
+        toMidnightUTCDate(startOfWeek(planEndDate, { weekStartsOn: 0 }))
+      )
     ) {
       const weekData = await this.getPlanWeek(
         weekStart,
@@ -812,9 +844,10 @@ export class PlansService {
         userActivities
       );
       weeks.push(weekData);
-      weekStart = addWeeks(weekStart, 1);
+      weekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
     }
 
+    console.log({ weeksStarDates: weeks.map((week) => week.startDate) });
     return weeks;
   }
 }
