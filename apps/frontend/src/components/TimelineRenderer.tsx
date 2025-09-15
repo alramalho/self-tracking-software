@@ -1,5 +1,6 @@
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import { useActivities } from "@/contexts/activities";
+import { usePlansProgress } from "@/contexts/plans-progress";
 import { useTimeline } from "@/contexts/timeline";
 import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -41,6 +42,23 @@ const TimelineRenderer: React.FC<{
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const { activities } = useActivities();
+
+  // Extract all unique plan IDs from timeline users
+  const allTimelinePlanIds = useMemo(() => {
+    if (!timelineData?.recommendedUsers) return [];
+    
+    const planIds = new Set<string>();
+    timelineData.recommendedUsers.forEach(user => {
+      user.plans?.forEach(plan => {
+        planIds.add(plan.id);
+      });
+    });
+    
+    return Array.from(planIds);
+  }, [timelineData?.recommendedUsers]);
+
+  // Batch load all timeline plan progress
+  const { data: allTimelinePlansProgress } = usePlansProgress(allTimelinePlanIds);
 
   const friends = useMemo(() => {
     return [
@@ -245,6 +263,13 @@ const TimelineRenderer: React.FC<{
           // wacky casting, should be dealt in the query level
           if (!activity || !user || user.username === null) return null;
 
+          // Get plan progress data for this user's plans
+          const timelineUser = timelineData?.recommendedUsers?.find(u => u.id === user.id);
+          const userPlanIds = timelineUser?.plans?.map((plan: any) => plan.id) || [];
+          const userPlansProgress = allTimelinePlansProgress?.filter(planProgress => 
+            userPlanIds.includes(planProgress.planId)
+          ) || [];
+
           return (
             <React.Fragment key={entry.id}>
               <ActivityEntryPhotoCard
@@ -259,6 +284,7 @@ const TimelineRenderer: React.FC<{
                     planType: PlanType;
                   }
                 }
+                plansProgressData={userPlansProgress}
                 onAvatarClick={() => {
                   router.push(`/profile/${user?.username}`);
                 }}

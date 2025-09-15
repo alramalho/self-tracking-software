@@ -12,6 +12,15 @@ export async function getTimelineData() {
     const updatedUser = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
+        plans: {
+          where: {
+            OR: [
+              { finishingDate: { gt: new Date() } },
+              { finishingDate: null },
+            ],
+          },
+          select: { id: true },
+        },
         connectionsFrom: {
           include: {
             to: {
@@ -21,6 +30,15 @@ export async function getTimelineData() {
                 name: true,
                 picture: true,
                 planType: true,
+                plans: {
+                  where: {
+                    OR: [
+                      { finishingDate: { gt: new Date() } },
+                      { finishingDate: null },
+                    ],
+                  },
+                  select: { id: true },
+                }, // Add this
               },
             },
           },
@@ -34,6 +52,15 @@ export async function getTimelineData() {
                 name: true,
                 picture: true,
                 planType: true,
+                plans: {
+                  where: {
+                    OR: [
+                      { finishingDate: { gt: new Date() } },
+                      { finishingDate: null },
+                    ],
+                  },
+                  select: { id: true },
+                }, // Add this
               },
             },
           },

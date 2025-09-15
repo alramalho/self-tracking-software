@@ -4,7 +4,7 @@ import { useApiWithAuth } from "@/api";
 import { dummyPlanProgressData } from "@/app/onboarding/components/steps/AIPartnerFinder";
 import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   ActivityEntry,
@@ -81,7 +81,9 @@ interface PlansProgressContextType {
   };
 }
 
-const PlansProgressContext = createContext<PlansProgressContextType | undefined>(undefined);
+const PlansProgressContext = createContext<
+  PlansProgressContextType | undefined
+>(undefined);
 
 export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -89,6 +91,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn, isLoaded } = useSession();
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
+  const queryClient = useQueryClient();
 
   const fetchPlanProgress = async (
     planId: string
@@ -105,27 +108,29 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     planIds: string[]
   ): Promise<PlanProgressData[]> => {
     if (planIds.length === 0) return [];
-    
-    const response = await api.post('/plans/batch-progress', { planIds });
+
+    const response = await api.post("/plans/batch-progress", { planIds });
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
-    // Parse ISO date strings to Date objects
+
     const data = response.data.progress;
-    return data.map((planProgress: any) => ({
-      ...planProgress,
-      weeks: planProgress.weeks.map((week: any) => ({
-        ...week,
-        startDate: new Date(week.startDate),
-      }))
-    }));
+    return data.map((planProgress: any) => {
+      queryClient.setQueryData(["plan-progress", planProgress.planId], planProgress);
+      return ({
+        ...planProgress,
+        weeks: planProgress.weeks.map((week: any) => ({
+          ...week,
+          startDate: new Date(week.startDate),
+        })),
+      })
+    });
   };
 
   // Single plan progress hook
   const usePlanProgress = (planId: string) => {
     const { data, isLoading, error } = useQuery({
-      queryKey: ["planProgress", planId],
+      queryKey: ["plan-progress", planId],
       queryFn: () => {
         if (planId == "demo-coach-plan") {
           return dummyPlanProgressData;
@@ -144,7 +149,6 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }, [error, planId, handleQueryError]);
 
-
     return {
       data,
       isLoading,
@@ -161,7 +165,35 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   const usePlansProgress = (planIds: string[]) => {
     const { data, isLoading, error } = useQuery({
       queryKey: ["plans-progress", planIds.sort()], // Sort for consistent cache keys
-      queryFn: () => fetchBatchPlanProgress(planIds),
+      queryFn: async () => {
+        // Check which plans already have cached data
+        const cachedData: PlanProgressData[] = [];
+        const missingPlanIds: string[] = [];
+        
+        planIds.forEach(planId => {
+          const queryState = queryClient.getQueryState(["plan-progress", planId]);
+          const existingData = queryState?.data as PlanProgressData | undefined;
+          const isInvalidated = queryState ? queryState.isInvalidated : true;
+          
+          if (existingData && !isInvalidated) {
+            cachedData.push(existingData);
+          } else {
+            missingPlanIds.push(planId);
+          }
+        });
+        
+        // Fetch only missing plans
+        const newData = missingPlanIds.length > 0 
+          ? await fetchBatchPlanProgress(missingPlanIds)
+          : [];
+        
+        // Combine cached and new data, maintaining original order
+        return planIds.map(planId => {
+          const cached = cachedData.find(d => d.planId === planId);
+          const fresh = newData.find(d => d.planId === planId);
+          return cached || fresh!;
+        });
+      },
       enabled: isLoaded && isSignedIn && planIds.length > 0,
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
@@ -174,9 +206,9 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }, [error, handleQueryError]);
 
-    return { 
-      data: data || [], 
-      isLoading 
+    return {
+      data: data || [],
+      isLoading,
     };
   };
 
@@ -231,7 +263,9 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 export const usePlansProgressContext = () => {
   const context = useContext(PlansProgressContext);
   if (context === undefined) {
-    throw new Error("usePlansProgressContext must be used within a PlansProgressProvider");
+    throw new Error(
+      "usePlansProgressContext must be used within a PlansProgressProvider"
+    );
   }
   return context;
 };
@@ -251,4 +285,3 @@ export const useUserProgress = (userId?: string) => {
   const { useUserProgress: hookFromContext } = usePlansProgressContext();
   return hookFromContext(userId);
 };
-
