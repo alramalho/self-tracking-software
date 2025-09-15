@@ -500,57 +500,70 @@ export class PlansService {
   async getBatchPlanProgress(
     planIds: string[],
     userId: string
-  ): Promise<{
-    planId: string;
-    plan: {
-      emoji: string;
-      goal: string;
-      id: string;
-      type: PlanOutlineType;
-    };
-    achievement: {
-      streak: number;
-      completedWeeks: number;
-      incompleteWeeks: number;
-      totalWeeks: number;
-    };
-    currentWeekStats: {
-      numActiveDaysInTheWeek: number;
-      numLeftDaysInTheWeek: number;
-      numActiveDaysLeftInTheWeek: number;
-      daysCompletedThisWeek: number;
-    };
-    habitAchievement: {
-      progressValue: number;
-      maxValue: number;
-      isAchieved: boolean;
-      progressPercentage: number;
-    };
-    lifestyleAchievement: {
-      progressValue: number;
-      maxValue: number;
-      isAchieved: boolean;
-      progressPercentage: number;
-    };
-    weeks: Array<PlanWeek>;
-  }[]> {
+  ): Promise<
+    {
+      planId: string;
+      plan: {
+        emoji: string;
+        goal: string;
+        id: string;
+        type: PlanOutlineType;
+      };
+      achievement: {
+        streak: number;
+        completedWeeks: number;
+        incompleteWeeks: number;
+        totalWeeks: number;
+      };
+      currentWeekStats: {
+        numActiveDaysInTheWeek: number;
+        numLeftDaysInTheWeek: number;
+        numActiveDaysLeftInTheWeek: number;
+        daysCompletedThisWeek: number;
+      };
+      habitAchievement: {
+        progressValue: number;
+        maxValue: number;
+        isAchieved: boolean;
+        progressPercentage: number;
+      };
+      lifestyleAchievement: {
+        progressValue: number;
+        maxValue: number;
+        isAchieved: boolean;
+        progressPercentage: number;
+      };
+      weeks: Array<PlanWeek>;
+    }[]
+  > {
+    const plans = await prisma.plan.findMany({
+      where: { id: { in: planIds } },
+      include: { activities: true },
+    });
+
+    if (!plans) {
+      throw new Error(`Plans ${planIds.join(", ")} not found.`);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+
     // Execute all plan progress calculations in parallel
-    const progressPromises = planIds.map(planId => 
-      this.getSinglePlanProgress(planId, userId).catch(error => {
-        logger.error(`Failed to get progress for plan ${planId}:`, error);
-        return null; // Return null for failed plans instead of throwing
-      })
+    const progressPromises = Promise.all(
+      plans.map((plan) => this.getSinglePlanProgress(plan, user))
     );
 
-    const results = await Promise.all(progressPromises);
-    
-    // Filter out null results (failed plans)
-    return results.filter((result): result is NonNullable<typeof result> => result !== null);
+    return await progressPromises;
   }
 
   private async getSinglePlanProgress(
-    planId: string,
-    userId: string
+    plan: Plan & { activities: Activity[] },
+    user: User
   ): Promise<{
     planId: string;
     plan: {
@@ -585,27 +598,8 @@ export class PlansService {
     };
     weeks: Array<PlanWeek>;
   }> {
-    // Verify plan ownership
-    const plan = await prisma.plan.findUnique({
-      where: { id: planId },
-      include: { activities: true },
-    });
-
-    if (!plan) {
-      throw new Error(`Plan ${planId} not found.`);
-    }
-
-    // Get user for timezone info
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new Error(`User ${userId} not found`);
-    }
-
     // Get achievement data
-    const achievement = await this.calculatePlanAchievement(planId);
+    const achievement = await this.calculatePlanAchievement(plan.id);
 
     // Get current week stats
     const currentWeekStats = await this.getPlanWeekStats(plan, user);
@@ -619,7 +613,7 @@ export class PlansService {
     const weeks = await this.getPlanWeeks(plan, user);
 
     return {
-      planId,
+      planId: plan.id,
       plan: {
         emoji: plan.emoji || "🔥",
         goal: plan.goal,
