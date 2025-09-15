@@ -36,7 +36,8 @@ export default function GlobalError({
 
             <Button
               onClick={() => {
-                window.location.href = "/";
+                // window.location.href = "/";
+                window.location.reload();
               }}
               className="bg-primary hover:bg-primary/90"
             >
