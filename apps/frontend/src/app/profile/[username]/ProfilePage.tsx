@@ -126,8 +126,9 @@ const ProfilePage: React.FC = () => {
   const [progressExplainerOpen, setProgressExplainerOpen] = useState(false);
   const [badgeExplainer, setBadgeExplainer] = useState<{
     open: boolean;
-    achiever: any;
-  }>({ open: false, achiever: undefined });
+    planIds: string[];
+    badgeType: 'streaks' | 'habits' | 'lifestyles' | null;
+  }>({ open: false, planIds: [], badgeType: null });
 
   useEffect(() => {
     if (profileData?.username && !username && isOwnProfile) {
@@ -352,12 +353,7 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* Badges */}
-          <div
-            className="flex justify-center mb-6 gap-3"
-            onClick={() =>
-              setBadgeExplainer({ open: true, achiever: undefined })
-            }
-          >
+          <div className="flex justify-center mb-6 gap-3">
             {/* <div
               className={cn(
                 "flex items-center transition-all duration-300 relative",
@@ -371,7 +367,16 @@ const ProfilePage: React.FC = () => {
                 <FireAnimation height={40} width={40} className="pb-2" />
               )}
             </div> */}
-            <BadgeCard count={totalStreaks} width={70} height={90}>
+            <BadgeCard 
+              count={totalStreaks} 
+              width={70} 
+              height={90}
+              onClick={() => setBadgeExplainer({
+                open: true,
+                planIds: planIds,
+                badgeType: 'streaks'
+              })}
+            >
               {isPlansProgressLoading ? (
                 <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
               ) : (
@@ -388,7 +393,16 @@ const ProfilePage: React.FC = () => {
                 </>
               )}
             </BadgeCard>
-            <BadgeCard count={totalHabits} width={70} height={90}>
+            <BadgeCard 
+              count={totalHabits} 
+              width={70} 
+              height={90}
+              onClick={() => setBadgeExplainer({
+                open: true,
+                planIds: planIds,
+                badgeType: 'habits'
+              })}
+            >
               {isPlansProgressLoading ? (
                 <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
               ) : (
@@ -413,7 +427,16 @@ const ProfilePage: React.FC = () => {
               <span className="text-lg font-cursive">x{totalLifestyles}</span>
               <Rocket size={35} className="pb-2 text-orange-500" />
             </div> */}
-            <BadgeCard count={totalLifestyles} width={70} height={90}>
+            <BadgeCard 
+              count={totalLifestyles} 
+              width={70} 
+              height={90}
+              onClick={() => setBadgeExplainer({
+                open: true,
+                planIds: planIds,
+                badgeType: 'lifestyles'
+              })}
+            >
               {isPlansProgressLoading ? (
                 <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
               ) : (
@@ -596,24 +619,12 @@ const ProfilePage: React.FC = () => {
                           onClick={() =>
                             setBadgeExplainer({
                               open: true,
-                              achiever: {
-                                user: {
-                                  username: profileData?.username || "",
-                                  name: profileData?.name || "",
-                                  picture: profileData?.picture || "",
-                                },
-                                plan: {
-                                  type: lifestyleAchieved
-                                    ? "lifestyle"
-                                    : habitAchieved
-                                    ? "habit"
-                                    : undefined,
-                                  emoji: plan.emoji || "",
-                                  goal: plan.goal,
-                                  streak:
-                                    backendProgress?.achievement.streak || 0,
-                                },
-                              },
+                              planIds: [plan.id],
+                              badgeType: lifestyleAchieved 
+                                ? 'lifestyles' 
+                                : habitAchieved 
+                                ? 'habits' 
+                                : null
                             })
                           }
                         >
@@ -742,7 +753,9 @@ const ProfilePage: React.FC = () => {
       <BadgeExplainerPopover
         open={badgeExplainer.open}
         onClose={() => setBadgeExplainer((prev) => ({ ...prev, open: false }))}
-        achiever={badgeExplainer.achiever}
+        planIds={badgeExplainer.planIds}
+        badgeType={badgeExplainer.badgeType}
+        user={profileData as any}
       />
 
       {isOwnProfile && (

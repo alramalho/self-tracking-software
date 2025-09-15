@@ -1,81 +1,141 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 // ACHIEVEMENT_WEEKS moved to backend
+import { usePlansProgress } from "@/contexts/plans-progress";
+import { useCurrentUser } from "@/contexts/users";
 import useConfetti from "@/hooks/useConfetti";
 import { Flame, Medal, Sprout } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface BadgeExplainerPopoverProps {
   open: boolean;
   onClose: () => void;
-  achiever?: {
-    user: {
-      username: string;
-      name: string;
-      picture: string;
-    };
-    plan: {
-      type: "habit" | "lifestyle" | undefined;
-      emoji: string;
-      goal: string;
-      streak: number;
-    };
-  };
+  user: {
+    name: string,
+    picture: string,
+    username: string,
+  }
+  planIds: string[];
+  badgeType: 'streaks' | 'habits' | 'lifestyles' | null;
+  userId?: string; // Optional user ID for viewing other users' achievements
 }
 
 const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
   open,
   onClose,
-  achiever,
+  user,
+  planIds,
+  badgeType,
+  userId,
 }) => {
   const { stars, shapes } = useConfetti();
+  const { currentUser } = useCurrentUser();
+  const { data: plansProgressData, isLoading } = usePlansProgress(planIds);
+  
+  
+  // Filter achievements based on badge type
+  const relevantAchievements = useMemo(() => {
+    if (!plansProgressData || !badgeType) return [];
+    
+    return plansProgressData.filter(progress => {
+      switch (badgeType) {
+        case 'habits': return progress.habitAchievement?.isAchieved;
+        case 'lifestyles': return progress.lifestyleAchievement?.isAchieved;
+        case 'streaks': return progress.achievement?.streak > 0;
+        default: return false;
+      }
+    });
+  }, [plansProgressData, badgeType]);
+
+  // Get the first achievement for the celebration display
+  const firstAchievement = relevantAchievements[0];
   
   useEffect(() => {
-    if (open && achiever?.plan.type && ["habit", "lifestyle"].includes(achiever.plan.type)) {
+    if (open && badgeType && ["habits", "lifestyles"].includes(badgeType) && relevantAchievements.length > 0) {
       setTimeout(() => {
-        stars()
-        shapes()
-      }, 500)
+        stars();
+        shapes();
+      }, 500);
     }
-  }, [achiever, open]);
+  }, [badgeType, open, relevantAchievements.length, stars, shapes]);
 
   return (
-    <AppleLikePopover open={open} onClose={onClose} title="Streak Details">
+    <AppleLikePopover open={open} onClose={onClose} title="Badge Details">
       <div className="p-4">
-        {achiever &&
-          achiever.plan.type &&
-          ["habit", "lifestyle"].includes(achiever.plan.type) && (
-            <div className={`bg-gradient-to-br ${achiever.plan.type === 'lifestyle' ? 'from-amber-50 to-amber-100' : 'from-lime-50 to-lime-100'} rounded-lg p-6 text-center`}>
-              <div className="flex justify-center items-center mb-4">
-                <Avatar className={`h-16 w-16 border-4 ${achiever.plan.type === 'lifestyle' ? 'border-amber-200' : 'border-lime-200'}`}>
-                  <AvatarImage src={achiever?.user.picture} />
-                  <AvatarFallback>{achiever?.user.name[0]}</AvatarFallback>
-                </Avatar>
-                {achiever.plan.type === "lifestyle" && (
-                  <Medal size={52} className="text-amber-500 animate-pulse" />
-                )}
-                {achiever.plan.type === "habit" && (
-                  <Sprout size={52} className="text-lime-500 animate-pulse" />
-                )}
+        {isLoading ? (
+          <div className="text-center py-4">Loading...</div>
+        ) : (
+          <>
+            {/* Achievement celebration section */}
+            {badgeType && ["habits", "lifestyles"].includes(badgeType) && firstAchievement && user && (
+              <div className={`bg-gradient-to-br ${badgeType === 'lifestyles' ? 'from-amber-50 to-amber-100' : 'from-lime-50 to-lime-100'} rounded-lg p-6 text-center mb-6`}>
+                <div className="flex justify-center items-center mb-4">
+                  <Avatar className={`h-16 w-16 border-4 ${badgeType === 'lifestyles' ? 'border-amber-200' : 'border-lime-200'}`}>
+                    <AvatarImage src={user?.picture || ""} />
+                    <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
+                  </Avatar>
+                  {badgeType === "lifestyles" && (
+                    <Medal size={52} className="text-amber-500 animate-pulse" />
+                  )}
+                  {badgeType === "habits" && (
+                    <Sprout size={52} className="text-lime-500 animate-pulse" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <h3 className={`text-xl font-bold ${badgeType === 'lifestyles' ? 'text-amber-900' : 'text-lime-900'}`}>
+                    {user?.name} achieved {relevantAchievements.length > 1 ? `${relevantAchievements.length} ` : 'a '}{badgeType.slice(0, -1)} badge{relevantAchievements.length > 1 ? 's' : ''}! 🎉
+                  </h3>
+                  {relevantAchievements.length === 1 && (
+                    <>
+                      <p className={badgeType === 'lifestyles' ? 'text-amber-800' : 'text-lime-800'}>
+                        By maintaining a
+                        <span className="font-bold">
+                          {" "}
+                          {firstAchievement.achievement.streak}-week streak{" "}
+                        </span>
+                        on the plan
+                      </p>
+                      <p className="text-lg">
+                        <span className="text-2xl">{firstAchievement.plan.emoji}</span> {firstAchievement.plan.goal}
+                      </p>
+                    </>
+                  )}
+                  {relevantAchievements.length > 1 && (
+                    <p className={badgeType === 'lifestyles' ? 'text-amber-800' : 'text-lime-800'}>
+                      Across {relevantAchievements.length} different plans!
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className={`text-xl font-bold ${achiever.plan.type === 'lifestyle' ? 'text-amber-900' : 'text-lime-900'}`}>
-                  {achiever?.user.name} achieved a {achiever.plan.type} badge! 🎉
-                </h3>
-                <p className={achiever.plan.type === 'lifestyle' ? 'text-amber-800' : 'text-lime-800'}>
-                  By maintaining a
-                  <span className="font-bold">
-                    {" "}
-                    {achiever.plan.streak}-week streak{" "}
-                  </span>
-                  on the plan
-                </p>
-                <p className="text-lg">
-                  <span className="text-2xl">{achiever.plan.emoji}</span> {achiever.plan.goal}
-                </p>
+            )}
+
+            {/* Show all relevant achievements */}
+            {relevantAchievements.length > 1 && (
+              <div className="space-y-3 mb-6">
+                <h4 className="font-semibold text-gray-900">{user?.name} Achievements:</h4>
+                {relevantAchievements.map((achievement, index) => (
+                  <div key={achievement.planId} className="p-3 border rounded-lg bg-white/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">{achievement.plan.emoji}</span>
+                      <h5 className="font-medium">{achievement.plan.goal}</h5>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {badgeType === 'streaks' && (
+                        <p>Current streak: <span className="font-bold">{achievement.achievement.streak}</span> weeks</p>
+                      )}
+                      {badgeType === 'habits' && (
+                        <p>Habit achieved with <span className="font-bold">{achievement.achievement.streak}</span> week streak</p>
+                      )}
+                      {badgeType === 'lifestyles' && (
+                        <p>Lifestyle achieved with <span className="font-bold">{achievement.achievement.streak}</span> week streak</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
+            )}
+          </>
+        )}
         <h3 className="text-xl font-semibold mb-4 mt-6">🏆 How badges are earned</h3>
 
         <div className="p-4 bg-gray-50 rounded-lg">

@@ -625,23 +625,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       <BadgeExplainerPopover
         open={showBadgeExplainer}
         onClose={() => setShowBadgeExplainer(false)}
-        achiever={{
-          user: {
-            username: user.username || "",
-            name: user.name || "",
-            picture: user.picture || "",
-          },
-          plan: {
-            type: lifestyleAchieved
-              ? "lifestyle"
-              : habitAchieved
-              ? "habit"
-              : undefined,
-            emoji: achievedPlan?.plan.emoji || "",
-            goal: achievedPlan?.plan.goal || "",
-            streak: achievedPlan?.achievement.streak || 0,
-          },
-        }}
+        user={user}
+        planIds={ownerUser?.plans?.map((plan) => plan.id) || []}
+        badgeType={lifestyleAchieved ? "lifestyles" : "habits"}
       />
     </NeonCard>
   ) : (
