@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useActivities } from "@/contexts/activities";
-import { todaysLocalDate } from "@/lib/utils";
+import { toMidnightUTCDate } from "@/lib/utils";
 import { format } from "date-fns";
 import { Loader2, Trash2 } from "lucide-react";
 import React, { useState } from "react";
@@ -30,7 +30,7 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
 }) => {
   const [quantity, setQuantity] = useState(activityEntry.quantity.toString());
   const [date, setDate] = useState(
-    format(new Date(activityEntry.date), "yyyy-MM-dd'T'HH:mm")
+    format(new Date(activityEntry.date), "yyyy-MM-dd")
   );
   const [description, setDescription] = useState(
     activityEntry.description || ""
@@ -62,8 +62,8 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
         <div>
           <label className="block text-sm font-medium mb-1">Date</label>
           <Input
-            type="datetime-local"
-            value={date}
+            type="date"
+            value={new Date(date).toISOString().split("T")[0]}
             onChange={(e) => setDate(e.target.value)}
           />
         </div>
@@ -77,16 +77,17 @@ const ActivityEntryEditor: React.FC<ActivityEntryEditorProps> = ({
           />
         </div>
         <Button
-          onClick={() =>
+          onClick={() => {
             upsertActivityEntry({
               entry: {
                 id: activityEntry.id,
                 quantity: Number(quantity),
-                date: todaysLocalDate(),
+                date: toMidnightUTCDate(new Date(date)),
                 description,
               },
-            })
-          }
+            });
+            onClose?.();
+          }}
           className="w-full"
           disabled={isUpsertingActivityEntry}
         >
