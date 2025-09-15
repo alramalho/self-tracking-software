@@ -102,7 +102,6 @@ export const dummyPlanProgressData: PlanProgressData = {
     streak: 3,
     completedWeeks: 2,
     incompleteWeeks: 0,
-    isAchieved: false,
     totalWeeks: 8,
   },
   currentWeekStats: {
