@@ -14,9 +14,8 @@ import {
   ChevronDown,
   ChevronRight,
   Hammer,
-  HelpCircle,
   RefreshCcw,
-  ScanFace,
+  ScanFace
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -29,20 +28,19 @@ import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePlans } from "@/contexts/plans";
+import { usePlansProgress } from "@/contexts/PlansProgressContext";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useThemeColors } from "@/hooks/useThemeColors";
-import { getThemeVariants } from "@/utils/theme";
 import { useSession } from "@clerk/clerk-react";
 import { isAfter } from "date-fns";
 
 const HomePage: React.FC = () => {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
   const router = useRouter();
-  
+
   const { notifications, clearAllNotifications } = useDataNotifications();
   const { plans } = usePlans();
   const activePlans = plans?.filter(
@@ -50,22 +48,19 @@ const HomePage: React.FC = () => {
       plan.deletedAt === null &&
       (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
   );
+  const _ = usePlansProgress(activePlans?.map((plan) => plan.id) || []); // force refetch prior to timeline to speed up plan show
   const { metrics } = useMetrics();
   const { refetchAllData } = useGlobalDataOperations();
-  
+
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
     "plans-section-collapsed",
     false
   );
-  const themeColors = useThemeColors();
-  const variants = getThemeVariants(themeColors.raw);
   const { userPlanType: userPaidPlanType } = usePaidPlan();
   const { setShowUpgradePopover } = useUpgrade();
   const isUserOnFreePlan = userPaidPlanType === "FREE";
-  const [showPlanProgressExplainer, setShowPlanProgressExplainer] =
-    useState(false);
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
   const { isLoaded, isSignedIn } = useSession();
 
@@ -214,7 +209,10 @@ const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div onClick={() => setIsFeedbackOpen(true)} className="ring-1 ring-gray-200 backdrop-blur-md bg-white/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200">
+          <div
+            onClick={() => setIsFeedbackOpen(true)}
+            className="ring-1 ring-gray-200 backdrop-blur-md bg-white/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200"
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Hammer size={40} className="text-gray-500" />
@@ -223,8 +221,7 @@ const HomePage: React.FC = () => {
                     We&apos;re updating the app!
                   </span>
                   <p className="text-xs text-gray-600">
-                    If anything is broken,
-                    please let us know.
+                    If anything is broken, please let us know.
                   </p>
                 </div>
               </div>
@@ -254,14 +251,6 @@ const HomePage: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       Your Plans
                     </h3>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowPlanProgressExplainer(true)}
-                    >
-                      <HelpCircle className="h-4 w-4 text-gray-400" />
-                    </Button>
                   </div>
                 </div>
                 <button

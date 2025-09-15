@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, ActivityEntry } from "@tsw/prisma";
 import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
+import { usePlans } from "../plans";
 import { TimelineData } from "../timeline/actions";
 import { HydratedUser } from "../users/actions";
 import { getActivities, getActivitiyEntries } from "./actions";
@@ -67,7 +68,6 @@ interface ActivitiesContextType {
   }) => Promise<void>;
   isAddingComment: boolean;
   isRemovingComment: boolean;
-
 }
 
 const ActivitiesContext = createContext<ActivitiesContextType | undefined>(
@@ -81,6 +81,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
+  const { plans } = usePlans();
 
   const activitiesQuery = useQuery({
     queryKey: ["activities"],
@@ -138,13 +139,28 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: (entry, variables) => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });
-      queryClient.setQueryData(["activity-entries"], (old: ReturnedActivityEntriesType) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["activity-entries"] });
-        return [...old, entry];
-      });
+      queryClient.setQueryData(
+        ["activity-entries"],
+        (old: ReturnedActivityEntriesType) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["activity-entries"],
+            });
+          return [...old, entry];
+        }
+      );
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       queryClient.refetchQueries({ queryKey: ["notifications"] });
       queryClient.refetchQueries({ queryKey: ["metrics"] });
+      const plansWithActivity = plans?.filter((plan) =>
+        plan.activities.some((activity) => activity.id === variables.activityId)
+      );
+      if (plansWithActivity) {
+        plansWithActivity.map((plan) => {
+          console.log("invalidating plan progress", plan.id);
+          queryClient.invalidateQueries({ queryKey: ["plan-progress", plan.id] });
+        });
+      }
 
       const hasPhoto = !!variables.photo;
       toast.success(
@@ -211,13 +227,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const deleteActivityMutation = useMutation({
     mutationFn: async (data: { id: string }) => {
       await api.delete(`/activities/${data.id}`);
-      return data.id
+      return data.id;
     },
     onSuccess: (id) => {
-      queryClient.setQueryData(["activities"], (old: ReturnedActivitiesType) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["activities"] });
-        return old.filter((activity) => activity.id !== id);
-      });
+      queryClient.setQueryData(
+        ["activities"],
+        (old: ReturnedActivitiesType) => {
+          if (!old)
+            return queryClient.refetchQueries({ queryKey: ["activities"] });
+          return old.filter((activity) => activity.id !== id);
+        }
+      );
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       toast.success("Activity deleted successfully!");
     },
@@ -230,16 +250,27 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const deleteActivityEntryMutation = useMutation({
     mutationFn: async (data: { id: string }) => {
       await api.delete(`/activities/activity-entries/${data.id}`);
-      return data.id
+      return data.id;
     },
     onSuccess: (id) => {
-      queryClient.setQueryData(["activity-entries"], (old: ReturnedActivityEntriesType) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["activity-entries"] });
-        return old.filter((entry) => entry.id !== id);
-      });
+      queryClient.setQueryData(
+        ["activity-entries"],
+        (old: ReturnedActivityEntriesType) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["activity-entries"],
+            });
+          return old.filter((entry) => entry.id !== id);
+        }
+      );
       queryClient.setQueryData(["timeline"], (old: TimelineData) => {
         if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
-        return { ...old, recommendedActivityEntries: old.recommendedActivityEntries.filter((entry) => entry.id !== id) };
+        return {
+          ...old,
+          recommendedActivityEntries: old.recommendedActivityEntries.filter(
+            (entry) => entry.id !== id
+          ),
+        };
       });
       toast.success("Activity deleted successfully!");
     },
@@ -280,24 +311,32 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
         return {
           ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
-            return entry.id === input.activityEntryId
-              ? { ...entry, reactions: reactions }
-              : entry;
-          }),
+          recommendedActivityEntries: old.recommendedActivityEntries.map(
+            (entry) => {
+              return entry.id === input.activityEntryId
+                ? { ...entry, reactions: reactions }
+                : entry;
+            }
+          ),
         };
       });
-      queryClient.setQueryData(["user", input.userUsername], (old: HydratedUser) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["user", input.userUsername] });
-        return {
-          ...old,
-          activityEntries: old.activityEntries?.map((entry) => {
-            return entry.id === input.activityEntryId
-              ? { ...entry, reactions: reactions }
-              : entry;
-          }),
-        };
-      });
+      queryClient.setQueryData(
+        ["user", input.userUsername],
+        (old: HydratedUser) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["user", input.userUsername],
+            });
+          return {
+            ...old,
+            activityEntries: old.activityEntries?.map((entry) => {
+              return entry.id === input.activityEntryId
+                ? { ...entry, reactions: reactions }
+                : entry;
+            }),
+          };
+        }
+      );
     },
     onError: (error) => {
       let customErrorMessage = `Failed to modify reactions`;
@@ -323,24 +362,32 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
         return {
           ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
-            return entry.id === input.activityEntryId
-              ? { ...entry, comments: comments }
-              : entry;
-          }),
+          recommendedActivityEntries: old.recommendedActivityEntries.map(
+            (entry) => {
+              return entry.id === input.activityEntryId
+                ? { ...entry, comments: comments }
+                : entry;
+            }
+          ),
         };
       });
-      queryClient.setQueryData(["user", input.userUsername], (old: HydratedUser) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["user", input.userUsername] });
-        return {
-          ...old,
-          activityEntries: old.activityEntries?.map((entry) => {
-            return entry.id === input.activityEntryId
-              ? { ...entry, comments: comments }
-              : entry;
-          }),
-        };
-      });
+      queryClient.setQueryData(
+        ["user", input.userUsername],
+        (old: HydratedUser) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["user", input.userUsername],
+            });
+          return {
+            ...old,
+            activityEntries: old.activityEntries?.map((entry) => {
+              return entry.id === input.activityEntryId
+                ? { ...entry, comments: comments }
+                : entry;
+            }),
+          };
+        }
+      );
     },
     onError: (error) => {
       let customErrorMessage = `Failed to add comment`;
@@ -365,24 +412,32 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
         return {
           ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries.map((entry) => {
-            return entry.id === input.activityEntryId
-              ? { ...entry, comments: comments }
-              : entry;
-          }),
+          recommendedActivityEntries: old.recommendedActivityEntries.map(
+            (entry) => {
+              return entry.id === input.activityEntryId
+                ? { ...entry, comments: comments }
+                : entry;
+            }
+          ),
         };
       });
-      queryClient.setQueryData(["user", input.userUsername], (old: HydratedUser) => {
-        if (!old) return queryClient.refetchQueries({ queryKey: ["user", input.userUsername] });
-        return {
-          ...old,
-          activityEntries: old.activityEntries?.map((entry) => {
-            return entry.id === input.activityEntryId
-              ? { ...entry, comments: comments }
-              : entry;
-          }),
-        };
-      });
+      queryClient.setQueryData(
+        ["user", input.userUsername],
+        (old: HydratedUser) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["user", input.userUsername],
+            });
+          return {
+            ...old,
+            activityEntries: old.activityEntries?.map((entry) => {
+              return entry.id === input.activityEntryId
+                ? { ...entry, comments: comments }
+                : entry;
+            }),
+          };
+        }
+      );
     },
     onError: (error) => {
       let customErrorMessage = `Failed to remove comment`;
@@ -390,7 +445,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.error("Failed to remove comment. Please try again.");
     },
   });
-
 
   const context: ActivitiesContextType = {
     activities: activitiesQuery.data || [],
@@ -418,7 +472,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     removeComment: removeCommentMutation.mutateAsync,
     isAddingComment: addCommentMutation.isPending,
     isRemovingComment: removeCommentMutation.isPending,
-
   };
 
   return (
