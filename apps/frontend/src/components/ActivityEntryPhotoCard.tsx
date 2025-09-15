@@ -19,7 +19,7 @@ import {
   isToday,
   isYesterday,
 } from "date-fns";
-import { Edit, Medal, Smile, Sprout } from "lucide-react";
+import { Edit, Rocket, Smile, Sprout } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -457,7 +457,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
           {/* Comment section for posts with images */}
           {hasImage && (
-            <div className="mx-2 mt-2">
+            <div className="mx-2 mt-2 relative z-10">
               <CommentSection
                 activityEntryId={activityEntry.id}
                 comments={comments}
@@ -565,7 +565,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         {!hasImage && (
           <>
             <Separator className="my-2 bg-gray-100" />
-            <div className="mt-3 w-full">
+            <div className="mt-3 w-full relative z-10">
               <CommentSection
                 activityEntryId={activityEntry.id}
                 comments={comments}
@@ -589,6 +589,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 onToggleShowAll={setShowAllComments}
                 isAddingComment={isAddingComment}
                 isRemovingComment={isRemovingComment}
+                className="bg-gray-50/30 backdrop-blur-md"
               />
             </div>
           </>
@@ -633,18 +634,16 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
       {!editable && ( // dont show in profile page
         <div
           onClick={() => setShowBadgeExplainer(true)}
-          className={`space-y-2 mb-4 absolute ${
-            hasImage ? "bottom-0 right-2" : "top-2 right-2"
-          } flex flex-col gap-2`}
+          className={`space-y-2 mb-4 absolute -bottom-9 -right-9 flex flex-col gap-2 z-0`}
         >
           {habitAchieved && !lifestyleAchieved && (
             <div className="flex flex-row items-center gap-2">
-              <Sprout size={42} className="text-lime-500 animate-pulse" />
+              <Sprout size={120} className="text-lime-500 opacity-20" />
             </div>
           )}
           {lifestyleAchieved && (
             <div className="flex flex-row items-center gap-2">
-              <Medal size={42} className="text-amber-500 animate-pulse" />
+              <Rocket size={120} className="text-amber-500 opacity-20" />
             </div>
           )}
         </div>
