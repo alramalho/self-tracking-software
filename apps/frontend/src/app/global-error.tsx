@@ -41,7 +41,7 @@ export default function GlobalError({
               }}
               className="bg-primary hover:bg-primary/90"
             >
-              Go to Home
+              Retry
             </Button>
 
             <div className="text-sm text-gray-500 max-w-md mx-auto mt-8 break-words">
