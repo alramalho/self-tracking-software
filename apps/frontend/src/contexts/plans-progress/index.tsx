@@ -76,7 +76,7 @@ interface PlansProgressContextType {
   };
 
   // User progress
-  useCurrentUserProgress: (userId?: string) => {
+  useUserProgress: (userId?: string) => {
     totalStreaks: number;
     totalHabits: number;
     totalLifestyles: number;
@@ -179,7 +179,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     return { data, isLoading };
   };
 
-  const useCurrentUserProgress = (userId?: string) => {
+  const useUserProgress = (userId?: string) => {
     const { currentUser } = useCurrentUser();
     const userIdToUse = userId || currentUser?.id || "";
     const { data: userData } = useUser({ id: userIdToUse });
@@ -216,7 +216,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   const context: PlansProgressContextType = {
     usePlanProgress,
     usePlansProgress,
-    useCurrentUserProgress,
+    useUserProgress,
   };
 
   return (
@@ -246,8 +246,8 @@ export const usePlansProgress = (planIds: string[]) => {
   return hookFromContext(planIds);
 };
 
-export const useCurrentUserProgress = (userId?: string) => {
-  const { useCurrentUserProgress: hookFromContext } = usePlansProgressContext();
+export const useUserProgress = (userId?: string) => {
+  const { useUserProgress: hookFromContext } = usePlansProgressContext();
   return hookFromContext(userId);
 };
 
