@@ -31,7 +31,7 @@ import { useDataNotifications } from "@/contexts/notifications";
 import { usePlans } from "@/contexts/plans";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useCurrentUser } from "@/contexts/users";
-import { getAccountLevel } from "@/hooks/useAccountLevel";
+import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -77,7 +77,7 @@ const HomePage: React.FC = () => {
   const unreadNotificationsCount = unreadNotifications.length;
   const { activityEntries } = useActivities();
   const totalActivitiesLogged = activityEntries?.length || 0;
-  const accountLevel = getAccountLevel(totalActivitiesLogged);
+  const accountLevel = useAccountLevel(totalActivitiesLogged);
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
