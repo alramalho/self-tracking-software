@@ -1,4 +1,3 @@
-import { useActivities } from "@/contexts/activities";
 import { Crown, Gem, Medal, Star, Target } from "lucide-react";
 import React, { useMemo } from "react";
 
@@ -38,10 +37,7 @@ export const ACCOUNT_LEVELS: AccountLevel[] = [
   createLevel("Diamond", 8192, "#22d3ee", "#0891b2", Gem, "text-cyan-400"),
 ];
 
-export function useAccountLevel(totalActivitiesLoggedInput?: number) {
-  const { activityEntries } = useActivities();
-  const totalActivitiesLogged =
-    totalActivitiesLoggedInput || activityEntries?.length || 0;
+export function getAccountLevel(totalActivitiesLogged: number) {
   return useMemo(() => {
     // Find current level
     let currentLevel: AccountLevel | null = null;

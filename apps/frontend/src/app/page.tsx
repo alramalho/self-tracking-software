@@ -24,13 +24,14 @@ import PullToRefresh from "react-simple-pull-to-refresh";
 
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useActivities } from "@/contexts/activities";
 import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePlans } from "@/contexts/plans";
 import { useUpgrade } from "@/contexts/UpgradeContext";
 import { useCurrentUser } from "@/contexts/users";
-import { useAccountLevel } from "@/hooks/useAccountLevel";
+import { getAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -39,8 +40,9 @@ import { useSession } from "@clerk/clerk-react";
 import { isAfter } from "date-fns";
 
 const HomePage: React.FC = () => {
+  const { currentUser, hasLoadedUserData } = useCurrentUser();
   const router = useRouter();
-  const accountLevel = useAccountLevel();
+  
   const { notifications, clearAllNotifications } = useDataNotifications();
   const { plans } = usePlans();
   const activePlans = plans?.filter(
@@ -50,7 +52,7 @@ const HomePage: React.FC = () => {
   );
   const { metrics } = useMetrics();
   const { refetchAllData } = useGlobalDataOperations();
-  const { currentUser, hasLoadedUserData } = useCurrentUser();
+  
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isPlansCollapsed, setIsPlansCollapsed] = useLocalStorage<boolean>(
@@ -73,6 +75,9 @@ const HomePage: React.FC = () => {
     ) || [];
 
   const unreadNotificationsCount = unreadNotifications.length;
+  const { activityEntries } = useActivities();
+  const totalActivitiesLogged = activityEntries?.length || 0;
+  const accountLevel = getAccountLevel(totalActivitiesLogged);
 
   const handleNotificationsClose = async () => {
     setIsNotificationsOpen(false);
