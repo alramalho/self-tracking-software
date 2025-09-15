@@ -438,6 +438,11 @@ export class PlansService {
     });
     const user = await prisma.user.findFirst({ where: { id: plan?.userId } });
 
+    console.log(
+      `Calculating achievement for plan ${plan?.goal}. User ${user?.username}.`
+    );
+    console.log(`Activities: ${plan?.activities.map((a) => a.title)}`);
+
     if (!plan) {
       throw new Error(`Plan ${planId} not found`);
     }
@@ -499,6 +504,9 @@ export class PlansService {
       );
 
       if (wasCompleted) {
+        console.log(
+          `week ${weekStart} was completed. streak +1 = ${streak + 1}`
+        );
         streak += 1;
         completedWeeks += 1;
         if (!isCurrentWeek) {
@@ -509,10 +517,15 @@ export class PlansService {
         if (incompleteWeeks > 1) {
           streak = Math.max(0, streak - 1);
         }
+        console.log(
+          `week ${weekStart} was not completed. streak -1 = ${streak}`
+        );
       }
 
       weekStart = addWeeks(weekStart, 1);
     }
+
+    console.log("streak", streak);
 
     const isAchieved = streak >= this.LIFESTYLE_WEEKS;
     const weeksToAchieve = this.LIFESTYLE_WEEKS - streak;
