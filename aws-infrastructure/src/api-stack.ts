@@ -526,10 +526,6 @@ export class ApiStack extends cdk.Stack {
               segment = segment.replace(/\{[^}]+\}/g, ".*"); // Changed [^/]+ to .*
               return segment;
             })
-            .map((segment) => {
-              const match = segment.match(/(.*?\/\.\*).*/);
-              return match ? match[1] : segment;
-            })
         )
       );
 
