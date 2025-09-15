@@ -1,7 +1,6 @@
-import { countTimesPerWeekPlanCompletedWeekSessions } from "@/contexts/plans-progress/lib";
 import { CompletePlan } from "@/contexts/plans";
+import { usePlanProgress } from "@/contexts/PlansProgressContext";
 import { cn } from "@/lib/utils";
-import { startOfWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -19,6 +18,7 @@ export function WeeklySessionsChecklist({
   plan,
   activityEntries,
 }: WeeklySessionsChecklistProps) {
+  const {data: planProgress} = usePlanProgress(plan.id);
   const [isFullyDone, setIsFullyDone] = useState(false);
   const [checkedSessions, setCheckedSessions] = useState<number>(0);
   const { ref, inView } = useInView({
@@ -26,13 +26,7 @@ export function WeeklySessionsChecklist({
     triggerOnce: true,
   });
   // Get current week's completed sessions count (unique days)
-  const currentWeekStart = startOfWeek(new Date());
-
-  const completedSessionsThisWeek = countTimesPerWeekPlanCompletedWeekSessions(
-    plan,
-    activityEntries,
-    currentWeekStart
-  );
+  const completedSessionsThisWeek = planProgress?.currentWeekStats.daysCompletedThisWeek || 0;
 
   useEffect(() => {
     if (inView) {
