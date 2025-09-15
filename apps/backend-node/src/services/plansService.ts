@@ -77,16 +77,39 @@ export class PlansService {
     const currentDate = new Date();
 
     // Convert to user's timezone for accurate week calculation
-    const userCurrentDate = new TZDate(currentDate, timezone);
+    const userCurrentDate = toMidnightUTCDate(
+      new TZDate(currentDate, timezone)
+    );
 
-    // Get start of the week (Sunday) to match Python logic
-    const weekStart = toMidnightUTCDate(
+    // Get the weeks data which includes current week
+    const weeks = await this.getPlanWeeks(planWithActivities, user);
+
+    // Find the current week from the weeks data
+    const currentWeekStart = toMidnightUTCDate(
       startOfWeek(userCurrentDate, { weekStartsOn: 0 })
-    ); // 0 = Sunday
+    );
+
+    const currentWeek = weeks.find((week) =>
+      isSameDay(week.startDate, currentWeekStart)
+    );
+
+    if (!currentWeek) {
+      // Fallback if current week not found in weeks data
+      logger.warn(
+        `Current week not found in weeks data for plan ${planWithActivities.goal}`
+      );
+      return {
+        numActiveDaysInTheWeek: 0,
+        numLeftDaysInTheWeek: 0,
+        numActiveDaysLeftInTheWeek: 0,
+        daysCompletedThisWeek: 0,
+      };
+    }
+
+    // Calculate days left in the week
     const weekEnd = toMidnightUTCDate(
       endOfWeek(userCurrentDate, { weekStartsOn: 0 })
     );
-
     const numLeftDaysInTheWeek = Math.max(
       0,
       Math.floor(
@@ -94,73 +117,40 @@ export class PlansService {
       ) + 1
     );
 
-    logger.debug(
-      `User ${user.username} has ${numLeftDaysInTheWeek} left days in the week`
-    );
+    // Extract stats from the current week data
+    const daysCompletedThisWeek = new Set(
+      currentWeek.completedActivities.map((activity) =>
+        format(new Date(activity.date), "yyyy-MM-dd")
+      )
+    ).size;
 
-    // Get activity entries for this week
-    const activityEntries = await prisma.activityEntry.findMany({
-      where: {
-        activityId: { in: planWithActivities.activities.map((a: any) => a.id) },
-        date: {
-          gte: weekStart,
-          lte: weekEnd,
-        },
-        deletedAt: null,
-      },
-    });
-
-    logger.debug(
-      `User ${user.username} has logged ${activityEntries.length} activity entries this week`
-    );
-
-    // Count unique days with completions (max 1 per day to avoid double counting)
-    const dailyCompletions = new Set();
-    for (const entry of activityEntries) {
-      const entryDate = new Date(entry.date);
-      if (entryDate >= weekStart && entryDate <= weekEnd) {
-        dailyCompletions.add(entryDate.toDateString());
-      }
-    }
-
-    const daysCompletedThisWeek = dailyCompletions.size;
-
-    logger.debug(
-      `User ${user.username} has completed ${daysCompletedThisWeek} days this week`
-    );
-
-    // Calculate planned activities for this week
     let numActiveDaysInTheWeek: number;
-    if (planWithActivities.outlineType === PlanOutlineType.TIMES_PER_WEEK) {
-      numActiveDaysInTheWeek = planWithActivities.timesPerWeek || 0;
+    if (typeof currentWeek.plannedActivities === "number") {
+      numActiveDaysInTheWeek = currentWeek.plannedActivities;
     } else {
-      // Count sessions scheduled for this week
-      const sessionsThisWeek = await prisma.planSession.findMany({
-        where: {
-          planId: planWithActivities.id,
-          date: {
-            gte: weekStart,
-            lte: weekEnd,
-          },
-        },
-      });
-      // create a set of dates where there's a session scheduled
-      const activeDaysInTheWeek = new Set();
-      for (const session of sessionsThisWeek) {
-        activeDaysInTheWeek.add(session.date);
-      }
-      numActiveDaysInTheWeek = activeDaysInTheWeek.size;
+      // For scheduled plans, count unique days with sessions
+      const uniqueDays = new Set(
+        currentWeek.plannedActivities.map((session) =>
+          format(new Date(session.date), "yyyy-MM-dd")
+        )
+      );
+      numActiveDaysInTheWeek = uniqueDays.size;
     }
-
-    logger.debug(
-      `Plan ${planWithActivities.goal} (${planWithActivities.outlineType}) has ${numActiveDaysInTheWeek} planned active days this week`
-    );
 
     const numActiveDaysLeftInTheWeek = Math.max(
       0,
       numActiveDaysInTheWeek - daysCompletedThisWeek
     );
 
+    logger.debug(
+      `User ${user.username} has ${numLeftDaysInTheWeek} left days in the week`
+    );
+    logger.debug(
+      `User ${user.username} has completed ${daysCompletedThisWeek} days this week`
+    );
+    logger.debug(
+      `Plan ${planWithActivities.goal} (${planWithActivities.outlineType}) has ${numActiveDaysInTheWeek} planned active days this week`
+    );
     logger.debug(
       `Plan ${planWithActivities.goal} (${planWithActivities.outlineType}) has ${numActiveDaysLeftInTheWeek} active days left this week`
     );
@@ -860,7 +850,6 @@ export class PlansService {
       weekStart = toMidnightUTCDate(addWeeks(weekStart, 1));
     }
 
-    console.log({ weeksStarDates: weeks.map((week) => week.startDate) });
     return weeks;
   }
 }
