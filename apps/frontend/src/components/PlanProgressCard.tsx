@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   CircleCheck,
   Flame,
+  Loader2,
   Medal,
   MoveRight,
   Sprout,
@@ -86,7 +87,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { data: planProgressData } = usePlanProgress(isDemo ? "" : plan.id);
+  const { data: planProgressData, isLoading: isLoadingPlanProgress } =
+    usePlanProgress(isDemo ? "" : plan.id);
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
   const router = useRouter();
@@ -139,9 +141,10 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
     achievement.streak >= FALLBACK_LIFESTYLE_WEEKS;
 
   // Calculate if week is completed from current week data
-  const isWeekCompleted = plan.outlineType === "TIMES_PER_WEEK" 
-    ? totalCompletedActivities >= totalPlannedActivities
-    : totalCompletedActivities === totalPlannedActivities;
+  const isWeekCompleted =
+    plan.outlineType === "TIMES_PER_WEEK"
+      ? totalCompletedActivities >= totalPlannedActivities
+      : totalCompletedActivities === totalPlannedActivities;
   const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
@@ -221,12 +224,17 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                 onFireClick?.();
               }}
             >
-              {achievement.streak > 1 && (
-                <span className="text-lg font-cursive">
-                  x{achievement.streak}
-                </span>
+              {isLoadingPlanProgress && (
+                <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              <FireAnimation height={40} width={40} className="pb-2" />
+              {!isLoadingPlanProgress && achievement.streak > 1 && (
+                <>
+                  <span className="text-lg font-cursive">
+                    x{achievement.streak}
+                  </span>
+                  <FireAnimation height={40} width={40} className="pb-2" />
+                </>
+              )}
             </div>
           </div>
 
