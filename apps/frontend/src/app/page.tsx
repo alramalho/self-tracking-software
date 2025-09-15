@@ -209,7 +209,7 @@ const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div onClick={() => setIsFeedbackOpen(true)} className="ring-1 ring-purple-200 backdrop-blur-md bg-white/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200">
+          <div onClick={() => setIsFeedbackOpen(true)} className="ring-1 ring-gray-200 backdrop-blur-md bg-white/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Hammer size={40} className="text-gray-500" />
