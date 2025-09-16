@@ -1,5 +1,6 @@
 "use client";
 
+import { useApiWithAuth } from "@/api";
 import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,8 +14,8 @@ import {
   getMetrics,
   updateTodaysNote,
   upsertMetric,
-  upsertMetricEntry
-} from "./actions";
+  upsertMetricEntry,
+} from "./service";
 
 interface MetricsContextType {
   metrics: Metric[] | undefined;
@@ -52,12 +53,13 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
   const { handleQueryError } = useLogError();
+  const api = useApiWithAuth();
 
   const metricsQuery = useQuery({
     queryKey: ["metrics"],
     queryFn: async () => {
       try {
-        return await getMetrics();
+        return await getMetrics(api);
       } catch (error) {
         throw error;
       }
@@ -69,7 +71,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["metricsEntries"],
     queryFn: async () => {
       try {
-        return await getMetricEntries();
+        return await getMetricEntries(api);
       } catch (error) {
         throw error;
       }
@@ -80,7 +82,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const createMetricMutation = useMutation({
     mutationFn: async (data: { title: string; emoji: string }) => {
-      return await upsertMetric(data);
+      return await upsertMetric(api, data);
     },
     onSuccess: (newMetric) => {
       queryClient.setQueryData(["metrics"], (old: Metric[]) => {
@@ -113,7 +115,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("upserting metric entries", data);
       const result = await Promise.all(
         data.map((metric) =>
-          upsertMetricEntry({
+          upsertMetricEntry(api, {
             metricId: metric.metricId,
             rating: metric.rating,
             date: metric.date,
@@ -153,7 +155,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateTodaysNoteMutation = useMutation({
     mutationFn: async (data: { note?: string; skip?: boolean }) => {
-      return await updateTodaysNote(data);
+      return await updateTodaysNote(api, data);
     },
     onSuccess: (_, variables) => {
       queryClient.refetchQueries({ queryKey: ["metricsEntries"] });
@@ -172,7 +174,7 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const deleteMetricMutation = useMutation({
     mutationFn: async (metricId: string) => {
-      await deleteMetric(metricId);
+      await deleteMetric(api, metricId);
       return metricId;
     },
     onSuccess: (metricId) => {

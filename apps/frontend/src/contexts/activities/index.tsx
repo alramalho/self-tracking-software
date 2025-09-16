@@ -9,8 +9,8 @@ import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import { usePlans } from "../plans";
 import { TimelineData } from "../timeline/actions";
-import { HydratedUser } from "../users/actions";
-import { getActivities, getActivitiyEntries } from "./actions";
+import { HydratedUser } from "../users/service";
+import { getActivities, getActivitiyEntries } from "./service";
 
 type ReturnedActivityEntriesType = Awaited<
   ReturnType<typeof getActivitiyEntries>
@@ -87,7 +87,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["activities"],
     queryFn: async () => {
       try {
-        return await getActivities();
+        return await getActivities(api);
       } catch (error) {
         throw error;
       }
@@ -98,7 +98,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["activity-entries"],
     queryFn: async () => {
       try {
-        return await getActivitiyEntries();
+        return await getActivitiyEntries(api);
       } catch (error) {
         throw error;
       }
@@ -182,7 +182,13 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     }) => {
       await api.post("/activities/upsert", data.activity);
     },
-    onSuccess: (_, { muteNotification }) => {
+    onSuccess: (_, { activity: newActivity, muteNotification }) => {
+      queryClient.setQueryData(["activities"], (old: ReturnedActivitiesType) => {
+        if (!old) return queryClient.refetchQueries({ queryKey: ["activities"] });
+        return old.map((a) => {
+          return newActivity.id === a.id ? { ...a, ...newActivity } : a;
+        });
+      });
       queryClient.refetchQueries({ queryKey: ["activities"] });
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       if (!muteNotification) {

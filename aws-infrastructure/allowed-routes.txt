@@ -21,8 +21,12 @@
 /exception
 /health
 /messages/{any}
+/metrics
+/metrics/{any}
+/notifications
 /notifications/{any}
 /onboarding/{any}
+/plans
 /plans/{any}
 /stripe/{any}
 /users/{any}

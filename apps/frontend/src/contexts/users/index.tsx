@@ -19,8 +19,8 @@ import {
   getUserFullDataByUserNameOrId,
   HydratedCurrentUser,
   HydratedUser,
-  updateUser as updateUserAction,
-} from "./actions";
+  updateUser as updateUserService,
+} from "./service";
 
 export type ThemeColorType =
   | "blue"
@@ -94,7 +94,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["current-user"],
     queryFn: async () => {
       console.log("fetching user")
-      const result = await getCurrentUserBasicData();
+      const result = await getCurrentUserBasicData(api);
       return result
     },
     enabled: isLoaded && isSignedIn,
@@ -115,13 +115,16 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
       muteNotifications?: boolean;
     }) => {
       try {
-        return await updateUserAction(data.updates);
+        return await updateUserService(api, data.updates);
       } catch (error) {
         throw error;
       }
     },
-    onSuccess: (_, { muteNotifications, updates }) => {
-      queryClient.setQueryData(["current-user"], {...currentUserQuery.data, ...updates });
+    onSuccess: (updatedUser, { muteNotifications }) => {
+      queryClient.setQueryData(["current-user"], updatedUser);
+      if (updatedUser?.username) {
+        queryClient.setQueryData(["user", updatedUser.username], updatedUser as HydratedUser);
+      }
       if (!muteNotifications) {
         toast.success("User updated successfully");
       }
@@ -286,6 +289,7 @@ export const useUsers = (
 ) => {
   const { isSignedIn } = useSession();
   const { handleQueryError } = useLogError();
+  const api = useApiWithAuth();
   const identifier = data
     .map((d) => d.username || d.id)
     .sort()
@@ -295,7 +299,7 @@ export const useUsers = (
 
   const query = useQuery({
     queryKey,
-    queryFn: () => getUserFullDataByUserNameOrId(data),
+    queryFn: () => getUserFullDataByUserNameOrId(api, data),
     enabled: isSignedIn && identifier.length > 0,
     staleTime: 1000 * 60 * 5,
   });
@@ -316,11 +320,12 @@ export const useUser = (
   const { handleQueryError } = useLogError();
   const identifier = data?.username || data.id;
   const { isSignedIn } = useSession();
+  const api = useApiWithAuth();
 
   const query = useQuery({
     queryKey: ["user", identifier],
     queryFn: async () => {
-      return await getUserFullDataByUserNameOrId([data]);
+      return await getUserFullDataByUserNameOrId(api, [data]);
     },
     enabled: isSignedIn && !!identifier,
     staleTime: 1000 * 60 * 5,

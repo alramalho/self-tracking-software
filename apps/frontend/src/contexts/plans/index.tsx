@@ -14,14 +14,12 @@ import {
   fetchPlanInvitation,
   getPlans,
   modifyManualMilestone,
+  PlanWithRelations,
   updatePlans,
   upgradeCoachSuggestedSessionsToPlanSessions,
-} from "./actions";
+} from "./service";
 
-export type CompletePlan = Omit<
-  Awaited<ReturnType<typeof getPlans>>[number],
-  "milestones"
-> & {
+export type CompletePlan = PlanWithRelations & {
   milestones: PlanMilestone[];
 };
 
@@ -69,8 +67,8 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     queryKey: ["plans"],
     queryFn: async () => {
       try {
-        console.log("fetching plans")
-        const result = await getPlans();
+        console.log("fetching plans");
+        const result = await getPlans(api);
         return result;
       } catch (error) {
         throw error;
@@ -90,7 +88,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       updates: Array<{ planId: string; updates: Prisma.PlanUpdateInput }>;
       muteNotifications?: boolean;
     }) => {
-      return await updatePlans(data.updates);
+      return await updatePlans(api, data.updates);
     },
     onSuccess: (result, { muteNotifications, updates }) => {
       if (result.success) {
@@ -174,7 +172,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const clearCoachSuggestedSessionsInPlanMutation = useMutation({
     mutationFn: async (planId: string) => {
-      await clearCoachSuggestedSessionsInPlan(planId);
+      await clearCoachSuggestedSessionsInPlan(api, planId);
     },
     onSuccess: () => {
       toast.success("Coach suggested sessions cleared successfully!");
@@ -187,7 +185,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const upgradeCoachSuggestedSessionsToPlanSessionsMutation = useMutation({
     mutationFn: async (planId: string) => {
-      await upgradeCoachSuggestedSessionsToPlanSessions(planId);
+      await upgradeCoachSuggestedSessionsToPlanSessions(api, planId);
     },
     onSuccess: () => {
       toast.success(
@@ -208,7 +206,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       milestoneId: string;
       delta: number;
     }) => {
-      await modifyManualMilestone(milestoneId, delta);
+      await modifyManualMilestone(api, milestoneId, delta);
     },
     onSuccess: () => {
       toast.success("Milestone updated successfully!");
@@ -257,12 +255,13 @@ export const usePlan = (
   options?: { includeActivities?: boolean }
 ) => {
   const { isSignedIn, isLoaded } = useSession();
+  const api = useApiWithAuth();
 
   const plan = useQuery({
     queryKey: ["plan", id],
     queryFn: async () => {
       try {
-        return await fetchPlan(id);
+        return await fetchPlan(api, id, options);
       } catch (error) {
         throw error;
       }
@@ -295,7 +294,7 @@ export const usePlanInvitation = (id: string) => {
     queryKey: ["plan-invitation", id],
     queryFn: async () => {
       try {
-        return await fetchPlanInvitation(id);
+        return await fetchPlanInvitation(api, id);
       } catch (error) {
         throw error;
       }

@@ -180,7 +180,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   // Filter weeks to show current and next week, or all weeks based on showAllWeeks state
   const weeksToDisplay = useMemo(() => {
-    console.log({planProgressWeeks: planProgress?.weeks})
     if (!planProgress?.weeks) return [];
 
 

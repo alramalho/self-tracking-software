@@ -18,6 +18,33 @@ import { prisma } from "../utils/prisma";
 export const usersRouter: Router = Router();
 const telegramService = new TelegramService();
 
+const basicUserInclude = {
+  connectionsFrom: {
+    include: {
+      to: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          picture: true,
+        },
+      },
+    },
+  },
+  connectionsTo: {
+    include: {
+      from: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          picture: true,
+        },
+      },
+    },
+  },
+} as const;
+
 // Health check
 usersRouter.get("/user-health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
@@ -27,8 +54,41 @@ usersRouter.get("/user-health", (_req: Request, res: Response) => {
 usersRouter.get(
   "/user",
   requireAuth,
-  (req: AuthenticatedRequest, res: Response) => {
-    res.json(req.user);
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        include: basicUserInclude,
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      logger.error("Failed to fetch current user:", error);
+      res.status(500).json({ error: "Failed to fetch current user" });
+    }
+  }
+);
+
+usersRouter.patch(
+  "/user",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: req.body,
+        include: basicUserInclude,
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      logger.error("Failed to update user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
   }
 );
 
@@ -238,6 +298,257 @@ usersRouter.get(
   }
 );
 
+// Fetch detailed user data by username or id
+usersRouter.post(
+  "/get-user",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { identifiers } = req.body as {
+        identifiers?: Array<{ username?: string; id?: string }>;
+      };
+
+      if (!Array.isArray(identifiers) || identifiers.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "At least one identifier is required" });
+      }
+
+      const orConditions: Array<{ id: string } | { username: string }> =
+        identifiers
+          .map((identifier) => {
+            if (identifier?.id) {
+              return { id: identifier.id };
+            }
+            if (identifier?.username) {
+              return { username: identifier.username.toLowerCase() };
+            }
+            return false;
+          })
+          .filter((condition) => condition !== false);
+
+      if (!orConditions.length) {
+        return res
+          .status(400)
+          .json({ error: "Each identifier must include an id or username" });
+      }
+
+      const user = await prisma.user.findFirst({
+        where: {
+          deletedAt: null,
+          OR: orConditions,
+        },
+        include: {
+          ...basicUserInclude,
+          plans: {
+            where: {
+              deletedAt: null,
+              OR: [
+                { finishingDate: { gt: new Date() } },
+                { finishingDate: null },
+              ],
+            },
+            include: {
+              activities: {
+                where: { deletedAt: null },
+              },
+            },
+          },
+          activities: {
+            where: { deletedAt: null },
+          },
+          activityEntries: {
+            where: { deletedAt: null },
+            include: {
+              activity: true,
+              comments: {
+                where: { deletedAt: null },
+                orderBy: { createdAt: "asc" },
+                include: {
+                  user: {
+                    select: { id: true, username: true, picture: true },
+                  },
+                },
+              },
+              reactions: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      username: true,
+                      picture: true,
+                      planType: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      logger.error("Failed to fetch user data:", error);
+      res.status(500).json({ error: "Failed to fetch user data" });
+    }
+  }
+);
+
+// Get timeline data for user and connections
+usersRouter.get(
+  "/timeline",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        include: {
+          plans: {
+            where: {
+              OR: [
+                { finishingDate: { gt: new Date() } },
+                { finishingDate: null },
+              ],
+            },
+            include: {
+              activities: { select: { id: true } },
+            },
+          },
+          connectionsFrom: {
+            include: {
+              to: {
+                select: {
+                  id: true,
+                  username: true,
+                  name: true,
+                  picture: true,
+                  planType: true,
+                  plans: {
+                    where: {
+                      OR: [
+                        { finishingDate: { gt: new Date() } },
+                        { finishingDate: null },
+                      ],
+                    },
+                    include: {
+                      activities: { select: { id: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          connectionsTo: {
+            include: {
+              from: {
+                select: {
+                  id: true,
+                  username: true,
+                  name: true,
+                  picture: true,
+                  planType: true,
+                  plans: {
+                    where: {
+                      OR: [
+                        { finishingDate: { gt: new Date() } },
+                        { finishingDate: null },
+                      ],
+                    },
+                    include: {
+                      activities: { select: { id: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        return res.json({
+          recommendedActivityEntries: [],
+          recommendedActivities: [],
+          recommendedUsers: [],
+        });
+      }
+
+      const connections = [
+        ...user.connectionsFrom
+          .filter((conn) => conn.status === "ACCEPTED")
+          .map((conn) => conn.to),
+        ...user.connectionsTo
+          .filter((conn) => conn.status === "ACCEPTED")
+          .map((conn) => conn.from),
+      ];
+
+      if (!connections.length) {
+        return res.json({
+          recommendedActivityEntries: [],
+          recommendedActivities: [],
+          recommendedUsers: [],
+        });
+      }
+
+      const userIds = [user.id, ...connections.map((friend) => friend.id)];
+
+      const activityEntries = await prisma.activityEntry.findMany({
+        where: {
+          userId: { in: userIds },
+          deletedAt: null,
+        },
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        take: 50,
+        include: {
+          activity: true,
+          comments: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "asc" },
+            include: {
+              user: {
+                select: { id: true, username: true, picture: true },
+              },
+            },
+          },
+          reactions: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  picture: true,
+                  planType: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const activityIds = Array.from(
+        new Set(activityEntries.map((entry) => entry.activityId))
+      );
+      const activities = await prisma.activity.findMany({
+        where: { id: { in: activityIds } },
+      });
+
+      res.json({
+        recommendedActivityEntries: activityEntries,
+        recommendedActivities: activities,
+        recommendedUsers: [user, ...connections],
+      });
+    } catch (error) {
+      logger.error("Failed to fetch timeline data:", error);
+      res.status(500).json({ error: "Failed to fetch timeline data" });
+    }
+  }
+);
+
 usersRouter.post(
   "/compute-recommendations",
   requireAuth,
@@ -313,6 +624,36 @@ usersRouter.get(
     }
   }
 );
+
+// usersRouter.get(
+//   "/public/:username_or_id",
+//   async (req: Request, res: Response) => {
+//     try {
+//       const { username_or_id } = req.params;
+
+//       const user = await prisma.user.findFirst({
+//         where: {
+//           deletedAt: null,
+//           OR: [
+//             { username: username_or_id.toLowerCase() },
+//             { id: username_or_id },
+//           ],
+//         },
+//         include: createFullUserInclude(),
+//       });
+
+//       if (!user) {
+//         return res.status(404).json({ error: "User not found" });
+//       }
+
+//       const { email, clerkId, ...publicUser } = user;
+//       res.json(publicUser);
+//     } catch (error) {
+//       logger.error("Failed to fetch public user:", error);
+//       res.status(500).json({ error: "Failed to fetch user" });
+//     }
+//   }
+// );
 
 // Send connection request
 usersRouter.post(

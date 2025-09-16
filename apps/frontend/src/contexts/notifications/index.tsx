@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Notification } from "@tsw/prisma";
 import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
-import { getNotifications } from "./actions";
+import { getNotifications } from "./service";
 
 interface DataNotificationsContextType {
   // Data access
@@ -38,7 +38,7 @@ export const DataNotificationsProvider: React.FC<{
     queryKey: ["notifications"],
     queryFn: async () => {
       try {
-        return await getNotifications();
+        return await getNotifications(api);
       } catch (err) {
         console.error(
           "[DataNotificationsProvider] Error fetching notifications:",
