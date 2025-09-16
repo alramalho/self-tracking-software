@@ -19,12 +19,12 @@ import { Button } from "./ui/button";
 
 type DownloadComponentProps = {
   isInstagram?: boolean;
-  isTikok?: boolean;
+  isTikTok?: boolean;
 };
 
 const DownloadComponent = ({
   isInstagram = false,
-  isTikok = false,
+  isTikTok = false,
 }: DownloadComponentProps) => {
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -37,6 +37,7 @@ const DownloadComponent = ({
     !/Chrome|Chromium|Edg|OPR/.test(navigator.userAgent);
   const isSupportedBrowser = isChrome || isSafari;
 
+  
   useEffect(() => {
     if (isDesktop) {
       window.location.href = "https://app.tracking.so/download";
@@ -45,7 +46,9 @@ const DownloadComponent = ({
 
   useEffect(() => {
     console.log("isIOS", isIOS);
-  }, [isIOS]);
+    console.log("isInstagram", isInstagram);
+    console.log("isTikTok", isTikTok);
+  }, [isIOS, isInstagram, isTikTok]);
 
   // Desktop users: redirect to mobile
   if (isDesktop) {
@@ -77,7 +80,7 @@ const DownloadComponent = ({
       ? "Open in external browser"
       : "Open in browser";
     const SecondaryIcon = isInstagram ? ExternalLink : Compass;
-    const platformName = isInstagram ? "Instagram" : isTikok ? "TikTok" : "this app";
+    const platformName = isInstagram ? "Instagram" : isTikTok ? "TikTok" : "this app";
 
     return (
       <div className="flex flex-col gap-4 items-center text-center">
