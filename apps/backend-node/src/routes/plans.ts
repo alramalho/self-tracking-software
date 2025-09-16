@@ -196,7 +196,7 @@ router.get(
 router.get(
   "/plan-invitations/:invitationId",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { invitationId } = req.params;
       const invitation = await prisma.planInvitation.findUnique({
@@ -204,7 +204,8 @@ router.get(
       });
 
       if (!invitation) {
-        return res.status(404).json({ error: "Plan invitation not found" });
+        res.status(404).json({ error: "Plan invitation not found" });
+        return;
       }
 
       res.json(invitation);
@@ -219,15 +220,13 @@ router.get(
 router.get(
   "/generate-invitation-link",
   requireAuth,
-  async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<Response | void> => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { plan_id } = req.query;
 
       if (!plan_id) {
-        return res.status(400).json({ error: "plan_id is required" });
+        res.status(400).json({ error: "plan_id is required" });
+        return;
       }
 
       // Verify plan ownership
@@ -236,9 +235,10 @@ router.get(
       });
 
       if (!plan || plan.userId !== req.user!.id) {
-        return res
+        res
           .status(403)
           .json({ error: "Not authorized to generate link for this plan" });
+        return;
       }
 
       // Create external invitation record
@@ -352,9 +352,10 @@ router.post(
       const { planIds } = req.body;
 
       if (!planIds || !Array.isArray(planIds)) {
-        return res.status(400).json({
+        res.status(400).json({
           error: "planIds array is required",
         });
+        return;
       }
 
       const userId = req.user!.id;
@@ -403,7 +404,8 @@ router.get(
       });
 
       if (!plan) {
-        return res.status(404).json({ error: "Plan not found" });
+        res.status(404).json({ error: "Plan not found" });
+        return;
       }
 
       // Transform the data to match expected format
@@ -429,9 +431,8 @@ router.post(
         req.body;
 
       if (!goal || !activities) {
-        return res
-          .status(400)
-          .json({ error: "goal and activities are required" });
+        res.status(400).json({ error: "goal and activities are required" });
+        return;
       }
 
       logger.info(`Generating sessions for plan goal: ${goal}`);
@@ -459,16 +460,17 @@ router.post(
 router.patch(
   "/bulk-update",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const validationResult = PlanBulkUpdateSchema.safeParse(req.body);
 
       if (!validationResult.success) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: "Invalid request data",
           details: validationResult.error.issues,
         });
+        return;
       }
 
       const { updates } = validationResult.data;
@@ -482,10 +484,11 @@ router.patch(
       });
 
       if (userPlans.length !== planIds.length) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: "Not authorized to update some plans",
         });
+        return;
       }
 
       await prisma.$transaction(
@@ -523,9 +526,8 @@ router.post(
       });
 
       if (!plan || plan.userId !== req.user!.id) {
-        return res
-          .status(403)
-          .json({ error: "Not authorized to update this plan" });
+        res.status(403).json({ error: "Not authorized to update this plan" });
+        return;
       }
 
       // Update the plan
@@ -553,13 +555,14 @@ router.post(
 router.post(
   "/milestones/:milestoneId/modify",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { milestoneId } = req.params;
       const { delta } = req.body as { delta?: number };
 
       if (typeof delta !== "number") {
-        return res.status(400).json({ error: "delta must be a number" });
+        res.status(400).json({ error: "delta must be a number" });
+        return;
       }
 
       const milestone = await prisma.planMilestone.findFirst({
@@ -572,7 +575,8 @@ router.post(
       });
 
       if (!milestone) {
-        return res.status(404).json({ error: "Milestone not found" });
+        res.status(404).json({ error: "Milestone not found" });
+        return;
       }
 
       const currentProgress = milestone.progress ?? 0;
@@ -595,7 +599,7 @@ router.post(
 router.post(
   "/:planId/clear-coach-suggested-sessions",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { planId } = req.params;
 
@@ -607,7 +611,8 @@ router.post(
       });
 
       if (!plan) {
-        return res.status(404).json({ error: "Plan not found" });
+        res.status(404).json({ error: "Plan not found" });
+        return;
       }
 
       await prisma.planSession.deleteMany({
@@ -634,7 +639,7 @@ router.post(
 router.post(
   "/:planId/upgrade-coach-suggested-sessions",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { planId } = req.params;
 
@@ -646,7 +651,8 @@ router.post(
       });
 
       if (!plan) {
-        return res.status(404).json({ error: "Plan not found" });
+        res.status(404).json({ error: "Plan not found" });
+        return;
       }
 
       const timezone = req.user?.timezone || "UTC";
@@ -699,17 +705,18 @@ router.post(
 router.post(
   "/upsert",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       // Validate request body with Zod
       const validationResult = PlanUpsertSchema.safeParse(req.body);
 
       if (!validationResult.success) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: "Invalid request data",
           details: validationResult.error.issues,
         });
+        return;
       }
 
       const planData: z.infer<typeof PlanUpsertSchema> = validationResult.data;
@@ -724,10 +731,11 @@ router.post(
       if (existingPlan) {
         // is update operation
         if (existingPlan.userId !== req.user!.id) {
-          return res.status(403).json({
+          res.status(403).json({
             success: false,
             error: "Not authorized to update this plan",
           });
+          return;
         }
 
         const { milestones, sessions, activities, ...plan } = planData;
@@ -780,14 +788,16 @@ router.post(
         recommendationsService.computeRecommendedUsers(req.user!.id);
 
         logger.info(`Updated plan ${planData.id} for user ${req.user!.id}`);
-        return res.json({ success: true, plan: updatedPlan });
+        res.json({ success: true, plan: updatedPlan });
+        return;
       } else {
         // Create new plan using existing create-plan logic
         if (!planData.goal) {
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             error: "Goal is required",
           });
+          return;
         }
 
         const result = await prisma.$transaction(async (tx) => {
@@ -860,14 +870,16 @@ router.post(
         recommendationsService.computeRecommendedUsers(req.user!.id);
 
         logger.info(`Created plan ${result.id} for user ${req.user!.id}`);
-        return res.json({ success: true, plan: result });
+        res.json({ success: true, plan: result });
+        return;
       }
     } catch (error) {
       logger.error("Error upserting plan:", error);
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Failed to save plan",
       });
+      return;
     }
   }
 );
@@ -897,7 +909,8 @@ router.post(
       });
 
       if (!invitation) {
-        return res.status(404).json({ error: "Invitation not found" });
+        res.status(404).json({ error: "Invitation not found" });
+        return;
       }
 
       // Handle external invitations by creating a new invitation for the current user
@@ -947,9 +960,10 @@ router.post(
 
       // Verify the invitation is for the current user
       if (invitation.recipientId !== req.user!.id) {
-        return res
+        res
           .status(403)
           .json({ error: "Not authorized to accept this invitation" });
+        return;
       }
 
       // Accept the invitation using a transaction
@@ -1046,7 +1060,8 @@ router.post(
       });
 
       if (!invitation) {
-        return res.status(404).json({ error: "Invitation not found" });
+        res.status(404).json({ error: "Invitation not found" });
+        return;
       }
 
       // Handle external invitations by creating a new invitation for the current user
@@ -1080,9 +1095,10 @@ router.post(
 
       // Verify the invitation is for the current user
       if (invitation.recipientId !== req.user!.id) {
-        return res
+        res
           .status(403)
           .json({ error: "Not authorized to reject this invitation" });
+        return;
       }
 
       // Update invitation status to rejected

@@ -1,10 +1,10 @@
-import { Response, Router } from "express";
 import { Prisma } from "@tsw/prisma";
+import { Response, Router } from "express";
 
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
+import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
-import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
 
 const router = Router();
 
@@ -50,11 +50,12 @@ router.get(
 router.post(
   "/",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { title, emoji } = req.body as { title?: string; emoji?: string };
 
     if (!title || !emoji) {
-      return res.status(400).json({ error: "Title and emoji are required" });
+      res.status(400).json({ error: "Title and emoji are required" });
+      return;
     }
 
     try {
@@ -69,11 +70,10 @@ router.post(
       });
 
       if (existingMetric) {
-        return res
-          .status(400)
-          .json({
-            error: `A metric with this name '${title}' already exists`,
-          });
+        res.status(400).json({
+          error: `A metric with this name '${title}' already exists`,
+        });
+        return;
       }
 
       const metric = await prisma.metric.create({
@@ -96,25 +96,20 @@ router.post(
 router.post(
   "/entries",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    const {
-      metricId,
-      rating,
-      date,
-      description,
-      skipped,
-      descriptionSkipped,
-    } = req.body as {
-      metricId?: string;
-      rating?: number;
-      date?: string;
-      description?: string;
-      skipped?: boolean;
-      descriptionSkipped?: boolean;
-    };
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { metricId, rating, date, description, skipped, descriptionSkipped } =
+      req.body as {
+        metricId?: string;
+        rating?: number;
+        date?: string;
+        description?: string;
+        skipped?: boolean;
+        descriptionSkipped?: boolean;
+      };
 
     if (!metricId) {
-      return res.status(400).json({ error: "Metric ID is required" });
+      res.status(400).json({ error: "Metric ID is required" });
+      return;
     }
 
     try {
@@ -126,14 +121,16 @@ router.post(
       });
 
       if (!metric) {
-        return res.status(404).json({ error: "Metric not found" });
+        res.status(404).json({ error: "Metric not found" });
+        return;
       }
 
       let entryDate = todaysLocalDate();
       if (date) {
         const parsedDate = new Date(date);
         if (Number.isNaN(parsedDate.getTime())) {
-          return res.status(400).json({ error: "Invalid date provided" });
+          res.status(400).json({ error: "Invalid date provided" });
+          return;
         }
         entryDate = toMidnightUTCDate(parsedDate);
       }
@@ -186,7 +183,7 @@ router.post(
 router.patch(
   "/entries/today-note",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { note, skip } = req.body as { note?: string; skip?: boolean };
 
     try {
@@ -200,9 +197,8 @@ router.patch(
       });
 
       if (todaysEntries.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "No metric entries found for today" });
+        res.status(404).json({ error: "No metric entries found for today" });
+        return;
       }
 
       const data: Prisma.MetricEntryUpdateManyMutationInput = {};
@@ -237,10 +233,13 @@ router.delete(
     const { metricId } = req.params;
 
     try {
-      const metric = await prisma.metric.findUnique({ where: { id: metricId } });
+      const metric = await prisma.metric.findUnique({
+        where: { id: metricId },
+      });
 
       if (!metric || metric.userId !== req.user!.id) {
-        return res.status(404).json({ error: "Metric not found" });
+        res.status(404).json({ error: "Metric not found" });
+        return;
       }
 
       await prisma.metric.delete({ where: { id: metricId } });
@@ -253,5 +252,5 @@ router.delete(
   }
 );
 
-export const metricsRouter = router;
+export const metricsRouter: Router = router;
 export default metricsRouter;
