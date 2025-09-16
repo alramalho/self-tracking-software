@@ -4,7 +4,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import {
   Check,
-  Copy,
+  Compass,
+  Ellipsis,
+  ExternalLink,
   MoreVertical,
   MoveRight,
   PlusSquare,
@@ -15,8 +17,16 @@ import {
 import { useEffect } from "react";
 import { Button } from "./ui/button";
 
-const DownloadComponent = () => {
-  const { shareOrCopyLink, copyLink, isShareSupported } = useShareOrCopy();
+type DownloadComponentProps = {
+  isInstagram?: boolean;
+  isTikok?: boolean;
+};
+
+const DownloadComponent = ({
+  isInstagram = false,
+  isTikok = false,
+}: DownloadComponentProps) => {
+  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -63,6 +73,12 @@ const DownloadComponent = () => {
 
   // Mobile users: check browser support
   if (!isSupportedBrowser) {
+    const secondaryLabel = isInstagram
+      ? "Open in external browser"
+      : "Open in browser";
+    const SecondaryIcon = isInstagram ? ExternalLink : Compass;
+    const platformName = isInstagram ? "Instagram" : isTikok ? "TikTok" : "this app";
+
     return (
       <div className="flex flex-col gap-4 items-center text-center">
         <div className="flex flex-row gap-2">
@@ -73,17 +89,25 @@ const DownloadComponent = () => {
         <div className="text-gray-600 mb-2">
           Current browser doesn&apos;t support app installation
         </div>
-        <div className="text-gray-600 mb-4">You can still open this link</div>
-        <div 
-          className="bg-gray-900 p-3 px-7 rounded-lg border border-gray-700 flex items-center gap-2 mb-4 cursor-pointer hover:bg-gray-800 transition-colors"
-          onClick={() => {
-            copyLink(`https://app.tracking.so/download`);
-          }}
-        >
-          <span className="font-mono text-gray-100">tracking.so</span>
-          <Copy className="w-6 h-6 text-gray-300" />
+        <div className="text-gray-600 mb-4">
+          Follow these steps to continue in your main browser outside {platformName}
         </div>
-        <div className="text-gray-600">in Chrome or Safari to install</div>
+        <div className="bg-gray-50 p-4 rounded-lg w-full max-w-md">
+          <div className="space-y-3 text-left text-gray-600">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                <Ellipsis className="w-6 h-6 text-gray-600" />
+              </div>
+              <span>Tap the menu button</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                <SecondaryIcon className="w-6 h-6 text-gray-600" />
+              </div>
+              <span>Tap &quot;{secondaryLabel}&quot;</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
