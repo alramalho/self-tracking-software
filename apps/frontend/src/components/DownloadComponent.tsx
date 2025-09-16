@@ -101,7 +101,7 @@ const DownloadComponent = ({
               <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                 <Ellipsis className="w-6 h-6 text-gray-600" />
               </div>
-              <span>Tap the menu button (top right)</span>
+              <span>Tap the menu button {(isInstagram || isTikTok) && "(top right)"}</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
