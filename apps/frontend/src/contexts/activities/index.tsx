@@ -8,7 +8,7 @@ import { Activity, ActivityEntry } from "@tsw/prisma";
 import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import { usePlans } from "../plans";
-import { TimelineData } from "../timeline/actions";
+import { TimelineData } from "../timeline/service";
 import { HydratedUser } from "../users/service";
 import { getActivities, getActivitiyEntries } from "./service";
 
