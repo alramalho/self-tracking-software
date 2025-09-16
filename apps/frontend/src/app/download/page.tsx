@@ -4,17 +4,17 @@ import React from "react";
 type DownloadPageProps = {
   searchParams?: {
     instagram?: string;
-    tikok?: string;
+    tiktok?: string;
   };
 };
 
 const DownloadPage: React.FC<DownloadPageProps> = ({ searchParams }) => {
   const isInstagram = searchParams?.instagram === "true";
-  const isTikok = searchParams?.tikok === "true";
+  const isTikTok = searchParams?.tiktok === "true";
 
   return (
     <div className="h-full w-full absolute flex z-[10] flex-col items-center justify-center px-4 bg-white overflow-hidden pointer-events-auto z-[1000]">
-      <DownloadComponent isInstagram={isInstagram} isTikok={isTikok} />
+      <DownloadComponent isInstagram={isInstagram} isTikTok={isTikTok} />
     </div>
   );
 };
