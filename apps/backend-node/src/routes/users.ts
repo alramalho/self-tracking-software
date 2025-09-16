@@ -54,7 +54,7 @@ usersRouter.get("/user-health", (_req: Request, res: Response) => {
 usersRouter.get(
   "/user",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
@@ -62,7 +62,8 @@ usersRouter.get(
       });
 
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        res.status(404).json({ error: "User not found" });
+        return;
       }
 
       res.json(user);
@@ -76,7 +77,7 @@ usersRouter.get(
 usersRouter.patch(
   "/user",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const updatedUser = await prisma.user.update({
         where: { id: req.user!.id },
@@ -96,7 +97,7 @@ usersRouter.patch(
 // usersRouter.get(
 //   "/load-users-data",
 //   requireAuth,
-//   async (req: AuthenticatedRequest, res: Response) => {
+//   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
 //     try {
 //       const { usernames } = req.query;
 //       const results: any = {};
@@ -309,9 +310,8 @@ usersRouter.post(
       };
 
       if (!Array.isArray(identifiers) || identifiers.length === 0) {
-        return res
-          .status(400)
-          .json({ error: "At least one identifier is required" });
+        res.status(400).json({ error: "At least one identifier is required" });
+        return;
       }
 
       const orConditions: Array<{ id: string } | { username: string }> =
@@ -328,9 +328,10 @@ usersRouter.post(
           .filter((condition) => condition !== false);
 
       if (!orConditions.length) {
-        return res
+        res
           .status(400)
           .json({ error: "Each identifier must include an id or username" });
+        return;
       }
 
       const user = await prisma.user.findFirst({
@@ -386,9 +387,9 @@ usersRouter.post(
           },
         },
       });
-
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        res.status(404).json({ error: "User not found" });
+        return;
       }
 
       res.json(user);
@@ -403,7 +404,7 @@ usersRouter.post(
 usersRouter.get(
   "/timeline",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
@@ -471,11 +472,12 @@ usersRouter.get(
       });
 
       if (!user) {
-        return res.json({
+        res.json({
           recommendedActivityEntries: [],
           recommendedActivities: [],
           recommendedUsers: [],
         });
+        return;
       }
 
       const connections = [
@@ -488,11 +490,12 @@ usersRouter.get(
       ];
 
       if (!connections.length) {
-        return res.json({
+        res.json({
           recommendedActivityEntries: [],
           recommendedActivities: [],
           recommendedUsers: [],
         });
+        return;
       }
 
       const userIds = [user.id, ...connections.map((friend) => friend.id)];
@@ -562,7 +565,8 @@ usersRouter.post(
       });
 
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        res.status(404).json({ error: "User not found" });
+        return;
       }
 
       // Update user embedding
@@ -659,7 +663,7 @@ usersRouter.get(
 usersRouter.post(
   "/send-connection-request/:recipientId",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { recipientId } = req.params;
       const body = FriendRequestSchema.parse(req.body);
@@ -709,7 +713,7 @@ usersRouter.post(
 usersRouter.post(
   "/accept-connection-request/:senderId",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { senderId } = req.params;
 
@@ -754,7 +758,7 @@ usersRouter.post(
 usersRouter.post(
   "/reject-connection-request/:senderId",
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { senderId } = req.params;
 
