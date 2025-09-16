@@ -1,3 +1,6 @@
+import { TZDate } from "@date-fns/tz";
+import { Prisma } from "@tsw/prisma";
+import { endOfWeek, startOfWeek } from "date-fns";
 import { Response, Router } from "express";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
@@ -9,6 +12,15 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
 const router = Router();
+
+const PlanBulkUpdateSchema = z.object({
+  updates: z.array(
+    z.object({
+      planId: z.string(),
+      updates: z.record(z.string(), z.any()),
+    })
+  ),
+});
 
 // Zod validation schemas
 const SessionSchema = z.object({
@@ -148,6 +160,61 @@ async function updateSortOrders(
   }
 }
 
+// Get user's plans
+router.get(
+  "/",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const plans = await prisma.plan.findMany({
+        where: {
+          userId: req.user!.id,
+          deletedAt: null,
+        },
+        include: {
+          activities: true,
+          sessions: true,
+          planGroup: {
+            include: {
+              members: true,
+            },
+          },
+          milestones: true,
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      });
+
+      res.json(plans);
+    } catch (error) {
+      logger.error("Error fetching plans:", error);
+      res.status(500).json({ error: "Failed to fetch plans" });
+    }
+  }
+);
+
+// Retrieve a plan invitation by id
+router.get(
+  "/plan-invitations/:invitationId",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { invitationId } = req.params;
+      const invitation = await prisma.planInvitation.findUnique({
+        where: { id: invitationId },
+      });
+
+      if (!invitation) {
+        return res.status(404).json({ error: "Plan invitation not found" });
+      }
+
+      res.json(invitation);
+    } catch (error) {
+      logger.error("Error fetching plan invitation:", error);
+      res.status(500).json({ error: "Failed to fetch plan invitation" });
+    }
+  }
+);
+
 // Generate invitation link for external sharing
 router.get(
   "/generate-invitation-link",
@@ -283,15 +350,18 @@ router.post(
   ): Promise<Response | void> => {
     try {
       const { planIds } = req.body;
-      
+
       if (!planIds || !Array.isArray(planIds)) {
-        return res.status(400).json({ 
-          error: "planIds array is required" 
+        return res.status(400).json({
+          error: "planIds array is required",
         });
       }
 
       const userId = req.user!.id;
-      const progressData = await plansService.getBatchPlanProgress(planIds, userId);
+      const progressData = await plansService.getBatchPlanProgress(
+        planIds,
+        userId
+      );
 
       logger.info(`Retrieved batch progress for ${planIds.length} plans`);
       res.json({ progress: progressData });
@@ -301,7 +371,6 @@ router.post(
     }
   }
 );
-
 
 // Get specific plan
 router.get(
@@ -313,6 +382,7 @@ router.get(
   ): Promise<Response | void> => {
     try {
       const { planId } = req.params;
+      const includeActivities = req.query.includeActivities === "true";
 
       const plan = await prisma.plan.findUnique({
         where: { id: planId },
@@ -322,8 +392,13 @@ router.get(
               activity: true,
             },
           },
-          activities: true,
+          activities: includeActivities ? true : false,
           milestones: true,
+          planGroup: {
+            include: {
+              members: true,
+            },
+          },
         },
       });
 
@@ -332,18 +407,8 @@ router.get(
       }
 
       // Transform the data to match expected format
-      const transformedPlan = {
-        ...plan,
-        activities: plan.activities,
-        sessions: plan.sessions.map((session) => ({
-          ...session,
-          activityId: session.activityId,
-          descriptive_guide: session.descriptiveGuide,
-        })),
-      };
-
       logger.info(`Retrieved plan ${planId}`);
-      res.json(transformedPlan);
+      res.json(plan);
     } catch (error) {
       logger.error("Error getting plan:", error);
       res.status(500).json({ error: "Failed to get plan" });
@@ -390,6 +455,56 @@ router.post(
   }
 );
 
+// Bulk update plans
+router.patch(
+  "/bulk-update",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const validationResult = PlanBulkUpdateSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: validationResult.error.issues,
+        });
+      }
+
+      const { updates } = validationResult.data;
+      const planIds = updates.map((update) => update.planId);
+
+      const userPlans = await prisma.plan.findMany({
+        where: {
+          id: { in: planIds },
+          userId: req.user!.id,
+        },
+      });
+
+      if (userPlans.length !== planIds.length) {
+        return res.status(403).json({
+          success: false,
+          error: "Not authorized to update some plans",
+        });
+      }
+
+      await prisma.$transaction(
+        updates.map((update) =>
+          prisma.plan.update({
+            where: { id: update.planId },
+            data: update.updates as Prisma.PlanUpdateInput,
+          })
+        )
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error updating plans:", error);
+      res.status(500).json({ error: "Failed to update plans" });
+    }
+  }
+);
+
 // Update plan
 router.post(
   "/:planId/update",
@@ -430,6 +545,152 @@ router.post(
     } catch (error) {
       logger.error("Error updating plan:", error);
       res.status(500).json({ error: "Failed to update plan" });
+    }
+  }
+);
+
+// Modify manual milestone progress
+router.post(
+  "/milestones/:milestoneId/modify",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { milestoneId } = req.params;
+      const { delta } = req.body as { delta?: number };
+
+      if (typeof delta !== "number") {
+        return res.status(400).json({ error: "delta must be a number" });
+      }
+
+      const milestone = await prisma.planMilestone.findFirst({
+        where: {
+          id: milestoneId,
+          plan: {
+            userId: req.user!.id,
+          },
+        },
+      });
+
+      if (!milestone) {
+        return res.status(404).json({ error: "Milestone not found" });
+      }
+
+      const currentProgress = milestone.progress ?? 0;
+      const newProgress = Math.min(Math.max(currentProgress + delta, 0), 100);
+
+      const updatedMilestone = await prisma.planMilestone.update({
+        where: { id: milestoneId },
+        data: { progress: newProgress },
+      });
+
+      res.json({ success: true, milestone: updatedMilestone });
+    } catch (error) {
+      logger.error("Error modifying milestone:", error);
+      res.status(500).json({ error: "Failed to modify milestone" });
+    }
+  }
+);
+
+// Clear coach suggested sessions for a plan
+router.post(
+  "/:planId/clear-coach-suggested-sessions",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { planId } = req.params;
+
+      const plan = await prisma.plan.findFirst({
+        where: {
+          id: planId,
+          userId: req.user!.id,
+        },
+      });
+
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      await prisma.planSession.deleteMany({
+        where: {
+          planId,
+          isCoachSuggested: true,
+          plan: {
+            userId: req.user!.id,
+          },
+        },
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error clearing coach suggested sessions:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to clear coach suggested sessions" });
+    }
+  }
+);
+
+// Upgrade coach suggested sessions to plan sessions
+router.post(
+  "/:planId/upgrade-coach-suggested-sessions",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { planId } = req.params;
+
+      const plan = await prisma.plan.findFirst({
+        where: {
+          id: planId,
+          userId: req.user!.id,
+        },
+      });
+
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      const timezone = req.user?.timezone || "UTC";
+      const currentDate = new TZDate(new Date(), timezone);
+      const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+
+      await prisma.planSession.deleteMany({
+        where: {
+          planId,
+          isCoachSuggested: false,
+          plan: {
+            userId: req.user!.id,
+          },
+          date: {
+            gte: weekStart,
+            lt: weekEnd,
+          },
+        },
+      });
+
+      await prisma.planSession.updateMany({
+        where: {
+          planId,
+          isCoachSuggested: true,
+          plan: {
+            userId: req.user!.id,
+          },
+          date: {
+            gte: weekStart,
+            lt: weekEnd,
+          },
+        },
+        data: {
+          isCoachSuggested: false,
+        },
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Error upgrading coach suggested sessions:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to upgrade coach suggested sessions" });
     }
   }
 );

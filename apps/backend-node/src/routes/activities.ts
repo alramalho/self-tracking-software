@@ -45,17 +45,36 @@ router.get(
           userId: req.user!.id,
           deletedAt: null,
         },
+        include: {
+          comments: {
+            where: { deletedAt: null },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  picture: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "asc" },
+          },
+          reactions: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  picture: true,
+                },
+              },
+            },
+          },
+        },
         orderBy: { createdAt: "desc" },
       });
 
-      const response = entries.map((entry) => ({
-        id: entry.id,
-        activityId: entry.activityId,
-        quantity: entry.quantity,
-        date: entry.date,
-      }));
-
-      res.json(response);
+      res.json(entries);
     } catch (error) {
       logger.error("Error fetching activity entries:", error);
       res.status(500).json({ error: "Failed to fetch activity entries" });
@@ -294,7 +313,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      let { id, title, measure, emoji, privacy_settings } = req.body;
+      let { id, title, measure, emoji, colorHex, privacy_settings } = req.body;
 
       if (!id) {
         id = uuidv4();
@@ -308,6 +327,7 @@ router.post(
           measure,
           emoji,
           privacySettings: privacy_settings as ActivityVisibility,
+          colorHex,
         },
         create: {
           id,
@@ -316,6 +336,7 @@ router.post(
           measure,
           emoji,
           privacySettings: privacy_settings as ActivityVisibility,
+          colorHex,
         },
       });
 

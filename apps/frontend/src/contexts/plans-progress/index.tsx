@@ -5,58 +5,18 @@ import { dummyPlanProgressData } from "@/app/onboarding/components/steps/AIPartn
 import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Activity,
-  ActivityEntry,
-  PlanOutlineType,
-  PlanSession,
-} from "@tsw/prisma";
 import { isFuture, isSameWeek } from "date-fns";
 import React, { createContext, useContext, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { useCurrentUser, useUser } from "../users";
+import {
+  fetchPlanProgress as fetchPlanProgressService,
+  fetchPlansProgress,
+  PlanProgressData,
+  normalizePlanProgress,
+} from "./service";
 
-export interface PlanProgressData {
-  planId: string;
-  plan: {
-    emoji: string;
-    goal: string;
-    id: string;
-    type: PlanOutlineType;
-  };
-  achievement: {
-    streak: number;
-    completedWeeks: number;
-    incompleteWeeks: number;
-    totalWeeks: number;
-  };
-  currentWeekStats: {
-    numActiveDaysInTheWeek: number;
-    numLeftDaysInTheWeek: number;
-    numActiveDaysLeftInTheWeek: number;
-    daysCompletedThisWeek: number;
-  };
-  habitAchievement: {
-    progressValue: number;
-    maxValue: number;
-    isAchieved: boolean;
-    progressPercentage: number;
-  };
-  lifestyleAchievement: {
-    progressValue: number;
-    maxValue: number;
-    isAchieved: boolean;
-    progressPercentage: number;
-  };
-  weeks: Array<{
-    startDate: Date;
-    activities: Activity[];
-    completedActivities: ActivityEntry[];
-    plannedActivities: number | PlanSession[];
-    weekActivities: Activity[]; // TODO: remove this BS
-    isCompleted: boolean;
-  }>;
-}
+export type { PlanProgressData } from "./service";
 
 interface PlansProgressContextType {
   // Single plan progress
@@ -96,12 +56,9 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchPlanProgress = async (
     planId: string
   ): Promise<PlanProgressData> => {
-    // Use batch endpoint with single plan ID
-    const batchData = await fetchBatchPlanProgress([planId]);
-    if (batchData.length === 0) {
-      throw new Error(`Plan ${planId} not found`);
-    }
-    return batchData[0];
+    const progress = await fetchPlanProgressService(api, planId);
+    queryClient.setQueryData(["plan-progress", planId], progress);
+    return progress;
   };
 
   const fetchBatchPlanProgress = async (
@@ -109,22 +66,11 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   ): Promise<PlanProgressData[]> => {
     if (planIds.length === 0) return [];
 
-    const response = await api.post("/plans/batch-progress", { planIds });
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = response.data.progress;
-    return data.map((planProgress: any) => {
+    const progressList = await fetchPlansProgress(api, planIds);
+    progressList.forEach((planProgress) => {
       queryClient.setQueryData(["plan-progress", planProgress.planId], planProgress);
-      return ({
-        ...planProgress,
-        weeks: planProgress.weeks.map((week: any) => ({
-          ...week,
-          startDate: new Date(week.startDate),
-        })),
-      })
     });
+    return progressList;
   };
 
   // Single plan progress hook
@@ -172,11 +118,11 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
         
         planIds.forEach(planId => {
           const queryState = queryClient.getQueryState(["plan-progress", planId]);
-          const existingData = queryState?.data as PlanProgressData | undefined;
+          const existingDataRaw = queryState?.data as PlanProgressData | undefined;
           const isInvalidated = queryState ? queryState.isInvalidated : true;
-          
-          if (existingData && !isInvalidated) {
-            cachedData.push(existingData);
+
+          if (existingDataRaw && !isInvalidated) {
+            cachedData.push(normalizePlanProgress(existingDataRaw));
           } else {
             missingPlanIds.push(planId);
           }

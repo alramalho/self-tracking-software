@@ -122,57 +122,23 @@ router.post(
   }
 );
 
-// Load notifications for user
 router.get(
-  "/load-notifications",
+  "/",
   requireAuth,
   async (
     req: AuthenticatedRequest,
     res: Response
   ): Promise<Response | void> => {
     try {
-      // Get all non-concluded notifications for user
-      let notifications = await prisma.notification.findMany({
+      const notifications = await prisma.notification.findMany({
         where: {
           userId: req.user!.id,
-          status: { not: "CONCLUDED" },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: {
+          createdAt: "desc",
+        },
       });
-
-      // Filter engagement notifications and keep only the latest one
-      const engagementNotifications = notifications.filter(
-        (n) => n.type === "ENGAGEMENT"
-      );
-      const latestEngagement =
-        engagementNotifications.length > 0 ? engagementNotifications[0] : null;
-
-      // Remove all engagement notifications except the latest
-      notifications = notifications.filter((n) => n.type !== "ENGAGEMENT");
-      if (latestEngagement && latestEngagement.status !== "CONCLUDED") {
-        notifications.push(latestEngagement);
-      }
-
-      // Mark processed notifications as opened
-      const processedNotifications = notifications.filter(
-        (n) => n.status === "PROCESSED"
-      );
-      if (processedNotifications.length > 0) {
-        await prisma.notification.updateMany({
-          where: {
-            id: { in: processedNotifications.map((n) => n.id) },
-          },
-          data: {
-            status: "OPENED",
-            openedAt: new Date(),
-          },
-        });
-      }
-
-      logger.info(
-        `Loaded ${notifications.length} notifications for user ${req.user!.id}`
-      );
-      res.json({ notifications });
+      return res.json(notifications);
     } catch (error) {
       logger.error("Error loading notifications:", error);
       res.status(500).json({ error: "Failed to load notifications" });
