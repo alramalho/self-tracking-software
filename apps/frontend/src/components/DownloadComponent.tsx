@@ -14,7 +14,6 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
-import { useEffect } from "react";
 import { Button } from "./ui/button";
 
 type DownloadComponentProps = {
@@ -37,18 +36,6 @@ const DownloadComponent = ({
     !/Chrome|Chromium|Edg|OPR/.test(navigator.userAgent);
   const isSupportedBrowser = isChrome || isSafari;
 
-  
-  useEffect(() => {
-    if (isDesktop) {
-      window.location.href = "https://app.tracking.so/download";
-    }
-  }, [isDesktop]);
-
-  useEffect(() => {
-    console.log("isIOS", isIOS);
-    console.log("isInstagram", isInstagram);
-    console.log("isTikTok", isTikTok);
-  }, [isIOS, isInstagram, isTikTok]);
 
   // Desktop users: redirect to mobile
   if (isDesktop) {
@@ -75,7 +62,7 @@ const DownloadComponent = ({
   }
 
   // Mobile users: check browser support
-  if (!isSupportedBrowser) {
+  if (!isSupportedBrowser || isTikTok || isInstagram) {
     const secondaryLabel = isInstagram
       ? "Open in external browser"
       : "Open in browser";
