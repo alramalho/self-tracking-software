@@ -1,6 +1,0 @@
-.env
-.venv
-logs
-spike.py
-
-scripts/copy_prod_data_to_dev.sh
