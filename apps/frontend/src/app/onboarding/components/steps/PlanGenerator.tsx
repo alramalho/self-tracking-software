@@ -168,10 +168,11 @@ const PlanGenerator = () => {
         });
       })
     );
+    const { progressState, progressCalculatedAt, ...planWithoutProgress } = plan;
     upsertPlan({
       planId: plan.id,
       updates: {
-        ...plan,
+        ...planWithoutProgress,
         planGroup: undefined,
         activities: plan.activities,
         sessions: plan.sessions,

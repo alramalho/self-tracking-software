@@ -267,7 +267,7 @@ const TimelineRenderer: React.FC<{
           const timelineUser = timelineData?.recommendedUsers?.find(u => u.id === user.id);
           const activityPlanIds = timelineUser?.plans?.filter((plan) => plan.activities?.some((a) => a.id === activity?.id)) || [];
           const userPlansProgress = allTimelinePlansProgress?.filter(planProgress => 
-            activityPlanIds.some(plan => plan.id === planProgress.planId)
+            activityPlanIds.some(plan => plan.id === planProgress.plan.id)
           ) || [];
 
           return (

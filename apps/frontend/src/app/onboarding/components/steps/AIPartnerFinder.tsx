@@ -97,7 +97,6 @@ export const dummyPlanProgressData: PlanProgressData = {
     id: dummyCoachPlan.id || "demo-coach-plan",
     type: dummyCoachPlan.outlineType || "TIMES_PER_WEEK",
   },
-  planId: dummyCoachPlan.id || "demo-coach-plan",
   achievement: {
     streak: 3,
     completedWeeks: 2,
@@ -122,6 +121,7 @@ export const dummyPlanProgressData: PlanProgressData = {
     isAchieved: false,
     progressPercentage: 43,
   },
+  currentWeekState: "ON_TRACK",
   weeks: [
     {
       startDate: new Date(),
