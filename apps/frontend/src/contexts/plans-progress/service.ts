@@ -1,10 +1,6 @@
+import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
+import { PlanProgressData } from "@tsw/prisma/types";
 import { AxiosInstance } from "axios";
-import {
-  Activity,
-  ActivityEntry,
-  PlanOutlineType,
-  PlanSession,
-} from "@tsw/prisma";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 
 export interface PlanWeekData {
@@ -16,42 +12,10 @@ export interface PlanWeekData {
   isCompleted: boolean;
 }
 
-export interface PlanProgressData {
-  planId: string;
-  plan: {
-    emoji: string;
-    goal: string;
-    id: string;
-    type: PlanOutlineType;
-  };
-  achievement: {
-    streak: number;
-    completedWeeks: number;
-    incompleteWeeks: number;
-    totalWeeks: number;
-  };
-  currentWeekStats: {
-    numActiveDaysInTheWeek: number;
-    numLeftDaysInTheWeek: number;
-    numActiveDaysLeftInTheWeek: number;
-    daysCompletedThisWeek: number;
-  };
-  habitAchievement: {
-    progressValue: number;
-    maxValue: number;
-    isAchieved: boolean;
-    progressPercentage: number;
-  };
-  lifestyleAchievement: {
-    progressValue: number;
-    maxValue: number;
-    isAchieved: boolean;
-    progressPercentage: number;
-  };
-  weeks: PlanWeekData[];
-}
-
-type PrimitivePlanWeek = Omit<PlanWeekData, "startDate" | "completedActivities" | "plannedActivities"> & {
+type PrimitivePlanWeek = Omit<
+  PlanWeekData,
+  "startDate" | "completedActivities" | "plannedActivities"
+> & {
   startDate: string | Date;
   completedActivities: Array<
     Omit<
@@ -71,14 +35,15 @@ type PrimitivePlanWeek = Omit<PlanWeekData, "startDate" | "completedActivities" 
       deletedAt?: string | Date | null;
     }
   >;
-  plannedActivities: number |
-    Array<
-      Omit<PlanSession, "date" | "createdAt" | "updatedAt"> & {
-        date: string | Date;
-        createdAt: string | Date;
-        updatedAt: string | Date;
-      }
-    >;
+  plannedActivities:
+    | number
+    | Array<
+        Omit<PlanSession, "date" | "createdAt" | "updatedAt"> & {
+          date: string | Date;
+          createdAt: string | Date;
+          updatedAt: string | Date;
+        }
+      >;
 };
 
 type PlanProgressApiResponse = Omit<PlanProgressData, "weeks"> & {
@@ -89,24 +54,41 @@ export const normalizePlanProgress = (
   payload: PlanProgressApiResponse | PlanProgressData
 ): PlanProgressData => {
   return normalizeApiResponse<PlanProgressData>(payload, [
-    'weeks.startDate',
-    'weeks.completedActivities.date',
-    'weeks.completedActivities.createdAt', 
-    'weeks.completedActivities.updatedAt',
-    'weeks.completedActivities.imageCreatedAt',
-    'weeks.completedActivities.imageExpiresAt',
-    'weeks.completedActivities.deletedAt'
+    "weeks.startDate",
+    "weeks.completedActivities.date",
+    "weeks.completedActivities.createdAt",
+    "weeks.completedActivities.updatedAt",
+    "weeks.completedActivities.imageCreatedAt",
+    "weeks.completedActivities.imageExpiresAt",
+    "weeks.completedActivities.deletedAt",
   ]);
 };
 
 export async function fetchPlansProgress(
+  api: AxiosInstance,
+  planIds: string[],
+  forceRecompute?: boolean
+): Promise<PlanProgressData[]> {
+  if (!planIds.length) return [];
+
+  const response = await api.post<{ progress: PlanProgressApiResponse[] }>(
+    "/plans/batch-progress",
+    { planIds, forceRecompute }
+  );
+
+  const normalized = response.data.progress.map(normalizePlanProgress);
+  console.log(`Progress fetched: ${normalized.length} plans, ${normalized.filter(p => p).length} valid`);
+  return normalized;
+}
+
+export async function computePlansProgress(
   api: AxiosInstance,
   planIds: string[]
 ): Promise<PlanProgressData[]> {
   if (!planIds.length) return [];
 
   const response = await api.post<{ progress: PlanProgressApiResponse[] }>(
-    "/plans/batch-progress",
+    "/plans/batch-progress/compute",
     { planIds }
   );
 
@@ -115,11 +97,23 @@ export async function fetchPlansProgress(
 
 export async function fetchPlanProgress(
   api: AxiosInstance,
-  planId: string
+  planId: string,
+  forceRecompute?: boolean
 ): Promise<PlanProgressData> {
-  const [progress] = await fetchPlansProgress(api, [planId]);
+  const [progress] = await fetchPlansProgress(api, [planId], forceRecompute);
   if (!progress) {
     throw new Error(`Plan ${planId} not found`);
   }
   return progress;
+}
+
+export async function computePlanProgress(
+  api: AxiosInstance,
+  planId: string
+): Promise<PlanProgressData> {
+  const response = await api.post<PlanProgressApiResponse>(
+    `/plans/${planId}/progress/compute`
+  );
+
+  return normalizePlanProgress(response.data);
 }

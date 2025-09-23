@@ -8,6 +8,7 @@ import {
   PlanState,
   User,
 } from "@tsw/prisma";
+import { PlanProgressData, PlanProgressState } from "@tsw/prisma/types";
 import {
   addWeeks,
   endOfWeek,
@@ -329,7 +330,7 @@ export class PlansService {
 
       await prisma.plan.update({
         where: { id: plan.id },
-        data: updatePlanData,
+        data: updatePlanData as any, // Type assertion needed for partial update
       });
 
       logger.info(
@@ -499,43 +500,9 @@ export class PlansService {
 
   async getBatchPlanProgress(
     planIds: string[],
-    userId: string
-  ): Promise<
-    {
-      planId: string;
-      plan: {
-        emoji: string;
-        goal: string;
-        id: string;
-        type: PlanOutlineType;
-      };
-      achievement: {
-        streak: number;
-        completedWeeks: number;
-        incompleteWeeks: number;
-        totalWeeks: number;
-      };
-      currentWeekStats: {
-        numActiveDaysInTheWeek: number;
-        numLeftDaysInTheWeek: number;
-        numActiveDaysLeftInTheWeek: number;
-        daysCompletedThisWeek: number;
-      };
-      habitAchievement: {
-        progressValue: number;
-        maxValue: number;
-        isAchieved: boolean;
-        progressPercentage: number;
-      };
-      lifestyleAchievement: {
-        progressValue: number;
-        maxValue: number;
-        isAchieved: boolean;
-        progressPercentage: number;
-      };
-      weeks: Array<PlanWeek>;
-    }[]
-  > {
+    userId: string,
+    forceRecompute: boolean = false
+  ): Promise<PlanProgressData[]> {
     const plans = await prisma.plan.findMany({
       where: { id: { in: planIds } },
       include: { activities: true },
@@ -553,51 +520,144 @@ export class PlansService {
       throw new Error(`User ${userId} not found`);
     }
 
-    // Execute all plan progress calculations in parallel
+    let cachedCount = 0;
+    let computedCount = 0;
+
     const progressPromises = Promise.all(
-      plans.map((plan) => this.getSinglePlanProgress(plan, user))
+      plans.map(async (plan) => {
+        const shouldRecompute = !plan.progressCalculatedAt || forceRecompute;
+
+        if (shouldRecompute) {
+          computedCount++;
+          return this.computePlanProgress(plan, user);
+        } else {
+          cachedCount++;
+          return this.getPlanProgress(plan, user);
+        }
+      })
     );
 
-    return await progressPromises;
+    const results = await progressPromises;
+    logger.info(`Batch progress: ${cachedCount} cached, ${computedCount} computed (${plans.length} total)`);
+    return results;
+  }
+
+  async getPlanProgress(
+    plan: Plan & { activities: Activity[] },
+    user: User
+  ): Promise<PlanProgressData> {
+    // If progress has never been calculated, compute it now
+    if (!plan.progressCalculatedAt) {
+      logger.info(
+        `Progress never calculated for plan ${plan.id}, computing now`
+      );
+      return this.computePlanProgress(plan, user);
+    }
+
+    // Just read from cached progress state
+    if (!plan.progressState) {
+      logger.warn(
+        `No cached progress found for plan ${plan.id}, computing fresh`
+      );
+      return this.computePlanProgress(plan, user);
+    }
+
+    logger.info(`Reading cached progress for plan ${plan.id}`);
+
+    const cachedState = plan.progressState as any as PlanProgressState;
+
+    return {
+      plan: {
+        emoji: plan.emoji || "🔥",
+        goal: plan.goal,
+        id: plan.id,
+        type: plan.outlineType,
+      },
+      achievement: cachedState!.achievement,
+      currentWeekStats: cachedState!.currentWeekStats,
+      habitAchievement: cachedState!.habitAchievement,
+      lifestyleAchievement: cachedState!.lifestyleAchievement,
+      weeks: cachedState!.weeks || [],
+      currentWeekState: cachedState!.currentWeekState,
+    };
+  }
+
+  async computePlanProgress(
+    plan: Plan & { activities: Activity[] },
+    user: User
+  ): Promise<PlanProgressData> {
+    const progressData = await this.getSinglePlanProgress(plan, user);
+
+    // Cache the computed progress
+    const progressState: PlanProgressState = {
+      achievement: progressData.achievement,
+      currentWeekStats: progressData.currentWeekStats,
+      habitAchievement: progressData.habitAchievement,
+      lifestyleAchievement: progressData.lifestyleAchievement,
+      currentWeekState: plan.currentWeekState,
+      weeks: progressData.weeks,
+    };
+
+    await prisma.plan.update({
+      where: { id: plan.id },
+      data: {
+        progressState,
+        progressCalculatedAt: new Date(),
+      },
+    });
+
+    logger.info(`Cached fresh progress for plan ${plan.id}`);
+    return progressData;
+  }
+
+  async invalidatePlanProgressCache(planId: string): Promise<void> {
+    await prisma.plan.update({
+      where: { id: planId },
+      data: {
+        progressCalculatedAt: null,
+      },
+    });
+    logger.info(`Invalidated progress cache for plan ${planId}`);
+  }
+
+  async invalidateUserPlanProgressCaches(
+    userId: string,
+    activityIds: string[]
+  ): Promise<void> {
+    // Find all plans that use the affected activities
+    const affectedPlans = await prisma.plan.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        activities: {
+          some: {
+            id: { in: activityIds },
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    if (affectedPlans.length > 0) {
+      await prisma.plan.updateMany({
+        where: {
+          id: { in: affectedPlans.map((p) => p.id) },
+        },
+        data: {
+          progressCalculatedAt: null,
+        },
+      });
+
+      logger.info(
+        `Invalidated progress cache for ${affectedPlans.length} plans affected by activity changes`
+      );
+    }
   }
 
   private async getSinglePlanProgress(
     plan: Plan & { activities: Activity[] },
     user: User
-  ): Promise<{
-    planId: string;
-    plan: {
-      emoji: string;
-      goal: string;
-      id: string;
-      type: PlanOutlineType;
-    };
-    achievement: {
-      streak: number;
-      completedWeeks: number;
-      incompleteWeeks: number;
-      totalWeeks: number;
-    };
-    currentWeekStats: {
-      numActiveDaysInTheWeek: number;
-      numLeftDaysInTheWeek: number;
-      numActiveDaysLeftInTheWeek: number;
-      daysCompletedThisWeek: number;
-    };
-    habitAchievement: {
-      progressValue: number;
-      maxValue: number;
-      isAchieved: boolean;
-      progressPercentage: number;
-    };
-    lifestyleAchievement: {
-      progressValue: number;
-      maxValue: number;
-      isAchieved: boolean;
-      progressPercentage: number;
-    };
-    weeks: Array<PlanWeek>;
-  }> {
+  ): Promise<PlanProgressData> {
     // Get achievement data
     const achievement = await this.calculatePlanAchievement(plan.id);
 
@@ -613,7 +673,6 @@ export class PlansService {
     const weeks = await this.getPlanWeeks(plan, user);
 
     return {
-      planId: plan.id,
       plan: {
         emoji: plan.emoji || "🔥",
         goal: plan.goal,
@@ -624,6 +683,7 @@ export class PlansService {
       currentWeekStats,
       habitAchievement,
       lifestyleAchievement,
+      currentWeekState: plan.currentWeekState,
       weeks,
     };
   }
@@ -670,7 +730,6 @@ export class PlansService {
         )
       ).size;
 
-    console.log({ completedActivities, numberOfDaysCompletedThisWeek });
     // Check whether the plan is times per week or scheduled sessions
     let plannedActivities: number | PlanSession[];
 

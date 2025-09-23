@@ -248,6 +248,12 @@ router.post(
           },
         },
       });
+
+      // Invalidate progress cache for affected plans
+      if (plans.length > 0) {
+        await plansService.invalidateUserPlanProgressCaches(req.user!.id, [activityId]);
+      }
+
       for (const plan of plans) {
         if (plan.sortOrder == 0) {
           // only coach first plan

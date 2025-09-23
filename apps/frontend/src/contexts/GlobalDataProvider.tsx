@@ -7,13 +7,12 @@ import React from "react";
 import toast from "react-hot-toast";
 import { ActivitiesProvider } from "./activities";
 import { MetricsProvider } from "./metrics";
-import {
-  DataNotificationsProvider
-} from "./notifications";
+import { DataNotificationsProvider } from "./notifications";
 import { PlansProvider } from "./plans";
 import { RecommendationsProvider } from "./recommendations";
 import { TimelineProvider } from "./timeline";
 import { UsersProvider } from "./users";
+import { PlansProgressProvider } from "./plans-progress";
 
 interface GlobalDataProviderProps {
   children: React.ReactNode;
@@ -25,7 +24,9 @@ export const useGlobalDataOperations = () => {
   const router = useRouter();
   const api = useApiWithAuth();
 
-  const refetchAllData = async (options: { preloadPages?: boolean; notify?: boolean } = {}) => {
+  const refetchAllData = async (
+    options: { preloadPages?: boolean; notify?: boolean } = {}
+  ) => {
     const { preloadPages = false, notify = true } = options;
     try {
       await Promise.all([
@@ -40,14 +41,9 @@ export const useGlobalDataOperations = () => {
 
       // Preload navigation pages if requested
       if (preloadPages) {
-        const routes = [
-          "/",
-          "/plans", 
-          "/add",
-          "/search",
-        ];
-        
-        routes.forEach(route => {
+        const routes = ["/", "/plans", "/add", "/search"];
+
+        routes.forEach((route) => {
           router.prefetch(route);
         });
       }
@@ -55,14 +51,13 @@ export const useGlobalDataOperations = () => {
       if (notify) {
         toast.success("Data refreshed!");
       }
-      
+
       return userData;
     } catch (err) {
       console.error("Failed to refresh all data:", err);
       throw err;
     }
   };
-
 
   return {
     refetchAllData,
@@ -78,9 +73,11 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
         <MetricsProvider>
           <TimelineProvider>
             <PlansProvider>
-              <ActivitiesProvider>
-                <RecommendationsProvider>{children}</RecommendationsProvider>
-              </ActivitiesProvider>
+              <PlansProgressProvider>
+                <ActivitiesProvider>
+                  <RecommendationsProvider>{children}</RecommendationsProvider>
+                </ActivitiesProvider>
+              </PlansProgressProvider>
             </PlansProvider>
           </TimelineProvider>
         </MetricsProvider>

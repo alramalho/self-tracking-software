@@ -8,6 +8,7 @@ import { Activity, ActivityEntry } from "@tsw/prisma";
 import React, { createContext, useContext } from "react";
 import { toast } from "react-hot-toast";
 import { usePlans } from "../plans";
+import { useComputeProgressForUserPlans } from "../plans-progress";
 import { TimelineData } from "../timeline/service";
 import { HydratedUser } from "../users/service";
 import { getActivities, getActivitiyEntries } from "./service";
@@ -82,6 +83,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
   const { plans } = usePlans();
+  const computeProgressForUserPlans = useComputeProgressForUserPlans();
 
   const activitiesQuery = useQuery({
     queryKey: ["activities"],
@@ -152,15 +154,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       queryClient.refetchQueries({ queryKey: ["notifications"] });
       queryClient.refetchQueries({ queryKey: ["metrics"] });
-      const plansWithActivity = plans?.filter((plan) =>
-        plan.activities.some((activity) => activity.id === variables.activityId)
-      );
-      if (plansWithActivity) {
-        plansWithActivity.map((plan) => {
-          console.log("invalidating plan progress", plan.id);
-          queryClient.invalidateQueries({ queryKey: ["plan-progress", plan.id] });
-        });
-      }
+      
+      computeProgressForUserPlans([variables.activityId]);
 
       const hasPhoto = !!variables.photo;
       toast.success(
