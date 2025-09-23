@@ -4,15 +4,19 @@ export const useLogError = () => {
   const { user } = useUser();
 
   const handleQueryError = (
-    error: Error & { digest?: string },
+    error: Error & { digest?: string; response?: any; status?: number },
     customErrorMessage: string
   ) => {
     customErrorMessage;
+    const axiosErrorDetails = error.response ? 
+      ` [${error.response.status} ${error.response.statusText}] ${JSON.stringify(error.response.data)}` : 
+      "";
+    
     let customError = {
       ...error,
       digest: error.digest || "",
       message:
-        "(useQuery Error) " + customErrorMessage + " / " + error.message || "",
+        "(useQuery Error) " + customErrorMessage + " / " + error.message + axiosErrorDetails || "",
     };
     console.error(customError);
     logError(customError);
