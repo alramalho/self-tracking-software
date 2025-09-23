@@ -25,7 +25,8 @@ import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
 
 function is3DaysOld(date: Date): boolean {
-  return isBefore(date, new Date(Date.now()));
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  return isBefore(date, threeDaysAgo);
 }
 type PlanWeek = {
   startDate: Date;
