@@ -24,6 +24,9 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
 
+function is3DaysOld(date: Date): boolean {
+  return isBefore(date, new Date(Date.now()));
+}
 type PlanWeek = {
   startDate: Date;
   activities: Activity[];
@@ -525,7 +528,10 @@ export class PlansService {
 
     const progressPromises = Promise.all(
       plans.map(async (plan) => {
-        const shouldRecompute = !plan.progressCalculatedAt || forceRecompute;
+        const shouldRecompute =
+          !plan.progressCalculatedAt ||
+          forceRecompute ||
+          is3DaysOld(plan.progressCalculatedAt);
 
         if (shouldRecompute) {
           computedCount++;
@@ -538,7 +544,9 @@ export class PlansService {
     );
 
     const results = await progressPromises;
-    logger.info(`Batch progress: ${cachedCount} cached, ${computedCount} computed (${plans.length} total)`);
+    logger.info(
+      `Batch progress: ${cachedCount} cached, ${computedCount} computed (${plans.length} total)`
+    );
     return results;
   }
 
@@ -775,10 +783,11 @@ export class PlansService {
       plannedActivities,
       weekActivities,
       isCompleted:
+        completedActivities.length > 0 &&
         numberOfDaysCompletedThisWeek >=
-        (typeof plannedActivities === "number"
-          ? plannedActivities
-          : (plannedActivities?.length ?? 0)),
+          (typeof plannedActivities === "number"
+            ? plannedActivities
+            : (plannedActivities?.length ?? 0)),
     };
   }
 
