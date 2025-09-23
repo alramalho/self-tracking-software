@@ -114,7 +114,7 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
               <div className="space-y-3 mb-6">
                 <h4 className="font-semibold text-gray-900">{user?.name} Achievements:</h4>
                 {relevantAchievements.map((achievement, index) => (
-                  <div key={achievement.planId} className="p-3 border rounded-lg bg-white/50">
+                  <div key={achievement.plan.id} className="p-3 border rounded-lg bg-white/50">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-2xl">{achievement.plan.emoji}</span>
                       <h5 className="font-medium">{achievement.plan.goal}</h5>
