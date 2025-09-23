@@ -340,9 +340,43 @@ router.get(
   }
 );
 
-// Get progress for multiple plans
+// Get progress for multiple plans (cached)
 router.post(
   "/batch-progress",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planIds, forceRecompute = false } = req.body;
+
+      if (!planIds || !Array.isArray(planIds)) {
+        res.status(400).json({
+          error: "planIds array is required",
+        });
+        return;
+      }
+
+      const userId = req.user!.id;
+      const progressData = await plansService.getBatchPlanProgress(
+        planIds,
+        userId,
+        forceRecompute
+      );
+
+      logger.info(`Retrieved batch progress for ${planIds.length} plans${forceRecompute ? ' (forced recompute)' : ''}`);
+      res.json({ progress: progressData });
+    } catch (error) {
+      logger.error("Error getting batch plan progress:", error);
+      res.status(500).json({ error: "Failed to get batch plan progress" });
+    }
+  }
+);
+
+// Compute progress for multiple plans (always fresh)
+router.post(
+  "/batch-progress/compute",
   requireAuth,
   async (
     req: AuthenticatedRequest,
@@ -361,14 +395,100 @@ router.post(
       const userId = req.user!.id;
       const progressData = await plansService.getBatchPlanProgress(
         planIds,
-        userId
+        userId,
+        true // Force recompute
       );
 
-      logger.info(`Retrieved batch progress for ${planIds.length} plans`);
+      logger.info(`Computed fresh batch progress for ${planIds.length} plans`);
       res.json({ progress: progressData });
     } catch (error) {
-      logger.error("Error getting batch plan progress:", error);
-      res.status(500).json({ error: "Failed to get batch plan progress" });
+      logger.error("Error computing batch plan progress:", error);
+      res.status(500).json({ error: "Failed to compute batch plan progress" });
+    }
+  }
+);
+
+// Get progress for single plan (cached)
+router.get(
+  "/:planId/progress",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+      const forceRecompute = req.query.forceRecompute === 'true';
+
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+        include: { activities: true },
+      });
+
+      if (!plan || plan.userId !== req.user!.id) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+      });
+
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const progressData = forceRecompute
+        ? await plansService.computePlanProgress(plan, user)
+        : await plansService.getPlanProgress(plan, user);
+
+      logger.info(`Retrieved progress for plan ${planId}${forceRecompute ? ' (forced recompute)' : ''}`);
+      res.json(progressData);
+    } catch (error) {
+      logger.error("Error getting plan progress:", error);
+      res.status(500).json({ error: "Failed to get plan progress" });
+    }
+  }
+);
+
+// Compute progress for single plan (always fresh)
+router.post(
+  "/:planId/progress/compute",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+        include: { activities: true },
+      });
+
+      if (!plan || plan.userId !== req.user!.id) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+      });
+
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const progressData = await plansService.computePlanProgress(plan, user);
+
+      logger.info(`Computed fresh progress for plan ${planId}`);
+      res.json(progressData);
+    } catch (error) {
+      logger.error("Error computing plan progress:", error);
+      res.status(500).json({ error: "Failed to compute plan progress" });
     }
   }
 );

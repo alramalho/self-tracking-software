@@ -1,4 +1,6 @@
 import {
+  PlanOutlineType,
+  PlanState,
   Plan as PrismaPlan,
   PlanMilestone as PrismaPlanMilestone,
 } from "../generated/prisma";
@@ -15,6 +17,52 @@ export type PlanMilestone = Omit<PrismaPlanMilestone, "criteria"> & {
   criteria: MilestoneCriteria;
 };
 
-export type Plan = Omit<PrismaPlan, "milestones"> & {
+export type PlanProgressState = {
+  achievement: {
+    streak: number;
+    completedWeeks: number;
+    incompleteWeeks: number;
+    totalWeeks: number;
+  };
+  currentWeekStats: {
+    numActiveDaysInTheWeek: number;
+    numLeftDaysInTheWeek: number;
+    numActiveDaysLeftInTheWeek: number;
+    daysCompletedThisWeek: number;
+  };
+  habitAchievement: {
+    progressValue: number;
+    maxValue: number;
+    isAchieved: boolean;
+    progressPercentage: number;
+  };
+  lifestyleAchievement: {
+    progressValue: number;
+    maxValue: number;
+    isAchieved: boolean;
+    progressPercentage: number;
+  };
+  weeks: Array<{
+    startDate: Date;
+    activities: any[];
+    completedActivities: any[];
+    plannedActivities: number | any[];
+    weekActivities: any[];
+    isCompleted: boolean;
+  }>;
+  currentWeekState: PlanState;
+} | null;
+
+export type PlanProgressData = {
+  plan: {
+    emoji: string;
+    goal: string;
+    id: string;
+    type: PlanOutlineType;
+  };
+} & NonNullable<PlanProgressState>;
+
+export type Plan = Omit<PrismaPlan, "milestones" | "progressState"> & {
   milestones: PlanMilestone[];
+  progressState: PlanProgressState;
 };

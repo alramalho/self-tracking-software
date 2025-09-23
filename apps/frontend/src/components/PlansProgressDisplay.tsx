@@ -22,14 +22,14 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const planIds = activePlans.map(p => p.id);
   const { data: plansProgressData, isLoading } = usePlansProgress(planIds);
 
-  if (isLoading || !plansProgressData) {
+  if (isLoading || !plansProgressData || plansProgressData == null) {
     return <div className={cn("w-full flex flex-col gap-4", className)}>Loading...</div>;
   }
-
+  
   return (
     <div className={cn("w-full flex flex-col gap-4", className)}>
       {/* Progress bars section */}
-      {plansProgressData.map((planProgressData, index) => {
+      {plansProgressData.filter(Boolean).map((planProgressData, index) => {
         const { plan, weeks, achievement } = planProgressData;
 
         const shouldShow = index == 0 || isExpanded;

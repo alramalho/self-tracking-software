@@ -5,18 +5,20 @@ import { dummyPlanProgressData } from "@/app/onboarding/components/steps/AIPartn
 import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PlanProgressData } from "@tsw/prisma/types";
 import { isFuture, isSameWeek } from "date-fns";
 import React, { createContext, useContext, useEffect } from "react";
 import { toast } from "react-hot-toast";
+import { usePlans } from "../plans";
 import { useCurrentUser, useUser } from "../users";
 import {
+  computePlansProgress,
   fetchPlanProgress as fetchPlanProgressService,
   fetchPlansProgress,
-  PlanProgressData,
   normalizePlanProgress,
 } from "./service";
 
-export type { PlanProgressData } from "./service";
+export type { PlanProgressData };
 
 interface PlansProgressContextType {
   // Single plan progress
@@ -39,6 +41,9 @@ interface PlansProgressContextType {
     totalHabits: number;
     totalLifestyles: number;
   };
+
+  // Compute fresh progress (for after activity logging)
+  computeProgressForUserPlans: (activityIds: string[]) => Promise<void>;
 }
 
 const PlansProgressContext = createContext<
@@ -52,7 +57,9 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
   const queryClient = useQueryClient();
-
+  const { plans } = usePlans();
+  const { currentUser } = useCurrentUser();
+  
   const fetchPlanProgress = async (
     planId: string
   ): Promise<PlanProgressData> => {
@@ -68,7 +75,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const progressList = await fetchPlansProgress(api, planIds);
     progressList.forEach((planProgress) => {
-      queryClient.setQueryData(["plan-progress", planProgress.planId], planProgress);
+      queryClient.setQueryData(["plan-progress", planProgress.plan.id], planProgress);
     });
     return progressList;
   };
@@ -135,8 +142,8 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
         
         // Combine cached and new data, maintaining original order
         return planIds.map(planId => {
-          const cached = cachedData.find(d => d.planId === planId);
-          const fresh = newData.find(d => d.planId === planId);
+          const cached = cachedData.find(d => d.plan.id === planId);
+          const fresh = newData.find(d => d.plan.id === planId);
           return cached || fresh!;
         });
       },
@@ -192,10 +199,48 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   };
 
+  const computeProgressForUserPlans = async (activityIds: string[]) => {
+    if (!currentUser?.id || !activityIds.length) return;
+
+    try {
+      // Find all user's plans that use the affected activities
+      const userPlans = plans || [];
+      const affectedPlanIds = userPlans
+        .filter(plan => 
+          plan.activities?.some(activity => activityIds.includes(activity.id))
+        )
+        .map(plan => plan.id);
+
+      if (affectedPlanIds.length === 0) return;
+
+      // Compute fresh progress for affected plans
+      const freshProgressData = await computePlansProgress(api, affectedPlanIds);
+      
+      // Update query cache with fresh data
+      freshProgressData.forEach((planProgress) => {
+        queryClient.setQueryData(["plan-progress", planProgress.plan.id], planProgress);
+      });
+
+      // Invalidate batch queries that might include these plans
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return key[0] === "plans-progress" && Array.isArray(key[1]);
+        },
+      });
+
+      console.log(`Computed fresh progress for ${affectedPlanIds.length} plans after activity logging`);
+    } catch (error) {
+      console.error("Failed to compute progress after activity logging:", error);
+      // Don't throw - this is a background operation
+    }
+  };
+
   const context: PlansProgressContextType = {
     usePlanProgress,
     usePlansProgress,
     useUserProgress,
+    computeProgressForUserPlans,
   };
 
   return (
@@ -230,4 +275,9 @@ export const usePlansProgress = (planIds: string[]) => {
 export const useUserProgress = (userId?: string) => {
   const { useUserProgress: hookFromContext } = usePlansProgressContext();
   return hookFromContext(userId);
+};
+
+export const useComputeProgressForUserPlans = () => {
+  const { computeProgressForUserPlans } = usePlansProgressContext();
+  return computeProgressForUserPlans;
 };

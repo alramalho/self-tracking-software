@@ -247,6 +247,10 @@ model Plan {
   currentWeekState             PlanState @default(ON_TRACK)
   currentWeekStateCalculatedAt DateTime?
 
+  // Progress cache
+  progressState        Json?
+  progressCalculatedAt DateTime?
+
   // Relations
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   planGroup   PlanGroup?       @relation(fields: [planGroupId], references: [id])
