@@ -10,8 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SignupRoute = SignupRouteImport.update({
@@ -19,14 +22,29 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignoutRoute = SignoutRouteImport.update({
+  id: '/signout',
+  path: '/signout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DownloadRoute = DownloadRouteImport.update({
   id: '/download',
   path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AddRoute = AddRouteImport.update({
+  id: '/add',
+  path: '/add',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,35 +55,62 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/add': typeof AddRoute
   '/download': typeof DownloadRoute
+  '/plans': typeof PlansRoute
   '/signin': typeof SigninRoute
+  '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/add': typeof AddRoute
   '/download': typeof DownloadRoute
+  '/plans': typeof PlansRoute
   '/signin': typeof SigninRoute
+  '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/add': typeof AddRoute
   '/download': typeof DownloadRoute
+  '/plans': typeof PlansRoute
   '/signin': typeof SigninRoute
+  '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/download' | '/signin' | '/signup'
+  fullPaths:
+    | '/'
+    | '/add'
+    | '/download'
+    | '/plans'
+    | '/signin'
+    | '/signout'
+    | '/signup'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/download' | '/signin' | '/signup'
-  id: '__root__' | '/' | '/download' | '/signin' | '/signup'
+  to: '/' | '/add' | '/download' | '/plans' | '/signin' | '/signout' | '/signup'
+  id:
+    | '__root__'
+    | '/'
+    | '/add'
+    | '/download'
+    | '/plans'
+    | '/signin'
+    | '/signout'
+    | '/signup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AddRoute: typeof AddRoute
   DownloadRoute: typeof DownloadRoute
+  PlansRoute: typeof PlansRoute
   SigninRoute: typeof SigninRoute
+  SignoutRoute: typeof SignoutRoute
   SignupRoute: typeof SignupRoute
 }
 
@@ -78,6 +123,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signout': {
+      id: '/signout'
+      path: '/signout'
+      fullPath: '/signout'
+      preLoaderRoute: typeof SignoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signin': {
       id: '/signin'
       path: '/signin'
@@ -85,11 +137,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SigninRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/download': {
       id: '/download'
       path: '/download'
       fullPath: '/download'
       preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/add': {
+      id: '/add'
+      path: '/add'
+      fullPath: '/add'
+      preLoaderRoute: typeof AddRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -104,8 +170,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AddRoute: AddRoute,
   DownloadRoute: DownloadRoute,
+  PlansRoute: PlansRoute,
   SigninRoute: SigninRoute,
+  SignoutRoute: SignoutRoute,
   SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
