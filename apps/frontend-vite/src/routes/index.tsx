@@ -45,6 +45,12 @@ function HomePage() {
           <Link to="/signin" search={{ redirect_url: undefined }} className="text-blue-500 hover:underline w-fit">
             🔐 Test /signin route (Clerk Auth)
           </Link>
+          <Link to="/signout" className="text-blue-500 hover:underline w-fit">
+            🚪 Test /signout route
+          </Link>
+          <Link to="/plans" className="text-blue-500 hover:underline w-fit">
+            📋 Test /plans route (Basic)
+          </Link>
         </div>
       </div>
     </div>

@@ -1,0 +1,226 @@
+
+import { useApiWithAuth } from "@/api";
+import { useLogError } from "@/hooks/useLogError";
+import { useClerk, useSession } from "@clerk/clerk-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Prisma } from "@tsw/prisma";
+import { useNavigate } from "@tanstack/react-router";
+import React, {
+  useCallback,
+  useEffect
+} from "react";
+import { toast } from "react-hot-toast";
+import {
+  getCurrentUserBasicData,
+  type HydratedCurrentUser,
+  type HydratedUser,
+  updateUser as updateUserService,
+} from "./service";
+import { UsersContext, type UsersContextType } from "./types";
+
+export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { isSignedIn, isLoaded } = useSession();
+  const navigate = useNavigate();
+  const { signOut } = useClerk();
+  const queryClient = useQueryClient();
+  const api = useApiWithAuth();
+  const { handleQueryError } = useLogError();
+
+  const handleAuthError = useCallback(
+    (err?: unknown) => {
+      console.error("[UsersProvider] Auth error:", err);
+      navigate({ to: "/signin", search: { redirect_url: undefined } });
+      toast.error(
+        "You are not authorized to access this page. Please login again.",
+        {
+          icon: "🔒",
+          duration: 5000,
+        }
+      );
+      queryClient.clear();
+      signOut({ redirectUrl: window.location.pathname });
+      throw err;
+    },
+    [navigate, queryClient, signOut]
+  );
+
+  const currentUserQuery = useQuery({
+    queryKey: ["current-user"],
+    queryFn: async () => {
+      console.log("fetching user")
+      const result = await getCurrentUserBasicData(api);
+      return result
+    },
+    enabled: isLoaded && isSignedIn,
+    retry: 5,
+    retryDelay: 1000,
+  });
+
+  useEffect(() => {
+    if (currentUserQuery.error) {
+      handleAuthError("could not load current user");
+      handleQueryError(currentUserQuery.error, `Failed to get current user`);
+    }
+  }, [currentUserQuery.error, handleAuthError, handleQueryError]);
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: {
+      updates: Prisma.UserUpdateInput;
+      muteNotifications?: boolean;
+    }) => {
+      return await updateUserService(api, data.updates);
+    },
+    onSuccess: (updatedUser, { muteNotifications }) => {
+      queryClient.setQueryData(["current-user"], updatedUser);
+      if (updatedUser?.username) {
+        queryClient.setQueryData(["user", updatedUser.username], updatedUser as HydratedUser);
+      }
+      if (!muteNotifications) {
+        toast.success("User updated successfully");
+      }
+    },
+    onError: (error, { muteNotifications }) => {
+      console.error("Error updating user:", error);
+      if (!muteNotifications) {
+        toast.error("Failed to update user");
+      }
+    },
+  });
+
+  const sendFriendRequestMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await api.post(`/users/send-connection-request/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["current-user"] });
+      toast.success("Friend request sent successfully");
+    },
+    onError: (error) => {
+      console.error("Error sending friend request:", error);
+      toast.error("Failed to send friend request");
+    },
+  });
+
+  const acceptFriendRequestMutation = useMutation({
+    mutationFn: async (user: { id: string, username: string }) => {
+      const response = await api.post(
+        `/users/accept-connection-request/${user.id}`
+      );
+      return response.data.connection;
+    },
+    onSuccess: (newConnection, user) => {
+      queryClient.setQueryData(["current-user"], (old: HydratedCurrentUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["current-user"] });
+        // replace the connection of id into the connectionsTo array
+        return {
+          ...old,
+          connectionsTo: old.connectionsTo?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.setQueryData(["user", user.username], (old: HydratedUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["users", user.username] });
+        return {
+          ...old,
+          connectionsFrom: old.connectionsFrom?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
+      queryClient.refetchQueries({ queryKey: ["timeline"] });
+      toast.success("Friend request accepted!");
+    },
+    onError: (error) => {
+      console.error("Error accepting friend request:", error);
+      toast.error("Failed to accept friend request.");
+    },
+  });
+
+  const rejectFriendRequestMutation = useMutation({
+    mutationFn: async (user: { id: string, username: string }) => {
+      const repsonse = await api.post(
+        `/users/reject-connection-request/${user.id}`
+      );
+      return repsonse.data.connection;
+    },
+    onSuccess: (newConnection, user) => {
+      queryClient.setQueryData(["current-user"], (old: HydratedCurrentUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["current-user"] });
+        return {
+          ...old,
+          connectionsTo: old.connectionsTo?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.setQueryData(["user", user.username], (old: HydratedUser) => {
+        if (!old)
+          return queryClient.refetchQueries({ queryKey: ["user", user.username] });
+        return {
+          ...old,
+          connectionsFrom: old.connectionsFrom?.map((oldConnection) =>
+            newConnection.id === oldConnection.id ? newConnection : oldConnection
+          ),
+        };
+      });
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
+      toast.success("Friend request rejected.");
+    },
+    onError: (error) => {
+      console.error("Error rejecting friend request:", error);
+      toast.error("Failed to reject friend request.");
+    },
+  });
+
+  const refetchCurrentUser = useCallback(
+    async (notify = true) => {
+      await queryClient.refetchQueries({ queryKey: ["current-user"] });
+      if (notify) {
+        toast.success("User data refreshed");
+      }
+    },
+    [queryClient]
+  );
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      console.log("🧹 Clearing users cache because not signed in");
+      queryClient.clear();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
+      }
+    }
+  }, [isSignedIn, isLoaded, queryClient]);
+
+  const context: UsersContextType = {
+    currentUser: currentUserQuery.data,
+    isLoadingCurrentUser: currentUserQuery.isLoading,
+    currentUserError: currentUserQuery.error,
+    refetchCurrentUser,
+    hasLoadedUserData: currentUserQuery.isSuccess && !!currentUserQuery.data,
+    handleAuthError,
+    // Actions
+    updateUser: updateUserMutation.mutateAsync,
+    isUpdatingUser: updateUserMutation.isPending,
+
+    sendFriendRequest: sendFriendRequestMutation.mutateAsync,
+    isSendingFriendRequest: sendFriendRequestMutation.isPending,
+
+    acceptFriendRequest: acceptFriendRequestMutation.mutateAsync,
+    isAcceptingFriendRequest: acceptFriendRequestMutation.isPending,
+
+    rejectFriendRequest: rejectFriendRequestMutation.mutateAsync,
+    isRejectingFriendRequest: rejectFriendRequestMutation.isPending,
+  };
+
+  return (
+    <UsersContext.Provider value={context}>{children}</UsersContext.Provider>
+  );
+};
