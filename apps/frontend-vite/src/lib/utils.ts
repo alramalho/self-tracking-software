@@ -53,3 +53,8 @@ export const toMidnightUTCDate = (date: Date) => {
   const newDate = new Date(format(date, "yyyy-MM-dd") + "T00:00:00.000Z");
   return newDate;
 };
+
+export function capitalize(str: string) {
+  if (str === undefined || str === null || str === "") return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}

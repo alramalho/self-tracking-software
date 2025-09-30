@@ -1,43 +1,91 @@
-import { GlobalDataProvider } from '@/contexts/GlobalDataProvider'
-import { ClerkProvider } from '@clerk/clerk-react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
-import { Toaster } from 'react-hot-toast'
+import GeneralInitializer from "@/components/GeneralInitializer";
+import { GlobalDataProvider } from "@/contexts/GlobalDataProvider";
+import { ThemeProvider } from "@/contexts/theme/provider";
+import { UpgradeProvider } from "@/contexts/upgrade/provider";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { NotificationsProvider } from "@/hooks/useNotifications";
+import { cn } from "@/lib/utils";
+import { PHProvider } from "@/posthog/PHProvider";
+import PostHogPageView from "@/posthog/PageView";
+import { ClerkProvider, useAuth } from "@clerk/clerk-react";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { Toaster } from "react-hot-toast";
+import { Toaster as SonnerToaster } from "sonner";
 
-// Create a client for react-query
+// Configure QueryClient with longer gcTime to support persistence
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours (for persistence)
+      staleTime: 1000 * 60 * 30, // 30 minutes
       retry: 3,
     },
   },
-})
+});
+
+const localStoragePersister = createAsyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  key: "TRACKING_SO_QUERY_CACHE",
+  throttleTime: 1000,
+});
 
 export const Route = createRootRoute({
   component: RootComponent,
-})
+});
 
 function RootComponent() {
   return (
-    <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
-      <QueryClientProvider client={queryClient}>
-        <GlobalDataProvider>
-          <Outlet />
+    <PHProvider>
+      <ClerkProvider
+        publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      >
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister: localStoragePersister }}
+        >
+          <GlobalDataProvider>
+            <ThemedLayout />
+          </GlobalDataProvider>
+        </PersistQueryClientProvider>
+      </ClerkProvider>
+    </PHProvider>
+  );
+}
+
+function ThemedLayout() {
+  const { isSignedIn } = useAuth();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  return (
+    <ThemeProvider>
+      <UpgradeProvider>
+        <NotificationsProvider>
+          <main
+            className={cn(
+              "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
+              isSignedIn && isDesktop ? "ml-64" : ""
+            )}
+          >
+            <GeneralInitializer>
+              <PostHogPageView />
+              <Outlet />
+            </GeneralInitializer>
+          </main>
+          <SonnerToaster position="top-center" />
           <Toaster
             position="top-center"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
+            containerStyle={{
+              bottom: "5rem",
+              zIndex: 105,
             }}
           />
           <TanStackRouterDevtools />
-        </GlobalDataProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
-  )
+        </NotificationsProvider>
+      </UpgradeProvider>
+    </ThemeProvider>
+  );
 }

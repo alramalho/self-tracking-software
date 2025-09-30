@@ -30,7 +30,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    "types": ["@serwist/vite/typings"]
+    "types": ["vite/client", "@serwist/vite/typings"]
   },
-  "include": ["src"]
+  "include": ["src", "vite-env.d.ts"]
 }

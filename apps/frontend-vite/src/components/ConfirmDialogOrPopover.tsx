@@ -1,55 +1,84 @@
-import React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
-// Stub implementation - replace with actual implementation when needed
-interface ConfirmDialogOrPopoverProps {
+interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  title: React.ReactNode;
+  title: string | React.ReactNode;
   description: string;
-  confirmText: string;
-  cancelText: string;
-  variant?: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: "default" | "destructive";
 }
 
-const ConfirmDialogOrPopover: React.FC<ConfirmDialogOrPopoverProps> = ({
+const ConfirmDialogOrPopover: React.FC<ConfirmDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
   title,
   description,
-  confirmText,
-  cancelText,
-  variant,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  variant = "default",
 }) => {
-  if (!isOpen) return null;
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-        <div className="mb-4">{title}</div>
-        <p className="text-sm text-gray-600 mb-6">{description}</p>
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            {cancelText}
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`px-4 py-2 rounded text-white ${
-              variant === "destructive"
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-blue-500 hover:bg-blue-600"
-            }`}
-          >
-            {confirmText}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  if (isDesktop) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>
+              {cancelText}
+            </Button>
+            <Button variant={variant} onClick={onConfirm}>
+              {confirmText}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  } else {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>{title}</DrawerTitle>
+            <DrawerDescription>{description}</DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter>
+            <Button variant="outline" onClick={onClose}>
+              {cancelText}
+            </Button>
+            <Button variant={variant} onClick={onConfirm}>
+              {confirmText}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 };
 
 export default ConfirmDialogOrPopover;

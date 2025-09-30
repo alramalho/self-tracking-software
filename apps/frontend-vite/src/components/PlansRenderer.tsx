@@ -1,11 +1,12 @@
+
 import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CompletePlan, usePlans } from "@/contexts/plans";
+import { type CompletePlan, usePlans } from "@/contexts/plans";
 import {
   closestCenter,
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   MouseSensor,
   TouchSensor,
   useSensor,
@@ -17,9 +18,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Link } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
 import { Plus, PlusSquare, RefreshCw } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Divider from "./Divider";

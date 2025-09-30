@@ -362,8 +362,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             }
           );
           const totalWeeks = planProgress?.weeks.length ?? 0;
+          console.log({weeks: planProgress?.weeks})
           const actualWeekIndex =
-            planProgress?.weeks.findIndex(
+            planProgress?.weeks?.findIndex(
               (w) => w.startDate.getTime() === week.startDate.getTime()
             ) ?? index;
           return (

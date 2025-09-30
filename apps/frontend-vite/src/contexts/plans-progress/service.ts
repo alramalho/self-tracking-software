@@ -77,7 +77,12 @@ export async function fetchPlansProgress(
   );
 
   const normalized = response.data.progress.map(normalizePlanProgress);
-  console.log(`Progress fetched: ${normalized.length} plans, ${normalized.filter(p => p).length} valid`);
+  console.log(
+    `Progress fetched: ${normalized.length} plans, ${
+      normalized.filter((p) => p).length
+    } valid`
+  );
+  console.log({ normalized });
   return normalized;
 }
 
