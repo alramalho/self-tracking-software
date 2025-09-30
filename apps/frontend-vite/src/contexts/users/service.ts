@@ -170,9 +170,7 @@ export async function getPublicUserProfile(
   usernameOrId: string
 ): Promise<HydratedUser> {
   const baseUrl =
-    process.env.BACKEND_PUBLIC_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.BACKEND_URL;
+    import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL;
 
   if (!baseUrl) {
     throw new Error("Backend URL is not configured");

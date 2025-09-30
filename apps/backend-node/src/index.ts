@@ -56,6 +56,7 @@ const allowedOrigins = [
 if (ENVIRONMENT === "development") {
   allowedOrigins.push("https://alex-trackingso.loca.lt");
   allowedOrigins.push("http://localhost:3001");
+  allowedOrigins.push("http://localhost:5173");
 }
 
 app.use(

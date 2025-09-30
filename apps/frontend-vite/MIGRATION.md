@@ -136,10 +136,43 @@ Start with the route code, then on your analysis indentify the needed dependenci
   - TODO: Need to implement full PlansRenderer with all dependencies later
 ## /search TODO
 
-[] analyse route (page.tsx and respective layout if existent)
-[] analyse respective depedencies (packages, components, hooks, contexts)
-[] migrate respective route code
-[] install missing dependencies
+[x] analyse route (page.tsx and respective layout if existent)
+[x] analyse respective depedencies (packages, components, hooks, contexts)
+[x] migrate respective route code
+[x] install missing dependencies
+
+### Analysis:
+- Route: `/search` - User search page with recommendations and notifications gating
+- No layout.tsx
+- Components needed:
+  - UserSearch (search users with debouncing)
+  - CollapsibleSelfUserCard (shows current user's card)
+  - RecommendedUsers (grid of recommended user cards)
+  - UserCard (display user with plans, activities, friend request buttons)
+  - AppleLikePopover (already exists ✅)
+- Hooks needed:
+  - useNotifications (isPushGranted, requestPermission)
+  - useCurrentUser, usePlans, useRecommendations
+  - useApiWithAuth
+- External deps:
+  - react-simple-pull-to-refresh (for pull to refresh)
+  - framer-motion (already installed ✅)
+  - lucide-react (icons ✅)
+- Features:
+  - Notification permission gate before accessing search
+  - Pull-to-refresh to recompute recommendations
+  - User search with real-time results
+  - Recommended users based on compatibility score
+  - Connection status tracking (pending, accepted, etc.)
+
+### Migration Status: ✅ COMPLETED (with simplified components)
+- Created UserSearch component ✅
+- Created simplified CollapsibleSelfUserCard ✅
+- Created simplified RecommendedUsers ✅
+- Created /search route with notification gating and pull-to-refresh ✅
+- Installed react-simple-pull-to-refresh ✅
+- **NOTE**: UserCard component not fully migrated - using simplified card views
+- **TODO**: Migrate full UserCard with PlanStreak, friend request functionality, activities display
 ## /profile/{username} TODO
 
 [] analyse route (page.tsx and respective layout if existent)
@@ -182,6 +215,48 @@ Start with the route code, then on your analysis indentify the needed dependenci
 [] analyse respective depedencies (packages, components, hooks, contexts)
 [] migrate respective route code
 [] install missing dependencies
+
+## / TODO (home) warning: complex, includes timeline
+ 
+## /create-new-plan ✅ BASIC IMPLEMENTATION
+
+[x] analyse route (page.tsx and respective layout if existent)
+[x] analyse respective depedencies (packages, components, hooks, contexts)
+[x] migrate respective route code (simplified implementation)
+[x] install missing dependencies
+
+### Analysis:
+- Route: `/create-new-plan` - Plan creation with upgrade gate
+- No layout.tsx
+- Components needed:
+  - AppleLikePopover (already exists ✅)
+  - CreatePlanCardJourney (simple wrapper) ✅
+  - PlanConfigurationForm (complex, 6-step form with AI generation) 🚧
+- Hooks needed:
+  - usePlans (already exists ✅)
+  - useUpgrade (already exists ✅)
+  - usePaidPlan (migrated ✅)
+  - useCurrentUser (already exists ✅)
+- Context needed: Plans, Upgrade, Users (all exist ✅)
+- External deps: lodash (capitalize), twMerge ✅
+- Features:
+  - Plan limit check based on user tier (FREE: 1 plan, PLUS: 100 plans)
+  - Upgrade popover when limit reached
+  - Full plan creation flow when under limit
+
+### Migration Status: ✅ BASIC IMPLEMENTATION COMPLETED
+- Created /create-new-plan route ✅
+- Migrated usePaidPlan hook with proper tier limits ✅
+- Created CreatePlanCardJourney wrapper component ✅
+- Created simplified PlanConfigurationForm stub ✅
+- **NOTE**: PlanConfigurationForm not fully migrated - using stub with TODO
+- **TODO**: Migrate full PlanConfigurationForm with all 6 steps:
+  1. Duration selection (CUSTOM, ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR)
+  2. Goal input
+  3. Emoji selection
+  4. Activities selection (multi-select from user's activities)
+  5. Outline type (SPECIFIC with AI-generated sessions vs TIMES_PER_WEEK)
+  6. Milestones configuration
 
 ## / TODO (home) warning: complex, includes timeline
  

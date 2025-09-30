@@ -1,7 +1,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
-import { BarProgressLoader } from "@/components/ui/BarProgressLoader";
+import { BarProgressLoader } from "@/components/ui/bar-progress-loader";
 import { Button } from "@/components/ui/button";
 import { useActivities } from "@/contexts/activities";
 import { CompletePlan, usePlans } from "@/contexts/plans";

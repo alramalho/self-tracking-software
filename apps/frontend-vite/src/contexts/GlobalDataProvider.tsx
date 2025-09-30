@@ -2,6 +2,7 @@
 
 "use client";
 
+import { NotificationsProvider } from "@/hooks/useNotifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import React from "react";
@@ -75,7 +76,9 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
             <PlansProvider>
               <PlansProgressProvider>
                 <ActivitiesProvider>
-                  <RecommendationsProvider>{children}</RecommendationsProvider>
+                  <RecommendationsProvider>
+                    <NotificationsProvider>{children}</NotificationsProvider>
+                  </RecommendationsProvider>
                 </ActivitiesProvider>
               </PlansProgressProvider>
             </PlansProvider>
