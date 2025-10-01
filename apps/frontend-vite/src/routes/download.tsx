@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import DownloadComponent from '../components/DownloadComponent'
 
 export const Route = createFileRoute('/download')({
+  
   component: DownloadPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {

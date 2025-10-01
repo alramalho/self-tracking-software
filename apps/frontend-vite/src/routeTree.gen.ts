@@ -20,6 +20,7 @@ import { Route as CreateNewPlanRouteImport } from './routes/create-new-plan'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboard'
 import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
 
 const SignupRoute = SignupRouteImport.update({
@@ -77,6 +78,11 @@ const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   path: '/profile/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InsightsDashboardRoute = InsightsDashboardRouteImport.update({
+  id: '/insights/dashboard',
+  path: '/insights/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FriendsUsernameRoute = FriendsUsernameRouteImport.update({
   id: '/friends/$username',
   path: '/friends/$username',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
   '/friends/$username': typeof FriendsUsernameRoute
+  '/insights/dashboard': typeof InsightsDashboardRoute
   '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
   '/friends/$username': typeof FriendsUsernameRoute
+  '/insights/dashboard': typeof InsightsDashboardRoute
   '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesById {
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
   '/friends/$username': typeof FriendsUsernameRoute
+  '/insights/dashboard': typeof InsightsDashboardRoute
   '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/signout'
     | '/signup'
     | '/friends/$username'
+    | '/insights/dashboard'
     | '/profile/$username'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/signout'
     | '/signup'
     | '/friends/$username'
+    | '/insights/dashboard'
     | '/profile/$username'
   id:
     | '__root__'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/signout'
     | '/signup'
     | '/friends/$username'
+    | '/insights/dashboard'
     | '/profile/$username'
   fileRoutesById: FileRoutesById
 }
@@ -183,6 +195,7 @@ export interface RootRouteChildren {
   SignoutRoute: typeof SignoutRoute
   SignupRoute: typeof SignupRoute
   FriendsUsernameRoute: typeof FriendsUsernameRoute
+  InsightsDashboardRoute: typeof InsightsDashboardRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
 }
 
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/insights/dashboard': {
+      id: '/insights/dashboard'
+      path: '/insights/dashboard'
+      fullPath: '/insights/dashboard'
+      preLoaderRoute: typeof InsightsDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/friends/$username': {
       id: '/friends/$username'
       path: '/friends/$username'
@@ -287,6 +307,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignoutRoute: SignoutRoute,
   SignupRoute: SignupRoute,
   FriendsUsernameRoute: FriendsUsernameRoute,
+  InsightsDashboardRoute: InsightsDashboardRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
 }
 export const routeTree = rootRouteImport
