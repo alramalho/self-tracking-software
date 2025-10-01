@@ -1,6 +1,6 @@
-import { PlanInvitation, Prisma } from "@tsw/prisma";
-import { AxiosInstance } from "axios";
-import { normalizeApiResponse, normalizeApiResponseArray } from "../../utils/dateUtils";
+import { type PlanInvitation, Prisma } from "@tsw/prisma";
+import { type AxiosInstance } from "axios";
+import { normalizeApiResponse } from "../../utils/dateUtils";
 
 export type PlanWithRelations = Prisma.PlanGetPayload<{
   include: {
@@ -66,24 +66,29 @@ const deserializePlan = (plan: PlanApiResponse): PlanWithRelations => {
   const activities =
     (plan as unknown as { activities?: PlanWithRelations["activities"] })
       .activities || [];
-  return normalizeApiResponse<PlanWithRelations>(
-    { ...plan, activities },
-    [
-      'createdAt', 'updatedAt', 'deletedAt', 'finishingDate', 'suggestedByCoachAt',
-      'sessions.date', 'sessions.createdAt', 'sessions.updatedAt',
-      'milestones.date', 'milestones.createdAt',
-      'planGroup.createdAt'
-    ]
-  );
+  return normalizeApiResponse<PlanWithRelations>({ ...plan, activities }, [
+    "createdAt",
+    "updatedAt",
+    "deletedAt",
+    "finishingDate",
+    "suggestedByCoachAt",
+    "sessions.date",
+    "sessions.createdAt",
+    "sessions.updatedAt",
+    "milestones.date",
+    "milestones.createdAt",
+    "planGroup.createdAt",
+  ]);
 };
 
 const deserializePlanInvitation = (
   invitation: PlanInvitationApiResponse
-): PlanInvitation => normalizeApiResponse<PlanInvitation>(invitation, ['createdAt', 'updatedAt']);
+): PlanInvitation =>
+  normalizeApiResponse<PlanInvitation>(invitation, ["createdAt", "updatedAt"]);
 
 const deserializeMilestone = (
   milestone: PlanApiResponse["milestones"][number]
-) => normalizeApiResponse(milestone, ['date', 'createdAt']);
+) => normalizeApiResponse(milestone, ["date", "createdAt"]);
 
 export async function getPlans(api: AxiosInstance) {
   const response = await api.get<PlanApiResponse[]>("/plans");

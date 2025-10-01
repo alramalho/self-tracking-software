@@ -3,6 +3,7 @@ import ActivityEditor from "@/components/ActivityEditor";
 import { ActivityLoggerPopover } from "@/components/ActivityLoggerPopover";
 import ActivityPhotoUploader from "@/components/ActivityPhotoUploader";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ActivityLogData } from "@/contexts/activities/types";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { createFileRoute } from "@tanstack/react-router";
 import type { Activity, ActivityEntry } from "@tsw/prisma";

@@ -1,5 +1,5 @@
-import { useCurrentUser } from "@/contexts/users";
 import { useTheme } from "@/contexts/theme/useTheme";
+import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -255,7 +255,7 @@ const BottomNav = () => {
           </Link>
 
           <Link
-            to={`/profile/${userUsername}`}
+            to="/profile/$username" params={{ username: userUsername || "" }}
             preload="intent"
             data-testid="nav-profile"
             className={cn(

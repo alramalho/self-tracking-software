@@ -1,5 +1,5 @@
 import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
-import { MetricCorrelation } from "@/contexts/metrics/lib";
+import { type MetricCorrelation } from "@/contexts/metrics/lib";
 import React from "react";
 
 interface MetricWeeklyViewProps {

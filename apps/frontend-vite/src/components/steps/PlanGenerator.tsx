@@ -1,17 +1,19 @@
+/* eslint-disable react-refresh/only-export-components */
+
 "use client";
 
 import { useApiWithAuth } from "@/api";
 import { BarProgressLoader } from "@/components/ui/bar-progress-loader";
 import { Button } from "@/components/ui/button";
-import { useActivities } from "@/contexts/activities";
-import { CompletePlan, usePlans } from "@/contexts/plans";
-import { Activity } from "@tsw/prisma";
+import { useActivities } from "@/contexts/activities/useActivities";
+import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
+import { type CompletePlan, usePlans } from "@/contexts/plans";
+import type { Activity } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { withFadeUpAnimation } from "../../lib";
-import { useOnboarding } from "../OnboardingContext";
 
 const PlanCard = ({
   plan,
@@ -141,12 +143,12 @@ const PlanGenerator = () => {
     updateOnboardingState,
     setSelectedPlan,
   } = useOnboarding();
-  const {upsertPlan} = usePlans()
-  const {upsertActivity} = useActivities()
+  const { upsertPlan } = usePlans();
+  const { upsertActivity } = useActivities();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [generatedPlans, setGeneratedPlans] = useState<
-    CompletePlan[] | null
-  >(plans);
+  const [generatedPlans, setGeneratedPlans] = useState<CompletePlan[] | null>(
+    plans
+  );
   const [generatedActivities, setGeneratedActivities] = useState<Activity[]>(
     []
   );
@@ -161,14 +163,15 @@ const PlanGenerator = () => {
     await Promise.all(
       Array.from(activityIds).map((id) => {
         const activity = plan.activities.find((a) => a.id === id);
-        if (!activity) return
+        if (!activity) return;
         return upsertActivity({
           activity: activity,
           muteNotification: true,
         });
       })
     );
-    const { progressState, progressCalculatedAt, ...planWithoutProgress } = plan;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { progressState, ...planWithoutProgress } = plan;
     upsertPlan({
       planId: plan.id,
       updates: {
@@ -177,14 +180,13 @@ const PlanGenerator = () => {
         activities: plan.activities,
         sessions: plan.sessions,
         milestones: plan.milestones,
-      }
+      },
     });
     completeStep("plan-generator", {
       selectedPlan: plan,
       plans: generatedPlans,
     });
   };
-
 
   async function generatePlans() {
     try {
@@ -233,7 +235,6 @@ const PlanGenerator = () => {
       }
     }
   }, [plans, planActivities]);
-
 
   return (
     <div className="w-full max-w-md space-y-8">
@@ -366,7 +367,7 @@ const PlanGenerator = () => {
                       index={1}
                     />
 
-                    {process.env.NODE_ENV === "development" && (
+                    {import.meta.env.NODE_ENV === "development" && (
                       <Button
                         onClick={() => generatePlans()}
                         className="w-full bg-yellow-400 text-black"

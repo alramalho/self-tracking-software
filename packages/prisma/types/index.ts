@@ -1,8 +1,8 @@
 import {
   PlanOutlineType,
   PlanState,
-  Plan as PrismaPlan,
-  PlanMilestone as PrismaPlanMilestone,
+  type Plan as PrismaPlan,
+  type PlanMilestone as PrismaPlanMilestone,
 } from "../generated/prisma";
 
 export type MilestoneCriteria = {

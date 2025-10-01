@@ -139,7 +139,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
   // Get coach message data
   const useCoachMessage = shouldUseCoachMessage(selectedPlan);
   const lastCoachMessage = useCoachMessage
-    ? getLastCoachMessage(selectedPlan)
+    ? getLastCoachMessage()
     : null;
 
   // Don't render if no coach data to show

@@ -67,7 +67,7 @@ export const RecommendedUsers: React.FC = () => {
                   {user.picture ? (
                     <img
                       src={user.picture}
-                      alt={user.username}
+                      alt={user.username || ""}
                       className="w-full h-full rounded-full object-cover"
                     />
                   ) : (

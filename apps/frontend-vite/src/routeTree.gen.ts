@@ -14,10 +14,13 @@ import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as PlansRouteImport } from './routes/plans'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as CreateNewPlanRouteImport } from './routes/create-new-plan'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -44,6 +47,11 @@ const PlansRoute = PlansRouteImport.update({
   path: '/plans',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DownloadRoute = DownloadRouteImport.update({
   id: '/download',
   path: '/download',
@@ -64,28 +72,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
+  id: '/profile/$username',
+  path: '/profile/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FriendsUsernameRoute = FriendsUsernameRouteImport.update({
+  id: '/friends/$username',
+  path: '/friends/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/create-new-plan': typeof CreateNewPlanRoute
   '/download': typeof DownloadRoute
+  '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
+  '/friends/$username': typeof FriendsUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
   '/create-new-plan': typeof CreateNewPlanRoute
   '/download': typeof DownloadRoute
+  '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
+  '/friends/$username': typeof FriendsUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,11 +117,14 @@ export interface FileRoutesById {
   '/add': typeof AddRoute
   '/create-new-plan': typeof CreateNewPlanRoute
   '/download': typeof DownloadRoute
+  '/onboarding': typeof OnboardingRoute
   '/plans': typeof PlansRoute
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
+  '/friends/$username': typeof FriendsUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,33 +133,42 @@ export interface FileRouteTypes {
     | '/add'
     | '/create-new-plan'
     | '/download'
+    | '/onboarding'
     | '/plans'
     | '/search'
     | '/signin'
     | '/signout'
     | '/signup'
+    | '/friends/$username'
+    | '/profile/$username'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/add'
     | '/create-new-plan'
     | '/download'
+    | '/onboarding'
     | '/plans'
     | '/search'
     | '/signin'
     | '/signout'
     | '/signup'
+    | '/friends/$username'
+    | '/profile/$username'
   id:
     | '__root__'
     | '/'
     | '/add'
     | '/create-new-plan'
     | '/download'
+    | '/onboarding'
     | '/plans'
     | '/search'
     | '/signin'
     | '/signout'
     | '/signup'
+    | '/friends/$username'
+    | '/profile/$username'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -140,11 +176,14 @@ export interface RootRouteChildren {
   AddRoute: typeof AddRoute
   CreateNewPlanRoute: typeof CreateNewPlanRoute
   DownloadRoute: typeof DownloadRoute
+  OnboardingRoute: typeof OnboardingRoute
   PlansRoute: typeof PlansRoute
   SearchRoute: typeof SearchRoute
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
   SignupRoute: typeof SignupRoute
+  FriendsUsernameRoute: typeof FriendsUsernameRoute
+  ProfileUsernameRoute: typeof ProfileUsernameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/download': {
       id: '/download'
       path: '/download'
@@ -212,6 +258,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile/$username': {
+      id: '/profile/$username'
+      path: '/profile/$username'
+      fullPath: '/profile/$username'
+      preLoaderRoute: typeof ProfileUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/friends/$username': {
+      id: '/friends/$username'
+      path: '/friends/$username'
+      fullPath: '/friends/$username'
+      preLoaderRoute: typeof FriendsUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -220,11 +280,14 @@ const rootRouteChildren: RootRouteChildren = {
   AddRoute: AddRoute,
   CreateNewPlanRoute: CreateNewPlanRoute,
   DownloadRoute: DownloadRoute,
+  OnboardingRoute: OnboardingRoute,
   PlansRoute: PlansRoute,
   SearchRoute: SearchRoute,
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,
   SignupRoute: SignupRoute,
+  FriendsUsernameRoute: FriendsUsernameRoute,
+  ProfileUsernameRoute: ProfileUsernameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

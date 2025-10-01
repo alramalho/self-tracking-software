@@ -155,19 +155,17 @@ export const NotificationsProvider = ({
     setNotificationCount(prev => prev + count);
   };
 
-  const clearAllNotifications = async () => {
-    setNotificationCount(0);
+  // const clearAllNotifications = async () => {
+  //   setNotificationCount(0);
     
-    if (navigator.clearAppBadge) {
-      await navigator.clearAppBadge();
-    }
-    if (registration) {
-      const notifications = await registration.getNotifications();
-      notifications.forEach((notification) => notification.close());
-    }
-
-    
-  };
+  //   if (navigator.clearAppBadge) {
+  //     await navigator.clearAppBadge();
+  //   }
+  //   if (registration) {
+  //     const notifications = await registration.getNotifications();
+  //     notifications.forEach((notification) => notification.close());
+  //   }
+  // };
 
   const sendLocalNotification = async (
     title: string,

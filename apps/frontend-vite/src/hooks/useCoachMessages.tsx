@@ -1,5 +1,5 @@
 import { useDataNotifications } from "@/contexts/notifications";
-import { CompletePlan } from "@/contexts/plans";
+import { type CompletePlan } from "@/contexts/plans";
 
 interface CoachMessage {
   message: string;
@@ -9,7 +9,7 @@ interface CoachMessage {
 export const useCoachMessages = () => {
   const { notifications } = useDataNotifications();
 
-  const getLastCoachMessage = (plan: CompletePlan): CoachMessage | null => {
+  const getLastCoachMessage = (): CoachMessage | null => {
     if (!notifications) return null;
 
     // Find the most recent coach notification

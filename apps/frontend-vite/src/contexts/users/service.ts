@@ -1,5 +1,5 @@
 import { Prisma } from "@tsw/prisma";
-import { AxiosInstance } from "axios";
+import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 
 type BasicUserApiResponse = Prisma.UserGetPayload<{

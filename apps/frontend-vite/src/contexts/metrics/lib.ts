@@ -1,4 +1,8 @@
-import { Activity, ActivityEntry, MetricEntry } from "@tsw/prisma";
+import {
+  type Activity,
+  type ActivityEntry,
+  type MetricEntry,
+} from "@tsw/prisma";
 import { isSameDay } from "date-fns";
 
 export const ACTIVITY_WINDOW_DAYS = 1; // How many days to look back for activity correlation

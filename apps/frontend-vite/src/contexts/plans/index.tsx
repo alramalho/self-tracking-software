@@ -1,5 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
-
 import { useApiWithAuth } from "@/api";
 import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useSession } from "@clerk/clerk-react";

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Activity } from "@tsw/prisma";
+import { type Activity } from "@tsw/prisma";
 import {
   differenceInDays,
   format,

@@ -64,7 +64,7 @@ export default function GeneralInitializer({
     if (isSignedIn && hasLoadedUserData && currentUser) {
       console.log({ currentUser });
     }
-  }, [currentUser, isSignedIn, hasLoadedUserData])
+  }, [currentUser, isSignedIn, hasLoadedUserData]);
 
   useEffect(() => {
     if (

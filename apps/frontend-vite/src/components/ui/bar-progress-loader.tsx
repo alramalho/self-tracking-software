@@ -15,7 +15,7 @@ export const BarProgressLoader = ({
   className = "w-full max-w-xs"
 }: BarProgressLoaderProps) => {
   const [progress, setProgress] = useState<number>(0);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startProgressAnimation = () => {
     const startTime = Date.now();
@@ -46,14 +46,14 @@ export const BarProgressLoader = ({
     }, 100); // Update every 100ms
   };
 
-  const stopProgressAnimation = () => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-    setProgress(100);
-    onComplete?.();
-  };
+  // const stopProgressAnimation = () => {
+  //   if (progressIntervalRef.current) {
+  //     clearInterval(progressIntervalRef.current);
+  //     progressIntervalRef.current = null;
+  //   }
+  //   setProgress(100);
+  //   onComplete?.();
+  // };
 
   useEffect(() => {
     setProgress(0);

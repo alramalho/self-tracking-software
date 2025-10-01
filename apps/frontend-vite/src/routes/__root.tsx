@@ -5,8 +5,6 @@ import { UpgradeProvider } from "@/contexts/upgrade/provider";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
-import { PHProvider } from "@/posthog/PHProvider";
-import PostHogPageView from "@/posthog/PageView";
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
@@ -39,20 +37,16 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <PHProvider>
-      <ClerkProvider
-        publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+    <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: localStoragePersister }}
       >
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister: localStoragePersister }}
-        >
-          <GlobalDataProvider>
-            <ThemedLayout />
-          </GlobalDataProvider>
-        </PersistQueryClientProvider>
-      </ClerkProvider>
-    </PHProvider>
+        <GlobalDataProvider>
+          <ThemedLayout />
+        </GlobalDataProvider>
+      </PersistQueryClientProvider>
+    </ClerkProvider>
   );
 }
 
@@ -71,7 +65,6 @@ function ThemedLayout() {
             )}
           >
             <GeneralInitializer>
-              <PostHogPageView />
               <Outlet />
             </GeneralInitializer>
           </main>

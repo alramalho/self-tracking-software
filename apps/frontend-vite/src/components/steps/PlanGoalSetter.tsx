@@ -1,13 +1,14 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useApiWithAuth } from "@/api";
 import {
-  BaseExtractionResponse,
+  type BaseExtractionResponse,
   DynamicUISuggester,
 } from "@/components/DynamicUISuggester";
+import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { AlertCircle, Goal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { withFadeUpAnimation } from "../../lib";
-import { useOnboarding } from "../OnboardingContext";
 
 interface PlanGoalSetterResponse extends BaseExtractionResponse {
   goal: string;

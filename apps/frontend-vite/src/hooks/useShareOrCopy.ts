@@ -1,9 +1,11 @@
+import { useCurrentUser } from "@/contexts/users";
 import toast from "react-hot-toast";
 import { useClipboard } from "./useClipboard";
 import { useShare } from "./useShare";
 
 export function useShareOrCopy() {
   const [_, copyToClipboard] = useClipboard();
+  const { currentUser } = useCurrentUser();
   const { share, isSupported: isShareSupported } = useShare();
 
   const shareOrCopyLink = async (link: string) => {
@@ -16,6 +18,12 @@ export function useShareOrCopy() {
     }
   };
 
+  const shareOrCopyReferralLink = async () => {
+    const link = `https://app.tracking.so/join/${currentUser?.username}`;
+
+    await shareOrCopyLink(link);
+  };
+
   const copyLink = async (link: string) => {
     const success = await copyToClipboard(link);
     if (!success) toast.error("Failed to copy");
@@ -24,6 +32,7 @@ export function useShareOrCopy() {
 
   return {
     shareOrCopyLink,
+    shareOrCopyReferralLink,
     copyLink,
     isShareSupported,
   };
