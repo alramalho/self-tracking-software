@@ -1,24 +1,42 @@
-// Stub implementation - replace with actual implementation when needed
+const isIsoDateString = (value: string): boolean => {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value);
+};
+
+const processNestedField = (obj: any, path: string[]): void => {
+  if (path.length === 1) {
+    // Base case: we're at the final field name
+    const fieldName = path[0];
+    if (obj[fieldName] && typeof obj[fieldName] === 'string' && isIsoDateString(obj[fieldName])) {
+      obj[fieldName] = new Date(obj[fieldName]);
+    }
+    return;
+  }
+
+  // Recursive case: navigate deeper
+  const [currentKey, ...remainingPath] = path;
+  const currentValue = obj[currentKey];
+
+  if (!currentValue) return;
+
+  if (Array.isArray(currentValue)) {
+    // If it's an array, process each item recursively
+    currentValue.forEach(item => {
+      if (item && typeof item === 'object') {
+        processNestedField(item, remainingPath);
+      }
+    });
+  } else if (typeof currentValue === 'object') {
+    // If it's an object, continue down the path
+    processNestedField(currentValue, remainingPath);
+  }
+};
+
 export const normalizeApiResponse = <T>(data: any, dateFields: string[]): T => {
   const result = { ...data };
 
-  // Convert string dates to Date objects for the specified fields
   dateFields.forEach(field => {
-    if (field.includes('.')) {
-      // Handle nested fields like 'sessions.date'
-      const [parent, child] = field.split('.');
-      if (result[parent] && Array.isArray(result[parent])) {
-        result[parent] = result[parent].map((item: any) => ({
-          ...item,
-          [child]: item[child] ? new Date(item[child]) : null
-        }));
-      }
-    } else {
-      // Handle direct fields
-      if (result[field]) {
-        result[field] = new Date(result[field]);
-      }
-    }
+    const path = field.split('.');
+    processNestedField(result, path);
   });
 
   return result as T;
