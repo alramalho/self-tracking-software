@@ -5,6 +5,7 @@
   "exports": {
     ".": "./index.ts",
     "./client": "./client.ts",
+    "./client": "./client.ts",
     "./types": "./types/index.ts"
   },
   "scripts": {

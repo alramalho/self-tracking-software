@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
+import supportAgentSvg from '../assets/icons/support-agent.svg';
 
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -188,7 +189,7 @@ function HomePage() {
                 title="Send Feedback"
               >
                 <img
-                  src="/icons/support-agent.svg"
+                  src={supportAgentSvg}
                   alt="Support"
                   className="w-9 h-9"
                 />
