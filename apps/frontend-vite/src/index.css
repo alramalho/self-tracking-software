@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
 @theme {
   /* Colors */
   --color-border: hsl(240 5.9% 90%);

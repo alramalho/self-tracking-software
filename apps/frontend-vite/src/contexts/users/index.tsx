@@ -2,12 +2,14 @@
 
 import { useApiWithAuth } from "@/api";
 import { useLogError } from "@/hooks/useLogError";
+import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useSession } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import { useContext } from "react";
 import { toast } from "react-hot-toast";
 import {
   getUserFullDataByUserNameOrId,
+  type HydratedUser,
 } from "./service";
 import { UsersContext } from "./types";
 
@@ -30,6 +32,29 @@ export const useUsers = (
   const query = useQuery({
     queryKey,
     queryFn: () => getUserFullDataByUserNameOrId(api, data),
+    select: (data) => normalizeApiResponse<HydratedUser>(data, [
+      "createdAt",
+      "updatedAt",
+      "lastActiveAt",
+      "connectionsFrom.createdAt",
+      "connectionsFrom.updatedAt",
+      "connectionsTo.createdAt",
+      "connectionsTo.updatedAt",
+      "plans.createdAt",
+      "plans.updatedAt",
+      "plans.deletedAt",
+      "plans.finishingDate",
+      "activities.createdAt",
+      "activities.updatedAt",
+      "activities.deletedAt",
+      "activityEntries.date",
+      "activityEntries.createdAt",
+      "activityEntries.updatedAt",
+      "activityEntries.deletedAt",
+      "activityEntries.comments.createdAt",
+      "activityEntries.comments.deletedAt",
+      "activityEntries.reactions.createdAt",
+    ]),
     enabled: isSignedIn && identifier.length > 0,
     staleTime: 1000 * 60 * 5,
   });
@@ -57,6 +82,29 @@ export const useUser = (
     queryFn: async () => {
       return await getUserFullDataByUserNameOrId(api, [data]);
     },
+    select: (data) => normalizeApiResponse<HydratedUser>(data, [
+      "createdAt",
+      "updatedAt",
+      "lastActiveAt",
+      "connectionsFrom.createdAt",
+      "connectionsFrom.updatedAt",
+      "connectionsTo.createdAt",
+      "connectionsTo.updatedAt",
+      "plans.createdAt",
+      "plans.updatedAt",
+      "plans.deletedAt",
+      "plans.finishingDate",
+      "activities.createdAt",
+      "activities.updatedAt",
+      "activities.deletedAt",
+      "activityEntries.date",
+      "activityEntries.createdAt",
+      "activityEntries.updatedAt",
+      "activityEntries.deletedAt",
+      "activityEntries.comments.createdAt",
+      "activityEntries.comments.deletedAt",
+      "activityEntries.reactions.createdAt",
+    ]),
     enabled: isSignedIn && !!identifier,
     staleTime: 1000 * 60 * 5,
   });

@@ -1,5 +1,5 @@
-import { Metric, MetricEntry, Prisma } from "@tsw/prisma";
-import { AxiosInstance } from "axios";
+import { type Metric, type MetricEntry, Prisma } from "@tsw/prisma";
+import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 
 export type MetricsBatchUpdateResult = Prisma.BatchPayload;
@@ -19,11 +19,10 @@ type MetricEntryApiResponse = Omit<
 };
 
 const deserializeMetric = (metric: MetricApiResponse): Metric =>
-  normalizeApiResponse<Metric>(metric, ['createdAt', 'updatedAt']);
+  normalizeApiResponse<Metric>(metric, ["createdAt", "updatedAt"]);
 
-const deserializeMetricEntry = (
-  entry: MetricEntryApiResponse
-): MetricEntry => normalizeApiResponse<MetricEntry>(entry, ['date', 'createdAt', 'updatedAt']);
+const deserializeMetricEntry = (entry: MetricEntryApiResponse): MetricEntry =>
+  normalizeApiResponse<MetricEntry>(entry, ["date", "createdAt", "updatedAt"]);
 
 export async function getMetrics(api: AxiosInstance) {
   const response = await api.get<MetricApiResponse[]>("/metrics");

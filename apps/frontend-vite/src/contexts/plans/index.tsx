@@ -1,13 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
 
 import { useApiWithAuth } from "@/api";
+import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { PlanInvitation } from "@tsw/prisma";
 import { useContext } from "react";
 import { toast } from "react-hot-toast";
 import {
   fetchPlan,
   fetchPlanInvitation,
+  type PlanWithRelations,
 } from "./service";
 import { PlansContext } from "./types";
 
@@ -21,6 +24,12 @@ export const usePlan = (
   const plan = useQuery({
     queryKey: ["plan", id],
     queryFn: () => fetchPlan(api, id, options),
+    select: (data) => normalizeApiResponse<PlanWithRelations>(data, [
+      'createdAt', 'updatedAt', 'deletedAt', 'finishingDate', 'suggestedByCoachAt',
+      'sessions.date', 'sessions.createdAt', 'sessions.updatedAt',
+      'milestones.date', 'milestones.createdAt',
+      'planGroup.createdAt'
+    ]),
     enabled: isLoaded && isSignedIn && !!id,
   });
 
@@ -35,6 +44,7 @@ export const usePlanInvitation = (id: string) => {
   const planInvitation = useQuery({
     queryKey: ["plan-invitation", id],
     queryFn: () => fetchPlanInvitation(api, id),
+    select: (data) => normalizeApiResponse<PlanInvitation>(data, ['createdAt', 'updatedAt']),
     enabled: isLoaded && isSignedIn && !!id,
   });
 
