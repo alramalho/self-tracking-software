@@ -91,6 +91,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         return fetchPlanProgress(planId);
       },
+      select: (data) => normalizePlanProgress(data),
       enabled: isLoaded && isSignedIn && hasLoadedUserData &&!!planId,
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
@@ -123,7 +124,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
         // Check which plans already have cached data
         const cachedData: PlanProgressData[] = [];
         const missingPlanIds: string[] = [];
-        
+
         planIds.forEach(planId => {
           const queryState = queryClient.getQueryState(["plan-progress", planId]);
           const existingDataRaw = queryState?.data as PlanProgressData | undefined;
@@ -135,12 +136,12 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
             missingPlanIds.push(planId);
           }
         });
-        
+
         // Fetch only missing plans
-        const newData = missingPlanIds.length > 0 
+        const newData = missingPlanIds.length > 0
           ? await fetchBatchPlanProgress(missingPlanIds)
           : [];
-        
+
         // Combine cached and new data, maintaining original order
         return planIds.map(planId => {
           const cached = cachedData.find(d => d.plan.id === planId);
@@ -148,6 +149,7 @@ export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
           return cached || fresh!;
         });
       },
+      select: (data) => data.map(normalizePlanProgress),
       enabled: isLoaded && isSignedIn && hasLoadedUserData && planIds.length > 0,
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes

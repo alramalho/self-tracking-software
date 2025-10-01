@@ -4,6 +4,7 @@
 
 import { useApiWithAuth } from "@/api";
 import { useLogError } from "@/hooks/useLogError";
+import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Metric, type MetricEntry } from "@tsw/prisma";
@@ -59,13 +60,15 @@ export const MetricsProvider: React.FC<{ children: React.ReactNode }> = ({
   const metricsQuery = useQuery({
     queryKey: ["metrics"],
     queryFn: () => getMetrics(api),
+    select: (data) => data.map(metric => normalizeApiResponse<Metric>(metric, ["createdAt", "updatedAt"])),
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
 
   const metricsEntriesQuery = useQuery({
-    queryKey: ["metricsEntries"], 
+    queryKey: ["metricsEntries"],
     queryFn: () => getMetricEntries(api),
+    select: (data) => data.map(entry => normalizeApiResponse<MetricEntry>(entry, ["date", "createdAt", "updatedAt"])),
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });

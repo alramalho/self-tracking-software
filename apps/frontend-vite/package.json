@@ -36,6 +36,7 @@
     "@types/react-lottie": "^1.2.10",
     "@types/serviceworker": "^0.0.153",
     "@types/uuid": "^9.0.8",
+    "@uiw/react-heat-map": "^2.2.2",
     "axios": "^1.12.2",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.0",

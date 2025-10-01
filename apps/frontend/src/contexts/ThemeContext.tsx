@@ -45,13 +45,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { currentUser, updateUser } = useCurrentUser();
   const userTheme =
-    currentUser?.themeBaseColor.toLowerCase() as LowerThemeColor;
+    currentUser?.themeBaseColor?.toLowerCase() as LowerThemeColor;
 
   // Get the effective theme color (either user's choice or resolved random color)
   const effectiveTheme = useMemo<BaseLoweredThemeColor>(() => {
     if (!currentUser) return "blue";
 
-    if (currentUser?.themeBaseColor.toLowerCase() !== "random")
+    if (currentUser?.themeBaseColor?.toLowerCase() !== "random")
       return userTheme as BaseLoweredThemeColor;
 
     const storedRandom = getStoredRandomColor();

@@ -2,6 +2,7 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Notification } from "@tsw/prisma";
@@ -48,6 +49,11 @@ export const DataNotificationsProvider: React.FC<{
         throw err;
       }
     },
+    select: (data) => data.map(notification =>
+      normalizeApiResponse<Notification>(notification, [
+        'createdAt', 'processedAt', 'concludedAt', 'sentAt'
+      ])
+    ),
     enabled: !!isSignedIn && isLoaded,
     staleTime: 1000 * 60 * 5,
     retry: false,
