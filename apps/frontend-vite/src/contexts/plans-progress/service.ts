@@ -1,6 +1,10 @@
-import { Activity, ActivityEntry, PlanSession } from "@tsw/prisma";
-import { PlanProgressData } from "@tsw/prisma/types";
-import { AxiosInstance } from "axios";
+import {
+  type Activity,
+  type ActivityEntry,
+  type PlanSession,
+} from "@tsw/prisma";
+import { type PlanProgressData } from "@tsw/prisma/types";
+import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
 
 export interface PlanWeekData {
@@ -53,7 +57,12 @@ type PlanProgressApiResponse = Omit<PlanProgressData, "weeks"> & {
 export const normalizePlanProgress = (
   payload: PlanProgressApiResponse | PlanProgressData
 ): PlanProgressData => {
-  return normalizeApiResponse<PlanProgressData>(payload, [
+  console.log(
+    "normalizePlanProgress completedActivities input:",
+    JSON.stringify(payload.weeks[0].completedActivities, null, 2)
+  );
+
+  const normalized = normalizeApiResponse<PlanProgressData>(payload, [
     "weeks.startDate",
     "weeks.completedActivities.date",
     "weeks.completedActivities.createdAt",
@@ -61,7 +70,17 @@ export const normalizePlanProgress = (
     "weeks.completedActivities.imageCreatedAt",
     "weeks.completedActivities.imageExpiresAt",
     "weeks.completedActivities.deletedAt",
+    "weeks.plannedActivities.date",
+    "weeks.plannedActivities.createdAt",
+    "weeks.plannedActivities.updatedAt",
   ]);
+
+  console.log(
+    "normalizePlanProgress completedActivities weeks sample:",
+    normalized.weeks?.[0]
+  );
+
+  return normalized;
 };
 
 export async function fetchPlansProgress(

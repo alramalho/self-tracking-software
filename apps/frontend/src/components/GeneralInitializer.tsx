@@ -61,6 +61,12 @@ export default function GeneralInitializer({
   }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]);
 
   useEffect(() => {
+    if (isSignedIn && hasLoadedUserData && currentUser) {
+      console.log({ currentUser });
+    }
+  }, [currentUser, isSignedIn, hasLoadedUserData])
+
+  useEffect(() => {
     if (
       isClerkLoaded &&
       isSignedIn &&
@@ -208,12 +214,12 @@ export default function GeneralInitializer({
               />
             ) : (
               <>
-              <div
-                 className={cn(
-                   "fixed top-0 left-0 w-full h-screen z-[-1]",
-                   "[background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4"
-                 )}
-               />
+                <div
+                  className={cn(
+                    "fixed top-0 left-0 w-full h-screen z-[-1]",
+                    "[background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4"
+                  )}
+                />
               </>
             )}
 
