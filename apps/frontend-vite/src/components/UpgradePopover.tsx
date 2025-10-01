@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { useCurrentUser } from "@/contexts/users";
 import { Link } from "@tanstack/react-router";
 import { CheckCircle } from "lucide-react";
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { type ReactNode, useEffect, useState } from "react";
 import Lottie from "react-lottie";
 import rocketAnimation from "../../public/animations/rocket.lottie.json";
 import Divider from "./Divider";
@@ -45,9 +45,9 @@ const QUARTERLY_SAVINGS = Math.round(
 const YEARLY_SAVINGS = Math.round(
   ((YEARLY_MONTHLY_EQUIVALENT - PLUS_YEARLY) / YEARLY_MONTHLY_EQUIVALENT) * 100
 );
-const YEARLY_OG_SAVINGS = Math.round(
-  ((OG_YEARLY - PLUS_YEARLY) / OG_YEARLY) * 100
-);
+// const YEARLY_OG_SAVINGS = Math.round(
+//   ((OG_YEARLY - PLUS_YEARLY) / OG_YEARLY) * 100
+// );
 
 // Calculate equivalent monthly prices
 const QUARTERLY_MONTHLY_PRICE = Math.floor((PLUS_QUARTERLY / 3) * 100) / 100;

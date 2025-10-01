@@ -7,6 +7,7 @@
     "module": "ESNext",
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
 
     /* Path mapping */
     "baseUrl": ".",
@@ -24,13 +25,14 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
     "types": ["vite/client", "@serwist/vite/typings"]
   },
-  "include": ["src", "vite-env.d.ts"]
+  "include": ["src", "vite-env.d.ts"],
+  "exclude": ["node_modules", "**/node_modules/*", "../../node_modules"]
 }

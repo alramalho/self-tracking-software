@@ -570,7 +570,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                   key={member.id}
                   className="flex flex-row flex-nowrap gap-2 items-center"
                 >
-                  <Link to={`/profile/${member.username}`}>
+                  <Link to="/profile/$username" params={{ username: member.username || "" }}>
                     <Avatar className="w-12 h-12 text-2xl">
                       <AvatarImage
                         src={member.picture || ""}

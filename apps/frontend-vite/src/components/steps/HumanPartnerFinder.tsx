@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 "use client";
 
 import AppleLikePopover from "@/components/AppleLikePopover";
@@ -5,8 +6,10 @@ import { CollapsibleSelfUserCard } from "@/components/CollapsibleSelfUserCard";
 import { RecommendedUsers } from "@/components/RecommendedUsers";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCurrentUser } from "@/contexts/users";
+import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { usePlans } from "@/contexts/plans";
+import { useCurrentUser } from "@/contexts/users";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -15,8 +18,6 @@ import {
   Send
 } from "lucide-react";
 import React, { useState } from "react";
-import { withFadeUpAnimation } from "../../lib";
-import { useOnboarding } from "../OnboardingContext";
 
 const OptionCard = ({
   isSelected,

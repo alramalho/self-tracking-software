@@ -2,8 +2,8 @@ import { useApiWithAuth } from "@/api";
 import { useLogError } from "@/hooks/useLogError";
 import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, PlanSession, Prisma } from "@tsw/prisma";
-import { PlanMilestone } from "@tsw/prisma/types";
+import { Prisma, type Activity, type PlanSession } from "@tsw/prisma";
+import { type PlanMilestone } from "@tsw/prisma/types";
 import React from "react";
 import { toast } from "react-hot-toast";
 import {

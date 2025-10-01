@@ -41,7 +41,7 @@ export const CollapsibleSelfUserCard: React.FC = () => {
                     {currentUser.picture ? (
                       <img
                         src={currentUser.picture}
-                        alt={currentUser.username}
+                        alt={currentUser.username || ""}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (

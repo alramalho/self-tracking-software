@@ -1,20 +1,21 @@
+/* eslint-disable react-refresh/only-export-components */
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useNotifications } from "@/hooks/useNotifications";
 import { AnimatePresence, motion } from "framer-motion";
 import { Ban, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { withFadeUpAnimation } from "../../lib";
-import { useOnboarding } from "../OnboardingContext";
 
 const NotificationsSelector = () => {
   const { completeStep, partnerType } = useOnboarding();
   const { requestPermission, isPushGranted } = useNotifications();
   const [isSuccess, setIsSuccess] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const isDevelopment = process.env.NODE_ENV === "development";
+  const isDevelopment = import.meta.env.NODE_ENV === "development";
 
   const handleSuccessTransition = () => {
     setIsTransitioning(true);

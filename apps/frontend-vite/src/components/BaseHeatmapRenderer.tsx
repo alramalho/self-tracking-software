@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type Activity } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
@@ -249,7 +251,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   rects.push(
                     <rect
                       key={data.index}
-                      {...props}
+                      {...(props as React.SVGProps<SVGRectElement>)}
                       fill="#EBEDF0"
                       stroke={isCurrentDay ? "#FF0000" : "none"}
                       strokeWidth={isCurrentDay ? 2 : 0}
@@ -262,7 +264,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                     rects.push(
                       <rect
                         key="today-border"
-                        {...props}
+                        {...(props as React.SVGProps<SVGRectElement>)}
                         fill="none"
                         stroke="#FF0000"
                         strokeWidth={2}
@@ -276,7 +278,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                     rects.push(
                       <rect
                         key="selected-border"
-                        {...props}
+                        {...(props as React.SVGProps<SVGRectElement>)}
                         fill="none"
                         stroke="#0066FF"
                         strokeWidth={2}
@@ -300,7 +302,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   rects.push(
                     <rect
                       key={0}
-                      {...props}
+                      {...(props as React.SVGProps<SVGRectElement>)}
                       fill={getActivityColor(
                         intensities[0].activityIndex,
                         intensities[0].intensity,
@@ -490,7 +492,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   rects.push(
                     <rect
                       key="today-border"
-                      {...props}
+                      {...(props as React.SVGProps<SVGRectElement>)}
                       fill="none"
                       stroke="#FF0000"
                       strokeWidth={2}
@@ -504,7 +506,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   rects.push(
                     <rect
                       key="selected-border"
-                      {...props}
+                      {...(props as React.SVGProps<SVGRectElement>)}
                       fill="none"
                       stroke="#0066FF"
                       strokeWidth={2}

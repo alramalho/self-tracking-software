@@ -1,9 +1,10 @@
-import { usePlansProgress } from "@/contexts/PlansProgressContext";
+import { usePlansProgress } from "@/contexts/plans-progress";
 import { usePlans } from "@/contexts/plans";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { cn } from "@/lib/utils";
 import React from "react";
 import { PlanProgressCard } from "./PlanProgressCard";
+import type { PlanProgressData } from "@tsw/prisma/types";
 
 
 
@@ -29,7 +30,7 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   return (
     <div className={cn("w-full flex flex-col gap-4", className)}>
       {/* Progress bars section */}
-      {plansProgressData.filter(Boolean).map((planProgressData, index) => {
+      {plansProgressData.filter(Boolean).map((planProgressData: PlanProgressData, index: number) => {
         const { plan, weeks, achievement } = planProgressData;
 
         const shouldShow = index == 0 || isExpanded;

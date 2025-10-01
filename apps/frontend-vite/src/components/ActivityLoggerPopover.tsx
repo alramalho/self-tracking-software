@@ -9,7 +9,7 @@ interface ActivityLoggerPopoverProps {
   open: boolean;
   onClose: () => void;
   selectedActivity: Activity;
-  onSubmit: (data: { date: Date; quantity: number }) => void;
+  onSubmit: (data: { activityId: string; date: Date; quantity: number }) => void;
 }
 
 export function ActivityLoggerPopover({
@@ -46,6 +46,7 @@ export function ActivityLoggerPopover({
     try {
       console.log({ selectedDate });
       onSubmit({
+        activityId: selectedActivity.id,
         date: selectedDate,
         quantity,
       });
@@ -74,7 +75,7 @@ export function ActivityLoggerPopover({
           <Calendar
             mode="single"
             selected={selectedDate}
-            onSelect={(date: Date) => {
+            onSelect={(date: Date | undefined) => {
               if (date) {
                 date.setHours(12, 0, 0, 0);
                 setSelectedDate(date);

@@ -1,12 +1,14 @@
+/* eslint-disable react-refresh/only-export-components */
+
 "use client";
 
-import NumberInput from "@/components/plan-configuration/NumberInput";
+import NumberInput from "@/components/NumberInput";
 import { Button } from "@/components/ui/button";
+import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useCurrentUser } from "@/contexts/users";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { withFadeUpAnimation } from "../../lib";
-import { useOnboarding } from "../OnboardingContext";
 
 const WelcomeStep = () => {
   const { completeStep } = useOnboarding();

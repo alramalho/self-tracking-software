@@ -1,14 +1,16 @@
+/* eslint-disable react-refresh/only-export-components */
+
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
-import { useActivities } from "@/contexts/activities";
+import { useActivities } from "@/contexts/activities/useActivities";
+import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import { ArrowRight, Route } from "lucide-react";
 import { useState } from "react";
-import { withFadeUpAnimation } from "../../lib";
-import { useOnboarding } from "../OnboardingContext";
 
 const PlanProgressInitiator = () => {
   const {

@@ -4,14 +4,13 @@ import { CollapsibleSelfUserCard } from "@/components/CollapsibleSelfUserCard";
 import { RecommendedUsers } from "@/components/RecommendedUsers";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import UserSearch, { UserSearchResult } from "@/components/UserSearch";
+import UserSearch, { type UserSearchResult } from "@/components/UserSearch";
 import { usePlans } from "@/contexts/plans";
 import { useRecommendations } from "@/contexts/recommendations";
 import { useCurrentUser } from "@/contexts/users";
 import { useNotifications } from "@/hooks/useNotifications";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Bell, RefreshCcw } from "lucide-react";
-import React from "react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
 

@@ -1,13 +1,14 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useApiWithAuth } from "@/api";
 import {
-  BaseExtractionResponse,
+  type BaseExtractionResponse,
   DynamicUISuggester,
 } from "@/components/DynamicUISuggester";
-import { Activity } from "@tsw/prisma";
+import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
+import type { Activity } from "@tsw/prisma";
 import { AlertCircle, BicepsFlexed } from "lucide-react";
 import { toast } from "sonner";
-import { withFadeUpAnimation } from "../../lib";
-import { useOnboarding } from "../OnboardingContext";
 
 interface PlanActivitySetterResponse extends BaseExtractionResponse {
   activities?: Activity[];

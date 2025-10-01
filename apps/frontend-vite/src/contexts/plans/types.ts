@@ -1,7 +1,7 @@
-import { Activity, PlanSession, Prisma } from "@tsw/prisma";
-import { PlanMilestone } from "@tsw/prisma/types";
+import { type Activity, type PlanSession, Prisma } from "@tsw/prisma";
+import { type PlanMilestone } from "@tsw/prisma/types";
 import { createContext } from "react";
-import { PlanWithRelations } from "./service";
+import { type PlanWithRelations } from "./service";
 
 export type CompletePlan = PlanWithRelations & {
   milestones: PlanMilestone[];
@@ -38,4 +38,6 @@ export interface PlansContextType {
   isUpgradingCoachSuggestedSessionsToPlanSessions: boolean;
 }
 
-export const PlansContext = createContext<PlansContextType | undefined>(undefined);
+export const PlansContext = createContext<PlansContextType | undefined>(
+  undefined
+);

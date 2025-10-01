@@ -1,10 +1,10 @@
 "use client";
 
-import NumberInput from "@/components/plan-configuration/NumberInput";
-import { PlanOutlineType } from "@tsw/prisma";
+import NumberInput from "@/components/NumberInput";
+import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
+import type { PlanOutlineType } from "@tsw/prisma";
 import { AnimatePresence, motion } from "framer-motion";
 import { CircleCheckBig, LandPlot, SquareChartGantt } from "lucide-react";
-import { useOnboarding } from "../OnboardingContext";
 
 export const PlanTypeSelector = () => {
   const { completeStep, setPlanType, planType, planTimesPerWeek, setPlanTimesPerWeek } = useOnboarding();
