@@ -1,4 +1,4 @@
-import { WeekMetricBarChart } from "@/components/WeekMetricBarChart";
+import { MetricBarChart } from "@/components/MetricBarChart";
 import { type MetricCorrelation } from "@/contexts/metrics/lib";
 import React from "react";
 
@@ -47,7 +47,7 @@ export const MetricWeeklyView: React.FC<MetricWeeklyViewProps> = ({
         <span className="text-xs text-gray-500">Last 7 days</span>
       </div>
       {hasAnyData ? (
-        <WeekMetricBarChart data={weekData} color={color} />
+        <MetricBarChart data={weekData} color={color} className="flex gap-1 mb-2 items-end" />
       ) : (
         <div className="py-2 text-center">
           <p className="text-sm text-gray-500">No data this week yet.</p>

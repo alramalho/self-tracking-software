@@ -8,15 +8,21 @@ export const useLogError = () => {
     customErrorMessage: string
   ) => {
     customErrorMessage;
-    const axiosErrorDetails = error.response ? 
-      ` [${error.response.status} ${error.response.statusText}] ${JSON.stringify(error.response.data)}` : 
-      "";
-    
+    const axiosErrorDetails = error.response
+      ? ` [${error.response.status} ${
+          error.response.statusText
+        }] ${JSON.stringify(error.response.data)}`
+      : "";
+
     let customError = {
       ...error,
       digest: error.digest || "",
       message:
-        "(useQuery Error) " + customErrorMessage + " / " + error.message + axiosErrorDetails || "",
+        "(useQuery Error) " +
+          customErrorMessage +
+          " / " +
+          error.message +
+          axiosErrorDetails || "",
     };
     console.error(customError);
     logError(customError);

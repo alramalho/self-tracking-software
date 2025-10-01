@@ -1,5 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -57,4 +57,20 @@ export const toMidnightUTCDate = (date: Date) => {
 export function capitalize(str: string) {
   if (str === undefined || str === null || str === "") return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export function formatTimeAgo(date: string | Date) {
+  return formatDistanceToNow(new Date(date), {
+    addSuffix: true,
+    includeSeconds: true,
+  });
+}
+
+export function getMessagePreview(message: string): string {
+  console.log({ message });
+  const firstLine = message.split("\n")[0].trim();
+  if (firstLine.length > 50) {
+    return firstLine.substring(0, 50) + " ...";
+  }
+  return firstLine;
 }

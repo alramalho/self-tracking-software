@@ -232,12 +232,51 @@ Start with the route code, then on your analysis indentify the needed dependenci
 [] analyse respective depedencies (packages, components, hooks, contexts)
 [] migrate respective route code
 [] install missing dependencies
-## /insights/dashboard TODO
+## /insights/dashboard ✅ COMPLETED
 
-[] analyse route (page.tsx and respective layout if existent)
-[] analyse respective depedencies (packages, components, hooks, contexts)
-[] migrate respective route code
-[] install missing dependencies
+[x] analyse route (page.tsx and respective layout if existent)
+[x] analyse respective depedencies (packages, components, hooks, contexts)
+[x] migrate respective route code
+[x] install missing dependencies
+
+### Analysis:
+- Route: `/insights/dashboard` - Metrics tracking dashboard with correlations
+- No layout.tsx needed
+- Components needed:
+  - AINotification ✅ (migrated)
+  - DailyCheckinViewer ✅ (migrated)
+  - MetricTrendCard ✅ (migrated)
+  - MetricInsightsCard ✅ (migrated)
+  - TrendHelpPopover ✅ (migrated)
+  - CorrelationHelpPopover ✅ (migrated)
+  - CorrelationEntry ✅ (migrated)
+  - Card, Button, Progress (UI components) ✅
+- Hooks needed:
+  - useMetrics ✅ (already exists)
+  - useActivities ✅ (already exists)
+  - useCurrentUser ✅ (already exists)
+  - useUpgrade ✅ (already exists)
+  - usePaidPlan ✅ (already exists)
+  - useThemeColors ✅ (already exists)
+- Context needed: Metrics, Activities, Users, Upgrade (all exist) ✅
+- External deps: recharts ✅, date-fns ✅, lucide-react ✅, react-remark ✅
+- Utilities: defaultMetrics, ACTIVITY_WINDOW_DAYS, MINIMUM_ENTRIES ✅ (migrated to lib/metrics.ts)
+
+### Migration Status: ✅ COMPLETED
+- Created insights.dashboard.tsx route ✅
+- Migrated all metric components (MetricTrendCard, MetricInsightsCard, etc.) ✅
+- Migrated AINotification component ✅
+- Migrated DailyCheckinViewer component ✅
+- Installed recharts dependency ✅
+- Created lib/metrics.ts with constants and defaultMetrics ✅
+- Implemented full dashboard features:
+  - Empty state with demo data for onboarding ✅
+  - Daily check-in viewer ✅
+  - Metric trend cards with charts ✅
+  - Correlation insights with Pearson calculation ✅
+  - Help popovers for trends and correlations ✅
+  - Progress tracking for metrics with insufficient data ✅
+  - Upgrade gate for free users ✅
 ## /insights/onboarding TODO
 
 [] analyse route (page.tsx and respective layout if existent)
