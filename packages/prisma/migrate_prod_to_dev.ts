@@ -1,5 +1,5 @@
 import * as readline from "readline";
-import { PrismaClient } from "./index";
+import { PrismaClient } from "./server";
 
 // Parse command line arguments
 function parseArgs(): { impersonateUser: string } {
@@ -241,6 +241,7 @@ async function migrateData() {
         create: {
           id,
           ...planData,
+          progressState: plan.progressState as any, // Handle JsonValue type
           activities: {
             connect: planActivities.map((activity) => ({
               id: activity.id,
@@ -249,6 +250,7 @@ async function migrateData() {
         },
         update: {
           ...planData,
+          progressState: plan.progressState as any, // Handle JsonValue type
           activities: {
             set: planActivities.map((activity) => ({
               id: activity.id,
@@ -508,7 +510,9 @@ async function migrateData() {
 
     // Post-processing: Update specified user with specific Clerk ID
     const { impersonateUser } = parseArgs();
-    console.info(`Post-processing: Updating ${impersonateUser} user with Clerk ID...`);
+    console.info(
+      `Post-processing: Updating ${impersonateUser} user with Clerk ID...`
+    );
     const targetUser = await targetPrisma.user.findUnique({
       where: { username: impersonateUser },
     });

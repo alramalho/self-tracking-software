@@ -57,10 +57,12 @@ type PlanProgressApiResponse = Omit<PlanProgressData, "weeks"> & {
 export const normalizePlanProgress = (
   payload: PlanProgressApiResponse | PlanProgressData
 ): PlanProgressData => {
-  console.log(
-    "normalizePlanProgress completedActivities input:",
-    JSON.stringify(payload.weeks[0].completedActivities, null, 2)
-  );
+  if (payload.weeks?.[0]?.completedActivities) {
+    console.log(
+      "normalizePlanProgress completedActivities input:",
+      JSON.stringify(payload.weeks[0].completedActivities, null, 2)
+    );
+  }
 
   const normalized = normalizeApiResponse<PlanProgressData>(payload, [
     "weeks.startDate",
