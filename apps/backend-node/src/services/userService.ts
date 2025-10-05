@@ -353,9 +353,13 @@ export class UserService {
   async updateUserEmbedding(user: User): Promise<void> {
     try {
       if (user.profile) {
-        await usersPineconeService.upsertRecord(user.profile, user.id, {
-          user_id: user.id,
-        });
+        await usersPineconeService.upsertRecords([
+          {
+            text: user.profile,
+            identifier: user.id,
+            metadata: { user_id: user.id },
+          },
+        ]);
         logger.info(`Updated user embedding for plan ${user.id}`);
       }
     } catch (error) {

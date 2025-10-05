@@ -80,9 +80,13 @@ async function updatePlanEmbedding(
   try {
     const readablePlan = await recommendationsService.getReadablePlan(planId);
     if (readablePlan) {
-      await plansPineconeService.upsertRecord(readablePlan, planId, {
-        user_id: userId,
-      });
+      await plansPineconeService.upsertRecords([
+        {
+          text: readablePlan,
+          identifier: planId,
+          metadata: { user_id: userId },
+        },
+      ]);
       logger.info(`Updated plan embedding for plan ${planId}`);
     }
   } catch (error) {

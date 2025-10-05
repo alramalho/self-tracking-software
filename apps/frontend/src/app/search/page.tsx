@@ -70,7 +70,9 @@ const ApSearchPage: React.FC = () => {
     <>
       <PullToRefresh
         onRefresh={async () => {
-          await api.post("/users/compute-recommendations");
+          await api.post("/users/compute-recommendations", {
+            planId: selectedPlanId,
+          });
           await refetchRecommendations();
           toast.success("Recommendations refreshed!");
         }}

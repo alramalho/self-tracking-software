@@ -24,12 +24,36 @@
       "request": "launch",
       "name": "Debug Api (dev)",
       "runtimeExecutable": "/Users/alramalho/Library/pnpm/pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": ["dev:debug"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**", "node_modules/**"],
-      "cwd": "${workspaceFolder}/apps/backend-node"
+      "cwd": "${workspaceFolder}/apps/backend-node",
+      "restart": true,
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/apps/backend-node/**",
+        "!**/node_modules/**"
+      ]
     },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Test Api",
+      "runtimeExecutable": "/Users/alramalho/Library/pnpm/pnpm",
+      "runtimeArgs": ["test"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**", "node_modules/**"],
+      "cwd": "${workspaceFolder}/apps/backend-node",
+      "restart": true,
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/apps/backend-node/**",
+        "!**/node_modules/**"
+      ],
+      "args": ["${input:nodeTestPath}"]
+    }
   ],
   "inputs": [
     {
@@ -41,6 +65,12 @@
       "id": "testPath",
       "type": "promptString",
       "description": "Test path (e.g., tests/test_week_analyser.py::test_conversation_with_no_plans)"
+    },
+    {
+      "id": "nodeTestPath",
+      "type": "promptString",
+      "description": "Test file path (e.g., src/tests/api.test.ts)",
+      "default": ""
     }
   ]
 }
