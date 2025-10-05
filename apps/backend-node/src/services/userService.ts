@@ -2,7 +2,6 @@ import { logger } from "@/utils/logger";
 import { Connection, Prisma, User } from "@tsw/prisma";
 import { UserSearchResult } from "../types/user";
 import { prisma } from "../utils/prisma";
-import { usersPineconeService } from "./pineconeService";
 
 type UserWithPlans = Prisma.UserGetPayload<{
   include: { plans: true };
@@ -351,24 +350,12 @@ export class UserService {
   }
 
   async updateUserEmbedding(user: User): Promise<void> {
-    try {
-      if (user.profile) {
-        await usersPineconeService.upsertRecords([
-          {
-            text: user.profile,
-            identifier: user.id,
-            metadata: { user_id: user.id },
-          },
-        ]);
-        logger.info(`Updated user embedding for plan ${user.id}`);
-      }
-    } catch (error) {
-      logger.error(
-        `Failed to update user embedding for plan ${user.id}:`,
-        error
-      );
-      // Don't throw the error to avoid breaking user operations
-    }
+    // NOTE: User profile embeddings are currently disabled
+    // We only use plan embeddings for recommendations
+    // This method is kept for backwards compatibility but does nothing
+    logger.info(
+      `User embedding update skipped for ${user.id} - user embeddings not currently used`
+    );
   }
 }
 

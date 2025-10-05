@@ -5,12 +5,12 @@
   "exports": {
     ".": "./index.ts",
     "./client": "./client.ts",
-    "./client": "./client.ts",
-    "./types": "./types/index.ts"
+    "./types": "./types/index.ts",
+    "./generated/prisma/sql/*": "./generated/prisma/sql/*.js"
   },
   "scripts": {
     "build": "prisma generate",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate --sql",
     "db:reset": "ts-node reset-db.ts",
     "reset-db": "pnpm db:reset",
     "db:push": "prisma db push",

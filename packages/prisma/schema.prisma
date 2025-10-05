@@ -1,13 +1,15 @@
 generator client {
-  provider      = "prisma-client-js"
-  output        = "./generated/prisma"
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  output          = "./generated/prisma"
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+  previewFeatures = ["postgresqlExtensions", "typedSql"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 model User {
@@ -229,6 +231,7 @@ model Plan {
   userId                     String
   planGroupId                String?
   goal                       String
+  embedding                  Unsupported("vector(1536)")?
   emoji                      String?
   finishingDate              DateTime?         @db.Date
   createdAt                  DateTime          @default(now())

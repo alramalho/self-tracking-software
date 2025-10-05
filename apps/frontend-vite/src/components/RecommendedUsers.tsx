@@ -10,6 +10,8 @@ interface RecommendedUsersProps {
   selectedPlanId: string | null;
 }
 
+type SortBy = "overall" | "goals" | "location" | "age";
+
 export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
   selectedPlanId,
 }) => {
@@ -26,6 +28,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
     null
   );
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<SortBy>("overall");
 
   // Filter recommendations by selected plan
   const userRecommendations = recommendations.filter((rec) => {
@@ -54,6 +57,30 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
     }
     return acc;
   }, [] as typeof userRecommendations);
+
+  // Sort recommendations based on user preference
+  const sortedRecommendations = [...deduplicatedRecommendations].sort((a, b) => {
+    if (sortBy === "overall") {
+      return b.score - a.score; // Default: by overall score
+    }
+
+    const aMetadata = a.metadata as any;
+    const bMetadata = b.metadata as any;
+
+    if (sortBy === "goals") {
+      return (bMetadata?.planSimScore || 0) - (aMetadata?.planSimScore || 0);
+    }
+
+    if (sortBy === "location") {
+      return (bMetadata?.geoSimScore || 0) - (aMetadata?.geoSimScore || 0);
+    }
+
+    if (sortBy === "age") {
+      return (bMetadata?.ageSimScore || 0) - (aMetadata?.ageSimScore || 0);
+    }
+
+    return 0;
+  });
 
   const getConnectionStatus = (
     userId: string
@@ -89,14 +116,59 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
     );
   }
 
-  const selectedRecommendation = deduplicatedRecommendations.find(
+  const selectedRecommendation = sortedRecommendations.find(
     (rec) => rec.recommendationObjectId === selectedExplainer
   );
 
   return (
     <>
+      {/* Sort Controls */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        <span className="text-sm text-gray-600 mr-2">Sort by:</span>
+        <button
+          onClick={() => setSortBy("overall")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            sortBy === "overall"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          Overall
+        </button>
+        <button
+          onClick={() => setSortBy("goals")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            sortBy === "goals"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          🎯 Goals
+        </button>
+        <button
+          onClick={() => setSortBy("location")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            sortBy === "location"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          🌍 Location
+        </button>
+        <button
+          onClick={() => setSortBy("age")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            sortBy === "age"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          👥 Age
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {deduplicatedRecommendations.map((recommendation) => {
+        {sortedRecommendations.map((recommendation) => {
           const user = recommendedUsers.find(
             (user) => user.id === recommendation.recommendationObjectId
           );
@@ -155,7 +227,13 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                       e.stopPropagation();
                       setSelectedExplainer(user.id || null);
                     }}
-                    className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1.5 rounded-full hover:bg-blue-200 transition-colors flex items-center gap-1.5"
+                    className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
+                      score >= 0.5
+                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        : score >= 0.25
+                        ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                        : "bg-red-100 text-red-800 hover:bg-red-200"
+                    }`}
                   >
                     {Math.round(score * 100)}% match
                     <Info size={12} />
@@ -268,24 +346,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                             }
                             weight={
                               (selectedRecommendation.metadata as any)
-                                .planSimWeight || 0.4
-                            }
-                          />
-                        )}
-                      {"activityConsistencyScore" in
-                        selectedRecommendation.metadata &&
-                        (selectedRecommendation.metadata as any)
-                          .activityConsistencyScore !== undefined && (
-                          <ScoreItem
-                            emoji="🔥"
-                            label="Activity Level"
-                            score={
-                              (selectedRecommendation.metadata as any)
-                                .activityConsistencyScore || 0
-                            }
-                            weight={
-                              (selectedRecommendation.metadata as any)
-                                .activityConsistencyWeight || 0.25
+                                .planSimWeight || 0.6
                             }
                           />
                         )}
@@ -317,29 +378,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                             }
                             weight={
                               (selectedRecommendation.metadata as any)
-                                .ageSimWeight || 0.15
-                            }
-                          />
-                        )}
-                      {/* Fallback for old recommendations with recentActivityScore */}
-                      {!(
-                        "activityConsistencyScore" in
-                        selectedRecommendation.metadata
-                      ) &&
-                        "recentActivityScore" in
-                          selectedRecommendation.metadata &&
-                        (selectedRecommendation.metadata as any)
-                          .recentActivityScore !== undefined && (
-                          <ScoreItem
-                            emoji="⏱️"
-                            label="Recent Activity"
-                            score={
-                              (selectedRecommendation.metadata as any)
-                                .recentActivityScore || 0
-                            }
-                            weight={
-                              (selectedRecommendation.metadata as any)
-                                .recentActivityWeight || 0.33
+                                .ageSimWeight || 0.2
                             }
                           />
                         )}

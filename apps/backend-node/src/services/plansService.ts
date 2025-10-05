@@ -20,9 +20,11 @@ import {
   startOfWeek,
 } from "date-fns";
 import { todaysLocalDate, toMidnightUTCDate } from "../utils/date";
+import { withErrorHandling } from "../utils/errorHandling";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 import { aiService } from "./aiService";
+import { embeddingService } from "./embeddingService";
 
 function is3DaysOld(date: Date): boolean {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -878,6 +880,223 @@ export class PlansService {
     }
 
     return weeks;
+  }
+
+  async getPlanEmbedding(planId: string): Promise<number[] | null> {
+    try {
+      // TODO: dont do this ::tesxt BS, just check if field is null or not
+      const result = await prisma.$queryRaw<
+        Array<{ id: string; goal: string; embedding: string | null }>
+      >`SELECT id, goal, "embedding"::text as "embedding" FROM "plans" WHERE id = ${planId}`;
+      const plan = result.length > 0 ? result[0] : null;
+
+      if (!plan) {
+        logger.warn(`Plan ${planId} not found`);
+        return null;
+      }
+
+      // Return existing embedding if available
+      if (plan.embedding) {
+        // Parse the vector string format "[1.0, 2.0, ...]" to number array
+        const embedding = JSON.parse(plan.embedding);
+        return embedding;
+      }
+
+      // Generate new embedding
+      return await this.updatePlanEmbedding(planId);
+    } catch (error) {
+      logger.error(`Error getting plan embedding for ${planId}:`, error);
+      return null;
+    }
+  }
+
+  async getReadablePlan(planId: string): Promise<string> {
+    return withErrorHandling(
+      async () => {
+        const plan = await prisma.plan.findUnique({
+          where: { id: planId },
+          include: {
+            activities: true,
+            sessions: {
+              where: {
+                date: {
+                  gte: new Date(),
+                },
+              },
+              take: 10,
+              orderBy: { date: "asc" },
+            },
+          },
+        });
+
+        if (!plan) {
+          return "";
+        }
+
+        const activityNames = plan.activities.map((a) => a.title);
+        return `${plan.goal} (${activityNames.join(", ")})`;
+      },
+      { fallback: "", errorMsg: "Error generating readable plan" }
+    );
+  }
+
+  private async processReadablePlansForBatch(
+    batchIds: string[]
+  ): Promise<Array<{ planId: string; text: string }>> {
+    const readablePlans: Array<{ planId: string; text: string }> = [];
+
+    for (const planId of batchIds) {
+      const readablePlan = await this.getReadablePlan(planId);
+      if (readablePlan) {
+        readablePlans.push({ planId, text: readablePlan });
+      } else {
+        logger.warn(`No readable text generated for plan ${planId}`);
+      }
+    }
+
+    return readablePlans;
+  }
+
+  private async updatePlanEmbeddingInDb(
+    planId: string,
+    embedding: number[]
+  ): Promise<boolean> {
+    return withErrorHandling(
+      async () => {
+        await prisma.$executeRaw`
+          UPDATE plans
+          SET "embedding" = ${JSON.stringify(embedding)}::vector
+          WHERE id = ${planId}
+        `;
+        logger.info(`Updated plan embedding for plan ${planId}`);
+        return true;
+      },
+      { fallback: false, errorMsg: `Failed to update plan ${planId}` }
+    );
+  }
+
+  async updatePlanEmbeddingsBatch(
+    planIds: string[]
+  ): Promise<Map<string, number[] | null>> {
+    const results = new Map<string, number[] | null>();
+
+    if (planIds.length === 0) {
+      return results;
+    }
+
+    return withErrorHandling(
+      async () => {
+        const BATCH_SIZE = 100;
+
+        for (let i = 0; i < planIds.length; i += BATCH_SIZE) {
+          const batchIds = planIds.slice(i, i + BATCH_SIZE);
+          const readablePlans =
+            await this.processReadablePlansForBatch(batchIds);
+
+          // Mark plans without readable text as failed
+          for (const planId of batchIds) {
+            if (!readablePlans.find((p) => p.planId === planId)) {
+              results.set(planId, null);
+            }
+          }
+
+          if (readablePlans.length === 0) continue;
+
+          const embeddings = await withErrorHandling(
+            async () =>
+              embeddingService.generateEmbeddings(
+                readablePlans.map((p) => p.text)
+              ),
+            {
+              fallback: [],
+              errorMsg: `Failed to generate embeddings for batch starting at index ${i}`,
+            }
+          );
+
+          if (embeddings.length === 0) {
+            // Mark all as failed
+            for (const { planId } of readablePlans) {
+              results.set(planId, null);
+            }
+            continue;
+          }
+
+          // Update database with embeddings
+          for (let j = 0; j < readablePlans.length; j++) {
+            const { planId } = readablePlans[j];
+            const embedding = embeddings[j];
+            const success = await this.updatePlanEmbeddingInDb(
+              planId,
+              embedding
+            );
+            results.set(planId, success ? embedding : null);
+          }
+
+          logger.info(
+            `Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(planIds.length / BATCH_SIZE)} (${readablePlans.length} embeddings)`
+          );
+        }
+
+        return results;
+      },
+      { fallback: results, errorMsg: "Error in batch plan embedding update" }
+    );
+  }
+
+  async updatePlanEmbedding(planId: string): Promise<number[] | null> {
+    const results = await this.updatePlanEmbeddingsBatch([planId]);
+    return results.get(planId) ?? null;
+  }
+
+  private async clearAllExistingPlanEmbeddings(): Promise<void> {
+    await prisma.$executeRaw`
+      UPDATE plans
+      SET "embedding" = NULL
+      WHERE "deletedAt" IS NULL
+        AND ("finishingDate" IS NULL OR "finishingDate" > NOW())
+    `;
+    logger.info("Cleared all existing plan embeddings");
+  }
+
+  async forceResetPlanEmbeddings(): Promise<{
+    total_plans: number;
+    embeddings_created: number;
+    failures: number;
+  }> {
+    logger.info("Starting force reset of plan embeddings");
+
+    const allPlans = await prisma.plan.findMany({
+      where: {
+        deletedAt: null,
+        OR: [{ finishingDate: null }, { finishingDate: { gt: new Date() } }],
+      },
+      select: { id: true },
+    });
+
+    const planIds = allPlans.map((p) => p.id);
+
+    logger.info(`Found ${planIds.length} active plans to recreate embeddings`);
+
+    await this.clearAllExistingPlanEmbeddings();
+
+    const results = await this.updatePlanEmbeddingsBatch(planIds);
+
+    const successCount = Array.from(results.values()).filter(
+      (emb) => emb !== null
+    ).length;
+    const failureCount = planIds.length - successCount;
+
+    const result = {
+      total_plans: planIds.length,
+      embeddings_created: successCount,
+      failures: failureCount,
+    };
+
+    logger.info(
+      `Force reset completed: ${successCount} embeddings created, ${failureCount} failures`
+    );
+
+    return result;
   }
 }
 

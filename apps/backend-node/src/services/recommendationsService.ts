@@ -1,7 +1,10 @@
 import { Plan, Recommendation, User } from "@tsw/prisma";
+import { semanticSearch } from "@tsw/prisma/generated/prisma/sql/semanticSearch";
+import { semanticSearchWithUsers } from "@tsw/prisma/generated/prisma/sql/semanticSearchWithUsers";
+import { Plan as CompletePlan } from "@tsw/prisma/types";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
-import { plansPineconeService } from "./pineconeService";
+import { plansService } from "./plansService";
 import { userService } from "./userService";
 
 export interface RecommendationScore {
@@ -18,10 +21,19 @@ export interface RecommendedUsersResponse {
   plans: Plan[];
 }
 
-const PLAN_SIM_WEIGHT = 0.5;
-const ACTIVITY_CONSISTENCY_WEIGHT = 0.3;
-const GEO_SIM_WEIGHT = 0.1;
-const AGE_SIM_WEIGHT = 0.1;
+const PLAN_SIM_WEIGHT = 0.6;
+const GEO_SIM_WEIGHT = 0.2;
+const AGE_SIM_WEIGHT = 0.2;
+
+/**
+ * Compress similarity scores using sigmoid function
+ * Penalizes low scores (<0.5) while preserving high scores (>0.5)
+ */
+function compressSimilarity(score: number): number {
+  const k = 10; // steepness
+  const midpoint = 0.5;
+  return 1 / (1 + Math.exp(-k * (score - midpoint)));
+}
 
 /**
  * Calculate age similarity using exponential decay
@@ -114,6 +126,79 @@ async function calculateGeoSimilarity(
 }
 
 export class RecommendationsService {
+  /**
+   * Retrieve plans similar to a given plan based on embedding similarity
+   * @param plan - The plan to find similar plans for
+   * @param options - Optional filters (limit, userIds)
+   * @returns Array of similar plans with similarity scores (excluding the source plan)
+   */
+  async retrieveSimilarPlans(
+    plan: Plan | CompletePlan,
+    options?: {
+      limit?: number;
+      userIds?: string[];
+    }
+  ): Promise<
+    Array<{
+      plan: Plan;
+      similarity: number;
+    }>
+  > {
+    try {
+      // Get plan embedding
+      const planEmbedding = await plansService.getPlanEmbedding(plan.id);
+
+      if (!planEmbedding) {
+        logger.warn(`No embedding found for plan ${plan.id}`);
+        return [];
+      }
+
+      const limit = options?.limit ?? 50;
+      const userIds = options?.userIds;
+
+      // Use TypedSQL queries
+      let results;
+      if (userIds && userIds.length > 0) {
+        results = await prisma.$queryRawTyped(
+          semanticSearchWithUsers(
+            plan.id,
+            JSON.stringify(planEmbedding),
+            userIds as any, // Cast to InputJsonObject for TypedSQL
+            limit
+          )
+        );
+      } else {
+        results = await prisma.$queryRawTyped(
+          semanticSearch(plan.id, JSON.stringify(planEmbedding), limit)
+        );
+      }
+
+      // Fetch full plan objects
+      const planIds = results.map((r) => r.planId);
+      const plans = await prisma.plan.findMany({
+        where: { id: { in: planIds } },
+      });
+
+      // Map back to maintain order and include similarity
+      return results
+        .map((r) => {
+          const foundPlan = plans.find((p) => p.id === r.planId);
+          return foundPlan && r.similarity !== null
+            ? {
+                plan: foundPlan,
+                similarity: compressSimilarity(r.similarity),
+              }
+            : null;
+        })
+        .filter(
+          (item): item is { plan: Plan; similarity: number } => item !== null
+        );
+    } catch (error) {
+      logger.error("Error retrieving similar plans:", error);
+      return [];
+    }
+  }
+
   /**
    * Compute recommended users for a given user
    */
@@ -251,7 +336,7 @@ export class RecommendationsService {
         return {};
       }
 
-      // Calculate base similarities (geo, age, activity) once for all target users
+      // Calculate base similarities (geo, age) once for all target users
       const baseSimilarities: Record<string, any> = {};
 
       for (const targetUser of eligibleUsers) {
@@ -273,10 +358,6 @@ export class RecommendationsService {
             targetUser.age
           );
         }
-
-        // Activity consistency (activities logged in past 15 days)
-        baseSimilarities[targetUser.id].activityConsistencyScore =
-          await calculateActivityConsistency(targetUser.id);
       }
 
       let eligiblePlans;
@@ -290,21 +371,22 @@ export class RecommendationsService {
       for (const userPlan of eligiblePlans) {
         const planResults: Record<string, any> = {};
 
-        // Calculate plan similarity using Pinecone for this specific plan
+        // Calculate plan similarity using pgvector for this specific plan
         try {
-          const planSearchResults = await plansPineconeService.query(
-            userPlan.goal,
-            50,
-            { user_id: { $in: userIds } }
-          );
+          // Use the reusable retrieveSimilarPlans function
+          const similarPlans = await this.retrieveSimilarPlans(userPlan, {
+            limit: 50,
+            userIds, // Only include these users
+          });
 
-          for (const result of planSearchResults) {
-            const userId = result.fields.user_id;
-            planResults[userId] = { planSimScore: result.score };
+          for (const result of similarPlans) {
+            planResults[result.plan.userId] = {
+              planSimScore: result.similarity,
+            };
           }
         } catch (error) {
           logger.warn(
-            `Failed to get plan similarities from Pinecone for plan ${userPlan.id}:`,
+            `Failed to get plan similarities from pgvector for plan ${userPlan.id}:`,
             error
           );
         }
@@ -315,13 +397,10 @@ export class RecommendationsService {
             planSimScore: planResults[targetUserId]?.planSimScore ?? 0,
             geoSimScore: baseSimilarities[targetUserId]?.geoSimScore ?? 0,
             ageSimScore: baseSimilarities[targetUserId]?.ageSimScore ?? 0,
-            activityConsistencyScore:
-              baseSimilarities[targetUserId]?.activityConsistencyScore ?? 0,
           };
 
           const finalScore =
             scores.planSimScore * PLAN_SIM_WEIGHT +
-            scores.activityConsistencyScore * ACTIVITY_CONSISTENCY_WEIGHT +
             scores.geoSimScore * GEO_SIM_WEIGHT +
             scores.ageSimScore * AGE_SIM_WEIGHT;
 
@@ -341,8 +420,6 @@ export class RecommendationsService {
                   geoSimWeight: GEO_SIM_WEIGHT,
                   ageSimScore: scores.ageSimScore,
                   ageSimWeight: AGE_SIM_WEIGHT,
-                  activityConsistencyScore: scores.activityConsistencyScore,
-                  activityConsistencyWeight: ACTIVITY_CONSISTENCY_WEIGHT,
                 },
               },
             });
@@ -350,7 +427,6 @@ export class RecommendationsService {
               planSimScore: scores.planSimScore,
               geoSimScore: scores.geoSimScore,
               ageSimScore: scores.ageSimScore,
-              activityConsistencyScore: scores.activityConsistencyScore,
               finalScore: finalScore,
             };
           }
@@ -495,145 +571,6 @@ export class RecommendationsService {
   private isHoursOld(date: Date, hours: number): boolean {
     const hoursDiff = (Date.now() - date.getTime()) / (1000 * 60 * 60);
     return hoursDiff > hours;
-  }
-
-  /**
-   * Get readable plan text for embedding
-   */
-  async getReadablePlan(planId: string): Promise<string> {
-    try {
-      const plan = await prisma.plan.findUnique({
-        where: { id: planId },
-        include: {
-          activities: true,
-          sessions: {
-            where: {
-              date: {
-                gte: new Date(),
-              },
-            },
-            take: 10,
-            orderBy: { date: "asc" },
-          },
-        },
-      });
-
-      if (!plan) {
-        return "";
-      }
-
-      const activityNames = plan.activities.map((a) => a.title);
-      return `${plan.goal} (${activityNames.join(", ")})`;
-    } catch (error) {
-      logger.error("Error generating readable plan:", error);
-      return "";
-    }
-  }
-
-  /**
-   * Force reset all plan embeddings in Pinecone
-   * Deletes all existing embeddings and recreates them from active plans in the database
-   */
-  async forceResetPlanEmbeddings(): Promise<{
-    total_plans: number;
-    embeddings_created: number;
-    failures: number;
-  }> {
-    try {
-      logger.info("Starting force reset of plan embeddings");
-
-      // Get all active plans from database
-      const allPlans = await prisma.plan.findMany({
-        where: {
-          deletedAt: null,
-          OR: [{ finishingDate: null }, { finishingDate: { gt: new Date() } }],
-        },
-        select: {
-          id: true,
-          userId: true,
-          goal: true,
-        },
-      });
-
-      logger.info(
-        `Found ${allPlans.length} active plans to recreate embeddings`
-      );
-
-      // Delete all existing plan embeddings by their IDs
-      const planIds = allPlans.map((p) => p.id);
-      if (planIds.length > 0) {
-        await plansPineconeService.deleteRecords(planIds);
-        logger.info(`Deleted ${planIds.length} plan embeddings from Pinecone`);
-      }
-
-      // Build records for batch upsert
-      const recordsToUpsert: Array<{
-        text: string;
-        identifier: string;
-        metadata: { user_id: string };
-      }> = [];
-      let failureCount = 0;
-
-      for (const plan of allPlans) {
-        try {
-          const readablePlan = await this.getReadablePlan(plan.id);
-          if (readablePlan) {
-            recordsToUpsert.push({
-              text: readablePlan,
-              identifier: plan.id,
-              metadata: { user_id: plan.userId },
-            });
-          } else {
-            failureCount++;
-            logger.warn(`Skipped plan ${plan.id} - no readable text generated`);
-          }
-        } catch (error) {
-          logger.error(
-            `Failed to create embedding for plan ${plan.id}:`,
-            error
-          );
-          failureCount++;
-        }
-      }
-
-      // Batch upsert records in chunks of 96 (Pinecone max batch size)
-      let successCount = 0;
-      const BATCH_SIZE = 96;
-
-      if (recordsToUpsert.length > 0) {
-        for (let i = 0; i < recordsToUpsert.length; i += BATCH_SIZE) {
-          const batch = recordsToUpsert.slice(i, i + BATCH_SIZE);
-          try {
-            await plansPineconeService.upsertRecords(batch);
-            successCount += batch.length;
-            logger.info(
-              `Upserted batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(recordsToUpsert.length / BATCH_SIZE)} (${batch.length} records)`
-            );
-          } catch (error) {
-            logger.error(
-              `Failed to upsert batch starting at index ${i}:`,
-              error
-            );
-            throw error;
-          }
-        }
-      }
-
-      const result = {
-        total_plans: allPlans.length,
-        embeddings_created: successCount,
-        failures: failureCount,
-      };
-
-      logger.info(
-        `Force reset completed: ${successCount} embeddings created, ${failureCount} failures`
-      );
-
-      return result;
-    } catch (error) {
-      logger.error("Error during force reset of plan embeddings:", error);
-      throw error;
-    }
   }
 }
 

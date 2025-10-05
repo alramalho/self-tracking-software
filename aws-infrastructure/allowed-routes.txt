@@ -6,6 +6,7 @@
 /activities
 /activities/{any}
 /admin/compute-recommendations
+/admin/debug-plan-similarity/{userId}
 /admin/get-recommendations/{username}
 /admin/public/log-error
 /admin/regenerate-image-url
