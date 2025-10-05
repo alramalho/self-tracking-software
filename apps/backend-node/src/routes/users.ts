@@ -560,6 +560,7 @@ usersRouter.post(
     res: Response
   ): Promise<Response | void> => {
     try {
+      const { planId } = req.body;
       const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
       });
@@ -572,9 +573,15 @@ usersRouter.post(
       // Update user embedding
       await userService.updateUserEmbedding(user);
 
+      let plan;
+      if (planId) {
+        plan = await prisma.plan.findUnique({
+          where: { id: planId },
+        });
+      }
       // Compute recommendations
       const recommendations =
-        await recommendationsService.computeRecommendedUsers(user.id);
+        await recommendationsService.computeRecommendedUsers(user.id, plan);
 
       res.json({
         message: `Recommendations computed successfully for user ${req.user!.username}`,

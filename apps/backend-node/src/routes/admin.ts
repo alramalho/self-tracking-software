@@ -563,7 +563,7 @@ router.post(
   adminAuth,
   async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
-      const { username } = req.body;
+      const { username, planName, forceReset = false } = req.body;
 
       if (!username) {
         return res.status(400).json({ error: "username is required" });
@@ -578,17 +578,37 @@ router.post(
         return res.status(404).json({ error: "User not found" });
       }
 
+      // Force reset plan embeddings if requested
+      let resetResult:
+        | {
+            total_plans: number;
+            embeddings_created: number;
+            failures: number;
+          }
+        | undefined;
+      if (forceReset) {
+        logger.info("Force reset requested - rebuilding all plan embeddings");
+        resetResult = await recommendationsService.forceResetPlanEmbeddings();
+      }
+
       // Update user embedding
       await userService.updateUserEmbedding(user);
 
+      let plan: any;
+      if (planName) {
+        plan = await prisma.plan.findFirst({
+          where: { goal: planName },
+        });
+      }
       // Compute recommendations
       const recommendations =
-        await recommendationsService.computeRecommendedUsers(user.id);
+        await recommendationsService.computeRecommendedUsers(user.id, plan);
 
       res.json({
         message: `Recommendations computed successfully for user ${username}`,
         user_id: user.id,
         recommendations,
+        ...(resetResult && { force_reset_result: resetResult }),
       });
     } catch (error) {
       logger.error("Error computing recommendations:", error);
@@ -633,6 +653,166 @@ router.get(
     } catch (error) {
       logger.error("Error getting recommendations:", error);
       res.status(500).json({ error: "Failed to get recommendations" });
+    }
+  }
+);
+
+// Debug plan similarity for a specific user
+router.get(
+  "/debug-plan-similarity/:userId",
+  adminAuth,
+  async (req: AdminRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      const { plansPineconeService } = await import(
+        "../services/pineconeService"
+      );
+
+      // Get user and their plans
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          plans: {
+            where: {
+              deletedAt: null,
+              OR: [
+                { finishingDate: null },
+                { finishingDate: { gt: new Date() } },
+              ],
+            },
+            orderBy: { sortOrder: "asc" },
+          },
+        },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.plans.length === 0) {
+        return res.status(400).json({ error: "User has no active plans" });
+      }
+
+      // Get some other users looking for partners
+      const otherUsers = await prisma.user.findMany({
+        where: {
+          lookingForAp: true,
+          id: { not: userId },
+          plans: {
+            some: {
+              deletedAt: null,
+              OR: [
+                { finishingDate: null },
+                { finishingDate: { gt: new Date() } },
+              ],
+            },
+          },
+        },
+        include: {
+          plans: {
+            where: {
+              deletedAt: null,
+              OR: [
+                { finishingDate: null },
+                { finishingDate: { gt: new Date() } },
+              ],
+            },
+          },
+        },
+        take: 20,
+      });
+
+      const debugResults = [];
+
+      // NOTE TO SELF: WE WERE FIXING RECOMMENDATIONS. PINECONE SEEMS TO BE EMPTY?
+
+      // Test each of user's plans against Pinecone
+      for (const userPlan of user.plans) {
+        logger.info(
+          `\n=== Testing plan: "${userPlan.goal}" (${userPlan.id}) ===`
+        );
+
+        const userIds = otherUsers.map((u) => u.id);
+
+        try {
+          const planSearchResults = await plansPineconeService.query(
+            userPlan.goal,
+            50,
+            { user_id: { $in: userIds } }
+          );
+
+          logger.info(`Pinecone returned ${planSearchResults.length} results`);
+
+          const planDebug = {
+            userPlan: {
+              id: userPlan.id,
+              goal: userPlan.goal,
+              emoji: userPlan.emoji,
+            },
+            pineconeResults: planSearchResults.map((result) => {
+              const matchedUser = otherUsers.find(
+                (u) => u.id === result.fields.user_id
+              );
+              return {
+                userId: result.fields.user_id,
+                username: matchedUser?.username,
+                score: result.score,
+                theirPlans: matchedUser?.plans.map((p) => ({
+                  goal: p.goal,
+                  emoji: p.emoji,
+                })),
+              };
+            }),
+            totalResults: planSearchResults.length,
+          };
+
+          debugResults.push(planDebug);
+
+          // Log details
+          for (const result of planSearchResults.slice(0, 5)) {
+            const matchedUser = otherUsers.find(
+              (u) => u.id === result.fields.user_id
+            );
+            logger.info(
+              `  - ${matchedUser?.username || result.fields.user_id}: ${result.score} - Plans: ${matchedUser?.plans.map((p) => p.goal).join(", ")}`
+            );
+          }
+        } catch (error) {
+          logger.error(
+            `Error querying Pinecone for plan ${userPlan.id}:`,
+            error
+          );
+          debugResults.push({
+            userPlan: {
+              id: userPlan.id,
+              goal: userPlan.goal,
+              emoji: userPlan.emoji,
+            },
+            error: String(error),
+          });
+        }
+      }
+
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          plans: user.plans.map((p) => ({
+            id: p.id,
+            goal: p.goal,
+            emoji: p.emoji,
+          })),
+        },
+        debugResults,
+      });
+    } catch (error) {
+      logger.error("Error debugging plan similarity:", error);
+      res.status(500).json({ error: "Failed to debug plan similarity" });
     }
   }
 );

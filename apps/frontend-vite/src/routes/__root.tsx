@@ -37,7 +37,12 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+    <ClerkProvider
+      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      signInUrl="/signin"
+      signUpUrl="/signup"
+      afterSignOutUrl="/signin"
+    >
       <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{ persister: localStoragePersister }}

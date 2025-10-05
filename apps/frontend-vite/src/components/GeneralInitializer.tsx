@@ -79,6 +79,17 @@ export default function GeneralInitializer({
   ]);
 
   useEffect(() => {
+    if (
+      isClerkLoaded &&
+      !isSignedIn &&
+      !pathname.startsWith("/signin") &&
+      !pathname.startsWith("/signup")
+    ) {
+      navigate({ to: "/signin", search: { redirect_url: pathname } });
+    }
+  }, [isClerkLoaded, isSignedIn, pathname, navigate]);
+
+  useEffect(() => {
     if (isSignedIn && hasLoadedUserData && currentUser) {
       if (!hasRanPosthogIdentify) {
         posthog.identify(currentUser.id, {

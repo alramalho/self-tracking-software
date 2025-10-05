@@ -61,12 +61,6 @@ export default function GeneralInitializer({
   }, [currentUser?.connectionsFrom, currentUser?.connectionsTo]);
 
   useEffect(() => {
-    if (isSignedIn && hasLoadedUserData && currentUser) {
-      console.log({ currentUser });
-    }
-  }, [currentUser, isSignedIn, hasLoadedUserData]);
-
-  useEffect(() => {
     if (
       isClerkLoaded &&
       isSignedIn &&

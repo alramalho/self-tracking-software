@@ -18,12 +18,14 @@ export class PineconeService {
   private indexHost: string;
   private index: Index<RecordMetadata>; // Added this property
   private _namespace: Index<RecordMetadata>;
+  private config: PineconeConfig;
 
   constructor(
     config: PineconeConfig,
     private namespace: string
   ) {
     this.pc = new Pinecone({ apiKey: config.apiKey });
+    this.config = config;
     this.indexHost = config.indexHost;
     this.index = this.pc.index(config.indexName, config.indexHost); // Added this line
     this._namespace = this.pc
@@ -32,22 +34,28 @@ export class PineconeService {
   }
 
   /**
-   * Upsert a record to Pinecone with text embedding
+   * Upsert records to Pinecone with text embedding
    */
-  async upsertRecord(
-    text: string,
-    identifier: string,
-    metadata: Record<string, any> = {}
+  async upsertRecords(
+    records: Array<{
+      text: string;
+      identifier: string;
+      metadata?: Record<string, any>;
+    }>
   ): Promise<void> {
     try {
-      await this._namespace.upsertRecords([
-        { _id: identifier, text, ...metadata },
-      ]);
+      const pineconeRecords = records.map((record) => ({
+        _id: record.identifier,
+        text: record.text,
+        ...(record.metadata || {}),
+      }));
+
+      await this._namespace.upsertRecords(pineconeRecords);
       logger.info(
-        `Upserted record ${identifier} to namespace ${this.namespace}`
+        `Upserted ${records.length} record(s) to namespace ${this.namespace}`
       );
     } catch (error) {
-      logger.error(`Failed to upsert record ${identifier}:`, error);
+      logger.error(`Failed to upsert ${records.length} record(s):`, error);
       throw error;
     }
   }
@@ -76,7 +84,7 @@ export class PineconeService {
 
       if (!result.result?.hits || result.result.hits.length === 0) {
         logger.info(
-          `No results found for query "${queryText}" in namespace ${this.namespace}`
+          `No results found for query "${queryText}" in namespace ${this.namespace} index ${this.config.indexHost}`
         );
         return [];
       }

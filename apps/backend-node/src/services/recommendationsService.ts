@@ -8,7 +8,7 @@ export interface RecommendationScore {
   planSimScore?: number;
   geoSimScore?: number;
   ageSimScore?: number;
-  recentActivityScore?: number;
+  activityConsistencyScore?: number;
   finalScore: number;
 }
 
@@ -18,10 +18,10 @@ export interface RecommendedUsersResponse {
   plans: Plan[];
 }
 
-const PLAN_SIM_WEIGHT = 0.33;
-const RECENT_ACTIVITY_WEIGHT = 0.33;
-const GEO_SIM_WEIGHT = 0.1666;
-const AGE_SIM_WEIGHT = 0.1666;
+const PLAN_SIM_WEIGHT = 0.5;
+const ACTIVITY_CONSISTENCY_WEIGHT = 0.3;
+const GEO_SIM_WEIGHT = 0.1;
+const AGE_SIM_WEIGHT = 0.1;
 
 /**
  * Calculate age similarity using exponential decay
@@ -32,7 +32,33 @@ function calculateAgeSimilarity(age1: number, age2: number): number {
 }
 
 /**
+ * Calculate activity consistency score based on activities logged in the past 15 days
+ * Cap at 5 activities for perfect score (aligns with ~3 times per week target)
+ */
+async function calculateActivityConsistency(userId: string): Promise<number> {
+  const fifteenDaysAgo = new Date();
+  fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+  const activityCount = await prisma.activityEntry.count({
+    where: {
+      activity: {
+        userId: userId,
+        deletedAt: null,
+      },
+      date: {
+        gte: fifteenDaysAgo,
+      },
+      deletedAt: null,
+    },
+  });
+
+  // Cap at 5 activities for perfect score (1.0)
+  return Math.min(activityCount / 5, 1.0);
+}
+
+/**
  * Calculate recency similarity using hyperbolic tangent fit
+ * @deprecated - Replaced by calculateActivityConsistency
  */
 function calculateRecencySimilarity(lastActiveAt: Date | null): number {
   if (!lastActiveAt) {
@@ -92,7 +118,8 @@ export class RecommendationsService {
    * Compute recommended users for a given user
    */
   async computeRecommendedUsers(
-    currentUserId: string
+    currentUserId: string,
+    specificPlan?: Plan
   ): Promise<Record<string, any>> {
     try {
       logger.info(`Computing recommendations for user ${currentUserId}`);
@@ -106,8 +133,8 @@ export class RecommendationsService {
         throw new Error("Current user not found");
       }
 
-      // Get all users looking for accountability partners who have at least one active plan
-      const usersLookingForPartners = await prisma.user.findMany({
+      // Get all users looking for accountability partners who have at least one active plan and exclude people who are >1 month old in the app without any logged activity
+      const eligibleUsers = await prisma.user.findMany({
         where: {
           lookingForAp: true,
           id: { not: currentUserId },
@@ -148,17 +175,44 @@ export class RecommendationsService {
                 ],
               },
             },
+            // Include new users (created within 30 days) OR users with recent activity
+            {
+              OR: [
+                // New users (joined within last 30 days)
+                {
+                  createdAt: {
+                    gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                  },
+                },
+                // OR users with logged activities in last 30 days
+                {
+                  activities: {
+                    some: {
+                      entries: {
+                        some: {
+                          date: {
+                            gte: new Date(
+                              Date.now() - 30 * 24 * 60 * 60 * 1000
+                            ),
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
           ],
         },
       });
 
-      if (usersLookingForPartners.length === 0) {
+      if (eligibleUsers.length === 0) {
         logger.info("No users looking for accountability partners found");
         return {};
       }
 
       const results: Record<string, any> = {};
-      const userIds = usersLookingForPartners.map((u) => u.id);
+      const userIds = eligibleUsers.map((u) => u.id);
 
       // Calculate profile similarity using Pinecone
       // if (currentUser.profile) {
@@ -182,88 +236,124 @@ export class RecommendationsService {
       //   }
       // }
 
-      // Calculate plan similarity using Pinecone
-      const userPlans = await prisma.plan.findMany({
+      // Get all active plans for the current user
+      let userPlans = await prisma.plan.findMany({
         where: {
           userId: currentUserId,
           deletedAt: null,
+          OR: [{ finishingDate: null }, { finishingDate: { gt: new Date() } }],
         },
         orderBy: { sortOrder: "asc" },
-        take: 1,
       });
 
-      if (userPlans.length > 0) {
+      if (userPlans.length === 0) {
+        logger.info("User has no active plans, cannot compute recommendations");
+        return {};
+      }
+
+      // Calculate base similarities (geo, age, activity) once for all target users
+      const baseSimilarities: Record<string, any> = {};
+
+      for (const targetUser of eligibleUsers) {
+        baseSimilarities[targetUser.id] = {};
+
+        // Geographic similarity
+        if (currentUser.timezone && targetUser.timezone) {
+          baseSimilarities[targetUser.id].geoSimScore =
+            await calculateGeoSimilarity(
+              currentUser.timezone,
+              targetUser.timezone
+            );
+        }
+
+        // Age similarity
+        if (currentUser.age && targetUser.age) {
+          baseSimilarities[targetUser.id].ageSimScore = calculateAgeSimilarity(
+            currentUser.age,
+            targetUser.age
+          );
+        }
+
+        // Activity consistency (activities logged in past 15 days)
+        baseSimilarities[targetUser.id].activityConsistencyScore =
+          await calculateActivityConsistency(targetUser.id);
+      }
+
+      let eligiblePlans;
+      if (specificPlan) {
+        eligiblePlans = [specificPlan];
+      } else {
+        eligiblePlans = userPlans;
+      }
+
+      // For each user plan, compute plan similarity and create recommendations
+      for (const userPlan of eligiblePlans) {
+        const planResults: Record<string, any> = {};
+
+        // Calculate plan similarity using Pinecone for this specific plan
         try {
           const planSearchResults = await plansPineconeService.query(
-            userPlans[0].goal,
+            userPlan.goal,
             50,
             { user_id: { $in: userIds } }
           );
 
           for (const result of planSearchResults) {
             const userId = result.fields.user_id;
-            if (!results[userId]) results[userId] = {};
-            results[userId].planSimScore = result.score;
+            planResults[userId] = { planSimScore: result.score };
           }
         } catch (error) {
-          logger.warn("Failed to get plan similarities from Pinecone:", error);
-        }
-      }
-
-      // Calculate other similarities
-      for (const targetUser of usersLookingForPartners) {
-        if (!results[targetUser.id]) results[targetUser.id] = {};
-
-        // Geographic similarity
-        if (currentUser.timezone && targetUser.timezone) {
-          results[targetUser.id].geoSimScore = await calculateGeoSimilarity(
-            currentUser.timezone,
-            targetUser.timezone
+          logger.warn(
+            `Failed to get plan similarities from Pinecone for plan ${userPlan.id}:`,
+            error
           );
         }
 
-        // Age similarity
-        if (currentUser.age && targetUser.age) {
-          results[targetUser.id].ageSimScore = calculateAgeSimilarity(
-            currentUser.age,
-            targetUser.age
-          );
-        }
+        // Merge base similarities with plan-specific similarities and create recommendations
+        for (const targetUserId of userIds) {
+          const scores = {
+            planSimScore: planResults[targetUserId]?.planSimScore ?? 0,
+            geoSimScore: baseSimilarities[targetUserId]?.geoSimScore ?? 0,
+            ageSimScore: baseSimilarities[targetUserId]?.ageSimScore ?? 0,
+            activityConsistencyScore:
+              baseSimilarities[targetUserId]?.activityConsistencyScore ?? 0,
+          };
 
-        // Recent activity similarity
-        results[targetUser.id].recentActivityScore = calculateRecencySimilarity(
-          targetUser.lastActiveAt || targetUser.createdAt
-        );
-      }
+          const finalScore =
+            scores.planSimScore * PLAN_SIM_WEIGHT +
+            scores.activityConsistencyScore * ACTIVITY_CONSISTENCY_WEIGHT +
+            scores.geoSimScore * GEO_SIM_WEIGHT +
+            scores.ageSimScore * AGE_SIM_WEIGHT;
 
-      // Calculate final scores and create recommendations
-      for (const [targetUserId, scores] of Object.entries(results)) {
-        const finalScore =
-          (scores.planSimScore || 0) * PLAN_SIM_WEIGHT +
-          (scores.recentActivityScore || 0) * RECENT_ACTIVITY_WEIGHT +
-          (scores.geoSimScore || 0) * GEO_SIM_WEIGHT +
-          (scores.ageSimScore || 0) * AGE_SIM_WEIGHT;
-
-        // Only create recommendations above a minimum threshold
-        if (finalScore > 0.1) {
-          await prisma.recommendation.create({
-            data: {
-              userId: currentUserId,
-              recommendationObjectType: "USER",
-              recommendationObjectId: targetUserId,
-              score: finalScore,
-              metadata: {
-                planSimScore: scores.planSimScore,
-                planSimWeight: PLAN_SIM_WEIGHT,
-                geoSimScore: scores.geoSimScore,
-                geoSimWeight: GEO_SIM_WEIGHT,
-                ageSimScore: scores.ageSimScore,
-                ageSimWeight: AGE_SIM_WEIGHT,
-                recentActivityScore: scores.recentActivityScore,
-                recentActivityWeight: RECENT_ACTIVITY_WEIGHT,
+          // Only create recommendations above a minimum threshold
+          if (finalScore > 0.1) {
+            await prisma.recommendation.create({
+              data: {
+                userId: currentUserId,
+                recommendationObjectType: "USER",
+                recommendationObjectId: targetUserId,
+                score: finalScore,
+                metadata: {
+                  relativeToPlanId: userPlan.id,
+                  planSimScore: scores.planSimScore,
+                  planSimWeight: PLAN_SIM_WEIGHT,
+                  geoSimScore: scores.geoSimScore,
+                  geoSimWeight: GEO_SIM_WEIGHT,
+                  ageSimScore: scores.ageSimScore,
+                  ageSimWeight: AGE_SIM_WEIGHT,
+                  activityConsistencyScore: scores.activityConsistencyScore,
+                  activityConsistencyWeight: ACTIVITY_CONSISTENCY_WEIGHT,
+                },
               },
-            },
-          });
+            });
+            results[targetUserId] = {
+              planSimScore: scores.planSimScore,
+              geoSimScore: scores.geoSimScore,
+              ageSimScore: scores.ageSimScore,
+              activityConsistencyScore: scores.activityConsistencyScore,
+              finalScore: finalScore,
+            };
+          }
         }
       }
 
@@ -433,27 +523,116 @@ export class RecommendationsService {
       }
 
       const activityNames = plan.activities.map((a) => a.title);
-      const currentDate = new Date();
-      const planAge = Math.floor(
-        (currentDate.getTime() - plan.createdAt.getTime()) /
-          (1000 * 60 * 60 * 24 * 7)
-      );
-
-      // Get current week's activity entries (simplified - would need proper week calculation)
-      const weekStart = new Date(currentDate);
-      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-
-      // This is a simplified version - in production you'd want proper activity tracking
-      const activitiesStr = activityNames.join("', '");
-      const plannedCount = plan.timesPerWeek || plan.sessions.length;
-
-      return `'${plan.goal}' is ${planAge} weeks old - with activities '${activitiesStr}'. This week the user had planned ${plannedCount} activities`;
+      return `${plan.goal} (${activityNames.join(", ")})`;
     } catch (error) {
       logger.error("Error generating readable plan:", error);
       return "";
+    }
+  }
+
+  /**
+   * Force reset all plan embeddings in Pinecone
+   * Deletes all existing embeddings and recreates them from active plans in the database
+   */
+  async forceResetPlanEmbeddings(): Promise<{
+    total_plans: number;
+    embeddings_created: number;
+    failures: number;
+  }> {
+    try {
+      logger.info("Starting force reset of plan embeddings");
+
+      // Get all active plans from database
+      const allPlans = await prisma.plan.findMany({
+        where: {
+          deletedAt: null,
+          OR: [{ finishingDate: null }, { finishingDate: { gt: new Date() } }],
+        },
+        select: {
+          id: true,
+          userId: true,
+          goal: true,
+        },
+      });
+
+      logger.info(
+        `Found ${allPlans.length} active plans to recreate embeddings`
+      );
+
+      // Delete all existing plan embeddings by their IDs
+      const planIds = allPlans.map((p) => p.id);
+      if (planIds.length > 0) {
+        await plansPineconeService.deleteRecords(planIds);
+        logger.info(`Deleted ${planIds.length} plan embeddings from Pinecone`);
+      }
+
+      // Build records for batch upsert
+      const recordsToUpsert: Array<{
+        text: string;
+        identifier: string;
+        metadata: { user_id: string };
+      }> = [];
+      let failureCount = 0;
+
+      for (const plan of allPlans) {
+        try {
+          const readablePlan = await this.getReadablePlan(plan.id);
+          if (readablePlan) {
+            recordsToUpsert.push({
+              text: readablePlan,
+              identifier: plan.id,
+              metadata: { user_id: plan.userId },
+            });
+          } else {
+            failureCount++;
+            logger.warn(`Skipped plan ${plan.id} - no readable text generated`);
+          }
+        } catch (error) {
+          logger.error(
+            `Failed to create embedding for plan ${plan.id}:`,
+            error
+          );
+          failureCount++;
+        }
+      }
+
+      // Batch upsert records in chunks of 96 (Pinecone max batch size)
+      let successCount = 0;
+      const BATCH_SIZE = 96;
+
+      if (recordsToUpsert.length > 0) {
+        for (let i = 0; i < recordsToUpsert.length; i += BATCH_SIZE) {
+          const batch = recordsToUpsert.slice(i, i + BATCH_SIZE);
+          try {
+            await plansPineconeService.upsertRecords(batch);
+            successCount += batch.length;
+            logger.info(
+              `Upserted batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(recordsToUpsert.length / BATCH_SIZE)} (${batch.length} records)`
+            );
+          } catch (error) {
+            logger.error(
+              `Failed to upsert batch starting at index ${i}:`,
+              error
+            );
+            throw error;
+          }
+        }
+      }
+
+      const result = {
+        total_plans: allPlans.length,
+        embeddings_created: successCount,
+        failures: failureCount,
+      };
+
+      logger.info(
+        `Force reset completed: ${successCount} embeddings created, ${failureCount} failures`
+      );
+
+      return result;
+    } catch (error) {
+      logger.error("Error during force reset of plan embeddings:", error);
+      throw error;
     }
   }
 }
