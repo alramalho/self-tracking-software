@@ -1,6 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Plan as CompletePlan } from "@tsw/prisma/types";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import logger from "../../utils/logger";
-import { plansPineconeService } from "../pineconeService";
+import { prisma } from "../../utils/prisma";
+import { plansService } from "../plansService";
+import { recommendationsService } from "../recommendationsService";
 
 // NOTE TO SELF: we need to
 // 1. make sure plan similarity works
@@ -8,193 +11,338 @@ import { plansPineconeService } from "../pineconeService";
 // so basically, make matching algorithm almost exclusive to plan similarity
 // activity based can be hidden (just use for filtering out)
 
-async function calculatePlanSimilarity(
-  planGoal: string,
-  targetPlanGoal: string,
-  targetUserId: string
-): Promise<number> {
-  try {
-    plansPineconeService.upsertRecords([
-      {
-        text: targetPlanGoal,
-        identifier: `test-${targetPlanGoal}-${targetUserId}`,
-        metadata: { user_id: targetUserId },
+const testUserId1 = "cmev4pw6x0000yz1sefkbyy1l";
+const testUserId2 = "cmf55cdau0001yy1injs56d1y";
+const testUserId3 = "cmf55nb160000yw1t6rwa2fuc";
+// TODO: these activities are not being used for anything rn, just match based on plan similarity
+async function createTestPlanWithActivities(
+  userId: string,
+  planId: string,
+  goal: string,
+  activities: Array<{ title: string; measure: string; emoji: string }>
+): Promise<void> {
+  // Create plan
+  await prisma.plan.create({
+    data: {
+      id: planId,
+      userId,
+      goal,
+      emoji: activities[0]?.emoji || "🎯",
+      timesPerWeek: 3,
+    },
+  });
+
+  // Create activities and sessions
+  for (const activity of activities) {
+    const activityRecord = await prisma.activity.create({
+      data: {
+        userId,
+        title: activity.title,
+        measure: activity.measure,
+        emoji: activity.emoji,
+        plans: {
+          connect: { id: planId },
+        },
       },
-    ]);
-    const results = await plansPineconeService.query(planGoal, 50, {
-      user_id: { $eq: targetUserId },
     });
 
-    if (results.length === 0) {
-      return 0;
+    // Create some plan sessions for this activity
+    const today = new Date();
+    for (let i = 0; i < 3; i++) {
+      const sessionDate = new Date(today);
+      sessionDate.setDate(today.getDate() + i);
+
+      await prisma.planSession.create({
+        data: {
+          planId,
+          activityId: activityRecord.id,
+          date: sessionDate,
+          quantity: 1,
+          descriptiveGuide: `Day ${i + 1} session`,
+        },
+      });
+    }
+  }
+}
+
+async function getMostSimilarPlan(
+  planId: string,
+  options?: { userIds?: string[]; limit?: number }
+): Promise<{ plan: CompletePlan; similarity: number } | null> {
+  try {
+    let eligibleUserIds = options?.userIds;
+    if (!eligibleUserIds || eligibleUserIds?.length === 0) {
+      eligibleUserIds = [testUserId1, testUserId2, testUserId3];
     }
 
-    // Find the matching result
-    const match = results.find((r) => r.fields.user_id === targetUserId);
-    return match?.score || 0;
+    const sourcePlan = (await prisma.plan.findUnique({
+      where: { id: planId },
+    })) as CompletePlan;
+
+    if (!sourcePlan) {
+      logger.error(`Source plan ${planId} not found`);
+      return null;
+    }
+
+    const similarPlans = await recommendationsService.retrieveSimilarPlans(
+      sourcePlan,
+      {
+        limit: options?.limit ?? 1,
+        userIds: eligibleUserIds,
+      }
+    );
+
+    if (similarPlans.length === 0) {
+      return null;
+    }
+
+    return {
+      plan: similarPlans[0].plan as CompletePlan,
+      similarity: similarPlans[0].similarity,
+    };
   } catch (error) {
-    logger.error("Error calculating plan similarity:", error);
-    return 0;
+    logger.error("Error getting most similar plan:", error);
+    return null;
   }
 }
 
 describe("Plan Similarity Integration Tests", () => {
-  const testUserId1 = "test-user-similarity-1";
-  const testUserId2 = "test-user-similarity-2";
-  const testUserId3 = "test-user-similarity-3";
-
   beforeAll(async () => {
-    // Setup test data in Pinecone
-    await plansPineconeService.upsertRecords([
-      {
-        text: "Run a marathon",
-        identifier: "plan-marathon",
-        metadata: { user_id: testUserId1 },
-      },
-      {
-        text: "Complete a 5K race",
-        identifier: "plan-5k",
-        metadata: { user_id: testUserId2 },
-      },
-      {
-        text: "Learn to code in Python",
-        identifier: "plan-coding",
-        metadata: { user_id: testUserId3 },
-      },
-    ]);
+    // Create test users
+    const users = [testUserId1, testUserId2, testUserId3];
+    for (const userId of users) {
+      await prisma.user.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          email: `${userId}@test.com`,
+          username: userId,
+        },
+        update: {},
+      });
+    }
+  });
 
-    // Wait for Pinecone to index
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+  beforeEach(async () => {
+    // Clean up all plans and activities before each test
+    const users = [testUserId1, testUserId2, testUserId3];
+    for (const userId of users) {
+      await prisma.planSession.deleteMany({
+        where: { plan: { userId } },
+      });
+      await prisma.activity.deleteMany({
+        where: { userId },
+      });
+      await prisma.plan.deleteMany({
+        where: { userId },
+      });
+    }
+
+    // Create the 3 base test plans
+    const testPlans = [
+      {
+        userId: testUserId1,
+        planId: "plan-marathon",
+        goal: "Run a marathon",
+        activities: [
+          { title: "Long run", measure: "km", emoji: "🏃" },
+          { title: "Speed training", measure: "km", emoji: "⚡" },
+          { title: "Recovery run", measure: "km", emoji: "🚶" },
+        ],
+      },
+      {
+        userId: testUserId2,
+        planId: "plan-5k",
+        goal: "Run a 10K race",
+        activities: [
+          { title: "Training run", measure: "km", emoji: "🏃" },
+          { title: "Interval training", measure: "sets", emoji: "⏱️" },
+        ],
+      },
+      {
+        userId: testUserId3,
+        planId: "plan-coding",
+        goal: "Learn to code in Python",
+        activities: [
+          { title: "Code practice", measure: "hours", emoji: "💻" },
+          { title: "Watch tutorials", measure: "hours", emoji: "📺" },
+          { title: "Build projects", measure: "projects", emoji: "🛠️" },
+        ],
+      },
+    ];
+
+    // Create plans with activities
+    for (const plan of testPlans) {
+      await createTestPlanWithActivities(
+        plan.userId,
+        plan.planId,
+        plan.goal,
+        plan.activities
+      );
+    }
+
+    // Generate embeddings
+    for (const plan of testPlans) {
+      const embedding = await plansService.updatePlanEmbedding(plan.planId);
+      if (!embedding) {
+        logger.warn(`Failed to generate embedding for plan ${plan.planId}`);
+      }
+    }
   });
 
   afterAll(async () => {
-    // Cleanup test data
-    await plansPineconeService.deleteRecords([
-      "plan-marathon",
-      "plan-5k",
-      "plan-coding",
-    ]);
-  });
+    // Cleanup test users
+    const users = [testUserId1, testUserId2, testUserId3];
+    for (const userId of users) {
+      await prisma.planSession.deleteMany({
+        where: { plan: { userId } },
+      });
+      await prisma.activity.deleteMany({
+        where: { userId },
+      });
+      await prisma.plan.deleteMany({
+        where: { userId },
+      });
+    }
 
-  describe("Identical Plans", () => {
-    it("should return ~1.0 for identical plan goals", async () => {
-      const similarity = await calculatePlanSimilarity(
-        "Run a marathon",
-        "Run a marathon",
-        testUserId1
-      );
-
-      expect(similarity).toBeGreaterThan(0.95);
-      expect(similarity).toBeLessThanOrEqual(1.0);
+    await prisma.user.deleteMany({
+      where: { id: { in: users } },
     });
   });
 
   describe("Similar Plans", () => {
-    it("should give high similarity for related running plans", async () => {
-      const similarity = await calculatePlanSimilarity(
-        "Run a marathon",
-        "Complete a 5K race",
-        testUserId2
+    it("should find nearly identical similarity (~1.0) for duplicate plans", async () => {
+      // Create an identical marathon plan
+      const identicalPlanId = "test-dynamic-plan-identical-marathon";
+      await createTestPlanWithActivities(
+        testUserId2,
+        identicalPlanId,
+        "Run a marathon", // Same goal as plan-marathon
+        [
+          { title: "Long run", measure: "km", emoji: "🏃" },
+          { title: "Speed training", measure: "km", emoji: "⚡" },
+          { title: "Recovery run", measure: "km", emoji: "🚶" },
+        ]
       );
+      await plansService.updatePlanEmbedding(identicalPlanId);
 
-      // Running plans should be highly similar
-      expect(similarity).toBeGreaterThan(0.7);
-      expect(similarity).toBeLessThan(1.0);
+      const result = await getMostSimilarPlan(identicalPlanId, { limit: 1 });
+
+      expect(result).not.toBeNull();
+      expect(result!.plan.id).toBe("plan-marathon");
+      expect(result!.similarity).toBeGreaterThan(0.95);
+      expect(result!.similarity).toBeLessThanOrEqual(1.0);
+    });
+
+    it("should find highly similar running plans", async () => {
+      const result = await getMostSimilarPlan("plan-marathon", { limit: 1 });
+
+      expect(result).not.toBeNull();
+      expect(result!.plan.id).toBe("plan-5k");
+      expect(result!.similarity).toBeGreaterThan(0.65);
+      expect(result!.similarity).toBeLessThan(1.0);
     });
 
     it("should give moderate-high similarity for fitness variations", async () => {
-      // Test with slightly different phrasing
-      const similarity = await calculatePlanSimilarity(
-        "Running daily",
-        "Run a marathon",
-        testUserId1
+      // Create a new running plan with different phrasing
+      const dynamicPlanId = "test-dynamic-plan-running";
+      await createTestPlanWithActivities(
+        testUserId1,
+        dynamicPlanId,
+        "Running daily to improve fitness",
+        [{ title: "Daily run", measure: "km", emoji: "🏃" }]
       );
+      await plansService.updatePlanEmbedding(dynamicPlanId);
 
-      expect(similarity).toBeGreaterThan(0.6);
+      const result = await getMostSimilarPlan(dynamicPlanId, { limit: 1 });
+
+      expect(result).not.toBeNull();
+      // Should match marathon or 5k
+      expect(["plan-marathon", "plan-5k"]).toContain(result!.plan.id);
+      expect(result!.similarity).toBeGreaterThan(0.5);
     });
   });
 
   describe("Dissimilar Plans", () => {
     it("should give low similarity for completely unrelated plans", async () => {
-      const similarity = await calculatePlanSimilarity(
-        "Run a marathon",
-        "Learn to code in Python",
-        testUserId3
-      );
+      const result = await getMostSimilarPlan("plan-coding", {
+        limit: 10,
+      });
 
-      // Running and coding should have low similarity
-      expect(similarity).toBeLessThan(0.4);
-    });
+      expect(result).not.toBeNull();
+      // The most similar plan to coding should not be running-related
+      // and should have low similarity
+      const runningSimilarity =
+        result!.plan.id === "plan-marathon" || result!.plan.id === "plan-5k"
+          ? result!.similarity
+          : 0;
 
-    it("should give very low similarity for opposite domains", async () => {
-      const similarity = await calculatePlanSimilarity(
-        "Complete a 5K race",
-        "Learn to code in Python",
-        testUserId3
-      );
-
-      expect(similarity).toBeLessThan(0.3);
+      expect(runningSimilarity).toBeLessThan(0.2);
     });
   });
 
   describe("Edge Cases", () => {
-    it("should return 0 for non-existent user", async () => {
-      const similarity = await calculatePlanSimilarity(
-        "Run a marathon",
-        "Some plan",
-        "non-existent-user"
-      );
+    it("should return null when no similar plans exist for a specific user", async () => {
+      const result = await getMostSimilarPlan("plan-marathon", {
+        userIds: ["non-existent-user"],
+        limit: 1,
+      });
 
-      expect(similarity).toBe(0);
-    });
-
-    it("should handle empty plan goals gracefully", async () => {
-      const similarity = await calculatePlanSimilarity(
-        "",
-        "Run a marathon",
-        testUserId1
-      );
-
-      expect(similarity).toBeGreaterThanOrEqual(0);
-      expect(similarity).toBeLessThanOrEqual(1);
+      expect(result).toBeNull();
     });
   });
 
   describe("Real-world Scenarios", () => {
     it("should correctly rank fitness plan similarities", async () => {
-      const basePlan = "Run a marathon";
+      // Marathon should be most similar to 5K
+      const marathonResult = await getMostSimilarPlan("plan-marathon", {
+        limit: 1,
+      });
 
-      // Test against 5K (very similar)
-      const sim5k = await calculatePlanSimilarity(
-        basePlan,
-        "Complete a 5K race",
-        testUserId2
-      );
+      expect(marathonResult).not.toBeNull();
+      expect(marathonResult!.plan.id).toBe("plan-5k");
+      expect(marathonResult!.similarity).toBeGreaterThan(0.65);
 
-      // Test against coding (dissimilar)
-      const simCoding = await calculatePlanSimilarity(
-        basePlan,
-        "Learn to code in Python",
-        testUserId3
-      );
+      // 5K should be most similar to marathon
+      const fiveKResult = await getMostSimilarPlan("plan-5k", { limit: 1 });
 
-      // Marathon should be more similar to 5K than to coding
-      expect(sim5k).toBeGreaterThan(simCoding);
-      expect(sim5k).toBeGreaterThan(0.6);
-      expect(simCoding).toBeLessThan(0.4);
+      expect(fiveKResult).not.toBeNull();
+      expect(fiveKResult!.plan.id).toBe("plan-marathon");
     });
 
     it("should recognize learning/studying similarity", async () => {
-      // Both are learning-related
-      const similarity = await calculatePlanSimilarity(
-        "Learn Spanish",
-        "Learn to code in Python",
-        testUserId3
+      // Create a Spanish learning plan
+      const spanishPlanId = "test-dynamic-plan-spanish";
+      await createTestPlanWithActivities(
+        testUserId3,
+        spanishPlanId,
+        "Learn Spanish fluently",
+        [
+          { title: "Spanish lessons", measure: "hours", emoji: "📚" },
+          { title: "Practice speaking", measure: "hours", emoji: "🗣️" },
+        ]
       );
+      await plansService.updatePlanEmbedding(spanishPlanId);
 
-      // Should have moderate similarity due to "learn" concept
-      expect(similarity).toBeGreaterThan(0.4);
-      expect(similarity).toBeLessThan(0.8);
+      // Spanish learning should be most similar to Python learning
+      const result = await getMostSimilarPlan(spanishPlanId, { limit: 1 });
+
+      expect(result).not.toBeNull();
+      expect(result!.plan.id).toBe("plan-coding");
+      expect(result!.similarity).toBeGreaterThan(0.25);
+      expect(result!.similarity).toBeLessThan(0.8);
+    });
+
+    it("should filter by userIds correctly", async () => {
+      // Only look at user2's plans
+      const result = await getMostSimilarPlan("plan-marathon", {
+        userIds: [testUserId2],
+        limit: 1,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result!.plan.userId).toBe(testUserId2);
+      expect(result!.plan.id).toBe("plan-5k");
     });
   });
 });

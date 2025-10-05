@@ -1,8 +1,10 @@
 import { TelegramService } from "@/services/telegramService";
 import { User } from "@tsw/prisma";
+import { Plan as CompletePlan } from "@tsw/prisma/types";
 import { NextFunction, Request, Response, Router } from "express";
 import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
+import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
@@ -588,7 +590,7 @@ router.post(
         | undefined;
       if (forceReset) {
         logger.info("Force reset requested - rebuilding all plan embeddings");
-        resetResult = await recommendationsService.forceResetPlanEmbeddings();
+        resetResult = await plansService.forceResetPlanEmbeddings();
       }
 
       // Update user embedding
@@ -657,7 +659,7 @@ router.get(
   }
 );
 
-// Debug plan similarity for a specific user
+// Debug plan similarity for a specific user (using pgvector)
 router.get(
   "/debug-plan-similarity/:userId",
   adminAuth,
@@ -668,10 +670,6 @@ router.get(
       if (!userId) {
         return res.status(400).json({ error: "userId is required" });
       }
-
-      const { plansPineconeService } = await import(
-        "../services/pineconeService"
-      );
 
       // Get user and their plans
       const user = await prisma.user.findUnique({
@@ -727,12 +725,10 @@ router.get(
         take: 20,
       });
 
-      const debugResults = [];
+      const debugResults: any[] = [];
 
-      // NOTE TO SELF: WE WERE FIXING RECOMMENDATIONS. PINECONE SEEMS TO BE EMPTY?
-
-      // Test each of user's plans against Pinecone
-      for (const userPlan of user.plans) {
+      // Test each of user's plans using pgvector
+      for (const userPlan of user.plans as CompletePlan[]) {
         logger.info(
           `\n=== Testing plan: "${userPlan.goal}" (${userPlan.id}) ===`
         );
@@ -740,13 +736,41 @@ router.get(
         const userIds = otherUsers.map((u) => u.id);
 
         try {
-          const planSearchResults = await plansPineconeService.query(
-            userPlan.goal,
-            50,
-            { user_id: { $in: userIds } }
-          );
+          if (!userPlan.embedding) {
+            debugResults.push({
+              userPlan: {
+                id: userPlan.id,
+                goal: userPlan.goal,
+                emoji: userPlan.emoji,
+              },
+              error: "Plan has no embedding",
+            });
+            continue;
+          }
 
-          logger.info(`Pinecone returned ${planSearchResults.length} results`);
+          const planSearchResults = await prisma.$queryRaw<
+            Array<{
+              user_id: string;
+              plan_id: string;
+              plan_goal: string;
+              similarity: number;
+            }>
+          >`
+            SELECT
+              "userId" as user_id,
+              id as plan_id,
+              goal as plan_goal,
+              1 - ("embedding" <=> ${JSON.stringify(userPlan.embedding)}::vector) as similarity
+            FROM plans
+            WHERE "userId" = ANY(${userIds}::text[])
+              AND "deletedAt" IS NULL
+              AND ("finishingDate" IS NULL OR "finishingDate" > NOW())
+              AND "embedding" IS NOT NULL
+            ORDER BY "embedding" <=> ${JSON.stringify(userPlan.embedding)}::vector
+            LIMIT 50
+          `;
+
+          logger.info(`pgvector returned ${planSearchResults.length} results`);
 
           const planDebug = {
             userPlan: {
@@ -754,14 +778,15 @@ router.get(
               goal: userPlan.goal,
               emoji: userPlan.emoji,
             },
-            pineconeResults: planSearchResults.map((result) => {
+            pgvectorResults: planSearchResults.map((result) => {
               const matchedUser = otherUsers.find(
-                (u) => u.id === result.fields.user_id
+                (u) => u.id === result.user_id
               );
               return {
-                userId: result.fields.user_id,
+                userId: result.user_id,
                 username: matchedUser?.username,
-                score: result.score,
+                score: result.similarity,
+                matchedPlanGoal: result.plan_goal,
                 theirPlans: matchedUser?.plans.map((p) => ({
                   goal: p.goal,
                   emoji: p.emoji,
@@ -775,16 +800,14 @@ router.get(
 
           // Log details
           for (const result of planSearchResults.slice(0, 5)) {
-            const matchedUser = otherUsers.find(
-              (u) => u.id === result.fields.user_id
-            );
+            const matchedUser = otherUsers.find((u) => u.id === result.user_id);
             logger.info(
-              `  - ${matchedUser?.username || result.fields.user_id}: ${result.score} - Plans: ${matchedUser?.plans.map((p) => p.goal).join(", ")}`
+              `  - ${matchedUser?.username || result.user_id}: ${result.similarity} - Plans: ${matchedUser?.plans.map((p) => p.goal).join(", ")}`
             );
           }
         } catch (error) {
           logger.error(
-            `Error querying Pinecone for plan ${userPlan.id}:`,
+            `Error querying pgvector for plan ${userPlan.id}:`,
             error
           );
           debugResults.push({

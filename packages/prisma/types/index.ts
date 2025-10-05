@@ -65,4 +65,5 @@ export type PlanProgressData = {
 export type Plan = Omit<PrismaPlan, "milestones" | "progressState"> & {
   milestones: PlanMilestone[];
   progressState: PlanProgressState;
+  embedding: number[] | null;
 };

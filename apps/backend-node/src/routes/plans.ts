@@ -5,7 +5,6 @@ import { Response, Router } from "express";
 import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
-import { plansPineconeService } from "../services/pineconeService";
 import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
 import { logger } from "../utils/logger";
@@ -71,24 +70,11 @@ const PlanUpsertSchema = z.object({
 });
 
 /**
- * Update plan embedding in Pinecone using readable plan text
+ * Update plan embedding using the plansService
  */
-async function updatePlanEmbedding(
-  planId: string,
-  userId: string
-): Promise<void> {
+async function updatePlanEmbedding(planId: string): Promise<void> {
   try {
-    const readablePlan = await recommendationsService.getReadablePlan(planId);
-    if (readablePlan) {
-      await plansPineconeService.upsertRecords([
-        {
-          text: readablePlan,
-          identifier: planId,
-          metadata: { user_id: userId },
-        },
-      ]);
-      logger.info(`Updated plan embedding for plan ${planId}`);
-    }
+    await plansService.updatePlanEmbedding(planId);
   } catch (error) {
     logger.error(`Failed to update plan embedding for plan ${planId}:`, error);
     // Don't throw the error to avoid breaking plan operations
@@ -661,7 +647,7 @@ router.post(
       });
 
       // Update plan embedding in background
-      updatePlanEmbedding(planId, req.user!.id);
+      updatePlanEmbedding(planId);
 
       // Mark user recommendations as outdated
       markUserRecommendationsOutdated(req.user!.id);
@@ -988,7 +974,7 @@ router.post(
           return newPlan;
         });
 
-        updatePlanEmbedding(result.id, req.user!.id);
+        updatePlanEmbedding(result.id);
 
         // Mark user recommendations as outdated
         recommendationsService.computeRecommendedUsers(req.user!.id);
