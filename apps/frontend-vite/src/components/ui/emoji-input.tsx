@@ -35,15 +35,16 @@ export const isOneEmoji = (str: string): boolean => {
 
   // Base emoji pattern
   const basePattern = patterns.join('|');
-  
+
   // Modifiers and joiners
   const variationSelector = '[\u{FE00}-\u{FE0F}]';
   const skinToneModifier = '[\u{1F3FB}-\u{1F3FF}]';
   const zwj = '\u200D';
-  
+  const regionalIndicator = '[\u{1F1E6}-\u{1F1FF}]';
+
   // Complete pattern that matches exactly one emoji (with optional modifiers and ZWJ sequences)
   const emojiRegex = new RegExp(
-    `^(?:${basePattern})(?:${variationSelector}|${skinToneModifier})?(?:${zwj}(?:${basePattern})(?:${variationSelector}|${skinToneModifier})?)*$`,
+    `^(?:${regionalIndicator}{2}|(?:${basePattern})(?:${variationSelector}|${skinToneModifier})?(?:${zwj}(?:${basePattern})(?:${variationSelector}|${skinToneModifier})?)*)$`,
     'u'
   );
 
