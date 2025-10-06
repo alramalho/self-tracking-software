@@ -2,6 +2,8 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRecommendations } from "@/contexts/recommendations";
 import { useCurrentUser } from "@/contexts/users";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
 import { useNavigate } from "@tanstack/react-router";
 import { Info, UserCheck, UserPlus } from "lucide-react";
 import React, { useState } from "react";
@@ -29,6 +31,8 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
   );
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortBy>("overall");
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
   // Filter recommendations by selected plan
   const userRecommendations = recommendations.filter((rec) => {
@@ -124,12 +128,12 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
     <>
       {/* Sort Controls */}
       <div className="flex items-center gap-2 mb-6 flex-wrap">
-        <span className="text-sm text-gray-600 mr-2">Sort by:</span>
+      <span className="text-sm text-gray-600 mr-2">Sort by:</span>
         <button
           onClick={() => setSortBy("overall")}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "overall"
-              ? "bg-blue-600 text-white"
+              ? `${variants.bg} text-white`
               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
@@ -139,7 +143,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           onClick={() => setSortBy("goals")}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "goals"
-              ? "bg-blue-600 text-white"
+              ? `${variants.bg} text-white`
               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
@@ -149,7 +153,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           onClick={() => setSortBy("location")}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "location"
-              ? "bg-blue-600 text-white"
+              ? `${variants.bg} text-white`
               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
@@ -159,7 +163,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           onClick={() => setSortBy("age")}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "age"
-              ? "bg-blue-600 text-white"
+              ? `${variants.bg} text-white`
               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
@@ -196,12 +200,11 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           return (
             <div
               key={user.id}
-              className="bg-white/50 p-6 rounded-2xl border border-gray-200 hover:shadow-lg transition-all relative"
+              className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-all relative cursor-pointer"
+              onClick={() => navigate({ to: `/profile/${user.username}` })}
             >
-              <div
-                className="flex items-start justify-between mb-4 cursor-pointer"
-                onClick={() => navigate({ to: `/profile/${user.username}` })}
-              >
+              {/* Header with icons - Avatar + Plan Emoji */}
+              <div className="flex items-center justify-between p-6 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl flex-shrink-0">
                     {user.picture ? (
@@ -214,20 +217,17 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                       user.name?.[0] || "U"
                     )}
                   </div>
-                  <div>
-                    <h3 className="font-semibold">
-                      {user.name || user.username}
-                    </h3>
-                    <p className="text-sm text-gray-600">@{user.username}</p>
-                  </div>
+                  {plan && <span className="text-4xl">{plan.emoji}</span>}
                 </div>
+
+                {/* Action buttons group */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedExplainer(user.id || null);
                     }}
-                    className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
+                    className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
                       score >= 0.5
                         ? "bg-green-100 text-green-800 hover:bg-green-200"
                         : score >= 0.25
@@ -236,51 +236,51 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                     }`}
                   >
                     {Math.round(score * 100)}% match
-                    <Info size={12} />
+                    <Info size={14} />
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSendFriendRequest(user.id);
+                    }}
+                    disabled={
+                      isSendingFriendRequest ||
+                      hasSentRequest ||
+                      connectionStatus === "PENDING" ||
+                      connectionStatus === "ACCEPTED"
+                    }
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={
+                      hasSentRequest || connectionStatus === "PENDING"
+                        ? "Request Sent"
+                        : connectionStatus === "ACCEPTED"
+                        ? "Friends"
+                        : "Add Friend"
+                    }
+                  >
+                    {hasSentRequest ||
+                    connectionStatus === "PENDING" ||
+                    connectionStatus === "ACCEPTED" ? (
+                      <UserCheck className="h-6 w-6 text-green-600" />
+                    ) : (
+                      <UserPlus className="h-6 w-6 text-gray-600" />
+                    )}
                   </button>
                 </div>
               </div>
-              {plan && (
-                <div
-                  className="text-sm text-gray-700 mb-4 cursor-pointer"
-                  onClick={() => navigate({ to: `/profile/${user.username}` })}
-                >
-                  <span className="mr-2">{plan.emoji}</span>
-                  {plan.goal}
-                </div>
-              )}
-              <div className="flex justify-center">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSendFriendRequest(user.id);
-                  }}
-                  disabled={
-                    isSendingFriendRequest ||
-                    hasSentRequest ||
-                    connectionStatus === "PENDING" ||
-                    connectionStatus === "ACCEPTED"
-                  }
-                  className="px-4 py-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-gray-200"
-                  title={
-                    hasSentRequest || connectionStatus === "PENDING"
-                      ? "Request Sent"
-                      : connectionStatus === "ACCEPTED"
-                      ? "Friends"
-                      : "Add Friend"
-                  }
-                >
-                  {hasSentRequest ||
-                  connectionStatus === "PENDING" ||
-                  connectionStatus === "ACCEPTED" ? (
-                    <UserCheck className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <>
-                      <span className="text-sm">Add Friend</span>
-                      <UserPlus className="h-5 w-5 text-gray-600" />
-                    </>
-                  )}
-                </button>
+
+              {/* Card content */}
+              <div className="px-6 pb-6">
+                <h3 className="text-xl font-semibold mb-1">
+                  {user.name || user.username}
+                </h3>
+
+                {plan && (
+                  <p className="text-sm text-gray-600">
+                    {plan.goal}
+                  </p>
+                )}
               </div>
             </div>
           );

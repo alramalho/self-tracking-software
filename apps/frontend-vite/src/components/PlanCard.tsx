@@ -154,8 +154,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
         <div className="absolute top-2 right-2 flex gap-1 items-center justify-end">
           {isCoached && (
             <div className="flex items-center justify-center gap-1 mr-2">
-              <span className="text-xs text-gray-500">Coached</span>
-              <BadgeCheck className={cn("h-4 w-4", variants.text)} />
+              <span className="text-sm text-gray-500">Coached</span>
+              <BadgeCheck className={cn("h-5 w-5", variants.text)} />
             </div>
           )}
           {!hideInviteButton && (
@@ -166,14 +166,14 @@ const PlanCard: React.FC<PlanCardProps> = ({
             onClick={handleEditClick}
             className="text-gray-500 hover:text-gray-700"
           >
-            <Pencil className="h-4 w-4 mr-1" />
+            <Pencil className="h-5 w-5 mr-1" />
           </button>
           <button
             data-testid="plan-delete-button"
             onClick={handleDeleteClick}
             className="text-red-400 hover:text-red-600"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-5 w-5" />
           </button>
         </div>
       </div>
