@@ -1,8 +1,8 @@
 "use client"
 
-import { format } from "date-fns"
+import { format } from "date-fns";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 interface DatePickerProps {
   selected?: Date;

@@ -10,7 +10,6 @@ export const CollapsibleSelfUserCard: React.FC = () => {
     return null;
   }
 
-  // Get the first plan (minimum sortOrder)
   const firstPlan = plans?.reduce((min, plan) => {
     if (!plan.sortOrder && !min.sortOrder) return min;
     if (!plan.sortOrder) return min;
