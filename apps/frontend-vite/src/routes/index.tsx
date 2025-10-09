@@ -83,13 +83,37 @@ function HomePage() {
     setIsNotificationsOpen(false);
   };
 
+  // Show loader for unauthenticated users (prevents flash before redirect)
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
+        <div className="bg-gray-50 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm">
+          <div className="flex justify-between items-center">
+            <div className="flex flex-row gap-1 items-center">
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <Skeleton className="h-6 w-32" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="w-9 h-9 rounded-full" />
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <Skeleton className="w-10 h-10 rounded-full" />
+            </div>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-20 w-full rounded-lg" />
+          <Skeleton className="h-20 w-full rounded-lg" />
+          <Skeleton className="h-20 w-full rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
   if (
     isLoaded &&
     isSignedIn &&
     (!hasLoadedUserData || !currentUser?.onboardingCompletedAt)
   ) {
-    // todo: this !currentUser?.onboardingCompletedAt should not be necessary, but somehow general initializer letting it go through to get here?
-
     return (
       <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
         {/* Header Skeleton */}
