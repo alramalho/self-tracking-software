@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { logGlobalError } from "@/utils/errorLogger";
-import { ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 
