@@ -19,7 +19,7 @@ Drawer.displayName = "Drawer"
 
 const DrawerTrigger = DrawerPrimitive.Trigger
 
-const DrawerPortal = DrawerPrimitive.Portal
+const DrawerPortal = DrawerPrimitive.Portal as React.FC<React.PropsWithChildren>
 
 const DrawerClose = DrawerPrimitive.Close
 
@@ -39,7 +39,6 @@ const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
-  // @ts-expect-error idk
   <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content
