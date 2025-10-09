@@ -1,6 +1,8 @@
 import { Prisma } from "@tsw/prisma";
+import { type PlanProgressData } from "@tsw/prisma/types";
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
+import { normalizePlanProgress } from "../plans-progress/service";
 
 type BasicUserApiResponse = Prisma.UserGetPayload<{
   include: {
@@ -31,7 +33,7 @@ type BasicUserApiResponse = Prisma.UserGetPayload<{
   };
 }>;
 
-type FullUserApiResponse = Prisma.UserGetPayload<{
+type FullUserApiResponseBase = Prisma.UserGetPayload<{
   include: {
     connectionsFrom: {
       include: {
@@ -97,8 +99,14 @@ type FullUserApiResponse = Prisma.UserGetPayload<{
   };
 }>;
 
+type FullUserApiResponse = Omit<FullUserApiResponseBase, 'plans'> & {
+  plans: Array<FullUserApiResponseBase['plans'][number] & { progress: any }>;
+};
+
 export type HydratedCurrentUser = BasicUserApiResponse;
-export type HydratedUser = FullUserApiResponse;
+export type HydratedUser = Omit<FullUserApiResponseBase, 'plans'> & {
+  plans: Array<FullUserApiResponseBase['plans'][number] & { progress: PlanProgressData }>;
+};
 
 function normalizeBasicUser(user: BasicUserApiResponse): HydratedCurrentUser {
   return normalizeApiResponse<HydratedCurrentUser>(user, [
@@ -113,7 +121,7 @@ function normalizeBasicUser(user: BasicUserApiResponse): HydratedCurrentUser {
 }
 
 function normalizeFullUser(user: FullUserApiResponse): HydratedUser {
-  return normalizeApiResponse<HydratedUser>(user, [
+  const normalized = normalizeApiResponse<Omit<HydratedUser, 'plans'>>(user, [
     "createdAt",
     "updatedAt",
     "lastActiveAt",
@@ -136,6 +144,14 @@ function normalizeFullUser(user: FullUserApiResponse): HydratedUser {
     "activityEntries.comments.deletedAt",
     "activityEntries.reactions.createdAt",
   ]);
+
+  return {
+    ...normalized,
+    plans: user.plans.map(plan => ({
+      ...plan,
+      progress: normalizePlanProgress(plan.progress)
+    }))
+  };
 }
 
 export async function getCurrentUserBasicData(

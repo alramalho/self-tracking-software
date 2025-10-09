@@ -1,11 +1,9 @@
 import { type CompletePlan } from "@/contexts/plans";
-import { usePlanProgress } from "@/contexts/plans-progress";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
-import { format, startOfWeek } from "date-fns";
+import { format, isSameWeek, startOfWeek } from "date-fns";
 import React, { useEffect, useMemo, useState } from "react";
 import ActivityEditor from "./ActivityEditor";
 import BaseHeatmapRenderer from "./BaseHeatmapRenderer";
-
 interface PlanActivityEntriesRendererProps {
   plan: CompletePlan;
   activities: Activity[];
@@ -20,7 +18,9 @@ const PlanActivityEntriesRenderer: React.FC<
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
-  const { isWeekCompleted } = usePlanProgress(plan.id);
+  const isWeekCompleted = (startDate: Date) => plan.progress.weeks.find((week) =>
+    isSameWeek(week.startDate, startDate)
+  )?.isCompleted ?? false;
 
   const planActivityEntries = activityEntries.filter((e) =>
     plan.activities?.map((a) => a.id).includes(e.activityId)

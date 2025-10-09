@@ -1,28 +1,28 @@
-import ActivityEntryEditor from '@/components/ActivityEntryEditor'
-import ActivityEntryPhotoCard from '@/components/ActivityEntryPhotoCard'
-import ActivityGridRenderer from '@/components/ActivityGridRenderer'
-import { BadgeCard } from '@/components/BadgeCard'
-import BadgeExplainerPopover from '@/components/BadgeExplainerPopover'
-import Divider from '@/components/Divider'
-import { FireAnimation } from '@/components/FireBadge'
-import MedalExplainerPopover from '@/components/MedalExplainerPopover'
-import NeonCard from '@/components/NeonGradientCard'
-import PlanActivityEntriesRenderer from '@/components/PlanActivityEntriesRenderer'
+import ActivityEntryEditor from "@/components/ActivityEntryEditor";
+import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
+import ActivityGridRenderer from "@/components/ActivityGridRenderer";
+import { BadgeCard } from "@/components/BadgeCard";
+import BadgeExplainerPopover from "@/components/BadgeExplainerPopover";
+import Divider from "@/components/Divider";
+import { FireAnimation } from "@/components/FireBadge";
+import MedalExplainerPopover from "@/components/MedalExplainerPopover";
+import NeonCard from "@/components/NeonGradientCard";
+import PlanActivityEntriesRenderer from "@/components/PlanActivityEntriesRenderer";
 import ProfileSettingsPopover, {
   type ActiveView,
-} from '@/components/profile/ProfileSettingsPopover'
-import { ProgressRing } from '@/components/ProgressRing'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { usePlansProgress, useUserProgress } from '@/contexts/plans-progress'
-import { useAccountLevel } from '@/hooks/useAccountLevel'
-import { useShareOrCopy } from '@/hooks/useShareOrCopy'
-import { useUnifiedProfileData } from '@/hooks/useUnifiedProfileData'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { type ActivityEntry } from '@tsw/prisma'
-import { subDays } from 'date-fns'
+} from "@/components/profile/ProfileSettingsPopover";
+import { ProgressRing } from "@/components/ProgressRing";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAccountLevel } from "@/hooks/useAccountLevel";
+import { useShareOrCopy } from "@/hooks/useShareOrCopy";
+import { useUnifiedProfileData } from "@/hooks/useUnifiedProfileData";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { type ActivityEntry } from "@tsw/prisma";
+import { type PlanProgressData } from "@tsw/prisma/types";
+import { subDays } from "date-fns";
 import {
   ChartArea,
   Check,
@@ -37,43 +37,70 @@ import {
   UserPlus,
   UserX,
   X,
-} from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { toast } from 'react-hot-toast'
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
 
-export const Route = createFileRoute('/profile/$username')({
+export const Route = createFileRoute("/profile/$username")({
   component: ProfilePage,
-})
+});
 
-type TimeRange = "60 Days" | "120 Days" | "180 Days"
+type TimeRange = "60 Days" | "120 Days" | "180 Days";
 
 // Utility function to convert TimeRange to number of days
 export const getTimeRangeDays = (timeRange: TimeRange): number => {
   switch (timeRange) {
     case "60 Days":
-      return 60
+      return 60;
     case "120 Days":
-      return 120
+      return 120;
     case "180 Days":
-      return 180
+      return 180;
     default:
-      return 60
+      return 60;
   }
-}
+};
 
 // Helper to check if plan is expired
-export const isPlanExpired = (plan: { finishingDate: Date | null }): boolean => {
-  if (!plan.finishingDate) return false
-  return plan.finishingDate < new Date()
+export const isPlanExpired = (plan: {
+  finishingDate: Date | null;
+}): boolean => {
+  if (!plan.finishingDate) return false;
+  return plan.finishingDate < new Date();
+};
+
+function userifyPlansProgress(plansProgress: PlanProgressData[]): {
+  totalStreaks: number;
+  totalHabits: number;
+  totalLifestyles: number;
+} {
+  return {
+    totalStreaks: plansProgress.reduce((acc, planProgress) => {
+      return acc + (planProgress.achievement?.streak || 0);
+    }, 0),
+    totalHabits: plansProgress.reduce(
+      (acc, planProgress) =>
+        acc + (planProgress.habitAchievement?.isAchieved ? 1 : 0),
+      0
+    ),
+    totalLifestyles: plansProgress.reduce(
+      (acc, planProgress) =>
+        acc + (planProgress.lifestyleAchievement?.isAchieved ? 1 : 0),
+      0
+    ),
+  };
 }
 
 function ProfilePage() {
-  const [showUserProfile, setShowUserProfile] = useState(false)
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const [initialActiveView, setInitialActiveView] = useState<string | null>(
     null
-  )
-  const { username } = Route.useParams()
-  const searchParams = Route.useSearch() as { redirectTo?: string; activeView?: string }
+  );
+  const { username } = Route.useParams();
+  const searchParams = Route.useSearch() as {
+    redirectTo?: string;
+    activeView?: string;
+  };
   const {
     profileData,
     isLoading: isProfileDataLoading,
@@ -82,14 +109,16 @@ function ProfilePage() {
     acceptFriendRequest,
     rejectFriendRequest,
     currentUser,
-  } = useUnifiedProfileData(username)
-  const { totalStreaks, totalHabits, totalLifestyles } = useUserProgress(
-    profileData?.id
-  )
+  } = useUnifiedProfileData(username);
+  const { totalStreaks, totalHabits, totalLifestyles } = useMemo(() => {
+    return userifyPlansProgress(
+      profileData?.plans?.map((plan) => plan.progress) || []
+    );
+  }, [profileData?.plans]);
 
   // Extract activities and activityEntries from profileData for consistency
-  const activities = profileData?.activities || []
-  const activityEntries = profileData?.activityEntries || []
+  const activities = profileData?.activities || [];
+  const activityEntries = profileData?.activityEntries || [];
 
   // For connection requests, we always use the current user data regardless of profile being viewed
   const currentUserSentConnectionRequests = useMemo(
@@ -98,65 +127,63 @@ function ProfilePage() {
         (conn) => conn.status === "PENDING"
       ) || [],
     [currentUser?.connectionsFrom]
-  )
+  );
   const currentUserReceivedConnectionRequests = useMemo(
     () =>
       currentUser?.connectionsTo?.filter((conn) => conn.status === "PENDING") ||
       [],
     [currentUser?.connectionsTo]
-  )
+  );
 
   const profileActivePlans = profileData?.plans?.filter(
     (p) => !isPlanExpired({ finishingDate: p.finishingDate })
-  )
+  );
   const [showEditActivityEntry, setShowActivityToEdit] = useState<
     ActivityEntry | undefined
-  >(undefined)
+  >(undefined);
   const userInformalName = profileData?.name?.includes(" ")
     ? profileData.name.split(" ")[0]
-    : profileData?.username
+    : profileData?.username;
 
-  const planIds = profileActivePlans?.map((plan) => plan.id) || []
-  const { data: plansProgressData, isLoading: isPlansProgressLoading } =
-    usePlansProgress(planIds)
-  const [timeRange, setTimeRange] = useState<TimeRange>("60 Days")
-  const [endDate, setEndDate] = useState(new Date())
-  const { shareOrCopyLink, isShareSupported } = useShareOrCopy()
-  const profilePaidPlanType = profileData?.planType
-  const redirectTo = searchParams?.redirectTo
-  const [progressExplainerOpen, setProgressExplainerOpen] = useState(false)
+  const planIds = profileActivePlans?.map((plan) => plan.id) || [];
+  const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
+  const [endDate, setEndDate] = useState(new Date());
+  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
+  const profilePaidPlanType = profileData?.planType;
+  const redirectTo = searchParams?.redirectTo;
+  const [progressExplainerOpen, setProgressExplainerOpen] = useState(false);
   const [badgeExplainer, setBadgeExplainer] = useState<{
     open: boolean;
     planIds: string[];
-    badgeType: 'streaks' | 'habits' | 'lifestyles' | null;
-  }>({ open: false, planIds: [], badgeType: null })
+    badgeType: "streaks" | "habits" | "lifestyles" | null;
+  }>({ open: false, planIds: [], badgeType: null });
 
   useEffect(() => {
     if (profileData?.username && !username && isOwnProfile) {
-      window.history.replaceState(null, "", `/profile/${profileData.username}`)
+      window.history.replaceState(null, "", `/profile/${profileData.username}`);
     }
-  }, [profileData?.username, username, isOwnProfile])
+  }, [profileData?.username, username, isOwnProfile]);
 
   useEffect(() => {
-    const activeView = searchParams?.activeView
+    const activeView = searchParams?.activeView;
     if (activeView && isOwnProfile) {
-      setShowUserProfile(true)
-      setInitialActiveView(activeView)
+      setShowUserProfile(true);
+      setInitialActiveView(activeView);
     }
-  }, [searchParams, isOwnProfile])
+  }, [searchParams, isOwnProfile]);
 
   const handleSendConnectionRequest = async () => {
     if (profileData) {
-      sendFriendRequest(profileData.id)
+      sendFriendRequest(profileData.id);
     }
-  }
+  };
 
   const activitiesNotInPlans = useMemo(() => {
     const plansActivityIds = new Set(
       profileActivePlans?.flatMap((plan) =>
         plan.activities?.map((a) => a.id)
       ) || []
-    )
+    );
 
     const activitiesNotInPlans = profileData?.activities?.filter(
       (activity) =>
@@ -164,31 +191,31 @@ function ProfilePage() {
         profileData?.activityEntries?.some(
           (entry) => entry.activityId === activity.id
         )
-    )
+    );
 
-    return activitiesNotInPlans
+    return activitiesNotInPlans;
   }, [
     profileActivePlans,
     profileData?.activities,
     profileData?.activityEntries,
-  ])
+  ]);
 
   const handleTimeRangeChange = (value: TimeRange) => {
-    setTimeRange(value)
-    setEndDate(new Date())
-  }
+    setTimeRange(value);
+    setEndDate(new Date());
+  };
 
   const hasPendingReceivedConnectionRequest = useMemo(() => {
     return currentUserReceivedConnectionRequests?.some((request) => {
-      return request.fromId === profileData?.id
-    })
-  }, [currentUserReceivedConnectionRequests, profileData?.id])
+      return request.fromId === profileData?.id;
+    });
+  }, [currentUserReceivedConnectionRequests, profileData?.id]);
 
   const hasPendingSentConnectionRequest = useMemo(() => {
     return currentUserSentConnectionRequests?.some((request) => {
-      return request.toId === profileData?.id
-    })
-  }, [currentUserSentConnectionRequests, profileData?.id])
+      return request.toId === profileData?.id;
+    });
+  }, [currentUserSentConnectionRequests, profileData?.id]);
 
   const friends = useMemo(
     () => [
@@ -200,17 +227,17 @@ function ProfilePage() {
         ?.map((conn) => conn.from) || []),
     ],
     [profileData?.connectionsFrom, profileData?.connectionsTo]
-  )
+  );
   const isFriend = useMemo(() => {
-    if (isOwnProfile) return false
+    if (isOwnProfile) return false;
 
-    return friends?.some((friend) => friend.id === currentUser?.id)
-  }, [friends, currentUser?.id, isOwnProfile])
+    return friends?.some((friend) => friend.id === currentUser?.id);
+  }, [friends, currentUser?.id, isOwnProfile]);
 
   // Calculate total activities logged (hardcoded if you don't know where they come from)
-  const totalActivitiesLogged = activityEntries?.length || 0 // Fallback to hardcoded value
+  const totalActivitiesLogged = activityEntries?.length || 0; // Fallback to hardcoded value
 
-  const accountLevel = useAccountLevel(totalActivitiesLogged)
+  const accountLevel = useAccountLevel(totalActivitiesLogged);
 
   if (isProfileDataLoading) {
     return (
@@ -259,7 +286,7 @@ function ProfilePage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!profileData) {
@@ -273,7 +300,7 @@ function ProfilePage() {
           Go Back
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -334,7 +361,10 @@ function ProfilePage() {
 
           {/* TikTok-style stats */}
           <div className="flex justify-center space-x-8 mb-6">
-            <Link to={`/friends/$username`} params={{ username: profileData?.username || "" }}>
+            <Link
+              to={`/friends/$username`}
+              params={{ username: profileData?.username || "" }}
+            >
               <div className="text-center cursor-pointer">
                 <p className="text-xl font-bold text-gray-900">
                   {friends?.length || 0}
@@ -357,13 +387,15 @@ function ProfilePage() {
               count={totalStreaks}
               width={70}
               height={90}
-              onClick={() => setBadgeExplainer({
-                open: true,
-                planIds: planIds,
-                badgeType: 'streaks'
-              })}
+              onClick={() =>
+                setBadgeExplainer({
+                  open: true,
+                  planIds: planIds,
+                  badgeType: "streaks",
+                })
+              }
             >
-              {isPlansProgressLoading ? (
+              {isProfileDataLoading ? (
                 <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
               ) : (
                 <>
@@ -383,13 +415,15 @@ function ProfilePage() {
               count={totalHabits}
               width={70}
               height={90}
-              onClick={() => setBadgeExplainer({
-                open: true,
-                planIds: planIds,
-                badgeType: 'habits'
-              })}
+              onClick={() =>
+                setBadgeExplainer({
+                  open: true,
+                  planIds: planIds,
+                  badgeType: "habits",
+                })
+              }
             >
-              {isPlansProgressLoading ? (
+              {isProfileDataLoading ? (
                 <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
               ) : (
                 <Sprout size={90} className="pb-2 text-lime-500 mt-5" />
@@ -399,13 +433,15 @@ function ProfilePage() {
               count={totalLifestyles}
               width={70}
               height={90}
-              onClick={() => setBadgeExplainer({
-                open: true,
-                planIds: planIds,
-                badgeType: 'lifestyles'
-              })}
+              onClick={() =>
+                setBadgeExplainer({
+                  open: true,
+                  planIds: planIds,
+                  badgeType: "lifestyles",
+                })
+              }
             >
-              {isPlansProgressLoading ? (
+              {isProfileDataLoading ? (
                 <Loader2 className="w-full h-full animate-spin mt-5 ml-5" />
               ) : (
                 <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
@@ -526,16 +562,11 @@ function ProfilePage() {
                 {profileActivePlans &&
                   profileActivePlans.length > 0 &&
                   profileActivePlans.map((plan) => {
-                    const backendProgress = plansProgressData?.find(
-                      (p) => p.plan?.id === plan.id
-                    )
-
-                    // Check achievements
+                    // Check achievements from inline progress data
                     const habitAchieved =
-                      backendProgress?.habitAchievement?.isAchieved ?? false
+                      plan.progress?.habitAchievement?.isAchieved ?? false;
                     const lifestyleAchieved =
-                      backendProgress?.lifestyleAchievement?.isAchieved ??
-                      false
+                      plan.progress?.lifestyleAchievement?.isAchieved ?? false;
 
                     return (
                       <NeonCard
@@ -576,10 +607,10 @@ function ProfilePage() {
                               open: true,
                               planIds: [plan.id],
                               badgeType: lifestyleAchieved
-                                ? 'lifestyles'
+                                ? "lifestyles"
                                 : habitAchieved
-                                ? 'habits'
-                                : null
+                                ? "habits"
+                                : null,
                             })
                           }
                         >
@@ -610,7 +641,7 @@ function ProfilePage() {
                           )}
                         />
                       </NeonCard>
-                    )
+                    );
                   })}
                 {(!profileActivePlans || profileActivePlans.length === 0) && (
                   <div className="text-center text-gray-500 py-8">
@@ -648,7 +679,7 @@ function ProfilePage() {
                     .map((entry) => {
                       const activity = activities.find(
                         (a) => a.id === entry.activityId
-                      )
+                      );
                       return (
                         <ActivityEntryPhotoCard
                           key={entry.id}
@@ -659,20 +690,23 @@ function ProfilePage() {
                           onEditClick={() => {
                             const activityToEdit = activityEntries.find(
                               (e) => e.id === entry.id
-                            )
+                            );
                             if (activityToEdit) {
-                              setShowActivityToEdit(activityToEdit)
+                              setShowActivityToEdit(activityToEdit);
                             } else {
                               console.error(
                                 `Activity ${showEditActivityEntry} to edit not found in activityEntries: ${activityEntries}`
-                              )
+                              );
                               toast.error(
                                 "Activity to edit not found! Please contact support"
-                              )
+                              );
                             }
                           }}
+                          userPlansProgressData={profileData.plans.map(
+                            (plan) => plan.progress
+                          )}
                         />
-                      )
+                      );
                     })}
                 </div>
               ) : (
@@ -711,6 +745,7 @@ function ProfilePage() {
         planIds={badgeExplainer.planIds}
         badgeType={badgeExplainer.badgeType}
         user={profileData as any}
+        userPlansProgressData={profileData?.plans?.map((plan) => plan.progress) || []}
       />
 
       {isOwnProfile && (
@@ -720,5 +755,5 @@ function ProfilePage() {
         />
       )}
     </div>
-  )
+  );
 }

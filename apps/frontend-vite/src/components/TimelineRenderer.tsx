@@ -1,6 +1,5 @@
 import ActivityEntryPhotoCard from "@/components/ActivityEntryPhotoCard";
 import { useActivities } from "@/contexts/activities/useActivities";
-import { usePlansProgress } from "@/contexts/plans-progress";
 import { useTimeline } from "@/contexts/timeline/useTimeline";
 import { useCurrentUser } from "@/contexts/users";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -42,23 +41,6 @@ const TimelineRenderer: React.FC<{
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const { activities } = useActivities();
-
-  // Extract all unique plan IDs from timeline users
-  const allTimelinePlanIds = useMemo(() => {
-    if (!timelineData?.recommendedUsers) return [];
-    
-    const planIds = new Set<string>();
-    timelineData.recommendedUsers.forEach(user => {
-      user.plans?.forEach(plan => {
-        planIds.add(plan.id);
-      });
-    });
-    
-    return Array.from(planIds);
-  }, [timelineData?.recommendedUsers]);
-
-  // Batch load all timeline plan progress
-  const { data: allTimelinePlansProgress } = usePlansProgress(allTimelinePlanIds);
 
   const friends = useMemo(() => {
     return [
@@ -263,12 +245,11 @@ const TimelineRenderer: React.FC<{
           // wacky casting, should be dealt in the query level
           if (!activity || !user || user.username === null) return null;
 
-          // Get plan progress data for this user's plans
+          // Get plan progress data for this user's plans from inline data
           const timelineUser = timelineData?.recommendedUsers?.find(u => u.id === user.id);
-          const activityPlanIds = timelineUser?.plans?.filter((plan) => plan.activities?.some((a) => a.id === activity?.id)) || [];
-          const userPlansProgress = allTimelinePlansProgress?.filter(planProgress => 
-            activityPlanIds.some(plan => plan.id === planProgress.plan.id)
-          ) || [];
+          const userPlansProgress = timelineUser?.plans
+            ?.filter((plan) => plan.activities?.some((a) => a.id === activity?.id))
+            .map(plan => plan.progress) || [];
 
           return (
             <React.Fragment key={entry.id}>
@@ -284,7 +265,7 @@ const TimelineRenderer: React.FC<{
                     planType: PlanType;
                   }
                 }
-                plansProgressData={userPlansProgress}
+                userPlansProgressData={userPlansProgress}
                 onAvatarClick={() => {
                   navigate({ to: `/profile/$username`, params: { username: user?.username || "" } });
                 }}

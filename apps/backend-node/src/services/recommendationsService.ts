@@ -21,9 +21,9 @@ export interface RecommendedUsersResponse {
   plans: Plan[];
 }
 
-const PLAN_SIM_WEIGHT = 0.6;
-const GEO_SIM_WEIGHT = 0.2;
-const AGE_SIM_WEIGHT = 0.2;
+const PLAN_SIM_WEIGHT = 0.7;
+const GEO_SIM_WEIGHT = 0.15;
+const AGE_SIM_WEIGHT = 0.15;
 
 /**
  * Compress similarity scores using sigmoid function

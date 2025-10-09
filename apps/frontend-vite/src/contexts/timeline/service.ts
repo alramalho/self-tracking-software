@@ -1,6 +1,8 @@
 import { type Activity, Prisma } from "@tsw/prisma";
+import { type PlanProgressData } from "@tsw/prisma/types";
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
+import { normalizePlanProgress } from "../plans-progress/service";
 
 export type TimelineActivityEntry = Prisma.ActivityEntryGetPayload<{
   include: {
@@ -37,7 +39,7 @@ export type TimelineActivityEntry = Prisma.ActivityEntryGetPayload<{
   };
 }>;
 
-export type TimelineUser = Prisma.UserGetPayload<{
+type TimelineUserBase = Prisma.UserGetPayload<{
   select: {
     id: true;
     username: true;
@@ -55,6 +57,12 @@ export type TimelineUser = Prisma.UserGetPayload<{
     };
   };
 }>;
+
+export type TimelineUser = Omit<TimelineUserBase, "plans"> & {
+  plans: Array<
+    TimelineUserBase["plans"][number] & { progress: PlanProgressData }
+  >;
+};
 
 export interface TimelineData {
   recommendedActivityEntries: TimelineActivityEntry[];
@@ -85,11 +93,19 @@ function normalizeActivity(activity: Activity): Activity {
 }
 
 function normalizeUser(user: TimelineUser): TimelineUser {
-  return normalizeApiResponse<TimelineUser>(user, [
+  const normalized = normalizeApiResponse<TimelineUser>(user, [
     "plans.createdAt",
     "plans.updatedAt",
     "plans.finishingDate",
   ]);
+
+  return {
+    ...normalized,
+    plans: normalized.plans.map((plan) => ({
+      ...plan,
+      progress: normalizePlanProgress(plan.progress),
+    })),
+  };
 }
 
 export async function getTimelineData(

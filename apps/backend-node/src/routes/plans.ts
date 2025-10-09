@@ -174,7 +174,26 @@ router.get(
         orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       });
 
-      res.json(plans);
+      // Batch load progress for all plans
+      const planIds = plans.map(p => p.id);
+      const plansProgress = await plansService.getBatchPlanProgress(
+        planIds,
+        req.user!.id,
+        false // Use cache
+      );
+
+      // Create progress map for fast lookup
+      const progressMap = new Map(
+        plansProgress.map(p => [p.plan.id, p])
+      );
+
+      // Augment each plan with progress data
+      const plansWithProgress = plans.map(plan => ({
+        ...plan,
+        progress: progressMap.get(plan.id)
+      }));
+
+      res.json(plansWithProgress);
     } catch (error) {
       logger.error("Error fetching plans:", error);
       res.status(500).json({ error: "Failed to fetch plans" });

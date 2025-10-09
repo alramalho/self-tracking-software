@@ -4,6 +4,7 @@ import multer from "multer";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { linearService } from "../services/linearService";
 import { notificationService } from "../services/notificationService";
+import { plansService } from "../services/plansService";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
 import { TelegramService } from "../services/telegramService";
@@ -456,7 +457,29 @@ usersRouter.post(
         return;
       }
 
-      res.json(user);
+      // Batch load progress for all user's plans
+      const planIds = user.plans.map(p => p.id);
+      const plansProgress = await plansService.getBatchPlanProgress(
+        planIds,
+        req.user!.id,
+        false // Use cache
+      );
+
+      // Create progress map for fast lookup
+      const progressMap = new Map(
+        plansProgress.map(p => [p.plan.id, p])
+      );
+
+      // Augment each plan with progress data
+      const userWithProgress = {
+        ...user,
+        plans: user.plans.map(plan => ({
+          ...plan,
+          progress: progressMap.get(plan.id)
+        }))
+      };
+
+      res.json(userWithProgress);
     } catch (error) {
       logger.error("Failed to fetch user data:", error);
       res.status(500).json({ error: "Failed to fetch user data" });
@@ -604,10 +627,35 @@ usersRouter.get(
         where: { id: { in: activityIds } },
       });
 
+      // Collect all plan IDs from all users
+      const allUsers = [user, ...connections];
+      const allPlanIds = allUsers.flatMap(u => u.plans?.map(p => p.id) || []);
+
+      // Batch load progress for all plans
+      const plansProgress = await plansService.getBatchPlanProgress(
+        allPlanIds,
+        req.user!.id,
+        false // Use cache
+      );
+
+      // Create progress map for fast lookup
+      const progressMap = new Map(
+        plansProgress.map(p => [p.plan.id, p])
+      );
+
+      // Augment each user's plans with progress data
+      const usersWithProgress = allUsers.map(u => ({
+        ...u,
+        plans: u.plans?.map(plan => ({
+          ...plan,
+          progress: progressMap.get(plan.id)
+        }))
+      }));
+
       res.json({
         recommendedActivityEntries: activityEntries,
         recommendedActivities: activities,
-        recommendedUsers: [user, ...connections],
+        recommendedUsers: usersWithProgress,
       });
     } catch (error) {
       logger.error("Failed to fetch timeline data:", error);
