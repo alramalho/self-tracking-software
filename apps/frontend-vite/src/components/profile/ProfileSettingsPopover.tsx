@@ -1,6 +1,5 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
@@ -21,13 +20,14 @@ import {
   Share2,
   SquareArrowUp,
   UserPen,
-  UserPlus
+  UserPlus,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import React, { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
+import { Switch } from "../ui/switch";
 import { TextAreaWithVoice } from "../ui/text-area-with-voice";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
 import {
@@ -52,8 +52,7 @@ export type ActiveView =
   | "privacy"
   | "ai"
   | "color"
-  | "editProfile"
-  | "social";
+  | "editProfile";
 
 // Define view depths for animation direction
 const viewLevels: Record<ActiveView, number> = {
@@ -64,7 +63,6 @@ const viewLevels: Record<ActiveView, number> = {
   privacy: 1,
   ai: 1,
   color: 1,
-  social: 1,
 };
 
 const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
@@ -86,7 +84,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
   const themeVariants = getThemeVariants(themeColors.raw);
-  const { isPushGranted, setIsPushGranted, requestPermission } = useNotifications();
+  const { isPushGranted, setIsPushGranted, requestPermission } =
+    useNotifications();
   const { shareOrCopyLink } = useShareOrCopy();
   const [temporaryProfileDescription, setTemporaryProfileDescription] =
     useState(currentUser?.profile || "");
@@ -110,7 +109,10 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
           toast.success("Permission for push notifications was granted");
         } catch (error) {
           toast.error("Failed to request permission for push notifications");
-          console.error("Failed to request permission for push notifications:", error);
+          console.error(
+            "Failed to request permission for push notifications:",
+            error
+          );
         }
       }
     } else {
@@ -330,6 +332,54 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <Pencil size={16} />
                         </Button>
                       </div>
+
+                      {/* Invite Friends */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            Invite Friends
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Share your profile with friends
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() =>
+                            shareOrCopyLink(
+                              `https://app.tracking.so/join/${currentUser?.username}`
+                            )
+                          }
+                        >
+                          <UserPlus size={20} />
+                        </Button>
+                      </div>
+
+                      {/* Share Profile Link */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            Share Profile Link
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Copy link to share your profile
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() =>
+                            shareOrCopyLink(
+                              `https://app.tracking.so/profile/${currentUser?.username}`
+                            )
+                          }
+                        >
+                          <Share2 size={20} />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -355,7 +405,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <div className="p-2">
                       <TextAreaWithVoice
                         value={temporaryProfileDescription}
-                        onChange={(value: any) => {
+                        onChange={(value) => {
                           setTemporaryProfileDescription(value);
                         }}
                         placeholder="A lively and outgoing "
@@ -394,90 +444,6 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     />
                   </div>
                 );
-              case "social":
-                return (
-                  <div>
-                    <Button
-                      variant="ghost"
-                      onClick={() => navigateTo("main")}
-                      className="mb-4 px-0 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-                    >
-                      <ChevronLeft size={18} /> Back to Settings
-                    </Button>
-                    <h2 className="text-lg font-semibold mb-6">
-                      Social Settings
-                    </h2>
-
-                    <div className="space-y-4">
-                      {/* Invite Friends */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            Invite Friends
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Share your profile with friends
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-gray-500 hover:text-gray-700"
-                          onClick={() =>
-                            shareOrCopyLink(
-                              `https://app.tracking.so/join/${currentUser?.username}`
-                            )
-                          }
-                        >
-                          <UserPlus size={20} />
-                        </Button>
-                      </div>
-
-                      {/* Push Notifications */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            Push Notifications
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {isPushGranted ? "Notifications enabled" : "Enable notifications for updates"}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Bell size={20} className="text-gray-500" />
-                          <Switch
-                            checked={isPushGranted}
-                            onCheckedChange={handleNotificationChange}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Share Profile Link */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            Share Profile Link
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Copy link to share your profile
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-gray-500 hover:text-gray-700"
-                          onClick={() =>
-                            shareOrCopyLink(
-                              `https://app.tracking.so/profile/${currentUser?.username}`
-                            )
-                          }
-                        >
-                          <Share2 size={20} />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
               case "main":
               default:
                 return (
@@ -501,6 +467,26 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </span>
                     </div>
                     <div className="flex flex-col gap-3">
+                      {/* Push Notifications */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            Push Notifications
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {isPushGranted
+                              ? "Notifications enabled"
+                              : "Enable notifications for updates"}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Bell size={20} className="text-gray-500" />
+                          <Switch
+                            checked={isPushGranted}
+                            onCheckedChange={handleNotificationChange}
+                          />
+                        </div>
+                      </div>
                       {userPlanType !== "FREE" && (
                         <Button
                           variant="ghost"
@@ -524,15 +510,6 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       >
                         <UserPen size={28} />
                         <span>User Settings</span>
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        className="w-full flex items-center justify-start px-0 gap-2"
-                        onClick={() => navigateTo("social")} // Navigate to social view
-                      >
-                        <UserPlus size={28} />
-                        <span>Social Settings</span>
                       </Button>
 
                       <Button
