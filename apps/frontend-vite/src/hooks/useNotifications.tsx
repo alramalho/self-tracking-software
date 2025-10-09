@@ -199,14 +199,17 @@ export const NotificationsProvider = ({
         if (granted) {
           setIsPushGranted(true);
 
+          console.log("Starting subscription");
           // Wait for the registration to be available
           const reg = registration || await navigator.serviceWorker.ready;
           if (reg) {
+            console.log("Registration available");
             // Check permission state again
             const pm = await reg.pushManager.permissionState({
               userVisibleOnly: true,
             });
             if (pm === "granted") {
+              console.log("Permission state is granted");
               try {
                 const subscription = await reg.pushManager.subscribe({
                   userVisibleOnly: true,
@@ -214,6 +217,7 @@ export const NotificationsProvider = ({
                     import.meta.env.VITE_VAPID_PUBLIC_KEY,
                 });
                 setSubscription(subscription);
+                console.log("Subscription set");
                 // Use api in a useCallback hook
                 await updatePwaStatus(subscription);
               } catch (err) {
