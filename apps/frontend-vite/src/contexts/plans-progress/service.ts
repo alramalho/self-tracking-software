@@ -57,13 +57,6 @@ type PlanProgressApiResponse = Omit<PlanProgressData, "weeks"> & {
 export const normalizePlanProgress = (
   payload: PlanProgressApiResponse | PlanProgressData
 ): PlanProgressData => {
-  if (payload.weeks?.[0]?.completedActivities) {
-    console.log(
-      "normalizePlanProgress completedActivities input:",
-      JSON.stringify(payload.weeks[0].completedActivities, null, 2)
-    );
-  }
-
   const normalized = normalizeApiResponse<PlanProgressData>(payload, [
     "weeks.startDate",
     "weeks.completedActivities.date",
@@ -76,11 +69,6 @@ export const normalizePlanProgress = (
     "weeks.plannedActivities.createdAt",
     "weeks.plannedActivities.updatedAt",
   ]);
-
-  console.log(
-    "normalizePlanProgress completedActivities weeks sample:",
-    normalized.weeks?.[0]
-  );
 
   return normalized;
 };
@@ -98,12 +86,6 @@ export async function fetchPlansProgress(
   );
 
   const normalized = response.data.progress.map(normalizePlanProgress);
-  console.log(
-    `Progress fetched: ${normalized.length} plans, ${
-      normalized.filter((p) => p).length
-    } valid`
-  );
-  console.log({ normalized });
   return normalized;
 }
 
