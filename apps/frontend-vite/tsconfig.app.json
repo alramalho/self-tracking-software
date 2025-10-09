@@ -31,7 +31,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    "types": ["vite/client", "@serwist/vite/typings"]
+    "types": ["vite/client", "@serwist/vite/typings", "webworker"]
   },
   "include": ["src", "vite-env.d.ts"],
   "exclude": ["node_modules", "**/node_modules/*", "../../node_modules"]
