@@ -34,6 +34,7 @@
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/express": "^1.7.4",
     "@date-fns/tz": "^1.4.1",
+    "@linear/sdk": "^60.0.0",
     "@openrouter/ai-sdk-provider": "^1.1.2",
     "@pinecone-database/pinecone": "^6.1.2",
     "@supabase/supabase-js": "^2.74.0",

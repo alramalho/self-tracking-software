@@ -2,6 +2,7 @@ import recommendationsService from "@/services/recommendationsService";
 import { Request, Response, Router } from "express";
 import multer from "multer";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
+import { linearService } from "../services/linearService";
 import { notificationService } from "../services/notificationService";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
@@ -946,9 +947,10 @@ Timestamp: ${new Date().toISOString()}</small></p>
 
       // Send Telegram notification for bug reports
       if (feedback.type === "bug_report") {
-        const imageLinksText = imageUrls.length > 0
-          ? `\n**Image Links:**\n${imageUrls.map((url, i) => `${i + 1}. ${url}`).join('\n')}\n`
-          : '';
+        const imageLinksText =
+          imageUrls.length > 0
+            ? `\n**Image Links:**\n${imageUrls.map((url, i) => `${i + 1}. ${url}`).join("\n")}\n`
+            : "";
 
         const telegramMessage =
           `🐛 **New Bug Report**\n\n` +
@@ -965,6 +967,25 @@ Timestamp: ${new Date().toISOString()}</small></p>
         } else {
           await telegramService.sendMessage(telegramMessage);
         }
+
+        // Create Linear ticket for bug reports in production
+        // if (process.env.NODE_ENV === "production") {
+        try {
+          const ticketUrl = await linearService.createBugTicket({
+            title: `Bug: ${feedback.text.substring(0, 100)}${feedback.text.length > 100 ? "..." : ""}`,
+            description: feedback.text,
+            reporterEmail: feedback.email,
+            reporterUsername: user?.username || undefined,
+            imageUrls,
+          });
+
+          if (ticketUrl) {
+            logger.info(`Linear ticket created for bug report: ${ticketUrl}`);
+          }
+        } catch (linearError) {
+          logger.error("Failed to create Linear ticket:", linearError);
+        }
+        // }
       }
 
       logger.info("Feedback received:", {
