@@ -11,12 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  Bell,
-  ChevronDown,
-  ChevronRight,
-  Hammer,
-  RefreshCcw,
-  ScanFace,
+    Bell,
+    ChevronDown,
+    ChevronRight,
+    Hammer,
+    RefreshCcw,
+    ScanFace,
 } from "lucide-react";
 import { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -25,6 +25,7 @@ import supportAgentSvg from '../assets/icons/support-agent.svg';
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { useSession } from "@/contexts/auth";
 import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
@@ -35,7 +36,6 @@ import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { useSession } from "@clerk/clerk-react";
 import { isAfter } from "date-fns";
 
 export const Route = createFileRoute('/')({

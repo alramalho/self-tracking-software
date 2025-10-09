@@ -1,14 +1,14 @@
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { normalizeApiResponse } from "@/utils/dateUtils";
-import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PlanInvitation } from "@tsw/prisma";
 import { useContext } from "react";
 import { toast } from "react-hot-toast";
 import {
-  fetchPlan,
-  fetchPlanInvitation,
-  type PlanWithRelations,
+    fetchPlan,
+    fetchPlanInvitation,
+    type PlanWithRelations,
 } from "./service";
 import { PlansContext } from "./types";
 

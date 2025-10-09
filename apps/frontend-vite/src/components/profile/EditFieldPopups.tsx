@@ -1,11 +1,10 @@
-import { useApiWithAuth } from "@/api";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PhotoUploader from "@/components/ui/PhotoUploader";
 import { Switch } from "@/components/ui/switch";
+import { useSupabaseUser } from "@/contexts/auth/provider";
 import { useCurrentUser } from "@/contexts/users";
-import { useUser as useClerkUser } from "@clerk/clerk-react";
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
@@ -77,17 +76,13 @@ export const EditAgePopup: React.FC<
   }
 > = ({ open, onClose, currentValue }) => {
   const [age, setAge] = useState(currentValue || 18);
-  const api = useApiWithAuth();
-
-  const ageOptions = Array.from({ length: 83 }, (_, i) => ({
-    value: (i + 18).toString(),
-    label: (i + 18).toString(),
-  }));
+  const { updateUser } = useCurrentUser();
 
   const handleSave = async () => {
     try {
-      await api.post("/users/update-user", {
-        age: age,
+      await updateUser({
+        updates: { age },
+        muteNotifications: true,
       });
       toast.success("Age updated");
       onClose();
@@ -127,17 +122,13 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
   open,
   onClose,
 }) => {
-  const { user: clerkUser } = useClerkUser();
-  const [firstName, setFirstName] = useState(clerkUser?.firstName || "");
-  const [lastName, setLastName] = useState(clerkUser?.lastName || "");
+  const { supabaseUser } = useSupabaseUser();
+  const [firstName, setFirstName] = useState(supabaseUser?.user_metadata.firstName || "");
+  const [lastName, setLastName] = useState(supabaseUser?.user_metadata.lastName || "");
   const { updateUser } = useCurrentUser();
 
   const handleSave = async () => {
     try {
-      await clerkUser?.update({
-        firstName: firstName,
-        lastName: lastName,
-      });
       await updateUser({
         updates: {
           name: `${firstName} ${lastName}`,
@@ -194,10 +185,8 @@ export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
   open,
   onClose,
 }) => {
-  const { user: clerkUser } = useClerkUser();
+  const { currentUser, updateProfileImage, isUpdatingProfileImage } = useCurrentUser();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const { updateUser } = useCurrentUser();
 
   const handleSave = async () => {
     if (!selectedFile) {
@@ -205,39 +194,11 @@ export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
       return;
     }
 
-    setIsUploading(true);
     try {
-      // Convert file to base64 for Clerk
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = reader.result as string;
-          const result = await clerkUser?.setProfileImage({ file: base64 });
-          const publicUrl = result?.publicUrl;
-          if (!publicUrl) {
-            toast.error("Failed to update profile picture");
-            setIsUploading(false);
-            return;
-          }
-          await updateUser({
-            updates:{
-              picture: publicUrl,
-            },
-            muteNotifications: true,
-          });
-          toast.success("Profile picture updated");
-          onClose();
-        } catch (error) {
-          console.error("Failed to update profile picture:", error);
-          toast.error("Failed to update profile picture");
-        } finally {
-          setIsUploading(false);
-        }
-      };
-      reader.readAsDataURL(selectedFile);
+      await updateProfileImage(selectedFile);
+      onClose();
     } catch (error) {
-      toast.error("Failed to update profile picture");
-      setIsUploading(false);
+      console.error("Failed to update profile picture:", error);
     }
   };
 
@@ -252,9 +213,9 @@ export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
         <div className="flex justify-center py-4">
           <PhotoUploader
             onFileSelect={setSelectedFile}
-            currentImageUrl={clerkUser?.imageUrl}
+            currentImageUrl={currentUser?.picture || undefined}
             placeholder="Upload new photo"
-            disabled={isUploading}
+            disabled={isUpdatingProfileImage}
           />
         </div>
         <div className="flex gap-2 pt-4">
@@ -262,16 +223,16 @@ export const EditProfilePicturePopup: React.FC<EditFieldPopupProps> = ({
             variant="outline"
             onClick={onClose}
             className="flex-1"
-            disabled={isUploading}
+            disabled={isUpdatingProfileImage}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             className="flex-1"
-            disabled={!selectedFile || isUploading}
+            disabled={!selectedFile || isUpdatingProfileImage}
           >
-            {isUploading ? (
+            {isUpdatingProfileImage ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Uploading...

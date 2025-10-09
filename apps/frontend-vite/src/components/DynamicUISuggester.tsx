@@ -10,7 +10,7 @@ import { Remark } from "react-remark";
 import AppleLikePopover from "./AppleLikePopover";
 import { QuestionChecks, type QuestionsChecks } from "./QuestionChecks";
 import { Button } from "./ui/button";
-import { TextAreaWithVoice } from "./ui/TextAreaWithVoice";
+import { TextAreaWithVoice } from "./ui/text-area-with-voice";
 
 const waveVariants = {
   initial: { rotate: 0 },
@@ -298,7 +298,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, x: -10 }}
                 transition={{ duration: 0.3, layout: true }}
-                className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md max-w-[250px] text-sm border border-gray-200 dark:border-gray-700 flex-shrink relative"
+                className="bg-white p-3 rounded-lg shadow-md max-w-[250px] text-sm border border-gray-200 flex-shrink relative"
               >
                 <Remark>{message}</Remark>
               </motion.div>
@@ -463,7 +463,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             <TextAreaWithVoice
               disabled={isSubmitting}
               value={rejectionFeedback}
-              onChange={(value) => setRejectionFeedback(value)}
+              onChange={(value: any) => setRejectionFeedback(value)}
               placeholder="The AI got the activity dates wrong"
             />
           </div>

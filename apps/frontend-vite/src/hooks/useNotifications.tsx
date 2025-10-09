@@ -2,10 +2,10 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { useDataNotifications } from "@/contexts/notifications";
 import { useCurrentUser } from "@/contexts/users";
 import { arrayBufferToBase64Async, isNotifySupported } from "@/lib/utils";
-import { useSession } from "@clerk/clerk-react";
 import { type Notification as PrismaNotification } from "@tsw/prisma";
 import React, {
   createContext,

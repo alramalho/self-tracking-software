@@ -1,7 +1,7 @@
 
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
-import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
 import React from "react";

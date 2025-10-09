@@ -2,8 +2,8 @@
 
 "use client";
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
-import { useSession } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import { type Plan, type Recommendation, type User } from "@tsw/prisma";
 import React, { createContext, type ReactNode, useContext } from "react";

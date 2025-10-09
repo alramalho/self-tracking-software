@@ -1,9 +1,9 @@
+import { MetricBarChart } from "@/components/MetricBarChart";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MetricEntry } from "@tsw/prisma";
-import { HelpCircle, TrendingDown, TrendingUp } from "lucide-react";
-import { MetricBarChart } from "@/components/MetricBarChart";
+import { type MetricEntry } from "@tsw/prisma";
 import { isSameDay } from "date-fns";
+import { HelpCircle, TrendingDown, TrendingUp } from "lucide-react";
 
 interface MetricTrendCardProps {
   metric: {

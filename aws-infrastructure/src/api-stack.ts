@@ -4,7 +4,7 @@ import * as cdk from "aws-cdk-lib";
 // import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
 // import * as ecs from "aws-cdk-lib/aws-ecs";
 // import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
-// import * as iam from "aws-cdk-lib/aws-iam";
+import * as iam from "aws-cdk-lib/aws-iam";
 // import * as lambda from "aws-cdk-lib/aws-lambda";
 // import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -53,6 +53,9 @@ export class ApiStack extends cdk.Stack {
       "S3Bucket",
       `${KEBAB_CASE_PREFIX}-bucket-${props.environment}`
     );
+
+    // NOTE: Since we're importing an existing bucket, the bucket policy for profile-images/*
+    // must be applied manually via AWS Console or CLI. See deployment docs for details.
 
     // // Deploy Python backend (existing)
     // const pythonEnvConfig = {

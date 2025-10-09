@@ -1,9 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
 import { normalizeApiResponse } from "@/utils/dateUtils";
-import { useSession } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import { useContext } from "react";
 import { toast } from "react-hot-toast";

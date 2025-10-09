@@ -1,6 +1,7 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -9,7 +10,6 @@ import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { capitalize } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { useClerk } from "@clerk/clerk-react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell,
@@ -28,7 +28,7 @@ import React, { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
-import { TextAreaWithVoice } from "../ui/TextAreaWithVoice";
+import { TextAreaWithVoice } from "../ui/text-area-with-voice";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
 import {
   EditAgePopup,
@@ -80,7 +80,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const previousViewRef = useRef<ActiveView>("main");
 
   const { isUserFree, userPlanType } = usePaidPlan();
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
   const { currentUser, updateUser } = useCurrentUser();
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
@@ -355,7 +355,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <div className="p-2">
                       <TextAreaWithVoice
                         value={temporaryProfileDescription}
-                        onChange={(value) => {
+                        onChange={(value: any) => {
                           setTemporaryProfileDescription(value);
                         }}
                         placeholder="A lively and outgoing "

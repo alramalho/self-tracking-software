@@ -12,10 +12,12 @@ const S3_BUCKET_NAME = `tracking-software-bucket-${["dev", "development"].includ
 export class S3Service {
   private s3Client: S3Client;
   private bucketName: string;
+  private region: string;
 
   constructor() {
+    this.region = process.env.AWS_REGION || "eu-central-1";
     this.s3Client = new S3Client({
-      region: process.env.AWS_REGION || "eu-central-1",
+      region: this.region,
       credentials: {
         accessKeyId: process.env.CUSTOM_AWS_ACCESS_KEY_ID || "",
         secretAccessKey: process.env.CUSTOM_AWS_SECRET_ACCESS_KEY || "",
@@ -27,7 +29,8 @@ export class S3Service {
   async upload(
     buffer: Buffer,
     key: string,
-    contentType?: string
+    contentType?: string,
+    isPublic: boolean = false
   ): Promise<string> {
     try {
       const command = new PutObjectCommand({
@@ -35,10 +38,11 @@ export class S3Service {
         Key: key.startsWith("/") ? key.substring(1) : key, // Remove leading slash
         Body: buffer,
         ContentType: contentType || "application/octet-stream",
+        // Don't use ACL - bucket policy should handle public access for profile-images/*
       });
 
       await this.s3Client.send(command);
-      logger.info(`Successfully uploaded file to S3: ${key}`);
+      logger.info(`Successfully uploaded file to S3: ${key} (public: ${isPublic})`);
 
       return key;
     } catch (error) {
@@ -110,7 +114,7 @@ export class S3Service {
 
   getPublicUrl(key: string): string {
     const cleanKey = key.startsWith("/") ? key.substring(1) : key;
-    return `https://${this.bucketName}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${cleanKey}`;
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${cleanKey}`;
   }
 }
 

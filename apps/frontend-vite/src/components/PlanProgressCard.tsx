@@ -11,11 +11,11 @@ import {
   CircleCheck,
   Flame,
   Loader2,
-  Medal,
   MoveRight,
+  Rocket,
   Sprout,
   TrendingDown,
-  TrendingUp,
+  TrendingUp
 } from "lucide-react";
 import { motion } from "motion/react";
 import React, { useRef, useState } from "react";
@@ -150,7 +150,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
   // Calculate total number of animations that will run
-  const totalProgressBars = 2 + (achievement.streak >= habitMaxValue ? 1 : 0); // week + habit + (lifestyle if applicable)
+  const totalProgressBars = 1 + (!habitIsAchieved ? 1 : 0) + (achievement.streak >= habitMaxValue ? 1 : 0); // week + (habit if not achieved) + (lifestyle if applicable)
   const totalAnimations = totalProgressBars + (isCoached ? 1 : 0); // + PlanStatus motion if coached
 
   const handleAnimationComplete = (animationId: string) => {
@@ -210,15 +210,21 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
           <div className="flex items-center justify-between gap-2 ">
             <div className="flex items-center gap-2">
               <span className="text-4xl">{plan.emoji || "📋"}</span>
-              <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
                 <span className="text-md font-semibold text-gray-800">
                   {plan.goal}
                 </span>
+                {!isLoadingPlanProgress && habitIsAchieved && (
+                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 w-fit">
+                    <Sprout size={18} className="text-lime-600" />
+                    <span className="text-[12px] font-medium text-lime-700">Habit</span>
+                  </div>
+                )}
               </div>
             </div>
             <div
               className={cn(
-                "flex items-center transition-all duration-300 relative",
+                "flex items-center gap-1 transition-all duration-300 relative",
                 achievement.streak == 0 ? "grayscale opacity-50" : ""
               )}
               onClick={() => {
@@ -345,28 +351,20 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               skipAnimation={skipAnimation}
             />
 
-            {/* Habit achievement progress (4 weeks) */}
-            <div className="space-y-1">
-              <SteppedBarProgress
-                value={habitProgressValue}
-                maxValue={habitMaxValue}
-                goal={<Sprout size={19} className="text-lime-500" />}
-                className={cn("w-full")}
-                color="bg-lime-400"
-                celebration={
-                  habitIsAchieved ? (
-                    <span className="flex items-center gap-1">
-                      <CircleCheck size={19} className="text-green-500" />
-                      <span className="text-xs font-normal text-gray-500">
-                        It&apos;s a habit!
-                      </span>
-                    </span>
-                  ) : undefined
-                }
-                onAnimationCompleted={() => handleAnimationComplete("habit")}
-                skipAnimation={skipAnimation}
-              />
-            </div>
+            {/* Habit achievement progress (4 weeks) - hide when achieved */}
+            {!habitIsAchieved && (
+              <div className="space-y-1">
+                <SteppedBarProgress
+                  value={habitProgressValue}
+                  maxValue={habitMaxValue}
+                  goal={<Sprout size={19} className="text-lime-500" />}
+                  className={cn("w-full")}
+                  color="bg-lime-400"
+                  onAnimationCompleted={() => handleAnimationComplete("habit")}
+                  skipAnimation={skipAnimation}
+                />
+              </div>
+            )}
 
             {/* Lifestyle achievement progress (9 weeks) - only show after habit is achieved */}
             {achievement.streak >= habitMaxValue && (
@@ -374,7 +372,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                 <SteppedBarProgress
                   value={lifestyleProgressValue}
                   maxValue={lifestyleMaxValue}
-                  goal={<Medal size={19} className="text-amber-400" />}
+                  goal={<Rocket size={19} className="text-amber-400" />}
                   className={cn("w-full")}
                   color={variants.bg}
                   celebration={

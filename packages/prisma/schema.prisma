@@ -10,6 +10,7 @@ datasource db {
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
   extensions = [vector]
+  schemas    = ["public"]
 }
 
 model User {
@@ -21,6 +22,7 @@ model User {
   username                        String?            @unique
   timezone                        String?            @default("Europe/Berlin")
   clerkId                         String?            @unique
+  supabaseAuthId                  String?            @unique
   language                        String?            @default("English")
   planType                        PlanType           @default(FREE)
   lastActiveAt                    DateTime?
@@ -74,6 +76,7 @@ model User {
   referredById  String?
 
   @@map("users")
+  @@schema("public")
 }
 
 model Connection {
@@ -94,6 +97,7 @@ model Connection {
   @@index([toId, status])
   @@index([status])
   @@map("connections")
+  @@schema("public")
 }
 
 model Activity {
@@ -118,6 +122,7 @@ model Activity {
   @@index([deletedAt, privacySettings])
   @@index([createdAt])
   @@map("activities")
+  @@schema("public")
 }
 
 model ActivityEntry {
@@ -150,6 +155,7 @@ model ActivityEntry {
   @@index([activityId])
   @@index([createdAt])
   @@map("activity_entries")
+  @@schema("public")
 }
 
 model Reaction {
@@ -166,6 +172,7 @@ model Reaction {
   @@unique([activityEntryId, userId, emoji])
   @@index([activityEntryId])
   @@map("reactions")
+  @@schema("public")
 }
 
 model Comment {
@@ -183,6 +190,7 @@ model Comment {
   @@index([activityEntryId, deletedAt])
   @@index([createdAt])
   @@map("comments")
+  @@schema("public")
 }
 
 model Metric {
@@ -200,6 +208,7 @@ model Metric {
   @@index([userId])
   @@index([createdAt])
   @@map("metrics")
+  @@schema("public")
 }
 
 model MetricEntry {
@@ -224,21 +233,22 @@ model MetricEntry {
   @@index([userId, date])
   @@index([metricId, date])
   @@map("metric_entries")
+  @@schema("public")
 }
 
 model Plan {
-  id                         String            @id @default(cuid())
+  id                         String                       @id @default(cuid())
   userId                     String
   planGroupId                String?
   goal                       String
   embedding                  Unsupported("vector(1536)")?
   emoji                      String?
-  finishingDate              DateTime?         @db.Date
-  createdAt                  DateTime          @default(now())
-  updatedAt                  DateTime          @default(now()) @updatedAt
+  finishingDate              DateTime?                    @db.Date
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @default(now()) @updatedAt
   deletedAt                  DateTime?
   durationType               PlanDurationType?
-  outlineType                PlanOutlineType   @default(SPECIFIC)
+  outlineType                PlanOutlineType              @default(SPECIFIC)
   timesPerWeek               Int?
   coachSuggestedTimesPerWeek Int?
   notes                      String?
@@ -266,6 +276,7 @@ model Plan {
   @@index([userId, id])
   @@index([createdAt])
   @@map("plans")
+  @@schema("public")
 }
 
 model PlanSession {
@@ -287,6 +298,7 @@ model PlanSession {
   @@index([activityId])
   @@index([planId, isCoachSuggested, date])
   @@map("plan_sessions")
+  @@schema("public")
 }
 
 model PlanMilestone {
@@ -302,6 +314,7 @@ model PlanMilestone {
 
   @@index([planId])
   @@map("plan_milestones")
+  @@schema("public")
 }
 
 model PlanGroup {
@@ -313,6 +326,7 @@ model PlanGroup {
   plans   Plan[]
 
   @@map("plan_groups")
+  @@schema("public")
 }
 
 model PlanInvitation {
@@ -330,6 +344,7 @@ model PlanInvitation {
   recipient User @relation("PlanInvitationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@map("plan_invitations")
+  @@schema("public")
 }
 
 model Message {
@@ -346,6 +361,7 @@ model Message {
   @@index([userId])
   @@index([createdAt])
   @@map("messages")
+  @@schema("public")
 }
 
 model MessageEmotion {
@@ -359,6 +375,7 @@ model MessageEmotion {
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@map("message_emotions")
+  @@schema("public")
 }
 
 model Notification {
@@ -382,6 +399,7 @@ model Notification {
   @@index([userId])
   @@index([createdAt])
   @@map("notifications")
+  @@schema("public")
 }
 
 model Recommendation {
@@ -398,12 +416,15 @@ model Recommendation {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("recommendations")
+  @@schema("public")
 }
 
 // Enums
 enum PlanType {
   FREE
   PLUS
+
+  @@schema("public")
 }
 
 enum ThemeColor {
@@ -414,29 +435,39 @@ enum ThemeColor {
   AMBER
   EMERALD
   ROSE
+
+  @@schema("public")
 }
 
 enum ActivityVisibility {
   PUBLIC
   PRIVATE
   FRIENDS
+
+  @@schema("public")
 }
 
 enum DailyCheckinTime {
   MORNING
   AFTERNOON
   EVENING
+
+  @@schema("public")
 }
 
 enum PlanDurationType {
   HABIT
   LIFESTYLE
   CUSTOM
+
+  @@schema("public")
 }
 
 enum PlanOutlineType {
   SPECIFIC
   TIMES_PER_WEEK
+
+  @@schema("public")
 }
 
 enum PlanState {
@@ -444,11 +475,15 @@ enum PlanState {
   AT_RISK
   FAILED
   COMPLETED
+
+  @@schema("public")
 }
 
 enum CriteriaJunction {
   AND
   OR
+
+  @@schema("public")
 }
 
 enum ConnectionStatus {
@@ -456,12 +491,16 @@ enum ConnectionStatus {
   ACCEPTED
   REJECTED
   BLOCKED
+
+  @@schema("public")
 }
 
 enum InvitationStatus {
   PENDING
   ACCEPTED
   REJECTED
+
+  @@schema("public")
 }
 
 enum NotificationStatus {
@@ -469,6 +508,8 @@ enum NotificationStatus {
   PROCESSED
   OPENED
   CONCLUDED
+
+  @@schema("public")
 }
 
 enum NotificationType {
@@ -478,14 +519,20 @@ enum NotificationType {
   INFO
   METRIC_CHECKIN
   COACH
+
+  @@schema("public")
 }
 
 enum RecommendationObjectType {
   USER
+
+  @@schema("public")
 }
 
 enum MessageRole {
   USER
   ASSISTANT
   SYSTEM
+
+  @@schema("public")
 }
