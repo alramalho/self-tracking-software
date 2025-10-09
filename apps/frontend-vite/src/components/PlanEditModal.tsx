@@ -1,43 +1,39 @@
-import React from "react";
+import { type CompletePlan } from "@/contexts/plans";
+import AppleLikePopover from "./AppleLikePopover";
+import PlanConfigurationForm from "./plan-configuration/PlanConfigurationForm";
 
-// Stub implementation - replace with actual implementation when needed
 interface PlanEditModalProps {
-  plan: any;
+  plan: CompletePlan;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  onFailure?: (error: string) => void;
   scrollToMilestones?: boolean;
 }
 
-export const PlanEditModal: React.FC<PlanEditModalProps> = ({
-  plan,
-  isOpen,
-  onClose,
+export function PlanEditModal({ 
+  plan, 
+  isOpen, 
+  onClose, 
   onSuccess,
-  scrollToMilestones,
-}) => {
-  if (!isOpen) return null;
-
+  onFailure,
+  scrollToMilestones = false,
+}: PlanEditModalProps) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-        <h2 className="text-lg font-semibold mb-4">Edit Plan (placeholder)</h2>
-        <p className="text-sm text-gray-500 mb-4">Plan: {plan?.goal}</p>
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Close
-          </button>
-          <button
-            onClick={onSuccess}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
+    <AppleLikePopover
+      className={"bg-gray-50"}
+      open={isOpen}
+      onClose={onClose}
+    >
+      <PlanConfigurationForm
+        isEdit={true}
+        plan={plan}
+        title={plan.goal}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        onFailure={onFailure}
+        scrollToMilestones={scrollToMilestones}
+      />
+    </AppleLikePopover>
   );
-};
+} 
