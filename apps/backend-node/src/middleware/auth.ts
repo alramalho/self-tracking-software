@@ -1,3 +1,4 @@
+import { clerkMiddleware, getAuth } from "@clerk/express";
 import { createClient } from "@supabase/supabase-js";
 import { User } from "@tsw/prisma";
 import { NextFunction, Request, RequestHandler, Response } from "express";
@@ -17,21 +18,16 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey!);
 
 // Middleware to verify Supabase JWT and load user from database
-async function verifySupabaseAuth(
+async function trySupabaseAuth(
   req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+  res: Response
+): Promise<User | null> {
   try {
     // Extract the Bearer token from Authorization header
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({
-        success: false,
-        error: { message: "Authentication required" },
-      });
-      return;
+      return null; // No Supabase token, will try Clerk
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
@@ -44,11 +40,7 @@ async function verifySupabaseAuth(
 
     if (error || !supabaseUser) {
       logger.warn("Invalid Supabase token:", error?.message);
-      res.status(401).json({
-        success: false,
-        error: { message: "Invalid or expired token" },
-      });
-      return;
+      return null; // Invalid token, will try Clerk
     }
 
     // Load user from database - try supabaseAuthId first, fallback to email for migration
@@ -71,6 +63,60 @@ async function verifySupabaseAuth(
       });
     }
 
+    return user;
+  } catch (error) {
+    logger.error("Failed to verify Supabase auth:", error);
+    return null; // Error, will try Clerk
+  }
+}
+
+// Middleware to load user from Clerk
+async function tryClerkAuth(req: Request, res: Response): Promise<User | null> {
+  try {
+    const { userId: clerkUserId } = getAuth(req);
+
+    if (!clerkUserId) {
+      return null; // No Clerk user
+    }
+
+    const user = await userService.getUserByClerkId(clerkUserId);
+
+    if (!user) {
+      logger.warn(`Clerk user ${clerkUserId} not found in database`);
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    logger.error("Failed to verify Clerk auth:", error);
+    return null;
+  }
+}
+
+// Combined middleware: Try Supabase first, fallback to Clerk
+async function verifyAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // Try Supabase auth first (priority)
+    let user = await trySupabaseAuth(req, res);
+
+    // If Supabase fails, try Clerk
+    if (!user) {
+      user = await tryClerkAuth(req, res);
+    }
+
+    // If both auth methods fail, return 401
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        error: { message: "Authentication required" },
+      });
+      return;
+    }
+
     // Attach user to request
     (req as AuthenticatedRequest).user = user;
 
@@ -79,7 +125,7 @@ async function verifySupabaseAuth(
 
     next();
   } catch (error) {
-    logger.error("Failed to verify Supabase auth:", error);
+    logger.error("Failed to verify auth:", error);
     res.status(500).json({
       success: false,
       error: { message: "Authentication failed" },
@@ -88,6 +134,8 @@ async function verifySupabaseAuth(
 }
 
 // Export as array for compatibility with existing route definitions
+// clerkMiddleware() is non-blocking and just adds auth context for getAuth() to work
 export const requireAuth: RequestHandler[] = [
-  verifySupabaseAuth as RequestHandler,
+  clerkMiddleware() as unknown as RequestHandler,
+  verifyAuth as RequestHandler,
 ];
