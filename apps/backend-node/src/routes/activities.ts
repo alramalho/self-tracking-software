@@ -251,7 +251,9 @@ router.post(
 
       // Invalidate progress cache for affected plans
       if (plans.length > 0) {
-        await plansService.invalidateUserPlanProgressCaches(req.user!.id, [activityId]);
+        await plansService.invalidateUserPlanProgressCaches(req.user!.id, [
+          activityId,
+        ]);
       }
 
       for (const plan of plans) {
@@ -766,18 +768,9 @@ router.post(
         orderBy: { createdAt: "asc" },
       });
 
-      const commentsWithUserData = allComments.map((c) => ({
-        id: c.id,
-        userId: c.userId,
-        username: c.user.username,
-        text: c.text,
-        createdAt: c.createdAt,
-        picture: c.user.picture,
-      }));
-
       res.json({
         message: "Comment added successfully",
-        comments: commentsWithUserData,
+        comments: allComments,
       });
     } catch (error) {
       logger.error("Error adding comment:", error);
@@ -825,18 +818,9 @@ router.delete(
         orderBy: { createdAt: "asc" },
       });
 
-      const commentsWithUserData = allComments.map((c) => ({
-        id: c.id,
-        userId: c.userId,
-        username: c.user.username,
-        text: c.text,
-        createdAt: c.createdAt,
-        picture: c.user.picture,
-      }));
-
       res.json({
         message: "Comment removed successfully",
-        comments: commentsWithUserData,
+        comments: allComments,
       });
     } catch (error) {
       logger.error("Error removing comment:", error);
