@@ -28,3 +28,4 @@ public/swe-worker*
 
 .env*
 !.env.example
+.vercel
