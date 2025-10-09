@@ -14,6 +14,7 @@ import React, {
   useEffect,
   useState
 } from "react";
+import { getSerwist } from "virtual:serwist";
 
 interface NotificationsContextType {
   notificationCount: number;
@@ -75,21 +76,24 @@ export const NotificationsProvider = ({
     }
   }, [notifications]);
 
+  // Only unsubscribe when explicitly disabling (when isPushGranted becomes false)
   useEffect(() => {
-    subscription
-      ?.unsubscribe()
-      .then((result) => {
-        if (result) {
-          console.log("Notifications disabled", result);
-          setIsPushGranted(false);
-        } else {
-          console.log("Notifications were not succesfully disabled", result);
-        }
-      })
-      .catch((err) => {
-        console.error("Error unsubscribing from push notifications", err);
-      });
-  }, [isPushGranted]);
+    if (!isPushGranted && subscription) {
+      subscription
+        .unsubscribe()
+        .then((result) => {
+          if (result) {
+            console.log("Notifications disabled", result);
+            setSubscription(null);
+          } else {
+            console.log("Notifications were not succesfully disabled", result);
+          }
+        })
+        .catch((err) => {
+          console.error("Error unsubscribing from push notifications", err);
+        });
+    }
+  }, [isPushGranted, subscription]);
 
   useEffect(() => {
     const isInPWA = window.matchMedia("(display-mode: standalone)").matches;
@@ -112,31 +116,34 @@ export const NotificationsProvider = ({
         console.log("App installed: " + event);
       };
 
-      // Register the service worker using standard API (vite-plugin-pwa handles this)
-      navigator.serviceWorker
-        .getRegistration()
-        .then((existingRegistration) => {
-          if (existingRegistration) {
-            console.log(
-              "Service worker already registered with scope: " + existingRegistration.scope
-            );
-            setRegistration(existingRegistration);
+      // Register the service worker using Serwist's Vite API
+      const loadSerwist = async () => {
+        try {
+          const serwist = await getSerwist();
+
+          if (serwist) {
+            serwist.addEventListener("installed", () => {
+              console.log("Serwist installed!");
+            });
+
+            const reg = await serwist.register();
+            if (reg) {
+              console.log(
+                "Service worker registered with scope: " + reg.scope
+              );
+              setRegistration(reg);
+            } else {
+              console.log("Service worker registration returned undefined");
+            }
           } else {
-            // Wait for service worker to be ready (vite-plugin-pwa will register it)
-            return navigator.serviceWorker.ready;
+            console.log("Serwist is not available");
           }
-        })
-        .then((registration) => {
-          if (registration) {
-            console.log(
-              "Service worker ready with scope: " + registration.scope
-            );
-            setRegistration(registration);
-          }
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error("Service worker registration error:", err);
-        });
+        }
+      };
+
+      loadSerwist();
 
       window.addEventListener("appinstalled", appinstalled);
 
