@@ -15,7 +15,6 @@ RUN pnpm install --frozen-lockfile
 
 # Generate Prisma client and build
 RUN pnpm db:generate
-RUN pnpm db:generate:sql
 RUN pnpm build --filter backend-node
 
 # Production stage
