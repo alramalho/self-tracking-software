@@ -97,7 +97,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
     new Set()
   );
 
-  const currentWeek = weeks.find((week) =>
+  const currentWeek = weeks?.find((week) =>
     isSameWeek(week.startDate, new Date())
   );
 
