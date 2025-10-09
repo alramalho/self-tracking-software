@@ -114,6 +114,8 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
             error
           );
         }
+      } else {
+        toast.success("Push notifications already enabled");
       }
     } else {
       setIsPushGranted(false);
