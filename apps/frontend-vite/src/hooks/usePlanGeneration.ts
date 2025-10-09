@@ -1,6 +1,6 @@
 import { useApiWithAuth } from "@/api";
-import { CompletePlan } from "@/contexts/plans";
-import { Activity } from "@tsw/prisma";
+import { type CompletePlan } from "@/contexts/plans";
+import { type Activity } from "@tsw/prisma";
 
 interface PlanGenerationConfig {
   goal: string;

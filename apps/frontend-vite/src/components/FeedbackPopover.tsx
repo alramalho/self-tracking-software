@@ -5,7 +5,7 @@ import { ArrowLeft, Bug, HelpCircle, MessageSquarePlus } from "lucide-react";
 import React, { useState } from "react";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
-import { TextAreaWithVoice } from "./ui/TextAreaWithVoice";
+import { TextAreaWithVoice } from "./ui/text-area-with-voice";
 
 type FeedbackType = "help_request" | "feature_request" | "bug_report";
 

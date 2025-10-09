@@ -1,11 +1,11 @@
 import GeneralInitializer from "@/components/GeneralInitializer";
+import { AuthProvider, useAuth } from "@/contexts/auth";
 import { GlobalDataProvider } from "@/contexts/GlobalDataProvider";
 import { ThemeProvider } from "@/contexts/theme/provider";
 import { UpgradeProvider } from "@/contexts/upgrade/provider";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
-import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -37,12 +37,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <ClerkProvider
-      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
-      signInUrl="/signin"
-      signUpUrl="/signup"
-      afterSignOutUrl="/signin"
-    >
+    <AuthProvider>
       <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{ persister: localStoragePersister }}
@@ -51,7 +46,7 @@ function RootComponent() {
           <ThemedLayout />
         </GlobalDataProvider>
       </PersistQueryClientProvider>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }
 

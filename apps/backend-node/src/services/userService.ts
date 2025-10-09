@@ -14,6 +14,7 @@ export class UserService {
         deletedAt: null,
         AND: [
           { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+          { email: { not: "alex@chatarmin.com" } },
           { email: { not: { startsWith: "lia.borges+" } } },
         ],
       },
@@ -50,10 +51,62 @@ export class UserService {
     });
   }
 
+  async getUserBySupabaseAuthId(supabaseAuthId: string): Promise<User | null> {
+    return prisma.user.findUnique({
+      where: { supabaseAuthId },
+    });
+  }
+
   async getUserByEmail(email: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { email },
     });
+  }
+
+  async createUserFromSocialLogin(data: {
+    email: string;
+    supabaseAuthId: string;
+    name?: string;
+    picture?: string;
+  }): Promise<User> {
+    // Create user with a reserved pending username pattern
+    // This allows the user to be created without a real username
+    // and prompts them to choose one after OAuth completes
+    const pendingUsername = `__pending__${data.supabaseAuthId}`;
+
+    return prisma.user.create({
+      data: {
+        email: data.email,
+        supabaseAuthId: data.supabaseAuthId,
+        name: data.name,
+        picture: data.picture,
+        username: pendingUsername,
+      },
+    });
+  }
+
+  // Migration helper: try supabaseAuthId first, fallback to email lookup
+  async getUserBySupabaseAuthIdOrEmail(
+    supabaseAuthId: string,
+    email: string
+  ): Promise<User | null> {
+    // Try supabaseAuthId first
+    let user = await this.getUserBySupabaseAuthId(supabaseAuthId);
+
+    if (!user) {
+      // Fallback to email lookup for migrating users
+      user = await this.getUserByEmail(email);
+
+      // If found by email, update with supabaseAuthId for future lookups
+      if (user) {
+        logger.info(
+          `Migrating user ${user.id} (${email}) to Supabase Auth ID: ${supabaseAuthId}`
+        );
+        user = await this.updateUser(user.id, { supabaseAuthId });
+      }
+    }
+
+    return user;
   }
 
   async updateUser(id: string, data: Partial<User>): Promise<User> {
@@ -76,6 +129,7 @@ export class UserService {
         deletedAt: null,
         AND: [
           { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+          { email: { not: "alex@chatarmin.com" } },
           { email: { not: { startsWith: "lia.borges+" } } },
         ],
         username: {

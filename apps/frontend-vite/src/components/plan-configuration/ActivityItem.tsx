@@ -1,6 +1,6 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import { Activity } from "@tsw/prisma";
+import { type Activity } from "@tsw/prisma";
 import { Check } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@/contexts/auth";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 

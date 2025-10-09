@@ -25,3 +25,6 @@ dist-ssr
 
 public/sw*
 public/swe-worker*
+
+.env*
+!.env.example

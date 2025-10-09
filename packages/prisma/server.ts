@@ -7,7 +7,15 @@ const globalForPrisma = (typeof globalThis !== "undefined"
 
 export const prisma = globalForPrisma.prisma || new PrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
+const nodeEnv =
+  // @ts-ignore
+  typeof process !== "undefined"
+    ? // @ts-ignore
+      process.env.NODE_ENV
+    : // @ts-ignore
+      import.meta.env?.MODE;
+
+if (nodeEnv !== "production") {
   globalForPrisma.prisma = prisma;
 }
 

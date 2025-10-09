@@ -1,10 +1,10 @@
 
 import { useApiWithAuth } from "@/api";
+import { useAuth, useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
-import { useClerk, useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Prisma } from "@tsw/prisma";
 import { useNavigate } from "@tanstack/react-router";
+import { Prisma } from "@tsw/prisma";
 import React, {
   useCallback,
   useEffect
@@ -23,7 +23,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { isSignedIn, isLoaded } = useSession();
   const navigate = useNavigate();
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
@@ -40,7 +40,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
       queryClient.clear();
-      signOut({ redirectUrl: window.location.pathname });
+      signOut();
       throw err;
     },
     [navigate, queryClient, signOut]
@@ -86,6 +86,43 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!muteNotifications) {
         toast.error("Failed to update user");
       }
+    },
+  });
+
+  const updateProfileImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await api.post("/users/update-profile-image", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      return response.data.url as string;
+    },
+    onSuccess: (publicUrl) => {
+      // Update the current user's picture in the cache
+      queryClient.setQueryData(["current-user"], (old: HydratedCurrentUser) => {
+        if (!old) return old;
+        return { ...old, picture: publicUrl };
+      });
+
+      // Also update in the user cache if username exists
+      const currentUser = queryClient.getQueryData<HydratedCurrentUser>(["current-user"]);
+      if (currentUser?.username) {
+        queryClient.setQueryData(["user", currentUser.username], (old: HydratedUser) => {
+          if (!old) return old;
+          return { ...old, picture: publicUrl };
+        });
+      }
+
+      toast.success("Profile picture updated");
+    },
+    onError: (error) => {
+      console.error("Error updating profile image:", error);
+      toast.error("Failed to update profile picture");
     },
   });
 
@@ -209,6 +246,9 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
     // Actions
     updateUser: updateUserMutation.mutateAsync,
     isUpdatingUser: updateUserMutation.isPending,
+
+    updateProfileImage: updateProfileImageMutation.mutateAsync,
+    isUpdatingProfileImage: updateProfileImageMutation.isPending,
 
     sendFriendRequest: sendFriendRequestMutation.mutateAsync,
     isSendingFriendRequest: sendFriendRequestMutation.isPending,

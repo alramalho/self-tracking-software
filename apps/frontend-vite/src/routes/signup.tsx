@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { SignUp } from '@clerk/clerk-react'
 import AuthLayout from '@/components/AuthLayout'
+import { SignUp } from '@/components/SignUp'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/signup')({
   component: SignUpPage,
@@ -13,19 +13,15 @@ export const Route = createFileRoute('/signup')({
 
 function SignUpPage() {
   const { redirect_url } = Route.useSearch()
+  const navigate = useNavigate();
 
   return (
     <AuthLayout>
       <SignUp
-        signInUrl={redirect_url ? `/signin?redirect_url=${redirect_url}` : "/signin"}
-        forceRedirectUrl={redirect_url}
-        appearance={{
-          elements: {
-            rootBox: "w-full",
-            card: "shadow-none",
-          }
+        onSuccess={() => {
+          navigate({ to: redirect_url ?? "/" });
         }}
       />
     </AuthLayout>
-  )
+  );
 }

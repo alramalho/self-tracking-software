@@ -3,33 +3,38 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    ".": "./index.ts",
+    ".": {
+      "browser": "./client.ts",
+      "default": "./index.ts"
+    },
     "./client": "./client.ts",
+    "./server": "./server.ts",
     "./types": "./types/index.ts",
     "./generated/prisma/sql/*": "./generated/prisma/sql/*.js"
   },
   "scripts": {
     "build": "prisma generate",
     "db:generate": "prisma generate --sql",
-    "db:reset": "ts-node reset-db.ts",
+    "db:reset": "tsx reset-db.ts",
     "reset-db": "pnpm db:reset",
     "db:push": "prisma db push",
-    "db:seed": "ts-node seed.ts",
+    "db:seed": "tsx seed.ts",
     "seed": "pnpm db:seed",
-    "migrate-prod-to-dev": "ts-node migrate_prod_to_dev.ts",
+    "migrate-prod-to-dev": "tsx migrate_prod_to_dev.ts",
     "clean": "rm -rf node_modules",
-    "db:migrate": "prisma migrate dev --skip-generate",
+    "db:migrate": "dotenv -e .env -- prisma migrate dev --skip-generate",
     "db:deploy": "prisma migrate deploy",
     "db:status": "prisma migrate status",
     "prod:db:status": "dotenv -e .env.prod -- prisma migrate status"
   },
   "dependencies": {
-    "dotenv": "^16.3.1",
     "@prisma/client": "^6.13.0",
+    "dotenv": "^16.3.1",
     "ts-node": "^10.9.1"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
-    "prisma": "^6.13.0"
+    "prisma": "^6.13.0",
+    "tsx": "^3.14.0"
   }
 }

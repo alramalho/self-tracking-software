@@ -1,8 +1,8 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useUser } from '@clerk/clerk-react'
-import { z } from 'zod'
 import PlansRenderer from '@/components/PlansRenderer'
+import { useUser } from '@/contexts/auth'
 import { useCurrentUser } from '@/contexts/users'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { z } from 'zod'
 
 const plansSearchSchema = z.object({
   selectedPlan: z.string().optional(),
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/plans')({
 })
 
 function PlansPage() {
-  const { user, isSignedIn } = useUser()
+  const { isSignedIn } = useUser()
   const { currentUser } = useCurrentUser()
   const search = Route.useSearch()
   const { selectedPlan } = search
@@ -35,8 +35,8 @@ function PlansPage() {
   return (
     <div className="container mx-auto p-3 max-w-2xl">
       <h1 className="text-2xl font-bold mb-4">
-        Welcome
-        {currentUser?.name ? `, ${currentUser.name}` : user?.fullName ? `, ${user.fullName}` : ""}. Here are your
+        Welcome{" "}
+        {currentUser?.name || ""}! Here are your
         active plans:
       </h1>
       <PlansRenderer initialSelectedPlanId={selectedPlan} />

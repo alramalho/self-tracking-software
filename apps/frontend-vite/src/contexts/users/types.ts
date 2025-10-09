@@ -30,6 +30,9 @@ export interface UsersContextType {
   }) => Promise<User>;
   isUpdatingUser: boolean;
 
+  updateProfileImage: (file: File) => Promise<string>;
+  isUpdatingProfileImage: boolean;
+
   sendFriendRequest: (userId: string) => Promise<void>;
   isSendingFriendRequest: boolean;
 
