@@ -67,20 +67,31 @@ export const RecommendedUsers: React.FC = () => {
         if (!user || !user.id) {
           return null;
         }
-        const plan = recommendedPlans
-          ?.filter((plan) => plan.userId === user.id)
-          .sort((a, b) => {
-            // Sort by sortOrder, with nulls last, then by createdAt
-            if (a.sortOrder !== null && b.sortOrder !== null) {
-              return a.sortOrder - b.sortOrder;
-            }
-            if (a.sortOrder !== null && b.sortOrder === null) return -1;
-            if (a.sortOrder === null && b.sortOrder !== null) return 1;
-            return (
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime()
-            );
-          })[0];
+        
+        // Get the plan that was used for this match from the recommendation metadata
+        const relativeToPlanId = (recommendation.metadata as any)?.relativeToPlanId;
+        let plan = relativeToPlanId 
+          ? recommendedPlans?.find((p) => p.id === relativeToPlanId)
+          : null;
+        
+        // Fallback to first plan if relativeToPlanId is not available or plan not found
+        if (!plan) {
+          plan = recommendedPlans
+            ?.filter((plan) => plan.userId === user.id)
+            .sort((a, b) => {
+              // Sort by sortOrder, with nulls last, then by createdAt
+              if (a.sortOrder !== null && b.sortOrder !== null) {
+                return a.sortOrder - b.sortOrder;
+              }
+              if (a.sortOrder !== null && b.sortOrder === null) return -1;
+              if (a.sortOrder === null && b.sortOrder !== null) return 1;
+              return (
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+              );
+            })[0];
+        }
+        
         return (
           <UserCard
             key={user.id}
