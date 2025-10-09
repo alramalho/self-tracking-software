@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "prisma generate",
-    "db:generate": "prisma generate --sql",
+    "db:generate": "prisma generate",
+    "db:generate:sql": "prisma generate --sql",
     "db:reset": "tsx reset-db.ts",
     "reset-db": "pnpm db:reset",
     "db:push": "prisma db push",
