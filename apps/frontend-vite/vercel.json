@@ -7,6 +7,10 @@
     {
       "source": "/relay-ph/(.*)",
       "destination": "https://us.i.posthog.com/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
