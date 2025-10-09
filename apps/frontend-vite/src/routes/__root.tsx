@@ -76,7 +76,7 @@ function ThemedLayout() {
               zIndex: 105,
             }}
           />
-          <TanStackRouterDevtools />
+          {import.meta.env.DEV && <TanStackRouterDevtools />}
         </NotificationsProvider>
       </UpgradeProvider>
     </ThemeProvider>
