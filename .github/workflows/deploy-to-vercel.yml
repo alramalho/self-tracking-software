@@ -9,7 +9,7 @@ on:
         type: string
 
 env:
-  VERCEL_PROJECT_ID: prj_Hoj3TTlujLlSYx8lgSzIn2jJYIM7
+  VERCEL_PROJECT_ID: prj_pqUqMZvGGe4d3MEhf7Y3qfXg5R4D
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 jobs:
