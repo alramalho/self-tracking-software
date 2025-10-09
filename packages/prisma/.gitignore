@@ -1,4 +1,14 @@
 .env
 .env*
 
+# Ignore everything in generated
 generated/*
+
+# But don't ignore the prisma directory itself
+!generated/prisma/
+
+# Ignore everything in prisma
+generated/prisma/*
+
+# But don't ignore the sql directory
+!generated/prisma/sql/
