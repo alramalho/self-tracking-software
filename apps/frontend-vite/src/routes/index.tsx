@@ -11,17 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-    Bell,
-    ChevronDown,
-    ChevronRight,
-    Hammer,
-    RefreshCcw,
-    ScanFace,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  Hammer,
+  RefreshCcw,
+  ScanFace,
 } from "lucide-react";
 import { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import supportAgentSvg from '../assets/icons/support-agent.svg';
 
+import { MaintenanceOverlay } from "@/components/MaintenanceOverlay";
 import { ProgressRing } from "@/components/ProgressRing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivities } from "@/contexts/activities/useActivities";
@@ -42,6 +43,15 @@ export const Route = createFileRoute('/')({
   component: HomePage,
 });
 
+// Maintenance mode configuration
+const MAINTENANCE_MODE_ENABLED = import.meta.env.VITE_MAINTENANCE_MODE_ENABLED;
+const WHITELISTED_EMAILS = [
+  "alexandre.ramalho.1998@gmail.com",
+  "liavilelaborges@gmail.com",
+];
+// Fixed maintenance end date: October 10th, 2025 at midnight UTC
+const MAINTENANCE_END_DATE = new Date('2025-10-10T00:00:00Z');
+
 function HomePage() {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
   const navigate = useNavigate();
@@ -53,6 +63,7 @@ function HomePage() {
       plan.deletedAt === null &&
       (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _ = usePlansProgress(activePlans?.map((plan) => plan.id) || []); // force refetch prior to timeline to speed up plan show
   const { metrics } = useMetrics();
   const { refetchAllData } = useGlobalDataOperations();
@@ -159,6 +170,12 @@ function HomePage() {
         </div>
       </div>
     );
+  }
+
+  // Check if maintenance mode is enabled and user is not whitelisted
+  const isUserWhitelisted = currentUser?.email && WHITELISTED_EMAILS.includes(currentUser.email);
+  if (MAINTENANCE_MODE_ENABLED && !isUserWhitelisted) {
+    return <MaintenanceOverlay targetDate={MAINTENANCE_END_DATE} />;
   }
 
   return (
