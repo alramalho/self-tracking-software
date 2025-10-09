@@ -1,5 +1,5 @@
+import { AnimatePresence, motion } from "framer-motion";
 import React, { forwardRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 export interface QuestionCheckItem {
   icon?: React.ReactNode | string;
@@ -39,7 +39,7 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
 
 
     return (
-      <div ref={ref} className="space-y-3 mt-12 px-4">
+      <div ref={ref} className="space-y-3 mt-4 px-4">
         {questionPrefix && (
           <p className="text-sm text-gray-500 mb-3">{questionPrefix}</p>
         )}
@@ -103,8 +103,8 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
                       <motion.h4
                         className={`text-sm font-semibold transition-colors duration-200 ${
                           checkedItems[key]
-                            ? "text-gray-900 dark:text-gray-100"
-                            : "text-gray-700 dark:text-gray-300"
+                            ? "text-gray-900"
+                            : "text-gray-700"
                         }`}
                       >
                         {item.title}
@@ -113,8 +113,8 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
                         <motion.p
                           className={`text-xs transition-colors duration-200 leading-relaxed ${
                             checkedItems[key]
-                              ? "text-gray-600 dark:text-gray-400"
-                              : "text-gray-500 dark:text-gray-500"
+                              ? "text-gray-600"
+                              : "text-gray-500"
                           }`}
                         >
                           {item.description}

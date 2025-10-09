@@ -1,7 +1,7 @@
-import { useUser } from "@clerk/clerk-react";
+import { useUser } from "@/contexts/auth";
 
 export const useLogError = () => {
-  const { user } = useUser();
+  const { supabaseUser: user } = useUser();
 
   const handleQueryError = (
     error: Error & { digest?: string; response?: any; status?: number },

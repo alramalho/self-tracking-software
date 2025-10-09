@@ -1,5 +1,5 @@
+import { useAuth } from '@/contexts/auth'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useAuth } from '@clerk/clerk-react'
 import { useEffect } from 'react'
 
 export const Route = createFileRoute('/signout')({

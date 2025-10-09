@@ -3,9 +3,9 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
 import { normalizeApiResponse } from "@/utils/dateUtils";
-import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Metric, type MetricEntry } from "@tsw/prisma";
 import { isSameDay } from "date-fns";

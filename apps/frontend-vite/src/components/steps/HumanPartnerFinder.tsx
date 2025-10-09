@@ -134,7 +134,7 @@ const OptionCard = ({
 // };
 
 const HumanPartnerFinder = () => {
-  const { completeStep, } = useOnboarding();
+  const { completeStep, planId } = useOnboarding();
   const { shareOrCopyReferralLink } = useShareOrCopy();
   const [apSearchPopupOpen, setApSearchPopupOpen] = useState(false);
   const [hasShared, setHasShared] = useState(false);
@@ -232,7 +232,7 @@ const HumanPartnerFinder = () => {
         ) : (
           <div className="space-y-6 mt-4">
             <CollapsibleSelfUserCard />
-            <RecommendedUsers />
+            <RecommendedUsers selectedPlanId={planId} />
           </div>
         )}
       </AppleLikePopover>

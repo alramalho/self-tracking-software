@@ -39,6 +39,7 @@ const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
+  // @ts-expect-error idk
   <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content

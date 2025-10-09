@@ -1,7 +1,9 @@
 import recommendationsService from "@/services/recommendationsService";
 import { Request, Response, Router } from "express";
+import multer from "multer";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { notificationService } from "../services/notificationService";
+import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
 import { TelegramService } from "../services/telegramService";
 import { userService } from "../services/userService";
@@ -17,6 +19,22 @@ import { prisma } from "../utils/prisma";
 
 export const usersRouter: Router = Router();
 const telegramService = new TelegramService();
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept images only
+    if (!file.mimetype.startsWith("image/")) {
+      cb(new Error("Only image files are allowed"));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 const basicUserInclude = {
   connectionsFrom: {
@@ -214,6 +232,51 @@ usersRouter.post(
       res.status(500).json({
         success: false,
         error: { message: "Failed to update user" },
+      });
+    }
+  }
+);
+
+// Update profile image
+usersRouter.post(
+  "/update-profile-image",
+  requireAuth,
+  upload.single("image"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          error: { message: "No image file provided" },
+        });
+        return;
+      }
+
+      // Generate unique file key
+      const fileExtension = req.file.mimetype.split("/")[1];
+      const key = `profile-images/${req.user!.id}-${Date.now()}.${fileExtension}`;
+
+      // Upload to S3 with public access
+      await s3Service.upload(req.file.buffer, key, req.file.mimetype, true);
+
+      // Get public URL
+      const publicUrl = s3Service.getPublicUrl(key);
+
+      // Update user's picture field
+      const updatedUser = await userService.updateUser(req.user!.id, {
+        picture: publicUrl,
+      });
+
+      res.json({
+        message: "Profile image updated successfully",
+        url: publicUrl,
+        user: updatedUser,
+      });
+    } catch (error) {
+      logger.error("Failed to update profile image:", error);
+      res.status(500).json({
+        success: false,
+        error: { message: "Failed to update profile image" },
       });
     }
   }

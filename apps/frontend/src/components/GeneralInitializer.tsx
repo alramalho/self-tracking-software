@@ -25,6 +25,10 @@ export default function GeneralInitializer({
 }) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useSession();
   const { currentUser, hasLoadedUserData, updateUser } = useCurrentUser();
+  const needsUsername = useMemo(
+    () => currentUser?.username?.startsWith("__pending__"),
+    [currentUser?.username]
+  );
   const { isAppInstalled, isPushGranted } = useNotifications();
   const { refetchAllData } = useGlobalDataOperations();
   const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
@@ -68,8 +72,12 @@ export default function GeneralInitializer({
       currentUser?.onboardingCompletedAt == null &&
       !isOnboardingPage
     ) {
-      console.log("pushing");
-      router.push("/onboarding");
+      console.log({needsUsername, currentUser})
+      if (needsUsername) {
+        router.push("/username-selection");
+      } else {
+        router.push("/onboarding");
+      }
     }
   }, [
     currentUser,

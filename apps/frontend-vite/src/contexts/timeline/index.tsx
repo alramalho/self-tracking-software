@@ -2,8 +2,8 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { normalizeApiResponse } from "@/utils/dateUtils";
-import { useSession } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Activity } from "@tsw/prisma";
 import React from "react";

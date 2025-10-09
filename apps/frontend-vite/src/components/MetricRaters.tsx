@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useMetrics } from "@/contexts/metrics";
 import { useCurrentUser } from "@/contexts/users";
 import { todaysLocalDate } from "@/lib/utils";
-import { Metric } from "@tsw/prisma";
+import { type Metric } from "@tsw/prisma";
 import { isToday } from "date-fns";
 import { useState } from "react";
 import toast from "react-hot-toast";

@@ -41,6 +41,7 @@ const FireBadge: React.FC<FireBadgeProps> = ({ children, ...props }) => {
       <FireAnimation height={props.height || 60} width={props.width || 60} />
       {children && (
         <Badge className="absolute bottom-0 left-1/2 -translate-x-1/2 text-sm bg-black/60">
+          {/* @ts-expect-error idk */}
           {children}
         </Badge>
       )}{" "}
