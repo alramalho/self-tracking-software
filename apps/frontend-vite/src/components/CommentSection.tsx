@@ -164,11 +164,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                   onClick={() => navigateToProfile(comment.user.username)}
                 >
                   <AvatarImage
-                    src={comment.user.picture || undefined}
-                    alt={comment.user.username}
+                    src={comment.user?.picture || undefined}
+                    alt={comment.user?.username}
                   />
                   <AvatarFallback>
-                    {comment.user.username[0].toUpperCase()}
+                    {comment.user?.username[0].toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
 
@@ -176,9 +176,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                   <div className="flex items-center justify-between">
                     <span
                       className="font-medium text-sm hover:underline cursor-pointer"
-                      onClick={() => navigateToProfile(comment.user.username)}
+                      onClick={() => navigateToProfile(comment.user?.username)}
                     >
-                      @{comment.user.username}
+                      @{comment.user?.username}
                     </span>
                     <span className="text-xs text-gray-400">
                       {getFormattedDate(comment.createdAt)}
