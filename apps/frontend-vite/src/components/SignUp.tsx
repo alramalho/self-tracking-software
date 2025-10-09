@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth";
 import { useState } from "react";
+import FeedbackPopover from "./FeedbackPopover";
 
 interface SignUpProps {
   onSuccess?: () => void;
@@ -17,7 +18,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onSuccess }) => {
   const { signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [showHelpForm, setShowHelpForm] = useState(false);
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     setError(null);
@@ -37,9 +38,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onSuccess }) => {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-        <CardDescription>
-          Sign up with Google to get started
-        </CardDescription>
+        <CardDescription>Sign up with Google to get started</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Button
@@ -74,6 +73,23 @@ export const SignUp: React.FC<SignUpProps> = ({ onSuccess }) => {
           <p className="text-sm text-destructive text-center">{error}</p>
         )}
       </CardContent>
+      <div className="p-4 border-t border-gray-200 flex justify-center items-center gap-2">
+        <img src="/icons/support-agent.svg" alt="Support" className="w-6 h-6" />
+        <p className="text-xs text-gray-500">
+          Having trouble? Click{" "}
+          <a
+            className="underline cursor-pointer"
+            onClick={() => setShowHelpForm(true)}
+          >
+            here
+          </a>{" "}
+          to get help.
+          <FeedbackPopover
+            onClose={() => setShowHelpForm(false)}
+            open={showHelpForm}
+          />
+        </p>
+      </div>
     </Card>
   );
 };

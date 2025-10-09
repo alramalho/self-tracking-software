@@ -54,6 +54,52 @@ export class TelegramService {
     await this.sendToAllChats(message);
   }
 
+  async sendMessageWithPhotos(
+    message: string,
+    photoUrls: string[]
+  ): Promise<void> {
+    if (!this.botToken || this.chatIds.length === 0) {
+      logger.warn("Telegram bot token or chat IDs not configured");
+      return;
+    }
+
+    const promises = this.chatIds.map(async (chatId) => {
+      try {
+        // First send the message
+        await axios.post(
+          `https://api.telegram.org/bot${this.botToken}/sendMessage`,
+          {
+            chat_id: chatId,
+            text: message,
+            parse_mode: "Markdown",
+          }
+        );
+
+        // Then send each photo
+        for (const photoUrl of photoUrls) {
+          await axios.post(
+            `https://api.telegram.org/bot${this.botToken}/sendPhoto`,
+            {
+              chat_id: chatId,
+              photo: photoUrl,
+            }
+          );
+        }
+
+        logger.debug(
+          `Message with ${photoUrls.length} photo(s) sent successfully to chat ID: ${chatId}`
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to send Telegram message with photos to chat ID ${chatId}:`,
+          error
+        );
+      }
+    });
+
+    await Promise.allSettled(promises);
+  }
+
   private async sendToAllChats(
     message: string,
     parseMode?: string
