@@ -19,6 +19,9 @@
     "db:generate": {
       "cache": false
     },
+    "db:generate:sql": {
+      "cache": false
+    },
     "db:migrate": {
       "cache": false
     },
