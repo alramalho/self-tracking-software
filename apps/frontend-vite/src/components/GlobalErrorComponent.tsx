@@ -7,13 +7,16 @@ import { useEffect } from "react";
 export function GlobalErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
 
+  function clearCache() {
+    localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
+  }
+
   useEffect(() => {
     console.error("Global Error: ", error);
     logGlobalError(
       error instanceof Error ? error : new Error(String(error)),
       typeof window !== "undefined" ? window.location.href : undefined
     );
-    localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
   }, [error]);
 
   return (
@@ -33,11 +36,12 @@ export function GlobalErrorComponent({ error, reset }: ErrorComponentProps) {
         <div className="flex gap-4 justify-center">
           <Button
             onClick={() => {
-              router.navigate({ to: "/" });
+              clearCache()
+              window.location.reload()
             }}
             className="bg-primary hover:bg-primary/90"
           >
-            Go Home
+            Retry
           </Button>
         </div>
 
