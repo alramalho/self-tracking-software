@@ -23,6 +23,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: ["react", "react-dom"],
   },
   // Capacitor configuration
   base: './', // Use relative paths for Capacitor
