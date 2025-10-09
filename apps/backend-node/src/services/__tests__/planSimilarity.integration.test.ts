@@ -5,15 +5,10 @@ import { prisma } from "../../utils/prisma";
 import { plansService } from "../plansService";
 import { recommendationsService } from "../recommendationsService";
 
-// NOTE TO SELF: we need to
-// 1. make sure plan similarity works
-// 2. refactor frontend to be more simple -> plan similarity focused
-// so basically, make matching algorithm almost exclusive to plan similarity
-// activity based can be hidden (just use for filtering out)
-
 const testUserId1 = "cmev4pw6x0000yz1sefkbyy1l";
 const testUserId2 = "cmf55cdau0001yy1injs56d1y";
 const testUserId3 = "cmf55nb160000yw1t6rwa2fuc";
+const testUserId4 = "cmf59yhp30000yu1h1nkji9fr";
 // TODO: these activities are not being used for anything rn, just match based on plan similarity
 async function createTestPlanWithActivities(
   userId: string,
@@ -72,7 +67,7 @@ async function getMostSimilarPlan(
   try {
     let eligibleUserIds = options?.userIds;
     if (!eligibleUserIds || eligibleUserIds?.length === 0) {
-      eligibleUserIds = [testUserId1, testUserId2, testUserId3];
+      eligibleUserIds = [testUserId1, testUserId2, testUserId3, testUserId4];
     }
 
     const sourcePlan = (await prisma.plan.findUnique({
@@ -109,7 +104,7 @@ async function getMostSimilarPlan(
 describe("Plan Similarity Integration Tests", () => {
   beforeAll(async () => {
     // Create test users
-    const users = [testUserId1, testUserId2, testUserId3];
+    const users = [testUserId1, testUserId2, testUserId3, testUserId4];
     for (const userId of users) {
       await prisma.user.upsert({
         where: { id: userId },
@@ -125,7 +120,7 @@ describe("Plan Similarity Integration Tests", () => {
 
   beforeEach(async () => {
     // Clean up all plans and activities before each test
-    const users = [testUserId1, testUserId2, testUserId3];
+    const users = [testUserId1, testUserId2, testUserId3, testUserId4];
     for (const userId of users) {
       await prisma.planSession.deleteMany({
         where: { plan: { userId } },
@@ -169,6 +164,12 @@ describe("Plan Similarity Integration Tests", () => {
           { title: "Build projects", measure: "projects", emoji: "🛠️" },
         ],
       },
+      {
+        userId: testUserId4,
+        planId: "plan-chess",
+        goal: "I want to play a bit of chess everyday",
+        activities: [{ title: "Chess", measure: "minutes", emoji: "♟️" }],
+      },
     ];
 
     // Create plans with activities
@@ -192,7 +193,7 @@ describe("Plan Similarity Integration Tests", () => {
 
   afterAll(async () => {
     // Cleanup test users
-    const users = [testUserId1, testUserId2, testUserId3];
+    const users = [testUserId1, testUserId2, testUserId3, testUserId4];
     for (const userId of users) {
       await prisma.planSession.deleteMany({
         where: { plan: { userId } },
@@ -264,7 +265,7 @@ describe("Plan Similarity Integration Tests", () => {
   });
 
   describe("Dissimilar Plans", () => {
-    it("should give low similarity for completely unrelated plans", async () => {
+    it("should give low similarity for running and coding (1)", async () => {
       const result = await getMostSimilarPlan("plan-coding", {
         limit: 10,
       });
@@ -277,7 +278,18 @@ describe("Plan Similarity Integration Tests", () => {
           ? result!.similarity
           : 0;
 
-      expect(runningSimilarity).toBeLessThan(0.2);
+      console.log({ runningSimilarity });
+      expect(runningSimilarity).toBeLessThan(0.1);
+    });
+    it("should give low similarity for chess and running and coding (1)", async () => {
+      const result = await getMostSimilarPlan("plan-chess", {
+        limit: 10,
+      });
+
+      expect(result).not.toBeNull();
+
+      console.log({ similarity: result!.similarity });
+      expect(result!.similarity).toBeLessThan(0.1);
     });
   });
 
