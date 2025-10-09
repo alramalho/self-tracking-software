@@ -28,12 +28,14 @@ function SearchPage() {
   const { plans, isLoadingPlans } = usePlans();
   const { refetchRecommendations } = useRecommendations();
 
-  const activePlans = useMemo(() =>
-    plans?.filter(
-      (plan) =>
-        plan.deletedAt === null &&
-        (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
-    ) || [],
+  const activePlans = useMemo(
+    () =>
+      plans?.filter(
+        (plan) =>
+          plan.deletedAt === null &&
+          (plan.finishingDate === null ||
+            isAfter(plan.finishingDate, new Date()))
+      ) || [],
     [plans]
   );
 
@@ -45,6 +47,14 @@ function SearchPage() {
   // Update selected plan when active plans load
   if (activePlans.length > 0 && !selectedPlanId) {
     setSelectedPlanId(activePlans[0].id);
+  }
+
+  function refreshRecommendations() {
+    api.post("/users/compute-recommendations", {
+      planId: selectedPlanId,
+    });
+    refetchRecommendations();
+    toast.success("Recommendations refreshed!");
   }
 
   const handleUserClick = (user: UserSearchResult) => {
@@ -109,11 +119,7 @@ function SearchPage() {
     <>
       <PullToRefresh
         onRefresh={async () => {
-          await api.post("/users/compute-recommendations", {
-            planId: selectedPlanId,
-          });
-          await refetchRecommendations();
-          toast.success("Recommendations refreshed!");
+          refreshRecommendations();
         }}
         pullingContent={
           <div className="flex items-center justify-center my-4">
@@ -132,30 +138,34 @@ function SearchPage() {
           <UserSearch onUserClick={handleUserClick} />
 
           {/* Plan Selector */}
-          {!isLoadingCurrentUser && !isLoadingPlans && activePlans.length > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600 font-medium">Find partners for:</span>
-              <div className="relative flex-1">
-                <select
-                  value={selectedPlanId || ""}
-                  onChange={(e) => handlePlanChange(e.target.value)}
-                  disabled={isRecomputingForPlan}
-                  className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {activePlans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.emoji} {plan.goal}
-                    </option>
-                  ))}
-                </select>
-                {isRecomputingForPlan ? (
-                  <RefreshCcw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 animate-spin" />
-                ) : (
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                )}
+          {!isLoadingCurrentUser &&
+            !isLoadingPlans &&
+            activePlans.length > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600 font-medium">
+                  Find partners for:
+                </span>
+                <div className="relative flex-1">
+                  <select
+                    value={selectedPlanId || ""}
+                    onChange={(e) => handlePlanChange(e.target.value)}
+                    disabled={isRecomputingForPlan}
+                    className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {activePlans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.emoji} {plan.goal}
+                      </option>
+                    ))}
+                  </select>
+                  {isRecomputingForPlan ? (
+                    <RefreshCcw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 animate-spin" />
+                  ) : (
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Recommendations Section */}
           {isLoadingCurrentUser || isLoadingPlans ? (
