@@ -1,8 +1,8 @@
 import { Construction } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface MaintenanceOverlayProps {
-  targetDate: Date;
+  targetDate?: Date;
 }
 
 export function MaintenanceOverlay({ targetDate }: MaintenanceOverlayProps) {
@@ -12,10 +12,16 @@ export function MaintenanceOverlay({ targetDate }: MaintenanceOverlayProps) {
     seconds: 0,
   });
 
+  // Use provided targetDate or fall back to env var
+  const maintenanceEndDate = useMemo(() => 
+    targetDate || new Date(import.meta.env.VITE_MAINTENANCE_END_DATE || '2025-10-10T00:00:00Z'),
+    [targetDate]
+  );
+
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date().getTime();
-      const target = targetDate.getTime();
+      const target = maintenanceEndDate.getTime();
       const difference = target - now;
 
       if (difference > 0) {
@@ -36,7 +42,7 @@ export function MaintenanceOverlay({ targetDate }: MaintenanceOverlayProps) {
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [targetDate]);
+  }, [maintenanceEndDate]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 flex items-center justify-center p-4">
