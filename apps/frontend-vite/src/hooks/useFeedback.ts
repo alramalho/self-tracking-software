@@ -11,11 +11,25 @@ export const useFeedback = () => {
     mutationFn: async (data: {
       text: string;
       type: "feature_request" | "help_request" | "bug_report";
+      email?: string;
+      images?: File[];
     }) => {
-      await api.post("/users/report-feedback", {
-        email: currentUser?.email,
-        text: data.text,
-        type: data.type,
+      const formData = new FormData();
+      formData.append("email", data.email || currentUser?.email || "");
+      formData.append("text", data.text);
+      formData.append("type", data.type);
+
+      // Add images if provided
+      if (data.images && data.images.length > 0) {
+        data.images.forEach((image) => {
+          formData.append("images", image);
+        });
+      }
+
+      await api.post("/users/report-feedback", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
     },
     onSuccess: () => {

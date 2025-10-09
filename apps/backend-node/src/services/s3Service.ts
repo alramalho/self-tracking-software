@@ -38,7 +38,7 @@ export class S3Service {
         Key: key.startsWith("/") ? key.substring(1) : key, // Remove leading slash
         Body: buffer,
         ContentType: contentType || "application/octet-stream",
-        // Don't use ACL - bucket policy should handle public access for profile-images/*
+        // Note: ACLs are disabled on this bucket, use bucket policy for public access
       });
 
       await this.s3Client.send(command);

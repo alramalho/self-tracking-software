@@ -1,7 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth";
 import { useState } from "react";
+import FeedbackPopover from "./FeedbackPopover";
 
 interface SignInProps {
   onSuccess?: () => void;
@@ -11,6 +18,7 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
   const { signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHelpForm, setShowHelpForm] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -66,6 +74,23 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
           <p className="text-sm text-destructive text-center">{error}</p>
         )}
       </CardContent>
+      <div className="p-4 border-t border-gray-200 flex justify-center items-center gap-2">
+        <img src="/icons/support-agent.svg" alt="Support" className="w-6 h-6" />
+        <p className="text-xs text-gray-500">
+          Having trouble? Click{" "}
+          <a
+            className="underline cursor-pointer"
+            onClick={() => setShowHelpForm(true)}
+          >
+            here
+          </a>{" "}
+          to get help.
+          <FeedbackPopover
+            onClose={() => setShowHelpForm(false)}
+            open={showHelpForm}
+          />
+        </p>
+      </div>
     </Card>
   );
 };

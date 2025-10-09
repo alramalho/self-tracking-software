@@ -1,7 +1,7 @@
 "use client";
 
 import { useFeedback } from "@/hooks/useFeedback";
-import { ArrowLeft, Bug, HelpCircle, MessageSquarePlus } from "lucide-react";
+import { ArrowLeft, Bug, HelpCircle, ImagePlus, MessageSquarePlus, X } from "lucide-react";
 import React, { useState } from "react";
 import AppleLikePopover from "./AppleLikePopover";
 import { Button } from "./ui/button";
@@ -19,23 +19,27 @@ interface FeedbackCategory {
 }
 
 interface FeedbackPopoverProps {
-  email: string;
+  email?: string;
   onClose: () => void;
   isEmailEditable?: boolean;
   open: boolean;
 }
 
-const FeedbackPopover = ({ 
-  email: initialEmail, 
+const FeedbackPopover = ({
+  email: initialEmail,
   onClose,
-  isEmailEditable = false,
+  isEmailEditable,
   open,
 }: FeedbackPopoverProps) => {
   const [selectedCategory, setSelectedCategory] = useState<FeedbackType | null>(null);
   const [text, setText] = useState("");
-  const [email, setEmail] = useState(initialEmail);
+  const [email, setEmail] = useState(initialEmail || "");
+  const [images, setImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { sendFeedback } = useFeedback();
+
+  // Auto-determine if email should be editable
+  const effectiveIsEmailEditable = isEmailEditable !== undefined ? isEmailEditable : !initialEmail;
 
   const categories: FeedbackCategory[] = [
     {
@@ -64,15 +68,34 @@ const FeedbackPopover = ({
     },
   ];
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const newImages = Array.from(files).slice(0, 3 - images.length); // Max 3 images
+      setImages((prev) => [...prev, ...newImages]);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
-    if (!selectedCategory || !text.trim()) return;
-    
+    if (!selectedCategory || !text.trim() || !email.trim()) return;
+
     setIsSubmitting(true);
-    
+
     try {
-      await sendFeedback({ text, type: selectedCategory });
-      
+      await sendFeedback({
+        text,
+        type: selectedCategory,
+        email,
+        images: images.length > 0 ? images : undefined,
+      });
+
       setText("");
+      setEmail(initialEmail || "");
+      setImages([]);
       setSelectedCategory(null);
       onClose();
     } catch (error) {
@@ -85,11 +108,14 @@ const FeedbackPopover = ({
   const handleBack = () => {
     setSelectedCategory(null);
     setText("");
+    setImages([]);
   };
 
   const handleClose = () => {
     setSelectedCategory(null);
     setText("");
+    setImages([]);
+    setEmail(initialEmail || "");
     onClose();
   };
 
@@ -144,13 +170,14 @@ const FeedbackPopover = ({
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => isEmailEditable && setEmail(e.target.value)}
-                  disabled={!isEmailEditable}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50"
+                  onChange={(e) => effectiveIsEmailEditable && setEmail(e.target.value)}
+                  disabled={!effectiveIsEmailEditable}
+                  className={`w-full px-3 py-2 border border-gray-200 rounded-lg ${effectiveIsEmailEditable ? "bg-white" : "bg-gray-50"}`}
+                  placeholder="your@email.com"
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Message</label>
                 <TextAreaWithVoice
@@ -161,9 +188,54 @@ const FeedbackPopover = ({
                 />
               </div>
 
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm text-gray-600 mb-2">
+                  Attach Images (optional, max 3)
+                </label>
+
+                {/* Image Previews */}
+                {images.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                        />
+                        <button
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload Button */}
+                {images.length < 3 && (
+                  <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors">
+                    <ImagePlus size={20} className="text-gray-500" />
+                    <span className="text-sm text-gray-600">
+                      {images.length === 0 ? "Add images" : "Add more images"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
               <Button
                 onClick={handleSubmit}
-                disabled={!text.trim() || isSubmitting}
+                disabled={!text.trim() || !email.trim() || isSubmitting}
                 className="w-full"
               >
                 {isSubmitting ? "Sending..." : "Send"}

@@ -868,38 +868,74 @@ usersRouter.post(
   }
 );
 
-// Report feedback
+// Report feedback (supports both authenticated and unauthenticated users)
 usersRouter.post(
   "/report-feedback",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  upload.array("images", 3), // Accept up to 3 images
+  async (req: Request, res: Response) => {
     try {
+      // Try to get authenticated user (optional)
+      const authReq = req as AuthenticatedRequest;
+      const user = authReq.user;
+
       const feedback = FeedbackSchema.parse(req.body);
+      const files = req.files as Express.Multer.File[] | undefined;
+
+      // Upload images to S3 if provided
+      const imageUrls: string[] = [];
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const fileExtension = file.mimetype.split("/")[1];
+          const key = `feedback-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
+
+          await s3Service.upload(file.buffer, key, file.mimetype, false);
+          // Use public URL since bucket policy allows public read for feedback-images/*
+          const publicUrl = s3Service.getPublicUrl(key);
+          imageUrls.push(publicUrl);
+        }
+      }
+
+      // Build email content
+      const userInfo = user
+        ? `${user.username} (${user.email})`
+        : "Anonymous/Unauthenticated";
+      const userId = user ? user.id : "N/A";
 
       // Send email notification using SES
       const adminEmail = process.env.ADMIN_EMAIL || "alex@tracking.so";
+
+      const imagesHtml =
+        imageUrls.length > 0
+          ? `
+<h3>Attached Images:</h3>
+${imageUrls.map((url, index) => `<p><a href="${url}">Image ${index + 1}</a><br><img src="${url}" style="max-width: 600px; margin: 10px 0;" /></p>`).join("")}
+`
+          : "";
+
       try {
         await sesService.sendEmail({
           to: [adminEmail],
-          subject: `New ${feedback.type} feedback from ${req.user!.username}`,
+          subject: `New ${feedback.type} feedback${user ? ` from ${user.username}` : ""}`,
           textBody: `
-Feedback received from user: ${req.user!.username} (${req.user!.email})
+Feedback received from: ${userInfo}
 Type: ${feedback.type}
-Email: ${feedback.email}
+Contact Email: ${feedback.email}
 Message: ${feedback.text}
+${imageUrls.length > 0 ? `\nImages:\n${imageUrls.join("\n")}` : ""}
 
-User ID: ${req.user!.id}
+User ID: ${userId}
 Timestamp: ${new Date().toISOString()}
           `,
           htmlBody: `
 <h2>New ${feedback.type} Feedback</h2>
-<p><strong>User:</strong> ${req.user!.username} (${req.user!.email})</p>
+<p><strong>From:</strong> ${userInfo}</p>
 <p><strong>Type:</strong> ${feedback.type}</p>
 <p><strong>Contact Email:</strong> ${feedback.email}</p>
 <p><strong>Message:</strong></p>
 <blockquote>${feedback.text}</blockquote>
+${imagesHtml}
 <hr>
-<p><small>User ID: ${req.user!.id}<br>
+<p><small>User ID: ${userId}<br>
 Timestamp: ${new Date().toISOString()}</small></p>
           `,
         });
@@ -910,22 +946,33 @@ Timestamp: ${new Date().toISOString()}</small></p>
 
       // Send Telegram notification for bug reports
       if (feedback.type === "bug_report") {
-        telegramService.sendMessage(
+        const imageLinksText = imageUrls.length > 0
+          ? `\n**Image Links:**\n${imageUrls.map((url, i) => `${i + 1}. ${url}`).join('\n')}\n`
+          : '';
+
+        const telegramMessage =
           `🐛 **New Bug Report**\n\n` +
-            `**User:** ${req.user!.username} (${req.user!.email})\n` +
-            `**Contact:** ${feedback.email}\n` +
-            `**Message:** ${feedback.text}\n` +
-            `**UTC Time:** ${new Date().toISOString()}`
-        );
+          `**From:** ${userInfo}\n` +
+          `**Contact:** ${feedback.email}\n` +
+          `**Message:** ${feedback.text}${imageLinksText}` +
+          `**UTC Time:** ${new Date().toISOString()}`;
+
+        if (imageUrls.length > 0) {
+          await telegramService.sendMessageWithPhotos(
+            telegramMessage,
+            imageUrls
+          );
+        } else {
+          await telegramService.sendMessage(telegramMessage);
+        }
       }
 
-      // TODO: Implement PostHog tracking when PostHog is set up
-
       logger.info("Feedback received:", {
-        userId: req.user!.id,
-        username: req.user!.username,
+        userId,
+        username: user?.username || "anonymous",
         type: feedback.type,
         email: feedback.email,
+        imageCount: imageUrls.length,
       });
 
       res.json({ status: "success" });
