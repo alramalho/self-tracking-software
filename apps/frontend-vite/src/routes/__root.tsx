@@ -1,4 +1,5 @@
 import GeneralInitializer from "@/components/GeneralInitializer";
+import { GlobalErrorComponent } from "@/components/GlobalErrorComponent";
 import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/auth";
 import { GlobalDataProvider } from "@/contexts/GlobalDataProvider";
@@ -62,6 +63,7 @@ function NotFoundComponent() {
 export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
+  errorComponent: GlobalErrorComponent,
 });
 
 function RootComponent() {
