@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivities } from "@/contexts/activities/useActivities";
-import { type PlanProgressData, usePlansProgress } from "@/contexts/plans-progress";
+import { type PlanProgressData } from "@/contexts/plans-progress";
 import { useCurrentUser, useUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -60,7 +60,7 @@ interface ActivityEntryPhotoCardProps {
     comments: (Comment & { user: { username: string; picture: string } })[];
   };
   user: { username: string; name: string; picture: string; planType: PlanType };
-  plansProgressData?: PlanProgressData[];
+  userPlansProgressData: PlanProgressData[];
   editable?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
@@ -89,7 +89,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   activity,
   activityEntry,
   user,
-  plansProgressData: propPlansProgressData,
+  userPlansProgressData,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactions, setReactions] = useState<ReactionCount>({});
@@ -123,19 +123,10 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
   const { data: ownerUser } = useUser({ username: user.username || "" });
 
-  // Use prop data if available, otherwise fetch via hook
-  const { data: fetchedPlansProgressData } = usePlansProgress(
-    useMemo(
-      () => propPlansProgressData ? [] : (ownerUser?.plans?.map((plan) => plan.id) || []),
-      [propPlansProgressData, ownerUser?.plans]
-    )
-  );
-
-  const plansProgressData = propPlansProgressData || fetchedPlansProgressData;
-  const habitAchieved = plansProgressData?.some(
+  const habitAchieved = userPlansProgressData?.some(
     (plan) => plan.habitAchievement.isAchieved
   );
-  const lifestyleAchieved = plansProgressData?.some(
+  const lifestyleAchieved = userPlansProgressData?.some(
     (plan) => plan.lifestyleAchievement.isAchieved
   );
   const totalLoggedActivities = useMemo(
@@ -654,6 +645,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
         user={user}
         planIds={ownerUser?.plans?.map((plan) => plan.id) || []}
         badgeType={lifestyleAchieved ? "lifestyles" : "habits"}
+        userPlansProgressData={userPlansProgressData}
       />
     </NeonCard>
   ) : (

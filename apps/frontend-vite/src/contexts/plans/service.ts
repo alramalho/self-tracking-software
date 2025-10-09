@@ -1,8 +1,10 @@
 import { type PlanInvitation, Prisma } from "@tsw/prisma";
+import { type PlanProgressData } from "@tsw/prisma/types";
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
+import { normalizePlanProgress } from "../plans-progress/service";
 
-export type PlanWithRelations = Prisma.PlanGetPayload<{
+type PlanWithRelationsBase = Prisma.PlanGetPayload<{
   include: {
     activities: true;
     sessions: true;
@@ -15,6 +17,10 @@ export type PlanWithRelations = Prisma.PlanGetPayload<{
   };
 }>;
 
+export type PlanWithRelations = PlanWithRelationsBase & {
+  progress: PlanProgressData;
+};
+
 type PlanApiResponse = Omit<
   PlanWithRelations,
   | "createdAt"
@@ -25,6 +31,7 @@ type PlanApiResponse = Omit<
   | "sessions"
   | "milestones"
   | "planGroup"
+  | "progress"
 > & {
   createdAt: string;
   updatedAt: string;
@@ -33,7 +40,7 @@ type PlanApiResponse = Omit<
   suggestedByCoachAt: string | null;
   sessions: Array<
     Omit<
-      PlanWithRelations["sessions"][number],
+      PlanWithRelationsBase["sessions"][number],
       "date" | "createdAt" | "updatedAt"
     > & {
       date: string;
@@ -42,16 +49,17 @@ type PlanApiResponse = Omit<
     }
   >;
   milestones: Array<
-    Omit<PlanWithRelations["milestones"][number], "date" | "createdAt"> & {
+    Omit<PlanWithRelationsBase["milestones"][number], "date" | "createdAt"> & {
       date: string;
       createdAt: string;
     }
   >;
-  planGroup: PlanWithRelations["planGroup"] extends null
+  planGroup: PlanWithRelationsBase["planGroup"] extends null
     ? null
-    : Omit<NonNullable<PlanWithRelations["planGroup"]>, "createdAt"> & {
+    : Omit<NonNullable<PlanWithRelationsBase["planGroup"]>, "createdAt"> & {
         createdAt: string;
       };
+  progress: any; // Will be properly typed by normalizePlanProgress
 };
 
 type PlanInvitationApiResponse = Omit<
@@ -64,9 +72,9 @@ type PlanInvitationApiResponse = Omit<
 
 const deserializePlan = (plan: PlanApiResponse): PlanWithRelations => {
   const activities =
-    (plan as unknown as { activities?: PlanWithRelations["activities"] })
+    (plan as unknown as { activities?: PlanWithRelationsBase["activities"] })
       .activities || [];
-  return normalizeApiResponse<PlanWithRelations>({ ...plan, activities }, [
+  const normalized = normalizeApiResponse<Omit<PlanWithRelations, 'progress'>>({ ...plan, activities }, [
     "createdAt",
     "updatedAt",
     "deletedAt",
@@ -79,6 +87,11 @@ const deserializePlan = (plan: PlanApiResponse): PlanWithRelations => {
     "milestones.createdAt",
     "planGroup.createdAt",
   ]);
+
+  return {
+    ...normalized,
+    progress: normalizePlanProgress(plan.progress)
+  };
 };
 
 const deserializePlanInvitation = (

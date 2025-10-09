@@ -1,5 +1,4 @@
 import { type CompletePlan } from "@/contexts/plans";
-import { usePlanProgress } from "@/contexts/plans-progress";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
@@ -10,12 +9,11 @@ import {
   AlertTriangle,
   CircleCheck,
   Flame,
-  Loader2,
   MoveRight,
   Rocket,
   Sprout,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { motion } from "motion/react";
 import React, { useRef, useState } from "react";
@@ -88,11 +86,10 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
-  const { data: planProgressData, isLoading: isLoadingPlanProgress } =
-    usePlanProgress(isDemo ? "" : plan.id);
   const [isFullyDone, setIsFullyDone] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
   const navigate = useNavigate();
+  const planProgressData = plan.progress;
 
   const [isAnimationCompleted, setIsAnimationCompleted] =
     useState<boolean>(false);
@@ -150,7 +147,10 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   const showConfetti = isCurrentWeek && isWeekCompleted;
 
   // Calculate total number of animations that will run
-  const totalProgressBars = 1 + (!habitIsAchieved ? 1 : 0) + (achievement.streak >= habitMaxValue ? 1 : 0); // week + (habit if not achieved) + (lifestyle if applicable)
+  const totalProgressBars =
+    1 +
+    (!habitIsAchieved ? 1 : 0) +
+    (achievement.streak >= habitMaxValue ? 1 : 0); // week + (habit if not achieved) + (lifestyle if applicable)
   const totalAnimations = totalProgressBars + (isCoached ? 1 : 0); // + PlanStatus motion if coached
 
   const handleAnimationComplete = (animationId: string) => {
@@ -214,10 +214,12 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                 <span className="text-md font-semibold text-gray-800">
                   {plan.goal}
                 </span>
-                {!isLoadingPlanProgress && habitIsAchieved && (
+                {habitIsAchieved && (
                   <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 w-fit">
                     <Sprout size={18} className="text-lime-600" />
-                    <span className="text-[12px] font-medium text-lime-700">Habit</span>
+                    <span className="text-[12px] font-medium text-lime-700">
+                      Habit
+                    </span>
                   </div>
                 )}
               </div>
@@ -231,17 +233,12 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                 onFireClick?.();
               }}
             >
-              {isLoadingPlanProgress && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
-              {!isLoadingPlanProgress && achievement.streak > 1 && (
-                <>
-                  <span className="text-lg font-cursive">
-                    x{achievement.streak}
-                  </span>
-                  <FireAnimation height={40} width={40} className="pb-2" />
-                </>
-              )}
+              <>
+                <span className="text-lg font-cursive">
+                  x{achievement.streak}
+                </span>
+                <FireAnimation height={40} width={40} className="pb-2" />
+              </>
             </div>
           </div>
 
@@ -346,7 +343,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
               onFullyDone={() => {
                 setTimeout(() => {
                   setIsFullyDone(true);
-                }, 500);  
+                }, 500);
               }}
               skipAnimation={skipAnimation}
             />

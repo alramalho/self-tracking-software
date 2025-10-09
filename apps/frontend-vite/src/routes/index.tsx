@@ -31,7 +31,6 @@ import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePlans } from "@/contexts/plans";
-import { usePlansProgress } from "@/contexts/plans-progress/index";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
@@ -63,8 +62,6 @@ function HomePage() {
       plan.deletedAt === null &&
       (plan.finishingDate === null || isAfter(plan.finishingDate, new Date()))
   );
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _ = usePlansProgress(activePlans?.map((plan) => plan.id) || []); // force refetch prior to timeline to speed up plan show
   const { metrics } = useMetrics();
   const { refetchAllData } = useGlobalDataOperations();
 

@@ -3,7 +3,7 @@
 
 import { useApiWithAuth } from "@/api";
 import { dummyPlanProgressData } from "@/components/steps/AIPartnerFinder";
-import { useSession } from "@/contexts/auth";
+import { useAuth } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type PlanProgressData } from "@tsw/prisma/types";
@@ -13,10 +13,10 @@ import { toast } from "react-hot-toast";
 import { usePlans } from "../plans";
 import { useCurrentUser, useUser } from "../users";
 import {
-    computePlansProgress,
-    fetchPlanProgress as fetchPlanProgressService,
-    fetchPlansProgress,
-    normalizePlanProgress,
+  computePlansProgress,
+  fetchPlanProgress as fetchPlanProgressService,
+  fetchPlansProgress,
+  normalizePlanProgress,
 } from "./service";
 
 export type { PlanProgressData };
@@ -54,7 +54,7 @@ const PlansProgressContext = createContext<
 export const PlansProgressProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { isSignedIn, isLoaded } = useSession();
+  const { isSignedIn, isLoaded } = useAuth();
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
   const queryClient = useQueryClient();

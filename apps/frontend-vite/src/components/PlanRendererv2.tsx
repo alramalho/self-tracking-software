@@ -1,6 +1,5 @@
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
-import { usePlanProgress } from "@/contexts/plans-progress";
 import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
@@ -40,7 +39,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
 
-  const { data: planProgress } = usePlanProgress(selectedPlan.id);
+  const planProgress = selectedPlan.progress;
   const currentWeekRef = useRef<HTMLDivElement>(null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);

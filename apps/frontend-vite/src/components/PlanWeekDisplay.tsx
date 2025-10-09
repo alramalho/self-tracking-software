@@ -1,6 +1,5 @@
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan } from "@/contexts/plans";
-import { usePlanProgress, type PlanProgressData } from "@/contexts/plans-progress";
 import useConfetti from "@/hooks/useConfetti";
 import { cn } from "@/lib/utils";
 import { type Activity, type PlanSession } from "@tsw/prisma";
@@ -16,7 +15,6 @@ interface PlanWeekDisplayProps {
   title?: string | React.ReactNode;
   date: Date;
   className?: string;
-  planProgress?: PlanProgressData; // Optional plan progress data for demo mode
 }
 
 export const MiniActivityCard = ({
@@ -44,16 +42,13 @@ export const PlanWeekDisplay = ({
   title,
   date,
   className,
-  planProgress: providedPlanProgress,
 }: PlanWeekDisplayProps) => {
   // Always call hooks to maintain consistent order
-  const { data: planProgressData } = usePlanProgress(plan.id);
   const { activities, activityEntries } = useActivities();
   const { stars, shapes } = useConfetti();
 
   // Use provided plan progress if available, otherwise use from hook
-  const planProgress = providedPlanProgress || planProgressData;
-  const week = planProgress?.weeks.find((w) => isSameWeek(w.startDate, date));
+  const week = plan.progress?.weeks.find((w) => isSameWeek(w.startDate, date));
 
   const [animatedCompletedActivities, setAnimatedCompletedActivities] =
     useState(0);
@@ -145,7 +140,7 @@ export const PlanWeekDisplay = ({
     setIsFullyDone(false);
   }, [plan.id, totalCompletedActivities, totalPlannedActivities]);
 
-  if (!planProgress || !week) {
+  if (!plan.progress || !week) {
     return null;
   }
 

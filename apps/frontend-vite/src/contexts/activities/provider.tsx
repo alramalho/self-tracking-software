@@ -84,6 +84,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.refetchQueries({ queryKey: ["timeline"] });
       queryClient.refetchQueries({ queryKey: ["notifications"] });
       queryClient.refetchQueries({ queryKey: ["metrics"] });
+      queryClient.refetchQueries({ queryKey: ["plans"] });
 
       computeProgressForUserPlans([variables.activityId]);
 

@@ -28,32 +28,15 @@ import React, { useState } from "react";
 import { MetricIsland } from "../MetricIsland";
 
 // Dummy data for coach overview demo
-const dummyCoachPlan = {
-  id: "demo-coach-plan",
-  goal: "Read 30 minutes daily",
-  emoji: "📚",
-  outlineType: "TIMES_PER_WEEK",
-  timesPerWeek: 7,
-  activities: [{ id: "reading-activity" }],
-  coachNotes:
-    "You're making great progress! I've noticed you're more consistent on weekdays. Let's try to maintain momentum on weekends too.",
-  suggestedByCoachAt: new Date(),
-  currentWeekState: "ON_TRACK",
-} as Partial<CompletePlan>;
-const dummyCoachPlanWithSuggestions = {
-  ...dummyCoachPlan,
-  coachNotes:
-    "Great progress reading 5 days last week! Let's adjust to 5 days per week for now - " +
-    "this feels more achievable while we work towards daily reading. What do you think?",
-  coachSuggestedTimesPerWeek: 5,
-  suggestedByCoachAt: new Date().toISOString(),
-};
+const DEMO_PLAN_ID = "demo-coach-plan";
+const DEMO_PLAN_GOAL = "Read 30 minutes daily";
+const DEMO_PLAN_EMOJI = "📚";
 
 const dummyActivities = [
   {
     id: "reading-activity",
     title: "Reading",
-    emoji: "📚",
+    emoji: DEMO_PLAN_EMOJI,
     unit: "minutes",
   },
 ];
@@ -92,10 +75,10 @@ const dummyMetric = {
 // Create plan progress data for demo
 export const dummyPlanProgressData: PlanProgressData = {
   plan: {
-    emoji: dummyCoachPlan.emoji || "🔥",
-    goal: dummyCoachPlan.goal || "Read 30 minutes daily",
-    id: dummyCoachPlan.id || "demo-coach-plan",
-    type: dummyCoachPlan.outlineType || "TIMES_PER_WEEK",
+    emoji: DEMO_PLAN_EMOJI,
+    goal: DEMO_PLAN_GOAL,
+    id: DEMO_PLAN_ID,
+    type: "TIMES_PER_WEEK",
   },
   achievement: {
     streak: 3,
@@ -132,6 +115,29 @@ export const dummyPlanProgressData: PlanProgressData = {
       isCompleted: false,
     },
   ],
+};
+
+const dummyCoachPlan = {
+  id: DEMO_PLAN_ID,
+  goal: DEMO_PLAN_GOAL,
+  emoji: DEMO_PLAN_EMOJI,
+  outlineType: "TIMES_PER_WEEK",
+  timesPerWeek: 7,
+  activities: [{ id: "reading-activity" }],
+  coachNotes:
+    "You're making great progress! I've noticed you're more consistent on weekdays. Let's try to maintain momentum on weekends too.",
+  suggestedByCoachAt: new Date(),
+  currentWeekState: "ON_TRACK",
+  progress: dummyPlanProgressData,
+} as Partial<CompletePlan>;
+
+const dummyCoachPlanWithSuggestions = {
+  ...dummyCoachPlan,
+  coachNotes:
+    "Great progress reading 5 days last week! Let's adjust to 5 days per week for now - " +
+    "this feels more achievable while we work towards daily reading. What do you think?",
+  coachSuggestedTimesPerWeek: 5,
+  suggestedByCoachAt: new Date().toISOString(),
 };
 
 const CardItem = ({
@@ -300,7 +306,6 @@ const AIPartnerFinder = () => {
               }
               plan={dummyCoachPlan as any}
               date={new Date()}
-              planProgress={dummyPlanProgressData as any}
             />
           </div>
         </div>
