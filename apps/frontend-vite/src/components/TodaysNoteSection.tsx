@@ -1,6 +1,6 @@
 import { useApiWithAuth } from "@/api";
 import { Button } from "@/components/ui/button";
-import { TextAreaWithVoice } from "@/components/ui/TextAreaWithVoice";
+import { TextAreaWithVoice } from "@/components/ui/text-area-with-voice";
 import { useMetrics } from "@/contexts/metrics";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";

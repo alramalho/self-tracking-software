@@ -14,6 +14,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
+    "@capgo/capacitor-social-login": "^7.11.12",
     "@charkour/react-reactions": "^0.11.0",
     "@clerk/clerk-react": "^5.3.2",
     "@dnd-kit/core": "^6.3.1",
@@ -30,6 +33,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.1",
+    "@supabase/supabase-js": "^2.74.0",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/query-async-storage-persister": "^5.85.5",
     "@tanstack/react-query": "^5.59.16",
@@ -68,6 +72,7 @@
     "zod": "^4.1.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
     "@eslint/js": "^9.36.0",
     "@serwist/vite": "^9.2.1",
     "@serwist/window": "^9.2.1",

@@ -1,4 +1,4 @@
-import { requireAuth as clerkRequireAuth, getAuth } from "@clerk/express";
+import { createClient } from "@supabase/supabase-js";
 import { User } from "@tsw/prisma";
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import { userService } from "../services/userService";
@@ -10,48 +10,84 @@ export interface AuthenticatedRequest extends Request {
   user?: User; // marked as optional for express type handling, should work
 }
 
-// Custom middleware to load user from database after Clerk auth
-export function loadUserFromClerk(
+// Initialize Supabase client for JWT verification
+const supabaseUrl = process.env.SUPABASE_URL || "http://127.0.0.1:55321";
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseKey!);
+
+// Middleware to verify Supabase JWT and load user from database
+async function verifySupabaseAuth(
   req: Request,
   res: Response,
   next: NextFunction
-): void {
-  const { userId: clerkUserId } = getAuth(req);
+): Promise<void> {
+  try {
+    // Extract the Bearer token from Authorization header
+    const authHeader = req.headers.authorization;
 
-  if (!clerkUserId) {
-    res.status(401).json({
-      success: false,
-      error: { message: "Authentication required" },
-    });
-    return;
-  }
-
-  userService
-    .getUserByClerkId(clerkUserId)
-    .then((user) => {
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          error: { message: "User not found" },
-        });
-        return;
-      }
-      (req as AuthenticatedRequest).user = user;
-      // Set the user ID in the request context for AI service usage
-      setRequestContext({ user: user });
-      next();
-    })
-    .catch((error) => {
-      logger.error("Failed to load user:", error);
-      res.status(500).json({
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(401).json({
         success: false,
-        error: { message: "Failed to load user" },
+        error: { message: "Authentication required" },
       });
+      return;
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify the JWT token with Supabase
+    const {
+      data: { user: supabaseUser },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !supabaseUser) {
+      logger.warn("Invalid Supabase token:", error?.message);
+      res.status(401).json({
+        success: false,
+        error: { message: "Invalid or expired token" },
+      });
+      return;
+    }
+
+    // Load user from database - try supabaseAuthId first, fallback to email for migration
+    let user = await userService.getUserBySupabaseAuthIdOrEmail(
+      supabaseUser.id,
+      supabaseUser.email!
+    );
+
+    // If user not found, auto-create them (social login flow)
+    // This handles the case where Supabase has authenticated them but they don't exist in our DB yet
+    if (!user) {
+      logger.info(
+        `Auto-creating user for social login: ${supabaseUser.email} (${supabaseUser.id})`
+      );
+      user = await userService.createUserFromSocialLogin({
+        email: supabaseUser.email!,
+        supabaseAuthId: supabaseUser.id,
+        name: supabaseUser.user_metadata?.full_name,
+        picture: supabaseUser.user_metadata?.avatar_url,
+      });
+    }
+
+    // Attach user to request
+    (req as AuthenticatedRequest).user = user;
+
+    // Set the user ID in the request context for AI service usage
+    setRequestContext({ user: user });
+
+    next();
+  } catch (error) {
+    logger.error("Failed to verify Supabase auth:", error);
+    res.status(500).json({
+      success: false,
+      error: { message: "Authentication failed" },
     });
+  }
 }
 
-// Combined middleware: Clerk auth + user loading
+// Export as array for compatibility with existing route definitions
 export const requireAuth: RequestHandler[] = [
-  clerkRequireAuth(),
-  loadUserFromClerk,
+  verifySupabaseAuth as RequestHandler,
 ];

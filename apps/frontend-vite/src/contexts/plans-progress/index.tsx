@@ -3,8 +3,8 @@
 
 import { useApiWithAuth } from "@/api";
 import { dummyPlanProgressData } from "@/components/steps/AIPartnerFinder";
+import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
-import { useSession } from "@clerk/clerk-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { isFuture, isSameWeek } from "date-fns";
@@ -13,10 +13,10 @@ import { toast } from "react-hot-toast";
 import { usePlans } from "../plans";
 import { useCurrentUser, useUser } from "../users";
 import {
-  computePlansProgress,
-  fetchPlanProgress as fetchPlanProgressService,
-  fetchPlansProgress,
-  normalizePlanProgress,
+    computePlansProgress,
+    fetchPlanProgress as fetchPlanProgressService,
+    fetchPlansProgress,
+    normalizePlanProgress,
 } from "./service";
 
 export type { PlanProgressData };

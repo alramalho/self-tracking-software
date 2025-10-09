@@ -1,22 +1,22 @@
 import { useApiWithAuth } from "@/api";
+import { useSession } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
-import { useSession } from "@clerk/clerk-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Prisma, type Activity, type PlanSession } from "@tsw/prisma";
 import { type PlanMilestone } from "@tsw/prisma/types";
 import React from "react";
 import { toast } from "react-hot-toast";
 import {
-  clearCoachSuggestedSessionsInPlan,
-  getPlans,
-  modifyManualMilestone,
-  updatePlans,
-  upgradeCoachSuggestedSessionsToPlanSessions,
+    clearCoachSuggestedSessionsInPlan,
+    getPlans,
+    modifyManualMilestone,
+    updatePlans,
+    upgradeCoachSuggestedSessionsToPlanSessions,
 } from "./service";
 import {
-  PlansContext,
-  type CompletePlan,
-  type PlansContextType,
+    PlansContext,
+    type CompletePlan,
+    type PlansContextType,
 } from "./types";
 
 export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({

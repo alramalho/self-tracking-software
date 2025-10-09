@@ -1,5 +1,5 @@
 import * as readline from "readline";
-import { PrismaClient } from "./server";
+import { PrismaClient } from "./generated/prisma";
 
 // Parse command line arguments
 function parseArgs(): { impersonateUser: string } {

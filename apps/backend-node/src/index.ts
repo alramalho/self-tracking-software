@@ -59,6 +59,10 @@ if (ENVIRONMENT === "development") {
   allowedOrigins.push("http://localhost:5173");
   allowedOrigins.push("http://localhost:5174");
   allowedOrigins.push("http://localhost:4173");
+  // Capacitor iOS/Android WebView origins
+  allowedOrigins.push("capacitor://localhost");
+  allowedOrigins.push("http://localhost");
+  allowedOrigins.push("ionic://localhost");
 }
 
 app.use(

@@ -1,10 +1,10 @@
+import { useAuth } from "@/contexts/auth";
 import { useCurrentUser } from "@/contexts/users";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
-import { useAuth } from "@clerk/clerk-react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import posthog from "posthog-js";
 import { useEffect, useMemo, useState } from "react";
@@ -22,6 +22,10 @@ export default function GeneralInitializer({
 }) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const { currentUser, hasLoadedUserData, updateUser } = useCurrentUser();
+  const needsUsername = useMemo(
+    () => currentUser?.username?.startsWith("__pending__"),
+    [currentUser?.username]
+  );
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
@@ -45,6 +49,7 @@ export default function GeneralInitializer({
   const pathname = location.pathname;
   const isOnboardingPage = pathname.startsWith("/onboarding");
   const isDownloadPage = pathname.startsWith("/download");
+  const isUsernameSelectionPage = pathname.startsWith("/username-selection");
 
   const friends = useMemo(() => {
     return [
@@ -65,8 +70,11 @@ export default function GeneralInitializer({
       currentUser?.onboardingCompletedAt == null &&
       !isOnboardingPage
     ) {
-      console.log("pushing to onboarding");
-      navigate({ to: "/onboarding" });
+      if (needsUsername) {
+        navigate({ to: "/username-selection" });
+      } else {
+        navigate({ to: "/onboarding" });
+      }
     }
   }, [
     currentUser,
@@ -154,7 +162,7 @@ export default function GeneralInitializer({
     (isSignedIn &&
       hasLoadedUserData &&
       currentUser?.onboardingCompletedAt == null &&
-      !isOnboardingPage)
+      !(isOnboardingPage || isUsernameSelectionPage))
   ) {
     return (
       <>
