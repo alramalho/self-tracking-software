@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import posthog from "posthog-js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import Lottie from "react-lottie";
 import targetAnimation from "../../public/animations/target.lottie.json";
@@ -33,6 +33,7 @@ export default function GeneralInitializer({
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const navigate = useNavigate();
   const [hasUpdatedTimezone, setHasUpdatedTimezone] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -139,6 +140,15 @@ export default function GeneralInitializer({
     friends,
   ]);
 
+  // Scroll to top on route change
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo(0, 0);
+      }
+    });
+  }, [pathname]);
+
   const reportBug = async (text: string, email: string) => {
     await toast.promise(
       fetch("/api/report-bug", {
@@ -204,6 +214,7 @@ export default function GeneralInitializer({
       ) : (
         <>
           <div
+            ref={scrollContainerRef}
             className={cn(
               "absolute inset-0 overflow-auto",
               isSignedIn && !isDesktop ? "pb-[4.7rem]" : "",
