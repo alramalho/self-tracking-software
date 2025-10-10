@@ -17,7 +17,7 @@ export const responseMonitor = (
   const originalJson = res.json;
 
   const sendTelegramNotification = async () => {
-    if (res.statusCode >= 400) {
+    if (res.statusCode >= 400 && res.statusCode != 401) {
       try {
         const telegramService = new TelegramService();
         const authenticatedReq = req as AuthenticatedRequest;
