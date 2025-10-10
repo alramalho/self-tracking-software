@@ -36,6 +36,56 @@ const targetPrisma = new PrismaClient({
 
 const isDevelopment = () => process.env.NODE_ENV === "development";
 
+/**
+ * Get actual column names from a database table
+ */
+async function getTableColumns(
+  prismaClient: PrismaClient,
+  tableName: string
+): Promise<Set<string>> {
+  const columns = await prismaClient.$queryRaw<Array<{ column_name: string }>>`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_name = ${tableName}
+    AND table_schema = 'public'
+  `;
+
+  return new Set(columns.map(col => col.column_name));
+}
+
+/**
+ * Filter an object to only include keys that exist as columns in the database
+ */
+function filterToExistingColumns<T extends Record<string, any>>(
+  data: T,
+  existingColumns: Set<string>
+): Partial<T> {
+  const filtered: Partial<T> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (existingColumns.has(key)) {
+      filtered[key as keyof T] = value;
+    }
+  }
+
+  return filtered;
+}
+
+/**
+ * Build a Prisma select object that only includes fields that exist in the database
+ */
+function buildSelectForExistingColumns(
+  existingColumns: Set<string>
+): Record<string, boolean> {
+  const select: Record<string, boolean> = {};
+
+  for (const column of existingColumns) {
+    select[column] = true;
+  }
+
+  return select;
+}
+
 function maskDatabaseUrl(url: string): string {
   if (!url) return "undefined";
   // Keep only the protocol, host, and database name visible
@@ -127,37 +177,49 @@ async function migrateData() {
 
     // Step 2: Migrate Users (including referral relationships)
     console.info("Migrating users...");
+
+    // Get actual columns from both databases
+    const sourceUserColumns = await getTableColumns(sourcePrisma, 'users');
+    const targetUserColumns = await getTableColumns(targetPrisma, 'users');
+
+    // Build select object to only fetch columns that exist in source database
+    const sourceUserSelect = buildSelectForExistingColumns(sourceUserColumns);
+
     const users = await sourcePrisma.user.findMany({
-      include: {
-        referredBy: true,
-        referredUsers: true,
-      },
+      select: sourceUserSelect as any,
     });
 
     // First pass: Upsert all users without referral relationships
     for (const user of users) {
-      const { id, referredBy, referredUsers, ...userData } = user;
+      const { id, referredById, ...userData } = user;
+
+      // Filter userData to only include fields that exist in both source and target
+      const commonColumns = new Set([...sourceUserColumns].filter(col => targetUserColumns.has(col)));
+      const filteredData = filterToExistingColumns(userData, commonColumns);
+
       await targetPrisma.user.upsert({
         where: { id },
         create: {
           id,
-          ...userData,
-          referredById: null, // Will be updated in second pass
-        },
+          ...filteredData,
+          ...(commonColumns.has('referredById') ? { referredById: null } : {}), // Will be updated in second pass
+        } as any,
         update: {
-          ...userData,
-          referredById: null, // Will be updated in second pass
-        },
+          ...filteredData,
+          ...(commonColumns.has('referredById') ? { referredById: null } : {}), // Will be updated in second pass
+        } as any,
       });
     }
 
-    // Second pass: Update referral relationships
-    for (const user of users) {
-      if (user.referredById) {
-        await targetPrisma.user.update({
-          where: { id: user.id },
-          data: { referredById: user.referredById },
-        });
+    // Second pass: Update referral relationships (only if the field exists)
+    if (targetUserColumns.has('referredById')) {
+      for (const user of users) {
+        if ((user as any).referredById) {
+          await targetPrisma.user.update({
+            where: { id },
+            data: { referredById: (user as any).referredById },
+          });
+        }
       }
     }
 
@@ -513,23 +575,32 @@ async function migrateData() {
     console.info(
       `Post-processing: Updating ${impersonateUser} user with Clerk ID...`
     );
+    const alexUser = await targetPrisma.user.findUnique({
+      where: { username: "alex" },
+    });
     const targetUser = await targetPrisma.user.findUnique({
       where: { username: impersonateUser },
     });
 
-    if (targetUser) {
+    if (targetUser && alexUser) {
+      await targetPrisma.user.update({
+        where: { id: alexUser.id },
+        data: {
+          clerkId: `--impersonating-${impersonateUser}--`,
+          supabaseAuthId: `--impersonating-${impersonateUser}--`,
+        },
+      });
       await targetPrisma.user.update({
         where: { id: targetUser.id },
         data: {
           clerkId: "user_30bDMTLDj4WYYD4h7VpYoQm9gAD",
+          supabaseAuthId: "30e57a1b-2913-4d13-836f-a2b7c5b74bb7",
         },
       });
-      console.info(
-        `✅ Updated ${impersonateUser} user with Clerk ID: user_30bDMTLDj4WYYD4h7VpYoQm9gAD`
-      );
+      console.info(`✅ Impersonated ${impersonateUser} user.`);
     } else {
       console.warn(
-        `⚠️  User with username '${impersonateUser}' not found - skipping Clerk ID update`
+        `⚠️  User with username 'alex' or '${impersonateUser}' not found, could not impersonate.`
       );
     }
 
