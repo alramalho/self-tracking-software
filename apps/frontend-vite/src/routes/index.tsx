@@ -43,11 +43,8 @@ export const Route = createFileRoute('/')({
 });
 
 // Maintenance mode configuration
-const MAINTENANCE_MODE_ENABLED = import.meta.env.VITE_MAINTENANCE_MODE_ENABLED;
-const WHITELISTED_EMAILS = [
-  "alexandre.ramalho.1998@gmail.com",
-  "liavilelaborges@gmail.com",
-];
+const MAINTENANCE_MODE_ENABLED = import.meta.env.VITE_MAINTENANCE_MODE_ENABLED === "true";
+const WHITELISTED_EMAILS: string[] = [];
 // Fixed maintenance end date: October 10th, 2025 at midnight UTC
 const MAINTENANCE_END_DATE = new Date('2025-10-10T00:00:00Z');
 
