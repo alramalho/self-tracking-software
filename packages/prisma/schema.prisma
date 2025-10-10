@@ -32,9 +32,17 @@ model User {
   isPwaInstalled                  Boolean            @default(false)
   isPwaNotificationsEnabled       Boolean            @default(false)
   lookingForAp                    Boolean?           @default(true)
+
+  // Web Push (PWA) fields
   pwaSubscriptionEndpoint         String?
   pwaSubscriptionKey              String?
   pwaSubscriptionAuthToken        String?
+
+  // iOS Native Push fields
+  isIosNotificationsEnabled       Boolean            @default(false)
+  iosDeviceToken                  String?
+  iosDeviceTokenUpdatedAt         DateTime?
+
   unactivatedEmailSentAt          DateTime?
   themeBaseColor                  ThemeColor         @default(BLUE)
   defaultActivityVisibility       ActivityVisibility @default(PUBLIC)

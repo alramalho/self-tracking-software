@@ -41,6 +41,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 
+
 export const Route = createFileRoute("/profile/$username")({
   component: ProfilePage,
 });
@@ -745,7 +746,9 @@ function ProfilePage() {
         planIds={badgeExplainer.planIds}
         badgeType={badgeExplainer.badgeType}
         user={profileData as any}
-        userPlansProgressData={profileData?.plans?.map((plan) => plan.progress) || []}
+        userPlansProgressData={
+          profileData?.plans?.map((plan) => plan.progress) || []
+        }
       />
 
       {isOwnProfile && (

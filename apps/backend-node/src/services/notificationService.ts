@@ -3,6 +3,7 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
 import * as webpush from "web-push";
+import { apnsService } from "./apnsService";
 
 export interface CreateNotificationData {
   userId: string;
@@ -228,92 +229,174 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Send a push notification to a user
+   * Automatically detects platform (iOS native vs Web/PWA) and routes accordingly
+   */
   async sendPushNotification(
     userId: string,
     title: string,
     body: string,
     url?: string,
     icon?: string
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; platform: "ios" | "web" | "none" }> {
     const environment =
       process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
 
-    if (environment === "dev" || environment === "development") {
-      logger.warn(
-        `Skipping push notification for '${userId}' in '${environment}' environment`
-      );
-      return { message: "Push notification skipped in development" };
-    }
+    // if (environment === "dev" || environment === "development") {
+    //   logger.warn(
+    //     `Skipping push notification for '${userId}' in '${environment}' environment`
+    //   );
+    //   return { message: "Push notification skipped in development", platform: 'none' };
+    // }
 
+    // Fetch user with all notification-related fields
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
+        id: true,
+        isIosNotificationsEnabled: true,
+        iosDeviceToken: true,
+        isPwaNotificationsEnabled: true,
         pwaSubscriptionEndpoint: true,
         pwaSubscriptionKey: true,
         pwaSubscriptionAuthToken: true,
       },
     });
 
-    if (
-      !user?.pwaSubscriptionEndpoint ||
-      !user.pwaSubscriptionKey ||
-      !user.pwaSubscriptionAuthToken
-    ) {
-      logger.error(`Subscription not found for ${userId}`);
-      throw new Error(`Subscription not found for ${userId}`);
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
     }
 
-    const subscriptionInfo = {
-      endpoint: user.pwaSubscriptionEndpoint,
-      keys: {
-        p256dh: user.pwaSubscriptionKey,
-        auth: user.pwaSubscriptionAuthToken,
-      },
-    };
+    const badge = await this.getNonConcludedNotificationsCount(userId);
 
-    const payload: PushNotificationPayload = {
-      title,
-      body,
-      icon,
-      url,
-      badge: await this.getNonConcludedNotificationsCount(userId),
-    };
+    // Priority 1: Try iOS native push if enabled and configured
+    if (
+      user.isIosNotificationsEnabled &&
+      user.iosDeviceToken &&
+      apnsService.isConfigured()
+    ) {
+      try {
+        await apnsService.sendPushNotification({
+          deviceToken: user.iosDeviceToken,
+          title,
+          body,
+          badge,
+          data: { url },
+        });
 
-    logger.info(`Sending push notification to: ${subscriptionInfo.endpoint}`);
-    logger.info(`Payload:`, payload);
+        logger.info(`iOS push notification sent to user ${userId}`);
+        return {
+          message: "iOS push notification sent successfully",
+          platform: "ios",
+        };
+      } catch (error: any) {
+        logger.error(
+          `Failed to send iOS push notification to ${userId}:`,
+          error
+        );
 
-    try {
-      const response = await webpush.sendNotification(
-        subscriptionInfo,
-        JSON.stringify(payload),
-        {
-          vapidDetails: {
-            subject: "mailto:alexandre.ramalho.1998@gmail.com",
-            publicKey: this.vapidPublicKey,
-            privateKey: this.vapidPrivateKey,
-          },
+        // If device token is invalid, clear it from the database
+        if (
+          error.message?.includes("invalid") ||
+          error.message?.includes("expired")
+        ) {
+          await prisma.user.update({
+            where: { id: userId },
+            data: {
+              iosDeviceToken: null,
+              iosDeviceTokenUpdatedAt: null,
+              isIosNotificationsEnabled: false,
+            },
+          });
+          logger.info(`Cleared invalid iOS device token for user ${userId}`);
         }
+
+        // Fall through to try web push
+        logger.info(`Falling back to web push for user ${userId}`);
+      }
+    }
+
+    // Priority 2: Try web push if enabled and configured
+    if (
+      user.isPwaNotificationsEnabled &&
+      user.pwaSubscriptionEndpoint &&
+      user.pwaSubscriptionKey &&
+      user.pwaSubscriptionAuthToken
+    ) {
+      const subscriptionInfo = {
+        endpoint: user.pwaSubscriptionEndpoint,
+        keys: {
+          p256dh: user.pwaSubscriptionKey,
+          auth: user.pwaSubscriptionAuthToken,
+        },
+      };
+
+      const payload: PushNotificationPayload = {
+        title,
+        body,
+        icon,
+        url,
+        badge,
+      };
+
+      logger.info(
+        `Sending web push notification to: ${subscriptionInfo.endpoint}`
       );
 
-      // TODO: Add PostHog analytics when implemented
-      logger.info(`WebPush response status: ${response.statusCode}`);
-      return { message: "Push notification sent successfully" };
-    } catch (error: any) {
-      logger.error("WebPush error:", error);
-
-      // Handle specific web-push errors similar to Python's WebPushException
-      if (error.statusCode === 410) {
-        logger.warn(
-          `Subscription expired for user ${userId}, should remove subscription`
+      try {
+        const response = await webpush.sendNotification(
+          subscriptionInfo,
+          JSON.stringify(payload),
+          {
+            vapidDetails: {
+              subject: "mailto:alexandre.ramalho.1998@gmail.com",
+              publicKey: this.vapidPublicKey,
+              privateKey: this.vapidPrivateKey,
+            },
+          }
         );
-      } else if (error.statusCode === 413) {
-        logger.error(`Payload too large for user ${userId}`);
-      } else if (error.statusCode === 429) {
-        logger.warn(`Rate limited for user ${userId}`);
-      }
 
-      throw error;
+        logger.info(
+          `Web push notification sent to user ${userId}, status: ${response.statusCode}`
+        );
+        return {
+          message: "Web push notification sent successfully",
+          platform: "web",
+        };
+      } catch (error: any) {
+        logger.error("WebPush error:", error);
+
+        // Handle specific web-push errors
+        if (error.statusCode === 410) {
+          logger.warn(
+            `Subscription expired for user ${userId}, clearing subscription`
+          );
+          await prisma.user.update({
+            where: { id: userId },
+            data: {
+              pwaSubscriptionEndpoint: null,
+              pwaSubscriptionKey: null,
+              pwaSubscriptionAuthToken: null,
+              isPwaNotificationsEnabled: false,
+            },
+          });
+        } else if (error.statusCode === 413) {
+          logger.error(`Payload too large for user ${userId}`);
+        } else if (error.statusCode === 429) {
+          logger.warn(`Rate limited for user ${userId}`);
+        }
+
+        throw error;
+      }
     }
+
+    // No valid notification method found
+    logger.warn(`No valid push notification method for user ${userId}`);
+    throw new Error(
+      `No valid notification subscription found for user ${userId}. ` +
+        `User needs to enable either iOS or web push notifications.`
+    );
   }
 
   async getNonConcludedNotificationsCount(userId: string): Promise<number> {

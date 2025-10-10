@@ -18,6 +18,7 @@
 /admin/stats
 /admin/users
 /ai/{any}
+/auth/{any}
 /clerk/{any}
 /exception
 /health

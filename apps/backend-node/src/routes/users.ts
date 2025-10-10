@@ -458,7 +458,7 @@ usersRouter.post(
       }
 
       // Batch load progress for all user's plans
-      const planIds = user.plans.map(p => p.id);
+      const planIds = user.plans.map((p) => p.id);
       const plansProgress = await plansService.getBatchPlanProgress(
         planIds,
         req.user!.id,
@@ -466,17 +466,15 @@ usersRouter.post(
       );
 
       // Create progress map for fast lookup
-      const progressMap = new Map(
-        plansProgress.map(p => [p.plan.id, p])
-      );
+      const progressMap = new Map(plansProgress.map((p) => [p.plan.id, p]));
 
       // Augment each plan with progress data
       const userWithProgress = {
         ...user,
-        plans: user.plans.map(plan => ({
+        plans: user.plans.map((plan) => ({
           ...plan,
-          progress: progressMap.get(plan.id)
-        }))
+          progress: progressMap.get(plan.id),
+        })),
       };
 
       res.json(userWithProgress);
@@ -629,7 +627,9 @@ usersRouter.get(
 
       // Collect all plan IDs from all users
       const allUsers = [user, ...connections];
-      const allPlanIds = allUsers.flatMap(u => u.plans?.map(p => p.id) || []);
+      const allPlanIds = allUsers.flatMap(
+        (u) => u.plans?.map((p) => p.id) || []
+      );
 
       // Batch load progress for all plans
       const plansProgress = await plansService.getBatchPlanProgress(
@@ -639,17 +639,15 @@ usersRouter.get(
       );
 
       // Create progress map for fast lookup
-      const progressMap = new Map(
-        plansProgress.map(p => [p.plan.id, p])
-      );
+      const progressMap = new Map(plansProgress.map((p) => [p.plan.id, p]));
 
       // Augment each user's plans with progress data
-      const usersWithProgress = allUsers.map(u => ({
+      const usersWithProgress = allUsers.map((u) => ({
         ...u,
-        plans: u.plans?.map(plan => ({
+        plans: u.plans?.map((plan) => ({
           ...plan,
-          progress: progressMap.get(plan.id)
-        }))
+          progress: progressMap.get(plan.id),
+        })),
       }));
 
       res.json({

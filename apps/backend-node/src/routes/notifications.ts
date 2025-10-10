@@ -190,7 +190,7 @@ router.post(
   requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { title, body, url, icon } = req.body;
+      const { title, body, url, icon, isNative } = req.body;
 
       const result = await notificationService.sendPushNotification(
         req.user!.id,
@@ -354,23 +354,6 @@ router.get(
     } catch (error) {
       logger.error("Error getting latest sent notification:", error);
       res.status(500).json({ error: "Failed to get latest sent notification" });
-    }
-  }
-);
-
-// Send test push notification
-router.post(
-  "/send-test-push",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      await notificationService.sendTestPushNotification(req.user!.id);
-
-      logger.info(`Sent test push notification to user ${req.user!.id}`);
-      res.json({ message: "Test push notification sent successfully" });
-    } catch (error) {
-      logger.error("Error sending test push notification:", error);
-      res.status(500).json({ error: "Failed to send test push notification" });
     }
   }
 );

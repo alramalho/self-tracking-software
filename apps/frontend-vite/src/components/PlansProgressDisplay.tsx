@@ -28,8 +28,6 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
         const { progress } = plan;
         const { weeks, achievement } = progress;
 
-        console.log({ plan: plan.goal, achievement });
-
         const shouldShow = index == 0 || isExpanded;
         const isCoached = index == 0 && userPaidPlanType != "FREE";
 

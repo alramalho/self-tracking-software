@@ -9,13 +9,18 @@ const config: CapacitorConfig = {
       "clerk.accounts.dev",
       "*.clerk.accounts.dev",
       "fonts.googleapis.com",
-      "fonts.gstatic.com"
+      "fonts.gstatic.com",
     ],
-    cleartext: true
+    cleartext: true,
   },
   ios: {
-    contentInset: "automatic"
-  }
+    contentInset: "automatic",
+  },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
+  },
 };
 
 export default config;

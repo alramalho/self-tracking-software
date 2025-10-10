@@ -17,6 +17,7 @@ import { prisma } from "./utils/prisma";
 import { activitiesRouter } from "./routes/activities";
 import { adminRouter } from "./routes/admin";
 import { aiRouter } from "./routes/ai";
+import authRouter from "./routes/auth";
 import { clerkRouter } from "./routes/clerk";
 import { messagesRouter } from "./routes/messages";
 import { metricsRouter } from "./routes/metrics";
@@ -108,6 +109,7 @@ app.get("/400", (_req, _res) => {
 });
 
 // API routes
+app.use("/auth", authRouter);
 app.use("/users", usersRouter);
 app.use("/activities", activitiesRouter);
 app.use("/plans", plansRouter);
