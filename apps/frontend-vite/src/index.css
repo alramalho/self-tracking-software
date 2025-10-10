@@ -134,6 +134,14 @@ body {
   font-family: var(--font-sans);
 }
 
+* {
+  /* Everything by default unselectable */
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+}
+
 /* Custom keyframes */
 @keyframes shine {
   0% { background-position: -200% 0; }
