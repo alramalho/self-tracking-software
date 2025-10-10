@@ -9,25 +9,6 @@ export class AuthService {
 
   async initializeSocialLogin() {
     if (this.isNativePlatform()) {
-      // Debug: Log all available env vars
-      console.log("🔍 DEBUG: All import.meta.env:", import.meta.env);
-      console.log(
-        "🔍 DEBUG: VITE_GOOGLE_WEB_CLIENT_ID:",
-        import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID
-      );
-      console.log(
-        "🔍 DEBUG: VITE_GOOGLE_IOS_CLIENT_ID:",
-        import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID
-      );
-      console.log(
-        "🔍 DEBUG: VITE_SUPABASE_API_URL:",
-        import.meta.env.VITE_SUPABASE_API_URL
-      );
-      console.log(
-        "🔍 DEBUG: VITE_SUPABASE_ANON_KEY:",
-        import.meta.env.VITE_SUPABASE_ANON_KEY
-      );
-
       await SocialLogin.initialize({
         google: {
           webClientId: import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID,
@@ -48,11 +29,6 @@ export class AuthService {
           },
         });
 
-        console.log(
-          "🔍 DEBUG: SocialLogin result:",
-          JSON.stringify(result, null, 2)
-        );
-
         // Look for ID token in different possible locations
         const idToken =
           // @ts-expect-error lol
@@ -66,20 +42,44 @@ export class AuthService {
         // @ts-expect-error lol
         const serverAuthCode = result.result?.serverAuthCode;
 
-        console.log("🔍 DEBUG: idToken:", idToken);
-        console.log("🔍 DEBUG: accessToken:", accessToken);
-        console.log("🔍 DEBUG: serverAuthCode:", serverAuthCode);
-
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: "google",
-          token: idToken || serverAuthCode,
-          // @ts-expect-error lol
-          nonce: serverAuthCode ? undefined : result.result?.nonce,
+        // Send idToken to backend for verification and session creation
+        const backendUrl =
+          import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+        const response = await fetch(`${backendUrl}/auth/ios-google-signin`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ idToken }),
         });
 
-        console.log("🔍 DEBUG: Supabase auth response:", { data, error });
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("🔴 Backend auth error:", errorData);
+          throw new Error(errorData.error || "Authentication failed");
+        }
 
-        if (error) throw error;
+        const { verificationUrl } = await response.json();
+
+        // Use the verification URL to create a Supabase session
+        const url = new URL(verificationUrl);
+        const token = url.searchParams.get("token");
+        const type = url.searchParams.get("type");
+
+        if (!token || type !== "magiclink") {
+          throw new Error("Invalid verification URL");
+        }
+
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: token,
+          type: "magiclink",
+        });
+
+        if (error) {
+          console.error("🔴 Supabase error:", error);
+          throw error;
+        }
+
         return data;
       } else {
         // Web: Use Supabase's built-in OAuth

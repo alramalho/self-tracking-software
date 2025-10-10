@@ -22,3 +22,5 @@ apps/backend-node/.env.prod
 PERSONAL_NOTES.md
 
 .env
+
+apps/backend-node/apple-stuff/*

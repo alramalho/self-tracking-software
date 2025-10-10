@@ -16,6 +16,9 @@
   "dependencies": {
     "@capacitor/core": "^7.4.3",
     "@capacitor/ios": "^7.4.3",
+    "@capacitor/local-notifications": "^7.0.3",
+    "@capacitor/push-notifications": "^7.0.3",
+    "@capawesome/capacitor-badge": "^7.0.1",
     "@capgo/capacitor-social-login": "^7.11.12",
     "@charkour/react-reactions": "^0.11.0",
     "@clerk/clerk-react": "^5.3.2",

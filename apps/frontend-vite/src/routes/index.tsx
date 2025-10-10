@@ -36,7 +36,7 @@ import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
-import { isAfter } from "date-fns";
+import { isAfter, isFuture } from "date-fns";
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -168,7 +168,7 @@ function HomePage() {
 
   // Check if maintenance mode is enabled and user is not whitelisted
   const isUserWhitelisted = currentUser?.email && WHITELISTED_EMAILS.includes(currentUser.email);
-  if (MAINTENANCE_MODE_ENABLED && !isUserWhitelisted) {
+  if (MAINTENANCE_MODE_ENABLED && !isUserWhitelisted && isFuture(MAINTENANCE_END_DATE)) {
     return <MaintenanceOverlay targetDate={MAINTENANCE_END_DATE} />;
   }
 
