@@ -22,10 +22,6 @@ export default function GeneralInitializer({
 }) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const { currentUser, hasLoadedUserData, updateUser } = useCurrentUser();
-  const needsUsername = useMemo(
-    () => currentUser?.username?.startsWith("__pending__"),
-    [currentUser?.username]
-  );
   const { isAppInstalled, isPushGranted } = useNotifications();
   const [hasRanPosthogIdentify, setHasRanPosthogIdentify] = useState(false);
   const [showBugDialog, setShowBugDialog] = useState(false);
@@ -50,7 +46,6 @@ export default function GeneralInitializer({
   const pathname = location.pathname;
   const isOnboardingPage = pathname.startsWith("/onboarding");
   const isDownloadPage = pathname.startsWith("/download");
-  const isUsernameSelectionPage = pathname.startsWith("/username-selection");
 
   const friends = useMemo(() => {
     return [
@@ -71,11 +66,7 @@ export default function GeneralInitializer({
       currentUser?.onboardingCompletedAt == null &&
       !isOnboardingPage
     ) {
-      if (needsUsername) {
-        navigate({ to: "/username-selection" });
-      } else {
-        navigate({ to: "/onboarding" });
-      }
+      navigate({ to: "/onboarding" });
     }
   }, [
     currentUser,
@@ -236,18 +227,20 @@ export default function GeneralInitializer({
               />
             ) : (
               <>
-              <div
-                 className={cn(
-                   "fixed top-0 left-0 w-full h-screen z-[-1]",
-                   "[background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4"
-                 )}
-               />
+                <div
+                  className={cn(
+                    "fixed top-0 left-0 w-full h-screen z-[-1]",
+                    "[background-image:linear-gradient(#f0f0f0_1px,transparent_1px),linear-gradient(to_right,#f0f0f0_1px,#f5f5f5_1px)] [background-size:20px_20px] flex flex-col items-center justify-center p-4"
+                  )}
+                />
               </>
             )}
 
             {children}
           </div>
-          {isSignedIn && !isDownloadPage  && !isUsernameSelectionPage&& <BottomNav />}
+          {isSignedIn && !isDownloadPage  && (
+            <BottomNav />
+          )}
         </>
       )}
     </>
