@@ -2,17 +2,17 @@
 
 "use client";
 
+import { useApiWithAuth } from "@/api";
 import NumberInput from "@/components/NumberInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useCurrentUser } from "@/contexts/users";
-import { useApiWithAuth } from "@/api";
-import { ArrowRight, CheckCircle2, Loader2, User, XCircle } from "lucide-react";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, CheckCircle2, Loader2, User, XCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type SubStep = "username" | "age";
 
@@ -20,10 +20,11 @@ const WelcomeStep = () => {
   const { completeStep } = useOnboarding();
   const api = useApiWithAuth();
   const { currentUser, updateUser } = useCurrentUser();
+  const isUsernameSet = useMemo(() => currentUser?.username?.startsWith("__pending__"), [currentUser?.username]);
 
   // Determine initial substep based on whether user has username
   const [currentSubStep, setCurrentSubStep] = useState<SubStep>(
-    currentUser?.username ? "age" : "username"
+    isUsernameSet ? "age" : "username"
   );
 
   // Username state
