@@ -102,11 +102,9 @@ router.post(
               logger.error(
                 "No user email found in customer data when downgrading user"
               );
-              return res
-                .status(400)
-                .json({
-                  error: "No customer email found when downgrading user",
-                });
+              return res.status(400).json({
+                error: "No customer email found when downgrading user",
+              });
             }
 
             await prisma.user.update({
@@ -140,6 +138,14 @@ router.post(
                 subscription = await stripe.subscriptions.retrieve(
                   subscriptions.data[0].id,
                   { expand: ["customer"] }
+                );
+
+                // Send Telegram notification for successful payment
+                const customer = subscription.customer as Stripe.Customer;
+                const amount = paymentIntent.amount / 100; // Convert cents to dollars
+                const currency = paymentIntent.currency.toUpperCase();
+                telegramService.sendMessage(
+                  `💰 User ${customer.email} paid ${amount} ${currency}.`
                 );
               } else {
                 logger.error("No active subscription found for payment intent");
