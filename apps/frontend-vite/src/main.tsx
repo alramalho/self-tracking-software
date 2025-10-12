@@ -13,8 +13,7 @@ const router = createRouter({ routeTree });
 
 posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
   defaults: "2025-05-24",
-  // api_host: "/relay-ph",
-  api_host: import.meta.env.VITE_POSTHOG_HOST,
+  api_host: "/relay-ph",
   // person_profiles: "identified_only",
   // capture_pageview: false,
   // capture_pageleave: true,
