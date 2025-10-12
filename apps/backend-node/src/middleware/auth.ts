@@ -1,3 +1,4 @@
+import { TelegramService } from "@/services/telegramService";
 import { clerkMiddleware, getAuth } from "@clerk/express";
 import { createClient } from "@supabase/supabase-js";
 import { User } from "@tsw/prisma";
@@ -61,6 +62,9 @@ async function trySupabaseAuth(
         name: supabaseUser.user_metadata?.full_name,
         picture: supabaseUser.user_metadata?.avatar_url,
       });
+
+      const telegramService = new TelegramService();
+      telegramService.sendMessage(`🎉 New user! (${user.email})`);
     }
 
     return user;
