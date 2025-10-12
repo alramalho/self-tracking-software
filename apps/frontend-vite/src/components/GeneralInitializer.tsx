@@ -163,7 +163,7 @@ export default function GeneralInitializer({
     (isSignedIn &&
       hasLoadedUserData &&
       currentUser?.onboardingCompletedAt == null &&
-      !(isOnboardingPage || isUsernameSelectionPage))
+      !isOnboardingPage)
   ) {
     return (
       <>
@@ -238,9 +238,7 @@ export default function GeneralInitializer({
 
             {children}
           </div>
-          {isSignedIn && !isDownloadPage  && (
-            <BottomNav />
-          )}
+          {isSignedIn && !isDownloadPage && <BottomNav />}
         </>
       )}
     </>
