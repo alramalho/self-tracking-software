@@ -220,6 +220,8 @@ export class AuthService {
       } else {
         // Web: Use Supabase's built-in OAuth (same as Google)
         console.log("🍎 Using Supabase OAuth for web...");
+        console.log("🍎 Redirect URL:", window.location.origin);
+        console.log("🍎 Current URL:", window.location.href);
 
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "apple",
@@ -230,11 +232,14 @@ export class AuthService {
         });
 
         if (error) {
-          console.error("🔴 Supabase Apple OAuth error:", error);
+          console.error("🔴 Supabase Apple OAuth error:");
+          console.error("🔴 Error message:", error.message);
+          console.error("🔴 Error details:", error);
           throw error;
         }
 
         console.log("🍎 ✅ Web Apple sign-in initiated!");
+        console.log("🍎 OAuth response data:", data);
         return data;
       }
     } catch (error) {
