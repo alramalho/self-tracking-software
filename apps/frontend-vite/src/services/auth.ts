@@ -218,76 +218,24 @@ export class AuthService {
         console.log("🍎 Session data:", data);
         return data;
       } else {
-        // // Web: Use Apple JS SDK → Backend (same as native!)
-        // console.log("🍎 Using web Apple JS SDK flow...");
+        // Web: Use Supabase's built-in OAuth (same as Google)
+        console.log("🍎 Using Supabase OAuth for web...");
 
-        // if (!(window as any).AppleID) {
-        //   throw new Error("Apple JS SDK not loaded");
-        // }
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "apple",
+          options: {
+            redirectTo: window.location.origin,
+            scopes: "email name",
+          },
+        });
 
-        // // Call Apple's sign in
-        // const appleResponse = await (window as any).AppleID.auth.signIn();
-        // console.log("🍎 Apple JS SDK response:", appleResponse);
+        if (error) {
+          console.error("🔴 Supabase Apple OAuth error:", error);
+          throw error;
+        }
 
-        // if (!appleResponse.authorization?.id_token) {
-        //   throw new Error("No id_token received from Apple");
-        // }
-
-        // // Send to backend (same flow as native!)
-        // const backendUrl =
-        //   import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
-        // console.log("🍎 Sending id_token to backend:", backendUrl);
-
-        // const response = await fetch(`${backendUrl}/auth/ios-apple-signin`, {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify({
-        //     identityToken: appleResponse.authorization.id_token,
-        //     user: appleResponse.user
-        //       ? {
-        //           firstName: appleResponse.user.name?.firstName,
-        //           lastName: appleResponse.user.name?.lastName,
-        //         }
-        //       : undefined,
-        //   }),
-        // });
-
-        // if (!response.ok) {
-        //   const errorData = await response.json();
-        //   console.error("🔴 Backend auth error:", errorData);
-        //   throw new Error(errorData.error || "Authentication failed");
-        // }
-
-        // const { verificationUrl } = await response.json();
-        // console.log(
-        //   "🍎 Received verificationUrl from backend:",
-        //   verificationUrl
-        // );
-
-        // // Use verification URL to create Supabase session (same as native!)
-        // const url = new URL(verificationUrl);
-        // const token = url.searchParams.get("token");
-        // const type = url.searchParams.get("type");
-
-        // if (!token || type !== "magiclink") {
-        //   throw new Error("Invalid verification URL");
-        // }
-
-        // const { data, error } = await supabase.auth.verifyOtp({
-        //   token_hash: token,
-        //   type: "magiclink",
-        // });
-
-        // if (error) {
-        //   console.error("🔴 Supabase error:", error);
-        //   throw error;
-        // }
-
-        // console.log("🍎 ✅ Web Apple sign-in successful!");
-        // return data;
-        console.log("not implemented");
+        console.log("🍎 ✅ Web Apple sign-in initiated!");
+        return data;
       }
     } catch (error) {
       console.error("🔴 Apple sign-in error:", error);
