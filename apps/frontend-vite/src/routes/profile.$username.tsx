@@ -324,10 +324,10 @@ function ProfilePage() {
 
             {isOwnProfile && (
               <button
-                className="p-2 rounded-full hover:bg-gray-100"
+                className="p-2 pr-4 rounded-full hover:bg-gray-100"
                 onClick={() => setShowUserProfile(true)}
               >
-                <EllipsisVertical size={20} />
+                <EllipsisVertical size={26} />
               </button>
             )}
           </div>
