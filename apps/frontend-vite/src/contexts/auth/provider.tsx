@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoaded: boolean;
   isSignedIn: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
   getToken: () => Promise<string | null>;
 }
@@ -60,6 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithApple = async () => {
+    setIsLoading(true);
+    try {
+      await authService.signInWithApple();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = async () => {
     setIsLoading(true);
     try {
@@ -82,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoaded,
         isSignedIn: !!supabaseUser,
         signInWithGoogle,
+        signInWithApple,
         signOut,
         getToken,
       }}

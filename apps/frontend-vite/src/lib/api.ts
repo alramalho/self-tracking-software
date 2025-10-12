@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useAuth } from "@/contexts/auth";
+import { supabase } from "@/services/supabase";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -9,28 +9,28 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Custom hook for authenticated API calls
-export const useApiWithAuth = () => {
-  const { getToken } = useAuth();
-
-  // Add auth interceptor
-  api.interceptors.request.use(
-    async (config) => {
-      try {
-        const token = await getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      } catch (error) {
-        console.error("Failed to get auth token:", error);
+// Add auth interceptor ONCE globally
+// This gets the fresh token on every request instead of capturing stale closures
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      // Get the current session directly from Supabase (always fresh)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
       }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
+    } catch (error) {
+      console.error("Failed to get auth token:", error);
     }
-  );
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
+// For backwards compatibility, keep the hook but just return the api instance
+export const useApiWithAuth = () => {
   return api;
 };
 
