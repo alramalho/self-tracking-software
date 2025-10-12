@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth";
-import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import FeedbackPopover from "./FeedbackPopover";
 
@@ -20,8 +19,7 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHelpForm, setShowHelpForm] = useState(false);
-  const appleSignInSupported =
-    Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+  const appleSignInSupported = true // Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
