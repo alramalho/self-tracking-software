@@ -73,7 +73,7 @@ router.post(
   }
 );
 
-// Mark notification as opened
+// Mark notification as opened (legacy single notification endpoint)
 router.post(
   "/mark-notification-opened",
   requireAuth,
@@ -118,6 +118,80 @@ router.post(
     } catch (error) {
       logger.error("Error marking notification as opened:", error);
       res.status(500).json({ error: "Failed to mark notification as opened" });
+    }
+  }
+);
+
+// Mark multiple notifications as opened (batch endpoint)
+router.post(
+  "/mark-notifications-opened",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { notification_ids } = req.body;
+
+      if (!notification_ids || !Array.isArray(notification_ids)) {
+        return res.status(400).json({ error: "notification_ids array is required" });
+      }
+
+      if (notification_ids.length === 0) {
+        return res.json({
+          message: "No notifications to mark as opened",
+          count: 0,
+        });
+      }
+
+      // Verify all notifications belong to the authenticated user
+      const notifications = await prisma.notification.findMany({
+        where: {
+          id: { in: notification_ids },
+        },
+        select: { id: true, userId: true },
+      });
+
+      // Check if any notifications don't belong to the user
+      const unauthorizedNotifications = notifications.filter(
+        (n) => n.userId !== req.user!.id
+      );
+
+      if (unauthorizedNotifications.length > 0) {
+        return res.status(403).json({
+          error: "Not authorized to mark some notifications as opened",
+        });
+      }
+
+      // Only update notifications that actually exist and belong to the user
+      const validNotificationIds = notifications.map((n) => n.id);
+
+      if (validNotificationIds.length === 0) {
+        return res.status(404).json({ error: "No valid notifications found" });
+      }
+
+      // Batch update all valid notifications
+      const result = await prisma.notification.updateMany({
+        where: {
+          id: { in: validNotificationIds },
+          userId: req.user!.id,
+        },
+        data: {
+          status: "OPENED",
+          openedAt: new Date(),
+        },
+      });
+
+      logger.info(
+        `Marked ${result.count} notifications as opened for user ${req.user!.id}`
+      );
+      res.json({
+        message: "Notifications marked as opened",
+        count: result.count,
+      });
+    } catch (error) {
+      logger.error("Error marking notifications as opened:", error);
+      res.status(500).json({ error: "Failed to mark notifications as opened" });
     }
   }
 );
