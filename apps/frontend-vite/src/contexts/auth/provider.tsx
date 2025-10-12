@@ -42,7 +42,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = authService.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, session);
+      console.log("🔐 Auth state changed:", event);
+      console.log("🔐 Session:", session);
+      console.log("🔐 User:", session?.user);
+
+      // Log OAuth errors from URL
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('error')) {
+        console.error("🔴 OAuth Error:", {
+          error: params.get('error'),
+          error_code: params.get('error_code'),
+          error_description: params.get('error_description'),
+        });
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
