@@ -8,11 +8,101 @@ import { getThemeVariants } from "@/utils/theme";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type Notification } from "@tsw/prisma";
 import { Check, Eye, X } from "lucide-react";
-import React from "react";
+import React, { useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 import { Remark } from "react-remark";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Skeleton } from "./ui/skeleton";
 
+interface NotificationItemProps {
+  notification: Notification;
+  markNotificationAsOpened: (notificationId: string) => Promise<void>;
+  handleNotificationAction: (notification: Notification, action: string) => void;
+  renderActionButtons: (notification: Notification) => React.ReactNode;
+  hasPictureData: (notification: Notification) => boolean;
+  hasUsernameData: (notification: Notification) => boolean;
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  markNotificationAsOpened,
+  handleNotificationAction,
+  renderActionButtons,
+  hasPictureData,
+  hasUsernameData,
+}) => {
+  const { ref, inView } = useInView({
+    threshold: 0.5,
+    triggerOnce: true,
+  });
+
+  const relatedData = notification.relatedData as {
+    username: string;
+    picture: string;
+    name: string;
+  };
+
+  const isUnopened = notification.status !== "OPENED" && notification.status !== "CONCLUDED";
+
+  useEffect(() => {
+    if (inView && isUnopened) {
+      markNotificationAsOpened(notification.id);
+    }
+  }, [inView, isUnopened, notification.id, markNotificationAsOpened]);
+
+  return (
+    <div
+      ref={ref}
+      key={notification.id}
+      className="shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
+    >
+      <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
+        {isUnopened && (
+          <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+        )}
+        {[
+          "FRIEND_REQUEST",
+          "PLAN_INVITATION",
+          "INFO",
+          "COACH",
+        ].includes(notification.type) &&
+          hasPictureData(notification) && (
+            <Link to={`/profile/$username`} params={{ username: relatedData.username }}>
+              <Avatar>
+                <AvatarImage
+                  src={relatedData.picture}
+                  alt={relatedData.name || ""}
+                />
+                <AvatarFallback>
+                  {(relatedData.name || "U")[0]}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          )}
+        {hasUsernameData(notification) ? (
+          <Link to={`/profile/$username`} params={{ username: relatedData.username }}>
+            <div className="markdown text-sm text-gray-700">
+              <Remark>{notification.message}</Remark>
+              <div className="text-xs text-gray-500 mt-1">
+                {formatTimeAgo(notification.createdAt)}
+              </div>
+            </div>
+          </Link>
+        ) : (
+          <div className="markdown text-sm text-gray-700">
+            <Remark>{notification.message}</Remark>
+            <div className="text-xs text-gray-500 mt-1">
+              {formatTimeAgo(notification.createdAt)}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="flex ml-4">
+        {renderActionButtons(notification)}
+      </div>
+    </div>
+  );
+};
 
 const Notifications: React.FC = () => {
   const {
@@ -20,6 +110,7 @@ const Notifications: React.FC = () => {
     clearAllNotifications,
     notifications,
     isLoadingNotifications,
+    markNotificationAsOpened,
   } = useDataNotifications();
   const navigate = useNavigate()
   const themeColors = useThemeColors();
@@ -174,7 +265,8 @@ const Notifications: React.FC = () => {
     (n) => n.type !== "ENGAGEMENT"
   );
 
-  const unreadNotifications =
+  // Show all non-concluded notifications
+  const displayedNotifications =
     regularNotifications?.filter((n) => n.status !== "CONCLUDED") || [];
 
   if (isLoadingNotifications) {
@@ -208,7 +300,7 @@ const Notifications: React.FC = () => {
     );
   }
 
-  if (unreadNotifications.length === 0) {
+  if (displayedNotifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         <div className="bg-gray-100 p-4 rounded-full mb-4">
@@ -260,62 +352,17 @@ const Notifications: React.FC = () => {
             </button>
           </div>
 
-          {unreadNotifications.map((notification) => {
-            const relatedData = notification.relatedData as {
-              username: string;
-              picture: string;
-              name: string;
-            };
-
-            return (
-              <div
-                key={notification.id}
-                className="shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
-              >
-                <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-                  {[
-                    "FRIEND_REQUEST",
-                    "PLAN_INVITATION",
-                    "INFO",
-                    "COACH",
-                  ].includes(notification.type) &&
-                    hasPictureData(notification) && (
-                      <Link to={`/profile/$username`} params={{ username: relatedData.username }}>
-                        <Avatar>
-                          <AvatarImage
-                            src={relatedData.picture}
-                            alt={relatedData.name || ""}
-                          />
-                          <AvatarFallback>
-                            {(relatedData.name || "U")[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Link>
-                    )}
-                  {hasUsernameData(notification) ? (
-                    <Link to={`/profile/$username`} params={{ username: relatedData.username }}>
-                      <div className="markdown text-sm text-gray-700">
-                        <Remark>{notification.message}</Remark>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {formatTimeAgo(notification.createdAt)}
-                        </div>
-                      </div>
-                    </Link>
-                  ) : (
-                    <div className="markdown text-sm text-gray-700">
-                      <Remark>{notification.message}</Remark>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {formatTimeAgo(notification.createdAt)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="flex ml-4">
-                  {renderActionButtons(notification)}
-                </div>
-              </div>
-            );
-          })}
+          {displayedNotifications.map((notification) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              markNotificationAsOpened={markNotificationAsOpened}
+              handleNotificationAction={handleNotificationAction}
+              renderActionButtons={renderActionButtons}
+              hasPictureData={hasPictureData}
+              hasUsernameData={hasUsernameData}
+            />
+          ))}
         </div>
       )}
     </>

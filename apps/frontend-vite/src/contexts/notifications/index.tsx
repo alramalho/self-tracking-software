@@ -20,6 +20,9 @@ interface DataNotificationsContextType {
   concludeNotification: ( data: { notificationId: string, mute?: boolean }) => Promise<void>;
   isConcludingNotification: boolean;
 
+  markNotificationAsOpened: (notificationId: string) => Promise<void>;
+  isMarkingNotificationAsOpened: boolean;
+
   clearAllNotifications: () => Promise<void>;
   isClearingNotifications: boolean;
 }
@@ -75,6 +78,21 @@ export const DataNotificationsProvider: React.FC<{
     },
   });
 
+  // Mark notification as opened mutation
+  const markNotificationAsOpenedMutation = useMutation({
+    mutationFn: async (notificationId: string) => {
+      await api.post("/notifications/mark-notification-opened", null, {
+        params: { notification_id: notificationId },
+      });
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["notifications"] });
+    },
+    onError: (error) => {
+      console.error("Error marking notification as opened:", error);
+    },
+  });
+
   // Clear all notifications mutation
   const clearAllNotificationsMutation = useMutation({
     mutationFn: async () => {
@@ -99,6 +117,9 @@ export const DataNotificationsProvider: React.FC<{
     // Actions
     concludeNotification: concludeNotificationMutation.mutateAsync,
     isConcludingNotification: concludeNotificationMutation.isPending,
+
+    markNotificationAsOpened: markNotificationAsOpenedMutation.mutateAsync,
+    isMarkingNotificationAsOpened: markNotificationAsOpenedMutation.isPending,
 
     clearAllNotifications: clearAllNotificationsMutation.mutateAsync,
     isClearingNotifications: clearAllNotificationsMutation.isPending,

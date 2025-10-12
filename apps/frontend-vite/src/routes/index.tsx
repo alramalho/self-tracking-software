@@ -74,12 +74,12 @@ function HomePage() {
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
   const { isLoaded, isSignedIn } = useSession();
 
-  const unreadNotifications =
+  const unopenedNotifications =
     notifications?.filter(
-      (n) => n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
+      (n) => n.status !== "OPENED" && n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
     ) || [];
 
-  const unreadNotificationsCount = unreadNotifications.length;
+  const unopenedNotificationsCount = unopenedNotifications.length;
   const { activityEntries } = useActivities();
   const totalActivitiesLogged = activityEntries?.length || 0;
   const accountLevel = useAccountLevel(totalActivitiesLogged);
@@ -235,11 +235,11 @@ function HomePage() {
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 relative"
                 >
                   <Bell size={24} />
-                  {unreadNotificationsCount > 0 && (
+                  {unopenedNotificationsCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {unreadNotificationsCount > 9
+                      {unopenedNotificationsCount > 9
                         ? "9+"
-                        : unreadNotificationsCount}
+                        : unopenedNotificationsCount}
                     </span>
                   )}
                 </button>
