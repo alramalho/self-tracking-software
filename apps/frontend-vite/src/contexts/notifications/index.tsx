@@ -20,7 +20,7 @@ interface DataNotificationsContextType {
   concludeNotification: ( data: { notificationId: string, mute?: boolean }) => Promise<void>;
   isConcludingNotification: boolean;
 
-  markNotificationAsOpened: (notificationId: string) => Promise<void>;
+  markNotificationAsOpened: (notificationIds: string[]) => Promise<void>;
   isMarkingNotificationAsOpened: boolean;
 
   clearAllNotifications: () => Promise<void>;
@@ -80,16 +80,17 @@ export const DataNotificationsProvider: React.FC<{
 
   // Mark notification as opened mutation
   const markNotificationAsOpenedMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      await api.post("/notifications/mark-notification-opened", null, {
-        params: { notification_id: notificationId },
+    mutationFn: async (notificationIds: string[]) => {
+      if (notificationIds.length === 0) return;
+      await api.post("/notifications/mark-notifications-opened", {
+        notification_ids: notificationIds,
       });
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["notifications"] });
     },
     onError: (error) => {
-      console.error("Error marking notification as opened:", error);
+      console.error("Error marking notifications as opened:", error);
     },
   });
 

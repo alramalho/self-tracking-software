@@ -8,7 +8,7 @@ import { getThemeVariants } from "@/utils/theme";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type Notification } from "@tsw/prisma";
 import { Check, Eye, X } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { useInView } from "react-intersection-observer";
 import { Remark } from "react-remark";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -16,7 +16,7 @@ import { Skeleton } from "./ui/skeleton";
 
 interface NotificationItemProps {
   notification: Notification;
-  markNotificationAsOpened: (notificationId: string) => Promise<void>;
+  markNotificationAsOpened: (notificationId: string) => void;
   handleNotificationAction: (notification: Notification, action: string) => void;
   renderActionButtons: (notification: Notification) => React.ReactNode;
   hasPictureData: (notification: Notification) => boolean;
@@ -54,12 +54,12 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     <div
       ref={ref}
       key={notification.id}
-      className="shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
+      className="relative shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
     >
+      {isUnopened && (
+        <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-blue-500" />
+      )}
       <div className="flex flex-row flex-nowrap w-full justify-start items-center gap-3 ">
-        {isUnopened && (
-          <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-        )}
         {[
           "FRIEND_REQUEST",
           "PLAN_INVITATION",
@@ -122,6 +122,43 @@ const Notifications: React.FC = () => {
     acceptFriendRequest,
     rejectFriendRequest,
   } = useCurrentUser();
+
+  // Debounced batching for marking notifications as opened
+  const notificationQueueRef = useRef<Set<string>>(new Set());
+  const debounceTimerRef = useRef<number | null>(null);
+
+  const flushNotificationQueue = useCallback(() => {
+    if (notificationQueueRef.current.size > 0) {
+      const idsToMark = Array.from(notificationQueueRef.current);
+      markNotificationAsOpened(idsToMark);
+      notificationQueueRef.current.clear();
+    }
+  }, [markNotificationAsOpened]);
+
+  const debouncedMarkAsOpened = useCallback((notificationId: string) => {
+    // Add to queue
+    notificationQueueRef.current.add(notificationId);
+
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new timer for 3 seconds
+    debounceTimerRef.current = setTimeout(() => {
+      flushNotificationQueue();
+    }, 3000);
+  }, [flushNotificationQueue]);
+
+  // Cleanup on unmount - flush any pending notifications
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      flushNotificationQueue();
+    };
+  }, [flushNotificationQueue]);
 
   const handleNotificationAction = async (
     notification: Notification,
@@ -356,7 +393,7 @@ const Notifications: React.FC = () => {
             <NotificationItem
               key={notification.id}
               notification={notification}
-              markNotificationAsOpened={markNotificationAsOpened}
+              markNotificationAsOpened={debouncedMarkAsOpened}
               handleNotificationAction={handleNotificationAction}
               renderActionButtons={renderActionButtons}
               hasPictureData={hasPictureData}
