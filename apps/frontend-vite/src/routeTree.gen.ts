@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SearchRouteImport } from './routes/search'
@@ -24,11 +23,6 @@ import { Route as InsightsOnboardingRouteImport } from './routes/insights.onboar
 import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboard'
 import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SignoutRoute = SignoutRouteImport.update({
   id: '/signout',
   path: '/signout',
@@ -105,7 +99,6 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
-  '/signup': typeof SignupRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -121,7 +114,6 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
-  '/signup': typeof SignupRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -138,7 +130,6 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
-  '/signup': typeof SignupRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -156,7 +147,6 @@ export interface FileRouteTypes {
     | '/search'
     | '/signin'
     | '/signout'
-    | '/signup'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -172,7 +162,6 @@ export interface FileRouteTypes {
     | '/search'
     | '/signin'
     | '/signout'
-    | '/signup'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -188,7 +177,6 @@ export interface FileRouteTypes {
     | '/search'
     | '/signin'
     | '/signout'
-    | '/signup'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -205,7 +193,6 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
-  SignupRoute: typeof SignupRoute
   FriendsUsernameRoute: typeof FriendsUsernameRoute
   InsightsDashboardRoute: typeof InsightsDashboardRoute
   InsightsOnboardingRoute: typeof InsightsOnboardingRoute
@@ -214,13 +201,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/signout': {
       id: '/signout'
       path: '/signout'
@@ -325,7 +305,6 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,
-  SignupRoute: SignupRoute,
   FriendsUsernameRoute: FriendsUsernameRoute,
   InsightsDashboardRoute: InsightsDashboardRoute,
   InsightsOnboardingRoute: InsightsOnboardingRoute,
