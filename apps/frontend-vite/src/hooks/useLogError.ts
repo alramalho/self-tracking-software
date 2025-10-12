@@ -7,6 +7,11 @@ export const useLogError = () => {
     error: Error & { digest?: string; response?: any; status?: number },
     customErrorMessage: string
   ) => {
+    // Skip logging 401 authentication errors
+    if (error.response?.status === 401 || error.status === 401) {
+      return;
+    }
+
     const axiosErrorDetails = error.response
       ? ` [${error.response.status} ${
           error.response.statusText
@@ -28,10 +33,15 @@ export const useLogError = () => {
   };
 
   const logError = async (
-    error: Error & { digest?: string },
+    error: Error & { digest?: string; response?: any; status?: number },
     url?: string,
     clerkId?: string
   ) => {
+    // Skip logging 401 authentication errors
+    if (error.response?.status === 401 || error.status === 401) {
+      return;
+    }
+
     const userClerkId = clerkId || user?.id;
 
     try {
