@@ -247,7 +247,7 @@ export default function GeneralInitializer({
 
             {children}
           </div>
-          {isSignedIn && !isDownloadPage && <BottomNav />}
+          {isSignedIn && !isDownloadPage  && !isUsernameSelectionPage&& <BottomNav />}
         </>
       )}
     </>
