@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UsernameSelectionRouteImport } from './routes/username-selection'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SignoutRouteImport } from './routes/signout'
 import { Route as SigninRouteImport } from './routes/signin'
@@ -25,11 +24,6 @@ import { Route as InsightsOnboardingRouteImport } from './routes/insights.onboar
 import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboard'
 import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
 
-const UsernameSelectionRoute = UsernameSelectionRouteImport.update({
-  id: '/username-selection',
-  path: '/username-selection',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -112,7 +106,6 @@ export interface FileRoutesByFullPath {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
-  '/username-selection': typeof UsernameSelectionRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -129,7 +122,6 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
-  '/username-selection': typeof UsernameSelectionRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -147,7 +139,6 @@ export interface FileRoutesById {
   '/signin': typeof SigninRoute
   '/signout': typeof SignoutRoute
   '/signup': typeof SignupRoute
-  '/username-selection': typeof UsernameSelectionRoute
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
@@ -166,7 +157,6 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/signup'
-    | '/username-selection'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -183,7 +173,6 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/signup'
-    | '/username-selection'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -200,7 +189,6 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signout'
     | '/signup'
-    | '/username-selection'
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
@@ -218,7 +206,6 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignoutRoute: typeof SignoutRoute
   SignupRoute: typeof SignupRoute
-  UsernameSelectionRoute: typeof UsernameSelectionRoute
   FriendsUsernameRoute: typeof FriendsUsernameRoute
   InsightsDashboardRoute: typeof InsightsDashboardRoute
   InsightsOnboardingRoute: typeof InsightsOnboardingRoute
@@ -227,13 +214,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/username-selection': {
-      id: '/username-selection'
-      path: '/username-selection'
-      fullPath: '/username-selection'
-      preLoaderRoute: typeof UsernameSelectionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -346,7 +326,6 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignoutRoute: SignoutRoute,
   SignupRoute: SignupRoute,
-  UsernameSelectionRoute: UsernameSelectionRoute,
   FriendsUsernameRoute: FriendsUsernameRoute,
   InsightsDashboardRoute: InsightsDashboardRoute,
   InsightsOnboardingRoute: InsightsOnboardingRoute,
