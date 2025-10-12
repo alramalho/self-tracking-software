@@ -63,10 +63,10 @@ const BottomNav = () => {
   return (
     <>
       <nav className={cn(
-        "box-border bg-transparent backdrop-blur-xl z-[50] m-4 rounded-3xl border border-white/30",
+        "box-border backdrop-blur-xl z-[50] m-4 rounded-3xl border border-white/30",
         isDesktop 
-          ? "fixed left-0 top-0 bottom-0 w-64 py-6 border-l border-gray-200 border-2"
-          : "fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-1"
+          ? "fixed left-0 top-0 bottom-0 w-64 py-6 border-l border-gray-200 border-2 bg-white"
+          : "fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-1 bg-transparent"
       )}>
         <div className={cn(
           "max-w-screen-xl mx-auto",

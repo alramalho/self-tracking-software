@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { logGlobalError } from "@/utils/errorLogger";
+import { useLogError } from "@/hooks/useLogError";
 import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 
 export function GlobalErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
+  const { logError } = useLogError();
 
   function clearCache() {
     localStorage.removeItem("TRACKING_SO_QUERY_CACHE");
@@ -13,11 +14,11 @@ export function GlobalErrorComponent({ error, reset }: ErrorComponentProps) {
 
   useEffect(() => {
     console.error("Global Error: ", error);
-    logGlobalError(
+    logError(
       error instanceof Error ? error : new Error(String(error)),
       typeof window !== "undefined" ? window.location.href : undefined
     );
-  }, [error]);
+  }, [error, logError]);
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gray-50">
