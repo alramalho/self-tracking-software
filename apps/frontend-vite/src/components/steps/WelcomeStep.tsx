@@ -20,7 +20,7 @@ const WelcomeStep = () => {
   const { completeStep } = useOnboarding();
   const api = useApiWithAuth();
   const { currentUser, updateUser } = useCurrentUser();
-  const isUsernameSet = useMemo(() => currentUser?.username?.startsWith("__pending__"), [currentUser?.username]);
+  const isUsernameSet = useMemo(() => !currentUser?.username?.startsWith("__pending__"), [currentUser?.username]);
 
   // Determine initial substep based on whether user has username
   const [currentSubStep, setCurrentSubStep] = useState<SubStep>(
