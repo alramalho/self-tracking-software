@@ -6,7 +6,12 @@ export const useLogError = () => {
     customErrorMessage: string
   ) => {
     // Skip logging 401 authentication errors
-    if (error.response?.status === 401 || error.status === 401) {
+    if (
+      error.response?.status === 401 ||
+      error.status === 401
+      // (error as any).code === 401 ||
+      // error.message?.includes("Request failed with status code 401")
+    ) {
       return;
     }
 
