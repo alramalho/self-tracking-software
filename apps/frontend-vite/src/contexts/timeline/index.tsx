@@ -9,6 +9,7 @@ import type { Activity } from "@tsw/prisma";
 import React from "react";
 import { getTimelineData, type TimelineActivityEntry, type TimelineUser } from "./service";
 import { TimelineContext, type TimelineContextType } from "./types";
+import { normalizePlanProgress } from "../plans-progress/service";
 
 export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -38,13 +39,17 @@ export const TimelineProvider: React.FC<{ children: React.ReactNode }> = ({
           "deletedAt",
         ])
       ),
-      recommendedUsers: data.recommendedUsers.map(user =>
-        normalizeApiResponse<TimelineUser>(user, [
+      recommendedUsers: data.recommendedUsers.map(user => ({
+        ...normalizeApiResponse<TimelineUser>(user, [
           "plans.createdAt",
           "plans.updatedAt",
           "plans.finishingDate",
-        ])
-      ),
+        ]),
+        plans: user.plans.map(plan => ({
+          ...plan,
+          progress: normalizePlanProgress(plan.progress)
+        }))
+      })),
     }),
     enabled: isLoaded && isSignedIn,
   });

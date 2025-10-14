@@ -1,4 +1,5 @@
 import recommendationsService from "@/services/recommendationsService";
+import { createClient } from "@supabase/supabase-js";
 import { Request, Response, Router } from "express";
 import multer from "multer";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
@@ -21,6 +22,12 @@ import { prisma } from "../utils/prisma";
 
 export const usersRouter: Router = Router();
 const telegramService = new TelegramService();
+
+// Initialize Supabase Admin client for user deletion
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Configure multer for memory storage
 const upload = multer({
@@ -109,6 +116,58 @@ usersRouter.patch(
     } catch (error) {
       logger.error("Failed to update user:", error);
       res.status(500).json({ error: "Failed to update user" });
+    }
+  }
+);
+
+// Delete user account (Apple Store compliant - effective deletion)
+usersRouter.delete(
+  "/user",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const supabaseAuthId = req.user!.supabaseAuthId;
+
+      // Clean up many-to-many relationships that don't cascade automatically
+      // Remove user from plan groups
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          planGroupMemberships: {
+            set: [], // Disconnect from all plan groups
+          },
+        },
+      });
+
+      // Handle self-referencing referral relationships
+      // Remove this user as referrer for any referred users
+      await prisma.user.updateMany({
+        where: { referredById: userId },
+        data: { referredById: null },
+      });
+
+      // Hard delete the user (CASCADE will delete all related records)
+      await prisma.user.delete({
+        where: { id: userId },
+      });
+
+      // Delete the Supabase Auth user (permanent deletion for Apple Store compliance)
+      if (supabaseAuthId) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(supabaseAuthId);
+          logger.info(`Deleted Supabase Auth user: ${supabaseAuthId}`);
+        } catch (authError) {
+          logger.error("Failed to delete Supabase Auth user:", authError);
+          // Continue even if auth deletion fails - user data is already deleted from DB
+        }
+      }
+
+      logger.info(`User account permanently deleted: ${userId}`);
+      res.json({ message: "Account deleted successfully" });
+    } catch (error) {
+      logger.error("Failed to delete user account:", error);
+      res.status(500).json({ error: "Failed to delete account" });
     }
   }
 );

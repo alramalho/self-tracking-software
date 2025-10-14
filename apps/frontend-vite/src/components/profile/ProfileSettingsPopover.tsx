@@ -1,4 +1,5 @@
 import AppleLikePopover from "@/components/AppleLikePopover";
+import DeleteAccountDialog from "@/components/DeleteAccountDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
@@ -19,6 +20,7 @@ import {
   Pencil,
   Share2,
   SquareArrowUp,
+  Trash2,
   UserPen,
   UserPlus,
 } from "lucide-react";
@@ -71,6 +73,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   initialActiveView = null,
 }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   // Single state for view navigation
   const [activeView, setActiveView] = useState<ActiveView>(
     (initialActiveView as ActiveView) || "main"
@@ -79,7 +82,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
   const { isUserFree, userPlanType } = usePaidPlan();
   const { signOut } = useAuth();
-  const { currentUser, updateUser } = useCurrentUser();
+  const { currentUser, updateUser, deleteAccount, isDeletingAccount } = useCurrentUser();
   const posthog = usePostHog();
   const { setShowUpgradePopover } = useUpgrade();
   const themeColors = useThemeColors();
@@ -99,6 +102,15 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
   const handleLogout = () => {
     signOut();
     posthog.reset();
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccount();
+      posthog.reset();
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+    }
   };
 
   const handleNotificationChange = async (checked: boolean) => {
@@ -382,6 +394,26 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <Share2 size={20} />
                         </Button>
                       </div>
+
+                      {/* Delete Account */}
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200 mt-6">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-red-900">
+                            Delete Account
+                          </p>
+                          <p className="text-xs text-red-600">
+                            Permanently delete your account and all data
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                          onClick={() => setShowDeleteAccountDialog(true)}
+                        >
+                          <Trash2 size={20} />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -583,6 +615,13 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
       <EditProfilePicturePopup
         open={showEditProfilePicture}
         onClose={() => setShowEditProfilePicture(false)}
+      />
+
+      <DeleteAccountDialog
+        isOpen={showDeleteAccountDialog}
+        onClose={() => setShowDeleteAccountDialog(false)}
+        onConfirm={handleDeleteAccount}
+        isDeleting={isDeletingAccount}
       />
     </>
   );

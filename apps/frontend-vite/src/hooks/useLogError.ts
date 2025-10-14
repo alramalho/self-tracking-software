@@ -1,8 +1,6 @@
-import { useUser } from "@/contexts/auth";
+import { authService } from "@/services/auth";
 
 export const useLogError = () => {
-  const { supabaseUser: user } = useUser();
-
   const handleQueryError = (
     error: Error & { digest?: string; response?: any; status?: number },
     customErrorMessage: string
@@ -34,15 +32,20 @@ export const useLogError = () => {
 
   const logError = async (
     error: Error & { digest?: string; response?: any; status?: number },
-    url?: string,
-    clerkId?: string
+    url?: string
   ) => {
     // Skip logging 401 authentication errors
     if (error.response?.status === 401 || error.status === 401) {
       return;
     }
 
-    const userClerkId = clerkId || user?.id;
+    let userSupabaseId;
+    try {
+      const { data } = await authService.getCurrentUser();
+      userSupabaseId = data.user?.id;
+    } catch (e) {
+      console.debug("Could not fetch user for error logging");
+    }
 
     try {
       const backendUrl = import.meta.env.VITE_API_URL;
@@ -63,7 +66,7 @@ export const useLogError = () => {
           referrer: document.referrer || "direct",
           user_agent: window.navigator.userAgent,
           timestamp: new Date().toISOString(),
-          user_clerk_id: userClerkId,
+          user_supabase_id: userSupabaseId,
         }),
       });
     } catch (e) {

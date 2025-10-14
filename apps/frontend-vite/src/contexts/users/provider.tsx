@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { toast } from "react-hot-toast";
 import {
+  deleteAccount as deleteAccountService,
   getCurrentUserBasicData,
   type HydratedCurrentUser,
   type HydratedUser,
@@ -216,6 +217,22 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      await deleteAccountService(api);
+    },
+    onSuccess: async () => {
+      queryClient.clear();
+      await signOut();
+      toast.success("Account deleted successfully");
+      navigate({ to: "/signin" });
+    },
+    onError: (error) => {
+      console.error("Error deleting account:", error);
+      toast.error("Failed to delete account");
+    },
+  });
+
   const refetchCurrentUser = useCallback(
     async (notify = true) => {
       await queryClient.refetchQueries({ queryKey: ["current-user"] });
@@ -258,6 +275,9 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
 
     rejectFriendRequest: rejectFriendRequestMutation.mutateAsync,
     isRejectingFriendRequest: rejectFriendRequestMutation.isPending,
+
+    deleteAccount: deleteAccountMutation.mutateAsync,
+    isDeletingAccount: deleteAccountMutation.isPending,
   };
 
   return (

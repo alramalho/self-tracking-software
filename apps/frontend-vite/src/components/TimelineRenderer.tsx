@@ -8,23 +8,9 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useNavigate } from "@tanstack/react-router";
 import { type Activity, type PlanType } from "@tsw/prisma";
-import {
-  Bell,
-  ChevronDown,
-  ChevronRight,
-  PersonStandingIcon,
-  RefreshCcw,
-  Search,
-  Send,
-  UserPlus,
-} from "lucide-react";
+import { Bell, RefreshCcw, Squirrel } from "lucide-react";
 import React, { useMemo, useRef } from "react";
 import { Button } from "./ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./ui/collapsible";
 import { Skeleton } from "./ui/skeleton";
 
 const TimelineRenderer: React.FC<{
@@ -84,104 +70,23 @@ const TimelineRenderer: React.FC<{
       </div>
     );
   }
-
   if (!friends?.length) {
     return (
-      <>
-        {/* <AINotification
-          messages={[
-            "Hey There! I'm Jarvis, your helper assistant throughout tracking.so. ",
-            "I see you haven't added any friends yet... statistically, you'll have **95%** more chances of success if you do, you know? Also, this timeline would get prettier 😅",
-            "Here's a how you could do it:",
-          ]}
-          createdAt={new Date().toISOString()}
-        /> */}
-        <div className="mt-6 grid grid-cols-1 gap-6">
-          {/* Find your Accountability Partner Card */}
-          <div className="ring-2 ring-gray-200 backdrop-blur-sm rounded-2xl bg-white/60 shadow-sm p-4">
-            <Collapsible
-              open={!isPartnerSectionCollapsed}
-              onOpenChange={(open) => setIsPartnerSectionCollapsed(!open)}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <CollapsibleTrigger asChild>
-                    <button
-                      className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
-                      aria-label={
-                        isPartnerSectionCollapsed
-                          ? "Expand partner section"
-                          : "Collapse partner section"
-                      }
-                    >
-                      {isPartnerSectionCollapsed ? (
-                        <ChevronRight size={16} className="text-gray-600" />
-                      ) : (
-                        <ChevronDown size={16} className="text-gray-600" />
-                      )}
-                    </button>
-                  </CollapsibleTrigger>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Find your Accountability Partner
-                  </h3>
-                </div>
-              </div>
-
-              {/* Always show summary in collapsed state */}
-              <div className="space-y-3">
-                {/* Partner overview - always visible */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <UserPlus size={20} className="text-blue-500" />
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">
-                        Improve your success rate by{" "}
-                      </span>
-                      <span className="font-bold text-blue-600">95%</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expandable detailed content */}
-                <CollapsibleContent className="space-y-0 pb-4 pt-0">
-                  <div className="space-y-4 pt-4">
-                    <p className="text-gray-600 text-sm">
-                      Improve your chances of success by finding an
-                      accountability partner
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        onClick={shareOrCopyReferralLink}
-                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                      >
-                        <Send size={16} className="mr-2" />
-                        Invite Friends
-                      </Button>
-                      <Button
-                        onClick={onOpenSearch}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <Search size={16} className="mr-2" />
-                        Search Users
-                      </Button>
-                      <Button
-                        onClick={() => navigate({ to: "/search" })}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <PersonStandingIcon size={16} className="mr-2" />
-                        Browse Community
-                      </Button>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          </div>
+      <div className="flex flex-col items-center gap-3 text-center text-gray-500 pt-2">
+        <Squirrel className="w-24 h-24 text-muted-foreground mx-auto" />
+        <div>
+          <h3 className="text-lg text-gray-800 font-semibold">Uh oh...</h3>
+          <p className="text-sm text-gray-400">
+            You haven't added any friends yet...
+          </p>
         </div>
-      </>
+        <Button
+          onClick={() => navigate({ to: "/search" })}
+          className="mt-2"
+        >
+          Find Friends
+        </Button>
+      </div>
     );
   }
 
@@ -203,7 +108,10 @@ const TimelineRenderer: React.FC<{
               className="mt-3"
               onClick={() => {
                 if (isDesktop || !isAppInstalled) {
-                  navigate({ to: "/download", search: { instagram: false, tiktok: false } });
+                  navigate({
+                    to: "/download",
+                    search: { instagram: false, tiktok: false },
+                  });
                 } else {
                   requestPermission();
                 }
@@ -223,7 +131,11 @@ const TimelineRenderer: React.FC<{
         <h2 className="mt-0 text-lg font-semibold">
           Friend&apos;s last activities
         </h2>
-        {isLoadingTimeline && <span><RefreshCcw className={`w-4 h-4 ml-2 animate-spin`} /></span>}
+        {isLoadingTimeline && (
+          <span>
+            <RefreshCcw className={`w-4 h-4 ml-2 animate-spin`} />
+          </span>
+        )}
       </div>
 
       {!isLoadingTimeline &&
@@ -246,10 +158,15 @@ const TimelineRenderer: React.FC<{
           if (!activity || !user || user.username === null) return null;
 
           // Get plan progress data for this user's plans from inline data
-          const timelineUser = timelineData?.recommendedUsers?.find(u => u.id === user.id);
-          const userPlansProgress = timelineUser?.plans
-            ?.filter((plan) => plan.activities?.some((a) => a.id === activity?.id))
-            .map(plan => plan.progress) || [];
+          const timelineUser = timelineData?.recommendedUsers?.find(
+            (u) => u.id === user.id
+          );
+          const userPlansProgress =
+            timelineUser?.plans
+              ?.filter((plan) =>
+                plan.activities?.some((a) => a.id === activity?.id)
+              )
+              .map((plan) => plan.progress) || [];
 
           return (
             <React.Fragment key={entry.id}>
@@ -267,10 +184,16 @@ const TimelineRenderer: React.FC<{
                 }
                 userPlansProgressData={userPlansProgress}
                 onAvatarClick={() => {
-                  navigate({ to: `/profile/$username`, params: { username: user?.username || "" } });
+                  navigate({
+                    to: `/profile/$username`,
+                    params: { username: user?.username || "" },
+                  });
                 }}
                 onUsernameClick={() => {
-                  navigate({ to: `/profile/$username`, params: { username: user?.username || "" } });
+                  navigate({
+                    to: `/profile/$username`,
+                    params: { username: user?.username || "" },
+                  });
                 }}
               />
               {/* {entry.isWeekFinisher && isInCurrentWeek(entry.date) && (

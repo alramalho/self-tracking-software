@@ -203,3 +203,7 @@ export async function getPublicUserProfile(
   const data: FullUserApiResponse = await response.json();
   return normalizeFullUser(data);
 }
+
+export async function deleteAccount(api: AxiosInstance): Promise<void> {
+  await api.delete("/users/user");
+}

@@ -28,17 +28,8 @@ const OnboardingStepRenderer = () => {
     currentStep,
     totalSteps,
     prevStep,
-    hasNextStep,
-    nextStep,
-    isStepCompleted,
     steps,
   } = useOnboarding();
-
-  const isStepCompletedCallback = useMemo(() => {
-    if (!currentStepData) return false;
-    const result = isStepCompleted(currentStepData.id);
-    return result;
-  }, [currentStepData?.id, isStepCompleted]);
 
   const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
 
@@ -53,12 +44,6 @@ const OnboardingStepRenderer = () => {
         onClick={prevStep}
         className="fixed m-0 top-8 left-2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
       />
-      {isStepCompletedCallback && hasNextStep && (
-        <ChevronRight
-          onClick={nextStep}
-          className="fixed m-0 top-8 right-2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
-        />
-      )}
 
       {!currentStepData ? (
         <div className="flex flex-col items-center justify-center h-full">

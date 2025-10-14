@@ -58,7 +58,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   // Auto-scroll to current week when weeks data loads
   useEffect(() => {
-    if (currentWeekRef.current && planProgress?.weeks.length) {
+    if (currentWeekRef.current && planProgress?.weeks?.length) {
       // Small delay to ensure the layout is complete
       setTimeout(() => {
         currentWeekRef.current?.scrollIntoView({
@@ -67,7 +67,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         });
       }, 100);
     }
-  }, [planProgress?.weeks.length]);
+  }, [planProgress?.weeks?.length]);
 
   const getStartDate = useCallback(() => {
     if (timeRange === "recent") {
@@ -360,11 +360,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               weekStartsOn: 0,
             }
           );
-          const totalWeeks = planProgress?.weeks.length ?? 0;
+          const totalWeeks = planProgress?.weeks?.length ?? 0;
           console.log({weeks: planProgress?.weeks})
           const actualWeekIndex =
             planProgress?.weeks?.findIndex(
-              (w) => w.startDate.getTime() === week.startDate.getTime()
+              (w) => {
+                console.log({startDate: w?.startDate});
+                return w?.startDate.getTime() === week?.startDate.getTime();
+              }
             ) ?? index;
           return (
             <div
