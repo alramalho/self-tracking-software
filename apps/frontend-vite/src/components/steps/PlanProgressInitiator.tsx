@@ -30,7 +30,7 @@ const PlanProgressInitiator = () => {
 
   const handleComplete = async (progress: string) => {
     let nextStep;
-    if (planType == "TIMES_PER_WEEK") {
+    if (planType === "TIMES_PER_WEEK") {
       await Promise.all(
         planActivities.map((activity) =>
           upsertActivity({

@@ -261,6 +261,8 @@ const ALLOWED_ORIGINS = new Set([
   "https://tracking.so",
   "https://app.tracking.so",
   "http://localhost:3001",
+  "http://localhost:5173",
+  "http://localhost:4173",
 ]);
 
 const BLACKLISTED_IPS = new Set<string>();
@@ -268,7 +270,7 @@ const MAX_ERROR_LENGTH = 1000;
 
 interface ErrorLogRequest {
   error_message: string;
-  user_clerk_id?: string;
+  user_supabase_id?: string;
   error_digest?: string;
   url: string;
   referrer: string;
@@ -303,19 +305,21 @@ router.post(
 
       // Get user if exists
       let user: User | null = null;
-      if (errorData.user_clerk_id) {
+      if (errorData.user_supabase_id) {
         try {
-          user = await userService.getUserByClerkId(errorData.user_clerk_id);
+          user = await userService.getUserBySupabaseAuthId(
+            errorData.user_supabase_id
+          );
         } catch (error) {
           logger.warn(
-            `User with clerk_id '${errorData.user_clerk_id}' not found`
+            `User with supabase_id '${errorData.user_supabase_id}' not found`
           );
         }
       }
 
       // Create error context
       const context = {
-        user_clerk_id: errorData.user_clerk_id,
+        user_supabase_id: errorData.user_supabase_id,
         user_username: user?.username || "unknown",
         error_message: errorData.error_message,
         error_digest: errorData.error_digest,

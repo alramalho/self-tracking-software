@@ -60,6 +60,8 @@ function NotFoundComponent() {
   );
 }
 
+
+
 export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

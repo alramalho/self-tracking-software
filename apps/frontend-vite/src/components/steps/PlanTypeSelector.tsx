@@ -18,7 +18,7 @@ export const PlanTypeSelector = () => {
   };
 
   const handleContinue = () => {
-    completeStep("plan-type-selector", { 
+    completeStep("plan-type-selector", {
       planType: "TIMES_PER_WEEK",
       timesPerWeek: planTimesPerWeek,
     });

@@ -47,6 +47,9 @@ export interface UsersContextType {
     username: string;
   }) => Promise<void>;
   isRejectingFriendRequest: boolean;
+
+  deleteAccount: () => Promise<void>;
+  isDeletingAccount: boolean;
 }
 
 export const UsersContext = createContext<UsersContextType | undefined>(

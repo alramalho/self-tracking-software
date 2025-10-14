@@ -18,7 +18,7 @@ const PlanActivityEntriesRenderer: React.FC<
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
-  const isWeekCompleted = (startDate: Date) => plan.progress.weeks.find((week) =>
+  const isWeekCompleted = (startDate: Date) => plan.progress.weeks?.find((week) =>
     isSameWeek(week.startDate, startDate)
   )?.isCompleted ?? false;
 

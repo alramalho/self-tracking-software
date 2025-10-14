@@ -15,7 +15,7 @@ interface PlanActivitySetterResponse extends BaseExtractionResponse {
 }
 
 function PlanActivitySetter() {
-  const { planGoal, completeStep } = useOnboarding();
+  const { planGoal, completeStep, planActivities } = useOnboarding();
   const api = useApiWithAuth();
   const questionChecks = {
     "Does the message mention specific activities to be done, and their unit of measurement? (for example, you could measure 'reading' in 'pages' or 'running' in 'kilometers'). You may suggest the unit of measurement to the user, given the relevant context you have available.":
@@ -78,6 +78,7 @@ function PlanActivitySetter() {
     <>
       <DynamicUISuggester<PlanActivitySetterResponse>
         id="plan-creator"
+        initialValue={planActivities?.map((activity) => `${activity.title} (${activity.measure})`).join(", ") || undefined}
         headerIcon={<BicepsFlexed className="w-[10rem] h-[10rem] text-blue-600" />}
         title="Which activities would you like to include?"
         questionsChecks={questionChecks}

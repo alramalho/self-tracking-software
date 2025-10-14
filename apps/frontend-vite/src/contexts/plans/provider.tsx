@@ -13,6 +13,7 @@ import {
     updatePlans,
     upgradeCoachSuggestedSessionsToPlanSessions,
 } from "./service";
+import { normalizePlanProgress } from "../plans-progress/service";
 import {
     PlansContext,
     type CompletePlan,
@@ -33,6 +34,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       const result = await getPlans(api);
       return result;
     },
+    select: (data) => data.map((plan) => ({
+      ...plan,
+      progress: normalizePlanProgress(plan.progress)
+    })),
     enabled: isLoaded && isSignedIn,
   });
 
