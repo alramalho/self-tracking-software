@@ -225,7 +225,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
       queryClient.clear();
       await signOut();
       toast.success("Account deleted successfully");
-      navigate({ to: "/signin" });
+      navigate({ to: "/signin", search: { redirect_url: undefined } });
     },
     onError: (error) => {
       console.error("Error deleting account:", error);
