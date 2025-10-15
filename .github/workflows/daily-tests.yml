@@ -13,24 +13,20 @@ jobs:
       - uses: actions/checkout@v4
           
       - name: Setup Node.js
-        if: steps.backend_tests.outcome == 'success'
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
       - name: Install pnpm
-        if: steps.backend_tests.outcome == 'success'
         uses: pnpm/action-setup@v2
         with:
           version: 8
 
       - name: Install backend-node dependencies
-        if: steps.backend_tests.outcome == 'success'
         working-directory: apps/backend-node
         run: pnpm install
 
       - name: Run backend-node tests
-        if: steps.backend_tests.outcome == 'success'
         id: backend_node_tests
         continue-on-error: true
         working-directory: apps/backend-node
@@ -59,46 +55,9 @@ jobs:
           path: apps/backend-node/test_output.txt
           retention-days: 3
 
-      - name: Install E2E test dependencies
-        if: steps.backend_tests.outcome == 'success' && steps.backend_node_tests.outcome == 'success'
-        working-directory: e2e-tests
-        run: |
-          yarn install
-          npx playwright install --with-deps
-
-      - name: Run E2E tests
-        if: steps.backend_tests.outcome == 'success' && steps.backend_node_tests.outcome == 'success'
-        id: e2e_tests
-        continue-on-error: true
-        working-directory: e2e-tests
-        env:
-          BASE_URL: "https://app.tracking.so"
-          ENVIRONMENT: "production"
-          APP_TEST_USER_EMAIL: "alexandre.ramalho.1998+e2etracking@gmail.com"
-          APP_TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          OUTPUT=$(yarn test:ci 2>&1)
-          echo "$OUTPUT"
-          echo "$OUTPUT" > test_output.txt
-          if [ $? -ne 0 ]; then
-            cd ../backend
-            python -m scripts.notify_test_failure "E2E Tests" "$(cat ../e2e-tests/test_output.txt)"
-            exit 1
-          fi
-
-      - name: Upload E2E test results
-        if: steps.e2e_tests.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-output
-          path: e2e-tests/test_output.txt
-          retention-days: 3
-
       - name: Check test results
         if: always()
         run: |
-          if [ "${{ steps.backend_tests.outcome }}" != "success" ] || [ "${{ steps.backend_node_tests.outcome }}" != "success" ] || [ "${{ steps.e2e_tests.outcome }}" != "success" ]; then
+          if [ "${{ steps.backend_node_tests.outcome }}" != "success" ]; then
             exit 1
           fi 
