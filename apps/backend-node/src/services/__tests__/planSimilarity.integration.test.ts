@@ -17,7 +17,7 @@ async function createTestPlanWithActivities(
   activities: Array<{ title: string; measure: string; emoji: string }>
 ): Promise<void> {
   // Create plan
-  await prisma.plan.create({
+  const createdPlan = await prisma.plan.create({
     data: {
       id: planId,
       userId,
@@ -26,6 +26,10 @@ async function createTestPlanWithActivities(
       timesPerWeek: 3,
     },
   });
+
+  if (!createdPlan) {
+    throw new Error(`Failed to create plan ${planId} for user ${userId}`);
+  }
 
   // Create activities and sessions
   for (const activity of activities) {
@@ -121,17 +125,46 @@ describe("Plan Similarity Integration Tests", () => {
   beforeEach(async () => {
     // Clean up all plans and activities before each test
     const users = [testUserId1, testUserId2, testUserId3, testUserId4];
-    for (const userId of users) {
+
+    // Get all activity IDs and plan IDs for these users
+    const userActivities = await prisma.activity.findMany({
+      where: { userId: { in: users } },
+      select: { id: true },
+    });
+    const activityIds = userActivities.map((a) => a.id);
+
+    const userPlans = await prisma.plan.findMany({
+      where: { userId: { in: users } },
+      select: { id: true },
+    });
+    const planIds = userPlans.map((p) => p.id);
+
+    // Delete in proper order respecting foreign keys
+    // 1. Delete ALL plan sessions that reference either our plans OR our activities
+    const deleteConditions = [];
+    if (planIds.length > 0) {
+      deleteConditions.push({ planId: { in: planIds } });
+    }
+    if (activityIds.length > 0) {
+      deleteConditions.push({ activityId: { in: activityIds } });
+    }
+    if (deleteConditions.length > 0) {
       await prisma.planSession.deleteMany({
-        where: { plan: { userId } },
-      });
-      await prisma.activity.deleteMany({
-        where: { userId },
-      });
-      await prisma.plan.deleteMany({
-        where: { userId },
+        where: {
+          OR: deleteConditions,
+        },
       });
     }
+
+    // 2. Delete activities (this will auto-cleanup the _ActivityToPlan join table)
+    await prisma.activity.deleteMany({
+      where: { userId: { in: users } },
+    });
+
+    // 3. Finally delete plans
+    await prisma.plan.deleteMany({
+      where: { userId: { in: users } },
+    });
 
     // Create the 3 base test plans
     const testPlans = [
@@ -194,17 +227,43 @@ describe("Plan Similarity Integration Tests", () => {
   afterAll(async () => {
     // Cleanup test users
     const users = [testUserId1, testUserId2, testUserId3, testUserId4];
-    for (const userId of users) {
+
+    // Get all activity IDs and plan IDs for these users
+    const userActivities = await prisma.activity.findMany({
+      where: { userId: { in: users } },
+      select: { id: true },
+    });
+    const activityIds = userActivities.map((a) => a.id);
+
+    const userPlans = await prisma.plan.findMany({
+      where: { userId: { in: users } },
+      select: { id: true },
+    });
+    const planIds = userPlans.map((p) => p.id);
+
+    // Delete in proper order respecting foreign keys
+    const deleteConditions = [];
+    if (planIds.length > 0) {
+      deleteConditions.push({ planId: { in: planIds } });
+    }
+    if (activityIds.length > 0) {
+      deleteConditions.push({ activityId: { in: activityIds } });
+    }
+    if (deleteConditions.length > 0) {
       await prisma.planSession.deleteMany({
-        where: { plan: { userId } },
-      });
-      await prisma.activity.deleteMany({
-        where: { userId },
-      });
-      await prisma.plan.deleteMany({
-        where: { userId },
+        where: {
+          OR: deleteConditions,
+        },
       });
     }
+
+    await prisma.activity.deleteMany({
+      where: { userId: { in: users } },
+    });
+
+    await prisma.plan.deleteMany({
+      where: { userId: { in: users } },
+    });
 
     await prisma.user.deleteMany({
       where: { id: { in: users } },
