@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createRootRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Home, Squirrel } from "lucide-react";
 import { Toaster } from "react-hot-toast";
@@ -86,6 +86,8 @@ function RootComponent() {
 function ThemedLayout() {
   const { isSignedIn } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const location = useLocation();
+  const isDownloadPage = location.pathname.startsWith("/download");
 
   return (
     <ThemeProvider>
@@ -94,7 +96,7 @@ function ThemedLayout() {
           <main
             className={cn(
               "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
-              isSignedIn && isDesktop ? "ml-64" : ""
+              (isSignedIn && isDesktop && !isDownloadPage) ? "ml-64" : ""
             )}
           >
             <GeneralInitializer>
