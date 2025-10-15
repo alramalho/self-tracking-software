@@ -805,6 +805,7 @@ describe("Coach Notes Tests", () => {
     }, 30000);
   });
 
+  // TODO: this test is too undeterminsitic, sometimes fails sometimes passes
   describe("ON_TRACK state", () => {
     it("should encourage continued momentum", async () => {
       const scenario: TestScenario = {
