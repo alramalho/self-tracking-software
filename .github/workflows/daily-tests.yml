@@ -53,16 +53,57 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          
-      - name: Install E2E test dependencies
+
+      - name: Install pnpm
         if: steps.backend_tests.outcome == 'success'
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install backend-node dependencies
+        if: steps.backend_tests.outcome == 'success'
+        working-directory: apps/backend-node
+        run: pnpm install
+
+      - name: Run backend-node tests
+        if: steps.backend_tests.outcome == 'success'
+        id: backend_node_tests
+        continue-on-error: true
+        working-directory: apps/backend-node
+        env:
+          ENVIRONMENT: "production"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          pnpm test 2>&1 | tee test_output.txt
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "Tests failed. Sending failure notification..."
+            tsx scripts/send_telegram_message.ts "❌ Backend-Node Tests Failed. Check GH logs for details."
+            exit 1
+          else
+            echo "Tests passed. Sending success notification..."
+            tsx scripts/send_telegram_message.ts "✅ Backend-Node Tests Passed"
+          fi
+
+      - name: Upload backend-node test results
+        if: steps.backend_node_tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-node-test-output
+          path: apps/backend-node/test_output.txt
+          retention-days: 3
+
+      - name: Install E2E test dependencies
+        if: steps.backend_tests.outcome == 'success' && steps.backend_node_tests.outcome == 'success'
         working-directory: e2e-tests
         run: |
           yarn install
           npx playwright install --with-deps
-          
+
       - name: Run E2E tests
-        if: steps.backend_tests.outcome == 'success'
+        if: steps.backend_tests.outcome == 'success' && steps.backend_node_tests.outcome == 'success'
         id: e2e_tests
         continue-on-error: true
         working-directory: e2e-tests
@@ -94,6 +135,6 @@ jobs:
       - name: Check test results
         if: always()
         run: |
-          if [ "${{ steps.backend_tests.outcome }}" != "success" ] || [ "${{ steps.e2e_tests.outcome }}" != "success" ]; then
+          if [ "${{ steps.backend_tests.outcome }}" != "success" ] || [ "${{ steps.backend_node_tests.outcome }}" != "success" ] || [ "${{ steps.e2e_tests.outcome }}" != "success" ]; then
             exit 1
           fi 
