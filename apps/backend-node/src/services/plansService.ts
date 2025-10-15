@@ -280,16 +280,25 @@ export class PlansService {
       }
 
       let updatePlanData: Partial<Plan> = {};
-      let coachNotesData: {
-        goal: string;
-        outlineType: PlanOutlineType;
-        timesPerWeek?: number;
-        oldSessions?: PlanSession[];
-        newSessions?: PlanSession[];
-      } = {
-        goal: plan.goal,
-        outlineType: plan.outlineType,
-      };
+      let changes:
+        | {
+            type: "times_reduced" | "sessions_downgraded" | "none";
+            oldTimesPerWeek?: number;
+            newTimesPerWeek?: number;
+            oldSessions?: Array<{
+              date: string;
+              activityId: string;
+              quantity: number;
+              descriptiveGuide?: string;
+            }>;
+            newSessions?: Array<{
+              date: string;
+              activityId: string;
+              quantity: number;
+              descriptiveGuide?: string;
+            }>;
+          }
+        | undefined = { type: "none" };
 
       if (
         newState === PlanState.FAILED &&
@@ -297,9 +306,16 @@ export class PlansService {
       ) {
         if (plan.outlineType === PlanOutlineType.TIMES_PER_WEEK) {
           // Reduce times per week by 1 (minimum 1)
-          const newTimesPerWeek = Math.max(1, (plan.timesPerWeek || 1) - 1);
+          const oldTimesPerWeek = plan.timesPerWeek || 1;
+          const newTimesPerWeek = Math.max(1, oldTimesPerWeek - 1);
           updatePlanData.coachSuggestedTimesPerWeek = newTimesPerWeek;
           updatePlanData.suggestedByCoachAt = new Date();
+
+          changes = {
+            type: "times_reduced",
+            oldTimesPerWeek,
+            newTimesPerWeek,
+          };
         }
         if (plan.outlineType === PlanOutlineType.SPECIFIC) {
           const suggestedSessions = await aiService.generatePlanSessions({
@@ -311,8 +327,19 @@ export class PlansService {
               "Please adapt the next week so it is downgraded 1 level of difficulty." +
               "The update should be minimal",
           });
-          coachNotesData.oldSessions = plan.sessions as PlanSession[];
-          const actualNewSesssions =
+
+          // Get old sessions (upcoming sessions that will be replaced)
+          const oldSessions = (plan.sessions || [])
+            .filter((s) => new Date(s.date) >= new Date())
+            .slice(0, 10) // Limit to next 10 sessions for context
+            .map((s) => ({
+              date: s.date.toISOString(),
+              activityId: s.activityId,
+              quantity: s.quantity,
+              descriptiveGuide: s.descriptiveGuide || undefined,
+            }));
+
+          const actualNewSessions =
             await prisma.planSession.createManyAndReturn({
               data: suggestedSessions.sessions.map((session) => ({
                 planId: plan.id,
@@ -322,15 +349,33 @@ export class PlansService {
                 isCoachSuggested: true,
               })),
             });
-          coachNotesData.newSessions = actualNewSesssions;
+
+          const newSessions = actualNewSessions.slice(0, 10).map((s) => ({
+            date: s.date.toISOString(),
+            activityId: s.activityId,
+            quantity: s.quantity,
+            descriptiveGuide: s.descriptiveGuide || undefined,
+          }));
+
+          changes = {
+            type: "sessions_downgraded",
+            oldSessions,
+            newSessions,
+          };
+
           updatePlanData.suggestedByCoachAt = new Date();
         }
       }
 
       const coachNotes = await aiService.generateCoachNotes(
-        coachNotesData,
+        {
+          goal: plan.goal,
+          outlineType: plan.outlineType,
+          timesPerWeek: plan.timesPerWeek || undefined,
+        },
         newState,
-        planWithActivities.activities
+        planWithActivities.activities,
+        changes
       );
       updatePlanData.coachNotes = coachNotes;
 
@@ -1097,6 +1142,115 @@ export class PlansService {
     );
 
     return result;
+  }
+
+  /**
+   * Process plan coaching for a user - recalculates plan state and sends notification if needed
+   * This is called by the hourly job at 8am in each user's timezone
+   */
+  async processPlanCoaching(
+    user: User & { plans: Plan[] },
+    plan: Plan & { activities: Activity[] },
+    pushNotify: boolean = true
+  ): Promise<any | null> {
+    try {
+      logger.info(
+        `Processing plan coaching for user '${user.username}' on plan '${plan.goal}'`
+      );
+
+      // Check if user has plans
+      if (!user.plans || user.plans.length === 0) {
+        logger.info(`User ${user.username} has no plans - skipping coaching`);
+        return null;
+      }
+
+      // Check if user is on free plan
+      if (user.planType === "FREE") {
+        logger.info(
+          `Skipping user ${user.username} because they are on free plan`
+        );
+        return null;
+      }
+
+      // Get activities from last 14 days to check if user is active
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+      const recentActivities = await prisma.activityEntry.findMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          date: {
+            gte: fourteenDaysAgo,
+          },
+        },
+      });
+
+      if (recentActivities.length === 0) {
+        logger.info(
+          `No recent activities for user ${user.username} - skipping coaching`
+        );
+        return null;
+      }
+
+      // Store old state to check if it changed
+      const oldState = plan.currentWeekState;
+
+      // Recalculate plan state
+      const updatedPlan = await this.recalculateCurrentWeekState(plan, user);
+
+      // If state didn't change, no notification needed
+      if (updatedPlan.currentWeekState === oldState) {
+        logger.info(
+          `No state transition for plan '${plan.goal}' of user '${user.username}' - skipping notification`
+        );
+        return null;
+      }
+
+      // State changed - generate and send notification
+      logger.info(
+        `Plan state changed from ${oldState} to ${updatedPlan.currentWeekState} for user '${user.username}'`
+      );
+
+      // Import notificationService and aiService dynamically to avoid circular dependency
+      const { notificationService } = await import("./notificationService");
+      const { aiService } = await import("./aiService");
+
+      // Generate coaching message using AI
+      const message = await aiService.generateCoachMessage(user, updatedPlan);
+
+      // Create and send notification
+      const notification =
+        await notificationService.createAndProcessNotification(
+          {
+            userId: user.id,
+            message,
+            type: "COACH",
+            relatedId: plan.id,
+            relatedData: {
+              picture:
+                "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
+              planId: plan.id,
+              oldState,
+              newState: updatedPlan.currentWeekState,
+            },
+          },
+          pushNotify
+        );
+
+      logger.info(
+        `Plan coaching notification sent to user '${user.username}' for plan '${plan.goal}'`
+      );
+
+      return notification;
+    } catch (error) {
+      logger.error(
+        `Error processing plan coaching for user ${user.username}:`,
+        error
+      );
+      // Don't throw - we don't want to stop the hourly job for one user's error
+      return null;
+    }
   }
 }
 
