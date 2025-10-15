@@ -232,10 +232,10 @@ router.post(
 
         // Send Telegram notification for new subscription
         telegramService.sendMessage(
-          `🎉 **New PLUS subscription created!**\n\n` +
-            `**User:** ${user.email}\n` +
-            `**Plan:** ${planType}\n` +
-            `**UTC Time:** ${new Date().toISOString()}`
+          `🎉 New PLUS subscription created!\n\n` +
+            `User: ${user.email}\n` +
+            `Plan: ${planType}\n` +
+            `UTC Time: ${new Date().toISOString()}`
         );
       }
 
