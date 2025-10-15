@@ -427,7 +427,33 @@ model Recommendation {
   @@schema("public")
 }
 
+model JobRun {
+  id           String    @id @default(cuid())
+  jobType      JobType
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  success      Boolean   @default(false)
+  input        Json?
+  output       Json?
+  errorMessage String?
+  errorStack   String?
+  triggeredBy  String    @default("CRON")
+
+  @@index([jobType, startedAt])
+  @@index([success])
+  @@index([startedAt])
+  @@map("job_runs")
+  @@schema("public")
+}
+
 // Enums
+enum JobType {
+  HOURLY
+  DAILY
+
+  @@schema("public")
+}
+
 enum PlanType {
   FREE
   PLUS

@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { notificationService } from "../services/notificationService";
 import { plansService } from "../services/plansService";
 import { recommendationsService } from "../services/recommendationsService";
+import { recurringJobService } from "../services/recurringJobService";
 import { s3Service } from "../services/s3Service";
 import { sesService } from "../services/sesService";
 import { userService } from "../services/userService";
@@ -388,114 +389,23 @@ router.post(
   adminAuth,
   async (req: AdminRequest, res: Response): Promise<Response | void> => {
     try {
-      logger.info("Starting hourly job execution");
+      const { filter_usernames = [], force = false } = req.body;
 
-      const { filter_usernames = [] } = req.body;
-
-      // Get paid users with plans
-      let users = await userService.getAllPaidUsers();
-
-      if (filter_usernames.length > 0) {
-        users = users.filter((user) =>
-          filter_usernames.includes(user.username)
-        );
-      }
-
-      // Filter users who have plans
-      const usersWithPlans = users.filter((user) => {
-        return user.plans && user.plans.length > 0;
-      });
-
-      let tasksStarted = 0;
-      const startedForUsers: string[] = [];
-
-      // TODO: Implement timezone-based hour checking and plan coaching
-      // For now, just log the intent
-      for (const user of usersWithPlans) {
-        logger.info(`Would process plan coaching for user: ${user.username}`);
-        tasksStarted++;
-        startedForUsers.push(user.username || "unknown");
-      }
-
-      logger.info(
-        `Hourly job completed. Would start ${tasksStarted} background tasks out of ${users.length} users checked`
+      const result = await recurringJobService.runHourlyJob(
+        {
+          filter_usernames,
+          force,
+        },
+        "MANUAL"
       );
 
-      res.json({
-        message: `Would start background tasks for ${tasksStarted} users (plan system not yet implemented)`,
-        started_for_users: startedForUsers,
-        total_users_checked: users.length,
-      });
+      res.json(result);
     } catch (error) {
       logger.error("Error in hourly job:", error);
       res.status(500).json({ error: "Failed to run hourly job" });
     }
   }
 );
-
-// Helper function to process unactivated emails
-const processUnactivatedEmails = async (
-  users: User[],
-  dryRun: boolean = true
-) => {
-  const unactivatedUsers: User[] = [];
-
-  for (const user of users) {
-    const userActivities = await prisma.activityEntry.findMany({
-      where: {
-        userId: user.id,
-        deletedAt: null,
-      },
-    });
-
-    const activityDays = new Set(
-      userActivities.map((entry) => entry.createdAt.toISOString().split("T")[0])
-    );
-
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-
-    if (user.createdAt < weekAgo && activityDays.size <= 1) {
-      unactivatedUsers.push(user);
-    }
-  }
-
-  if (dryRun) {
-    return {
-      message: "Email sending skipped (dry run)",
-      would_email: unactivatedUsers.length,
-      would_email_usernames: unactivatedUsers.map((u: any) => u.username),
-    };
-  }
-
-  const triggeredUserUsernames: string[] = [];
-  for (const user of unactivatedUsers) {
-    if (user.unactivatedEmailSentAt) {
-      logger.info(
-        `Unactivated email already sent to '${user.username}', skipping`
-      );
-      continue;
-    }
-
-    // TODO: Implement loops email service
-    logger.info(`Would send unactivated email to ${user.email}`);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { unactivatedEmailSentAt: new Date() },
-    });
-
-    if (user.username) {
-      triggeredUserUsernames.push(user.username);
-    }
-  }
-
-  return {
-    emails_sent: triggeredUserUsernames.length,
-    emailed_usernames: triggeredUserUsernames,
-    unactivated_users_count: unactivatedUsers.length,
-  };
-};
 
 // Run daily job
 router.post(
@@ -509,51 +419,14 @@ router.post(
         send_report = false,
       } = req.body;
 
-      const unactivatedEmailsDryRun = dry_run.unactivated_emails !== false;
-
-      logger.info(
-        `Running daily job with filter_usernames: ${filter_usernames} and unactivated_emails_dry_run: ${unactivatedEmailsDryRun}`
-      );
-
-      // Get all users or subset if specified
-      let allUsers = await userService.getAllUsers();
-
-      if (filter_usernames.length > 0) {
-        allUsers = allUsers.filter((user) =>
-          filter_usernames.includes(user.username)
-        );
-      }
-
-      // Process unactivated emails
-      const unactivatedEmailsResult = await processUnactivatedEmails(
-        allUsers,
-        unactivatedEmailsDryRun
-      );
-
-      // TODO: Process recommendations outdated logic when recommendations system is ready
-      const recommendationsOutdatedResult: string[] = [];
-
-      const result = {
-        dry_run: {
-          unactivated_emails: unactivatedEmailsDryRun,
+      const result = await recurringJobService.runDailyJob(
+        {
+          filter_usernames,
+          dry_run,
+          send_report,
         },
-        users_checked: allUsers.length,
-        recommendations_outdated: recommendationsOutdatedResult,
-        unactivated_emails_result: unactivatedEmailsResult,
-      };
-
-      // Send report email if requested
-      if (send_report) {
-        const currentDate = new Date().toISOString().split("T")[0];
-        const environment = process.env.NODE_ENV || "development";
-        const reportEmail = process.env.ADMIN_EMAIL || "admin@tracking.so";
-
-        await sesService.sendEmail({
-          to: reportEmail,
-          subject: `Daily Job for Tracking.so [${environment}] [${currentDate}]`,
-          htmlBody: `<strong>Daily Job Report in ${environment} environment</strong><br><br><pre>${JSON.stringify(result, null, 2)}</pre>`,
-        });
-      }
+        "MANUAL"
+      );
 
       res.json(result);
     } catch (error) {

@@ -6,7 +6,14 @@
     "lib": ["es2020", "dom"],
     "types": ["node"],
     "outDir": "./dist",
-    "rootDir": "./"
+    "rootDir": "./",
+    "esModuleInterop": true
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "commonjs"
+    }
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]

@@ -31,6 +31,7 @@
       "cwd": "${workspaceFolder}/apps/backend-node",
       "restart": true,
       "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/apps/backend-node/**/*.js"],
       "resolveSourceMapLocations": [
         "${workspaceFolder}/apps/backend-node/**",
         "!**/node_modules/**"

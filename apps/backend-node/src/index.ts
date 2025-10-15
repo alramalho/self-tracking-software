@@ -10,6 +10,7 @@ import helmet from "helmet";
 import { errorHandler, responseMonitor } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { requestContextMiddleware } from "./middleware/requestContext";
+import { cronScheduler } from "./services/cronScheduler";
 import { logger, morganMiddleware } from "./utils/logger";
 import { prisma } from "./utils/prisma";
 
@@ -96,7 +97,6 @@ app.use(limiter);
 // Health check endpoint
 
 app.get("/health", (_req, res) => {
-  logger.info("Health check");
   res.json({ status: "ok" });
 });
 
@@ -129,12 +129,14 @@ app.use(errorHandler);
 // Graceful shutdown
 process.on("SIGINT", async () => {
   logger.info("Received SIGINT, shutting down gracefully...");
+  cronScheduler.stop();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on("SIGTERM", async () => {
   logger.info("Received SIGTERM, shutting down gracefully...");
+  cronScheduler.stop();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -145,6 +147,9 @@ if (process.env.SKIP_SERVER_START === "true") {
   app.listen(PORT, HOST, () => {
     logger.info(`Server running on ${HOST}:${PORT} in ${ENVIRONMENT} mode`);
     logger.info(`Health check available at http://${HOST}:${PORT}/health`);
+
+    // Start cron scheduler
+    cronScheduler.start();
   });
 }
 
