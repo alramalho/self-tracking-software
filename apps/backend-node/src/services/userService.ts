@@ -14,6 +14,7 @@ export class UserService {
         deletedAt: null,
         AND: [
           { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+          { email: { not: { endsWith: "@test.com" } } },
           { email: { not: "alex@chatarmin.com" } },
           { email: { not: { startsWith: "lia.borges+" } } },
         ],
@@ -129,6 +130,7 @@ export class UserService {
         deletedAt: null,
         AND: [
           { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+          { email: { not: { endsWith: "@test.com" } } },
           { email: { not: "alex@chatarmin.com" } },
           { email: { not: { startsWith: "lia.borges+" } } },
         ],

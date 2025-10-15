@@ -225,6 +225,7 @@ export class RecommendationsService {
           id: { not: currentUserId },
           AND: [
             { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+            { email: { not: { endsWith: "@test.com" } } },
             { email: { not: "alex@chatarmin.com" } },
             { email: { not: { startsWith: "lia.borges+" } } },
             {
@@ -491,6 +492,7 @@ export class RecommendationsService {
           id: { in: recommendedUserIds },
           AND: [
             { email: { not: { startsWith: "alexandre.ramalho.1998+" } } },
+            { email: { not: { endsWith: "@test.com" } } },
             { email: { not: "alex@chatarmin.com" } },
             { email: { not: { startsWith: "lia.borges+" } } },
           ],
