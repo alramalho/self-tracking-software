@@ -16,7 +16,8 @@
     "script:check-str-similarity": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/check_str_similarity.ts",
     "update-routes:simplified": "export SKIP_SERVER_START=true && dotenv -e .env -- tsx scripts/update_allowed_routes.ts --simplify",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "send-telegram-message": "tsx scripts/send_telegram_message.ts"
   },
   "keywords": [
     "tracking",

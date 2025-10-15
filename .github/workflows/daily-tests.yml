@@ -46,11 +46,11 @@ jobs:
           pnpm test:ci 2>&1 | tee test_output.txt
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
             echo "Tests failed. Sending failure notification..."
-            tsx scripts/send_telegram_message.ts "❌ Backend-Node Tests Failed. Check GH logs for details."
+            pnpm send-telegram-message "❌ Backend-Node Tests Failed. Check GH logs for details."
             exit 1
           else
             echo "Tests passed. Sending success notification..."
-            tsx scripts/send_telegram_message.ts "✅ Backend-Node Tests Passed"
+            pnpm send-telegram-message "✅ Backend-Node Tests Passed"
           fi
 
       - name: Upload backend-node test results
