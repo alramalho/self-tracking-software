@@ -533,8 +533,7 @@ export class AIService {
       context += `\n- Current streak: ${achievement.streak} ${achievement.streak === 1 ? "week" : "weeks"}`;
     }
 
-    const prompt =
-      `Generate a motivational message for this user based on their current progress:\n\n${context}`;
+    const prompt = `Generate a motivational message for this user based on their current progress:\n\n${context}`;
 
     return this.generateText(prompt, systemPrompt);
   }
@@ -838,7 +837,7 @@ export class AIService {
 
     const system =
       `You are an expert coach assisting the user with the plan '${plan.goal}'. ` +
-      `Your task is to generate brief coach notes (1-2 sentences max) that: ` +
+      `Your task is to generate brief coach notes (2-3 sentences) that: ` +
       `1. Clearly explain what specific adjustment was made to the plan (if any) ` +
       `2. Briefly explain WHY this adjustment helps given their performance ` +
       `3. Provide encouragement that's realistic and actionable. ` +
@@ -847,7 +846,13 @@ export class AIService {
       `- Be specific about what changed (e.g., "Reduced from 4 to 3 times per week") ` +
       `- Focus on the reason for the change (e.g., "building consistency", "capitalizing on momentum") ` +
       `- Keep tone supportive but realistic, never generic or overly enthusiastic ` +
-      `- Today is ${currentDate}`;
+      `- Today is ${currentDate}` +
+      `` +
+      `State-specific requirements: ` +
+      `- FAILED: MUST mention the specific adjustment made and why it helps ` +
+      `- AT_RISK: NO adjustment was made - MUST explicitly state no changes, acknowledge tight timeline/urgency (e.g., "no room for error", "tight window"), do NOT suggest any changes or considerations ` +
+      `- ON_TRACK: MUST acknowledge good progress/buffer, do NOT mention adjustments ` +
+      `- COMPLETED: MUST celebrate success, do NOT mention adjustments`;
 
     let messages: Array<{
       role: "system" | "user" | "assistant";
@@ -938,7 +943,21 @@ export class AIService {
         {
           role: "assistant",
           content:
-            "No adjustments yet - you still have time to complete this week. One session at a time, you've got this.",
+            "No adjustments made - but time is tight with no room to miss any remaining sessions. Stay focused on completing each one to finish strong this week.",
+        },
+        {
+          role: "user",
+          content: generateMessageStr(
+            [{ title: "Writing", measure: "words" }],
+            "AT_RISK",
+            "I want to write consistently",
+            { type: "none" }
+          ),
+        },
+        {
+          role: "assistant",
+          content:
+            "Plan stays the same - but you'll need to hit all remaining days to complete this week. The window is tight, so prioritize getting them done.",
         },
         {
           role: "user",

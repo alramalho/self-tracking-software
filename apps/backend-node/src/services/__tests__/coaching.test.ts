@@ -183,6 +183,79 @@ async function evaluateCoachMessage(
   }
 }
 
+async function evaluateCoachNotes(
+  notes: string,
+  scenario: TestScenario,
+  additionalContext?: string
+): Promise<{
+  passes: boolean;
+  results: Array<{ criterion: string; pass: boolean; reasoning: string }>;
+}> {
+  const criteria = scenario.evaluationCriteria;
+
+  // Build evaluation schema - array of criterion results
+  const EvaluationSchema = z.object({
+    results: z.array(
+      z.object({
+        criterion: z.string(),
+        pass: z.boolean(),
+        reasoning: z.string(),
+      })
+    ),
+  });
+
+  const systemPrompt =
+    `You are an expert evaluator of coaching notes. Evaluate the following notes against specific criteria.` +
+    `` +
+    `For each criterion, determine if it passes (true/false) and provide brief reasoning.` +
+    `` +
+    `Be strict: a criterion only passes if it's clearly met.`;
+
+  const criteriaList = criteria.map((c, i) => `${i + 1}. ${c}`).join("\n");
+
+  const prompt =
+    `Evaluate these coach notes:\n"${notes}"\n\n` +
+    `Scenario context:\n` +
+    `- Plan: ${scenario.planGoal}\n` +
+    `- Week status: ${scenario.expectedWeekStatus}\n` +
+    `- Completed: ${scenario.activityEntries.length}/${scenario.timesPerWeek} days\n` +
+    (additionalContext ? `- ${additionalContext}\n` : "") +
+    `\n` +
+    `Criteria to evaluate:\n${criteriaList}\n\n` +
+    `For each criterion, provide:\n` +
+    `1. The criterion text (exactly as listed above)\n` +
+    `2. Whether it passes (true/false)\n` +
+    `3. Brief reasoning explaining your decision`;
+
+  try {
+    const evaluation = await aiService.generateStructuredResponse(
+      prompt,
+      EvaluationSchema,
+      systemPrompt
+    );
+
+    const allPass = evaluation.results.every((result) => result.pass);
+
+    // Log failed criteria
+    if (!allPass) {
+      logger.warn("❌ Notes failed evaluation:");
+      evaluation.results
+        .filter((r) => !r.pass)
+        .forEach((r) => {
+          logger.warn(`  - ${r.criterion}: ${r.reasoning}`);
+        });
+    }
+
+    return {
+      passes: allPass,
+      results: evaluation.results,
+    };
+  } catch (error) {
+    logger.error("Error evaluating coach notes:", error);
+    throw error;
+  }
+}
+
 describe("Coaching Messages Tests", () => {
   beforeAll(async () => {
     // Create test users
@@ -252,9 +325,7 @@ describe("Coaching Messages Tests", () => {
   });
 
   describe("Week Status: FAILED", () => {
-    it(
-      "should acknowledge impossibility and mention plan adjustment",
-      async () => {
+    it("should acknowledge impossibility and mention plan adjustment", async () => {
       const scenario: TestScenario = {
         name: "Week failed - 2/7 done with 3 days left",
         userId: testUserId1,
@@ -296,16 +367,12 @@ describe("Coaching Messages Tests", () => {
         );
       });
 
-        expect(evaluation.passes).toBe(true);
-      },
-      30000
-    ); // 30s timeout for AI calls
+      expect(evaluation.passes).toBe(true);
+    }, 30000); // 30s timeout for AI calls
   });
 
   describe("Week Status: AT_RISK", () => {
-    it(
-      "should acknowledge time constraint without false promises",
-      async () => {
+    it("should acknowledge time constraint without false promises", async () => {
       const scenario: TestScenario = {
         name: "Week at risk - 4/7 done with 3 days left",
         userId: testUserId2,
@@ -350,16 +417,12 @@ describe("Coaching Messages Tests", () => {
         );
       });
 
-        expect(evaluation.passes).toBe(true);
-      },
-      30000
-    ); // 30s timeout for AI calls
+      expect(evaluation.passes).toBe(true);
+    }, 30000); // 30s timeout for AI calls
   });
 
   describe("Week Status: ON_TRACK", () => {
-    it(
-      "should encourage continued momentum with buffer time",
-      async () => {
+    it("should encourage continued momentum with buffer time", async () => {
       const scenario: TestScenario = {
         name: "Week on track - 3/5 done with 3 days left",
         userId: testUserId3,
@@ -399,16 +462,12 @@ describe("Coaching Messages Tests", () => {
         );
       });
 
-        expect(evaluation.passes).toBe(true);
-      },
-      30000
-    ); // 30s timeout for AI calls
+      expect(evaluation.passes).toBe(true);
+    }, 30000); // 30s timeout for AI calls
   });
 
   describe("Week Status: COMPLETED", () => {
-    it(
-      "should celebrate success and acknowledge completion",
-      async () => {
+    it("should celebrate success and acknowledge completion", async () => {
       const scenario: TestScenario = {
         name: "Week completed - 5/5 done",
         userId: testUserId4,
@@ -454,9 +513,278 @@ describe("Coaching Messages Tests", () => {
         );
       });
 
-        expect(evaluation.passes).toBe(true);
-      },
-      30000
-    ); // 30s timeout for AI calls
+      expect(evaluation.passes).toBe(true);
+    }, 30000); // 30s timeout for AI calls
+  });
+});
+
+describe("Coach Notes Tests", () => {
+  beforeAll(async () => {
+    // Create test users
+    const users = [testUserId1, testUserId2, testUserId3, testUserId4];
+    for (const userId of users) {
+      await prisma.user.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          email: `${userId}@test.com`,
+          username: userId,
+          name: userId.replace("test-coach-user-", "User "),
+        },
+        update: {},
+      });
+    }
+  });
+
+  beforeEach(async () => {
+    // Enable fake timers (each test will set its own date via createTestScenario)
+    vi.useFakeTimers();
+
+    // Clean up all plans, activities, and entries before each test
+    const users = [testUserId1, testUserId2, testUserId3, testUserId4];
+    for (const userId of users) {
+      await prisma.activityEntry.deleteMany({
+        where: { userId },
+      });
+      await prisma.planSession.deleteMany({
+        where: { plan: { userId } },
+      });
+      await prisma.activity.deleteMany({
+        where: { userId },
+      });
+      await prisma.plan.deleteMany({
+        where: { userId },
+      });
+    }
+  });
+
+  afterEach(() => {
+    // Restore real timers after each test
+    vi.useRealTimers();
+  });
+
+  afterAll(async () => {
+    // Cleanup test users
+    const users = [testUserId1, testUserId2, testUserId3, testUserId4];
+    for (const userId of users) {
+      await prisma.activityEntry.deleteMany({
+        where: { userId },
+      });
+      await prisma.planSession.deleteMany({
+        where: { plan: { userId } },
+      });
+      await prisma.activity.deleteMany({
+        where: { userId },
+      });
+      await prisma.plan.deleteMany({
+        where: { userId },
+      });
+    }
+
+    await prisma.user.deleteMany({
+      where: { id: { in: users } },
+    });
+  });
+
+  describe("FAILED state with plan adjustment", () => {
+    it("should explain the adjustment made to the plan", async () => {
+      const scenario: TestScenario = {
+        name: "Week failed - plan adjusted",
+        userId: testUserId1,
+        planId: "plan-notes-failed-1",
+        planGoal: "I want to run every day",
+        planType: PlanOutlineType.TIMES_PER_WEEK,
+        timesPerWeek: 7,
+        activities: [{ title: "Running", measure: "km", emoji: "🏃" }],
+        activityEntries: [{ dayOffset: 0 }, { dayOffset: 1 }],
+        currentDayOfWeek: 4, // Thursday
+        expectedWeekStatus: PlanState.FAILED,
+        evaluationCriteria: [
+          "Mentions the reduction in times per week (from 7 to 6)",
+          "Explains why the adjustment was made",
+          "Maintains supportive tone without guilt",
+          "Focuses on sustainable progress",
+        ],
+      };
+
+      const { plan, user } = await createTestScenario(scenario);
+
+      // Calculate plan progress - this will trigger state transition and generate coach notes
+      await plansService.recalculateCurrentWeekState(plan, user);
+
+      // Fetch the updated plan to get the coach notes
+      const updatedPlan = await prisma.plan.findUnique({
+        where: { id: plan.id },
+      });
+
+      expect(updatedPlan?.coachNotes).toBeTruthy();
+      logger.info(`Generated coach notes: "${updatedPlan!.coachNotes}"`);
+
+      const evaluation = await evaluateCoachNotes(
+        updatedPlan!.coachNotes!,
+        scenario,
+        "Plan adjusted from 7 to 6 times per week"
+      );
+
+      // Log results
+      evaluation.results.forEach((result) => {
+        logger.info(
+          `${result.pass ? "✓" : "✗"} ${result.criterion}: ${result.reasoning}`
+        );
+      });
+
+      expect(evaluation.passes).toBe(true);
+    }, 30000);
+  });
+
+  describe("AT_RISK state", () => {
+    it("should acknowledge challenge without adjustment", async () => {
+      const scenario: TestScenario = {
+        name: "Week at risk - no adjustment",
+        userId: testUserId2,
+        planId: "plan-notes-at-risk-1",
+        planGoal: "Practice guitar daily",
+        planType: PlanOutlineType.TIMES_PER_WEEK,
+        timesPerWeek: 7,
+        activities: [{ title: "Guitar", measure: "minutes", emoji: "🎸" }],
+        activityEntries: [
+          { dayOffset: 0 },
+          { dayOffset: 1 },
+          { dayOffset: 2 },
+          { dayOffset: 3 },
+        ],
+        currentDayOfWeek: 4, // Thursday
+        expectedWeekStatus: PlanState.AT_RISK,
+        evaluationCriteria: [
+          "Acknowledges the tight timeline or urgency",
+          "Does NOT mention any plan adjustment",
+          "Remains encouraging and supportive",
+          "Avoids panic or negativity",
+        ],
+      };
+
+      const { plan, user } = await createTestScenario(scenario);
+
+      await plansService.recalculateCurrentWeekState(plan, user);
+
+      const updatedPlan = await prisma.plan.findUnique({
+        where: { id: plan.id },
+      });
+
+      expect(updatedPlan?.coachNotes).toBeTruthy();
+      logger.info(`Generated coach notes: "${updatedPlan!.coachNotes}"`);
+
+      const evaluation = await evaluateCoachNotes(
+        updatedPlan!.coachNotes!,
+        scenario
+      );
+
+      evaluation.results.forEach((result) => {
+        logger.info(
+          `${result.pass ? "✓" : "✗"} ${result.criterion}: ${result.reasoning}`
+        );
+      });
+
+      expect(evaluation.passes).toBe(true);
+    }, 30000);
+  });
+
+  describe("ON_TRACK state", () => {
+    it("should encourage continued momentum", async () => {
+      const scenario: TestScenario = {
+        name: "Week on track - keep going",
+        userId: testUserId3,
+        planId: "plan-notes-on-track-1",
+        planGoal: "Write daily journal",
+        planType: PlanOutlineType.TIMES_PER_WEEK,
+        timesPerWeek: 5,
+        activities: [{ title: "Journaling", measure: "pages", emoji: "📝" }],
+        activityEntries: [{ dayOffset: 0 }, { dayOffset: 1 }, { dayOffset: 2 }],
+        currentDayOfWeek: 4, // Thursday
+        expectedWeekStatus: PlanState.ON_TRACK,
+        evaluationCriteria: [
+          "Acknowledges good progress",
+          "Does NOT mention any plan adjustment",
+          "Maintains positive and encouraging tone",
+          "Suggests staying the course",
+        ],
+      };
+
+      const { plan, user } = await createTestScenario(scenario);
+
+      await plansService.recalculateCurrentWeekState(plan, user);
+
+      const updatedPlan = await prisma.plan.findUnique({
+        where: { id: plan.id },
+      });
+
+      expect(updatedPlan?.coachNotes).toBeTruthy();
+      logger.info(`Generated coach notes: "${updatedPlan!.coachNotes}"`);
+
+      const evaluation = await evaluateCoachNotes(
+        updatedPlan!.coachNotes!,
+        scenario
+      );
+
+      evaluation.results.forEach((result) => {
+        logger.info(
+          `${result.pass ? "✓" : "✗"} ${result.criterion}: ${result.reasoning}`
+        );
+      });
+
+      expect(evaluation.passes).toBe(true);
+    }, 30000);
+  });
+
+  describe("COMPLETED state", () => {
+    it("should celebrate success and reinforce achievement", async () => {
+      const scenario: TestScenario = {
+        name: "Week completed - celebration",
+        userId: testUserId4,
+        planId: "plan-notes-completed-1",
+        planGoal: "Exercise 5 times a week",
+        planType: PlanOutlineType.TIMES_PER_WEEK,
+        timesPerWeek: 5,
+        activities: [{ title: "Workout", measure: "sessions", emoji: "💪" }],
+        activityEntries: [
+          { dayOffset: 0 },
+          { dayOffset: 1 },
+          { dayOffset: 2 },
+          { dayOffset: 3 },
+          { dayOffset: 4 },
+        ],
+        currentDayOfWeek: 4, // Thursday
+        expectedWeekStatus: PlanState.COMPLETED,
+        evaluationCriteria: [
+          "Celebrates the completion or success",
+          "Does NOT mention any plan adjustment",
+          "Reinforces the positive achievement",
+          "Maintains encouraging tone for future",
+        ],
+      };
+
+      const { plan, user } = await createTestScenario(scenario);
+
+      const updatedPlan = await plansService.recalculateCurrentWeekState(
+        plan,
+        user
+      );
+
+      expect(updatedPlan?.coachNotes).toBeTruthy();
+      logger.info(`Generated coach notes: "${updatedPlan!.coachNotes}"`);
+
+      const evaluation = await evaluateCoachNotes(
+        updatedPlan!.coachNotes!,
+        scenario
+      );
+
+      evaluation.results.forEach((result) => {
+        logger.info(
+          `${result.pass ? "✓" : "✗"} ${result.criterion}: ${result.reasoning}`
+        );
+      });
+
+      expect(evaluation.passes).toBe(true);
+    }, 30000);
   });
 });
