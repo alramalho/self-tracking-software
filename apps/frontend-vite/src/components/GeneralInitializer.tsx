@@ -83,7 +83,8 @@ export default function GeneralInitializer({
       isClerkLoaded &&
       !isSignedIn &&
       !pathname.startsWith("/signin") &&
-      !pathname.startsWith("/signup")
+      !pathname.startsWith("/signup") &&
+      !pathname.startsWith("/download")
     ) {
       navigate({ to: "/signin", search: { redirect_url: pathname } });
     }
