@@ -27,7 +27,7 @@ jobs:
         run: pnpm install
 
       - name: Generate prisma types
-        working-directory: apps/backend-node
+        working-directory: packages/prisma
         run: pnpm db:generate
 
       - name: Run backend-node tests
