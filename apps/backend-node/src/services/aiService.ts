@@ -2,7 +2,7 @@ import {
   createOpenRouter,
   OpenRouterProvider,
 } from "@openrouter/ai-sdk-provider";
-import { PlanOutlineType } from "@tsw/prisma";
+import { Activity, Plan, PlanOutlineType, User } from "@tsw/prisma";
 import { generateObject, generateText } from "ai";
 import { endOfWeek, format } from "date-fns";
 import { z } from "zod/v4";
@@ -442,6 +442,7 @@ export class AIService {
       emoji: z.string(),
     });
 
+    // FIXME note to self: coach message and notes still shitty and not in sync with plan state: need to fix
     const systemPrompt =
       `You are a plan coach. Paraphrase goals to be short, concrete and tangible. ` +
       `They should include the achievable result, not timeframe or details.` +
@@ -457,118 +458,83 @@ export class AIService {
   }
 
   async generateCoachMessage(
-    user: {
-      id: string;
-      name?: string | null;
-      username?: string | null;
-      profile?: string | null;
-      timezone?: string | null;
-    },
-    plan: {
-      id: string;
-      goal: string;
-      emoji?: string | null;
-      sessions?: any[];
-      createdAt: Date;
-      finishingDate?: Date | null;
-      activities?: any[];
-    }
+    user: User,
+    plan: Plan & { activities: Activity[] }
   ): Promise<string> {
     const userName = user.name || user.username || "there";
-    const userProfile = user.profile || `User working towards: ${plan.goal}`;
 
     // Get comprehensive progress data including streaks
-    let streakData: {
-      streak: number;
-      completedWeeks: number;
-      incompleteWeeks: number;
-      isAchieved: boolean;
-      totalWeeks: number;
-      weeksToAchieve?: number;
-    } | null = null;
-    let currentWeekStats: {
-      numActiveDaysInTheWeek: number;
-      numLeftDaysInTheWeek: number;
-      numActiveDaysLeftInTheWeek: number;
-      daysCompletedThisWeek: number;
-    } | null = null;
+    let achievement;
+    let currentWeekStats;
 
     if (this.plansService) {
       try {
         // Get comprehensive progress data including streaks
-        const progressData = await (this.plansService as any).getPlanProgress(
-          plan.id,
-          user.id
+        const progressData = await this.plansService.getPlanProgress(
+          plan,
+          user
         );
-        streakData = progressData.achievement;
+        achievement = progressData.achievement;
         currentWeekStats = progressData.currentWeekStats;
       } catch (error) {
-        logger.debug(
-          "Could not get plan progress data, using fallback:",
-          error
-        );
-        // Fallback to basic week stats
-        try {
-          const planWithActivities = {
-            ...plan,
-            activities: plan.activities || [],
-          };
-          const stats = await (this.plansService as any).getPlanWeekStats(
-            planWithActivities,
-            user
-          );
-          currentWeekStats = stats;
-        } catch (fallbackError) {
-          logger.debug("Fallback stats also failed:", fallbackError);
-        }
+        logger.error("Could not get plan progress data", error);
+        throw error;
       }
     }
 
     // Determine time context for this week
-    let timeContext = "";
     const now = new Date();
     const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 }); // Sunday = 0
     const daysLeft = Math.ceil(
       (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
-    if (daysLeft > 0) {
-      timeContext = `with ${daysLeft} out of 7 days remaining this week`;
-    } else if (daysLeft === 0) {
-      timeContext = "on the final day of the week";
-    }
 
-    // Build streak context with forward-looking motivation
-    let streakContext = "";
-    if (streakData) {
-      if (streakData.streak > 0) {
-        const nextStreak = streakData.streak + 1;
-        streakContext = `Currently on ${streakData.streak}-week streak, next milestone: ${nextStreak}-week streak`;
+    const systemPrompt =
+      `You are a supportive personal coach. Generate a brief, personalized coaching message (1-2 sentences).` +
+      `` +
+      `Keep it natural and varied - don't follow a fixed template. Focus on what matters most given the context.` +
+      `Be encouraging but realistic. Use their name. Optionally include 🔥 if it feels appropriate.`;
+
+    // Build a simple, clear context
+    let context = `${userName}'s plan: "${plan.goal}"`;
+
+    if (currentWeekStats) {
+      const { daysCompletedThisWeek, numActiveDaysInTheWeek } =
+        currentWeekStats;
+      const daysNeeded = numActiveDaysInTheWeek - daysCompletedThisWeek;
+
+      // Determine week feasibility (aligned with PlanState calculation logic from plansService)
+      let weekStatus: "COMPLETED" | "FAILED" | "AT_RISK" | "ON_TRACK";
+      if (daysNeeded === 0) {
+        weekStatus = "COMPLETED";
+      } else if (daysNeeded > daysLeft) {
+        // Impossible to complete = FAILED
+        weekStatus = "FAILED";
+      } else if (daysNeeded === daysLeft) {
+        // No margin for error = AT_RISK
+        weekStatus = "AT_RISK";
       } else {
-        streakContext = "Opportunity to start a new streak this week";
+        // Has buffer time = ON_TRACK
+        weekStatus = "ON_TRACK";
+      }
+
+      context += `\n- This week: ${daysCompletedThisWeek}/${numActiveDaysInTheWeek} days completed`;
+      context += `\n- Days needed: ${daysNeeded} more ${daysNeeded === 1 ? "day" : "days"}`;
+      context += `\n- Time left: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} remaining`;
+      context += `\n- Week status: ${weekStatus}`;
+
+      // If week is failed (impossible to complete), mention plan has been adjusted
+      if (weekStatus === "FAILED") {
+        context += `\n- Important: The plan has been automatically adjusted to be more achievable going forward`;
       }
     }
 
-    const systemPrompt =
-      `You are an encouraging but realistic personal coach. Generate a coaching message that is:` +
-      `- Personal and addresses the user by name` +
-      `- Mentions current week progress first` +
-      `- Forward-looking: focus on what they can achieve (next streak milestone)` +
-      `- Use motivational language about "just one more" or "close to"` +
-      `- Include a single fire emoji (🔥) when appropriate` +
-      `- Encouraging but not overly optimistic` +
-      `- Warm and supportive in tone` +
-      `- Brief (1-2 sentences max)`;
+    if (achievement && achievement.streak > 0) {
+      context += `\n- Current streak: ${achievement.streak} ${achievement.streak === 1 ? "week" : "weeks"}`;
+    }
 
     const prompt =
-      `Generate a coaching message for ${userName}.` +
-      `` +
-      `Context:` +
-      `- User plan goal: ${plan.goal}` +
-      `${currentWeekStats ? `- This week: ${currentWeekStats.daysCompletedThisWeek}/${currentWeekStats.numActiveDaysInTheWeek} days completed` : ""}` +
-      `${timeContext ? `- Timeline: ${timeContext}` : ""}` +
-      `${streakContext ? `- Current streak: ${streakContext}` : ""}` +
-      `. ` +
-      `Focus primarily on this week's progress, with a brief positive mention of their streak if they have one.`;
+      `Generate a motivational message for this user based on their current progress:\n\n${context}`;
 
     return this.generateText(prompt, systemPrompt);
   }
