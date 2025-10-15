@@ -25,7 +25,7 @@ const DownloadComponent = ({
   isInstagram = false,
   isTikTok = false,
 }: DownloadComponentProps) => {
-  const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
+  const { shareOrCopyLink, copyLink, isShareSupported } = useShareOrCopy();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -51,12 +51,32 @@ const DownloadComponent = ({
         <span className="text-xl text-center text-gray-500 my-2 font-mono">
           tracking.so/download
         </span>
-        <Button
-          className="w-fit mx-auto"
-          onClick={() => shareOrCopyLink(`https://app.tracking.so/download`)}
-        >
-          {isShareSupported ? "Share" : "Copy"} link
-        </Button>
+        <div className="flex flex-row gap-2 items-center justify-center w-full">
+          {isShareSupported ? (
+            <>
+              <Button
+                className="w-fit"
+                onClick={() => shareOrCopyLink(`https://app.tracking.so/download`)}
+              >
+                Share link
+              </Button>
+              <Button
+                variant="outline"
+                className="w-fit"
+                onClick={() => copyLink(`https://app.tracking.so/download`)}
+              >
+                Copy link
+              </Button>
+            </>
+          ) : (
+            <Button
+              className="w-fit"
+              onClick={() => copyLink(`https://app.tracking.so/download`)}
+            >
+              Copy link
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
