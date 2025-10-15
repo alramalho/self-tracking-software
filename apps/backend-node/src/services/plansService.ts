@@ -68,8 +68,7 @@ export class PlansService {
     }
   }
 
-  // note to self: we were amidst fixing the recommendations
-  private async getPlanWeekStats(
+  async getPlanWeekStats(
     planWithActivities: Plan & { activities: any[] },
     user: User
   ): Promise<{
@@ -169,7 +168,10 @@ export class PlansService {
     };
   }
 
-  async recalculateCurrentWeekState(plan: Plan, user: User): Promise<Plan> {
+  async recalculateCurrentWeekState(
+    plan: Plan,
+    user: User
+  ): Promise<Plan & { activities: Activity[] }> {
     try {
       logger.info(
         `Recalculating current week state for plan '${plan.goal}' of user '${user.username}'`
@@ -419,11 +421,6 @@ export class PlansService {
     });
     const user = await prisma.user.findFirst({ where: { id: plan?.userId } });
 
-    console.log(
-      `Calculating achievement for plan ${plan?.goal}. User ${user?.username}.`
-    );
-    console.log(`Activities: ${plan?.activities.map((a) => a.title)}`);
-
     if (!plan || !user) {
       throw new Error(`Plan ${planId} or user not found`);
     }
@@ -472,9 +469,6 @@ export class PlansService {
       const wasCompleted = week.isCompleted;
 
       if (wasCompleted) {
-        console.log(
-          `week ${weekStart} was completed. streak +1 = ${streak + 1}`
-        );
         streak += 1;
         completedWeeks += 1;
         if (!isCurrentWeek) {
@@ -485,13 +479,8 @@ export class PlansService {
         if (incompleteWeeks > 1) {
           streak = Math.max(0, streak - 1);
         }
-        console.log(
-          `week ${weekStart} was not completed. streak -1 = ${streak}`
-        );
       }
     }
-
-    console.log("streak", streak);
 
     return {
       streak: Math.max(0, streak),
@@ -879,31 +868,19 @@ export class PlansService {
     // Determine the actual start date - either the earliest activity entry or the provided startDate
     let actualStartDate: Date;
     if (startDate) {
-      console.log({ startDate });
       actualStartDate = startDate;
     } else if (activityEntries.length > 0) {
-      console.log("activityEntries[0].date", activityEntries[0].date);
-      console.log(
-        "toMidnightUTCDate(activityEntries[0].date)",
-        toMidnightUTCDate(activityEntries[0].date)
-      );
       actualStartDate = toMidnightUTCDate(activityEntries[0].date);
     } else {
       // If no activity entries exist, start from current week
-      console.log("todaysLocalDate", todaysLocalDate());
       actualStartDate = todaysLocalDate();
     }
-
-    console.log({ actualStartDate });
 
     const weeks: Array<PlanWeek> = [];
 
     let weekStart = toMidnightUTCDate(
       startOfWeek(actualStartDate, { weekStartsOn: 0 })
     );
-
-    console.log({ planGoal: plan.goal });
-    console.log({ weekStart });
     const planEndDate = new Date(
       plan.finishingDate || addWeeks(new Date(), this.LIFESTYLE_WEEKS)
     );
