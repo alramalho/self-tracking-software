@@ -40,6 +40,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          HELICONE_API_KEY: ${{ secrets.HELICONE_API_KEY }}
         run: |
           pnpm test:ci 2>&1 | tee test_output.txt
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
