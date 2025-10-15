@@ -237,24 +237,27 @@ export class PlansService {
       });
 
       if (oldState !== newState) {
-        this.processStateTransition(updatedPlan, user, newState).catch(
-          (error) => {
-            logger.error(
-              `Error processing state transition for plan ${updatedPlan.id}:`,
-              error
-            );
-          }
-        );
-
         logger.info(
           `Plan '${plan.goal}' of user '${user.username}' state transition: ${oldState} -> ${newState}`
         );
+
+        // Await state transition to ensure coach notes are generated before returning
+        await this.processStateTransition(updatedPlan, user, newState);
       }
 
       logger.info(
         `Updated plan '${plan.goal}' of user '${user.username}' current week state from ${oldState} to ${newState}`
       );
-      return updatedPlan;
+
+      // Fetch the updated plan with coach notes
+      const finalPlan = await prisma.plan.findUnique({
+        where: { id: plan.id },
+        include: {
+          activities: true,
+        },
+      });
+
+      return finalPlan as Plan & { activities: Activity[] };
     } catch (error) {
       logger.error("Error recalculating plan week state:", error);
       throw error;
