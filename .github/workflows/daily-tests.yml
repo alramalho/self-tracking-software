@@ -26,6 +26,10 @@ jobs:
         working-directory: apps/backend-node
         run: pnpm install
 
+      - name: Generate prisma types
+        working-directory: apps/backend-node
+        run: pnpm db:generate
+
       - name: Run backend-node tests
         id: backend_node_tests
         continue-on-error: true
