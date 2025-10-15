@@ -37,7 +37,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          pnpm test 2>&1 | tee test_output.txt
+          pnpm test:ci 2>&1 | tee test_output.txt
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
             echo "Tests failed. Sending failure notification..."
             tsx scripts/send_telegram_message.ts "❌ Backend-Node Tests Failed. Check GH logs for details."
