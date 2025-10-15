@@ -473,11 +473,11 @@ router.post(
       // Send to Telegram notification service for significant errors
       if (attempts >= 3) {
         telegramService.sendMessage(
-          `⚠️ **Dynamic UI attempt error**\n\n` +
-            `**User:** ${req.user!.username}\n` +
-            `**Attempts:** ${attempts}\n` +
-            `**ID:** ${id}\n` +
-            `**UTC Time:** ${new Date().toISOString()}`
+          `⚠️ Dynamic UI attempt error\n\n` +
+            `User: ${req.user!.username}\n` +
+            `Attempts: ${attempts}\n` +
+            `ID: ${id}\n` +
+            `UTC Time: ${new Date().toISOString()}`
         );
       }
 
@@ -507,11 +507,11 @@ router.post(
 
       // Send to Telegram notification service for pattern analysis
       telegramService.sendMessage(
-        `⏭️ **Dynamic UI skip**\n\n` +
-          `**User:** ${req.user!.username}\n` +
-          `**Attempts:** ${attempts}\n` +
-          `**ID:** ${id}\n` +
-          `**UTC Time:** ${new Date().toISOString()}`
+        `⏭️ Dynamic UI skip\n\n` +
+          `User: ${req.user!.username}\n` +
+          `Attempts: ${attempts}\n` +
+          `ID: ${id}\n` +
+          `UTC Time: ${new Date().toISOString()}`
       );
 
       res.json({ status: "success" });
