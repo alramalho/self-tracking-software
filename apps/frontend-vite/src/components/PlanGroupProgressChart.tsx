@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlanGroupProgress } from "@/hooks/usePlanGroupProgress";
 import { Loader2, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -18,14 +19,14 @@ interface PlanGroupProgressChartProps {
   planId: string;
 }
 
-const STATUS_COLORS = {
-  COMPLETED: "hsl(221, 60%, 55%)", // milder blue
+const getStatusColors = (mutedForegroundColor: string) => ({
+  COMPLETED: "hsl(142, 45%, 40%)", // darker green for completed
   ON_TRACK: "hsl(142, 45%, 45%)", // milder green
   AT_RISK: "hsl(38, 70%, 55%)", // milder yellow/orange
   FAILED: "hsl(0, 65%, 55%)", // milder red
-  NULL: "hsl(var(--muted-foreground))", // neutral gray for no status
-  DEFAULT: "hsl(var(--muted-foreground))", // use theme muted color
-};
+  NULL: mutedForegroundColor, // neutral gray for no status
+  DEFAULT: mutedForegroundColor, // use theme muted color
+});
 
 const STATUS_LABELS = {
   COMPLETED: "Completed",
@@ -37,6 +38,24 @@ const STATUS_LABELS = {
 
 export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) {
   const { data, isLoading, error } = usePlanGroupProgress(planId);
+
+  // Get computed CSS custom properties for chart colors
+  const [cssColors, setCssColors] = useState({
+    mutedForeground: "hsl(0, 0%, 45%)", // fallback
+    muted: "hsl(0, 0%, 96%)", // fallback
+  });
+
+  useEffect(() => {
+    // Read CSS custom properties from the document
+    const computedStyle = getComputedStyle(document.documentElement);
+    const mutedForeground = computedStyle.getPropertyValue('--muted-foreground').trim();
+    const muted = computedStyle.getPropertyValue('--muted').trim();
+
+    setCssColors({
+      mutedForeground: mutedForeground ? `hsl(${mutedForeground})` : "hsl(0, 0%, 45%)",
+      muted: muted ? `hsl(${muted})` : "hsl(0, 0%, 96%)",
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -101,8 +120,8 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
                         : data.status === "FAILED"
                           ? "bg-red-500/10 text-red-600 dark:text-red-500"
                           : data.status === "COMPLETED"
-                            ? "bg-blue-500/10 text-blue-600 dark:text-blue-500"
-                            : "bg-gray-500/10 text-gray-600 dark:text-gray-500"
+                            ? "bg-chart-1/10 text-chart-1 dark:text-chart-1"
+                            : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {data.status && data.status in STATUS_LABELS
@@ -138,7 +157,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
           x={0}
           y={48}
           textAnchor="middle"
-          fill="hsl(var(--muted-foreground))"
+          fill={cssColors.mutedForeground}
           className="text-xs"
         >
           {member.name.split(" ")[0]}
@@ -174,7 +193,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
                 angle: -90,
                 position: "insideLeft",
                 style: {
-                  fill: "hsl(var(--muted-foreground))",
+                  fill: cssColors.mutedForeground,
                   fontSize: 12,
                 },
               }}
@@ -182,6 +201,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="completed" name="Completed" radius={[8, 8, 0, 0]}>
               {chartData.map((entry, index) => {
+                const STATUS_COLORS = getStatusColors(cssColors.mutedForeground);
                 let fillColor = STATUS_COLORS.DEFAULT;
                 if (entry.isCoached) {
                   // For coached plans, use status-based colors
@@ -197,7 +217,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
             <Bar
               dataKey="target"
               name="Target"
-              fill="hsl(var(--muted))"
+              fill={cssColors.muted}
               opacity={0.3}
               radius={[8, 8, 0, 0]}
             />
@@ -205,10 +225,10 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
         </ResponsiveContainer>
 
         {/* Legend for status */}
-        {chartData.some((m) => m.isCoached) && (
+        {chartData.some((m) => m.status) && (
           <div className="mt-4 pt-4 border-t">
             <p className="text-xs text-muted-foreground mb-2">
-              Progress Status (coached plans only):
+              Progress Status:
             </p>
             <div className="flex flex-wrap gap-2">
               {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -223,8 +243,8 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
                         : key === "FAILED"
                           ? "bg-red-500/10 text-red-600 dark:text-red-500"
                           : key === "COMPLETED"
-                            ? "bg-blue-500/10 text-blue-600 dark:text-blue-500"
-                            : "bg-gray-500/10 text-gray-600 dark:text-gray-500"
+                            ? "bg-green-500/10 text-green-600 dark:text-green-500"
+                            : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {label}

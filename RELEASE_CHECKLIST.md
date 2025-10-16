@@ -48,6 +48,13 @@
 - [ ] **Select build in version page and Submit for Review** — final step; Apple will test and approve the release.
 
 
+
+---
+
+## Payment
+
+- [] Check if apple requires payment to be through apple store (likely so)
+
 --- 
 
 ## App refactorings

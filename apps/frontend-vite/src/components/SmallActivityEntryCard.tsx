@@ -60,9 +60,9 @@ export const SmallActivityEntryCard = ({
       <div
         key={`${entry.date}-${entry.activityId}`}
         className={cn(
-          `relative flex flex-col items-center justify-center rounded-lg bg-gray-100 p-2 transition-all duration-200 ${
-            onClick ? "cursor-pointer bg-gray-100 hover:bg-opacity-80" : ""
-          } ${selected ? "ring-2 ring-gray-300 ring-offset-2" : ""}`,
+          `relative flex flex-col items-center justify-center rounded-lg bg-muted p-2 transition-all duration-200 ${
+            onClick ? "cursor-pointer bg-muted hover:bg-muted/80" : ""
+          } ${selected ? "ring-2 ring-border ring-offset-2" : ""}`,
           className
         )}
         onClick={() => onClick?.(`${entry.date}-${entry.activityId}`)}
@@ -75,13 +75,13 @@ export const SmallActivityEntryCard = ({
         {activity?.emoji && (
           <span className="text-2xl mb-2">{activity.emoji}</span>
         )}
-        <span className="text-xs text-gray-500 mt-1 text-center">
+        <span className="text-xs text-muted-foreground mt-1 text-center">
           {dateInfoStr(entry.date)}
         </span>
-        <span className="text-md font-medium text-center text-gray-800">
+        <span className="text-md font-medium text-center text-foreground">
           {activity?.title || "Unknown Activity"}
         </span>
-        <span className="text-xs text-gray-800 text-center mb-3">
+        <span className="text-xs text-foreground text-center mb-3">
           {entry.quantity} {activity?.measure}
         </span>
         {completedOn && !isSameDay(completedOn, entry.date) && (

@@ -74,7 +74,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
       <div
         className={twMerge(
           "relative transition-transform touch-manipulation",
-          isDragging && "scale-105 shadow-lg z-50 bg-white rounded-lg"
+          isDragging && "scale-105 shadow-lg z-50 bg-card rounded-lg"
         )}
         data-testid="plan-card"
         onClick={() => onSelect(plan.id!)}
@@ -86,7 +86,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
               className={`text-6xl font-normal bg-transparent ${
                 isSelected
                   ? `${variants.veryFadedText} hover:${variants.veryFadedText}`
-                  : `text-gray-200 hover:text-gray-200`
+                  : `text-muted-foreground/20 hover:text-muted-foreground/20`
               } hover:bg-transparent`}
             >
               #{priority}
@@ -94,7 +94,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           </div>
         )}
         <div
-          className="absolute bottom-2 right-[50%] translate-x-[50%] z-10 text-gray-300 cursor-grab active:cursor-grabbing"
+          className="absolute bottom-2 right-[50%] translate-x-[50%] z-10 text-muted-foreground cursor-grab active:cursor-grabbing"
           {...dragHandleProps}
         >
           <div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           className={`flex flex-col items-left justify-center p-4 pr-20 rounded-lg ring-2 ${
             isSelected
               ? twMerge(variants.ringBright, variants.veryFadedBg)
-              : cn("ring-gray-300 bg-white")
+              : cn("ring-border bg-card")
           } sm:aspect-square w-full relative`}
         >
           {plan.emoji && (
@@ -113,7 +113,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           )}
           <span className="text-md font-medium text-left">{plan.goal}</span>
           {plan.finishingDate ? (
-            <span className="text-xs text-gray-500 text-left mt-1">
+            <span className="text-xs text-muted-foreground text-left mt-1">
               until{" "}
               {plan.finishingDate
                 ? new Date(plan.finishingDate).toLocaleDateString("en-GB", {
@@ -124,7 +124,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
                 : ""}
             </span>
           ) : (
-            <span className="text-xs text-gray-500 text-left mt-1">
+            <span className="text-xs text-muted-foreground text-left mt-1">
               no end date
             </span>
           )}
@@ -154,7 +154,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
         <div className="absolute top-2 right-2 flex gap-1 items-center justify-end">
           {isCoached && (
             <div className="flex items-center justify-center gap-1 mr-2">
-              <span className="text-sm text-gray-500">Coached</span>
+              <span className="text-sm text-muted-foreground">Coached</span>
               <BadgeCheck className={cn("h-5 w-5", variants.text)} />
             </div>
           )}
@@ -164,7 +164,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <button
             data-testid="plan-edit-button"
             onClick={handleEditClick}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-muted-foreground hover:text-foreground"
           >
             <Pencil className="h-5 w-5 mr-1" />
           </button>

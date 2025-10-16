@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Configure light/dark mode to use class strategy instead of media query */
+@variant dark (.dark &);
+@variant light (:not(.dark) &);
+
 @layer base {
   * {
     @apply border-border;
@@ -78,10 +82,11 @@
   --animate-background-position-spin: background-position-spin 3000ms infinite alternate;
 }
 
-/* @theme dark {
+/* Dark mode theme - using class selector instead of @theme dark */
+.dark {
   --color-background: hsl(240 10% 3.9%);
   --color-foreground: hsl(0 0% 98%);
-  --color-card: hsl(240 10% 3.9%);
+  --color-card: hsl(0 0% 9.02%);
   --color-card-foreground: hsl(0 0% 98%);
   --color-popover: hsl(240 10% 3.9%);
   --color-popover-foreground: hsl(0 0% 98%);
@@ -103,7 +108,7 @@
   --color-chart-3: hsl(30 80% 55%);
   --color-chart-4: hsl(280 65% 60%);
   --color-chart-5: hsl(340 75% 55%);
-} */
+}
 
 .markdown ul {
   list-style-type: disc;

@@ -90,12 +90,12 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
                 className={`flex items-center gap-4 p-3 border rounded-lg ${
                   isLocked
                     ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-gray-50 cursor-pointer"
+                    : "hover:bg-muted/50 cursor-pointer"
                 } ${
                   isSelected
                     ? `ring-2 ring-offset-2 ${
                         palette.color === "random"
-                          ? "ring-gray-500"
+                          ? "ring-ring"
                           : `ring-${palette.color}-500`
                       }`
                     : ""
@@ -116,11 +116,11 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{palette.name}</span>
                       {isLocked && (
-                        <span className="text-xs text-gray-500">🔒</span>
+                        <span className="text-xs text-muted-foreground">🔒</span>
                       )}
                     </div>
                     {palette.description && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {palette.description}
                       </span>
                     )}

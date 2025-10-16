@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 
 import { useActivities } from "@/contexts/activities/useActivities";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { type Activity } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
 import { format } from "date-fns";
@@ -27,7 +28,7 @@ export interface BaseHeatmapRendererProps {
   refreshKey?: number | string;
 }
 
-export const getActivityColorMatrix = () => {
+export const getActivityColorMatrix = (isLightMode: boolean = true) => {
   const baseColors = [
     ["#9AE6B4", "#68D391", "#48BB78", "#38A169", "#2F855A"], // green
     ["#BEE3F8", "#90CDF4", "#63B3ED", "#4299E1", "#3182CE"], // blue
@@ -38,7 +39,17 @@ export const getActivityColorMatrix = () => {
     ["#C3DAFE", "#A3BFFA", "#7F9CF5", "#667EEA", "#5A67D8"], // indigo
     ["#E2E8F0", "#CBD5E0", "#A0AEC0", "#718096", "#4A5568"], // gray
   ];
-  return baseColors;
+  const darkBaseColors = [
+    ["#34D399", "#10B981", "#059669", "#047857", "#065F46"], // green - lighter than before
+    ["#38BDF8", "#0EA5E9", "#0284C7", "#0369A1", "#075985"], // blue - lighter than before
+    ["#F87171", "#EF4444", "#DC2626", "#B91C1C", "#991B1B"], // red - lighter than before
+    ["#FACC15", "#EAB308", "#CA8A04", "#A16207", "#854D0E"], // yellow - lighter than before
+    ["#A78BFA", "#8B5CF6", "#7C3AED", "#6D28D9", "#5B21B6"], // purple - lighter than before
+    ["#F472B6", "#EC4899", "#DB2777", "#BE185D", "#9F1239"], // pink - lighter than before
+    ["#818CF8", "#6366F1", "#4F46E5", "#4338CA", "#3730A3"], // indigo - lighter than before
+    ["#94A3B8", "#64748B", "#475569", "#334155", "#1E293B"], // gray - lighter than before
+  ];
+  return isLightMode ? baseColors : darkBaseColors;
 };
 
 // Helper function to convert HEX to RGBA
@@ -54,7 +65,8 @@ const intensityAlphaLevels = [0.2, 0.4, 0.6, 0.8, 1.0]; // Define alpha levels f
 export const getActivityColor = (
   activityIndex: number,
   intensityLevel: number,
-  activity?: Activity
+  activity?: Activity,
+  isLightMode: boolean = true
 ) => {
   if (activity?.colorHex) {
     // Ensure intensityLevel is within the bounds of our alpha levels array
@@ -64,7 +76,7 @@ export const getActivityColor = (
       ];
     return hexToRgba(activity.colorHex, alpha);
   }
-  const colorMatrix = getActivityColorMatrix();
+  const colorMatrix = getActivityColorMatrix(isLightMode);
   const row = colorMatrix[activityIndex % colorMatrix.length];
   return row[Math.min(intensityLevel, row.length - 1)];
 };
@@ -80,6 +92,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   getWeekCompletionStatus,
   onEditActivity,
 }) => {
+  const { isLightMode } = useTheme();
   // Add state for selected date
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
@@ -107,7 +120,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
       )
     : 52;
   const renderActivityLegend = () => {
-    const colorMatrix = getActivityColorMatrix();
+    const colorMatrix = getActivityColorMatrix(isLightMode);
     return (
       <div className="grid grid-cols-[auto_1fr] gap-3 mt-2">
         <div className="flex items-center gap-2">
@@ -162,14 +175,14 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   {onEditActivity && isOwnActivity(activity) && (
                     <button
                       onClick={() => onEditActivity(activity)}
-                      className="ml-2 p-1 text-gray-500 hover:text-gray-700"
+                      className="ml-2 p-1 text-muted-foreground hover:text-foreground"
                       title={`Edit ${activity.title}`}
                     >
                       <Brush size={16} />
                     </button>
                   )}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   ({activity.measure})
                 </span>
               </div>
@@ -252,7 +265,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                     <rect
                       key={data.index}
                       {...(props as React.SVGProps<SVGRectElement>)}
-                      fill="#EBEDF0"
+                      fill={isLightMode ? "#EBEDF0" : "#353535"}
                       stroke={isCurrentDay ? "#FF0000" : "none"}
                       strokeWidth={isCurrentDay ? 2 : 0}
                       rx={4}
@@ -306,7 +319,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[0].activityIndex,
                         intensities[0].intensity,
-                        activity
+                        activity,
+                        isLightMode
                       )}
                       rx={4}
                     />
@@ -330,7 +344,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[0].activityIndex,
                         intensities[0].intensity,
-                        activity1
+                        activity1,
+                        isLightMode
                       )}
                     />,
                     <path
@@ -349,7 +364,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[1].activityIndex,
                         intensities[1].intensity,
-                        activity2
+                        activity2,
+                        isLightMode
                       )}
                     />
                   );
@@ -371,7 +387,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[0].activityIndex,
                         intensities[0].intensity,
-                        activity1
+                        activity1,
+                        isLightMode
                       )}
                     />,
                     <path
@@ -387,7 +404,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[1].activityIndex,
                         intensities[1].intensity,
-                        activity2
+                        activity2,
+                        isLightMode
                       )}
                     />,
                     <path
@@ -406,7 +424,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[2].activityIndex,
                         intensities[2].intensity,
-                        activity3
+                        activity3,
+                        isLightMode
                       )}
                     />
                   );
@@ -429,7 +448,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[0].activityIndex,
                         intensities[0].intensity,
-                        activity1
+                        activity1,
+                        isLightMode
                       )}
                     />,
                     <path
@@ -445,7 +465,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[1].activityIndex,
                         intensities[1].intensity,
-                        activity2
+                        activity2,
+                        isLightMode
                       )}
                     />,
                     <path
@@ -461,7 +482,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[2].activityIndex,
                         intensities[2].intensity,
-                        activity3
+                        activity3,
+                        isLightMode
                       )}
                     />,
                     <path
@@ -481,7 +503,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                       fill={getActivityColor(
                         intensities[3].activityIndex,
                         intensities[3].intensity,
-                        activity4
+                        activity4,
+                        isLightMode
                       )}
                     />
                   );

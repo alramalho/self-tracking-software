@@ -40,14 +40,14 @@ export const ActivityCard = ({
           "flex flex-col items-left justify-center p-6 rounded-lg border-2 w-full h-full aspect-square",
           selected
             ? cn(variants.card.selected.border, variants.card.selected.bg)
-            : "border-gray-300 bg-white"
+            : "border-border bg-card"
         )}
       >
         {activity.emoji && (
           <span className="text-4xl mb-2 text-left">{activity.emoji}</span>
         )}
         <span className="text-xl font-medium text-left">{activity.title}</span>
-        <span className="text-sm text-gray-500 text-left">
+        <span className="text-sm text-muted-foreground text-left">
           {activity.measure}
         </span>
         {/* {activity.privacy_settings &&
@@ -69,9 +69,9 @@ export const ActivityCard = ({
             e.stopPropagation();
             onEditClick();
           }}
-          className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+          className="absolute top-2 right-2 p-1 bg-card rounded-full shadow-md hover:bg-muted"
         >
-          <Edit className="h-4 w-4 text-gray-500" />
+          <Edit className="h-4 w-4 text-muted-foreground" />
         </button>
       )}
     </div>

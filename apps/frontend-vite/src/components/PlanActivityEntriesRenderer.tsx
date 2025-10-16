@@ -109,12 +109,12 @@ const PlanActivityEntriesRenderer: React.FC<
     );
 
     return (
-      <div className="p-4 bg-gray-100/70 backdrop-blur-sm rounded-xl w-full max-w-md">
+      <div className="p-4 bg-muted/70 backdrop-blur-sm rounded-xl w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4 text-left">
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
         {entriesOnDate.length === 0 ? (
-          <p className="text-center text-gray-500">
+          <p className="text-center text-muted-foreground">
             No activities recorded for this date.
           </p>
         ) : (
@@ -129,7 +129,7 @@ const PlanActivityEntriesRenderer: React.FC<
                 <li key={index} className="flex items-center gap-2">
                   <span className="text-3xl">{activity.emoji}</span>
                   <span className="text-md">{activity.title}</span>
-                  <span className="text-sm mt-1 text-gray-600">
+                  <span className="text-sm mt-1 text-muted-foreground">
                     ({entry.quantity} {activity.measure})
                   </span>
                 </li>

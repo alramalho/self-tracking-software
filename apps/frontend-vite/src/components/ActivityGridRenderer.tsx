@@ -83,12 +83,12 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     );
 
     return (
-      <div className="p-4 bg-gray-100/70 backdrop-blur-sm rounded-xl w-full max-w-md">
+      <div className="p-4 bg-muted/70 backdrop-blur-sm rounded-xl w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4 text-left">
           Activities on {format(focusedDate, "MMMM d, yyyy")}
         </h3>
         {entriesOnDate.length === 0 ? (
-          <p className="text-center text-gray-500">
+          <p className="text-center text-muted-foreground">
             No activities recorded for this date.
           </p>
         ) : (
@@ -104,7 +104,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="text-3xl">{activity.emoji}</span>
                     <span className="text-md">{activity.title}</span>
-                    <span className="text-sm mt-1 text-gray-600">
+                    <span className="text-sm mt-1 text-muted-foreground">
                       ({entry.quantity} {activity.measure})
                     </span>
                   </div>
@@ -121,12 +121,12 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-6 rounded-2xl border-2 overflow-x-auto">
+      <div className="bg-card p-6 rounded-2xl border-2 overflow-x-auto">
         <div className="flex items-center space-x-3 mb-4">
-            <span className="text-lg font-semibold text-gray-800">
+            <span className="text-lg font-semibold text-foreground">
               Non-plan activities
             </span>
-            <span className="text-2xl font-semibold text-gray-800 ml-2">
+            <span className="text-2xl font-semibold text-foreground ml-2">
               {activities.map((a) => a.emoji)}
             </span>
         </div>

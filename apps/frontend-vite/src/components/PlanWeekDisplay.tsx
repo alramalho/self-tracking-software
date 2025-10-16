@@ -27,12 +27,12 @@ export const MiniActivityCard = ({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-2 p-2 bg-gray-100 rounded-md text-center min-w-16",
+        "flex flex-col items-center gap-2 p-2 bg-muted rounded-md text-center min-w-16",
         className
       )}
     >
       <span className="text-xl">{activity.emoji}</span>
-      <span className="text-xs text-gray-700">{activity.title}</span>
+      <span className="text-xs text-foreground">{activity.title}</span>
     </div>
   );
 };
@@ -154,7 +154,7 @@ export const PlanWeekDisplay = ({
     >
       {title &&
         (typeof title === "string" ? (
-          <h2 className="text-md font-semibold text-gray-800">{title}</h2>
+          <h2 className="text-md font-semibold text-foreground">{title}</h2>
         ) : (
           title
         ))}
@@ -167,14 +167,14 @@ export const PlanWeekDisplay = ({
               "flex-1 h-2 rounded transition-all duration-300",
               index < animatedCompletedActivities
                 ? "bg-green-500"
-                : "bg-gray-200"
+                : "bg-muted"
             )}
           />
         ))}
       </div>
 
       <div className="flex flex-col items-start justify-center gap-0">
-        <span className="flex w-full flex-row items-center justify-between text-xs text-gray-700 gap-2">
+        <span className="flex w-full flex-row items-center justify-between text-xs text-muted-foreground gap-2">
           <span>
             <span className="text-lg uppercase">{plan.emoji}</span> ACTIVITIES:
             <span className="font-semibold">
@@ -215,7 +215,7 @@ export const PlanWeekDisplay = ({
       {/* coming up section, wherewe either display  */}
       {plan.outlineType == "TIMES_PER_WEEK" && !isWeekCompleted && (
         <div className="flex flex-col items-start justify-center gap-0 mt-4">
-          <span className="text-sm text-gray-500">Coming up, any of:</span>
+          <span className="text-sm text-muted-foreground">Coming up, any of:</span>
           <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 mt-2">
             {week.weekActivities.map((activity) => (
               <MiniActivityCard key={activity.id} activity={activity} />
@@ -226,7 +226,7 @@ export const PlanWeekDisplay = ({
 
       {plan.outlineType == "SPECIFIC" && (isCurrentWeek || isFutureWeek) && (
         <div className="mt-4 flex flex-col items-start justify-center gap-2">
-          <span className="text-sm text-gray-500">Coming up:</span>
+          <span className="text-sm text-muted-foreground">Coming up:</span>
           <div className="flex flex-row flex-wrap gap-2">
             {plan.sessions
               .filter((session) => {

@@ -1,5 +1,7 @@
 import { type LowerThemeColor } from "@/utils/theme";
-import { ThemeColor, type User } from "@tsw/prisma";
+import { ThemeColor, ThemeMode, type User } from "@tsw/prisma";
+
+export type LowerThemeMode = Lowercase<ThemeMode>;
 
 export async function updateUserTheme(
   updateUserFn: (data: {
@@ -10,6 +12,19 @@ export async function updateUserTheme(
 ): Promise<User> {
   return await updateUserFn({
     updates: { themeBaseColor: color.toUpperCase() as ThemeColor },
+    muteNotifications: true,
+  });
+}
+
+export async function updateUserThemeMode(
+  updateUserFn: (data: {
+    updates: { themeMode: ThemeMode };
+    muteNotifications: boolean;
+  }) => Promise<User>,
+  mode: LowerThemeMode
+): Promise<User> {
+  return await updateUserFn({
+    updates: { themeMode: mode.toUpperCase() as ThemeMode },
     muteNotifications: true,
   });
 }
