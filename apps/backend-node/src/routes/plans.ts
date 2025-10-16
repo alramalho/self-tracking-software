@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { Prisma } from "@tsw/prisma";
+import { PlanState, Prisma } from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { Response, Router } from "express";
 import { z } from "zod/v4";
@@ -162,11 +162,35 @@ router.get(
           deletedAt: null,
         },
         include: {
-          activities: true,
+          activities: {
+            where: {
+              deletedAt: null,
+            },
+          },
           sessions: true,
           planGroup: {
             include: {
-              members: true,
+              members: {
+                where: {
+                  status: "ACTIVE",
+                },
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      username: true,
+                      picture: true,
+                    },
+                  },
+                  plan: {
+                    select: {
+                      id: true,
+                      goal: true,
+                    },
+                  },
+                },
+              },
             },
           },
           milestones: true,
@@ -175,7 +199,7 @@ router.get(
       });
 
       // Batch load progress for all plans
-      const planIds = plans.map(p => p.id);
+      const planIds = plans.map((p) => p.id);
       const plansProgress = await plansService.getBatchPlanProgress(
         planIds,
         req.user!.id,
@@ -183,14 +207,12 @@ router.get(
       );
 
       // Create progress map for fast lookup
-      const progressMap = new Map(
-        plansProgress.map(p => [p.plan.id, p])
-      );
+      const progressMap = new Map(plansProgress.map((p) => [p.plan.id, p]));
 
       // Augment each plan with progress data
-      const plansWithProgress = plans.map(plan => ({
+      const plansWithProgress = plans.map((plan) => ({
         ...plan,
-        progress: progressMap.get(plan.id)
+        progress: progressMap.get(plan.id),
       }));
 
       res.json(plansWithProgress);
@@ -201,15 +223,178 @@ router.get(
   }
 );
 
-// Retrieve a plan invitation by id
+// Invite a user to a plan (within-app invitation)
+router.post(
+  "/invite-to-plan",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const { planId, recipientId } = req.body;
+
+      if (!planId || !recipientId) {
+        res.status(400).json({ error: "planId and recipientId are required" });
+        return;
+      }
+
+      // Verify plan ownership
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+      });
+
+      if (!plan || plan.userId !== req.user!.id) {
+        res
+          .status(403)
+          .json({ error: "Not authorized to invite to this plan" });
+        return;
+      }
+
+      // Verify recipient exists
+      const recipient = await prisma.user.findUnique({
+        where: { id: recipientId },
+      });
+
+      if (!recipient) {
+        res.status(404).json({ error: "Recipient user not found" });
+        return;
+      }
+
+      // Create or get plan group
+      let planGroupId = plan.planGroupId;
+      if (!planGroupId) {
+        const planGroup = await prisma.planGroup.create({
+          data: {},
+        });
+        planGroupId = planGroup.id;
+
+        // Update plan with new planGroupId
+        await prisma.plan.update({
+          where: { id: planId },
+          data: { planGroupId },
+        });
+
+        // Create owner membership for the plan creator
+        await prisma.planGroupMember.create({
+          data: {
+            planGroupId,
+            userId: req.user!.id,
+            planId: planId,
+            role: "OWNER",
+            status: "ACTIVE",
+            joinedAt: new Date(),
+          },
+        });
+      }
+
+      // Check if user is already a member or was previously invited
+      const existingMember = await prisma.planGroupMember.findUnique({
+        where: {
+          planGroupId_userId: {
+            planGroupId,
+            userId: recipientId,
+          },
+        },
+      });
+
+      let invitation;
+
+      if (existingMember) {
+        // If already ACTIVE or INVITED, reject the new invitation
+        if (
+          existingMember.status === "ACTIVE" ||
+          existingMember.status === "INVITED"
+        ) {
+          res
+            .status(400)
+            .json({ error: "User already invited or is a member" });
+          return;
+        }
+
+        // If LEFT or REJECTED, update the existing record to INVITED (re-invitation)
+        invitation = await prisma.planGroupMember.update({
+          where: { id: existingMember.id },
+          data: {
+            status: "INVITED",
+            invitedById: req.user!.id,
+            invitedAt: new Date(),
+            leftAt: null,
+          },
+          include: {
+            planGroup: {
+              include: {
+                plans: true,
+              },
+            },
+            invitedBy: true,
+          },
+        });
+      } else {
+        // Create new invitation (PlanGroupMember with INVITED status)
+        invitation = await prisma.planGroupMember.create({
+          data: {
+            planGroupId,
+            userId: recipientId,
+            invitedById: req.user!.id,
+            role: "MEMBER",
+            status: "INVITED",
+          },
+          include: {
+            planGroup: {
+              include: {
+                plans: true,
+              },
+            },
+            invitedBy: true,
+          },
+        });
+      }
+
+      // Create notification for recipient
+      await prisma.notification.create({
+        data: {
+          userId: recipientId,
+          message: `${req.user!.name || req.user!.username || "Someone"} invited you to join their plan: ${plan.goal}`,
+          type: "PLAN_INVITATION",
+          relatedId: invitation.id,
+          relatedData: {
+            planGroupId,
+            planGoal: plan.goal,
+            inviterId: req.user!.id,
+          },
+        },
+      });
+
+      logger.info(
+        `User ${req.user!.id} invited user ${recipientId} to plan ${planId}`
+      );
+      res.json({ success: true, invitation });
+    } catch (error) {
+      logger.error("Error inviting user to plan:", error);
+      res.status(500).json({ error: "Failed to invite user to plan" });
+    }
+  }
+);
+
+// Retrieve a plan group member invitation by id
 router.get(
   "/plan-invitations/:invitationId",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { invitationId } = req.params;
-      const invitation = await prisma.planInvitation.findUnique({
+      const invitation = await prisma.planGroupMember.findUnique({
         where: { id: invitationId },
+        include: {
+          planGroup: {
+            include: {
+              plans: {
+                include: {
+                  activities: true,
+                },
+              },
+            },
+          },
+          invitedBy: true,
+        },
       });
 
       if (!invitation) {
@@ -250,17 +435,44 @@ router.get(
         return;
       }
 
-      // Create external invitation record
-      const invitation = await prisma.planInvitation.create({
+      // Create or get plan group
+      let planGroupId = plan.planGroupId;
+      if (!planGroupId) {
+        const planGroup = await prisma.planGroup.create({
+          data: {},
+        });
+        planGroupId = planGroup.id;
+
+        // Update plan with new planGroupId
+        await prisma.plan.update({
+          where: { id: plan_id as string },
+          data: { planGroupId },
+        });
+
+        // Create owner membership for the plan creator
+        await prisma.planGroupMember.create({
+          data: {
+            planGroupId,
+            userId: req.user!.id,
+            planId: plan_id as string,
+            role: "OWNER",
+            status: "ACTIVE",
+            joinedAt: new Date(),
+          },
+        });
+      }
+
+      // Create external invitation link
+      const inviteLink = await prisma.planInviteLink.create({
         data: {
-          planId: plan_id as string,
-          senderId: req.user!.id,
-          recipientId: "external", // Special case for external links
+          planGroupId,
+          createdById: req.user!.id,
+          isActive: true,
         },
       });
 
       const baseUrl = process.env.FRONTEND_URL || "https://app.tracking.so";
-      const link = `${baseUrl}/join-plan/${invitation.id}`;
+      const link = `${baseUrl}/join-plan/${inviteLink.id}`;
 
       logger.info(`Generated invitation link for plan ${plan_id}`);
       res.json({ link });
@@ -374,7 +586,9 @@ router.post(
         forceRecompute
       );
 
-      logger.info(`Retrieved batch progress for ${planIds.length} plans${forceRecompute ? ' (forced recompute)' : ''}`);
+      logger.info(
+        `Retrieved batch progress for ${planIds.length} plans${forceRecompute ? " (forced recompute)" : ""}`
+      );
       res.json({ progress: progressData });
     } catch (error) {
       logger.error("Error getting batch plan progress:", error);
@@ -427,7 +641,7 @@ router.get(
   ): Promise<Response | void> => {
     try {
       const { planId } = req.params;
-      const forceRecompute = req.query.forceRecompute === 'true';
+      const forceRecompute = req.query.forceRecompute === "true";
 
       const plan = await prisma.plan.findUnique({
         where: { id: planId },
@@ -452,7 +666,9 @@ router.get(
         ? await plansService.computePlanProgress(plan, user)
         : await plansService.getPlanProgress(plan, user);
 
-      logger.info(`Retrieved progress for plan ${planId}${forceRecompute ? ' (forced recompute)' : ''}`);
+      logger.info(
+        `Retrieved progress for plan ${planId}${forceRecompute ? " (forced recompute)" : ""}`
+      );
       res.json(progressData);
     } catch (error) {
       logger.error("Error getting plan progress:", error);
@@ -502,6 +718,166 @@ router.post(
   }
 );
 
+// Get plan group progress comparison for all members
+router.get(
+  "/:planId/group-progress",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+
+      // Get the plan with group info
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+        include: {
+          planGroup: {
+            include: {
+              members: {
+                where: {
+                  status: "ACTIVE",
+                },
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      username: true,
+                      picture: true,
+                      planType: true,
+                      timezone: true,
+                    },
+                  },
+                  plan: {
+                    include: {
+                      activities: true,
+                      sessions: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      if (!plan.planGroup) {
+        res.status(400).json({ error: "Plan is not part of a group" });
+        return;
+      }
+
+      // Check if user is member of this plan group
+      const isMember = plan.planGroup.members.some(
+        (m) => m.userId === req.user!.id
+      );
+      if (!isMember) {
+        res.status(403).json({ error: "Not authorized to view this group" });
+        return;
+      }
+
+      // Calculate progress for each member
+      const memberProgress = await Promise.all(
+        plan.planGroup.members.map(async (member) => {
+          if (!member.plan) {
+            return null;
+          }
+
+          const user = member.user;
+          const memberPlan = member.plan;
+
+          // Check if this is a coached plan
+          // Coached = user is PLUS AND sortOrder is minimum of all user's plans
+          let isCoached = false;
+          if (user.planType === "PLUS") {
+            const userPlans = await prisma.plan.findMany({
+              where: {
+                userId: user.id,
+                deletedAt: null,
+              },
+              select: {
+                sortOrder: true,
+              },
+              orderBy: {
+                sortOrder: "asc",
+              },
+            });
+
+            const minSortOrder = userPlans[0]?.sortOrder;
+            isCoached = memberPlan.sortOrder === minSortOrder;
+          }
+
+          // Get current week's activity count
+          const timezone = user.timezone || "UTC";
+          const currentDate = new TZDate(new Date(), timezone);
+          const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+          const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+
+          const activityIds = memberPlan.activities.map((a) => a.id);
+          const weeklyActivityCount = await prisma.activityEntry.count({
+            where: {
+              userId: user.id,
+              activityId: { in: activityIds },
+              date: {
+                gte: weekStart,
+                lte: weekEnd,
+              },
+              deletedAt: null,
+            },
+          });
+
+          // Calculate target
+          let target = memberPlan.timesPerWeek || 0;
+          if (target === 0 && memberPlan.outlineType === "SPECIFIC") {
+            // Count sessions in current week
+            const weekSessions = memberPlan.sessions.filter((s) => {
+              const sessionDate = new TZDate(s.date, timezone);
+              return sessionDate >= weekStart && sessionDate <= weekEnd;
+            });
+            target = weekSessions.length;
+          }
+
+          // Determine status - use currentWeekState as-is (can be null)
+          let status: PlanState | null = null;
+          if (isCoached) {
+            status = memberPlan.currentWeekState;
+          }
+
+          return {
+            userId: user.id,
+            name: user.name || user.username || "Unknown",
+            username: user.username,
+            picture: user.picture,
+            planId: memberPlan.id,
+            weeklyActivityCount,
+            target,
+            isCoached,
+            status,
+          };
+        })
+      );
+
+      // Filter out null entries
+      const validProgress = memberProgress.filter((p) => p !== null);
+
+      logger.info(`Retrieved group progress for plan ${planId}`);
+      res.json({
+        planGroupId: plan.planGroupId,
+        members: validProgress,
+      });
+    } catch (error) {
+      logger.error("Error getting group progress:", error);
+      res.status(500).json({ error: "Failed to get group progress" });
+    }
+  }
+);
+
 // Get specific plan
 router.get(
   "/:planId",
@@ -526,7 +902,27 @@ router.get(
           milestones: true,
           planGroup: {
             include: {
-              members: true,
+              members: {
+                where: {
+                  status: "ACTIVE",
+                },
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      username: true,
+                      picture: true,
+                    },
+                  },
+                  plan: {
+                    select: {
+                      id: true,
+                      goal: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -1023,111 +1419,150 @@ router.post(
   ): Promise<Response | void> => {
     try {
       const { invitationId } = req.params;
-      const { activity_associations = [] } = req.body;
 
-      let invitation = await prisma.planInvitation.findUnique({
+      // Check if it's a PlanInviteLink (external) or PlanGroupMember (direct invite)
+      let inviteLink = await prisma.planInviteLink.findUnique({
         where: { id: invitationId },
         include: {
-          plan: {
+          planGroup: {
             include: {
-              planGroup: true,
-              activities: true,
+              plans: {
+                include: {
+                  activities: true,
+                },
+              },
             },
           },
         },
       });
 
-      if (!invitation) {
-        res.status(404).json({ error: "Invitation not found" });
-        return;
-      }
-
-      // Handle external invitations by creating a new invitation for the current user
-      if (invitation.recipientId === "external") {
-        logger.info(
-          `Plan invitation recipient is external, creating new invitation for user ${req.user!.id}`
-        );
-
-        // Check if invitation already exists for this user
-        const existingInvitation = await prisma.planInvitation.findFirst({
-          where: {
-            planId: invitation.planId,
-            senderId: invitation.senderId,
-            recipientId: req.user!.id,
-          },
-          include: {
-            plan: {
-              include: {
-                planGroup: true,
-                activities: true,
-              },
-            },
-          },
-        });
-
-        if (existingInvitation) {
-          invitation = existingInvitation;
-        } else {
-          invitation = await prisma.planInvitation.create({
-            data: {
-              planId: invitation.planId,
-              senderId: invitation.senderId,
-              recipientId: req.user!.id,
-              status: "PENDING",
-            },
+      let memberInvite = await prisma.planGroupMember.findUnique({
+        where: { id: invitationId },
+        include: {
+          planGroup: {
             include: {
-              plan: {
+              plans: {
                 include: {
-                  planGroup: true,
                   activities: true,
                 },
               },
             },
-          });
-        }
+          },
+        },
+      });
+
+      if (!inviteLink && !memberInvite) {
+        res.status(404).json({ error: "Invitation not found" });
+        return;
       }
 
-      // Verify the invitation is for the current user
-      if (invitation.recipientId !== req.user!.id) {
-        res
-          .status(403)
-          .json({ error: "Not authorized to accept this invitation" });
+      let planGroup;
+
+      if (inviteLink) {
+        // Handle external invite link
+        if (!inviteLink.isActive) {
+          res.status(400).json({ error: "Invite link is no longer active" });
+          return;
+        }
+
+        if (inviteLink.maxUses && inviteLink.usedCount >= inviteLink.maxUses) {
+          res
+            .status(400)
+            .json({ error: "Invite link has reached maximum uses" });
+          return;
+        }
+
+        if (inviteLink.expiresAt && new Date() > inviteLink.expiresAt) {
+          res.status(400).json({ error: "Invite link has expired" });
+          return;
+        }
+
+        planGroup = inviteLink.planGroup;
+
+        // Check if user is already a member
+        const existingMember = await prisma.planGroupMember.findUnique({
+          where: {
+            planGroupId_userId: {
+              planGroupId: inviteLink.planGroupId,
+              userId: req.user!.id,
+            },
+          },
+        });
+
+        if (existingMember) {
+          res
+            .status(400)
+            .json({ error: "You are already a member of this plan group" });
+          return;
+        }
+
+        // Increment used count
+        await prisma.planInviteLink.update({
+          where: { id: invitationId },
+          data: { usedCount: { increment: 1 } },
+        });
+      } else {
+        // Handle direct member invitation
+        if (memberInvite!.userId !== req.user!.id) {
+          res
+            .status(403)
+            .json({ error: "Not authorized to accept this invitation" });
+          return;
+        }
+
+        if (memberInvite!.status !== "INVITED") {
+          res
+            .status(400)
+            .json({ error: "Invitation has already been processed" });
+          return;
+        }
+
+        planGroup = memberInvite!.planGroup;
+      }
+
+      // Get the first plan in the group as template
+      const templatePlan = planGroup.plans[0];
+      if (!templatePlan) {
+        res.status(400).json({ error: "No template plan found in group" });
         return;
       }
 
       // Accept the invitation using a transaction
       const result = await prisma.$transaction(async (tx) => {
-        // Update invitation status
-        await tx.planInvitation.update({
-          where: { id: invitation!.id },
-          data: { status: "ACCEPTED" },
-        });
-
-        const plan = invitation!.plan;
+        // First, create copies of the activities for the new user
+        const newActivities = await Promise.all(
+          templatePlan.activities.map(async (templateActivity: any) => {
+            return await tx.activity.create({
+              data: {
+                userId: req.user!.id,
+                title: templateActivity.title,
+                measure: templateActivity.measure,
+                emoji: templateActivity.emoji,
+                colorHex: templateActivity.colorHex,
+                privacySettings: templateActivity.privacySettings,
+              },
+            });
+          })
+        );
 
         // Create a copy of the plan for the new user
         const newPlan = await tx.plan.create({
           data: {
             userId: req.user!.id,
-            goal: plan.goal,
-            emoji: plan.emoji,
-            finishingDate: plan.finishingDate,
-            notes: plan.notes,
-            durationType: plan.durationType,
-            outlineType: plan.outlineType,
-            timesPerWeek: plan.timesPerWeek,
+            goal: templatePlan.goal,
+            emoji: templatePlan.emoji,
+            finishingDate: templatePlan.finishingDate,
+            notes: templatePlan.notes,
+            durationType: templatePlan.durationType,
+            outlineType: templatePlan.outlineType,
+            timesPerWeek: templatePlan.timesPerWeek,
             sortOrder: 1,
-            planGroupId: plan.planGroupId,
-            // Connect activities based on activity_associations or use original plan's activities
+            planGroupId: planGroup.id,
+            // Connect to the newly created activities
             activities: {
-              connect:
-                activity_associations.length > 0
-                  ? activity_associations.map((assoc: any) => ({
-                      id: assoc.user_activity_id,
-                    }))
-                  : plan.activities.map((activity: any) => ({
-                      id: activity.id,
-                    })),
+              connect: newActivities.map((activity) => ({
+                id: activity.id,
+              })),
             },
           },
           include: {
@@ -1138,17 +1573,27 @@ router.post(
           },
         });
 
-        // Update plan group if it exists to include the new plan
-        if (plan.planGroupId) {
-          await tx.planGroup.update({
-            where: { id: plan.planGroupId },
+        // Create or update member record
+        if (memberInvite) {
+          // Update existing member invitation to ACTIVE
+          await tx.planGroupMember.update({
+            where: { id: invitationId },
             data: {
-              members: {
-                connect: { id: req.user!.id },
-              },
-              plans: {
-                connect: { id: newPlan.id },
-              },
+              status: "ACTIVE",
+              planId: newPlan.id,
+              joinedAt: new Date(),
+            },
+          });
+        } else {
+          // Create new member record for external link
+          await tx.planGroupMember.create({
+            data: {
+              planGroupId: planGroup.id,
+              userId: req.user!.id,
+              planId: newPlan.id,
+              role: "MEMBER",
+              status: "ACTIVE",
+              joinedAt: new Date(),
             },
           });
         }
@@ -1158,6 +1603,22 @@ router.post(
 
         return newPlan;
       });
+
+      // Mark the related notification as concluded
+      if (memberInvite) {
+        await prisma.notification.updateMany({
+          where: {
+            userId: req.user!.id,
+            type: "PLAN_INVITATION",
+            relatedId: invitationId,
+            status: { not: "CONCLUDED" },
+          },
+          data: {
+            status: "CONCLUDED",
+            concludedAt: new Date(),
+          },
+        });
+      }
 
       logger.info(
         `User ${req.user!.id} accepted plan invitation ${invitationId}`
@@ -1184,56 +1645,49 @@ router.post(
     try {
       const { invitationId } = req.params;
 
-      let invitation = await prisma.planInvitation.findUnique({
+      // Only PlanGroupMember invitations can be rejected (not external links)
+      const memberInvite = await prisma.planGroupMember.findUnique({
         where: { id: invitationId },
       });
 
-      if (!invitation) {
+      if (!memberInvite) {
         res.status(404).json({ error: "Invitation not found" });
         return;
       }
 
-      // Handle external invitations by creating a new invitation for the current user
-      if (invitation.recipientId === "external") {
-        logger.info(
-          `Plan invitation recipient is external, creating new invitation for user ${req.user!.id}`
-        );
-
-        // Check if invitation already exists for this user
-        const existingInvitation = await prisma.planInvitation.findFirst({
-          where: {
-            planId: invitation.planId,
-            senderId: invitation.senderId,
-            recipientId: req.user!.id,
-          },
-        });
-
-        if (existingInvitation) {
-          invitation = existingInvitation;
-        } else {
-          invitation = await prisma.planInvitation.create({
-            data: {
-              planId: invitation.planId,
-              senderId: invitation.senderId,
-              recipientId: req.user!.id,
-              status: "PENDING",
-            },
-          });
-        }
-      }
-
       // Verify the invitation is for the current user
-      if (invitation.recipientId !== req.user!.id) {
+      if (memberInvite.userId !== req.user!.id) {
         res
           .status(403)
           .json({ error: "Not authorized to reject this invitation" });
         return;
       }
 
+      if (memberInvite.status !== "INVITED") {
+        res
+          .status(400)
+          .json({ error: "Invitation has already been processed" });
+        return;
+      }
+
       // Update invitation status to rejected
-      await prisma.planInvitation.update({
-        where: { id: invitation.id },
+      await prisma.planGroupMember.update({
+        where: { id: invitationId },
         data: { status: "REJECTED" },
+      });
+
+      // Mark the related notification as concluded
+      await prisma.notification.updateMany({
+        where: {
+          userId: req.user!.id,
+          type: "PLAN_INVITATION",
+          relatedId: invitationId,
+          status: { not: "CONCLUDED" },
+        },
+        data: {
+          status: "CONCLUDED",
+          concludedAt: new Date(),
+        },
       });
 
       logger.info(
@@ -1243,6 +1697,137 @@ router.post(
     } catch (error) {
       logger.error("Error rejecting plan invitation:", error);
       res.status(500).json({ error: "Failed to reject plan invitation" });
+    }
+  }
+);
+
+// Leave plan group
+router.post(
+  "/leave-plan-group/:planId",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+
+      // Get the plan with group info
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+        include: {
+          planGroup: true,
+        },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      if (!plan.planGroupId) {
+        res.status(400).json({ error: "Plan is not part of a group" });
+        return;
+      }
+
+      if (plan.userId !== req.user!.id) {
+        res.status(403).json({ error: "Not authorized to leave this plan" });
+        return;
+      }
+
+      // Update the member status to LEFT
+      await prisma.planGroupMember.updateMany({
+        where: {
+          planGroupId: plan.planGroupId,
+          userId: req.user!.id,
+          status: "ACTIVE",
+        },
+        data: {
+          status: "LEFT",
+          leftAt: new Date(),
+        },
+      });
+
+      // Remove the planGroupId from the user's plan
+      await prisma.plan.update({
+        where: { id: planId },
+        data: {
+          planGroupId: null,
+        },
+      });
+
+      logger.info(`User ${req.user!.id} left plan group for plan ${planId}`);
+      res.json({ message: "Successfully left plan group" });
+    } catch (error) {
+      logger.error("Error leaving plan group:", error);
+      res.status(500).json({ error: "Failed to leave plan group" });
+    }
+  }
+);
+
+// Delete plan (soft delete)
+router.delete(
+  "/:planId",
+  requireAuth,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response | void> => {
+    try {
+      const { planId } = req.params;
+
+      // Get the plan with group info
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId },
+        include: {
+          planGroup: true,
+        },
+      });
+
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      if (plan.userId !== req.user!.id) {
+        res.status(403).json({ error: "Not authorized to delete this plan" });
+        return;
+      }
+
+      // If plan is in a group, automatically leave the group
+      if (plan.planGroupId) {
+        // Update member status to LEFT
+        await prisma.planGroupMember.updateMany({
+          where: {
+            planGroupId: plan.planGroupId,
+            userId: req.user!.id,
+            status: "ACTIVE",
+          },
+          data: {
+            status: "LEFT",
+            leftAt: new Date(),
+          },
+        });
+
+        logger.info(
+          `User ${req.user!.id} automatically left plan group when deleting plan ${planId}`
+        );
+      }
+
+      // Soft delete the plan
+      const deletedPlan = await prisma.plan.update({
+        where: { id: planId },
+        data: {
+          deletedAt: new Date(),
+          planGroupId: null, // Clear group reference
+        },
+      });
+
+      logger.info(`User ${req.user!.id} deleted plan ${planId}`);
+      res.json({ success: true, plan: deletedPlan });
+    } catch (error) {
+      logger.error("Error deleting plan:", error);
+      res.status(500).json({ error: "Failed to delete plan" });
     }
   }
 );

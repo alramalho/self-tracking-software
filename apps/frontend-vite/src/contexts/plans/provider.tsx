@@ -8,6 +8,7 @@ import React from "react";
 import { toast } from "react-hot-toast";
 import {
     clearCoachSuggestedSessionsInPlan,
+    deletePlan,
     getPlans,
     modifyManualMilestone,
     updatePlans,
@@ -95,37 +96,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       return response.data;
     },
     onSuccess: (result, { planId }) => {
-      const upsertedPlan = result.plan;
-
-      // Handle cache updates based on operation type
-      queryClient.setQueryData(["plans"], (oldPlans: CompletePlan[] = []) => {
-        const planExists = oldPlans.some((plan) => plan.id === planId);
-
-        if (upsertedPlan.deletedAt !== null) {
-          // Deletion: Remove plan from cache
-          return oldPlans.filter((plan) => plan.id !== planId);
-        } else if (!planExists) {
-          // Creation: Add new plan to cache
-          return [...oldPlans, upsertedPlan];
-        } else {
-          // Update: Modify existing plan in cache
-          return oldPlans.map((plan) =>
-            plan.id === planId ? { ...plan, ...upsertedPlan } : plan
-          );
-        }
-      });
-
-      // Update individual plan cache
-      if (upsertedPlan) {
-        queryClient.setQueryData(["plan", planId], upsertedPlan);
-      } else {
-        // Remove from individual plan cache if deleted
-        queryClient.removeQueries({ queryKey: ["plan", planId] });
-      }
-
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: ["recommendations"] });
-      }, 1000);
+      // Invalidate and refetch to ensure proper data propagation
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plan", planId] });
+      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
     },
     onError: (error) => {
       const customErrorMessage = `Failed to update plan`;
@@ -182,6 +156,39 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
+  const leavePlanGroupMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const response = await api.post(`/plans/leave-plan-group/${planId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch plans
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      toast.success("Left plan group successfully!");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to leave plan group`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
+  const deletePlanMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      await deletePlan(api, planId);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch plans
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      toast.success("Plan deleted successfully!");
+    },
+    onError: (error) => {
+      const customErrorMessage = `Failed to delete plan`;
+      handleQueryError(error, customErrorMessage);
+      toast.error(customErrorMessage);
+    },
+  });
+
   const context: PlansContextType = {
     plans: plans.data as CompletePlan[] | undefined,
     isLoadingPlans: plans.isLoading,
@@ -199,6 +206,10 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       upgradeCoachSuggestedSessionsToPlanSessionsMutation.mutateAsync,
     isUpgradingCoachSuggestedSessionsToPlanSessions:
       upgradeCoachSuggestedSessionsToPlanSessionsMutation.isPending,
+    leavePlanGroup: leavePlanGroupMutation.mutateAsync,
+    isLeavingPlanGroup: leavePlanGroupMutation.isPending,
+    deletePlan: deletePlanMutation.mutateAsync,
+    isDeletingPlan: deletePlanMutation.isPending,
   };
 
   return (

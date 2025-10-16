@@ -307,9 +307,12 @@ router.post(
       const latestEngagement =
         engagementNotifications.length > 0 ? engagementNotifications[0] : null;
 
-      // Conclude all notifications except the latest engagement
+      // Conclude all notifications except the latest engagement and action-required notifications
       const notificationsToClose = notifications.filter(
-        (n) => n.id !== latestEngagement?.id
+        (n) =>
+          n.id !== latestEngagement?.id &&
+          n.type !== "FRIEND_REQUEST" &&
+          n.type !== "PLAN_INVITATION"
       );
 
       if (notificationsToClose.length > 0) {
@@ -328,7 +331,7 @@ router.post(
         `Cleared ${notificationsToClose.length} notifications for user ${req.user!.id}`
       );
       res.json({
-        message: "All notifications cleared except latest engagement",
+        message: "All notifications cleared except action-required notifications",
       });
     } catch (error) {
       logger.error("Error clearing notifications:", error);

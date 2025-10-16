@@ -36,7 +36,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   isDragging = false,
   dragHandleProps,
 }) => {
-  const { plans, upsertPlan } = usePlans();
+  const { plans, deletePlan } = usePlans();
   const { isUserPremium } = usePaidPlan();
   const { currentUser } = useCurrentUser();
   const isCoached =
@@ -65,8 +65,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   };
 
   const handleDeletePlan = async () => {
-    await upsertPlan({ planId: plan.id!, updates: { deletedAt: new Date() } });
-    toast.success("Plan deleted successfully!");
+    await deletePlan(plan.id!);
     setShowDeleteConfirm(false);
   };
 
@@ -132,17 +131,18 @@ const PlanCard: React.FC<PlanCardProps> = ({
           {plan.planGroup?.members && (
             <div className="flex items-center space-x-1 mt-2">
               {plan.planGroup.members.map((member) => {
-                if (!currentUser?.id || member.id === currentUser?.id) {
+                const user = member.user || member;
+                if (!currentUser?.id || user.id === currentUser?.id) {
                   return null;
                 }
                 return (
                   <Avatar key={member.id} className="w-6 h-6">
                     <AvatarImage
-                      src={member.picture || ""}
-                      alt={member.name || member.username || ""}
+                      src={user.picture || ""}
+                      alt={user.name || user.username || ""}
                     />
                     <AvatarFallback>
-                      {member.name?.[0] || member.username?.[0] || "U"}
+                      {user.name?.[0] || user.username?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
                 );

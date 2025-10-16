@@ -67,9 +67,9 @@ model User {
   plans                   Plan[]
   messages                Message[]
   notifications           Notification[]
-  planInvitationsSent     PlanInvitation[] @relation("PlanInvitationSender")
-  planInvitationsReceived PlanInvitation[] @relation("PlanInvitationRecipient")
-  planGroupMemberships    PlanGroup[]
+  planGroupMemberships    PlanGroupMember[] @relation("PlanGroupMember")
+  planGroupInvitesSent    PlanGroupMember[] @relation("PlanGroupMemberInviter")
+  planInviteLinksCreated  PlanInviteLink[]
   recommendations         Recommendation[]
   reactionsSent           Reaction[]
   commentsSent            Comment[]
@@ -265,7 +265,7 @@ model Plan {
   sortOrder                  Int?
 
   // Current week state
-  currentWeekState             PlanState @default(ON_TRACK)
+  currentWeekState             PlanState?
   currentWeekStateCalculatedAt DateTime?
 
   // Progress cache
@@ -273,12 +273,12 @@ model Plan {
   progressCalculatedAt DateTime?
 
   // Relations
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  planGroup   PlanGroup?       @relation(fields: [planGroupId], references: [id])
-  sessions    PlanSession[]
-  activities  Activity[]
-  invitations PlanInvitation[]
-  milestones  PlanMilestone[]
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planGroup         PlanGroup?        @relation(fields: [planGroupId], references: [id])
+  sessions          PlanSession[]
+  activities        Activity[]
+  milestones        PlanMilestone[]
+  planGroupMembers  PlanGroupMember[]
 
   @@index([userId, deletedAt])
   @@index([userId, id])
@@ -330,28 +330,55 @@ model PlanGroup {
   createdAt DateTime @default(now())
 
   // Relations
-  members User[]
-  plans   Plan[]
+  members         PlanGroupMember[]
+  plans           Plan[]
+  inviteLinks     PlanInviteLink[]
 
   @@map("plan_groups")
   @@schema("public")
 }
 
-model PlanInvitation {
-  id          String           @id @default(cuid())
-  planId      String
-  senderId    String
-  recipientId String
-  status      InvitationStatus @default(PENDING)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime?        @updatedAt
+model PlanGroupMember {
+  id          String          @id @default(cuid())
+  planGroupId String
+  userId      String
+  planId      String?         // their plan copy in this group
+  role        PlanGroupRole   @default(MEMBER)
+  status      PlanGroupStatus @default(INVITED)
+  invitedById String?
+  invitedAt   DateTime        @default(now())
+  joinedAt    DateTime?
+  leftAt      DateTime?
 
   // Relations
-  plan      Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  sender    User @relation("PlanInvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
-  recipient User @relation("PlanInvitationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  planGroup PlanGroup @relation(fields: [planGroupId], references: [id], onDelete: Cascade)
+  user      User      @relation("PlanGroupMember", fields: [userId], references: [id], onDelete: Cascade)
+  plan      Plan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  invitedBy User?     @relation("PlanGroupMemberInviter", fields: [invitedById], references: [id], onDelete: SetNull)
 
-  @@map("plan_invitations")
+  @@unique([planGroupId, userId])
+  @@index([userId, status])
+  @@index([planGroupId, status])
+  @@map("plan_group_members")
+  @@schema("public")
+}
+
+model PlanInviteLink {
+  id          String    @id @default(cuid())
+  planGroupId String
+  createdById String
+  expiresAt   DateTime?
+  maxUses     Int?      @default(0) // 0 = unlimited
+  usedCount   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  planGroup PlanGroup @relation(fields: [planGroupId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([planGroupId, isActive])
+  @@map("plan_invite_links")
   @@schema("public")
 }
 
@@ -529,14 +556,6 @@ enum ConnectionStatus {
   @@schema("public")
 }
 
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-
-  @@schema("public")
-}
-
 enum NotificationStatus {
   PENDING
   PROCESSED
@@ -567,6 +586,22 @@ enum MessageRole {
   USER
   ASSISTANT
   SYSTEM
+
+  @@schema("public")
+}
+
+enum PlanGroupRole {
+  OWNER
+  MEMBER
+
+  @@schema("public")
+}
+
+enum PlanGroupStatus {
+  INVITED
+  ACTIVE
+  LEFT
+  REJECTED
 
   @@schema("public")
 }
