@@ -36,6 +36,10 @@ export interface PlansContextType {
     planId: string
   ) => Promise<void>;
   isUpgradingCoachSuggestedSessionsToPlanSessions: boolean;
+  leavePlanGroup: (planId: string) => Promise<void>;
+  isLeavingPlanGroup: boolean;
+  deletePlan: (planId: string) => Promise<void>;
+  isDeletingPlan: boolean;
 }
 
 export const PlansContext = createContext<PlansContextType | undefined>(

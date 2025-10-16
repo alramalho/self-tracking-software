@@ -6,9 +6,9 @@ import type { PlanInvitation } from "@tsw/prisma";
 import { useContext } from "react";
 import { toast } from "react-hot-toast";
 import {
-    fetchPlan,
-    fetchPlanInvitation,
-    type PlanWithRelations,
+  fetchPlan,
+  fetchPlanInvitation,
+  type PlanWithRelations,
 } from "./service";
 import { PlansContext } from "./types";
 
@@ -53,6 +53,7 @@ export const usePlanInvitation = (id: string) => {
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });
       queryClient.refetchQueries({ queryKey: ["plans"] });
+      queryClient.refetchQueries({ queryKey: ["activities"] });
       toast.success("Plan invitation accepted successfully!");
     },
     onError: (error) => {

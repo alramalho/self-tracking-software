@@ -5,14 +5,16 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Link } from "@tanstack/react-router";
 import { addWeeks, endOfWeek, format, isFuture, isSameWeek, startOfWeek, subDays } from "date-fns";
-import { ChartArea, Maximize2, Minimize2, PlusSquare } from "lucide-react";
+import { ChartArea, Loader2, Maximize2, Minimize2, PlusSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AppleLikePopover from "./AppleLikePopover";
 import { CoachOverviewCard } from "./CoachOverviewCard";
 import { MilestoneOverview } from "./MilestoneOverview";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import { PlanEditModal } from "./PlanEditModal";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
+import { PlanGroupProgressChart } from "./PlanGroupProgressChart";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -30,7 +32,7 @@ interface PlanRendererv2Props {
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const { currentUser } = useCurrentUser();
-  const { plans } = usePlans();
+  const { plans, leavePlanGroup, isLeavingPlanGroup } = usePlans();
   const { activities, activityEntries } = useActivities();
 
   const [showEditModal, setShowEditModal] = useState(false);
@@ -38,6 +40,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [timeRange, setTimeRange] = useState<"recent" | "all">("recent");
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
+  const [showLeaveGroupPopover, setShowLeaveGroupPopover] = useState(false);
 
   const planProgress = selectedPlan.progress;
   const currentWeekRef = useRef<HTMLDivElement>(null);
@@ -323,6 +326,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       )}
 
+      {selectedPlan.planGroupId && (
+        <div className="mb-8">
+          <PlanGroupProgressChart planId={selectedPlan.id} />
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <div className="flex flex-row items-center justify-between mb-2">
           <div className="flex flex-row items-center justify-start gap-2">
@@ -565,29 +574,42 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       {selectedPlan.planGroup?.members &&
         selectedPlan.planGroup.members.length >= 2 && (
           <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
-            <h2 className="text-lg font-semibold mb-2">People in this plan</h2>
+            <div className="flex flex-row items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold">People in this plan</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLeaveGroupPopover(true)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                Leave Group
+              </Button>
+            </div>
             <div className="flex flex-row flex-wrap gap-6">
-              {selectedPlan.planGroup.members.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex flex-row flex-nowrap gap-2 items-center"
-                >
-                  <Link to="/profile/$username" params={{ username: member.username || "" }}>
-                    <Avatar className="w-12 h-12 text-2xl">
-                      <AvatarImage
-                        src={member.picture || ""}
-                        alt={member.name || member.username || ""}
-                      />
-                      <AvatarFallback>{member.name?.[0] || "U"}</AvatarFallback>
-                    </Avatar>
-                  </Link>
-                  <div className="text-lg text-gray-800">
-                    {currentUser?.username === member.username
-                      ? "You"
-                      : member.name}
+              {selectedPlan.planGroup.members.map((member) => {
+                const user = (member as any).user || member;
+                return (
+                  <div
+                    key={member.id}
+                    className="flex flex-row flex-nowrap gap-2 items-center"
+                  >
+                    <Link to="/profile/$username" params={{ username: user.username || "" }}>
+                      <Avatar className="w-12 h-12 text-2xl">
+                        <AvatarImage
+                          src={user.picture || ""}
+                          alt={user.name || user.username || ""}
+                        />
+                        <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
+                      </Avatar>
+                    </Link>
+                    <div className="text-lg text-gray-800">
+                      {currentUser?.username === user.username
+                        ? "You"
+                        : user.name}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -601,6 +623,48 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           <span>Log Activity</span>
         </Button>
       </Link>
+
+      <AppleLikePopover
+        open={showLeaveGroupPopover}
+        onClose={() => setShowLeaveGroupPopover(false)}
+        title="Leave Plan Group"
+      >
+        <div className="flex flex-col gap-4 p-4">
+          <h2 className="text-xl font-semibold text-center">Leave Plan Group?</h2>
+          <p className="text-sm text-gray-600 text-center">
+            You'll leave this group but your plan and activities will remain intact.
+            You can continue working on your plan independently.
+          </p>
+          <div className="flex flex-col gap-2 mt-4">
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await leavePlanGroup(selectedPlan.id);
+                setShowLeaveGroupPopover(false);
+              }}
+              disabled={isLeavingPlanGroup}
+              className="w-full"
+            >
+              {isLeavingPlanGroup ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Leaving...
+                </>
+              ) : (
+                "Leave Group"
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowLeaveGroupPopover(false)}
+              disabled={isLeavingPlanGroup}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </AppleLikePopover>
 
       <PlanEditModal
         plan={selectedPlan}

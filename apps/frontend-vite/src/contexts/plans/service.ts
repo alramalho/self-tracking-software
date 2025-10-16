@@ -164,3 +164,45 @@ export async function upgradeCoachSuggestedSessionsToPlanSessions(
 ) {
   await api.post(`/plans/${planId}/upgrade-coach-suggested-sessions`);
 }
+
+export async function deletePlan(api: AxiosInstance, planId: string) {
+  const response = await api.delete<{ success: boolean; plan: PlanApiResponse }>(
+    `/plans/${planId}`
+  );
+  return response.data;
+}
+
+export interface PlanGroupMemberProgress {
+  userId: string;
+  name: string;
+  username: string | null;
+  picture: string | null;
+  planId: string;
+  weeklyActivityCount: number;
+  target: number;
+  isCoached: boolean;
+  status: "ON_TRACK" | "AT_RISK" | "FAILED" | "COMPLETED" | null;
+}
+
+export interface PlanGroupProgressData {
+  planGroupId: string;
+  members: PlanGroupMemberProgress[];
+}
+
+export async function getPlanGroupProgress(
+  api: AxiosInstance,
+  planId: string
+): Promise<PlanGroupProgressData | null> {
+  try {
+    const response = await api.get<PlanGroupProgressData>(
+      `/plans/${planId}/group-progress`
+    );
+    return response.data;
+  } catch (error: any) {
+    // Return null if plan has no group (400 error) or other errors
+    if (error?.response?.status === 400 || error?.response?.status === 403) {
+      return null;
+    }
+    throw error;
+  }
+}

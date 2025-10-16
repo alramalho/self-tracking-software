@@ -71,20 +71,22 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: (entry, variables) => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });
-      queryClient.setQueryData(
-        ["activity-entries"],
-        (old: ReturnedActivityEntriesType) => {
-          if (!old)
-            return queryClient.refetchQueries({
-              queryKey: ["activity-entries"],
-            });
-          return [...old, entry];
-        }
-      );
-      queryClient.refetchQueries({ queryKey: ["timeline"] });
-      queryClient.refetchQueries({ queryKey: ["notifications"] });
-      queryClient.refetchQueries({ queryKey: ["metrics"] });
-      queryClient.refetchQueries({ queryKey: ["plans"] });
+      // queryClient.setQueryData(
+      //   ["activity-entries"],
+      //   (old: ReturnedActivityEntriesType) => {
+      //     if (!old)
+      //       return queryClient.refetchQueries({
+      //         queryKey: ["activity-entries"],
+      //       });
+      //     return [...old, entry];
+      //   }
+      // );
+      queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["plan-group-progress"] });
 
       computeProgressForUserPlans([variables.activityId]);
 

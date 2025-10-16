@@ -19,6 +19,7 @@ import { Route as CreateNewPlanRouteImport } from './routes/create-new-plan'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as JoinPlanInvitationIdRouteImport } from './routes/join-plan.$invitationId'
 import { Route as InsightsOnboardingRouteImport } from './routes/insights.onboarding'
 import { Route as InsightsDashboardRouteImport } from './routes/insights.dashboard'
 import { Route as FriendsUsernameRouteImport } from './routes/friends.$username'
@@ -73,6 +74,11 @@ const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   path: '/profile/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinPlanInvitationIdRoute = JoinPlanInvitationIdRouteImport.update({
+  id: '/join-plan/$invitationId',
+  path: '/join-plan/$invitationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InsightsOnboardingRoute = InsightsOnboardingRouteImport.update({
   id: '/insights/onboarding',
   path: '/insights/onboarding',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
+  '/join-plan/$invitationId': typeof JoinPlanInvitationIdRoute
   '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
+  '/join-plan/$invitationId': typeof JoinPlanInvitationIdRoute
   '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/friends/$username': typeof FriendsUsernameRoute
   '/insights/dashboard': typeof InsightsDashboardRoute
   '/insights/onboarding': typeof InsightsOnboardingRoute
+  '/join-plan/$invitationId': typeof JoinPlanInvitationIdRoute
   '/profile/$username': typeof ProfileUsernameRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
+    | '/join-plan/$invitationId'
     | '/profile/$username'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
+    | '/join-plan/$invitationId'
     | '/profile/$username'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/friends/$username'
     | '/insights/dashboard'
     | '/insights/onboarding'
+    | '/join-plan/$invitationId'
     | '/profile/$username'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   FriendsUsernameRoute: typeof FriendsUsernameRoute
   InsightsDashboardRoute: typeof InsightsDashboardRoute
   InsightsOnboardingRoute: typeof InsightsOnboardingRoute
+  JoinPlanInvitationIdRoute: typeof JoinPlanInvitationIdRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
 }
 
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join-plan/$invitationId': {
+      id: '/join-plan/$invitationId'
+      path: '/join-plan/$invitationId'
+      fullPath: '/join-plan/$invitationId'
+      preLoaderRoute: typeof JoinPlanInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/insights/onboarding': {
       id: '/insights/onboarding'
       path: '/insights/onboarding'
@@ -308,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   FriendsUsernameRoute: FriendsUsernameRoute,
   InsightsDashboardRoute: InsightsDashboardRoute,
   InsightsOnboardingRoute: InsightsOnboardingRoute,
+  JoinPlanInvitationIdRoute: JoinPlanInvitationIdRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
 }
 export const routeTree = rootRouteImport

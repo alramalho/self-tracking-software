@@ -45,7 +45,10 @@ const InviteButton: React.FC<InviteButtonProps> = ({
     try {
       await Promise.all(
         invitees.map((invitee) =>
-          api.post(`/invite-to-plan/${planId}/${invitee.userId}`)
+          api.post(`/plans/invite-to-plan`, {
+            planId,
+            recipientId: invitee.userId,
+          })
         )
       );
       toast.success("Invitations sent successfully!");

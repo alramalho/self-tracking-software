@@ -44,6 +44,9 @@ router.get(
         where: {
           userId: req.user!.id,
           deletedAt: null,
+          activity: {
+            deletedAt: null,
+          },
         },
         include: {
           comments: {

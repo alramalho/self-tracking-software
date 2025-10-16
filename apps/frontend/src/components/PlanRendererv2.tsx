@@ -15,6 +15,7 @@ import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import { PlanEditModal } from "./PlanEditModal";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
+import { PlanGroupProgressChart } from "./PlanGroupProgressChart";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -327,6 +328,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               setShowEditModal(true);
             }}
           />
+        </div>
+      )}
+
+      {selectedPlan.planGroupId && (
+        <div className="mb-8">
+          <PlanGroupProgressChart planId={selectedPlan.id} />
         </div>
       )}
 
