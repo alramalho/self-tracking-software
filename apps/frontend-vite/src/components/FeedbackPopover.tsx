@@ -137,13 +137,13 @@ const FeedbackPopover = ({
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`w-full p-4 rounded-lg border border-gray-200 ${category.bgColor} transition-colors duration-200 flex items-center gap-4`}
+                  className={`w-full p-4 rounded-lg border border-border ${category.bgColor} transition-colors duration-200 flex items-center gap-4`}
                 >
                   <div className={category.iconColor}>
                     {category.icon}
                   </div>
                   <div className="text-left">
-                    <h4 className="font-medium text-gray-900">{category.title}</h4>
+                    <h4 className="font-medium text-foreground">{category.title}</h4>
                   </div>
                 </button>
               ))}
@@ -154,7 +154,7 @@ const FeedbackPopover = ({
             <div className="flex items-center gap-3 mb-4">
               <button
                 onClick={handleBack}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft size={20} />
               </button>
@@ -166,31 +166,31 @@ const FeedbackPopover = ({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Email</label>
+                <label className="block text-sm text-muted-foreground mb-1">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => effectiveIsEmailEditable && setEmail(e.target.value)}
                   disabled={!effectiveIsEmailEditable}
-                  className={`w-full px-3 py-2 border border-gray-200 rounded-lg ${effectiveIsEmailEditable ? "bg-white" : "bg-gray-50"}`}
+                  className={`w-full px-3 py-2 border border-border rounded-lg ${effectiveIsEmailEditable ? "bg-card" : "bg-muted"}`}
                   placeholder="your@email.com"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Message</label>
+                <label className="block text-sm text-muted-foreground mb-1">Message</label>
                 <TextAreaWithVoice
                   value={text}
                   onChange={setText}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg min-h-[120px] focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full px-3 py-2 border border-border rounded-lg min-h-[120px] focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder={selectedCategoryData?.placeholder}
                 />
               </div>
 
               {/* Image Upload */}
               <div>
-                <label className="block text-sm text-gray-600 mb-2">
+                <label className="block text-sm text-muted-foreground mb-2">
                   Attach Images (optional, max 3)
                 </label>
 
@@ -202,7 +202,7 @@ const FeedbackPopover = ({
                         <img
                           src={URL.createObjectURL(image)}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                          className="w-full h-20 object-cover rounded-lg border border-border"
                         />
                         <button
                           onClick={() => handleRemoveImage(index)}
@@ -217,9 +217,9 @@ const FeedbackPopover = ({
 
                 {/* Upload Button */}
                 {images.length < 3 && (
-                  <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors">
-                    <ImagePlus size={20} className="text-gray-500" />
-                    <span className="text-sm text-gray-600">
+                  <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-muted-foreground transition-colors">
+                    <ImagePlus size={20} className="text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
                       {images.length === 0 ? "Add images" : "Add more images"}
                     </span>
                     <input

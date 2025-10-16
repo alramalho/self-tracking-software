@@ -37,7 +37,7 @@ function Calendar({
       data-testid="day-picker"
       showOutsideDays={showOutsideDays}
       disabled={disabledDays}
-      className={cn("p-3 bg-white", className)}
+      className={cn("p-3 bg-card", className)}
       classNames={{
         months: "sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",

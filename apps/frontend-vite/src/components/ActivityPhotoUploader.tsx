@@ -72,8 +72,8 @@ const ActivityPhotoUploader: React.FC<ActivityPhotoUploaderProps> = ({
           disabled={isLoggingActivity}
         />
         <div className="mb-3">
-          <Info className="w-5 h-5 text-gray-500 mb-1 mr-2 inline" />
-          <p className="text-md text-gray-500 mb-6 inline">
+          <Info className="w-5 h-5 text-muted-foreground mb-1 mr-2 inline" />
+          <p className="text-md text-muted-foreground mb-6 inline">
             Only you and your friends can see this info until it expires after
             7 days.
           </p>

@@ -77,7 +77,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
               key={index}
               className={cn(
                 "flex-1 h-2 rounded transition-all",
-                index < animatedValue ? color : "bg-gray-200",
+                index < animatedValue ? color : "bg-muted",
                 isFullyDone ? "animate-pulse duration-1300" : "duration-300"
               )}
             />
@@ -93,7 +93,7 @@ export const SteppedBarProgress: React.FC<SteppedBarProgressProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1 }}
-            className="flex w-full flex-row items-center justify-between text-xs text-gray-700 gap-2"
+            className="flex w-full flex-row items-center justify-between text-xs text-foreground gap-2"
           >
             {typeof celebration === "string" ? (
               <span className="mt-1 text-sm font-normal text-green-600">

@@ -77,11 +77,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
           placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="rounded-xl bg-white h-12 text-lg"
+          className="rounded-xl bg-card h-12 text-lg"
         />
         {isLoading && (
           <div className="absolute right-2 top-1/2 -translate-y-1/2">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-500 " />
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         )}
       </div>
@@ -89,7 +89,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
         {searchResults.map((user) => (
           <li
             key={user.userId}
-            className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+            className="flex items-center p-2 hover:bg-muted cursor-pointer"
             onClick={() => onUserClick(user)}
           >
             <Avatar className="mr-2">

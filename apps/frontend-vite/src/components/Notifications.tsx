@@ -54,7 +54,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     <div
       ref={ref}
       key={notification.id}
-      className="relative shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-white border border-gray-200"
+      className="relative shadow-sm bg-opacity-50 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between transition-shadow duration-200 mb-4 bg-card border border-border"
     >
       {isUnopened && (
         <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-blue-500" />
@@ -81,17 +81,17 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           )}
         {hasUsernameData(notification) ? (
           <Link to={`/profile/$username`} params={{ username: relatedData.username }}>
-            <div className="markdown text-sm text-gray-700">
+            <div className="markdown text-sm text-foreground">
               <Remark>{notification.message}</Remark>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {formatTimeAgo(notification.createdAt)}
               </div>
             </div>
           </Link>
         ) : (
-          <div className="markdown text-sm text-gray-700">
+          <div className="markdown text-sm text-foreground">
             <Remark>{notification.message}</Remark>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {formatTimeAgo(notification.createdAt)}
             </div>
           </div>
@@ -270,7 +270,7 @@ const Notifications: React.FC = () => {
           <>
             <button
               onClick={() => handleNotificationAction(notification, "dismiss")}
-              className={`${buttonClasses} bg-gray-100 text-gray-600 hover:bg-gray-200 ml-2`}
+              className={`${buttonClasses} bg-muted text-muted-foreground hover:bg-muted/80 ml-2`}
               aria-label="Dismiss"
             >
               <X size={iconSize} />
@@ -316,7 +316,7 @@ const Notifications: React.FC = () => {
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="p-4 rounded-2xl border border-gray-200 bg-white"
+            className="p-4 rounded-2xl border border-border bg-card"
           >
             <div className="flex items-center justify-between">
               <div className="flex flex-row items-center gap-3 flex-1">
@@ -340,12 +340,12 @@ const Notifications: React.FC = () => {
   if (displayedNotifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
-        <div className="bg-gray-100 p-4 rounded-full mb-4">
-          <Check size={48} className="text-gray-600" />
+        <div className="bg-muted p-4 rounded-full mb-4">
+          <Check size={48} className="text-muted-foreground" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-700">All up to date!</h2>
+        <h2 className="text-xl font-semibold text-foreground">All up to date!</h2>
         {!isPushGranted && (
-          <p className="text-gray-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             <button className="underline" onClick={requestPermission}>
               Click here
             </button>{" "}
@@ -353,7 +353,7 @@ const Notifications: React.FC = () => {
           </p>
         )}
         {isPushGranted && (
-          <p className="text-gray-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             Come back later to see new notifications.
           </p>
         )}
@@ -383,7 +383,7 @@ const Notifications: React.FC = () => {
             <h2 className="text-lg font-semibold">Notifications</h2>
             <button
               onClick={clearAllNotifications}
-              className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
+              className="text-sm px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors duration-200"
             >
               Clear All
             </button>

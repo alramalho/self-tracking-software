@@ -86,17 +86,17 @@ export const themeVariants: Record<
       selected: {
         border: "border-slate-400",
         bg: "bg-slate-100",
-        glassBg: "bg-slate-100/70",
+        glassBg: "bg-slate-100/70 dark:bg-slate-800/70",
       },
-      glassBg: "bg-slate-100/40",
-      softGlassBg: "bg-slate-50/60",
+      glassBg: "bg-slate-100/40 dark:bg-slate-800/40",
+      softGlassBg: "bg-slate-50/60 dark:bg-slate-800/60",
     },
     button: {
       solid: "bg-slate-500 hover:bg-slate-600",
       outline:
         "border-slate-500 text-slate-500 hover:bg-slate-50 hover:text-slate-700",
       glass:
-        "bg-slate-100/40 text-slate-500 hover:bg-slate-50 hover:text-slate-700",
+        "bg-slate-100/40 dark:bg-slate-800/40 text-slate-500 hover:bg-slate-50 hover:text-slate-700",
       ghost: "text-slate-500 hover:bg-slate-50",
     },
     indicator: {
@@ -134,17 +134,17 @@ export const themeVariants: Record<
       selected: {
         border: "border-blue-400",
         bg: "bg-blue-100",
-        glassBg: "bg-blue-100/70",
+        glassBg: "bg-blue-100/70 dark:bg-blue-800/70",
       },
-      glassBg: "bg-blue-100/40",
-      softGlassBg: "bg-blue-50/60",
+      glassBg: "bg-blue-100/40 dark:bg-blue-800/40",
+      softGlassBg: "bg-blue-50/60 dark:bg-blue-800/60",
     },
     button: {
       solid: "bg-blue-500 hover:bg-blue-600",
       outline:
         "border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-700",
       glass:
-        "bg-blue-100/40 text-blue-500 hover:bg-blue-50 hover:text-blue-700",
+        "bg-blue-100/40 dark:bg-blue-800/40 text-blue-500 hover:bg-blue-50 hover:text-blue-700",
       ghost: "text-blue-500 hover:bg-blue-50",
     },
     indicator: {
@@ -182,17 +182,17 @@ export const themeVariants: Record<
       selected: {
         border: "border-violet-500",
         bg: "bg-violet-50",
-        glassBg: "bg-violet-100/70",
+        glassBg: "bg-violet-100/70 dark:bg-violet-800/70",
       },
-      glassBg: "bg-violet-100/40",
-      softGlassBg: "bg-violet-50/60",
+      glassBg: "bg-violet-100/40 dark:bg-violet-800/40",
+      softGlassBg: "bg-violet-50/60 dark:bg-violet-800/60",
     },
     button: {
       solid: "bg-violet-500 hover:bg-violet-600",
       outline:
         "border-violet-500 text-violet-500 hover:bg-violet-50 hover:text-violet-700",
       glass:
-        "bg-violet-100/40 text-violet-500 hover:bg-violet-50 hover:text-violet-700",
+        "bg-violet-100/40 dark:bg-violet-800/40 text-violet-500 hover:bg-violet-50 hover:text-violet-700",
       ghost: "text-violet-500 hover:bg-violet-50",
     },
     indicator: {
@@ -230,17 +230,17 @@ export const themeVariants: Record<
       selected: {
         border: "border-amber-400",
         bg: "bg-amber-50",
-        glassBg: "bg-amber-100/70",
+        glassBg: "bg-amber-100/70 dark:bg-amber-800/70",
       },
-      glassBg: "bg-amber-100/40",
-      softGlassBg: "bg-amber-50/60",
+      glassBg: "bg-amber-100/40 dark:bg-amber-800/40",
+      softGlassBg: "bg-amber-50/60 dark:bg-amber-800/60",
     },
     button: {
       solid: "bg-amber-500 hover:bg-amber-600",
       outline:
         "border-amber-500 text-amber-500 hover:bg-amber-50 hover:text-amber-700",
       glass:
-        "bg-amber-100/40 text-amber-500 hover:bg-amber-50 hover:text-amber-700",
+        "bg-amber-100/40 dark:bg-amber-800/40 text-amber-500 hover:bg-amber-50 hover:text-amber-700",
       ghost: "text-amber-500 hover:bg-amber-50",
     },
     indicator: {
@@ -278,17 +278,17 @@ export const themeVariants: Record<
       selected: {
         border: "border-emerald-400",
         bg: "bg-emerald-50",
-        glassBg: "bg-emerald-100/70",
+        glassBg: "bg-emerald-100/70 dark:bg-emerald-800/70",
       },
-      glassBg: "bg-emerald-100/40",
-      softGlassBg: "bg-emerald-50/60",
+      glassBg: "bg-emerald-100/40 dark:bg-emerald-800/40",
+      softGlassBg: "bg-emerald-50/60 dark:bg-emerald-800/60",
     },
     button: {
       solid: "bg-emerald-500 hover:bg-emerald-600",
       outline:
         "border-emerald-500 text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700",
       glass:
-        "bg-emerald-100/40 text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700",
+        "bg-emerald-100/40 dark:bg-emerald-800/40 text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700",
       ghost: "text-emerald-500 hover:bg-emerald-50",
     },
     indicator: {
@@ -326,17 +326,17 @@ export const themeVariants: Record<
       selected: {
         border: "border-rose-400",
         bg: "bg-rose-50",
-        glassBg: "bg-rose-100/70",
+        glassBg: "bg-rose-100/70 dark:bg-rose-800/70",
       },
-      glassBg: "bg-rose-100/40",
-      softGlassBg: "bg-rose-50/60",
+      glassBg: "bg-rose-100/40 dark:bg-rose-800/40",
+      softGlassBg: "bg-rose-50/60 dark:bg-rose-800/60",
     },
     button: {
       solid: "bg-rose-500 hover:bg-rose-600",
       outline:
         "border-rose-500 text-rose-500 hover:bg-rose-50 hover:text-rose-700",
       glass:
-        "bg-rose-100/40 text-rose-500 hover:bg-rose-50 hover:text-rose-700",
+        "bg-rose-100/40 dark:bg-rose-800/40 text-rose-500 hover:bg-rose-50 hover:text-rose-700",
       ghost: "text-rose-500 hover:bg-rose-50",
     },
     indicator: {

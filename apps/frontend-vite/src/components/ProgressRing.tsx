@@ -51,7 +51,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={currentLevel?.color || "#e5e7eb"}
+          stroke={currentLevel?.color || "hsl(var(--muted))"}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={adjustedCircumference}

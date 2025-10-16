@@ -95,7 +95,7 @@ export function ActivityLoggerPopover({
               onClick={() => handleQuantityChange(-1)}
               variant="outline"
               size="icon"
-              className="bg-white"
+              className="bg-card"
             >
               -
             </Button>
@@ -104,7 +104,7 @@ export function ActivityLoggerPopover({
               onClick={() => handleQuantityChange(1)}
               variant="outline"
               size="icon"
-              className="bg-white"
+              className="bg-card"
             >
               +
             </Button>
@@ -115,7 +115,7 @@ export function ActivityLoggerPopover({
                 key={value}
                 onClick={() => handleQuickSelect(value)}
                 variant="secondary"
-                className="bg-white"
+                className="bg-card"
                 size="sm"
               >
                 {value}

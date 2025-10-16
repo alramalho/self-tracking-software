@@ -30,7 +30,6 @@ import React, {
 import toast from "react-hot-toast";
 import BadgeExplainerPopover from "./BadgeExplainerPopover";
 import CommentSection from "./CommentSection";
-import NeonCard from "./NeonGradientCard";
 import { ProgressRing } from "./ProgressRing";
 import { Separator } from "./ui/separator";
 
@@ -329,9 +328,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const cardContent = (
     <div
       className={
-        shouldShowNeonEffect
-          ? ""
-          : "bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden relative"
+        "bg-card backdrop-blur-sm border rounded-2xl relative overflow-hidden"
       }
     >
       {hasImage && (
@@ -349,7 +346,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     <button
                       key={emoji}
                       onClick={() => handleReactionClick(emoji)}
-                      className={`inline-flex border  border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
+                      className={`inline-flex border border-white/20 dark:border-gray-700/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
                         usernames.includes(currentUserUsername || "")
                           ? variants.card.selected.glassBg
                           : variants.card.glassBg
@@ -357,11 +354,11 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     >
                       <span className="text-base">{emoji}</span>
                       {showUserList[emoji] ? (
-                        <span className="text-gray-800 font-medium">
+                        <span className="text-foreground font-medium">
                           {formatUserList(usernames)}
                         </span>
                       ) : (
-                        <span className="text-gray-800 font-medium">
+                        <span className="text-foreground font-medium">
                           {usernames.length}
                         </span>
                       )}
@@ -407,7 +404,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                       }}
                       className={`inline-flex ${variants.card.glassBg} border border-white/20 backdrop-blur-sm items-center space-x-1 rounded-full p-2 transition-all shadow-md`}
                     >
-                      <Smile className={`h-6 w-6 text-gray-800`} />
+                      <Smile className={`h-6 w-6 text-foreground`} />
                     </button>
                   )}
                 </div>
@@ -426,7 +423,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 >
                   <p
                     ref={textRef}
-                    className="text-gray-800 font-medium text-sm relative z-10"
+                    className="text-foreground font-medium text-sm relative z-10"
                   >
                     {activityEntry.description}
                   </p>
@@ -437,7 +434,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 {shouldShowReadMore && (
                   <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="text-gray-500 underline text-xs font-medium mt-1"
+                    className="text-muted-foreground underline text-xs font-medium mt-1"
                   >
                     {isExpanded ? "Show less" : "Read more"}
                   </button>
@@ -448,7 +445,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
           {/* Comment section for posts with images */}
           {hasImage && (
-            <div className="mx-2 mt-2 relative z-10">
+            <div className="mx-2 mt-2 relative z-10 bg-red">
               <CommentSection
                 activityEntryId={activityEntry.id}
                 comments={comments}
@@ -501,13 +498,13 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 </Avatar>
               </ProgressRing>
             </div>
-            <span className="text-5xl h-full text-gray-400">
+            <span className="text-5xl h-full text-muted-foreground">
               {activity.emoji}
             </span>
             <div className="flex flex-col">
               <div className="flex items-center gap-1 flex-row flex-nowrap">
                 <span
-                  className="text-sm text-gray-500 hover:underline cursor-pointer"
+                  className="text-sm text-muted-foreground hover:underline cursor-pointer"
                   onClick={onUsernameClick}
                   style={{ color: accountLevel.currentLevel?.color }}
                 >
@@ -522,7 +519,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               <span className="font-semibold">
                 {activity.title} – {activityEntry.quantity} {activity.measure}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {getFormattedDate(activityEntry.date)}{" "}
                 {activityEntry.timezone && `– 📍 ${activityEntry.timezone}`}
               </span>
@@ -536,7 +533,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
               shouldShowReadMore && !isExpanded && "overflow-hidden"
             } relative`}
           >
-            <p ref={textRef} className="text-gray-700 text-sm">
+            <p ref={textRef} className="text-foreground text-sm">
               {activityEntry.description}
             </p>
             {shouldShowReadMore && !isExpanded && (
@@ -555,7 +552,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
 
         {!hasImage && (
           <>
-            <Separator className="my-2 bg-gray-100" />
+            <Separator className="my-2" />
             <div className="mt-3 w-full relative z-10">
               <CommentSection
                 activityEntryId={activityEntry.id}
@@ -580,14 +577,14 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 onToggleShowAll={setShowAllComments}
                 isAddingComment={isAddingComment}
                 isRemovingComment={isRemovingComment}
-                className="bg-gray-50/30 backdrop-blur-md"
+                className="backdrop-blur-md"
               />
             </div>
           </>
         )}
 
         {hasImage && !hasImageExpired && (
-          <span className="text-xs text-gray-400 mt-2">
+          <span className="text-xs text-muted-foreground mt-2">
             Image expires{" "}
             {activityEntry.imageExpiresAt &&
             differenceInCalendarDays(activityEntry.imageExpiresAt, new Date()) >
@@ -604,28 +601,19 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           {editable && onEditClick && (
             <button
               onClick={onEditClick}
-              className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+              className="absolute top-2 right-2 p-1 bg-card rounded-full shadow-md hover:bg-muted"
             >
-              <Edit className="h-4 w-4 text-gray-500" />
+              <Edit className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
         </div>
       </div>
-    </div>
-  );
 
-  return shouldShowNeonEffect ? (
-    <NeonCard
-      color={"none"}
-      className={`${lifestyleAchieved ? "bg-amber-50/50" : "none"}`}
-    >
-      {" "}
-      {/* dont show neon effect */}
-      {cardContent}
+      {/* Sprout/Rocket badge moved inside the card */}
       {!editable && ( // dont show in profile page
         <div
           onClick={() => setShowBadgeExplainer(true)}
-          className={`space-y-2 mb-4 absolute -bottom-9 -right-9 flex flex-col gap-2 z-0`}
+          className={`space-y-2 absolute -bottom-5 -right-9 flex flex-col gap-2 z-0`}
         >
           {habitAchieved && !lifestyleAchieved && (
             <div className="flex flex-row items-center gap-2">
@@ -639,17 +627,22 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
           )}
         </div>
       )}
-      <BadgeExplainerPopover
-        open={showBadgeExplainer}
-        onClose={() => setShowBadgeExplainer(false)}
-        user={user}
-        planIds={ownerUser?.plans?.map((plan) => plan.id) || []}
-        badgeType={lifestyleAchieved ? "lifestyles" : "habits"}
-        userPlansProgressData={userPlansProgressData}
-      />
-    </NeonCard>
-  ) : (
-    cardContent
+    </div>
+  );
+  return (
+    <div className="relative rounded-2xl">
+      {cardContent}
+      {shouldShowNeonEffect && (
+        <BadgeExplainerPopover
+          open={showBadgeExplainer}
+          onClose={() => setShowBadgeExplainer(false)}
+          user={user}
+          planIds={ownerUser?.plans?.map((plan) => plan.id) || []}
+          badgeType={lifestyleAchieved ? "lifestyles" : "habits"}
+          userPlansProgressData={userPlansProgressData}
+        />
+      )}
+    </div>
   );
 };
 

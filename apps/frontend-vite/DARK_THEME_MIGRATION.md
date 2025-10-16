@@ -28,42 +28,42 @@ Core reusable components used across the app.
 - [x] **components/ui/button.tsx** - Already uses semantic tokens ✓
 - [x] **components/ui/card.tsx** - ✅ MIGRATED (Batch 3)
 - [x] **components/ui/input.tsx** - Already uses semantic tokens ✓
-- [ ] **components/ui/label.tsx** - Check text colors
-- [ ] **components/ui/badge.tsx** - Check background/text colors
+- [x] **components/ui/label.tsx** - Already uses semantic tokens ✓
+- [x] **components/ui/badge.tsx** - Already uses semantic tokens ✓
 - [x] **components/ui/dialog.tsx** - ✅ MIGRATED (Batch 3)
 - [x] **components/ui/select.tsx** - Already uses semantic tokens ✓
-- [ ] **components/ui/switch.tsx** - Check toggle colors
-- [ ] **components/ui/skeleton.tsx** - Check loading state colors
-- [ ] **components/ui/avatar.tsx** - Check background colors
-- [ ] **components/ui/separator.tsx** - Check divider colors
-- [ ] **components/ui/textarea.tsx** - Check input colors
-- [ ] **components/ui/tabs.tsx** - Check tab colors
-- [ ] **components/ui/progress.tsx** - Check progress colors
-- [ ] **components/ui/calendar.tsx** - Check calendar backgrounds
-- [ ] **components/ui/drawer.tsx** - Check drawer backgrounds
+- [x] **components/ui/switch.tsx** - ✅ MIGRATED (Batch 12)
+- [x] **components/ui/skeleton.tsx** - Already uses semantic tokens ✓
+- [x] **components/ui/avatar.tsx** - ✅ MIGRATED (Batch 9)
+- [x] **components/ui/separator.tsx** - Already uses semantic tokens ✓
+- [x] **components/ui/textarea.tsx** - Already uses semantic tokens ✓
+- [x] **components/ui/tabs.tsx** - ✅ MIGRATED (Batch 12)
+- [x] **components/ui/progress.tsx** - Already uses semantic tokens ✓
+- [x] **components/ui/calendar.tsx** - ✅ MIGRATED (Batch 13)
+- [x] **components/ui/drawer.tsx** - ✅ MIGRATED (Batch 12)
 
 ### Layout Components (Priority: High)
 
 - [x] **components/BottomNav.tsx** - ✅ MIGRATED (Batch 1)
-- [ ] **components/AuthLayout.tsx** - Auth page layout
+- [x] **components/AuthLayout.tsx** - ✅ MIGRATED (Batch 13)
 
 ### Activity Components (Priority: High)
 
 - [x] **components/ActivityCard.tsx** - ✅ MIGRATED (Batch 1)
-- [ ] **components/ActivityEditor.tsx** - Activity form
+- [x] **components/ActivityEditor.tsx** - Already uses semantic tokens ✓
 - [x] **components/ActivityGridRenderer.tsx** - ✅ MIGRATED (Batch 7)
-- [ ] **components/ActivityLoggerPopover.tsx** - Activity logging UI
-- [ ] **components/ActivityEntryEditor.tsx** - Entry editing
-- [ ] **components/ActivityEntryPhotoCard.tsx** - Photo card display
+- [x] **components/ActivityLoggerPopover.tsx** - ✅ MIGRATED (Batch 9)
+- [x] **components/ActivityEntryEditor.tsx** - Already uses semantic tokens ✓
+- [x] **components/ActivityEntryPhotoCard.tsx** - ✅ MIGRATED (Batch 11)
 - [x] **components/SmallActivityEntryCard.tsx** - ✅ MIGRATED (Batch 5)
-- [ ] **components/ActivityPhotoUploader.tsx** - Photo upload UI
+- [x] **components/ActivityPhotoUploader.tsx** - ✅ MIGRATED (Batch 12)
 
 ### Plan Components (Priority: High)
 
 - [x] **components/PlansRenderer.tsx** - ✅ MIGRATED (Batch 4)
 - [x] **components/PlanCard.tsx** - ✅ MIGRATED (Batch 3)
 - [x] **components/PlanRendererv2.tsx** - ✅ MIGRATED (Batch 4)
-- [ ] **components/PlanProgressCard.tsx** - Progress visualization
+- [x] **components/PlanProgressCard.tsx** - ✅ MIGRATED (Batch 8)
 - [x] **components/PlanWeekDisplay.tsx** - ✅ MIGRATED (Batch 5)
 - [x] **components/PlanSessionsRenderer.tsx** - ✅ MIGRATED (Batch 6)
 - [x] **components/PlanActivityEntriesRenderer.tsx** - ✅ MIGRATED (Batch 6)
@@ -116,7 +116,7 @@ Core reusable components used across the app.
 - [ ] **components/metrics/TrendHelpPopover.tsx** - Help popover
 - [ ] **components/metrics/CorrelationHelpPopover.tsx** - Correlation help
 - [ ] **components/metrics/CorrelationEntry.tsx** - Correlation display
-- [ ] **components/HomepageMetricsSection.tsx** - Homepage metrics
+- [x] **components/HomepageMetricsSection.tsx** - ✅ MIGRATED (Batch 10)
 
 ### Profile & Settings Components (Priority: Medium)
 
@@ -129,17 +129,17 @@ Core reusable components used across the app.
 
 ### Social & Search Components (Priority: Medium)
 
-- [ ] **components/UserSearch.tsx** - User search
-- [ ] **components/RecommendedUsers.tsx** - User recommendations
-- [ ] **components/CommentSection.tsx** - Comments display
-- [ ] **components/TimelineRenderer.tsx** - Timeline view
+- [x] **components/UserSearch.tsx** - ✅ MIGRATED (Batch 13)
+- [x] **components/RecommendedUsers.tsx** - ✅ MIGRATED (Batch 13)
+- [x] **components/CommentSection.tsx** - ✅ MIGRATED (Batch 11 - Fix)
+- [x] **components/TimelineRenderer.tsx** - ✅ MIGRATED (Batch 10)
 
 ### Notification & Feedback Components (Priority: Low)
 
-- [ ] **components/Notifications.tsx** - Notification list
+- [x] **components/Notifications.tsx** - ✅ MIGRATED (Batch 11)
 - [ ] **components/AINotification.tsx** - AI notifications
 - [ ] **components/FeedbackForm.tsx** - Feedback form
-- [ ] **components/FeedbackPopover.tsx** - Feedback popover
+- [x] **components/FeedbackPopover.tsx** - ✅ MIGRATED (Batch 11)
 - [ ] **components/UpgradePopover.tsx** - Upgrade prompts
 
 ### Coach Components (Priority: Low)
@@ -151,19 +151,19 @@ Core reusable components used across the app.
 
 ### Utility Components (Priority: Low)
 
-- [ ] **components/Divider.tsx** - Dividers
+- [x] **components/Divider.tsx** - ✅ MIGRATED (Batch 8)
 - [x] **components/BaseHeatmapRenderer.tsx** - ✅ MIGRATED (Batch 7)
-- [ ] **components/SteppedBarProgress.tsx** - Progress bar
+- [x] **components/SteppedBarProgress.tsx** - ✅ MIGRATED (Batch 9)
 - [ ] **components/SteppedColorPicker.tsx** - Color picker
 - [ ] **components/ProgressBar.tsx** - Progress bar
-- [ ] **components/ProgressRing.tsx** - Progress ring
+- [x] **components/ProgressRing.tsx** - ✅ MIGRATED (Batch 10)
 - [ ] **components/BadgeCard.tsx** - Badge display
 - [ ] **components/BadgeExplainerPopover.tsx** - Badge help
 - [ ] **components/MedalExplainerPopover.tsx** - Medal help
 - [ ] **components/NeonGradientCard.tsx** - Gradient card
 - [x] **components/AppleLikePopover.tsx** - ✅ MIGRATED (Batch 4)
 - [ ] **components/ConfirmDialogOrPopover.tsx** - Confirm dialog
-- [ ] **components/MilestoneOverview.tsx** - Milestone display
+- [x] **components/MilestoneOverview.tsx** - ✅ MIGRATED (Batch 8)
 - [ ] **components/NumberInput.tsx** - Number input
 - [ ] **components/QuestionChecks.tsx** - Question checks
 - [ ] **components/DynamicUISuggester.tsx** - UI suggestions
@@ -194,9 +194,9 @@ Core reusable components used across the app.
 ## Progress Tracking
 
 **Total Components:** ~120
-**Migrated:** 21 (including 1 new component, 2 already using semantic tokens)
+**Migrated:** 50 (including 1 new component, 14 already using semantic tokens)
 **In Progress:** 0
-**Remaining:** 99
+**Remaining:** 70
 
 ### Batch Progress
 
@@ -240,7 +240,43 @@ Core reusable components used across the app.
     - All getActivityColor() calls now pass isLightMode parameter (10 calls total)
   - [x] ActivityGridRenderer.tsx - Comprehensive migration (bg-gray-100/70 → bg-muted/70, text-gray-{500,600,800} → semantic tokens, bg-white → bg-card)
 
-- **Batch 8:** Not started
+- **Batch 8:** ✅ COMPLETED
+  - [x] MilestoneOverview.tsx - Simple stub component (bg-gray-50 → bg-muted, text-gray-500 → text-muted-foreground)
+  - [x] Divider.tsx - Replaced manual dark: classes with semantic tokens (bg-gray-300 dark:bg-gray-700 → bg-border, text-gray-500 dark:text-gray-400 → text-muted-foreground)
+  - [x] PlanProgressCard.tsx - Comprehensive migration of large component (text-gray-{400,500,800} → semantic tokens, bg-white/60 ring-gray-200 → bg-card/60 ring-border, status messages, week labels, lifestyle celebration text)
+
+- **Batch 9:** ✅ COMPLETED
+  - [x] ui/avatar.tsx - Migrated AvatarFallback (bg-gray-50 → bg-muted, border-gray-200 → border-border)
+  - [x] ActivityLoggerPopover.tsx - Migrated all button backgrounds (bg-white → bg-card, 3 occurrences)
+  - [x] SteppedBarProgress.tsx - Migrated progress bars (bg-gray-200 → bg-muted, text-gray-700 → text-foreground)
+  - [x] Verified 7 components already using semantic tokens: ui/label.tsx, ui/badge.tsx, ui/separator.tsx, ui/skeleton.tsx, ui/textarea.tsx, ActivityEditor.tsx
+
+- **Batch 10:** ✅ COMPLETED (Homepage Components)
+  - [x] TimelineRenderer.tsx - Migrated timeline component (bg-white/50 → bg-card/50, text-gray-{400,500,800} → semantic tokens)
+  - [x] HomepageMetricsSection.tsx - Comprehensive migration (bg-white/60 ring-gray-200 → bg-card/60 ring-border, text-gray-{400,500,600,900} → semantic tokens, hover:bg-gray-100 → hover:bg-muted/50, border-gray-100 → border-border)
+  - [x] ProgressRing.tsx - Migrated fallback stroke color (#e5e7eb → hsl(var(--muted)))
+
+- **Batch 11:** ✅ COMPLETED (Social & Feedback Components)
+  - [x] Notifications.tsx - Comprehensive migration (bg-white border-gray-200 → bg-card border-border, text-gray-{500,600,700} → semantic tokens, bg-gray-100 → bg-muted, hover:bg-gray-200 → hover:bg-muted/80)
+  - [x] FeedbackPopover.tsx - Migrated form inputs and borders (border-gray-{200,300} → border-border, text-gray-{500,600,900} → semantic tokens, bg-white/bg-gray-50 → bg-card/bg-muted, hover:border-gray-400 → hover:border-muted-foreground, focus:ring-gray-200 → focus:ring-ring)
+  - [x] ActivityEntryPhotoCard.tsx - Large component migration (bg-white/50 → bg-card/50, text-gray-{400,500,700,800} → semantic tokens, bg-gray-{50,100} → bg-muted, hover:bg-gray-100 → hover:bg-muted, Separator bg-gray-100 removed to use default)
+  - [x] CommentSection.tsx - **FIX** after user feedback (text-gray-{400,500} → text-muted-foreground, added text-foreground to username/comment text, placeholder:text-muted-foreground for input, hover:text-gray-600 → hover:text-foreground for delete button)
+
+- **Batch 12:** ✅ COMPLETED (UI Components & Activity Photo Uploader)
+  - [x] ui/switch.tsx - Migrated switch thumb (bg-white → bg-background)
+  - [x] ui/tabs.tsx - Migrated tabs (border-gray-200 → border-border, text-gray-500/700 → text-muted-foreground/foreground, data-[state=active]:text-black → data-[state=active]:text-foreground, data-[state=active]:border-black → data-[state=active]:border-foreground)
+  - [x] ui/progress.tsx - Already uses semantic tokens (bg-secondary) ✓
+  - [x] ui/drawer.tsx - Migrated drawer (bg-gray-50 → bg-muted, bg-gray-300 → bg-border for drag handle)
+  - [x] ActivityPhotoUploader.tsx - Migrated info text (text-gray-500 → text-muted-foreground for Info icon and text)
+
+- **Batch 13:** ✅ COMPLETED (Layout, UI Calendar, Social Components - 5 total with 1 large)
+  - [x] ui/calendar.tsx - Migrated calendar background (bg-white → bg-card)
+  - [x] AuthLayout.tsx - Migrated auth layout (bg-gray-50/80 → bg-muted/80, text-gray-900 → text-foreground, text-gray-600 → text-muted-foreground)
+  - [x] ActivityEntryEditor.tsx - Already uses semantic tokens ✓
+  - [x] UserSearch.tsx - Migrated search UI (bg-white → bg-card, text-gray-500 → text-muted-foreground, hover:bg-gray-100 → hover:bg-muted)
+  - [x] RecommendedUsers.tsx - **LARGE** (counts as 2) - Comprehensive migration of user recommendations (text-gray-{600,700,400,500,900} → semantic tokens, bg-gray-{100,200,300} → bg-muted/bg-border, border-gray-{200,300} → border-border, hover:bg-gray-{100,200} → hover:bg-muted/hover:bg-muted/80, all sort buttons, card backgrounds, avatars, match scores, progress bars)
+
+- **Batch 14:** Not started
 - *(Continue adding batches as we progress)*
 
 ---
