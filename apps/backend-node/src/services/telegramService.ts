@@ -51,7 +51,7 @@ export class TelegramService {
       return;
     }
 
-    await this.sendToAllChats(message);
+    await this.sendToAllChats(message, "Markdown");
   }
 
   async sendMessageWithPhotos(

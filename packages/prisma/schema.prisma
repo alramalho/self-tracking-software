@@ -55,7 +55,7 @@ model User {
   dailyCheckinTime DailyCheckinTime?
 
   // Stripe settings
-  stripeCustomerId         String?
+  stripeCustomerId         String?            @unique
   stripeSubscriptionId     String?
   stripeSubscriptionStatus String?
 
