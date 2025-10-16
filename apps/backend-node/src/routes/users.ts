@@ -2,6 +2,7 @@ import recommendationsService from "@/services/recommendationsService";
 import { createClient } from "@supabase/supabase-js";
 import { Request, Response, Router } from "express";
 import multer from "multer";
+import Stripe from "stripe";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { linearService } from "../services/linearService";
 import { notificationService } from "../services/notificationService";
@@ -22,6 +23,11 @@ import { prisma } from "../utils/prisma";
 
 export const usersRouter: Router = Router();
 const telegramService = new TelegramService();
+
+// Initialize Stripe client
+const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
+  apiVersion: "2025-07-30.basil",
+});
 
 // Initialize Supabase Admin client for user deletion
 const supabaseAdmin = createClient(
@@ -128,6 +134,26 @@ usersRouter.delete(
     try {
       const userId = req.user!.id;
       const supabaseAuthId = req.user!.supabaseAuthId;
+      const stripeSubscriptionId = req.user!.stripeSubscriptionId;
+      const userEmail = req.user!.email;
+      const username = req.user!.username || "unknown";
+
+      // Cancel Stripe subscription if exists
+      let stripeCancellationStatus = "No active subscription";
+      if (stripeSubscriptionId) {
+        try {
+          await stripe.subscriptions.cancel(stripeSubscriptionId);
+          stripeCancellationStatus = "✅ Successfully cancelled";
+          logger.info(
+            `Canceled Stripe subscription ${stripeSubscriptionId} for user ${userId}`
+          );
+        } catch (stripeError) {
+          stripeCancellationStatus = `❌ Failed: ${stripeError instanceof Error ? stripeError.message : "Unknown error"}`;
+          logger.error("Failed to cancel Stripe subscription:", stripeError);
+          // Continue with deletion even if Stripe cancellation fails
+          // User can contact support if they're still being charged
+        }
+      }
 
       // Clean up many-to-many relationships that don't cascade automatically
       // Remove user from plan groups
@@ -162,6 +188,15 @@ usersRouter.delete(
           // Continue even if auth deletion fails - user data is already deleted from DB
         }
       }
+
+      // Send Telegram notification
+      telegramService.sendMessage(
+        `😵🗑️ *User Account Deleted*\n\n` +
+          `User: ${username} (${userEmail})\n` +
+          `User ID: ${userId}\n` +
+          `Stripe Subscription: ${stripeCancellationStatus}\n` +
+          `UTC Time: ${new Date().toISOString()}`
+      );
 
       logger.info(`User account permanently deleted: ${userId}`);
       res.json({ message: "Account deleted successfully" });
