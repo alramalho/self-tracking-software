@@ -44,6 +44,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { currentUser, updateUser } = useCurrentUser();
+  const userThemeMode = useMemo(() => {
+    return currentUser?.themeMode?.toLowerCase() || "light";
+  }, [currentUser?.themeMode]);
   const userTheme =
     currentUser?.themeBaseColor?.toLowerCase() as LowerThemeColor;
 
@@ -88,6 +91,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value = {
     currentTheme: userTheme,
+    isLightMode: userThemeMode === "light",
     effectiveTheme,
     updateTheme: async (color: LowerThemeColor) => {
       await updateUser({

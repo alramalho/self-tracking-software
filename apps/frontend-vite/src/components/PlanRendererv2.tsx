@@ -306,7 +306,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <span className="text-4xl">{selectedPlan.emoji}</span>
         <div className="flex flex-col">
           <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {selectedPlan.outlineType === "TIMES_PER_WEEK"
               ? `${selectedPlan.timesPerWeek} times per week`
               : `custom plan`}
@@ -382,7 +382,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             <div
               key={actualWeekIndex}
               ref={isCurrentWeek ? currentWeekRef : null}
-              className="flex flex-col gap-2 p-3 rounded-2xl bg-white p-2 border border-gray-200"
+              className="flex flex-col gap-2 p-3 rounded-2xl bg-card p-2 border border-border"
             >
               <PlanWeekDisplay
                 title={
@@ -394,7 +394,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                         ? "Next week"
                         : `Week ${actualWeekIndex + 1} / ${totalWeeks}`}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                       {format(week.startDate, "d")}-
                       {format(endOfWeek(week.startDate), "d MMM")}
                     </span>
@@ -412,14 +412,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <span className="text-4xl">🎯</span>
         <h2 className="text-xl font-semibold mt-2">Full Activities Overview</h2>
       </div>
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 mt-4">
+      <div className="bg-card border border-border rounded-2xl p-4 mt-4">
         <div className="flex flex-row justify-between items-center my-4">
-          <span className="text-sm text-gray-500">Time range</span>
+          <span className="text-sm text-muted-foreground">Time range</span>
           <Select
             value={timeRange}
             onValueChange={(value: "recent" | "all") => setTimeRange(value)}
           >
-            <div className="bg-white font-semibold text-gray-800">
+            <div className="bg-card font-semibold text-foreground">
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select time range" />
               </SelectTrigger>
@@ -445,7 +445,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-gfrom './EmblaCarouselSelecteay-800">This week</h2>
 
-              <span className="text-sm text-gray-500 ">
+              <span className="text-sm text-muted-foreground ">
                 Completed activities are calculated on a per week count basis.
               </span>
             </div>
@@ -492,13 +492,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         <div className="mt-4">
           {selectedPlan.outlineType === "SPECIFIC" && (
             <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
-              <span className="text-xs text-gray-500">Completed</span>
+              <span className="text-xs text-muted-foreground">Completed</span>
               <Switch
                 data-testid="display-future-activities-switch"
                 checked={displayFutureActivities}
                 onCheckedChange={setDisplayFutureActivities}
               />
-              <span className="text-xs text-gray-500">Planned</span>
+              <span className="text-xs text-muted-foreground">Planned</span>
             </div>
           )}
           {displayFutureActivities ? (
@@ -573,7 +573,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
       {selectedPlan.planGroup?.members &&
         selectedPlan.planGroup.members.length >= 2 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
+          <div className="bg-card border border-border rounded-lg p-4 mt-4">
             <div className="flex flex-row items-center justify-between mb-2">
               <h2 className="text-lg font-semibold">People in this plan</h2>
               <Button
@@ -602,7 +602,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                         <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
                       </Avatar>
                     </Link>
-                    <div className="text-lg text-gray-800">
+                    <div className="text-lg text-foreground">
                       {currentUser?.username === user.username
                         ? "You"
                         : user.name}
@@ -617,9 +617,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       <Link to="/add">
         <Button
           variant="outline"
-          className="bg-gray-50 mt-4 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+          className="bg-muted/50 mt-4 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-border text-muted-foreground"
         >
-          <PlusSquare className="h-8 w-8 mb-2 text-gray-400" />
+          <PlusSquare className="h-8 w-8 mb-2 text-muted-foreground/70" />
           <span>Log Activity</span>
         </Button>
       </Link>
@@ -631,7 +631,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
       >
         <div className="flex flex-col gap-4 p-4">
           <h2 className="text-xl font-semibold text-center">Leave Plan Group?</h2>
-          <p className="text-sm text-gray-600 text-center">
+          <p className="text-sm text-muted-foreground text-center">
             You'll leave this group but your plan and activities will remain intact.
             You can continue working on your plan independently.
           </p>

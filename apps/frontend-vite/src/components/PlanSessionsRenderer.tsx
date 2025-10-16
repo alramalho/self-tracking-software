@@ -13,8 +13,8 @@ const PlanSessionsRenderer: React.FC<PlanSessionsRendererProps> = ({
   startDate,
 }) => {
   return (
-    <div className="p-4 border rounded-lg bg-gray-50">
-      <p className="text-sm text-gray-500">Plan Sessions Renderer (placeholder)</p>
+    <div className="p-4 border rounded-lg bg-muted">
+      <p className="text-sm text-muted-foreground">Plan Sessions Renderer (placeholder)</p>
       <p className="text-sm">Plan: {plan?.goal}</p>
       <p className="text-sm">Activities: {activities.length}</p>
     </div>

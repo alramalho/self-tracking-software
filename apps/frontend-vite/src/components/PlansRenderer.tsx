@@ -196,9 +196,9 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
         <Link to="/create-new-plan">
           <Button
             variant="outline"
-            className="bg-gray-50 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+            className="bg-muted/50 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-border text-muted-foreground"
           >
-            <PlusSquare className="h-8 w-8 mb-2 text-gray-400" />
+            <PlusSquare className="h-8 w-8 mb-2 text-muted-foreground/70" />
             <span>Create new Plan</span>
           </Button>
         </Link>
@@ -287,9 +287,9 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
           <Link to="/create-new-plan">
             <Button
               variant="outline"
-              className="bg-gray-50 w-full h-full min-h-[120px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-gray-500"
+              className="bg-muted/50 w-full h-full min-h-[120px] flex flex-col items-center justify-center border-2 border-dashed border-border text-muted-foreground"
             >
-              <Plus className="h-6 w-6 mb-1 text-gray-400" />
+              <Plus className="h-6 w-6 mb-1 text-muted-foreground/70" />
               <span className="text-sm">Create New Plan</span>
             </Button>
           </Link>

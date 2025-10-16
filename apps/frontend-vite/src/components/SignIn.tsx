@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import FeedbackPopover from "./FeedbackPopover";
@@ -17,10 +18,12 @@ interface SignInProps {
 
 export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
   const { signInWithGoogle, signInWithApple } = useAuth();
+  const { isLightMode } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHelpForm, setShowHelpForm] = useState(false);
-  const appleSignInSupported = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios"; // web apple login is proving harduous, and will be deprecated anyway soon
+  const appleSignInSupported =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios"; // web apple login is proving harduous, and will be deprecated anyway soon
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -112,7 +115,15 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
         )}
       </CardContent>
       <div className="p-4 border-t border-gray-200 flex justify-center items-center gap-2">
-        <img src="/icons/support-agent.svg" alt="Support" className="w-6 h-6" />
+        <img
+          src={
+            isLightMode
+              ? "/icons/support-agent.svg"
+              : "/icons/support-agent-white.svg"
+          }
+          alt="Support"
+          className="w-6 h-6 dark:fill-white"
+        />
         <p className="text-xs text-gray-500">
           Having trouble? Click{" "}
           <a

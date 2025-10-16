@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   CreditCard,
   LogOut,
+  Moon,
   Paintbrush,
   Pencil,
   Share2,
@@ -32,6 +33,7 @@ import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
 import { Switch } from "../ui/switch";
 import { TextAreaWithVoice } from "../ui/text-area-with-voice";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
+import ThemeModeSwitcher from "./ThemeModeSwitcher";
 import {
   EditAgePopup,
   EditFullNamePopup,
@@ -54,6 +56,7 @@ export type ActiveView =
   | "privacy"
   | "ai"
   | "color"
+  | "themeMode"
   | "editProfile";
 
 // Define view depths for animation direction
@@ -65,6 +68,7 @@ const viewLevels: Record<ActiveView, number> = {
   privacy: 1,
   ai: 1,
   color: 1,
+  themeMode: 1,
 };
 
 const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
@@ -210,7 +214,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <Button
                       variant="ghost"
                       onClick={() => navigateTo("main")}
-                      className="mb-4 px-0 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                     >
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
@@ -220,17 +224,17 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
 
                     <div className="space-y-4">
                       {/* Looking for AP */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Looking for Accountability Partner
                           </p>
                           <p
                             className={twMerge(
-                              "text-xs text-gray-500",
+                              "text-xs text-muted-foreground",
                               currentUser?.lookingForAp
                                 ? "text-green-600"
-                                : "text-gray-500"
+                                : "text-muted-foreground"
                             )}
                           >
                             {currentUser?.lookingForAp ? "Yes" : "No"}
@@ -239,7 +243,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className={"text-gray-500"}
+                          className={"text-muted-foreground"}
                           onClick={() => setShowEditLookingForAp(true)}
                         >
                           <Pencil size={16} />
@@ -247,12 +251,12 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </div>
 
                       {/* Age */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Age
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {currentUser?.age
                               ? `${currentUser.age} years old`
                               : "No age set"}
@@ -261,7 +265,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-muted-foreground hover:text-foreground"
                           onClick={() => setShowEditAge(true)}
                         >
                           <Pencil size={16} />
@@ -269,19 +273,19 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </div>
 
                       {/* Full Name */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Full Name
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {currentUser?.name || "No name set"}
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-muted-foreground hover:text-foreground"
                           onClick={() => setShowEditFullName(true)}
                         >
                           <Pencil size={16} />
@@ -289,37 +293,37 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </div>
 
                       {/* Username (Read Only) */}
-                      <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Username
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {currentUser?.username || "No username set"}
                           </p>
                         </div>
-                        <div className="text-xs text-gray-400 px-2">
+                        <div className="text-xs text-muted-foreground px-2">
                           Read only
                         </div>
                       </div>
 
                       {/* Email (Read Only) */}
-                      <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Email
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {currentUser?.email || "No email"}
                           </p>
                         </div>
-                        <div className="text-xs text-gray-400 px-2">
+                        <div className="text-xs text-muted-foreground px-2">
                           Read only
                         </div>
                       </div>
 
                       {/* Profile Picture */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1 flex items-center gap-3">
                           <img
                             src={currentUser?.picture || "/default-avatar.png"}
@@ -329,10 +333,10 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                             className="w-10 h-10 rounded-full object-cover"
                           />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-foreground">
                               Profile Picture
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               Click to update your photo
                             </p>
                           </div>
@@ -340,7 +344,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-muted-foreground hover:text-foreground"
                           onClick={() => setShowEditProfilePicture(true)}
                         >
                           <Pencil size={16} />
@@ -348,19 +352,19 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </div>
 
                       {/* Invite Friends */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Invite Friends
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Share your profile with friends
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-muted-foreground hover:text-foreground"
                           onClick={() =>
                             shareOrCopyLink(
                               `https://app.tracking.so/join/${currentUser?.username}`
@@ -372,19 +376,19 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </div>
 
                       {/* Share Profile Link */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Share Profile Link
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Copy link to share your profile
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-muted-foreground hover:text-foreground"
                           onClick={() =>
                             shareOrCopyLink(
                               `https://app.tracking.so/profile/${currentUser?.username}`
@@ -424,7 +428,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <Button
                       variant="ghost"
                       onClick={() => navigateTo("userSummary")} // Use navigateTo
-                      className="mb-4 px-0 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                     >
                       <ChevronLeft size={18} /> Back to User Settings
                     </Button>
@@ -468,11 +472,27 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                     <Button
                       variant="ghost"
                       onClick={() => navigateTo("main")}
-                      className="mb-4 px-0 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                     >
                       <ChevronLeft size={18} /> Back to Settings
                     </Button>
                     <ColorPalettePickerPopup
+                      open={true} // Keep it open when this view is active
+                      onClose={() => navigateTo("main")} // Use navigateTo to navigate back
+                    />
+                  </div>
+                );
+              case "themeMode":
+                return (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigateTo("main")}
+                      className="mb-4 px-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronLeft size={18} /> Back to Settings
+                    </Button>
+                    <ThemeModeSwitcher
                       open={true} // Keep it open when this view is active
                       onClose={() => navigateTo("main")} // Use navigateTo to navigate back
                     />
@@ -487,7 +507,7 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       <span
                         className={twMerge(
                           "text-xl font-cursive flex items-center gap-2",
-                          isUserFree ? "text-gray-500" : themeVariants.text
+                          isUserFree ? "text-muted-foreground" : themeVariants.text
                         )}
                       >
                         On {capitalize(userPlanType || "FREE")} Plan
@@ -495,26 +515,26 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                           <SquareArrowUp
                             onClick={() => setShowUpgradePopover(true)}
                             size={20}
-                            className="text-gray-800 cursor-pointer"
+                            className="text-foreground cursor-pointer"
                           />
                         )}
                       </span>
                     </div>
                     <div className="flex flex-col gap-3">
                       {/* Push Notifications */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             Push Notifications
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {isPushGranted
                               ? "Notifications enabled"
                               : "Enable notifications for updates"}
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Bell size={20} className="text-gray-500" />
+                          <Bell size={20} className="text-muted-foreground" />
                           <Switch
                             checked={isPushGranted}
                             onCheckedChange={handleNotificationChange}
@@ -553,6 +573,14 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       >
                         <Paintbrush size={28} />
                         <span>Color Palette</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-start px-0 gap-2"
+                        onClick={() => navigateTo("themeMode")} // Navigate to theme mode view
+                      >
+                        <Moon size={28} />
+                        <span>Theme Mode</span>
                       </Button>
                       <Button
                         variant="ghost"

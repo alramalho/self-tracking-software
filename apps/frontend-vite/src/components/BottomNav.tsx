@@ -63,10 +63,10 @@ const BottomNav = () => {
   return (
     <>
       <nav className={cn(
-        "box-border backdrop-blur-xl z-[50] m-4 rounded-3xl border border-white/30",
-        isDesktop 
-          ? "fixed left-0 top-0 bottom-0 w-64 py-6 border-l border-gray-200 border-2 bg-white"
-          : "fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-1 bg-transparent"
+        "box-border backdrop-blur-xl z-[50] m-4 rounded-3xl border border-white/30 dark:border-gray-600/40",
+        isDesktop
+          ? "fixed left-0 top-0 bottom-0 w-64 py-6 border-l border-border border-2 bg-card"
+          : "fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-1 bg-transparent dark:bg-gray-200/10"
       )}>
         <div className={cn(
           "max-w-screen-xl mx-auto",
@@ -81,14 +81,14 @@ const BottomNav = () => {
             className={cn(
               "transition-all duration-200 relative",
               isDesktop
-                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/")
                 ? cn(
                     activeThemeClass,
-                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                    isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
                   )
-                : "text-gray-500 hover:text-gray-700"
+                : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => {
               if (pathname !== "/") {
@@ -129,14 +129,14 @@ const BottomNav = () => {
             className={cn(
               "transition-all duration-200",
               isDesktop
-                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/plans")
                 ? cn(
                     activeThemeClass,
-                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                    isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
                   )
-                : "text-gray-500 hover:text-gray-700"
+                : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => {
               if (pathname !== "/plans") {
@@ -169,14 +169,14 @@ const BottomNav = () => {
             className={cn(
               "transition-all duration-200 relative",
               isDesktop
-                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/add")
                 ? cn(
                     activeThemeClass,
-                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                    isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
                   )
-                : "text-gray-500 hover:text-gray-700"
+                : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => {
               if (pathname !== "/add") {
@@ -221,14 +221,14 @@ const BottomNav = () => {
             className={cn(
               "relative transition-all duration-200",
               isDesktop
-                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/search")
                 ? cn(
                     activeThemeClass,
-                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                    isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
                   )
-                : "text-gray-500 hover:text-gray-700"
+                : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => {
               if (!pathname.startsWith("/search")) {
@@ -261,14 +261,14 @@ const BottomNav = () => {
             className={cn(
               "relative transition-all duration-200",
               isDesktop
-                ? "flex items-center p-3 rounded-lg hover:bg-gray-100/50"
+                ? "flex items-center p-3 rounded-lg hover:bg-muted/50"
                 : "flex flex-col justify-center items-center p-2",
               isActiveRoute("/profile")
                 ? cn(
                     activeThemeClass,
-                    isDesktop ? "bg-gray-100/80" : "scale-110 -translate-y-0.5"
+                    isDesktop ? "bg-muted/80" : "scale-110 -translate-y-0.5"
                   )
-                : "text-gray-500 hover:text-gray-700"
+                : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => {
               if (!pathname.startsWith(`/profile/${userUsername}`)) {

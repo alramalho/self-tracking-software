@@ -1,5 +1,6 @@
 import { useApiWithAuth } from "@/api";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { useCoachMessages } from "@/hooks/useCoachMessages";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
+  const { isLightMode } = useTheme();
   const api = useApiWithAuth();
   const {
     upsertPlan,
@@ -169,17 +171,17 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
         {(hasCoachNotes || hasCoachMessage) && (
           <>
             <Avatar>
-              <AvatarImage src="https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" />
+              <AvatarImage src={isLightMode ? "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png" : "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvs_logo_white_transparent.png"} />
               <AvatarFallback>CN</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1 flex-1">
-              <span className={`text-sm italic text-gray-600`}>
+              <span className={`text-sm italic text-muted-foreground`}>
                 {hasCoachMessage
                   ? lastCoachMessage?.message
                   : selectedPlan.coachNotes}
               </span>
               <div className="flex flex-row items-center justify-between gap-2 mt-1">
-                <span className="text-[10px] italic text-gray-500">
+                <span className="text-[10px] italic text-muted-foreground/80">
                   Coach Oli,{" "}
                   {hasCoachMessage && lastCoachMessage
                     ? formatDistance(lastCoachMessage.createdAt, new Date(), {
@@ -213,10 +215,10 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                   </Avatar>
                 )}
                 <div className="text-start">
-                  <span className="text-lg font-semibold text-gray-800 block">
+                  <span className="text-lg font-semibold text-foreground block">
                     New Schedule Suggestion
                   </span>
-                  <span className="text-xs text-gray-400 font-medium">
+                  <span className="text-xs text-muted-foreground/70 font-medium">
                     UPDATED SESSIONS
                   </span>
                 </div>
@@ -263,7 +265,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
               <div className="flex flex-row gap-3 justify-center">
                 <Button
                   variant="outline"
-                  className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
+                  className="flex-1 h-10 text-sm font-medium border-border text-muted-foreground"
                   disabled={
                     loadingStates.decliningSessions ||
                     loadingStates.acceptingSessions
@@ -307,18 +309,18 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
             <div className="flex flex-col justify-start gap-4 w-full mt-3">
               <div className="flex flex-row justify-center items-center gap-4 md:gap-8">
                 <div className="flex flex-col items-center text-center flex-shrink-0">
-                  <span className="text-4xl md:text-5xl font-light text-gray-800">
+                  <span className="text-4xl md:text-5xl font-light text-foreground">
                     {selectedPlan.timesPerWeek}
                   </span>
-                  <span className="text-xs text-gray-400 font-medium mt-1">
+                  <span className="text-xs text-muted-foreground/70 font-medium mt-1">
                     CURRENT
                   </span>
                 </div>
 
                 <div className="flex items-center flex-shrink-0">
-                  <div className="w-8 md:w-16 h-px bg-gray-300"></div>
-                  <MoveRight className="h-5 w-5 md:h-6 md:w-6 text-gray-400 mx-2" />
-                  <div className="w-8 md:w-16 h-px bg-gray-300"></div>
+                  <div className="w-8 md:w-16 h-px bg-border"></div>
+                  <MoveRight className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground/70 mx-2" />
+                  <div className="w-8 md:w-16 h-px bg-border"></div>
                 </div>
 
                 <div className="flex flex-col items-center text-center flex-shrink-0">
@@ -327,7 +329,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                   >
                     {selectedPlan.coachSuggestedTimesPerWeek}
                   </span>
-                  <span className="text-xs text-gray-400 font-medium mt-1">
+                  <span className="text-xs text-muted-foreground/70 font-medium mt-1">
                     SUGGESTED
                   </span>
                 </div>
@@ -337,7 +339,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                 <div className="flex flex-row gap-3 justify-center">
                   <Button
                     variant="outline"
-                    className="flex-1 h-10 text-sm font-medium border-gray-200 text-gray-600"
+                    className="flex-1 h-10 text-sm font-medium border-border text-muted-foreground"
                     disabled={
                       loadingStates.decliningTimesPerWeek ||
                       loadingStates.acceptingTimesPerWeek

@@ -45,6 +45,7 @@ model User {
 
   unactivatedEmailSentAt          DateTime?
   themeBaseColor                  ThemeColor         @default(BLUE)
+  themeMode                       ThemeMode          @default(LIGHT)
   defaultActivityVisibility       ActivityVisibility @default(PUBLIC)
   recommendationsOutdated         Boolean            @default(false)
   recommendationsLastCalculatedAt DateTime?
@@ -496,6 +497,14 @@ enum ThemeColor {
   AMBER
   EMERALD
   ROSE
+
+  @@schema("public")
+}
+
+enum ThemeMode {
+  LIGHT
+  DARK
+  AUTO
 
   @@schema("public")
 }
