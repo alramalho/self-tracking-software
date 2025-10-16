@@ -20,23 +20,144 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
 const STRIPE_PLUS_PRODUCT_ID = process.env.STRIPE_PLUS_PRODUCT_ID!;
 const telegramService = new TelegramService();
 
-// Helper function to determine user plan from product ID
-function getUserPlan(productId: string, event: any): string {
+// Helper: Determine user plan from product ID
+function getUserPlanFromProduct(productId: string): "PLUS" | "FREE" {
   if (productId === STRIPE_PLUS_PRODUCT_ID) {
     return "PLUS";
-  } else {
-    logger.error(`Unknown product id ${productId}`);
-    logger.error(`Full event:`, event);
-
-    // Send Telegram notification
-    telegramService.sendMessage(
-      `🚨 **Unknown product id ${productId}**\n\n` +
-        `**UTC Time:** ${new Date().toISOString()}\n` +
-        `**Check logs for full event**`
-    );
-
-    return "FREE";
   }
+
+  logger.error(`Unknown product id: ${productId}`);
+  telegramService.sendMessage(
+    `🚨 Unknown product id ${productId}\n\n` +
+      `UTC Time: ${new Date().toISOString()}\n` +
+      `Check logs for full event`
+  );
+
+  return "FREE";
+}
+
+// Helper: Find user by Stripe customer ID
+async function findUserByCustomerId(customerId: string) {
+  const user = await prisma.user.findUnique({
+    where: { stripeCustomerId: customerId },
+  });
+
+  if (!user) {
+    logger.error(`User not found for Stripe customer ID: ${customerId}`);
+    telegramService.sendMessage(
+      `🚨 **User not found for customer ID ${customerId}**\n\n` +
+        `UTC Time: ${new Date().toISOString()}`
+    );
+  }
+
+  return user;
+}
+
+// Helper: Update user subscription data
+async function updateUserSubscription(
+  customerId: string,
+  subscription: Stripe.Subscription,
+  planType: "PLUS" | "FREE"
+) {
+  const user = await findUserByCustomerId(customerId);
+  if (!user) return null;
+
+  return await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      planType,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscription.id,
+      stripeSubscriptionStatus: subscription.status,
+    },
+  });
+}
+
+// Handler: Subscription events (user data updates)
+async function handleSubscriptionEvent(
+  event: Stripe.Event,
+  subscription: Stripe.Subscription
+): Promise<void> {
+  const customer = subscription.customer as Stripe.Customer;
+  const productId = subscription.items.data[0]?.price?.product as string;
+
+  // Determine plan type based on subscription status and event
+  let planType: "PLUS" | "FREE";
+  if (
+    event.type === "customer.subscription.deleted" ||
+    event.type === "customer.subscription.paused"
+  ) {
+    planType = "FREE";
+  } else {
+    planType = getUserPlanFromProduct(productId);
+  }
+
+  // Update user subscription data
+  const updatedUser = await updateUserSubscription(
+    customer.id,
+    subscription,
+    planType
+  );
+
+  if (!updatedUser) {
+    throw new Error(`User not found for customer ${customer.id}`);
+  }
+
+  logger.info(
+    `Subscription ${event.type} processed for user ${updatedUser.email}: plan=${planType}, status=${subscription.status}`
+  );
+
+  // Handle new subscription creation
+  if (event.type === "customer.subscription.created") {
+    try {
+      await loopsService.sendPlusUpgradeEvent(
+        updatedUser.email,
+        updatedUser.id
+      );
+      logger.info(`Sent plus_upgrade event to Loops for ${updatedUser.email}`);
+    } catch (loopsError) {
+      logger.error("Failed to send Loops event:", loopsError);
+    }
+
+    telegramService.sendMessage(
+      `🎉 *New PLUS subscription*!\n\n` +
+        `User: ${updatedUser.email}\n` +
+        `Plan: ${planType}\n` +
+        `UTC Time: ${new Date().toISOString()}`
+    );
+  }
+}
+
+// Handler: Payment events (notifications only)
+async function handlePaymentIntent(
+  paymentIntent: Stripe.PaymentIntent
+): Promise<void> {
+  if (!paymentIntent.customer) {
+    logger.warn("Payment intent has no customer attached");
+    return;
+  }
+
+  const user = await findUserByCustomerId(paymentIntent.customer as string);
+  if (!user) {
+    logger.warn(
+      `Payment succeeded for unknown customer: ${paymentIntent.customer}`
+    );
+    return;
+  }
+
+  const amount = paymentIntent.amount / 100;
+  const currency = paymentIntent.currency.toUpperCase();
+
+  telegramService.sendMessage(
+    `🎉💰 Payment received!\n\n` +
+      `User: ${user.email}\n` +
+      `Amount: ${amount} ${currency}\n` +
+      `UTC Time: ${new Date().toISOString()}`
+  );
+
+  logger.info(
+    `Payment intent succeeded: ${user.email} paid ${amount} ${currency}`
+  );
 }
 
 // Stripe webhook endpoint (requires raw body middleware)
@@ -44,16 +165,11 @@ router.post(
   "/webhook",
   async (req: Request, res: Response): Promise<Response | void> => {
     const sig = req.headers["stripe-signature"] as string;
-
-    // For webhook verification, we need the raw body as a Buffer
-    // This assumes raw body middleware is set up for this route
     const payload = req.body;
 
+    // Verify webhook signature
     let event: Stripe.Event;
-
     try {
-      console.log({ payload, sig, STRIPE_WEBHOOK_SECRET });
-      // Verify webhook signature
       if (Buffer.isBuffer(payload)) {
         event = stripe.webhooks.constructEvent(
           payload,
@@ -61,7 +177,6 @@ router.post(
           STRIPE_WEBHOOK_SECRET
         );
       } else {
-        // Fallback for string
         event = stripe.webhooks.constructEvent(
           payload.toString(),
           sig,
@@ -73,190 +188,52 @@ router.post(
       return res.status(400).json({ error: `Webhook Error: ${err.message}` });
     }
 
+    // Process event
     try {
       logger.info(`Processing Stripe event: ${event.type}`);
 
-      let subscription: Stripe.Subscription;
-
-      // Handle different event types
       switch (event.type) {
-        case "customer.subscription.deleted":
+        // Subscription events - update user data
+        case "customer.subscription.created":
         case "customer.subscription.updated":
+        case "customer.subscription.deleted":
         case "customer.subscription.paused":
         case "customer.subscription.resumed":
-        case "customer.subscription.trial_will_end":
-        case "customer.subscription.created":
-          subscription = await stripe.subscriptions.retrieve(
+        case "customer.subscription.trial_will_end": {
+          const subscription = await stripe.subscriptions.retrieve(
             (event.data.object as Stripe.Subscription).id,
             { expand: ["customer"] }
           );
-
-          if (
-            event.type === "customer.subscription.deleted" ||
-            event.type === "customer.subscription.paused"
-          ) {
-            const customer = subscription.customer as Stripe.Customer;
-            const userEmail = customer.email;
-
-            if (!userEmail) {
-              logger.error(
-                "No user email found in customer data when downgrading user"
-              );
-              return res.status(400).json({
-                error: "No customer email found when downgrading user",
-              });
-            }
-
-            await prisma.user.update({
-              where: { email: userEmail as string },
-              data: {
-                planType: "FREE",
-                stripeCustomerId: customer.id,
-                stripeSubscriptionId: subscription.id,
-                stripeSubscriptionStatus: subscription.status,
-              },
-            });
-          }
+          await handleSubscriptionEvent(event, subscription);
           break;
-
-        case "payment_intent.succeeded":
-          const paymentIntent = event.data.object as Stripe.PaymentIntent;
-
-          // For payment intents, we need to find the related subscription
-          // This is a simplified approach - in production you might want to store
-          // the subscription ID in payment intent metadata
-          try {
-            // Get all active subscriptions for this customer and find the matching one
-            if (paymentIntent.customer) {
-              const subscriptions = await stripe.subscriptions.list({
-                customer: paymentIntent.customer as string,
-                status: "active",
-                limit: 10,
-              });
-
-              if (subscriptions.data.length > 0) {
-                subscription = await stripe.subscriptions.retrieve(
-                  subscriptions.data[0].id,
-                  { expand: ["customer"] }
-                );
-
-                // Send Telegram notification for successful payment
-                const customer = subscription.customer as Stripe.Customer;
-                const amount = paymentIntent.amount / 100; // Convert cents to dollars
-                const currency = paymentIntent.currency.toUpperCase();
-                telegramService.sendMessage(
-                  `💰 User ${customer.email} paid ${amount} ${currency}.`
-                );
-              } else {
-                logger.error("No active subscription found for payment intent");
-                return res.status(400).json({ error: "No subscription found" });
-              }
-            } else {
-              logger.error("No customer found in payment intent");
-              return res.status(400).json({ error: "No customer found" });
-            }
-          } catch (subscriptionError) {
-            logger.error(
-              "Error retrieving subscription for payment intent:",
-              subscriptionError
-            );
-            return res
-              .status(400)
-              .json({ error: "Error processing payment intent" });
-          }
-          break;
-
-        default:
-          logger.error(`Unhandled event type: ${event.type}`);
-          return res
-            .status(400)
-            .json({ error: `Unhandled event type: ${event.type}` });
-      }
-
-      // Extract user information
-      const customer = subscription.customer as Stripe.Customer;
-      const userEmail = customer.email;
-
-      if (!userEmail) {
-        logger.error("No email found in customer data");
-        return res.status(400).json({ error: "No customer email found" });
-      }
-
-      logger.info(`Processing webhook for user email: ${userEmail}`);
-
-      // Extract product information first
-      const productId = subscription.items.data[0]?.price?.product as string;
-
-      // Find user by email
-      const user = await prisma.user.findUnique({
-        where: { email: userEmail },
-      });
-
-      if (!user) {
-        logger.error(`User not found for email: ${userEmail}`);
-
-        // Send Telegram notification
-        telegramService.sendMessage(
-          `🚨 **UNEXISTENT USER triggered ${event.type} on product '${productId}'**\n\n` +
-            `**UTC Time:** ${new Date().toISOString()}\n` +
-            `**Email:** ${userEmail}\n` +
-            `**Check logs for full event**`
-        );
-
-        return res.status(404).json({ error: "User not found" });
-      }
-      const planType = getUserPlan(productId, event);
-
-      // Update user with Stripe information
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          planType: planType as any, // Cast to match enum
-          stripeCustomerId: customer.id,
-          stripeSubscriptionId: subscription.id,
-          stripeSubscriptionStatus: subscription.status,
-        },
-      });
-
-      // Handle subscription created event (welcome email)
-      if (event.type === "customer.subscription.created") {
-        logger.info(`New subscription created for user: ${user.email}`);
-
-        // Send plus upgrade event to Loops
-        try {
-          await loopsService.sendPlusUpgradeEvent(user.email, user.id);
-          logger.info(`Sent plus_upgrade event to Loops for ${user.email}`);
-        } catch (loopsError) {
-          logger.error("Failed to send Loops event:", loopsError);
         }
 
-        // Send Telegram notification for new subscription
-        telegramService.sendMessage(
-          `🎉 New PLUS subscription created!\n\n` +
-            `User: ${user.email}\n` +
-            `Plan: ${planType}\n` +
-            `UTC Time: ${new Date().toISOString()}`
-        );
+        // Payment events - notifications only
+        case "payment_intent.succeeded": {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          await handlePaymentIntent(paymentIntent);
+          break;
+        }
+
+        default:
+          logger.warn(`Unhandled event type: ${event.type}`);
+          return res.status(200).json({ received: true });
       }
 
-      logger.info(
-        `Successfully processed ${event.type} for user: ${user.email}`
-      );
-      logger.info(`Updated user plan to: ${planType}`);
-      logger.info(`Subscription status: ${subscription.status}`);
-
-      res.json({ success: true });
+      return res.json({ success: true });
     } catch (error) {
-      logger.error("Error processing Stripe webhook:", error);
+      logger.error(`Error processing webhook ${event.type}:`, error);
 
-      // Send Telegram error notification
       telegramService.sendMessage(
-        `🚨 **Something went terribly wrong at checkout**\n\n` +
-          `**UTC Time:** ${new Date().toISOString()}\n` +
-          `**Check logs for traceback**`
+        `🚨 *Webhook processing failed*\n\n` +
+          `Event: ${event.type}\n` +
+          `UTC Time: ${new Date().toISOString()}\n` +
+          `Check logs for details`
       );
 
-      res.status(500).json({ success: false, error: "Internal server error" });
+      return res
+        .status(500)
+        .json({ success: false, error: "Internal server error" });
     }
   }
 );
