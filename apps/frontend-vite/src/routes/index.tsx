@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
+import supportAgentWhiteSvg from '../assets/icons/support-agent-white.svg';
 import supportAgentSvg from '../assets/icons/support-agent.svg';
 
 import { MaintenanceOverlay } from "@/components/MaintenanceOverlay";
@@ -31,6 +32,7 @@ import { useGlobalDataOperations } from "@/contexts/GlobalDataProvider";
 import { useMetrics } from "@/contexts/metrics";
 import { useDataNotifications } from "@/contexts/notifications";
 import { usePlans } from "@/contexts/plans";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
@@ -51,7 +53,7 @@ const MAINTENANCE_END_DATE = new Date('2025-10-10T00:00:00Z');
 function HomePage() {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
   const navigate = useNavigate();
-
+  const { isLightMode } = useTheme();
   const { notifications } = useDataNotifications();
   const { plans } = usePlans();
   const activePlans = plans?.filter(
@@ -224,7 +226,7 @@ function HomePage() {
                 title="Send Feedback"
               >
                 <img
-                  src={supportAgentSvg}
+                  src={isLightMode ? supportAgentSvg : supportAgentWhiteSvg}
                   alt="Support"
                   className="w-9 h-9"
                 />

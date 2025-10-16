@@ -13,8 +13,8 @@ export const MilestoneOverview: React.FC<MilestoneOverviewProps> = ({
   onEdit,
 }) => {
   return (
-    <div className="p-4 border rounded-lg bg-gray-50">
-      <p className="text-sm text-gray-500">Milestone Overview (placeholder)</p>
+    <div className="p-4 border rounded-lg bg-muted">
+      <p className="text-sm text-muted-foreground">Milestone Overview (placeholder)</p>
       <p className="text-sm">Milestones: {milestones.length}</p>
     </div>
   );

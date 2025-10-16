@@ -51,7 +51,7 @@ export const PlanStatus = ({ plan }: { plan: CompletePlan }) => {
     <div className="flex items-center gap-2">
       {config.icon}
       <span
-        className={`text-sm font-medium italic text-gray-500 uppercase animate-pulse`}
+        className={`text-sm font-medium italic text-muted-foreground uppercase animate-pulse`}
       >
         {config.message}
       </span>
@@ -203,7 +203,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                   variants.ringBright,
                   "backdrop-blur-sm"
                 )
-              : "bg-white/60 ring-gray-200",
+              : "bg-card ring-border",
             className
           )}
         >
@@ -211,7 +211,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-4xl">{plan.emoji || "📋"}</span>
               <div className="flex items-center gap-2">
-                <span className="text-md font-semibold text-gray-800">
+                <span className="text-md font-semibold text-foreground">
                   {plan.goal}
                 </span>
                 {habitIsAchieved && (
@@ -258,13 +258,13 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                       <span
                         className={`text-sm italic ${
                           isGeneratingCoachMessage || !canGenerateNewMessage
-                            ? "text-gray-400"
-                            : "text-gray-500"
+                            ? "text-muted-foreground/60"
+                            : "text-muted-foreground"
                         }`}
                       >
                         {lastCoachMessage}
                       </span>
-                      <span className="text-[10px] italic text-gray-400">
+                      <span className="text-[10px] italic text-muted-foreground/60">
                         Coach Oli
                       </span>
                     </div>
@@ -276,8 +276,8 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                       className={cn(
                         "p-1 rounded-full transition-all duration-200",
                         canGenerateNewMessage && !isGeneratingCoachMessage
-                          ? "hover:bg-white/20 text-gray-600 hover:text-gray-800 cursor-pointer"
-                          : "text-gray-300 cursor-not-allowed"
+                          ? "hover:bg-white/20 text-muted-foreground hover:text-foreground cursor-pointer"
+                          : "text-muted-foreground/30 cursor-not-allowed"
                       )}
                       title={
                         !canGenerateNewMessage
@@ -312,7 +312,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                     }
                   >
                     <div className="flex flex-row items-center justify-between bg-transparent rounded-md">
-                      <span className="text-xs text-gray-400/80">
+                      <span className="text-xs text-muted-foreground/80">
                         This week
                       </span>
                       <div
@@ -322,7 +322,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                       >
                         <div className="flex flex-row items-center gap-2">
                           <PlanStatus plan={plan} />
-                          <MoveRight className="h-4 w-4 text-gray-400" />
+                          <MoveRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
                     </div>
@@ -376,7 +376,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                     lifestyleIsAchieved ? (
                       <span className="flex items-center gap-1">
                         <CircleCheck size={19} className="text-green-500" />
-                        <span className="text-xs font-normal text-gray-500">
+                        <span className="text-xs font-normal text-muted-foreground">
                           Part of your lifestyle!
                         </span>
                       </span>

@@ -68,10 +68,10 @@ export const HomepageMetricsSection: React.FC = () => {
   if (!canLogMetrics) {
     return (
       <>
-        <h3 className="text-md font-semibold text-gray-900">Your Metrics</h3>
-        <div className="bg-white/60 ring-1 ring-gray-200 rounded-xl p-2 border border-white/50 text-center">
+        <h3 className="text-md font-semibold text-foreground">Your Metrics</h3>
+        <div className="bg-card/60 ring-1 ring-border rounded-xl p-2 border border-white/50 text-center">
           <div className="flex items-center justify-center gap-2">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted-foreground">
               Come back after 2PM to log your metrics
             </span>
           </div>
@@ -90,36 +90,36 @@ export const HomepageMetricsSection: React.FC = () => {
           <div className="flex items-center gap-2">
             <CollapsibleTrigger asChild>
               <button
-                className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
+                className="p-1 hover:bg-muted/50 rounded transition-colors duration-200 flex items-center justify-center"
                 aria-label={
                   isMetricsCollapsed ? "Expand metrics" : "Collapse metrics"
                 }
               >
                 {isMetricsCollapsed ? (
-                  <ChevronRight size={16} className="text-gray-600" />
+                  <ChevronRight size={16} className="text-muted-foreground" />
                 ) : (
-                  <ChevronDown size={16} className="text-gray-600" />
+                  <ChevronDown size={16} className="text-muted-foreground" />
                 )}
               </button>
             </CollapsibleTrigger>
 
             {isMetricsCollapsed && canLogMetrics ? (
               <div className="flex items-center gap-2">
-                <span className="text-md font-semibold text-gray-900">
+                <span className="text-md font-semibold text-foreground">
                   {unloggedMetricsCount} metric
                   {unloggedMetricsCount > 1 ? "s" : ""} to log today
                 </span>
                 <PulsatingCirclePill variant="yellow" size="md" />
               </div>
             ) : (
-              <h3 className="text-md font-semibold text-gray-900">
+              <h3 className="text-md font-semibold text-foreground">
                 Your Metrics
               </h3>
             )}
           </div>
           <button
             onClick={() => navigate({ to: "/insights/dashboard" })}
-            className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
           >
             View Insights
             <ChevronRight size={16} />
@@ -153,7 +153,7 @@ export const HomepageMetricsSection: React.FC = () => {
                 return (
                   <div key={`${metric.id}-${index}-homepage`}>
                     {isLoggedToday || isSkippedToday ? (
-                      <div className="my-2 bg-white/60 ring-1 ring-gray-200 rounded-3xl p-4 border border-white/50">
+                      <div className="my-2 bg-card/60 ring-1 ring-border rounded-3xl p-4 border border-white/50">
                         {/* Weekly chart */}
                         <MetricWeeklyView
                           metric={metric}
@@ -166,17 +166,17 @@ export const HomepageMetricsSection: React.FC = () => {
 
                         {/* Muted logged indicator at bottom */}
                         {isLoggedToday && (
-                          <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-gray-100">
-                            <CircleCheckBig className="w-4 h-4 text-gray-400" />
-                            <span className="text-xs text-gray-400 font-medium">
+                          <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-border">
+                            <CircleCheckBig className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground font-medium">
                               Logged today
                             </span>
                           </div>
                         )}
 
                         {isSkippedToday && (
-                          <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-gray-100">
-                            <span className="text-xs text-gray-400 font-medium">
+                          <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-border">
+                            <span className="text-xs text-muted-foreground font-medium">
                               Skipped today
                             </span>
                           </div>
@@ -203,7 +203,7 @@ export const HomepageMetricsSection: React.FC = () => {
               <div className="text-center">
                 <button
                   onClick={() => navigate({ to: "/insights/dashboard" })}
-                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   +{metrics.length - 3} more metrics
                 </button>

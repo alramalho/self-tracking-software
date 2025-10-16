@@ -128,13 +128,13 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
     <>
       {/* Sort Controls */}
       <div className="flex items-center gap-2 mb-6 flex-wrap">
-      <span className="text-sm text-gray-600 mr-2">Sort by:</span>
+      <span className="text-sm text-muted-foreground mr-2">Sort by:</span>
         <button
           onClick={() => setSortBy("overall")}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "overall"
               ? `${variants.bg} text-white`
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-muted text-foreground hover:bg-muted/80"
           }`}
         >
           Overall
@@ -144,7 +144,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "goals"
               ? `${variants.bg} text-white`
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-muted text-foreground hover:bg-muted/80"
           }`}
         >
           🎯 Goals
@@ -154,7 +154,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "location"
               ? `${variants.bg} text-white`
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-muted text-foreground hover:bg-muted/80"
           }`}
         >
           🌍 Location
@@ -164,7 +164,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             sortBy === "age"
               ? `${variants.bg} text-white`
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-muted text-foreground hover:bg-muted/80"
           }`}
         >
           👥 Age
@@ -200,13 +200,13 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           return (
             <div
               key={user.id}
-              className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-all relative cursor-pointer"
+              className="bg-card rounded-2xl border border-border hover:shadow-lg transition-all relative cursor-pointer"
               onClick={() => navigate({ to: `/profile/${user.username}` })}
             >
               {/* Header with icons - Avatar + Plan Emoji */}
               <div className="flex items-center justify-between p-6 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl flex-shrink-0">
                     {user.picture ? (
                       <img
                         src={user.picture}
@@ -250,7 +250,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                       connectionStatus === "PENDING" ||
                       connectionStatus === "ACCEPTED"
                     }
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-full hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title={
                       hasSentRequest || connectionStatus === "PENDING"
                         ? "Request Sent"
@@ -264,7 +264,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                     connectionStatus === "ACCEPTED" ? (
                       <UserCheck className="h-6 w-6 text-green-600" />
                     ) : (
-                      <UserPlus className="h-6 w-6 text-gray-600" />
+                      <UserPlus className="h-6 w-6 text-muted-foreground" />
                     )}
                   </button>
                 </div>
@@ -277,7 +277,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                 </h3>
 
                 {plan && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     {plan.goal}
                   </p>
                 )}
@@ -303,7 +303,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
               <div className="p-4 space-y-4">
                 {/* Avatar Header */}
                 <div className="flex items-center justify-center gap-3 mb-6">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-xl flex-shrink-0 border-2 border-gray-300">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-xl flex-shrink-0 border-2 border-border">
                     {currentUser?.picture ? (
                       <img
                         src={currentUser.picture}
@@ -314,8 +314,8 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                       currentUser?.name?.[0] || "U"
                     )}
                   </div>
-                  <span className="text-2xl font-bold text-gray-400">×</span>
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-xl flex-shrink-0 border-2 border-gray-300">
+                  <span className="text-2xl font-bold text-muted-foreground">×</span>
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-xl flex-shrink-0 border-2 border-border">
                     {selectedUser?.picture ? (
                       <img
                         src={selectedUser.picture}
@@ -327,7 +327,7 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 text-center mb-6">
+                <p className="text-sm text-muted-foreground text-center mb-6">
                   How well you match across different dimensions:
                 </p>
                 <div className="space-y-3">
@@ -384,14 +384,14 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                         )}
                     </>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">
+                    <p className="text-sm text-muted-foreground italic">
                       No detailed score breakdown available
                     </p>
                   )}
                 </div>
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-foreground">
                       Total Match
                     </span>
                     <span className="text-lg font-bold text-blue-600">
@@ -436,7 +436,7 @@ const ScoreItem: React.FC<{
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl">{emoji}</span>
-          <span className="font-semibold text-gray-900">{label}</span>
+          <span className="font-semibold text-foreground">{label}</span>
         </div>
         <span className={`text-2xl font-bold ${getScoreColor(score)}`}>
           {Math.round(score * 100)}%
@@ -444,7 +444,7 @@ const ScoreItem: React.FC<{
       </div>
 
       {/* Progress bar */}
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+      <div className="w-full bg-muted rounded-full h-2 mb-2">
         <div
           className={`h-2 rounded-full transition-all ${getProgressBarColor(
             score
@@ -453,7 +453,7 @@ const ScoreItem: React.FC<{
         />
       </div>
 
-      <div className="flex justify-between items-center text-xs text-gray-500">
+      <div className="flex justify-between items-center text-xs text-muted-foreground">
         <span>Importance: {Math.round(weight * 100)}%</span>
         <span>Contributes {Math.round(score * weight * 100)}% to total</span>
       </div>

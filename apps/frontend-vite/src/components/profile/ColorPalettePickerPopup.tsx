@@ -87,13 +87,13 @@ const ColorPalettePickerPopup: React.FC<ColorPalettePickerPopupProps> = ({
             return (
               <div
                 key={palette.name}
-                className={`flex items-center gap-4 p-3 border rounded-lg ${
+                className={`flex items-center gap-4 p-3 border dark:border-black/40 bg-white/40 dark:bg-black/10 rounded-lg ${
                   isLocked
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:bg-muted/50 cursor-pointer"
                 } ${
                   isSelected
-                    ? `ring-2 ring-offset-2 ${
+                    ? `ring-2 ring-offset-2 dark:ring-offset-black ${
                         palette.color === "random"
                           ? "ring-ring"
                           : `ring-${palette.color}-500`

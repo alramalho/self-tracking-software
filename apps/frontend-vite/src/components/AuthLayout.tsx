@@ -11,7 +11,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
     <div
     // [background-image:linear-gradient(#eaedf1_1px,transparent_1px),linear-gradient(to_right,#eef0f3_1px,#f8fafc_1px)]
     // [background-size:20px_20px] flex flex-col items-center justify-center p-4
-      className={`relative w-full min-h-dvh bg-gray-50/80`}
+      className={`relative w-full min-h-dvh bg-muted/80`}
     >
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
@@ -29,13 +29,13 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
               width={150}
             />
           </div>
-          <h2 className="mt-10 text-3xl font-bold tracking-tight text-gray-900">
+          <h2 className="mt-10 text-3xl font-bold tracking-tight text-foreground">
             Welcome to your{" "}
             <span className="text-blue-500 break-normal text-nowrap">
               tracking.so<span className="text-blue-300">ftware</span>
             </span>
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Track your journey with friends
           </p>
         </div>

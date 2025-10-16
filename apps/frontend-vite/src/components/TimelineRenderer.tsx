@@ -45,7 +45,7 @@ const TimelineRenderer: React.FC<{
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="bg-white/50 backdrop-blur-sm border rounded-2xl overflow-hidden"
+            className="bg-card/50 backdrop-blur-sm border rounded-2xl overflow-hidden"
           >
             <div className="relative max-h-full max-w-full mx-auto p-4 pb-0">
               <div className="relative rounded-2xl overflow-hidden backdrop-blur-lg shadow-lg border border-white/20">
@@ -72,11 +72,11 @@ const TimelineRenderer: React.FC<{
   }
   if (!friends?.length) {
     return (
-      <div className="flex flex-col items-center gap-3 text-center text-gray-500 pt-2">
+      <div className="flex flex-col items-center gap-3 text-center text-muted-foreground pt-2">
         <Squirrel className="w-24 h-24 text-muted-foreground mx-auto" />
         <div>
-          <h3 className="text-lg text-gray-800 font-semibold">Uh oh...</h3>
-          <p className="text-sm text-gray-400">
+          <h3 className="text-lg text-foreground font-semibold">Uh oh...</h3>
+          <p className="text-sm text-muted-foreground">
             You haven't added any friends yet...
           </p>
         </div>
@@ -92,16 +92,16 @@ const TimelineRenderer: React.FC<{
 
   if (timelineData?.recommendedActivityEntries.length === 0) {
     return (
-      <div className="text-start text-gray-500 pt-2">
+      <div className="text-start text-muted-foreground pt-2">
         Your friends have not logged anything yet...
         <br />
         {isPushGranted ? (
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-muted-foreground">
             Maybe you could go ahead and poke them?
           </span>
         ) : (
           <div className="flex flex-col items-start">
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-muted-foreground">
               Turn on notifications to know when they do
             </span>
             <Button

@@ -130,14 +130,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   }
 
   return (
-    <div className={`${fullWidth ? "w-full" : ""} ${className}`}>
+    <div className={`${fullWidth ? "w-full" : ""} bg-muted/30 dark:bg-muted/10 backdrop-blur-md  ${className}`}>
       {/* Comments section */}
       {comments.length > 0 && (
         <div className="space-y-2 mb-2">
           {hasHiddenComments && (
             <button
               onClick={handleToggleShowAll}
-              className={`w-full text-center py-2 ${commentBg} rounded-lg text-sm text-gray-500 flex items-center justify-center gap-1 border border-white/20 shadow-sm`}
+              className={`w-full text-center py-2 ${commentBg} rounded-lg text-sm text-muted-foreground flex items-center justify-center gap-1 border border-white/20 dark:border-gray-700/20 shadow-sm`}
             >
               Show all {comments.length} comments{" "}
               <ChevronDown className="h-4 w-4" />
@@ -147,7 +147,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           {showAllComments && comments.length > 2 && (
             <button
               onClick={handleToggleShowAll}
-              className={`w-full text-center py-2 ${commentBg} rounded-lg text-sm text-gray-500 flex items-center justify-center gap-1 border border-white/20 shadow-sm`}
+              className={`w-full text-center py-2 ${commentBg} rounded-lg text-sm text-muted-foreground flex items-center justify-center gap-1 border border-white/20 dark:border-gray-700/20 shadow-sm`}
             >
               Hide comments <ChevronUp className="h-4 w-4" />
             </button>
@@ -156,7 +156,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           {visibleComments.map((comment) => (
             <div
               key={comment.id}
-              className={`${commentBg} px-3 py-2 rounded-lg border border-white/20 shadow-sm backdrop-blur-lg`}
+              className={`${commentBg} px-3 py-2 rounded-lg border border-white/20 dark:border-gray-700/20 shadow-sm backdrop-blur-lg`}
             >
               <div className="flex items-start gap-2">
                 <Avatar
@@ -175,16 +175,16 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span
-                      className="font-medium text-sm hover:underline cursor-pointer"
+                      className="font-medium text-sm hover:underline cursor-pointer text-foreground"
                       onClick={() => navigateToProfile(comment.user?.username)}
                     >
                       @{comment.user?.username}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {getFormattedDate(comment.createdAt)}
                     </span>
                   </div>
-                  <p className="text-sm break-words whitespace-pre-wrap">
+                  <p className="text-sm break-words whitespace-pre-wrap text-foreground">
                     {comment.text}
                   </p>
                 </div>
@@ -192,7 +192,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 {currentUser?.id === comment.userId && (
                   <button
                     onClick={() => handleDeleteComment(comment.id)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -207,7 +207,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       {currentUser && (
         <form onSubmit={handleSubmitComment} className="flex gap-2 w-full">
           <div
-            className={`flex items-center gap-2 p-2 w-full ${commentBg} rounded-lg border border-white/20 shadow-sm backdrop-blur-lg`}
+            className={`flex items-center gap-2 p-2 w-full ${commentBg} rounded-lg border border-white/20 dark:border-gray-700/20 shadow-sm backdrop-blur-lg`}
           >
             <Avatar className="w-6 h-6">
               <AvatarImage src={currentUser?.picture || undefined} />
@@ -220,14 +220,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 bg-transparent outline-none text-[16px] z-10"
+              className="flex-1 bg-transparent outline-none text-[16px] z-10 text-foreground placeholder:text-muted-foreground"
               disabled={isAddingComment}
             />
 
             <button
               type="submit"
               disabled={!newComment.trim() || isAddingComment}
-              className={`text-gray-400 ${
+              className={`text-muted-foreground ${
                 newComment.trim() ? "hover:text-blue-500" : ""
               } disabled:opacity-50`}
             >
