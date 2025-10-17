@@ -5,7 +5,8 @@ import { useTheme } from "@/contexts/theme/useTheme";
 import { type Activity } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
 import { format } from "date-fns";
-import { Brush } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Brush, ChevronDown } from "lucide-react";
 import React, { useState } from "react";
 
 export interface HeatmapData {
@@ -95,6 +96,8 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   const { isLightMode } = useTheme();
   // Add state for selected date
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  // Add state for legend expansion
+  const [isLegendExpanded, setIsLegendExpanded] = useState(false);
 
   // Convert dates to UTC
   const utcStartDate = new Date(
@@ -122,78 +125,106 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix(isLightMode);
     return (
-      <div className="grid grid-cols-[auto_1fr] gap-3 mt-2">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-4 h-4"
-            style={{
-              border: "2px solid #FF0000",
-            }}
-            title="Today's date"
+      <div className="grid grid-cols-[auto_1fr] gap-3 mt-2 w-full px-4">
+        <button
+          onClick={() => setIsLegendExpanded(!isLegendExpanded)}
+          className="col-span-2 w-full flex items-center gap-2 text-lg font-semibold hover:text-muted-foreground transition-colors py-1"
+        >
+          <ChevronDown
+            size={25}
+            className={`transition-transform ${
+              isLegendExpanded ? "rotate-180" : ""
+            }`}
           />
-          <div
-            className="w-4 h-4"
-            style={{
-              border: "2px solid #0066FF",
-            }}
-            title="Selected date"
-          />
-        </div>
-        <span className="text-sm font-semibold">Today / Selected</span>
+          Legend
+        </button>
 
-        {!noActivityLegend &&
-          activities?.map((activity, index) => (
-            <React.Fragment key={index}>
-              <div className="flex flex-row gap-0 items-center">
-                {activity.colorHex
-                  ? intensityAlphaLevels.map((alpha, intensityIdx) => (
-                      <div
-                        key={intensityIdx}
-                        className="w-4 h-4"
-                        style={{
-                          backgroundColor: hexToRgba(activity.colorHex!, alpha),
-                        }}
-                        title={`${activity.title} - Intensity ${
-                          intensityIdx + 1
-                        }`}
-                      />
-                    ))
-                  : colorMatrix[index % colorMatrix.length].map(
-                      (color, intensityIndex) => (
-                        <div
-                          key={intensityIndex}
-                          className="w-4 h-4"
-                          style={{ backgroundColor: color }}
-                          title={`Intensity level ${intensityIndex + 1}`}
-                        />
-                      )
-                    )}
+        <AnimatePresence>
+          {isLegendExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="col-span-2 grid grid-cols-[auto_1fr] gap-3 overflow-hidden"
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-4 h-4"
+                  style={{
+                    border: "2px solid #FF0000",
+                  }}
+                  title="Today's date"
+                />
+                <div
+                  className="w-4 h-4"
+                  style={{
+                    border: "2px solid #0066FF",
+                  }}
+                  title="Selected date"
+                />
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold flex items-center">
-                  {activity.emoji} {activity.title}
-                  {onEditActivity && isOwnActivity(activity) && (
-                    <button
-                      onClick={() => onEditActivity(activity)}
-                      className="ml-2 p-1 text-muted-foreground hover:text-foreground"
-                      title={`Edit ${activity.title}`}
-                    >
-                      <Brush size={16} />
-                    </button>
-                  )}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({activity.measure})
-                </span>
-              </div>
-            </React.Fragment>
-          ))}
+              <span className="text-sm font-semibold">Today / Selected</span>
+
+              {!noActivityLegend &&
+                activities?.map((activity, index) => (
+                  <React.Fragment key={index}>
+                    <div className="flex flex-row gap-0 items-center">
+                      {activity.colorHex
+                        ? intensityAlphaLevels.map((alpha, intensityIdx) => (
+                            <div
+                              key={intensityIdx}
+                              className="w-4 h-4"
+                              style={{
+                                backgroundColor: hexToRgba(
+                                  activity.colorHex!,
+                                  alpha
+                                ),
+                              }}
+                              title={`${activity.title} - Intensity ${
+                                intensityIdx + 1
+                              }`}
+                            />
+                          ))
+                        : colorMatrix[index % colorMatrix.length].map(
+                            (color, intensityIndex) => (
+                              <div
+                                key={intensityIndex}
+                                className="w-4 h-4"
+                                style={{ backgroundColor: color }}
+                                title={`Intensity level ${intensityIndex + 1}`}
+                              />
+                            )
+                          )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold flex items-center">
+                        {activity.emoji} {activity.title}
+                        {onEditActivity && isOwnActivity(activity) && (
+                          <button
+                            onClick={() => onEditActivity(activity)}
+                            className="ml-2 p-1 text-muted-foreground hover:text-foreground"
+                            title={`Edit ${activity.title}`}
+                          >
+                            <Brush size={16} />
+                          </button>
+                        )}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        ({activity.measure})
+                      </span>
+                    </div>
+                  </React.Fragment>
+                ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
 
   return (
-    <div className="mb-4 grid gap-5">
+    <div className="mb-4 grid gap-3">
       <div className="overflow-x-auto">
         <div className="relative mt-2">
           <HeatMap
