@@ -581,7 +581,7 @@ function ProfilePage() {
                         }
                         className="p-4"
                       >
-                        <div className="flex flex-row items-center gap-2 mb-6">
+                        <div className="flex flex-row items-center gap-2 mb-2">
                           <span className="text-4xl">{plan.emoji}</span>
                           <div className="flex flex-col gap-0">
                             <h3 className="text-lg font-semibold">
