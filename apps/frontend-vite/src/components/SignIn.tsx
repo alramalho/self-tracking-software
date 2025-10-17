@@ -10,7 +10,10 @@ import { useAuth } from "@/contexts/auth";
 import { useTheme } from "@/contexts/theme/useTheme";
 import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
+import supportAgentWhiteSvg from '../assets/icons/support-agent-white.svg';
+import supportAgentSvg from '../assets/icons/support-agent.svg';
 import FeedbackPopover from "./FeedbackPopover";
+
 
 interface SignInProps {
   onSuccess?: () => void;
@@ -118,8 +121,8 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
         <img
           src={
             isLightMode
-              ? "/icons/support-agent.svg"
-              : "/icons/support-agent-white.svg"
+              ? supportAgentSvg
+              : supportAgentWhiteSvg
           }
           alt="Support"
           className="w-6 h-6 dark:fill-white"
