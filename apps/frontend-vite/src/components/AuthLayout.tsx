@@ -11,9 +11,9 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
     <div
     // [background-image:linear-gradient(#eaedf1_1px,transparent_1px),linear-gradient(to_right,#eef0f3_1px,#f8fafc_1px)]
     // [background-size:20px_20px] flex flex-col items-center justify-center p-4
-      className={`relative w-full min-h-dvh bg-muted/80`}
+      className={`relative w-full min-h-dvh bg-muted/80 flex`}
     >
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-8 flex flex-col items-center justify-center">
         <div className="text-center">
           <div className="mx-auto w-fit -translate-x-[2px]">
             <Lottie
