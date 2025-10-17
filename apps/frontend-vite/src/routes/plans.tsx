@@ -23,7 +23,7 @@ function PlansPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Please sign in to view your plans</p>
+          <p className="text-muted-foreground mb-4">Please sign in to view your plans</p>
           <Link to="/signin" search={{ redirect_url: undefined }} className="text-blue-500 hover:underline">
             Sign In
           </Link>

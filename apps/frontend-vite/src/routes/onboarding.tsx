@@ -42,13 +42,13 @@ const OnboardingStepRenderer = () => {
       />
       <ChevronLeft
         onClick={prevStep}
-        className="fixed m-0 top-8 left-2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
+        className="fixed m-0 top-8 left-2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
       />
 
       {!currentStepData ? (
         <div className="flex flex-col items-center justify-center h-full">
           <X size={48} className="text-red-500 mb-4" />
-          <p className="text-gray-600">Error loading step</p>
+          <p className="text-muted-foreground">Error loading step</p>
         </div>
       ) : (
         <currentStepData.component />

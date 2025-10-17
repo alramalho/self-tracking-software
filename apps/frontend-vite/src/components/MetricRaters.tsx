@@ -87,7 +87,7 @@ export function MetricRaters({
             />
 
             {isDisabled && (
-              <p className="text-sm text-black italic mt-4">
+              <p className="text-sm text-foreground italic mt-4">
                 ✅ You have already logged your {metric.title} today.{" "}
               </p>
             )}

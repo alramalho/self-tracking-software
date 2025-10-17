@@ -33,13 +33,13 @@ import ConfirmDialogOrPopover from "../ConfirmDialogOrPopover";
 import { Switch } from "../ui/switch";
 import { TextAreaWithVoice } from "../ui/text-area-with-voice";
 import ColorPalettePickerPopup from "./ColorPalettePickerPopup";
-import ThemeModeSwitcher from "./ThemeModeSwitcher";
 import {
   EditAgePopup,
   EditFullNamePopup,
   EditLookingForApPopup,
   EditProfilePicturePopup,
 } from "./EditFieldPopups";
+import ThemeModeSwitcher from "./ThemeModeSwitcher";
 
 interface ProfileSettingsPopoverProps {
   open: boolean;
@@ -400,19 +400,19 @@ const ProfileSettingsPopover: React.FC<ProfileSettingsPopoverProps> = ({
                       </div>
 
                       {/* Delete Account */}
-                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200 mt-6">
+                      <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800 mt-6">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-red-900">
+                          <p className="text-sm font-medium text-red-900 dark:text-red-100">
                             Delete Account
                           </p>
-                          <p className="text-xs text-red-600">
+                          <p className="text-xs text-red-600 dark:text-red-400">
                             Permanently delete your account and all data
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900"
                           onClick={() => setShowDeleteAccountDialog(true)}
                         >
                           <Trash2 size={20} />

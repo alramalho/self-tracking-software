@@ -21,7 +21,7 @@ export function GlobalErrorComponent({ error, reset }: ErrorComponentProps) {
   }, [error, logError]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gray-50">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-muted">
       <div className="text-center space-y-6">
         <AlertCircle className="w-16 h-16 text-red-500 mx-auto" />
 
@@ -29,7 +29,7 @@ export function GlobalErrorComponent({ error, reset }: ErrorComponentProps) {
           <h1 className="text-3xl font-bold tracking-tighter">
             Something went wrong
           </h1>
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             We apologize for the inconvenience.<br/>Please try again later.
           </p>
         </div>
@@ -46,7 +46,7 @@ export function GlobalErrorComponent({ error, reset }: ErrorComponentProps) {
           </Button>
         </div>
 
-        <div className="text-sm text-gray-500 max-w-md mx-auto mt-8 break-words">
+        <div className="text-sm text-muted-foreground max-w-md mx-auto mt-8 break-words">
           <p className="font-medium">Error details:</p>
           <p>{error instanceof Error ? error.message : String(error)}</p>
         </div>

@@ -26,11 +26,11 @@ export const OutlineOption = ({
         "relative p-4 rounded-lg border-2 transition-all w-full text-left",
         selected
           ? cn(variants.card.selected.border, variants.card.selected.bg)
-          : "border-gray-300 bg-white"
+          : "border-border bg-card"
       )}
     >
       <h3 className="font-medium">{title}</h3>
-      <p className="text-sm text-gray-500">{description}</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
       {selected && (
         <Check className={cn("absolute top-3 right-3 h-4 w-4", variants.text)} />
       )}

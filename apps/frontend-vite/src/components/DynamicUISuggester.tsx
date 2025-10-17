@@ -298,7 +298,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, x: -10 }}
                 transition={{ duration: 0.3, layout: true }}
-                className="bg-white p-3 rounded-lg shadow-md max-w-[250px] text-sm border border-gray-200 flex-shrink relative"
+                className="bg-card p-3 rounded-lg shadow-md max-w-[250px] text-sm border border-border flex-shrink relative"
               >
                 <Remark>{message}</Remark>
               </motion.div>
@@ -313,7 +313,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
             </>
           )}
 
-          <p className="text-center text-md text-gray-600 mt-2">
+          <p className="text-center text-md text-muted-foreground mt-2">
             {initialMessage}
           </p>
         </div>
@@ -324,7 +324,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         {description && (
           <div className="px-4">
             <p
-              className={`text-sm text-gray-500 ${
+              className={`text-sm text-muted-foreground ${
                 questionsChecks ? "text-left" : "text-center"
               }`}
             >
@@ -372,7 +372,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <Button
             variant={allQuestionsChecked ? "outline" : "default"}
             className={`w-full rounded-xl ${
-              allQuestionsChecked ? "bg-white" : ""
+              allQuestionsChecked ? "bg-card" : ""
             }`}
             onClick={() => submitMutation.mutateAsync(text)}
             disabled={
@@ -395,7 +395,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
           <div className="px-4">
             <Button
               variant="outline"
-              className="w-full bg-white italic"
+              className="w-full bg-card italic"
               onClick={handleSkip}
             >
               Seems like you&apos;re struggling. Skip for now
@@ -411,7 +411,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
 
         {extractedData && shouldRenderChildren && (onAccept || onReject) && (
           <div ref={actionsRef}>
-            <div className="text-sm text-gray-500 mt-8 text-left w-full px-4 mt-4">
+            <div className="text-sm text-muted-foreground mt-8 text-left w-full px-4 mt-4">
               <p className="flex flex-row gap-2">
                 <ScanFace size={24} />
                 {creationMessage ?? "Do you want me to process this for you?"}
@@ -421,7 +421,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               {onReject && (
                 <Button
                   variant="outline"
-                  className="w-full flex items-center gap-2 text-red-600 bg-white border-red-600"
+                  className="w-full flex items-center gap-2 text-red-600 bg-card border-red-600"
                   onClick={() => setRejectionFeedbackOpen(true)}
                   disabled={isSubmitting}
                 >
@@ -432,7 +432,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               {onAccept && (
                 <Button
                   variant="outline"
-                  className="w-full flex items-center gap-2 text-green-600 bg-white border-green-600"
+                  className="w-full flex items-center gap-2 text-green-600 bg-card border-green-600"
                   onClick={handleAccept}
                   disabled={isSubmitting}
                   loading={isSubmitting}
@@ -451,10 +451,10 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
         onClose={() => setRejectionFeedbackOpen(false)}
       >
         <div className="space-y-4">
-          <h2 className="text-md text-gray-800 m-4 mt-6 text-center font-semibold">
+          <h2 className="text-md text-foreground m-4 mt-6 text-center font-semibold">
             Please tell us what we got wrong
           </h2>
-          <p className="text-sm text-gray-500 px-4 py-2 text-center">
+          <p className="text-sm text-muted-foreground px-4 py-2 text-center">
             The AI has a smart memory and can learn from your feedback. You can
             ask the AI to correct the mistake.
           </p>

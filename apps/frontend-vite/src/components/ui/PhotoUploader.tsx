@@ -138,10 +138,10 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div
-        className={`border-2 border-dashed border-gray-300 rounded-lg text-center w-full min-h-32 ${
+        className={`border-2 border-dashed border-border rounded-lg text-center w-full min-h-32 ${
           isProcessing || disabled
             ? "opacity-50 cursor-not-allowed"
-            : "cursor-pointer hover:bg-gray-50"
+            : "cursor-pointer hover:bg-muted/50"
         } flex items-center justify-center overflow-hidden`}
         onClick={() =>
           !isProcessing &&
@@ -158,11 +158,11 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         ) : (
           <div className="p-2">
             {isProcessing ? (
-              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             ) : (
               <>
-                <Camera className="w-12 h-12 text-gray-400 mx-auto" />
-                <p className="text-md text-gray-500">{placeholder}</p>
+                <Camera className="w-12 h-12 text-muted-foreground mx-auto" />
+                <p className="text-md text-muted-foreground">{placeholder}</p>
               </>
             )}
           </div>

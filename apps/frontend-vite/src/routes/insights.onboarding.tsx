@@ -268,7 +268,7 @@ function OnboardingPage() {
                 placeholder="Anything specific that influenced your rating today?"
                 value={description}
                 onChange={setDescription}
-                className="min-h-[100px] bg-white"
+                className="min-h-[100px] bg-card"
                 disabled={
                   Object.keys(ratings).length !== selectedMetrics.length
                 }

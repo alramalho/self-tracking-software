@@ -39,7 +39,7 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
           <Number>4</Number>
           Your Activities
         </h3>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Select from activities you&apos;ve already created or add new ones
         </p>
         <div
@@ -56,10 +56,10 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
           ))}
           <button
             onClick={() => setShowActivityEditor(true)}
-            className="flex flex-col items-center justify-center p-4 rounded-lg border-2 border-dashed border-gray-300 aspect-square hover:bg-gray-50"
+            className="flex flex-col items-center justify-center p-4 rounded-lg border-2 border-dashed border-border aspect-square hover:bg-muted/50"
           >
-            <Plus className="h-8 w-8 text-gray-400 mb-2" />
-            <span className="text-sm font-medium text-gray-500">Add New</span>
+            <Plus className="h-8 w-8 text-muted-foreground mb-2" />
+            <span className="text-sm font-medium text-muted-foreground">Add New</span>
           </button>
         </div>
       </div>

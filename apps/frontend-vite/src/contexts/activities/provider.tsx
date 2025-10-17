@@ -71,16 +71,16 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     onSuccess: (entry, variables) => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });
-      // queryClient.setQueryData(
-      //   ["activity-entries"],
-      //   (old: ReturnedActivityEntriesType) => {
-      //     if (!old)
-      //       return queryClient.refetchQueries({
-      //         queryKey: ["activity-entries"],
-      //       });
-      //     return [...old, entry];
-      //   }
-      // );
+      queryClient.setQueryData(
+        ["activity-entries"],
+        (old: ReturnedActivityEntriesType) => {
+          if (!old)
+            return queryClient.refetchQueries({
+              queryKey: ["activity-entries"],
+            });
+          return [...old, entry];
+        }
+      );
       queryClient.invalidateQueries({ queryKey: ["activity-entries"] });
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -300,7 +300,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!old) return queryClient.refetchQueries({ queryKey: ["timeline"] });
         return {
           ...old,
-          recommendedActivityEntries: old.recommendedActivityEntries.map(
+          recommendedActivityEntries: old.recommendedActivityEntries?.map(
             (entry) => {
               return entry.id === input.activityEntryId
                 ? { ...entry, comments: comments }

@@ -19,6 +19,7 @@ export interface ThemeVariants {
   ring: string;
   ringSoft: string;
   ringBright: string;
+  ringOffset: string;
   border: string;
   brightBorder: string;
   fadedText: string;
@@ -67,11 +68,12 @@ export const themeVariants: Record<
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-slate-50/60 backdrop-blur-sm",
     veryFadedBg: "bg-slate-50 dark:bg-slate-600/30",
-    fadedBg: "bg-slate-200/50",
+    fadedBg: "bg-slate-200/50 dark:bg-slate-800/50",
     text: "text-slate-500",
     ring: "ring-gray-500",
     ringSoft: "ring-gray-200",
     ringBright: "ring-slate-300 dark:ring-slate-700",
+    ringOffset: "ring-offset-slate-50 dark:ring-offset-slate-900",
     darkText: "text-slate-800",
     fadedText: "text-slate-300",
     veryFadedText: "text-slate-200 dark:text-slate-700",
@@ -114,12 +116,13 @@ export const themeVariants: Record<
       "bg-gradient-to-r from-gray-100/20 to-blue-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-blue-50/60 backdrop-blur-sm",
-    fadedBg: "bg-blue-200/50",
+    fadedBg: "bg-blue-200/50 dark:bg-blue-800/50",
     veryFadedBg: "bg-blue-50 dark:bg-blue-600/30",
     text: "text-blue-500",
     ring: "ring-blue-500",
     ringSoft: "ring-blue-200",
     ringBright: "ring-blue-300 dark:ring-blue-700",
+    ringOffset: "ring-offset-blue-50 dark:ring-offset-blue-900",
     darkText: "text-blue-800",
     fadedText: "text-blue-300",
     veryFadedText: "text-blue-200 dark:text-blue-800",
@@ -162,12 +165,13 @@ export const themeVariants: Record<
       "bg-gradient-to-r from-gray-100/20 to-violet-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-violet-50/60 backdrop-blur-sm",
-    fadedBg: "bg-violet-100",
+    fadedBg: "bg-violet-100 dark:bg-violet-800/50",
     veryFadedBg: "bg-violet-50 dark:bg-violet-600/30",
     text: "text-violet-500",
     ring: "ring-violet-500",
     ringSoft: "ring-violet-200",
     ringBright: "ring-violet-300 dark:ring-violet-700",
+    ringOffset: "ring-offset-violet-50 dark:ring-offset-violet-900",
     darkText: "text-violet-800",
     fadedText: "text-violet-300",
     veryFadedText: "text-violet-200 dark:text-violet-800",
@@ -210,12 +214,13 @@ export const themeVariants: Record<
       "bg-gradient-to-r from-gray-100/20 to-amber-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-amber-50/60 backdrop-blur-sm",
-    fadedBg: "bg-amber-100",
+    fadedBg: "bg-amber-100 dark:bg-amber-800/50",
     veryFadedBg: "bg-amber-50 dark:bg-amber-600/30",
     text: "text-amber-500",
     ring: "ring-amber-500",
     ringSoft: "ring-amber-200",
     ringBright: "ring-amber-300 dark:ring-amber-700",
+    ringOffset: "ring-offset-amber-50 dark:ring-offset-amber-900",
     darkText: "text-amber-700",
     fadedText: "text-amber-300",
     veryFadedText: "text-amber-200 dark:text-amber-800",
@@ -258,12 +263,13 @@ export const themeVariants: Record<
       "bg-gradient-to-r from-gray-100/20 to-emerald-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-emerald-50/60 backdrop-blur-sm",
-    fadedBg: "bg-emerald-100",
+    fadedBg: "bg-emerald-100 dark:bg-emerald-800/50",
     veryFadedBg: "bg-emerald-50 dark:bg-emerald-600/30",
     text: "text-emerald-500",
     ring: "ring-emerald-500",
     ringSoft: "ring-emerald-200",
     ringBright: "ring-emerald-300 dark:ring-emerald-700",
+    ringOffset: "ring-offset-emerald-50 dark:ring-offset-emerald-900",
     darkText: "text-emerald-800",
     fadedText: "text-emerald-300",
     veryFadedText: "text-emerald-200 dark:text-emerald-800",
@@ -306,12 +312,13 @@ export const themeVariants: Record<
       "bg-gradient-to-r from-gray-100/20to-rose-50 backdrop-blur-sm",
     verySoftGrandientBg:
       "bg-gradient-to-r from-transparent to-rose-50/60 backdrop-blur-sm",
-    fadedBg: "bg-rose-100",
+    fadedBg: "bg-rose-100 dark:bg-rose-800/50",
     veryFadedBg: "bg-rose-50 dark:bg-rose-600/30",
     text: "text-rose-500",
     ring: "ring-rose-500",
     ringSoft: "ring-rose-200",
     ringBright: "ring-rose-300 dark:ring-rose-700",
+    ringOffset: "ring-offset-rose-50 dark:ring-offset-rose-900",
     darkText: "text-rose-800",
     fadedText: "text-rose-300",
     veryFadedText: "text-rose-200 dark:text-rose-800",

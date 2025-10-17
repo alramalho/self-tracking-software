@@ -114,7 +114,7 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
           <p className="text-sm text-destructive text-center">{error}</p>
         )}
       </CardContent>
-      <div className="p-4 border-t border-gray-200 flex justify-center items-center gap-2">
+      <div className="p-4 border-t border-border flex justify-center items-center gap-2">
         <img
           src={
             isLightMode
@@ -124,7 +124,7 @@ export const SignIn: React.FC<SignInProps> = ({ onSuccess }) => {
           alt="Support"
           className="w-6 h-6 dark:fill-white"
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           Having trouble? Click{" "}
           <a
             className="underline cursor-pointer"

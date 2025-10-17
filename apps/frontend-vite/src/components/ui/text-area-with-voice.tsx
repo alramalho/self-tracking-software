@@ -97,9 +97,9 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
   };
 
   return (
-    <div className="space-y-2 bg-white">
+    <div className="space-y-2 bg-card">
       {label && (
-        <label className="text-sm font-medium text-gray-700">
+        <label className="text-sm font-medium text-foreground">
           <span>{label}</span>
         </label>
       )}
@@ -129,7 +129,7 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 rounded-full hover:bg-gray-100 ${isTranscribing ? "opacity-50" : ""}`}
+            className={`h-8 w-8 rounded-full hover:bg-muted/50 ${isTranscribing ? "opacity-50" : ""}`}
             onClick={() => {
               if (isRecording) {
                 onRecordingStopped?.();
@@ -145,7 +145,7 @@ export const TextAreaWithVoice: React.FC<TextAreaWithVoiceProps> = ({
             ) : isRecording ? (
               <Mic className="h-6 w-6 text-red-400" />
             ) : (
-              <Mic className="h-6 w-6 text-gray-700" />
+              <Mic className="h-6 w-6 text-foreground" />
             )}
           </Button>
         </div>

@@ -34,7 +34,7 @@ export const EditLookingForApPopup: React.FC<
         <h3 className="text-lg font-semibold">
           Looking for Accountability Partner
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           This will make your profile discoverable and allow us to recommend
           your profile to people also looking for AP&apos;s.
         </p>
@@ -43,7 +43,7 @@ export const EditLookingForApPopup: React.FC<
           <span
             className={twMerge(
               "text-sm",
-              value ? "text-green-600" : "text-gray-500"
+              value ? "text-green-600" : "text-muted-foreground"
             )}
           >
             {value ? "Yes, I'm looking for an AP" : "No, not looking for an AP"}
@@ -148,7 +148,7 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
         <h3 className="text-lg font-semibold">Edit your full name</h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               First Name
             </label>
             <Input
@@ -158,7 +158,7 @@ export const EditFullNamePopup: React.FC<EditFieldPopupProps> = ({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Last Name
             </label>
             <Input

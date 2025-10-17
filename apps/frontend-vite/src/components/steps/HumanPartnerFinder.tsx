@@ -38,13 +38,13 @@ const OptionCard = ({
       className={`w-full p-5 rounded-xl border-2 transition-all duration-200 text-left ${
         isSelected
           ? "border-blue-500 bg-blue-50 shadow-md"
-          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+          : "border-border bg-card hover:bg-muted/50"
       }`}
     >
       <div className="flex items-start gap-4">
         <div
           className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-            isSelected ? "bg-blue-100" : "bg-gray-100"
+            isSelected ? "bg-blue-100" : "bg-muted"
           }`}
         >
           {icon}
@@ -52,14 +52,14 @@ const OptionCard = ({
         <div className="flex-1">
           <h3
             className={`text-md font-semibold ${
-              isSelected ? "text-blue-900" : "text-gray-900"
+              isSelected ? "text-blue-900" : "text-foreground"
             }`}
           >
             {title}
           </h3>
           <p
             className={`text-xs mt-1 ${
-              isSelected ? "text-blue-700" : "text-gray-600"
+              isSelected ? "text-blue-700" : "text-muted-foreground"
             }`}
           >
             {description}
@@ -156,11 +156,11 @@ const HumanPartnerFinder = () => {
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="flex flex-col items-center gap-2">
             <PersonStanding className="w-20 h-20 text-blue-600" />
-            <h2 className="text-2xl mt-2 font-bold tracking-tight text-gray-900">
+            <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
               Let&apos;s find you a human partner
             </h2>
           </div>
-          <p className="text-md text-gray-600">
+          <p className="text-md text-muted-foreground">
             How would you like to connect with others?
           </p>
         </div>
@@ -189,15 +189,15 @@ const HumanPartnerFinder = () => {
         {/* Continue to app button - shows after user has shared or opened community search */}
         <AnimatePresence>
           {(hasShared || hasOpenedCommunitySearch) && (
-            <motion.div 
+            <motion.div
               className="mt-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <Button 
-                className="w-full bg-black hover:bg-gray-800 text-white py-3 px-6 rounded-lg font-medium"
+              <Button
+                className="w-full bg-foreground hover:bg-foreground/90 text-background py-3 px-6 rounded-lg font-medium"
                 onClick={() => handleContinueToApp()}
                 loading={isContinuing}
               >

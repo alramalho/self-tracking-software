@@ -1,5 +1,6 @@
 "use client";
 
+import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { HomepageMetricsSection } from "@/components/HomepageMetricsSection";
@@ -15,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
   Hammer,
+  Moon,
   RefreshCcw,
   ScanFace,
 } from "lucide-react";
@@ -94,7 +96,7 @@ function HomePage() {
   if (!isLoaded || !isSignedIn) {
     return (
       <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
-        <div className="bg-gray-50 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm">
+        <div className="bg-muted ring-1 ring-border backdrop-blur-sm rounded-full py-2 px-4 shadow-sm">
           <div className="flex justify-between items-center">
             <div className="flex flex-row gap-1 items-center">
               <Skeleton className="w-10 h-10 rounded-full" />
@@ -124,7 +126,7 @@ function HomePage() {
     return (
       <div className="container mx-auto px-3 pt-3 pb-8 max-w-2xl space-y-4">
         {/* Header Skeleton */}
-        <div className="bg-gray-50 ring-1 ring-gray-200 backdrop-blur-sm rounded-full py-2 px-4 shadow-sm">
+        <div className="bg-muted ring-1 ring-border backdrop-blur-sm rounded-full py-2 px-4 shadow-sm">
           <div className="flex justify-between items-center">
             <div className="flex flex-row gap-1 items-center">
               <Skeleton className="w-10 h-10 rounded-full" />
@@ -182,12 +184,12 @@ function HomePage() {
         }}
         pullingContent={
           <div className="flex items-center justify-center my-4">
-            <RefreshCcw size={24} className="text-gray-500" />
+            <RefreshCcw size={24} className="text-muted-foreground" />
           </div>
         }
         refreshingContent={
           <div className="flex items-center justify-center my-4">
-            <RefreshCcw size={24} className="text-gray-500 animate-spin" />
+            <RefreshCcw size={24} className="text-muted-foreground animate-spin" />
           </div>
         }
       >
@@ -222,7 +224,7 @@ function HomePage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsFeedbackOpen(true)}
-                className="p-0 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
                 title="Send Feedback"
               >
                 <img
@@ -234,7 +236,7 @@ function HomePage() {
               <div className="relative">
                 <button
                   onClick={() => setIsNotificationsOpen(true)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 relative"
+                  className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200 relative"
                 >
                   <Bell size={24} />
                   {unopenedNotificationsCount > 0 && (
@@ -248,7 +250,7 @@ function HomePage() {
               </div>
               <button
                 onClick={() => navigate({ to: "/insights/dashboard" })}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
                 title="AI Insights"
               >
                 <ScanFace size={24} />
@@ -258,16 +260,16 @@ function HomePage() {
 
           <div
             onClick={() => setIsFeedbackOpen(true)}
-            className="ring-1 ring-gray-200 backdrop-blur-md bg-white/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200"
+            className="ring-1 ring-border backdrop-blur-md bg-card/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Hammer size={40} className="text-gray-500" />
+                <Hammer size={40} className="text-muted-foreground" />
                 <div>
-                  <span className="text-sm font-semibold text-gray-700">
+                  <span className="text-sm font-semibold text-foreground">
                     We&apos;re updating the app!
                   </span>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     If anything is broken, please let us know.
                   </p>
                 </div>
@@ -282,27 +284,27 @@ function HomePage() {
                   {activePlans.length > 1 && (
                     <button
                       onClick={() => setIsPlansCollapsed((prev) => !prev)}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors duration-200 flex items-center justify-center"
+                      className="p-1 hover:bg-muted/50 rounded transition-colors duration-200 flex items-center justify-center"
                       aria-label={
                         isPlansCollapsed ? "Expand streaks" : "Collapse streaks"
                       }
                     >
                       {isPlansCollapsed ? (
-                        <ChevronRight size={16} className="text-gray-600" />
+                        <ChevronRight size={16} className="text-muted-foreground" />
                       ) : (
-                        <ChevronDown size={16} className="text-gray-600" />
+                        <ChevronDown size={16} className="text-muted-foreground" />
                       )}
                     </button>
                   )}
                   <div className="flex flex-row items-center justify-between gap-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                       Your Plans
                     </h3>
                   </div>
                 </div>
                 <button
                   onClick={() => navigate({ to: "/plans" })}
-                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   View Details
                   <ChevronRight size={16} />
@@ -344,7 +346,7 @@ function HomePage() {
             <ScanFace size={30} className="text-purple-500" />
             <div>
               <h3 className="text-lg font-semibold">AI Coach & Insights</h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Get personalized coaching and track your daily metrics
               </p>
             </div>
@@ -371,6 +373,23 @@ function HomePage() {
         onClose={() => setIsFeedbackOpen(false)}
         isEmailEditable={!currentUser?.email}
         open={isFeedbackOpen}
+      />
+
+      {/* Night Mode Announcement */}
+      <AnnouncementPopover
+        id="night-mode-2025"
+        title="Night Mode is Here!"
+        icon={<Moon size={32} className="text-foreground" />}
+        description="Switch between light and dark themes to match your preference. Perfect for late-night tracking sessions!"
+        imageSrc={"/public/images/screenshots/night-mode.png"}
+        actionLabel="Try it out →"
+        onAction={() =>
+          navigate({
+            to: `/profile/$username`,
+            params: { username: currentUser?.username || "" },
+            search: { activeView: "themeMode" },
+          })
+        }
       />
     </div>
   );

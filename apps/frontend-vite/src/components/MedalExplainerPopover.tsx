@@ -3,8 +3,9 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useActivities } from "@/contexts/activities/useActivities";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { useCurrentUser } from "@/contexts/users";
-import { ACCOUNT_LEVELS, useAccountLevel } from "@/hooks/useAccountLevel";
+import { getAccountLevels, useAccountLevel } from "@/hooks/useAccountLevel";
 import { Check, Medal, Target, Trophy, Zap } from "lucide-react";
 import React from "react";
 
@@ -19,8 +20,10 @@ const MedalExplainerPopover: React.FC<MedalExplainerPopoverProps> = ({
 }) => {
   const { currentUser } = useCurrentUser();
   const { activityEntries } = useActivities();
+  const { isDarkMode } = useTheme();
   const totalActivitiesLogged = activityEntries?.length || 0;
   const accountLevel = useAccountLevel(totalActivitiesLogged);
+  const ACCOUNT_LEVELS = getAccountLevels(isDarkMode);
 
   return (
     <AppleLikePopover open={open} onClose={onClose} title="Level Progress">

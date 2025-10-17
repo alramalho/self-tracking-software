@@ -11,11 +11,13 @@ import UserSearch, { type UserSearchResult } from "./UserSearch";
 interface InviteButtonProps {
   planId: string;
   onInviteSuccess: () => void;
+  isExternalSupported: boolean;
 }
 
 const InviteButton: React.FC<InviteButtonProps> = ({
   planId,
   onInviteSuccess,
+  isExternalSupported = true,
 }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
@@ -86,7 +88,7 @@ const InviteButton: React.FC<InviteButtonProps> = ({
   const shareOrCopyButton = (
     <Button
       variant="outline"
-      className="mt-4 text-md w-full p-6 bg-gray-50"
+      className="mt-4 text-md w-full p-6 bg-muted"
       onClick={handleShareOrCopy}
     >
       {isShareSupported ? (
@@ -120,8 +122,8 @@ const InviteButton: React.FC<InviteButtonProps> = ({
         open={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       >
-        {shareOrCopyButton}
-        <Divider text="OR" />
+        {isExternalSupported && shareOrCopyButton}
+        {isExternalSupported && <Divider text="OR" />}
         <UserSearch
           onUserClick={handleUserSelect}
           selectedUsers={invitees}

@@ -50,15 +50,15 @@ function PlanActivitySetter() {
     return (
       <div className="space-y-4">
         {data.activities && data.activities.length > 0 && (
-          <div className="border border-gray-200 rounded-md p-3 bg-white">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">
+          <div className="border border-border rounded-md p-3 bg-card">
+            <h3 className="text-sm font-medium text-foreground mb-2">
               Activities
             </h3>
             <div className="space-y-2">
               {data.activities.map((activity, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <span className="text-lg">{activity.emoji}</span>
-                  <span className="flex-1 text-gray-900">
+                  <span className="flex-1 text-foreground">
                     {activity.title || (activity as any).name} (
                     {activity.measure})
                   </span>

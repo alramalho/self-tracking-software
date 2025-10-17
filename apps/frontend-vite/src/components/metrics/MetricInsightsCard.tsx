@@ -49,7 +49,7 @@ export function MetricInsightsCard({
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground hover:text-foreground"
             onClick={onHelpClick}
           >
             <HelpCircle className="h-5 w-5" />

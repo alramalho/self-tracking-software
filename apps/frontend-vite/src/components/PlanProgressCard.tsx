@@ -215,9 +215,9 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                   {plan.goal}
                 </span>
                 {habitIsAchieved && (
-                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 w-fit">
-                    <Sprout size={18} className="text-lime-600" />
-                    <span className="text-[12px] font-medium text-lime-700">
+                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 dark:bg-lime-900/30 w-fit">
+                    <Sprout size={18} className="text-lime-500" />
+                    <span className="text-[12px] font-medium text-lime-500">
                       Habit
                     </span>
                   </div>

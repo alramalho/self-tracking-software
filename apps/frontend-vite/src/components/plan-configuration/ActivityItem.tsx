@@ -26,7 +26,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
       className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 aspect-square cursor-pointer transition-colors ${
         isSelected
           ? twMerge(variants.card.selected.border, variants.card.selected.bg)
-          : "border-gray-200 hover:bg-gray-50"
+          : "border-border hover:bg-muted/50"
       } ${className}`}
     >
       <div className="relative w-full h-full flex flex-col items-start justify-center">
@@ -35,7 +35,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
         )}
         <span className="text-xl">{activity.emoji}</span>
         <p className="text-sm font-medium text-left">{activity.title}</p>
-        <p className="text-xs text-gray-500 text-left">{activity.measure}</p>
+        <p className="text-xs text-muted-foreground text-left">{activity.measure}</p>
       </div>
     </div>
   );

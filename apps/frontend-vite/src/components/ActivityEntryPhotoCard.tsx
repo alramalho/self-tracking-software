@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type PlanProgressData } from "@/contexts/plans-progress";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { useCurrentUser, useUser } from "@/contexts/users";
 import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -121,7 +122,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
   const textRef = useRef<HTMLParagraphElement>(null);
   const [showBadgeExplainer, setShowBadgeExplainer] = useState(false);
   const { data: ownerUser } = useUser({ username: user.username || "" });
-
+  const { isLightMode } = useTheme();
   const habitAchieved = userPlansProgressData?.some(
     (plan) => plan.habitAchievement.isAchieved
   );
@@ -346,7 +347,7 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                     <button
                       key={emoji}
                       onClick={() => handleReactionClick(emoji)}
-                      className={`inline-flex border border-white/20 dark:border-gray-700/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
+                      className={`inline-flex border border-white/20 backdrop-blur-sm items-center rounded-full px-3 py-1.5 text-sm shadow-md transition-all gap-2 pointer-events-auto ${
                         usernames.includes(currentUserUsername || "")
                           ? variants.card.selected.glassBg
                           : variants.card.glassBg
@@ -489,7 +490,9 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 <Avatar
                   className="w-8 h-8"
                   style={{
-                    boxShadow: `0 0 0 2px white, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
+                    boxShadow: `0 0 0 2px ${
+                      isLightMode ? "white" : "black"
+                    }, 0 0 0 5px ${accountLevel.currentLevel?.color}`,
                   }}
                   onClick={onAvatarClick}
                 >

@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { PlanState, Prisma } from "@tsw/prisma";
+import { Activity, Plan, PlanGroup, PlanState, Prisma } from "@tsw/prisma";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { Response, Router } from "express";
 import { z } from "zod/v4";
@@ -1419,6 +1419,7 @@ router.post(
   ): Promise<Response | void> => {
     try {
       const { invitationId } = req.params;
+      const { existingPlanId } = req.body;
 
       // Check if it's a PlanInviteLink (external) or PlanGroupMember (direct invite)
       let inviteLink = await prisma.planInviteLink.findUnique({
@@ -1456,7 +1457,9 @@ router.post(
         return;
       }
 
-      let planGroup;
+      let planGroup:
+        | (PlanGroup & { plans: (Plan & { activities: Activity[] })[] })
+        | null = null;
 
       if (inviteLink) {
         // Handle external invite link
@@ -1529,49 +1532,180 @@ router.post(
 
       // Accept the invitation using a transaction
       const result = await prisma.$transaction(async (tx) => {
-        // First, create copies of the activities for the new user
-        const newActivities = await Promise.all(
-          templatePlan.activities.map(async (templateActivity: any) => {
-            return await tx.activity.create({
-              data: {
-                userId: req.user!.id,
-                title: templateActivity.title,
-                measure: templateActivity.measure,
-                emoji: templateActivity.emoji,
-                colorHex: templateActivity.colorHex,
-                privacySettings: templateActivity.privacySettings,
-              },
-            });
-          })
-        );
-
-        // Create a copy of the plan for the new user
-        const newPlan = await tx.plan.create({
-          data: {
-            userId: req.user!.id,
-            goal: templatePlan.goal,
-            emoji: templatePlan.emoji,
-            finishingDate: templatePlan.finishingDate,
-            notes: templatePlan.notes,
-            durationType: templatePlan.durationType,
-            outlineType: templatePlan.outlineType,
-            timesPerWeek: templatePlan.timesPerWeek,
-            sortOrder: 1,
-            planGroupId: planGroup.id,
-            // Connect to the newly created activities
-            activities: {
-              connect: newActivities.map((activity) => ({
-                id: activity.id,
-              })),
-            },
-          },
+        let userPlan: Prisma.PlanGetPayload<{
           include: {
-            activities: true,
-            sessions: true,
-            milestones: true,
-            planGroup: true,
-          },
-        });
+            activities: true;
+            sessions: true;
+            milestones: true;
+            planGroup: {
+              include: {
+                members: {
+                  include: {
+                    user: true;
+                    plan: true;
+                  };
+                };
+              };
+            };
+          };
+        }>;
+
+        if (existingPlanId) {
+          // User chose to link an existing plan to the group
+          const existingPlan = await tx.plan.findUnique({
+            where: { id: existingPlanId },
+            include: {
+              activities: true,
+              sessions: true,
+              milestones: true,
+              planGroup: {
+                include: {
+                  members: {
+                    where: {
+                      status: "ACTIVE",
+                    },
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                          username: true,
+                          picture: true,
+                        },
+                      },
+                      plan: {
+                        select: {
+                          id: true,
+                          goal: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          if (!existingPlan) {
+            throw new Error("Existing plan not found");
+          }
+
+          if (existingPlan.userId !== req.user!.id) {
+            throw new Error("Not authorized to use this plan");
+          }
+
+          if (existingPlan.planGroupId) {
+            throw new Error("Plan is already part of a group");
+          }
+
+          // Update the existing plan to join the group
+          userPlan = await tx.plan.update({
+            where: { id: existingPlanId },
+            data: { planGroupId: planGroup.id },
+            include: {
+              activities: true,
+              sessions: true,
+              milestones: true,
+              planGroup: {
+                include: {
+                  members: {
+                    where: {
+                      status: "ACTIVE",
+                    },
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                          username: true,
+                          picture: true,
+                        },
+                      },
+                      plan: {
+                        select: {
+                          id: true,
+                          goal: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+        } else {
+          // User chose to create a new plan (copy the template)
+          // First, create copies of the activities for the new user
+          const newActivities = await Promise.all(
+            templatePlan.activities.map(async (templateActivity: any) => {
+              return await tx.activity.create({
+                data: {
+                  userId: req.user!.id,
+                  title: templateActivity.title,
+                  measure: templateActivity.measure,
+                  emoji: templateActivity.emoji,
+                  colorHex: templateActivity.colorHex,
+                  privacySettings: templateActivity.privacySettings,
+                },
+              });
+            })
+          );
+
+          // Create a copy of the plan for the new user
+          userPlan = await tx.plan.create({
+            data: {
+              userId: req.user!.id,
+              goal: templatePlan.goal,
+              emoji: templatePlan.emoji,
+              finishingDate: templatePlan.finishingDate,
+              notes: templatePlan.notes,
+              durationType: templatePlan.durationType,
+              outlineType: templatePlan.outlineType,
+              timesPerWeek: templatePlan.timesPerWeek,
+              sortOrder: 1,
+              planGroupId: planGroup.id,
+              // Connect to the newly created activities
+              activities: {
+                connect: newActivities.map((activity) => ({
+                  id: activity.id,
+                })),
+              },
+            },
+            include: {
+              activities: true,
+              sessions: true,
+              milestones: true,
+              planGroup: {
+                include: {
+                  members: {
+                    where: {
+                      status: "ACTIVE",
+                    },
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                          username: true,
+                          picture: true,
+                        },
+                      },
+                      plan: {
+                        select: {
+                          id: true,
+                          goal: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          // Update sort orders for other plans
+          await updateSortOrders(tx, req.user!.id, userPlan.id);
+        }
 
         // Create or update member record
         if (memberInvite) {
@@ -1580,7 +1714,7 @@ router.post(
             where: { id: invitationId },
             data: {
               status: "ACTIVE",
-              planId: newPlan.id,
+              planId: userPlan.id,
               joinedAt: new Date(),
             },
           });
@@ -1590,7 +1724,7 @@ router.post(
             data: {
               planGroupId: planGroup.id,
               userId: req.user!.id,
-              planId: newPlan.id,
+              planId: userPlan.id,
               role: "MEMBER",
               status: "ACTIVE",
               joinedAt: new Date(),
@@ -1598,10 +1732,7 @@ router.post(
           });
         }
 
-        // Update sort orders for other plans
-        await updateSortOrders(tx, req.user!.id, newPlan.id);
-
-        return newPlan;
+        return userPlan;
       });
 
       // Mark the related notification as concluded
@@ -1621,7 +1752,7 @@ router.post(
       }
 
       logger.info(
-        `User ${req.user!.id} accepted plan invitation ${invitationId}`
+        `User ${req.user!.id} accepted plan invitation ${invitationId}${existingPlanId ? ` with existing plan ${existingPlanId}` : " with new plan"}`
       );
       res.json({
         message: "Invitation accepted successfully",

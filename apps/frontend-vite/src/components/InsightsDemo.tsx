@@ -51,14 +51,14 @@ export const InsightsDemo: React.FC<InsightsDemoProps> = ({
     <div className={`space-y-6 ${className}`}>
       {/* Demo Metrics Preview */}
       <div className="space-y-4">
-        <div className="text-sm font-medium text-gray-700 mb-3">
+        <div className="text-sm font-medium text-foreground mb-3">
           Preview: Track metrics like happiness, energy & productivity
         </div>
 
         {demoMetrics.map((metric) => (
           <div
             key={metric.name}
-            className="bg-white/60 rounded-lg p-4 border border-white/50"
+            className="bg-card/60 rounded-lg p-4 border border-card/50"
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">
@@ -72,7 +72,7 @@ export const InsightsDemo: React.FC<InsightsDemoProps> = ({
               data={metric.data}
               color={metric.bgColor}
             />
-            <div className="text-xs text-gray-600 mt-2">
+            <div className="text-xs text-muted-foreground mt-2">
               {metric.correlations.map((correlation, i) => (
                 <span key={correlation}>
                   <span className="text-green-600">{correlation}</span>

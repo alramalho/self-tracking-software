@@ -104,23 +104,23 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
         className={`ring-1 rounded-3xl p-4 backdrop-blur-sm ${cn(
           hasNote && !wasSkipped
             ? `${variants.card.softGlassBg} ${variants.ringSoft}` // Use variants for submitted notes
-            : "bg-gray-50 ring-gray-200" // Use gray for skipped
+            : "bg-muted ring-border" // Use semantic tokens for skipped
         )}`}
       >
         <div className="flex items-center gap-2">
           {hasNote && !wasSkipped ? (
             <Check className={`w-5 h-5 ${variants.text}`} />
           ) : (
-            <XCircle className={`w-5 h-5 text-gray-500`} />
+            <XCircle className={`w-5 h-5 text-muted-foreground`} />
           )}
-          <span className="text-sm font-normal italic text-gray-500">
+          <span className="text-sm font-normal italic text-muted-foreground">
             {hasNote && !wasSkipped
               ? "Note added to today's entries!"
               : "Skipped adding note today"}
           </span>
         </div>
         {hasNote && !wasSkipped && (
-          <div className="mt-2 text-xs text-gray-400 italic">
+          <div className="mt-2 text-xs text-muted-foreground italic">
             &quot;{existingNote || note.trim()}&quot;
           </div>
         )}
@@ -132,7 +132,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="ring-1 rounded-3xl p-4 bg-white/60 backdrop-blur-sm ring-gray-200 shadow-sm"
+      className="ring-1 rounded-3xl p-4 bg-card/60 backdrop-blur-sm ring-border shadow-sm"
     >
       <div className="space-y-4">
         <TextAreaWithVoice
@@ -149,7 +149,7 @@ export const TodaysNoteSection: React.FC<TodaysNoteSectionProps> = ({
             size="sm"
             onClick={handleSkip}
             disabled={isSubmitting}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-muted-foreground hover:text-foreground"
           >
             Skip
           </Button>

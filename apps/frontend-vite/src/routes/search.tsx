@@ -86,14 +86,14 @@ function SearchPage() {
         }}
       >
         <div className="flex flex-col items-center justify-center py-8">
-          <div className="bg-gray-100 p-4 rounded-full mb-4">
-            <Bell size={48} className="text-gray-600" />
+          <div className="bg-muted p-4 rounded-full mb-4">
+            <Bell size={48} className="text-muted-foreground" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-700 text-center">
+          <h2 className="text-lg font-semibold text-foreground text-center">
             Please enable notifications to continue
           </h2>
           {!isPushGranted && (
-            <p className="text-gray-500 text-sm">
+            <p className="text-muted-foreground text-sm">
               <button className="underline" onClick={requestPermission}>
                 Click here
               </button>{" "}
@@ -101,7 +101,7 @@ function SearchPage() {
             </p>
           )}
           {isPushGranted && (
-            <p className="text-gray-500 text-sm text-center">
+            <p className="text-muted-foreground text-sm text-center">
               This will enable you to stay on top of newest recommended partners
               and received friend requests.
             </p>
@@ -123,12 +123,12 @@ function SearchPage() {
         }}
         pullingContent={
           <div className="flex items-center justify-center my-4">
-            <RefreshCcw size={24} className="text-gray-500" />
+            <RefreshCcw size={24} className="text-muted-foreground" />
           </div>
         }
         refreshingContent={
           <div className="flex items-center justify-center my-4">
-            <RefreshCcw size={24} className="text-gray-500 animate-spin" />
+            <RefreshCcw size={24} className="text-muted-foreground animate-spin" />
           </div>
         }
         className="!h-fit"
@@ -142,7 +142,7 @@ function SearchPage() {
             !isLoadingPlans &&
             activePlans.length > 0 && (
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600 font-medium">
+                <span className="text-sm text-muted-foreground font-medium">
                   Find partners for:
                 </span>
                 <div className="relative flex-1">
@@ -150,7 +150,7 @@ function SearchPage() {
                     value={selectedPlanId || ""}
                     onChange={(e) => handlePlanChange(e.target.value)}
                     disabled={isRecomputingForPlan}
-                    className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full appearance-none bg-card border border-border rounded-lg px-4 py-2 pr-10 text-sm font-medium text-foreground hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {activePlans.map((plan) => (
                       <option key={plan.id} value={plan.id}>
@@ -159,9 +159,9 @@ function SearchPage() {
                     ))}
                   </select>
                   {isRecomputingForPlan ? (
-                    <RefreshCcw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 animate-spin" />
+                    <RefreshCcw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
                   ) : (
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   )}
                 </div>
               </div>

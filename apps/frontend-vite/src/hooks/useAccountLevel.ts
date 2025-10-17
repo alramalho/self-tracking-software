@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/theme/useTheme";
 import { Crown, Gem, Medal, Star, Target } from "lucide-react";
 import React, { useMemo } from "react";
 
@@ -28,17 +29,66 @@ const createLevel = (
     }),
 });
 
-export const ACCOUNT_LEVELS: AccountLevel[] = [
-  createLevel("New", 0, "#A3A3A3", "#787878", Target, "text-gray-400"),
-  createLevel("Bronze", 16, "#CD7F32", "#92400e", Medal, "text-amber-600"),
-  createLevel("Silver", 128, "#A9BCD5", "#475569", Medal, "text-slate-400"),
-  createLevel("Gold", 512, "#fbbf24", "#d97706", Crown, "text-yellow-500"),
-  createLevel("Platinum", 2048, "#A8CADD", "#71717a", Star, "text-slate-300"),
-  createLevel("Diamond", 8192, "#22d3ee", "#0891b2", Gem, "text-cyan-400"),
+export const getAccountLevels = (isDarkMode: boolean): AccountLevel[] => [
+  createLevel(
+    "New",
+    0,
+    isDarkMode ? "#9CA3AF" : "#A3A3A3",
+    isDarkMode ? "#6B7280" : "#787878",
+    Target,
+    "text-gray-400 dark:text-gray-500"
+  ),
+  createLevel(
+    "Bronze",
+    16,
+    isDarkMode ? "#D97706" : "#CD7F32",
+    isDarkMode ? "#78350f" : "#92400e",
+    Medal,
+    "text-amber-600 dark:text-amber-500"
+  ),
+  createLevel(
+    "Silver",
+    128,
+    isDarkMode ? "#94A3B8" : "#A9BCD5",
+    isDarkMode ? "#334155" : "#475569",
+    Medal,
+    "text-slate-400 dark:text-slate-300"
+  ),
+  createLevel(
+    "Gold",
+    512,
+    isDarkMode ? "#FCD34D" : "#fbbf24",
+    isDarkMode ? "#B45309" : "#d97706",
+    Crown,
+    "text-yellow-500 dark:text-yellow-400"
+  ),
+  createLevel(
+    "Platinum",
+    2048,
+    isDarkMode ? "#94A3B8" : "#A8CADD",
+    isDarkMode ? "#475569" : "#71717a",
+    Star,
+    "text-slate-300 dark:text-slate-400"
+  ),
+  createLevel(
+    "Diamond",
+    8192,
+    isDarkMode ? "#06B6D4" : "#22d3ee",
+    isDarkMode ? "#0E7490" : "#0891b2",
+    Gem,
+    "text-cyan-400 dark:text-cyan-300"
+  ),
 ];
 
+// Backwards compatibility - default to light mode
+// For theme-aware usage, use getAccountLevels(isDarkMode) or useAccountLevel hook
+export const ACCOUNT_LEVELS = getAccountLevels(false);
+
 export function useAccountLevel(totalActivitiesLogged: number) {
+  const { isDarkMode } = useTheme();
   return useMemo(() => {
+    const ACCOUNT_LEVELS = getAccountLevels(isDarkMode);
+
     // Find current level
     let currentLevel: AccountLevel | null = null;
     let nextLevel: AccountLevel | null = null;
@@ -83,5 +133,5 @@ export function useAccountLevel(totalActivitiesLogged: number) {
       isMaxLevel: !nextLevel,
       atLeastBronze: totalActivitiesLogged >= ACCOUNT_LEVELS[1].threshold,
     };
-  }, [totalActivitiesLogged]);
+  }, [totalActivitiesLogged, isDarkMode]);
 }
