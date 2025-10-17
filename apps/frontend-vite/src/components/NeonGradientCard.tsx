@@ -12,14 +12,14 @@ const NeonCard = ({
   const neonClasses = {
     amber: cn(
       "ring-offset-2 ring-offset-background",
-      "ring-amber-400 ring-2",
-      "bg-gradient-to-br from-amber-50/80 via-amber-100/60 to-amber-50/80",
+      "ring-amber-400 dark:ring-amber-600 ring-2",
+      "bg-gradient-to-br from-amber-50/80 via-amber-100/60 to-amber-50/80 dark:from-amber-900/10 dark:via-amber-800/20 dark:to-amber-900/60",
       "shadow-lg shadow-amber-200/50"
     ),
     lime: cn(
       "ring-offset-2 ring-offset-background",
-      "ring-lime-400 ring-2",
-      "bg-gradient-to-br from-lime-50/80 via-lime-100/60 to-green-50/80",
+      "ring-lime-400 dark:ring-lime-600 ring-2",
+      "bg-gradient-to-br from-lime-50/80 via-lime-100/60 to-green-50/80 dark:from-lime-900/40 dark:via-lime-800/20 dark:to-lime-900/60",
       "shadow-lg shadow-lime-200/50"
     ),
     none: "bg-card/50 backdrop-blur-sm border rounded-2xl overflow-hidden relative",
