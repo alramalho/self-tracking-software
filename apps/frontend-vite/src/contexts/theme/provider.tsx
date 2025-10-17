@@ -22,10 +22,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     [currentUser?.themeBaseColor]
   );
 
-  const themeMode = useMemo(
-    () => (currentUser?.themeMode?.toLowerCase() || "light") as LowerThemeMode,
-    [currentUser?.themeMode]
-  );
+  // Get theme mode from user data, fallback to localStorage, then to light
+  const themeMode = useMemo(() => {
+    if (currentUser?.themeMode) {
+      return currentUser.themeMode.toLowerCase() as LowerThemeMode;
+    }
+    // Fallback to localStorage if user data not loaded yet
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("themeMode") as LowerThemeMode | null;
+      if (stored) return stored;
+    }
+    return "light" as LowerThemeMode;
+  }, [currentUser?.themeMode]);
 
   // Detect system preference for AUTO mode
   const systemPrefersDark = useMemo(() => {
@@ -40,6 +48,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     return themeMode as "light" | "dark";
   }, [themeMode, systemPrefersDark]);
+
+  // Persist theme mode to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && themeMode) {
+      localStorage.setItem("themeMode", themeMode);
+    }
+  }, [themeMode]);
 
   // Apply dark class to document root
   useEffect(() => {

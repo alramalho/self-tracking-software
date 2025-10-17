@@ -21,7 +21,7 @@ export function PlanEditModal({
 }: PlanEditModalProps) {
   return (
     <AppleLikePopover
-      className={"bg-gray-50"}
+      className={"bg-muted"}
       open={isOpen}
       onClose={onClose}
     >

@@ -130,7 +130,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   }
 
   return (
-    <div className={`${fullWidth ? "w-full" : ""} bg-muted/30 dark:bg-muted/10 backdrop-blur-md  ${className}`}>
+    <div className={`${fullWidth ? "w-full" : ""} bg-muted/30 backdrop-blur-md  ${className}`}>
       {/* Comments section */}
       {comments.length > 0 && (
         <div className="space-y-2 mb-2">

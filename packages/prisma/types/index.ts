@@ -50,7 +50,7 @@ export type PlanProgressState = {
     weekActivities: any[];
     isCompleted: boolean;
   }>;
-  currentWeekState: PlanState;
+  currentWeekState: PlanState | undefined | null;
 } | null;
 
 export type PlanProgressData = {

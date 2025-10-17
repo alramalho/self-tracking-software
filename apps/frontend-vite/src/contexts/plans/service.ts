@@ -1,4 +1,4 @@
-import { type PlanInvitation, Prisma } from "@tsw/prisma";
+import { Prisma } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { type AxiosInstance } from "axios";
 import { normalizeApiResponse } from "../../utils/dateUtils";
@@ -10,7 +10,24 @@ type PlanWithRelationsBase = Prisma.PlanGetPayload<{
     sessions: true;
     planGroup: {
       include: {
-        members: true;
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true;
+                name: true;
+                username: true;
+                picture: true;
+              };
+            };
+            plan: {
+              select: {
+                id: true;
+                goal: true;
+              };
+            };
+          };
+        };
       };
     };
     milestones: true;
@@ -62,12 +79,47 @@ type PlanApiResponse = Omit<
   progress: any; // Will be properly typed by normalizePlanProgress
 };
 
-type PlanInvitationApiResponse = Omit<
-  PlanInvitation,
-  "createdAt" | "updatedAt"
+export type PlanGroupMemberInvitationPayload = Prisma.PlanGroupMemberGetPayload<{
+  include: {
+    planGroup: {
+      include: {
+        plans: {
+          include: {
+            activities: true;
+          };
+        };
+      };
+    };
+    invitedBy: true;
+  };
+}>;
+
+type PlanGroupMemberInvitationApiResponse = Omit<
+  PlanGroupMemberInvitationPayload,
+  "invitedAt" | "joinedAt" | "leftAt" | "planGroup" | "invitedBy"
 > & {
-  createdAt: string;
-  updatedAt: string | null;
+  invitedAt: string;
+  joinedAt: string | null;
+  leftAt: string | null;
+  planGroup: Omit<
+    NonNullable<PlanGroupMemberInvitationPayload["planGroup"]>,
+    "createdAt" | "plans"
+  > & {
+    createdAt: string;
+    plans: Array<
+      Omit<
+        PlanGroupMemberInvitationPayload["planGroup"]["plans"][number],
+        "createdAt" | "updatedAt" | "deletedAt" | "finishingDate" | "suggestedByCoachAt"
+      > & {
+        createdAt: string;
+        updatedAt: string;
+        deletedAt: string | null;
+        finishingDate: string | null;
+        suggestedByCoachAt: string | null;
+      }
+    >;
+  };
+  invitedBy: PlanGroupMemberInvitationPayload["invitedBy"];
 };
 
 const deserializePlan = (plan: PlanApiResponse): PlanWithRelations => {
@@ -94,10 +146,20 @@ const deserializePlan = (plan: PlanApiResponse): PlanWithRelations => {
   };
 };
 
-const deserializePlanInvitation = (
-  invitation: PlanInvitationApiResponse
-): PlanInvitation =>
-  normalizeApiResponse<PlanInvitation>(invitation, ["createdAt", "updatedAt"]);
+const deserializePlanGroupMemberInvitation = (
+  invitation: PlanGroupMemberInvitationApiResponse
+): PlanGroupMemberInvitationPayload =>
+  normalizeApiResponse<PlanGroupMemberInvitationPayload>(invitation, [
+    "invitedAt",
+    "joinedAt",
+    "leftAt",
+    "planGroup.createdAt",
+    "planGroup.plans.createdAt",
+    "planGroup.plans.updatedAt",
+    "planGroup.plans.deletedAt",
+    "planGroup.plans.finishingDate",
+    "planGroup.plans.suggestedByCoachAt",
+  ]);
 
 const deserializeMilestone = (
   milestone: PlanApiResponse["milestones"][number]
@@ -129,10 +191,10 @@ export async function updatePlans(
 }
 
 export async function fetchPlanInvitation(api: AxiosInstance, id: string) {
-  const response = await api.get<PlanInvitationApiResponse>(
+  const response = await api.get<PlanGroupMemberInvitationApiResponse>(
     `/plans/plan-invitations/${id}`
   );
-  return deserializePlanInvitation(response.data);
+  return deserializePlanGroupMemberInvitation(response.data);
 }
 
 export async function modifyManualMilestone(

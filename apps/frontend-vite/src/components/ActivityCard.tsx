@@ -60,7 +60,7 @@ export const ActivityCard = ({
           )} */}
         <div
           className="absolute bottom-2 right-2 w-5 h-5 rounded-sm"
-          style={{ backgroundColor: activity.colorHex || "#e5e7eb" }}
+          style={{ backgroundColor: activity.colorHex || "transparent" }}
         />
       </button>
       {onEditClick && (

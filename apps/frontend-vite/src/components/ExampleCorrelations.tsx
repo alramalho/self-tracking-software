@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 
 export const ExampleCorrelations = () => {
   return (
-    <Card className="p-6 bg-white opacity-70">
+    <Card className="p-6 bg-card opacity-70">
       <div className="space-y-6">
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold">

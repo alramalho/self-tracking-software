@@ -6,19 +6,19 @@ import { Prisma, type Activity, type PlanSession } from "@tsw/prisma";
 import { type PlanMilestone } from "@tsw/prisma/types";
 import React from "react";
 import { toast } from "react-hot-toast";
-import {
-    clearCoachSuggestedSessionsInPlan,
-    deletePlan,
-    getPlans,
-    modifyManualMilestone,
-    updatePlans,
-    upgradeCoachSuggestedSessionsToPlanSessions,
-} from "./service";
 import { normalizePlanProgress } from "../plans-progress/service";
 import {
-    PlansContext,
-    type CompletePlan,
-    type PlansContextType,
+  clearCoachSuggestedSessionsInPlan,
+  deletePlan,
+  getPlans,
+  modifyManualMilestone,
+  updatePlans,
+  upgradeCoachSuggestedSessionsToPlanSessions,
+} from "./service";
+import {
+  PlansContext,
+  type CompletePlan,
+  type PlansContextType,
 } from "./types";
 
 export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -161,9 +161,25 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await api.post(`/plans/leave-plan-group/${planId}`);
       return response.data;
     },
-    onSuccess: () => {
-      // Invalidate and refetch plans
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+    onSuccess: (_data, planId) => {
+      // Optimistically update the plan in cache
+      queryClient.setQueryData(["plans"], (oldPlans: CompletePlan[] = []) => {
+        return oldPlans.map((plan) => {
+          if (plan.id === planId) {
+            // Remove plan group info when leaving
+            return {
+              ...plan,
+              planGroupId: null,
+              planGroup: null,
+            };
+          }
+          return plan;
+        });
+      });
+
+      // Also invalidate individual plan query if it exists
+      queryClient.invalidateQueries({ queryKey: ["plan", planId] });
+
       toast.success("Left plan group successfully!");
     },
     onError: (error) => {

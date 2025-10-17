@@ -23,6 +23,11 @@ export async function updateUserThemeMode(
   }) => Promise<User>,
   mode: LowerThemeMode
 ): Promise<User> {
+  // Immediately persist to localStorage to prevent flash on next page load
+  if (typeof window !== "undefined") {
+    localStorage.setItem("themeMode", mode);
+  }
+
   return await updateUserFn({
     updates: { themeMode: mode.toUpperCase() as ThemeMode },
     muteNotifications: true,

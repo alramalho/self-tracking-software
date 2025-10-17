@@ -119,7 +119,7 @@ const pricingTiers: PricingTier[] = [
 export const Coffee = () => {
   return (
     <div className="flex flex-row gap-2 items-center justify-center">
-      <span className="text-2xl font-bold text-gray-700 font-cursive">
+      <span className="text-2xl font-bold text-foreground font-cursive">
         is your consistency worth a
       </span>
       <div className="relative">
@@ -136,12 +136,12 @@ export const Coffee = () => {
               height="64"
             />
           </picture>
-          {/* <p className="text-2xl text-gray-500 font-bold font-cursive absolute bottom-[-10px] left-[calc(50%-5px)] translate-x-[-50%]">
+          {/* <p className="text-2xl text-muted-foreground font-bold font-cursive absolute bottom-[-10px] left-[calc(50%-5px)] translate-x-[-50%]">
         latte
       </p> */}
         </div>
       </div>
-      <span className="text-2xl font-bold text-gray-700 font-cursive">?</span>
+      <span className="text-2xl font-bold text-foreground font-cursive">?</span>
     </div>
   );
 };
@@ -191,28 +191,28 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
   return (
     <div className="flex justify-center gap-1 w-full">
       <div className="flex flex-col items-center">
-        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
+        <div className="text-xl font-bold bg-muted rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.days}
         </div>
-        <div className="text-xs text-gray-500">days</div>
+        <div className="text-xs text-muted-foreground">days</div>
       </div>
       <div className="flex flex-col items-center">
-        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
+        <div className="text-xl font-bold bg-muted rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.hours}
         </div>
-        <div className="text-xs text-gray-500">hours</div>
+        <div className="text-xs text-muted-foreground">hours</div>
       </div>
       <div className="flex flex-col items-center">
-        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
+        <div className="text-xl font-bold bg-muted rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.minutes}
         </div>
-        <div className="text-xs text-gray-500">minutes</div>
+        <div className="text-xs text-muted-foreground">minutes</div>
       </div>
       <div className="flex flex-col items-center">
-        <div className="text-xl font-bold bg-gray-100 rounded py-2 px-5 min-w-[4rem] text-center">
+        <div className="text-xl font-bold bg-muted rounded py-2 px-5 min-w-[4rem] text-center">
           {timeLeft.seconds}
         </div>
-        <div className="text-xs text-gray-500">seconds</div>
+        <div className="text-xs text-muted-foreground">seconds</div>
       </div>
     </div>
   );
@@ -242,7 +242,7 @@ const RocketSection = () => {
   const launchDate = getNextLaunchDate();
 
   return (
-    <div className="text-center bg-white/70 space-y-2 border-2 border-gray-200 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center">
+    <div className="text-center bg-card/70 space-y-2 border-2 border-border border-dashed rounded-2xl p-4 flex flex-col items-center justify-center">
       <div className="flex items-center justify-center gap-2">
         <Lottie
           options={{
@@ -259,7 +259,7 @@ const RocketSection = () => {
         <h2 className="text-xl font-bold">Launching discount!</h2>
       </div>
       <div className="text-center space-y-2 pb-4">
-        <h2 className="text-md font-normal text-gray-700 pt-2">
+        <h2 className="text-md font-normal text-foreground pt-2">
           We&apos;re offering a{" "}
           <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent animate-gradient rounded-xl">
             big discount{" "}
@@ -313,15 +313,15 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
           <RocketSection />
 
           {/* Pricing Tier Switch */}
-          <div className="bg-gray-100 rounded-2xl p-1 grid grid-cols-3 gap-1">
+          <div className="bg-muted rounded-2xl p-1 grid grid-cols-3 gap-1">
             {pricingTiers.map((tier) => (
               <button
                 key={tier.id}
                 onClick={() => setSelectedTier(tier.id)}
                 className={`relative py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
                   selectedTier === tier.id
-                    ? "bg-white shadow-sm text-gray-900"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-card shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <div className="flex flex-col items-center gap-1">
@@ -342,7 +342,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               <div className="flex flex-row items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">{currentTier.title}</h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {currentTier.positioning}
                   </p>
                 </div>
@@ -355,19 +355,19 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 
               <div className="space-y-1">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-normal line-through text-gray-500">
+                  <span className="text-xl font-normal line-through text-muted-foreground">
                     €{currentTier.ogPrice}
                   </span>
-                  <span className="text-gray-500">/ month</span>
+                  <span className="text-muted-foreground">/ month</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold">
                     €{currentTier.equivalentMonthly || currentTier.price}
                   </span>
-                  <span className="text-gray-500">/ month</span>
+                  <span className="text-muted-foreground">/ month</span>
                 </div>
                 {currentTier.equivalentMonthly && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     €{currentTier.price} per {currentTier.period}
                     {currentTier.savings && (
                       <span className="text-green-600 font-medium ml-1">
@@ -379,7 +379,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
               </div>
 
               <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-700">
+                <div className="text-sm font-medium text-foreground">
                   What&apos;s included:
                 </div>
                 <div className="grid grid-cols-1 gap-2">
@@ -389,7 +389,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                       className="flex items-center gap-2 text-sm"
                     >
                       <span className="text-sm">{feature.emoji}</span>
-                      <span className="text-gray-600">{feature.title}</span>
+                      <span className="text-muted-foreground">{feature.title}</span>
                     </div>
                   ))}
                 </div>
@@ -420,7 +420,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
           </Card>
 
           <div className="text-center">
-            <div className="text-sm text-gray-500 space-y-1">
+            <div className="text-sm text-muted-foreground space-y-1">
               <p>
                 All plans include a free trial and full access to all features
               </p>
@@ -431,7 +431,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
 
         <Divider className="my-6 mt-24" />
         {/* <FAQ /> */}
-        <div className="flex flex-row gap-4 items-start justify-center bg-gray-200/80 p-7 rounded-2xl">
+        <div className="flex flex-row gap-4 items-start justify-center bg-muted/80 p-7 rounded-2xl">
           <div className="flex flex-col">
             <div className="flex flex-row gap-4 items-center">
               <Avatar className="w-10 h-10 ring-2 ring-blue-500 ring-offset-2 ring-offset-white">
@@ -448,7 +448,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 I&apos;m Alex, the founder.
               </span>
             </div>
-            <div className="text-sm text-gray-500 space-y-4 mt-4">
+            <div className="text-sm text-muted-foreground space-y-4 mt-4">
               <p>
                 Tracking Software is my attempt at creating a better social
                 network, where comparison can be used as leverage to improve

@@ -31,14 +31,14 @@ export function TrendHelpPopover({
           Understanding Your {metricTitle} Trend
         </h3>
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           The trend compares your average {metricTitle.toLowerCase()} from this
           week against last week, showing how things are changing.
         </p>
 
-        <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="bg-muted p-4 rounded-lg">
           <p className="text-sm font-medium mb-2">Real Example:</p>
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             Let&apos;s look at someone&apos;s {metricTitle.toLowerCase()} ratings
             over two weeks:
           </p>
@@ -112,7 +112,7 @@ export function TrendHelpPopover({
             </div>
 
             {/* Calculation */}
-            <div className="mt-6 p-3 bg-white rounded border">
+            <div className="mt-6 p-3 bg-card rounded border">
               <p className="text-sm font-medium mb-2">Trend Calculation:</p>
               <div className="space-y-2 text-sm">
                 <p>1. This week&apos;s average: 4.00</p>
@@ -134,7 +134,7 @@ export function TrendHelpPopover({
               <li className="text-red-500">
                 Negative % (↘️): This week&apos;s average is lower than last week
               </li>
-              <li className="text-gray-600">
+              <li className="text-muted-foreground">
                 The percentage shows how much better or worse this week is compared
                 to last week
               </li>
@@ -142,7 +142,7 @@ export function TrendHelpPopover({
           </div>
         </div>
 
-        <div className="text-xs text-gray-500 mt-4">
+        <div className="text-xs text-muted-foreground mt-4">
           Tip: Click on any dot to see the exact rating for that day.
         </div>
       </div>

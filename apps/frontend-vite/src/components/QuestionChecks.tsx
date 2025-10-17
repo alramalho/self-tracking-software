@@ -41,7 +41,7 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
     return (
       <div ref={ref} className="space-y-3 mt-4 px-4">
         {questionPrefix && (
-          <p className="text-sm text-gray-500 mb-3">{questionPrefix}</p>
+          <p className="text-sm text-muted-foreground mb-3">{questionPrefix}</p>
         )}
         <div className="space-y-3">
           {Object.entries(questionsChecks).map(([key, item], index) => (
@@ -58,7 +58,7 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
                 className="group"
               >
                 <div
-                  className="flex items-start space-x-4 p-2 rounded-xl bg-white transition-all duration-200 cursor-pointer"
+                  className="flex items-start space-x-4 p-2 rounded-xl bg-card transition-all duration-200 cursor-pointer"
                   onClick={onItemClick}
                 >
                   <div className="relative flex-shrink-0 mt-1">
@@ -103,8 +103,8 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
                       <motion.h4
                         className={`text-sm font-semibold transition-colors duration-200 ${
                           checkedItems[key]
-                            ? "text-gray-900"
-                            : "text-gray-700"
+                            ? "text-foreground"
+                            : "text-foreground"
                         }`}
                       >
                         {item.title}
@@ -113,8 +113,8 @@ export const QuestionChecks = forwardRef<HTMLDivElement, QuestionChecksProps>(
                         <motion.p
                           className={`text-xs transition-colors duration-200 leading-relaxed ${
                             checkedItems[key]
-                              ? "text-gray-600"
-                              : "text-gray-500"
+                              ? "text-muted-foreground"
+                              : "text-muted-foreground"
                           }`}
                         >
                           {item.description}

@@ -47,24 +47,24 @@ const FeedbackPopover = ({
       title: "Question",
       icon: <HelpCircle size={24} />,
       placeholder: "What do you want to know?",
-      iconColor: "text-blue-600",
-      bgColor: "bg-blue-50 hover:bg-blue-100",
+      iconColor: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900",
     },
     {
       id: "feature_request", 
       title: "Feedback",
       icon: <MessageSquarePlus size={24} />,
       placeholder: "What feature would you like to see? Please describe how it would help you.",
-      iconColor: "text-green-600",
-      bgColor: "bg-green-50 hover:bg-green-100",
+      iconColor: "text-green-600 dark:text-green-400",
+      bgColor: "bg-green-50 dark:bg-green-950 hover:bg-green-100 dark:hover:bg-green-900",
     },
     {
       id: "bug_report",
       title: "Problem", 
       icon: <Bug size={24} />,
       placeholder: "Please describe the bug or problem you encountered...",
-      iconColor: "text-red-600",
-      bgColor: "bg-red-50 hover:bg-red-100",
+      iconColor: "text-red-600 dark:text-red-400",
+      bgColor: "bg-red-50 dark:bg-red-950 hover:bg-red-100 dark:hover:bg-red-900",
     },
   ];
 
@@ -217,7 +217,7 @@ const FeedbackPopover = ({
 
                 {/* Upload Button */}
                 {images.length < 3 && (
-                  <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-muted-foreground transition-colors">
+                  <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed rounded-lg cursor-pointer border-muted-foreground transition-colors">
                     <ImagePlus size={20} className="text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
                       {images.length === 0 ? "Add images" : "Add more images"}

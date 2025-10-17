@@ -42,13 +42,13 @@ const DownloadComponent = ({
     return (
       <div className="flex flex-col gap-2 items-center">
         <div className="flex flex-row gap-2">
-          <MoveRight className="w-16 h-16 mb-6 text-gray-600" />
-          <Smartphone className="w-16 h-16 mb-6 text-gray-600" />
+          <MoveRight className="w-16 h-16 mb-6 text-muted-foreground" />
+          <Smartphone className="w-16 h-16 mb-6 text-muted-foreground" />
         </div>
         <h2 className="text-xl font-semibold text-center">
           Open this website on your mobile phone
         </h2>
-        <span className="text-xl text-center text-gray-500 my-2 font-mono">
+        <span className="text-xl text-center text-muted-foreground my-2 font-mono">
           tracking.so/download
         </span>
         <div className="flex flex-row gap-2 items-center justify-center w-full">
@@ -92,27 +92,27 @@ const DownloadComponent = ({
     return (
       <div className="flex flex-col gap-4 items-center text-center">
         <div className="flex flex-row gap-2">
-          <X className="w-16 h-16 mb-2 text-gray-600" />
-          <MoveRight className="w-16 h-16 mb-2 text-gray-600" />
-          <Smartphone className="w-16 h-16 mb-2 text-gray-600" />
+          <X className="w-16 h-16 mb-2 text-muted-foreground" />
+          <MoveRight className="w-16 h-16 mb-2 text-muted-foreground" />
+          <Smartphone className="w-16 h-16 mb-2 text-muted-foreground" />
         </div>
-        <div className="text-gray-600 mb-2">
+        <div className="text-muted-foreground mb-2">
           Current browser doesn&apos;t support app installation
         </div>
-        <div className="text-gray-600 mb-4">
+        <div className="text-muted-foreground mb-4">
           Follow these steps to continue in your main browser outside {platformName}
         </div>
-        <div className="bg-gray-50 p-4 rounded-lg w-full max-w-md">
-          <div className="space-y-3 text-left text-gray-600">
+        <div className="bg-muted p-4 rounded-lg w-full max-w-md">
+          <div className="space-y-3 text-left text-muted-foreground">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                <Ellipsis className="w-6 h-6 text-gray-600" />
+              <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
+                <Ellipsis className="w-6 h-6 text-foreground" />
               </div>
               <span>Tap the menu button {(isInstagram || isTikTok) && "(top right)"}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                <SecondaryIcon className="w-6 h-6 text-gray-600" />
+              <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
+                <SecondaryIcon className="w-6 h-6 text-foreground" />
               </div>
               <span>Tap &quot;{secondaryLabel}&quot;</span>
             </div>
@@ -125,25 +125,25 @@ const DownloadComponent = ({
   return (
     <div className="flex flex-col gap-4 items-center text-center">
       <div className="flex flex-row gap-2">
-        <Check className="w-16 h-16 mb-2 text-gray-600" />
-        <MoveRight className="w-16 h-16 mb-2 text-gray-600" />
-        <Smartphone className="w-16 h-16 mb-2 text-gray-600" />
+        <Check className="w-16 h-16 mb-2 text-muted-foreground" />
+        <MoveRight className="w-16 h-16 mb-2 text-muted-foreground" />
+        <Smartphone className="w-16 h-16 mb-2 text-muted-foreground" />
       </div>
       <h2 className="text-2xl font-semibold mb-4">Install the App</h2>
 
-      <div className="bg-gray-50 p-4 rounded-lg w-full max-w-md">
-        <div className="space-y-3 text-left text-gray-600">
+      <div className="bg-muted p-4 rounded-lg w-full max-w-md">
+        <div className="space-y-3 text-left text-muted-foreground">
           {isIOS ? (
             <>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <Share className="w-6 h-6 text-gray-600" />
+                <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
+                  <Share className="w-6 h-6 text-foreground" />
                 </div>
                 <span>Tap the share button</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <PlusSquare className="w-6 h-6 text-gray-600" />
+                <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
+                  <PlusSquare className="w-6 h-6 text-foreground" />
                 </div>
                 <span>
                   Scroll down and tap &quot;
@@ -154,14 +154,14 @@ const DownloadComponent = ({
           ) : (
             <>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <MoreVertical className="w-6 h-6 text-gray-600" />
+                <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
+                  <MoreVertical className="w-6 h-6 text-foreground" />
                 </div>
                 <span>Tap the menu button</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <PlusSquare className="w-6 h-6 text-gray-600" />
+                <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center flex-shrink-0">
+                  <PlusSquare className="w-6 h-6 text-foreground" />
                 </div>
                 <span>
                   Look for &quot;

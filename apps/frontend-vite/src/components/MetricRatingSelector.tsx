@@ -49,8 +49,8 @@ export const MetricRatingSelector: React.FC<MetricRatingSelectorProps> = ({
           disabled={disabled}
           className={`aspect-square p-4 text-md font-medium ${
             selectedRating === rating
-              ? "bg-gray-100 text-black border-gray-800"
-              : `hover:bg-gray-100 ${ratingColors[rating as keyof typeof ratingColors]}`
+              ? "bg-muted text-foreground border-foreground"
+              : `hover:bg-muted ${ratingColors[rating as keyof typeof ratingColors]}`
           }`}
         >
           {shouldLoad && <Loader2 className="w-4 h-4 animate-spin" />}

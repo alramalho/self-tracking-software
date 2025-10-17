@@ -21,11 +21,11 @@ export const CollapsibleSelfUserCard: React.FC = () => {
     <div>
       <h2 className="text-lg font-semibold mb-4">Your profile</h2>
       <div className="grid grid-cols-1 justify-items-center">
-        <div className="max-w-sm w-full bg-white rounded-2xl border border-gray-200">
+        <div className="max-w-sm w-full bg-card rounded-2xl border border-border">
           {/* Header with icons - Avatar + Plan Emoji */}
           <div className="flex items-center justify-between p-6 pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl flex-shrink-0">
                 {currentUser.picture ? (
                   <img
                     src={currentUser.picture}
@@ -45,7 +45,7 @@ export const CollapsibleSelfUserCard: React.FC = () => {
             <h3 className="text-xl font-semibold mb-1">{currentUser.name}</h3>
 
             {firstPlan && (
-              <p className="text-sm text-gray-600">{firstPlan.goal}</p>
+              <p className="text-sm text-muted-foreground">{firstPlan.goal}</p>
             )}
           </div>
         </div>

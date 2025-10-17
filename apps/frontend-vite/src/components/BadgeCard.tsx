@@ -21,7 +21,7 @@ export function BadgeCard({
     <div
       onClick={onClick}
       className={cn(
-        `overflow-hidden m-0 relative ring-2 ring-gray-300 rounded-xl cursor-pointer bg-white`,
+        `overflow-hidden m-0 relative ring-2 ring-border rounded-xl cursor-pointer bg-card`,
         className,
         count == 0 ? "grayscale opacity-50" : ""
       )}

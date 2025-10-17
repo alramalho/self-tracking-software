@@ -175,13 +175,13 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
               <AvatarFallback>CN</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1 flex-1">
-              <span className={`text-sm italic text-muted-foreground`}>
+              <span className={`text-sm italic opacity-70`}>
                 {hasCoachMessage
                   ? lastCoachMessage?.message
                   : selectedPlan.coachNotes}
               </span>
               <div className="flex flex-row items-center justify-between gap-2 mt-1">
-                <span className="text-[10px] italic text-muted-foreground/80">
+                <span className="text-[10px] italic text-muted-foreground">
                   Coach Oli,{" "}
                   {hasCoachMessage && lastCoachMessage
                     ? formatDistance(lastCoachMessage.createdAt, new Date(), {
@@ -218,7 +218,7 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                   <span className="text-lg font-semibold text-foreground block">
                     New Schedule Suggestion
                   </span>
-                  <span className="text-xs text-muted-foreground/70 font-medium">
+                  <span className="text-xs text-muted-foreground font-medium">
                     UPDATED SESSIONS
                   </span>
                 </div>
@@ -312,14 +312,14 @@ export const CoachOverviewCard: React.FC<CoachOverviewCardProps> = ({
                   <span className="text-4xl md:text-5xl font-light text-foreground">
                     {selectedPlan.timesPerWeek}
                   </span>
-                  <span className="text-xs text-muted-foreground/70 font-medium mt-1">
+                  <span className="text-xs text-muted-foregroundfont-medium mt-1">
                     CURRENT
                   </span>
                 </div>
 
                 <div className="flex items-center flex-shrink-0">
                   <div className="w-8 md:w-16 h-px bg-border"></div>
-                  <MoveRight className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground/70 mx-2" />
+                  <MoveRight className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground mx-2" />
                   <div className="w-8 md:w-16 h-px bg-border"></div>
                 </div>
 

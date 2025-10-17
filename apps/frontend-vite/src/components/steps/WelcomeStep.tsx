@@ -170,14 +170,14 @@ const WelcomeStep = () => {
             alt="Tracking Software Logo"
             className="w-32 h-32 mx-auto"
           />
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">
             Welcome to your{" "}
             <span className="text-blue-500 break-normal text-nowrap">
               tracking.so<span className="text-blue-300">ftware</span>
             </span>
           </h2>
         </div>
-        <p className="mt-2 text-md text-gray-600">
+        <p className="mt-2 text-md text-muted-foreground">
           The most effective app to improve your lifestyle.
         </p>
       </div>
@@ -201,7 +201,7 @@ const WelcomeStep = () => {
               </div>
 
               <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Choose your username
                 </h3>
               </div>
@@ -215,7 +215,7 @@ const WelcomeStep = () => {
                       placeholder="Enter username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                      className="pr-10 text-lg bg-white border-xl py-2 px-4"
+                      className="pr-10 text-lg bg-card border-xl py-2 px-4"
                       autoFocus
                       disabled={isSubmittingUsername}
                     />
@@ -265,7 +265,7 @@ const WelcomeStep = () => {
             >
               <div className="space-y-3">
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
                     What&apos;s your age?
                   </h3>
                 </div>

@@ -66,7 +66,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
           <Number>5</Number>
           How would you like to track your progress?
         </h3>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Choose how you want to structure your plan
         </p>
 
@@ -108,7 +108,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
             >
               Additional Customization
             </label>
-            <p className="text-sm text-gray-500 mb-2">
+            <p className="text-sm text-muted-foreground mb-2">
               Add any specific requirements or preferences to help generate your
               schedule
             </p>
@@ -117,7 +117,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Example: I prefer morning workouts, I want to alternate between activities, etc..."
-              className="mb-4 bg-white"
+              className="mb-4 bg-card"
             />
           </div>
 
@@ -140,7 +140,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
             {generatedSessions && (
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Generated Schedule</h4>
-                <div className="bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 p-4">
+                <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border p-4">
                   <PlanSessionsRenderer
                     plan={convertToDisplayPlan(generatedSessions) as unknown as CompletePlan}
                     activities={activities}

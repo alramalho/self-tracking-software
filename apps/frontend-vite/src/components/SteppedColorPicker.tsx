@@ -1,9 +1,10 @@
+import { useTheme } from '@/contexts/theme/useTheme';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface ColorOption {
   name: string;
-  hex: string; 
+  hex: string;
   lightHex: string;
   middleHex: string;
 }
@@ -28,13 +29,13 @@ const tailwindColorPalette: ColorOption[] = [
   { name: 'Rose', hex: '#f43f5e', lightHex: '#f43f5e66', middleHex: '#f43f5eaa' },
 ];
 
-// Special option for "no color"
-const noColorOption: ColorOption = {
+// Helper function to get theme-aware gray colors
+const getNoColorOption = (isDark: boolean): ColorOption => ({
   name: 'Automatic (based on plan)',
   hex: '',
-  lightHex: '#e5e7eb66',
-  middleHex: '#e5e7ebcc',
-};
+  lightHex: isDark ? '#71717a66' : '#e5e7eb66',  // zinc-500 for dark, gray-200 for light
+  middleHex: isDark ? '#71717acc' : '#e5e7ebcc', // zinc-500 for dark, gray-200 for light
+});
 
 interface SteppedColorPickerProps {
   value: string; // This will be the hex or empty string
@@ -42,8 +43,13 @@ interface SteppedColorPickerProps {
 }
 
 const SteppedColorPicker: React.FC<SteppedColorPickerProps> = ({ value, onChange }) => {
+  const { isDarkMode } = useTheme();
+  const noColorOption = getNoColorOption(isDarkMode);
   const allOptions = [noColorOption, ...tailwindColorPalette];
   const [isOpen, setIsOpen] = useState(false);
+
+  // Theme-aware fallback color for "no color" option
+  const noColorFallback = isDarkMode ? '#71717a' : '#e5e7eb'; // zinc-500 for dark, gray-200 for light
 
   // Find the currently selected color option
   const selectedOption = allOptions.find(color => color.hex === value) || noColorOption;
@@ -51,8 +57,8 @@ const SteppedColorPicker: React.FC<SteppedColorPickerProps> = ({ value, onChange
   return (
     <div className="border rounded-xl overflow-hidden">
       {/* Accordion Header */}
-      <div 
-        className="flex justify-between items-center p-3 bg-gray-50 cursor-pointer"
+      <div
+        className="flex justify-between items-center p-3 bg-muted cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
       >
         <h3 className="text-md font-semibold">Activity Color</h3>
@@ -69,9 +75,9 @@ const SteppedColorPicker: React.FC<SteppedColorPickerProps> = ({ value, onChange
                   className="w-4 h-4 rounded-sm"
                   style={{ backgroundColor: selectedOption.middleHex }}
                 ></div>
-                <div 
+                <div
                   className="w-4 h-4 rounded-sm"
-                  style={{ backgroundColor: selectedOption.hex || '#e5e7eb' }}
+                  style={{ backgroundColor: selectedOption.hex || noColorFallback }}
                 ></div>
               </div>
             </div>
@@ -90,15 +96,15 @@ const SteppedColorPicker: React.FC<SteppedColorPickerProps> = ({ value, onChange
                 <div
                   key={color.name}
                   className={`flex items-center gap-4 p-3 border rounded-xl transition-all
-                    ${isSelected ? 'bg-gray-100 shadow-sm' : 'hover:bg-gray-50 bg-white'} 
+                    ${isSelected ? 'bg-muted shadow-sm' : 'hover:bg-muted/50 bg-card'}
                     cursor-pointer`}
                   onClick={() => onChange(color.hex)}
                 >
                   <div className="flex items-center gap-3">
                     {isSelected && (
-                      <Check className="w-5 h-5 text-gray-700" />
+                      <Check className="w-5 h-5 text-foreground" />
                     )}
-                    <span className="font-medium text-gray-800">{color.name}</span>
+                    <span className="font-medium text-foreground">{color.name}</span>
                   </div>
                   
                   <div className="flex gap-2 ml-auto">
@@ -110,9 +116,9 @@ const SteppedColorPicker: React.FC<SteppedColorPickerProps> = ({ value, onChange
                       className="w-6 h-6 rounded-sm"
                       style={{ backgroundColor: color.middleHex }}
                     ></div>
-                    <div 
+                    <div
                       className="w-6 h-6 rounded-sm"
-                      style={{ backgroundColor: color.hex || '#e5e7eb' }}
+                      style={{ backgroundColor: color.hex || noColorFallback }}
                     ></div>
                   </div>
                 </div>

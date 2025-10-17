@@ -37,10 +37,10 @@ const FeedbackForm = ({
 
   return (
     <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4 ${className}`}>
-      <div className="bg-white rounded-lg w-full max-w-md p-4 relative">
+      <div className="bg-card rounded-lg w-full max-w-md p-4 relative">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
+          className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
         >
           <X size={20} />
         </button>
@@ -49,23 +49,23 @@ const FeedbackForm = ({
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Email</label>
+            <label className="block text-sm text-muted-foreground mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => isEmailEditable && setEmail(e.target.value)}
               disabled={!isEmailEditable}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-muted"
               required
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Message</label>
+            <label className="block text-sm text-muted-foreground mb-1">Message</label>
             <TextAreaWithVoice
               value={text}
               onChange={setText}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg min-h-[120px] focus:outline-none focus:ring-2 focus:ring-gray-200"
+              className="w-full px-3 py-2 border border-border rounded-lg min-h-[120px] focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder={placeholder}
             />
           </div>

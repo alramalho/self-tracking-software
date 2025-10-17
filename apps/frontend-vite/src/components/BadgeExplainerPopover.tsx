@@ -157,19 +157,19 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
           {/* Show all relevant achievements */}
           {relevantAchievements.length > 1 && (
             <div className="space-y-3 mb-6">
-              <h4 className="font-semibold text-gray-900">
+              <h4 className="font-semibold text-foreground">
                 {user?.name} Achievements:
               </h4>
               {relevantAchievements.map((achievement, index) => (
                 <div
                   key={achievement.plan.id}
-                  className="p-3 border rounded-lg bg-white/50"
+                  className="p-3 border rounded-lg bg-card/50"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-2xl">{achievement.plan.emoji}</span>
                     <h5 className="font-medium">{achievement.plan.goal}</h5>
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     {badgeType === "streaks" && (
                       <p>
                         Current streak:{" "}
@@ -207,11 +207,11 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
           🏆 How badges are earned
         </h3>
 
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2 flex items-center gap-2">
             <Flame className="text-red-500 inline-block" size={24} /> Streaks:
           </h4>
-          <ul className="text-sm text-gray-600 space-y-2">
+          <ul className="text-sm text-muted-foreground space-y-2">
             <li>
               • Each completed week adds <span className="font-bold">+1</span>{" "}
               to your streak
@@ -231,22 +231,22 @@ const BadgeExplainerPopover: React.FC<BadgeExplainerPopoverProps> = ({
           </ul>
         </div>
 
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2 flex items-center gap-2">
             <Sprout className="text-lime-500 inline-block" size={24} /> Habit
             badge:
           </h4>
-          <ul className="text-sm text-gray-600 space-y-2">
+          <ul className="text-sm text-muted-foreground space-y-2">
             <li>• You get a habit badge if you achieve a streak of 4 weeks!</li>
           </ul>
         </div>
 
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2 flex items-center gap-2">
             <Medal className="text-yellow-500 inline-block" size={24} />{" "}
             Lifestyle badge:
           </h4>
-          <ul className="text-sm text-gray-600 space-y-2">
+          <ul className="text-sm text-muted-foreground space-y-2">
             <li>
               • You get a lifetyle badge if you achieve a streak of 9 weeks!
             </li>

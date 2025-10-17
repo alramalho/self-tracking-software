@@ -67,7 +67,7 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-muted-foreground mb-2">
               Please type <span className="font-bold">delete</span> to confirm:
             </p>
             <Input
@@ -112,7 +112,7 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 py-4">
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-muted-foreground mb-2">
               Please type <span className="font-bold">delete</span> to confirm:
             </p>
             <Input

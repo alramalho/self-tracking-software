@@ -27,7 +27,7 @@ const DurationOption: React.FC<DurationOptionProps> = ({
       className={`relative flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${
         isSelected
           ? twMerge(variants.card.selected.border, variants.card.selected.bg)
-          : "border-gray-200 hover:bg-gray-50"
+          : "border-border hover:bg-muted/50"
       }`}
     >
       {isSelected && (

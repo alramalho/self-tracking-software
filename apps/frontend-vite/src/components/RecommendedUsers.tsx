@@ -229,10 +229,10 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
                     }}
                     className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
                       score >= 0.5
-                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        ? "bg-green-100 dark:bg-green-950 text-green-800 hover:bg-green-200"
                         : score >= 0.25
-                        ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                        : "bg-red-100 text-red-800 hover:bg-red-200"
+                        ? "bg-yellow-100 dark:bg-yellow-950 text-yellow-800 hover:bg-yellow-200 dark:text-yellow-400 dark:hover:bg-yellow-800"
+                        : "bg-red-100 dark:bg-red-950 text-red-800 hover:bg-red-200 dark:text-red-400 dark:hover:bg-red-800"
                     }`}
                   >
                     {Math.round(score * 100)}% match
@@ -414,15 +414,15 @@ const ScoreItem: React.FC<{
   weight: number;
 }> = ({ emoji, label, score, weight }) => {
   const getScoreColor = (score: number) => {
-    if (score >= 0.6) return "text-green-600";
-    if (score >= 0.2) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 0.6) return "text-green-600 dark:text-green-400";
+    if (score >= 0.2) return "text-yellow-600 dark:text-yellow-400";
+    return "text-red-600 dark:text-red-400";
   };
 
   const getScoreBgColor = (score: number) => {
-    if (score >= 0.6) return "bg-green-50 border-green-200";
-    if (score >= 0.2) return "bg-yellow-50 border-yellow-200";
-    return "bg-red-50 border-red-200";
+    if (score >= 0.6) return "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800";
+    if (score >= 0.2) return "bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800";
+    return "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800";
   };
 
   const getProgressBarColor = (score: number) => {

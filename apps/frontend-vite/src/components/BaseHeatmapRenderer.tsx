@@ -40,14 +40,14 @@ export const getActivityColorMatrix = (isLightMode: boolean = true) => {
     ["#E2E8F0", "#CBD5E0", "#A0AEC0", "#718096", "#4A5568"], // gray
   ];
   const darkBaseColors = [
-    ["#34D399", "#10B981", "#059669", "#047857", "#065F46"], // green - lighter than before
-    ["#38BDF8", "#0EA5E9", "#0284C7", "#0369A1", "#075985"], // blue - lighter than before
-    ["#F87171", "#EF4444", "#DC2626", "#B91C1C", "#991B1B"], // red - lighter than before
-    ["#FACC15", "#EAB308", "#CA8A04", "#A16207", "#854D0E"], // yellow - lighter than before
-    ["#A78BFA", "#8B5CF6", "#7C3AED", "#6D28D9", "#5B21B6"], // purple - lighter than before
-    ["#F472B6", "#EC4899", "#DB2777", "#BE185D", "#9F1239"], // pink - lighter than before
-    ["#818CF8", "#6366F1", "#4F46E5", "#4338CA", "#3730A3"], // indigo - lighter than before
-    ["#94A3B8", "#64748B", "#475569", "#334155", "#1E293B"], // gray - lighter than before
+    ["#065F46", "#047857", "#059669", "#10B981", "#34D399"], // green - darker to lighter
+    ["#075985", "#0369A1", "#0284C7", "#0EA5E9", "#38BDF8"], // blue - darker to lighter
+    ["#991B1B", "#B91C1C", "#DC2626", "#EF4444", "#F87171"], // red - darker to lighter
+    ["#854D0E", "#A16207", "#CA8A04", "#EAB308", "#FACC15"], // yellow - darker to lighter
+    ["#5B21B6", "#6D28D9", "#7C3AED", "#8B5CF6", "#A78BFA"], // purple - darker to lighter
+    ["#9F1239", "#BE185D", "#DB2777", "#EC4899", "#F472B6"], // pink - darker to lighter
+    ["#3730A3", "#4338CA", "#4F46E5", "#6366F1", "#818CF8"], // indigo - darker to lighter
+    ["#1E293B", "#334155", "#475569", "#64748B", "#94A3B8"], // gray - darker to lighter
   ];
   return isLightMode ? baseColors : darkBaseColors;
 };
@@ -236,7 +236,6 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   return dateObj.getTime() === selectedUTC.getTime();
                 })();
 
-              
               // note to self:
               // we were refactoring plan prgoress, right now its scatteres throughout the frontend,
               // making it hard to iterate, and prone to bugs
@@ -265,7 +264,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                     <rect
                       key={data.index}
                       {...(props as React.SVGProps<SVGRectElement>)}
-                      fill={isLightMode ? "#EBEDF0" : "#353535"}
+                      fill={isLightMode ? "#EBEDF0" : "#242424"}
                       stroke={isCurrentDay ? "#FF0000" : "none"}
                       strokeWidth={isCurrentDay ? 2 : 0}
                       rx={4}

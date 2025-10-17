@@ -2,7 +2,6 @@ import { useApiWithAuth } from "@/api";
 import { useSession } from "@/contexts/auth";
 import { normalizeApiResponse } from "@/utils/dateUtils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { PlanInvitation } from "@tsw/prisma";
 import { useContext } from "react";
 import { toast } from "react-hot-toast";
 import {
@@ -34,7 +33,7 @@ export const usePlan = (
   return plan;
 };
 
-export const usePlanInvitation = (id: string) => {
+export const usePlanGroupInvitation = (id: string) => {
   const { isSignedIn, isLoaded } = useSession();
   const queryClient = useQueryClient();
   const api = useApiWithAuth();
@@ -42,13 +41,14 @@ export const usePlanInvitation = (id: string) => {
   const planInvitation = useQuery({
     queryKey: ["plan-invitation", id],
     queryFn: () => fetchPlanInvitation(api, id),
-    select: (data) => normalizeApiResponse<PlanInvitation>(data, ['createdAt', 'updatedAt']),
     enabled: isLoaded && isSignedIn && !!id,
   });
 
   const acceptPlanInvitationMutation = useMutation({
-    mutationFn: async (planInvitationId: string) => {
-      await api.post(`/plans/accept-plan-invitation/${planInvitationId}`);
+    mutationFn: async (data: { planInvitationId: string; existingPlanId?: string }) => {
+      await api.post(`/plans/accept-plan-invitation/${data.planInvitationId}`, {
+        existingPlanId: data.existingPlanId,
+      });
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["current-user"] });

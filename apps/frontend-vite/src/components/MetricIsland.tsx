@@ -62,13 +62,13 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
 
   if (isSkippedToday) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-3xl p-3 flex-1 min-w-0 opacity-50">
+      <div className="bg-muted border border-border rounded-3xl p-3 flex-1 min-w-0 opacity-50">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-lg">{metric.emoji}</span>
-          <span className="text-sm font-medium text-gray-600">
+          <span className="text-sm font-medium text-muted-foreground">
             {metric.title}
           </span>
-          <span className="text-xs text-gray-500">Skipped Today</span>
+          <span className="text-xs text-muted-foreground">Skipped Today</span>
         </div>
       </div>
     );
@@ -76,7 +76,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
 
   return (
     <div
-      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-gray-50 backdrop-blur-sm ring-gray-200 ${
+      className={`ring-1 rounded-3xl p-3 flex-1 min-w-0 shadow-sm bg-muted backdrop-blur-sm ring-border ${
         isLoggedToday && "opacity-70"
       } ${className}`}
     >
@@ -84,7 +84,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-lg">{metric.emoji}</span>
-            <span className="text-sm font-medium text-gray-600">
+            <span className="text-sm font-medium text-muted-foreground">
               {metric.title}
             </span>
             {canLogMetrics && (
@@ -119,7 +119,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
               size="sm"
               onClick={handleSkip}
               disabled={isLogging || isSkipping}
-              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 h-auto m-0 shrink-0"
+              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 h-auto m-0 shrink-0"
             >
               {isSkipping ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -130,7 +130,7 @@ export const MetricIsland: React.FC<MetricIslandProps> = ({
           </div>
         ) : (
           <>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               Come back after 2 PM to log your daily metric
             </span>
           </>

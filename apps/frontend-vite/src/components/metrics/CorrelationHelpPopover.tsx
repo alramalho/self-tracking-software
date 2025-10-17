@@ -29,14 +29,14 @@ export function CorrelationHelpPopover({
       <div className="pt-8 space-y-4 mb-4">
         <h3 className="text-lg font-semibold">Understanding Pearson Correlation</h3>
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           Pearson correlation measures how well two things move together, from -100%
           (perfect opposite) to +100% (perfect match).
         </p>
 
-        <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="bg-muted p-4 rounded-lg">
           <p className="text-sm font-medium mb-2">Real Example:</p>
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             Let&apos;s look at running activity and {metricTitle.toLowerCase()} over 7
             days:
           </p>
@@ -95,7 +95,7 @@ export function CorrelationHelpPopover({
               expected pattern)
             </li>
           </ul>
-          <p className="mt-3 text-sm text-gray-600">
+          <p className="mt-3 text-sm text-muted-foreground">
             Think of it like this: if you see someone went running, you&apos;d have
             a 60% chance of correctly guessing they had higher{" "}
             {metricTitle.toLowerCase()} that day - better than random chance, but
@@ -103,7 +103,7 @@ export function CorrelationHelpPopover({
           </p>
         </div>
 
-        <div className="text-xs text-gray-500 mt-4">
+        <div className="text-xs text-muted-foreground mt-4">
           Note: Correlations below 10% are shown in gray as they would only let you
           make correct predictions 10% of the time - barely better than random
           chance.

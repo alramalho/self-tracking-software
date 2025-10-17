@@ -37,11 +37,11 @@ export function InsightsBanner({ open, onClose }: InsightsBannerProps) {
             </>
           ) : (
             <div className="text-center space-y-4 py-8">
-              <Clock className="w-12 h-12 mx-auto text-gray-400" />
+              <Clock className="w-12 h-12 mx-auto text-muted-foreground" />
               <h2 className="text-xl font-semibold">
                 Metrics can be logged after 4 PM
               </h2>
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 This helps you reflect on your entire day. Come back at 4 PM to
                 log your metrics!
               </p>

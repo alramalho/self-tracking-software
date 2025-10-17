@@ -254,7 +254,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
             <Label className="text-lg font-medium">
               What are your next milestones in this plan?
             </Label>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Set specific milestones that you want to achieve next in your plan. You can update this as you progress.
             </p>
           </div>
@@ -278,7 +278,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                     }
                     placeholder="Milestone title"
                     className={cn(
-                      "text-lg font-medium bg-white",
+                      "text-lg font-medium bg-card",
                       validationErrors[milestoneIndex]?.title && "border-red-500 focus-visible:ring-red-500"
                     )}
                   />
@@ -309,7 +309,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                     className={cn(
                       "flex-1",
                       !milestone.criteria?.items.length && cn("border-2", variants.card.selected.border, variants.card.selected.bg),
-                      milestone.criteria?.items.length && "bg-white"
+                      milestone.criteria?.items.length && "bg-card"
                     )}
                   >
                     Manual Progress
@@ -327,7 +327,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                     className={cn(
                       "flex-1",
                       milestone.criteria?.items.length && cn("border-2",variants.card.selected.border, variants.card.selected.bg),
-                      !milestone.criteria?.items.length && "bg-white"
+                      !milestone.criteria?.items.length && "bg-card"
                     )}
                   >
                     Activity Criteria 
@@ -350,7 +350,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                         <div className="text-2xl font-semibold">
                           {typeof milestone.progress === 'number' ? milestone.progress : 0}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           PERCENT
                         </div>
                       </div>
@@ -433,7 +433,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
                             <p className="text-sm text-red-500">Must be greater than 0</p>
                           )}
                         </div>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-muted-foreground">
                           {activities.find(
                             (a) => a.id === criterion.activityId
                           )?.measure || "units"}
@@ -473,7 +473,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
         <Button
           onClick={() => setMilestones(prev => prev.slice(0, -1))}
           variant="outline"
-          className="gap-2 border-2 bg-gray-50 w-1/2"
+          className="gap-2 border-2 bg-muted w-1/2"
           disabled={milestones.length === 0}
         >
           <Minus className="h-4 w-4" />
@@ -482,7 +482,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
         <Button
           onClick={addMilestone}
           variant="outline"
-          className="gap-2 flex-1 border-dashed border-2 border-dashed bg-gray-50 w-1/2"
+          className="gap-2 flex-1 border-dashed border-2 border-dashed bg-muted w-1/2"
           disabled={false}
         >
           <Plus className="h-4 w-4" />
@@ -491,8 +491,8 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
       </div>
 
       <div className="mt-6 flex items-start space-x-2">
-        <Info className="w-5 h-5 text-gray-500 mt-1 flex-shrink-0" />
-        <p className="text-sm text-gray-500">
+        <Info className="w-5 h-5 text-muted-foreground mt-1 flex-shrink-0" />
+        <p className="text-sm text-muted-foreground">
           Milestone targets are cumulative, meaning each milestone&apos;s total target should be greater than the previous one. 
           For example, if your first milestone is 100km and your second is 300km, you need to run a total of 300km by the second milestone.
         </p>

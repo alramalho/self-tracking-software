@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/auth";
 import { GlobalDataProvider } from "@/contexts/GlobalDataProvider";
 import { ThemeProvider } from "@/contexts/theme/provider";
+import { useTheme } from "@/contexts/theme/useTheme";
 import { UpgradeProvider } from "@/contexts/upgrade/provider";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NotificationsProvider } from "@/hooks/useNotifications";
@@ -91,29 +92,47 @@ function ThemedLayout() {
 
   return (
     <ThemeProvider>
-      <UpgradeProvider>
-        <NotificationsProvider>
-          <main
-            className={cn(
-              "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
-              (isSignedIn && isDesktop && !isDownloadPage) ? "ml-64" : ""
-            )}
-          >
-            <GeneralInitializer>
-              <Outlet />
-            </GeneralInitializer>
-          </main>
-          <SonnerToaster position="top-center" />
-          <Toaster
-            position="top-center"
-            containerStyle={{
-              bottom: "5rem",
-              zIndex: 105,
-            }}
-          />
-          {import.meta.env.DEV && <TanStackRouterDevtools />}
-        </NotificationsProvider>
-      </UpgradeProvider>
+      <ToasterComponents isSignedIn={isSignedIn} isDesktop={isDesktop} isDownloadPage={isDownloadPage} />
     </ThemeProvider>
+  );
+}
+
+function ToasterComponents({ isSignedIn, isDesktop, isDownloadPage }: { isSignedIn: boolean, isDesktop: boolean, isDownloadPage: boolean }) {
+  const { effectiveThemeMode } = useTheme();
+
+  return (
+    <UpgradeProvider>
+      <NotificationsProvider>
+        <main
+          className={cn(
+            "relative h-[100dvh] bg-white flex flex-col items-center justify-center p-4 z-10 bg-transparent",
+            (isSignedIn && isDesktop && !isDownloadPage) ? "ml-64" : ""
+          )}
+        >
+          <GeneralInitializer>
+            <Outlet />
+          </GeneralInitializer>
+        </main>
+        <SonnerToaster
+          position="top-center"
+          theme={effectiveThemeMode}
+        />
+        <Toaster
+          position="top-center"
+          containerStyle={{
+            bottom: "5rem",
+            zIndex: 105,
+          }}
+          toastOptions={{
+            style: {
+              background: effectiveThemeMode === 'dark' ? '#000000' : '#ffffff',
+              color: effectiveThemeMode === 'dark' ? '#ffffff' : '#000000',
+              border: `1px solid hsl(var(--border))`,
+            },
+          }}
+        />
+        {import.meta.env.DEV && <TanStackRouterDevtools />}
+      </NotificationsProvider>
+    </UpgradeProvider>
   );
 }

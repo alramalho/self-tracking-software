@@ -47,7 +47,7 @@ export const MetricBarChart: React.FC<MetricBarChartProps> = ({
   return (
     <div className="space-y-1">
       {label && (
-        <div className={`text-xs font-medium ${dimmed ? "text-gray-400" : "text-gray-600"}`}>
+        <div className={`text-xs font-medium ${dimmed ? "text-muted-foreground/60" : "text-muted-foreground"}`}>
           {label}
         </div>
       )}

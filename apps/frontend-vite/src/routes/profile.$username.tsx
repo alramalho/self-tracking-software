@@ -242,7 +242,7 @@ function ProfilePage() {
 
   if (isProfileDataLoading) {
     return (
-      <div className="flex flex-col items-center min-h-screen p-2 bg-gradient-to-b from-gray-50 to-white">
+      <div className="flex flex-col items-center min-h-screen p-2 bg-gradient-to-b from-muted to-background">
         <div className="w-full max-w-md">
           {/* TikTok-style header skeleton */}
           <div className="flex flex-col items-center pt-6">
@@ -276,7 +276,7 @@ function ProfilePage() {
           </div>
 
           {/* Tabs skeleton */}
-          <div className="grid grid-cols-2 gap-4 h-13 bg-gray-100 rounded-lg p-1 mb-4">
+          <div className="grid grid-cols-2 gap-4 h-13 bg-muted rounded-lg p-1 mb-4">
             <Skeleton className="h-10 rounded-md" />
             <Skeleton className="h-10 rounded-md" />
           </div>
@@ -293,8 +293,8 @@ function ProfilePage() {
   if (!profileData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-4">
-        <UserX className="w-12 h-12 text-gray-400 mb-2" />
-        <div className="text-gray-600">
+        <UserX className="w-12 h-12 text-muted-foreground mb-2" />
+        <div className="text-muted-foreground">
           No profile data available. Does this user exist?
         </div>
         <Button variant="outline" onClick={() => window.history.back()}>
@@ -313,7 +313,7 @@ function ProfilePage() {
           <div className="flex justify-between items-center w-full mb-2">
             {!isOwnProfile ? (
               <button
-                className="p-2 rounded-full hover:bg-gray-100"
+                className="p-2 rounded-full hover:bg-muted/50"
                 onClick={() => window.history.back()}
               >
                 <ChevronLeft size={20} />
@@ -324,7 +324,7 @@ function ProfilePage() {
 
             {isOwnProfile && (
               <button
-                className="p-2 pr-4 rounded-full hover:bg-gray-100"
+                className="p-2 pr-4 rounded-full hover:bg-muted/50"
                 onClick={() => setShowUserProfile(true)}
               >
                 <EllipsisVertical size={26} />
@@ -355,10 +355,10 @@ function ProfilePage() {
           </div>
 
           {/* Name and username */}
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className="text-xl font-bold text-foreground">
             {profileData?.name}
           </h2>
-          <p className="text-gray-600 text-sm mb-3">@{profileData?.username}</p>
+          <p className="text-muted-foreground text-sm mb-3">@{profileData?.username}</p>
 
           {/* TikTok-style stats */}
           <div className="flex justify-center space-x-8 mb-6">
@@ -367,18 +367,18 @@ function ProfilePage() {
               params={{ username: profileData?.username || "" }}
             >
               <div className="text-center cursor-pointer">
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-xl font-bold text-foreground">
                   {friends?.length || 0}
                 </p>
-                <p className="text-sm text-gray-600">Friends</p>
+                <p className="text-sm text-muted-foreground">Friends</p>
               </div>
             </Link>
 
             <div className="text-center">
-              <p className="text-xl font-bold text-gray-900">
+              <p className="text-xl font-bold text-foreground">
                 {totalActivitiesLogged}
               </p>
-              <p className="text-sm text-gray-600">Entries</p>
+              <p className="text-sm text-muted-foreground">Entries</p>
             </div>
           </div>
 
@@ -485,7 +485,7 @@ function ProfilePage() {
                 </div>
               ) : (
                 <Button
-                  className="mb-6 px-8 rounded-full bg-black text-white hover:bg-gray-800"
+                  className="mb-6 px-8 rounded-full bg-black text-white hover:bg-foreground/90"
                   onClick={handleSendConnectionRequest}
                   disabled={hasPendingSentConnectionRequest}
                 >
@@ -539,10 +539,10 @@ function ProfilePage() {
               <div className="space-y-4 mt-4">
                 {profileData?.plans && profileData?.plans.length > 0 && (
                   <div className="flex flex-row gap-4 justify-between items-center">
-                    <span className="text-sm text-gray-500">Time range</span>
+                    <span className="text-sm text-muted-foreground">Time range</span>
                     <div className="flex self-center">
                       <select
-                        className="p-2 border rounded-md font-medium text-gray-800"
+                        className="p-2 border rounded-md font-medium text-foreground"
                         value={timeRange}
                         onChange={(e) =>
                           handleTimeRangeChange(
@@ -588,12 +588,12 @@ function ProfilePage() {
                               {plan.goal}
                             </h3>
                             {plan.outlineType == "TIMES_PER_WEEK" && (
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-muted-foreground">
                                 {plan.timesPerWeek} times per week
                               </span>
                             )}
                             {plan.outlineType == "SPECIFIC" && (
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-muted-foreground">
                                 Custom plan
                               </span>
                             )}
@@ -645,7 +645,7 @@ function ProfilePage() {
                     );
                   })}
                 {(!profileActivePlans || profileActivePlans.length === 0) && (
-                  <div className="text-center text-gray-500 py-8">
+                  <div className="text-center text-muted-foreground py-8">
                     {isOwnProfile
                       ? "You haven't created any plans yet."
                       : `${profileData?.name} hasn't got any public plans available.`}
@@ -711,7 +711,7 @@ function ProfilePage() {
                     })}
                 </div>
               ) : (
-                <div className="text-center text-gray-500 py-8">
+                <div className="text-center text-muted-foreground py-8">
                   {activityEntries?.length === 0
                     ? isOwnProfile
                       ? "You haven't completed any activities yet."

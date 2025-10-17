@@ -10,6 +10,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Caveat:wght@400..700&family=Geist:wght@100..900&display=swap" rel="stylesheet" />
     <title>the all-in-one free lifestyle tracker | tracking.so</title>
+    <script>
+      // Prevent theme flash by applying theme class before React renders
+      (function() {
+        try {
+          const themeMode = localStorage.getItem('themeMode') || 'light';
+          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+          // Resolve AUTO to light/dark based on system preference
+          const effectiveThemeMode = themeMode === 'auto'
+            ? (systemPrefersDark ? 'dark' : 'light')
+            : themeMode;
+
+          if (effectiveThemeMode === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {
+          // Silently fail if localStorage is not available
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -74,7 +74,7 @@ export const BarProgressLoader = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.6 }}
     >
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-muted rounded-full h-2">
         <motion.div
           className="bg-blue-600 h-2 rounded-full"
           initial={{ width: "0%" }}

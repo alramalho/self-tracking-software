@@ -85,7 +85,7 @@ const AINotification: React.FC<AINotificationProps> = ({
         transition={{ duration: 0.5, delay: 0.8 }}
       >
         {displayMessages.map((message, index) => (
-          <div key={index} className="relative p-2 markdown mt-2 text-sm text-gray-700 border border-gray-200 rounded-t-lg rounded-tr-lg rounded-br-lg bg-white">
+          <div key={index} className="relative p-2 markdown mt-2 text-sm text-foreground border border-border rounded-t-lg rounded-tr-lg rounded-br-lg bg-card">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: hasNotification ? 1 : 0 }}
@@ -106,7 +106,7 @@ const AINotification: React.FC<AINotificationProps> = ({
         ))}
 
         <div className="flex flex-row justify-between">
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-muted-foreground mt-1">
             {formatTimeAgo(createdAt)}
           </div>
           {onClick && (
@@ -141,7 +141,7 @@ const AINotification: React.FC<AINotificationProps> = ({
             e.stopPropagation();
             onDismiss(e);
           }}
-          className="absolute top-1 right-1 p-[3px] rounded-full bg-gray-500"
+          className="absolute top-1 right-1 p-[3px] rounded-full bg-muted-foreground"
           aria-label="Dismiss"
         >
           <X size={15} className="text-white" />
