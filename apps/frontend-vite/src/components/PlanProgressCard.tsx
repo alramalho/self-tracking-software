@@ -11,6 +11,7 @@ import {
   Flame,
   MoveRight,
   Rocket,
+  Sparkles,
   Sprout,
   TrendingDown,
   TrendingUp,
@@ -234,6 +235,14 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
           {/* Badges row - beneath the title */}
           <div className="flex items-center gap-2 flex-wrap">
+            {isCoached && (
+              <div className={cn("flex items-center gap-1 px-3 py-1 rounded-full w-fit", variants.fadedBg)}>
+                <Sparkles size={18} className={variants.text} />
+                <span className={cn("text-[12px] font-medium", variants.text)}>
+                  Coached
+                </span>
+              </div>
+            )}
             {habitIsAchieved && (
               <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 dark:bg-lime-900/30 w-fit">
                 <Sprout size={18} className="text-lime-500" />

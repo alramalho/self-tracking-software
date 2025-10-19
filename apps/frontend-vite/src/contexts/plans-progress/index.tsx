@@ -2,7 +2,6 @@
 "use client";
 
 import { useApiWithAuth } from "@/api";
-import { dummyPlanProgressData } from "@/components/steps/AIPartnerFinder";
 import { useAuth } from "@/contexts/auth";
 import { useLogError } from "@/hooks/useLogError";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +17,7 @@ import {
   fetchPlansProgress,
   normalizePlanProgress,
 } from "./service";
+import { dummyPlanProgressData } from "@/components/AICoachFeaturePreview";
 
 export type { PlanProgressData };
 

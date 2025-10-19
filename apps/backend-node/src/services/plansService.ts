@@ -1197,14 +1197,18 @@ export class PlansService {
       const { aiService } = await import("./aiService");
 
       // Generate coaching message using AI
-      const message = await aiService.generateCoachMessage(user, updatedPlan);
+      const coachMessage = await aiService.generateCoachMessage(
+        user,
+        updatedPlan
+      );
 
       // Create and send notification
       const notification =
         await notificationService.createAndProcessNotification(
           {
             userId: user.id,
-            message,
+            title: coachMessage.title,
+            message: coachMessage.message,
             type: "COACH",
             relatedId: plan.id,
             relatedData: {

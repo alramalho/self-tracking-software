@@ -7,6 +7,7 @@ import { apnsService } from "./apnsService";
 
 export interface CreateNotificationData {
   userId: string;
+  title?: string;
   message: string;
   type?: NotificationType;
   relatedId?: string;
@@ -61,6 +62,7 @@ export class NotificationService {
     const notification = await prisma.notification.create({
       data: {
         userId: data.userId,
+        title: data.title,
         message: data.message,
         type: data.type || "INFO",
         relatedId: data.relatedId,
