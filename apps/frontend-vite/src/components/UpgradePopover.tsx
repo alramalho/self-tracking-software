@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCurrentUser } from "@/contexts/users";
-import { Link } from "@tanstack/react-router";
 import { CheckCircle } from "lucide-react";
 import React, { type ReactNode, useEffect, useState } from "react";
 import Lottie from "react-lottie";
@@ -406,15 +405,16 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                   Continue
                 </Button>
               ) : (
-                <Link
-                  to={currentTier.paymentLink}
+                <a
+                  href={`${currentTier.paymentLink}?client_reference_id=${currentUser?.id}`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="block"
                 >
                   <Button className="w-full rounded-xl bg-purple-500 hover:bg-purple-600 text-lg py-6">
                     Start Free Trial
                   </Button>
-                </Link>
+                </a>
               )}
             </div>
           </Card>
