@@ -62,13 +62,13 @@ function PlanGoalSetter() {
     return (
       <div className="space-y-4">
         {data.goal && (
-          <div className="border border-gray-200 rounded-md p-3 bg-white">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-md p-3 bg-white dark:bg-gray-800">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Goal
             </h3>
             <div className="space-y-2">
               <span className="text-lg">{data.emoji || "🎯"}{" "}</span>
-              <span className="flex-1 text-gray-900 italic">
+              <span className="flex-1 text-gray-900 dark:text-gray-100 italic">
                 {data.goal}
               </span>
             </div>

@@ -44,11 +44,11 @@ export const PlanTypeSelector = () => {
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-2">
           <LandPlot className="w-20 h-20 text-blue-600" />
-          <h2 className="text-2xl mt-2 font-bold tracking-tight text-gray-900">
+          <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
             Choose Your Plan Type
           </h2>
         </div>
-        <p className="text-md text-gray-600">
+        <p className="text-md text-muted-foreground">
           How would you like to structure your activities?
         </p>
       </div>
@@ -61,31 +61,29 @@ export const PlanTypeSelector = () => {
           return (
             <div key={option.id} className={`rounded-xl border-2 transition-all duration-200 ${
               isSelected
-                ? "border-blue-500 bg-blue-50 shadow-md"
-                : "border-gray-200 bg-white"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-md"
+                : "border-border bg-card hover:bg-muted/50"
             }`}>
               <button
                 onClick={() => handlePlanSelect(option.id)}
-                className={`w-full p-6 text-left ${
-                  !isSelected ? "hover:border-gray-300 hover:bg-gray-50" : ""
-                }`}
+                className={`w-full p-6 text-left`}
               >
                 <div className="flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    isSelected ? "bg-blue-500" : "bg-gray-100"
+                    isSelected ? "bg-blue-500" : "bg-muted"
                   }`}>
                     <Icon className={`w-6 h-6 ${
-                      isSelected ? "text-white" : "text-gray-600"
+                      isSelected ? "text-white" : "text-muted-foreground"
                     }`} />
                   </div>
                   <div className="flex-1">
                     <h3 className={`text-lg font-semibold ${
-                      isSelected ? "text-blue-900" : "text-gray-900"
+                      isSelected ? "text-blue-600 dark:text-blue-400" : "text-foreground"
                     }`}>
                       {option.title}
                     </h3>
                     <p className={`text-sm mt-1 ${
-                      isSelected ? "text-blue-700" : "text-gray-600"
+                      isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
                     }`}>
                       {option.description}
                     </p>
@@ -103,7 +101,7 @@ export const PlanTypeSelector = () => {
                     className="overflow-hidden"
                   >
                     <div className="px-6 pb-6 space-y-4">
-                      <div className="border-t border-blue-200 pt-4">
+                      <div className="border-t border-blue-200 dark:border-blue-800 pt-4">
                         <NumberInput
                           title="Times per Week"
                           value={planTimesPerWeek}
@@ -114,7 +112,7 @@ export const PlanTypeSelector = () => {
                       </div>
                       <button
                         onClick={handleContinue}
-                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                        className="w-full bg-blue-600 dark:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                       >
                         Continue
                       </button>

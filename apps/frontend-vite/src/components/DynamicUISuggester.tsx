@@ -417,11 +417,10 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
                 {creationMessage ?? "Do you want me to process this for you?"}
               </p>
             </div>
-            <div className="flex flex-row gap-2 justify-center mt-4">
+            <div className="flex flex-row gap-2 justify-center mt-4 px-4">
               {onReject && (
                 <Button
-                  variant="outline"
-                  className="w-full flex items-center gap-2 text-red-600 bg-card border-red-600"
+                  className="w-full flex items-center gap-2 text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 border-0"
                   onClick={() => setRejectionFeedbackOpen(true)}
                   disabled={isSubmitting}
                 >
@@ -431,8 +430,7 @@ export function DynamicUISuggester<T extends BaseExtractionResponse>({
               )}
               {onAccept && (
                 <Button
-                  variant="outline"
-                  className="w-full flex items-center gap-2 text-green-600 bg-card border-green-600"
+                  className="w-full flex items-center gap-2 text-white bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 border-0"
                   onClick={handleAccept}
                   disabled={isSubmitting}
                   loading={isSubmitting}

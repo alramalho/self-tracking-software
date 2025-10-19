@@ -23,7 +23,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   steps,
   initialStepId,
 }) => {
-  const { updateUser  } = useCurrentUser();
+  const { updateUser, refetchCurrentUser } = useCurrentUser();
   const { sideCannons } = useConfetti();
   const [onboardingState, setOnboardingState] = useLocalStorage<OnboardingState>(
     "onboarding-state",
@@ -190,12 +190,17 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
             onboardingCompletedAt: new Date(),
           },
           muteNotifications: true,
-        }).then(() => {
-          posthog.capture("onboarding-completed");
-          sideCannons({ duration: 500 });
-          toast.success("Onboarding Completed! 🎉");
-          navigate({ to: "/" });
-        });
+        })
+          .then(() => {
+            // Force refetch to ensure the data is truly updated before navigation
+            return refetchCurrentUser(false);
+          })
+          .then(() => {
+            posthog.capture("onboarding-completed");
+            sideCannons({ duration: 500 });
+            toast.success("Onboarding Completed! 🎉");
+            navigate({ to: "/" });
+          });
       } else {
         // Priority 1: If options.nextStep is provided, go to that specific step
         if (options?.nextStep) {

@@ -70,21 +70,21 @@ const PlanCard = ({
       onClick={onSelect}
       className={`w-full p-6 rounded-3xl border-2 transition-all duration-200 text-left ${
         isSelected
-          ? "border-blue-500 bg-blue-50 shadow-md"
-          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+          ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-md"
+          : "border-border bg-card hover:bg-muted/50"
       }`}
     >
       <div className="flex items-start gap-4">
         <motion.div
           className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-            isSelected ? "bg-blue-200" : "bg-gray-100"
+            isSelected ? "bg-blue-200 dark:bg-blue-800" : "bg-muted"
           }`}
           animate={isSelected ? { scale: [1, 1.1, 1] } : { scale: 1 }}
           transition={{ duration: 0.3 }}
         >
           <motion.div
             className={`text-2xl ${
-              isSelected ? "text-white" : "text-gray-600"
+              isSelected ? "text-blue-900 dark:text-blue-100" : "text-muted-foreground"
             }`}
             animate={isSelected ? { rotate: [0, 10, -10, 0] } : { rotate: 0 }}
             transition={{ duration: 0.5 }}
@@ -95,7 +95,7 @@ const PlanCard = ({
         <div className="flex-1">
           <motion.div
             className={`font-semibold text-lg ${
-              isSelected ? "text-blue-900" : "text-gray-900"
+              isSelected ? "text-blue-600 dark:text-blue-400" : "text-foreground"
             }`}
             animate={{ opacity: 1 }}
             initial={{ opacity: 0 }}
@@ -105,7 +105,7 @@ const PlanCard = ({
           </motion.div>
           <motion.div
             className={`text-sm mt-1 ${
-              isSelected ? "text-blue-700" : "text-gray-600"
+              isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
             }`}
             animate={{ opacity: 1 }}
             initial={{ opacity: 0 }}
@@ -116,7 +116,7 @@ const PlanCard = ({
           {weeksCount > 0 && (
             <motion.div
               className={`text-sm mt-1 ${
-                isSelected ? "text-blue-600" : "text-gray-500"
+                isSelected ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"
               }`}
               animate={{ opacity: 1 }}
               initial={{ opacity: 0 }}
@@ -274,7 +274,7 @@ const PlanGenerator = () => {
                 </motion.div>
 
                 <motion.h2
-                  className="text-2xl mt-2 font-bold tracking-tight text-gray-900"
+                  className="text-2xl mt-2 font-bold tracking-tight text-foreground"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
@@ -288,7 +288,7 @@ const PlanGenerator = () => {
                 </motion.h2>
 
                 <motion.p
-                  className="text-gray-600 mb-6"
+                  className="text-muted-foreground mb-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
@@ -326,7 +326,7 @@ const PlanGenerator = () => {
                 </motion.div>
 
                 <motion.h2
-                  className="text-2xl mt-2 font-bold tracking-tight text-gray-900"
+                  className="text-2xl mt-2 font-bold tracking-tight text-foreground"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 }}
@@ -335,7 +335,7 @@ const PlanGenerator = () => {
                 </motion.h2>
 
                 <motion.p
-                  className="text-gray-600 mb-6"
+                  className="text-muted-foreground mb-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.6 }}

@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 "use client";
 
+import { useTheme } from "@/contexts/theme/useTheme";
 import { withFadeUpAnimation } from "@/contexts/onboarding/lib";
 import { useOnboarding } from "@/contexts/onboarding/useOnboarding";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -25,14 +26,14 @@ const OptionCard = ({
       onClick={onClick}
       className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
         isSelected
-          ? "border-blue-500 bg-blue-50 shadow-md"
-          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+          ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-md"
+          : "border-border bg-card hover:bg-muted/50"
       }`}
     >
       <div className="flex items-start gap-4">
         <div
           className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-            isSelected ? "bg-blue-100" : "bg-gray-100"
+            isSelected ? "bg-blue-100 dark:bg-blue-800" : "bg-muted"
           }`}
         >
           {icon}
@@ -40,14 +41,14 @@ const OptionCard = ({
         <div className="flex-1">
           <h3
             className={`text-lg font-semibold ${
-              isSelected ? "text-blue-900" : "text-gray-900"
+              isSelected ? "text-blue-600 dark:text-blue-400" : "text-foreground"
             }`}
           >
             {title}
           </h3>
           <p
             className={`text-sm mt-1 ${
-              isSelected ? "text-blue-700" : "text-gray-600"
+              isSelected ? "text-blue-700 dark:text-blue-300" : "text-muted-foreground"
             }`}
           >
             {description}
@@ -61,6 +62,7 @@ const OptionCard = ({
 const PartnerTypeSelector = () => {
   const { completeStep, partnerType, setPartnerType } = useOnboarding();
   const { isPushGranted } = useNotifications();
+  const { isDarkMode } = useTheme();
 
   const handlePlanSelect = (selectedType: "human" | "ai") => {
     completeStep(
@@ -75,15 +77,15 @@ const PartnerTypeSelector = () => {
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-2">
           <PersonStanding className="w-20 h-20 text-blue-600" />
-          <h2 className="text-2xl mt-2 font-bold tracking-tight text-gray-900">
+          <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
             Let&apos;s get you a partner.
           </h2>
         </div>
-        <p className="text-md text-gray-600">
+        <p className="text-md text-muted-foreground">
           Research shows having a partner significantly improves success rates,
           which is why this is an important step in your journey.
         </p>
-        <p className="text-lg font-semibold text-gray-600">
+        <p className="text-lg font-semibold text-muted-foreground">
           You have two options:
         </p>
       </div>
@@ -105,7 +107,7 @@ const PartnerTypeSelector = () => {
           onClick={() => handlePlanSelect("ai")}
           icon={
             <img
-              src="/images/jarvis_logo_transparent.png"
+              src={isDarkMode ? "/images/jarvis_logo_white_transparent.png" : "/images/jarvis_logo_transparent.png"}
               className="w-9 h-9"
             />
           }
