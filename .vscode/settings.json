@@ -22,7 +22,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "editor.codeActionsOnSave": {
-    "source.organizeImports": "explicit"
+    "source.organizeImports": "never"
   },
   "typescript.preferences.organizeImportsIgnoreCase": "auto",
   "typescript.preferences.organizeImportsNumericCollation": true,

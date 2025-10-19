@@ -11,7 +11,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
     <div
     // [background-image:linear-gradient(#eaedf1_1px,transparent_1px),linear-gradient(to_right,#eef0f3_1px,#f8fafc_1px)]
     // [background-size:20px_20px] flex flex-col items-center justify-center p-4
-      className={`relative w-full min-h-dvh bg-muted/80 flex`}
+      className={`relative w-full mx-auto min-h-dvh bg-muted/80 flex justify-center items-center`}
     >
       <div className="w-full max-w-md space-y-8 flex flex-col items-center justify-center">
         <div className="text-center">

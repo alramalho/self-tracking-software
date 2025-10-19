@@ -210,19 +210,9 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
           <div className="flex items-center justify-between gap-2 ">
             <div className="flex items-center gap-2">
               <span className="text-4xl">{plan.emoji || "📋"}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-md font-semibold text-foreground">
-                  {plan.goal}
-                </span>
-                {habitIsAchieved && (
-                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 dark:bg-lime-900/30 w-fit">
-                    <Sprout size={18} className="text-lime-500" />
-                    <span className="text-[12px] font-medium text-lime-500">
-                      Habit
-                    </span>
-                  </div>
-                )}
-              </div>
+              <span className="text-md font-semibold text-foreground">
+                {plan.goal}
+              </span>
             </div>
             <div
               className={cn(
@@ -240,6 +230,26 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
                 <FireAnimation height={40} width={40} className="pb-2" />
               </>
             </div>
+          </div>
+
+          {/* Badges row - beneath the title */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {habitIsAchieved && (
+              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-lime-100 dark:bg-lime-900/30 w-fit">
+                <Sprout size={18} className="text-lime-500" />
+                <span className="text-[12px] font-medium text-lime-500">
+                  Habit
+                </span>
+              </div>
+            )}
+            {isWeekCompleted && (
+              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 w-fit">
+                🎉{" "}
+                <span className="text-[12px] font-medium text-green-500">
+                  Week completed
+                </span>
+              </div>
+            )}
           </div>
 
           {isCoached && (
@@ -364,7 +374,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
             )}
 
             {/* Lifestyle achievement progress (9 weeks) - only show after habit is achieved */}
-            {achievement.streak >= habitMaxValue && (
+            {habitIsAchieved && !lifestyleIsAchieved && (
               <div className="space-y-1">
                 <SteppedBarProgress
                   value={lifestyleProgressValue}
@@ -392,31 +402,11 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
 
             <AnimatePresence>
               {showConfetti && isFullyDone && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginTop: 16 }}
-                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                  transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
-                  className="overflow-hidden"
-                >
-                  <Confetti
-                    className="absolute left-0 top-0 z-0 size-full"
-                    ref={confettiRef}
-                    manualstart
-                  />
-                  <div
-                    className="relative p-3 rounded-lg backdrop-blur-sm bg-gradient-to-br from-green-200/40 via-green-100/40 to-emerald-200/40 border border-green-200 animate-background-position-spin bg-[length:200%_200%]"
-                    onClick={() => {
-                      confettiRef.current?.fire({});
-                    }}
-                  >
-                    <div className="relative z-10 flex items-center justify-center">
-                      <span className="text-md font-semibold text-green-700 pointer-events-none select-none animate-pulse">
-                        🎉 Fantastic work this week!
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
+                <Confetti
+                  className="absolute left-0 top-0 z-0 size-full"
+                  ref={confettiRef}
+                  manualstart
+                />
               )}
             </AnimatePresence>
 
