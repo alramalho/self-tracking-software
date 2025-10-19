@@ -102,10 +102,7 @@ const NotificationsSelector = () => {
             </motion.div>
 
             <motion.h2
-              className="text-2xl mt-2 font-bold tracking-tight"
-              animate={{
-                color: isSuccess ? "#16a34a" : "#111827",
-              }}
+              className="text-2xl mt-2 font-bold tracking-tight text-foreground"
               transition={{ duration: 0.5 }}
             >
               <AnimatePresence mode="wait">
@@ -137,12 +134,12 @@ const NotificationsSelector = () => {
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3 }}
               >
-                <p className="text-md text-gray-600">
+                <p className="text-md text-muted-foreground">
                   Notifications allow us to provide out-of-app outreach. As our
                   app relies on accountability and coaching, this is an
                   important part of the onboarding.
                 </p>
-                <p className="text-md text-gray-400 mt-2">
+                <p className="text-md text-muted-foreground/60 mt-2">
                   (You will be able to disable them after a while)
                 </p>
               </motion.div>

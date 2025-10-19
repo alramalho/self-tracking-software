@@ -70,11 +70,11 @@ const PlanProgressInitiator = () => {
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex flex-col items-center gap-1">
           <Route className="w-20 h-20 mx-auto text-blue-600" />
-          <h2 className="text-2xl mt-2 font-bold tracking-tight text-gray-900">
+          <h2 className="text-2xl mt-2 font-bold tracking-tight text-foreground">
             How advanced are you already?
           </h2>
         </div>
-        <p className="text-md text-gray-600">
+        <p className="text-md text-muted-foreground">
           Help us understand your starting point.
         </p>
       </div>
@@ -86,7 +86,7 @@ const PlanProgressInitiator = () => {
         />
         <Button
           size="lg"
-          className="w-full border-gray-200 rounded-xl"
+          className="w-full rounded-xl"
           onClick={() => {
             handleComplete(text.length > 0 ? text : "I'm a complete beginner");
           }}
