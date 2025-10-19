@@ -128,6 +128,50 @@ async function handleSubscriptionEvent(
   }
 }
 
+// Handler: Checkout session completed (link customer to user)
+async function handleCheckoutSessionCompleted(
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  const clientReferenceId = session.client_reference_id;
+  const customerId = session.customer as string;
+
+  if (!clientReferenceId) {
+    logger.warn("Checkout session has no client_reference_id");
+    return;
+  }
+
+  if (!customerId) {
+    logger.warn("Checkout session has no customer");
+    return;
+  }
+
+  // Find user by ID (from client_reference_id)
+  const user = await prisma.user.findUnique({
+    where: { id: clientReferenceId },
+  });
+
+  if (!user) {
+    logger.error(`User not found for client_reference_id: ${clientReferenceId}`);
+    telegramService.sendMessage(
+      `🚨 **User not found for checkout session**\n\n` +
+        `Client Reference ID: ${clientReferenceId}\n` +
+        `Customer ID: ${customerId}\n` +
+        `UTC Time: ${new Date().toISOString()}`
+    );
+    return;
+  }
+
+  // Link Stripe customer to user
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { stripeCustomerId: customerId },
+  });
+
+  logger.info(
+    `Linked Stripe customer ${customerId} to user ${user.email} (${user.id})`
+  );
+}
+
 // Handler: Payment events (notifications only)
 async function handlePaymentIntent(
   paymentIntent: Stripe.PaymentIntent
@@ -193,6 +237,13 @@ router.post(
       logger.info(`Processing Stripe event: ${event.type}`);
 
       switch (event.type) {
+        // Checkout session completed - link customer to user
+        case "checkout.session.completed": {
+          const session = event.data.object as Stripe.Checkout.Session;
+          await handleCheckoutSessionCompleted(session);
+          break;
+        }
+
         // Subscription events - update user data
         case "customer.subscription.created":
         case "customer.subscription.updated":
