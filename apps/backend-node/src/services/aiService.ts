@@ -460,7 +460,7 @@ export class AIService {
   async generateCoachMessage(
     user: User,
     plan: Plan & { activities: Activity[] }
-  ): Promise<string> {
+  ): Promise<{ title: string; message: string }> {
     const userName = user.name || user.username || "there";
 
     // Get comprehensive progress data including streaks
@@ -489,11 +489,27 @@ export class AIService {
       (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
 
+    const schema = z.object({
+      title: z
+        .string()
+        .describe(
+          "A short, punchy title (3-5 words) summarizing the coaching update"
+        ),
+      message: z
+        .string()
+        .describe(
+          "A brief, personalized coaching message (1-2 sentences) with actionable advice"
+        ),
+    });
+
     const systemPrompt =
-      `You are a supportive personal coach. Generate a brief, personalized coaching message (1-2 sentences).` +
+      `You are a supportive personal coach. Generate a brief coaching notification with a title and message.` +
+      `` +
+      `Title: Short, punchy summary (3-5 words) of the week's status or key point` +
+      `Message: Brief, personalized advice (1-2 sentences) that's encouraging but realistic` +
       `` +
       `Keep it natural and varied - don't follow a fixed template. Focus on what matters most given the context.` +
-      `Be encouraging but realistic. Use their name. Optionally include 🔥 if it feels appropriate.`;
+      `Use their name in the message. Optionally include 🔥 if it feels appropriate.`;
 
     // Build a simple, clear context
     let context = `${userName}'s plan: "${plan.goal}"`;
@@ -533,9 +549,9 @@ export class AIService {
       context += `\n- Current streak: ${achievement.streak} ${achievement.streak === 1 ? "week" : "weeks"}`;
     }
 
-    const prompt = `Generate a motivational message for this user based on their current progress:\n\n${context}`;
+    const prompt = `Generate a coaching notification for this user based on their current progress:\n\n${context}`;
 
-    return this.generateText(prompt, systemPrompt);
+    return this.generateStructuredResponse(prompt, schema, systemPrompt);
   }
 
   async generatePlanSessions(params: {

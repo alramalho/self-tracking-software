@@ -326,7 +326,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                 <div className="flex flex-col items-center gap-1">
                   <span>{tier.title}</span>
                   {tier.savings && (
-                    <span className="text-xs text-green-600 font-medium">
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                       Save {tier.savings}%
                     </span>
                   )}
@@ -336,7 +336,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
           </div>
 
           {/* Selected Pricing Card */}
-          <Card className="p-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-white to-purple-50 ring-2 ring-purple-500/50">
+          <Card className="p-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-background to-purple-50 dark:to-purple-950 ring-2 ring-purple-500/50">
             <div className="space-y-4">
               <div className="flex flex-row items-center justify-between">
                 <div>
@@ -369,7 +369,7 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
                   <p className="text-sm text-muted-foreground">
                     €{currentTier.price} per {currentTier.period}
                     {currentTier.savings && (
-                      <span className="text-green-600 font-medium ml-1">
+                      <span className="text-green-600 dark:text-green-400 font-medium ml-1">
                         • Save {currentTier.savings}%
                       </span>
                     )}
@@ -429,12 +429,12 @@ export const UpgradePopover: React.FC<UpgradePopoverProps> = ({
           </div>
         </div>
 
-        <Divider className="my-6 mt-24" />
+        <Divider className="my-6 mt-12" />
         {/* <FAQ /> */}
         <div className="flex flex-row gap-4 items-start justify-center bg-muted/80 p-7 rounded-2xl">
           <div className="flex flex-col">
             <div className="flex flex-row gap-4 items-center">
-              <Avatar className="w-10 h-10 ring-2 ring-blue-500 ring-offset-2 ring-offset-white">
+              <Avatar className="w-10 h-10 ring-2 ring-blue-500 ring-offset-2 ring-offset-background">
                 <AvatarImage
                   src={
                     "https://images.clerk.dev/oauth_google/img_2nWIRuxpfaqd2hVzjtFkClrFSn7"

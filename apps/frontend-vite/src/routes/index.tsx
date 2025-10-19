@@ -1,10 +1,11 @@
 "use client";
 
+import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
+import { CoachNotificationBanner } from "@/components/CoachNotificationBanner";
 import FeedbackPopover from "@/components/FeedbackPopover";
 import { HomepageMetricsSection } from "@/components/HomepageMetricsSection";
-import InsightsDemo from "@/components/InsightsDemo";
 import Notifications from "@/components/Notifications";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
 import TimelineRenderer from "@/components/TimelineRenderer";
@@ -15,8 +16,8 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
-  Hammer,
   Moon,
+  MoveRight,
   RefreshCcw,
   ScanFace,
 } from "lucide-react";
@@ -55,7 +56,7 @@ const MAINTENANCE_END_DATE = new Date('2025-10-10T00:00:00Z');
 function HomePage() {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
   const navigate = useNavigate();
-  const { isLightMode } = useTheme();
+  const { isLightMode, isDarkMode } = useTheme();
   const { notifications } = useDataNotifications();
   const { plans } = usePlans();
   const activePlans = plans?.filter(
@@ -258,24 +259,33 @@ function HomePage() {
             </div>
           </div>
 
-          <div
-            onClick={() => setIsFeedbackOpen(true)}
-            className="ring-1 ring-border backdrop-blur-md bg-card/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-colors duration-200"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Hammer size={40} className="text-muted-foreground" />
-                <div>
-                  <span className="text-sm font-semibold text-foreground">
-                    We&apos;re updating the app!
-                  </span>
-                  <p className="text-xs text-muted-foreground">
-                    If anything is broken, please let us know.
-                  </p>
+          {isUserOnFreePlan ? (
+            <div
+              onClick={() => setShowAICoachPopover(true)}
+              className="ring-1 ring-border backdrop-blur-md bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-blue-100/60 hover:to-purple-100/60 dark:hover:from-blue-900/40 dark:hover:to-purple-900/40 transition-all duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={isDarkMode ? "/images/jarvis_logo_white_transparent.png" : "/images/jarvis_logo_transparent.png"}
+                    alt="Oli AI Coach"
+                    className="w-10 h-10"
+                  />
+                  <div>
+                    <span className="text-sm font-semibold text-foreground">
+                      Struggling with consistency?
+                    </span>
+                    <p className="text-xs text-muted-foreground">
+                      Perhaps our AI coach can help. Try it freely
+                    </p>
+                  </div>
                 </div>
+                <ChevronRight size={20} className="text-muted-foreground" />
               </div>
             </div>
-          </div>
+          ) : (
+            <CoachNotificationBanner />
+          )}
 
           {activePlans && activePlans.length > 0 && (
             <div className="mb-3">
@@ -339,32 +349,20 @@ function HomePage() {
       <AppleLikePopover
         onClose={() => setShowAICoachPopover(false)}
         open={showAICoachPopover}
-        title="AI Coach & Insights"
+        displayIcon={false}
       >
-        <div className="p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <ScanFace size={30} className="text-purple-500" />
-            <div>
-              <h3 className="text-lg font-semibold">AI Coach & Insights</h3>
-              <p className="text-muted-foreground text-sm">
-                Get personalized coaching and track your daily metrics
-              </p>
-            </div>
-          </div>
-
-          <InsightsDemo showCorrelations={false} className="mb-6" />
-
+        <AICoachFeaturePreview>
           <Button
+            size="lg"
+            className="w-full mt-8 rounded-xl"
             onClick={() => {
               setShowAICoachPopover(false);
               setShowUpgradePopover(true);
             }}
-            className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
           >
-            <ScanFace size={16} className="mr-2" />
-            Try AI Coaching Free
+            <span>Start trial</span> <MoveRight className="ml-3 w-4 h-4" />
           </Button>
-        </div>
+        </AICoachFeaturePreview>
       </AppleLikePopover>
 
       {/* Feedback Modal */}
