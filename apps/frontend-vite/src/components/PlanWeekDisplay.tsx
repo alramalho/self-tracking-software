@@ -159,6 +159,17 @@ export const PlanWeekDisplay = ({
           title
         ))}
 
+      {/* Week completed badge */}
+      {isWeekCompleted && (
+        <div className="flex items-center gap-2 flex-wrap mt-2">
+          <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 w-fit">
+            <span className="text-[12px] font-medium text-green-500">
+              Week completed
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-1 mt-3">
         {Array.from({ length: totalPlannedActivities }, (_, index) => (
           <div
@@ -185,32 +196,6 @@ export const PlanWeekDisplay = ({
         </span>
       </div>
 
-      <AnimatePresence>
-        {isFullyDone && showConfetti && (
-          <motion.div
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: "auto", marginTop: 16 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
-            className="overflow-hidden"
-            onClick={() => {
-              if (Math.random() < 0.5) {
-                stars();
-              } else {
-                shapes();
-              }
-            }}
-          >
-            <div className="relative p-3 rounded-lg backdrop-blur-sm bg-gradient-to-br from-green-200/40 via-green-100/40 to-emerald-200/40 border border-green-200 animate-background-position-spin bg-[length:200%_200%]">
-              <div className="relative z-10 flex items-center justify-center">
-                <span className="text-md font-semibold text-green-700 animate-pulse">
-                  🎉 Fantastic work this week!
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* coming up section, wherewe either display  */}
       {plan.outlineType == "TIMES_PER_WEEK" && !isWeekCompleted && (

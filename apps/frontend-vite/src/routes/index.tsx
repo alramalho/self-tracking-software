@@ -278,7 +278,7 @@ function HomePage() {
           </div>
 
           {activePlans && activePlans.length > 0 && (
-            <div>
+            <div className="mb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {activePlans.length > 1 && (
