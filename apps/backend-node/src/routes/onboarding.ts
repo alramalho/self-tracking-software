@@ -100,7 +100,7 @@ router.post(
         req.user!.id,
         30
       );
-      const userContext = `Plan goal: ${plan_goal}. User conversation: ${conversationHistory || message}`;
+      const userContext = `Plan goal: ${plan_goal}. Conversation History: ${conversationHistory || message}`;
 
       // Extract activities using AI
       const activitiesResult = await aiService.extractActivitiesForPlan(
