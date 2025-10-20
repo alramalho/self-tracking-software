@@ -1180,17 +1180,17 @@ export class PlansService {
       const updatedPlan = await this.recalculateCurrentWeekState(plan, user);
 
       // If state didn't change, no notification needed
-      if (updatedPlan.currentWeekState === oldState) {
-        logger.info(
-          `No state transition for plan '${plan.goal}' of user '${user.username}' - skipping notification`
-        );
-        return null;
-      }
+      // if (updatedPlan.currentWeekState === oldState) {
+      //   logger.info(
+      //     `No state transition for plan '${plan.goal}' of user '${user.username}' - skipping notification`
+      //   );
+      //   return null;
+      // }
 
-      // State changed - generate and send notification
-      logger.info(
-        `Plan state changed from ${oldState} to ${updatedPlan.currentWeekState} for user '${user.username}'`
-      );
+      // // State changed - generate and send notification
+      // logger.info(
+      //   `Plan state changed from ${oldState} to ${updatedPlan.currentWeekState} for user '${user.username}'`
+      // );
 
       // Import notificationService and aiService dynamically to avoid circular dependency
       const { notificationService } = await import("./notificationService");
