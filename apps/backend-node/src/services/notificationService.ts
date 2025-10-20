@@ -99,7 +99,7 @@ export class NotificationService {
     });
 
     const user = notification.user;
-    const title = `hey ${user.name || user.username} 👋`;
+    const title = notification.title || `hey ${user.name || user.username} 👋`;
     const body = processedNotification.message.toLowerCase();
 
     let isPush = false;

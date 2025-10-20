@@ -84,7 +84,8 @@ router.post(
       await notificationService.createAndProcessNotification(
         {
           userId: user.id,
-          message,
+          message: message.message,
+          title: message.title,
           type: "COACH",
           relatedData: {
             picture:
