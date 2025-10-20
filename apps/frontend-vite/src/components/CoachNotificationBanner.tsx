@@ -44,8 +44,8 @@ export const CoachNotificationBanner: React.FC = () => {
 
   const coachIcon =
     (isDarkMode
-      ? "/images/jarvis_logo_white_transparent.png"
-      : "/images/jarvis_logo_transparent.png");
+      ? "/public/images/jarvis_logo_white_transparent.png"
+      : "/public/images/jarvis_logo_transparent.png");
 
   return (
     <div className="ring-1 ring-border backdrop-blur-md bg-card/30 rounded-3xl py-3 px-4 shadow-sm transition-colors duration-200">
