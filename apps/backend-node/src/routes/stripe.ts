@@ -53,13 +53,53 @@ async function findUserByCustomerId(customerId: string) {
   return user;
 }
 
+// Helper: Find user by Stripe customer ID with retry polling (for race conditions)
+async function findUserByCustomerIdWithRetry(
+  customerId: string,
+  maxAttempts = 10, // 10 attempts over ~5s
+  delayMs = 500
+) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const user = await prisma.user.findUnique({
+      where: { stripeCustomerId: customerId },
+    });
+
+    if (user) {
+      if (attempt > 1) {
+        logger.info(
+          `Found user for customer ${customerId} after ${attempt} attempts`
+        );
+      }
+      return user;
+    }
+
+    if (attempt < maxAttempts) {
+      logger.info(
+        `Attempt ${attempt}/${maxAttempts}: User not found for customer ${customerId}, retrying in ${delayMs}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  logger.error(
+    `User not found for Stripe customer ID: ${customerId} after ${maxAttempts} attempts`
+  );
+  telegramService.sendMessage(
+    `🚨 **User not found for customer ID ${customerId}** after polling\\n\\n` +
+      `Attempts: ${maxAttempts}\\n` +
+      `UTC Time: ${new Date().toISOString()}`
+  );
+
+  return null;
+}
+
 // Helper: Update user subscription data
 async function updateUserSubscription(
   customerId: string,
   subscription: Stripe.Subscription,
   planType: "PLUS" | "FREE"
 ) {
-  const user = await findUserByCustomerId(customerId);
+  const user = await findUserByCustomerIdWithRetry(customerId);
   if (!user) return null;
 
   return await prisma.user.update({
