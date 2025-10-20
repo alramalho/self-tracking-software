@@ -1,6 +1,6 @@
 import { AuthenticatedRequest, requireAuth } from "@/middleware/auth";
 import { plansService } from "@/services/plansService";
-import { ActivityEntry, ActivityVisibility } from "@tsw/prisma";
+import { ActivityEntry } from "@tsw/prisma";
 import { Response, Router } from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
@@ -324,7 +324,7 @@ router.post(
     res: Response
   ): Promise<Response | void> => {
     try {
-      let { id, title, measure, emoji, colorHex, privacy_settings } = req.body;
+      let { id, title, measure, emoji, colorHex } = req.body;
 
       if (!id) {
         id = uuidv4();
@@ -337,7 +337,6 @@ router.post(
           title,
           measure,
           emoji,
-          privacySettings: privacy_settings as ActivityVisibility,
           colorHex,
         },
         create: {
@@ -346,7 +345,6 @@ router.post(
           title,
           measure,
           emoji,
-          privacySettings: privacy_settings as ActivityVisibility,
           colorHex,
         },
       });

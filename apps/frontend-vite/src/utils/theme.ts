@@ -87,7 +87,7 @@ export const themeVariants: Record<
     card: {
       selected: {
         border: "border-slate-400",
-        bg: "bg-slate-100",
+        bg: "bg-slate-100 dark:bg-slate-800/50",
         glassBg: "bg-slate-100/70 dark:bg-slate-800/70",
       },
       glassBg: "bg-slate-100/40 dark:bg-slate-800/40",
@@ -135,8 +135,8 @@ export const themeVariants: Record<
     background: "bg-blue-50",
     card: {
       selected: {
-        border: "border-blue-400",
-        bg: "bg-blue-100",
+        border: "border-blue-400 dark:border-blue-600",
+        bg: "bg-blue-100 dark:bg-blue-800/50",
         glassBg: "bg-blue-100/70 dark:bg-blue-800/70",
       },
       glassBg: "bg-blue-100/40 dark:bg-blue-800/40",
@@ -184,8 +184,8 @@ export const themeVariants: Record<
     background: "bg-violet-50",
     card: {
       selected: {
-        border: "border-violet-500",
-        bg: "bg-violet-50",
+        border: "border-violet-500 dark:border-violet-600",
+        bg: "bg-violet-50 dark:bg-violet-800/50",
         glassBg: "bg-violet-100/70 dark:bg-violet-800/70",
       },
       glassBg: "bg-violet-100/40 dark:bg-violet-800/40",
@@ -233,8 +233,8 @@ export const themeVariants: Record<
     background: "bg-amber-50",
     card: {
       selected: {
-        border: "border-amber-400",
-        bg: "bg-amber-50",
+        border: "border-amber-400 dark:border-amber-600",
+        bg: "bg-amber-50 dark:bg-amber-800/50",
         glassBg: "bg-amber-100/70 dark:bg-amber-800/70",
       },
       glassBg: "bg-amber-100/40 dark:bg-amber-800/40",
@@ -282,8 +282,8 @@ export const themeVariants: Record<
     background: "bg-emerald-50",
     card: {
       selected: {
-        border: "border-emerald-400",
-        bg: "bg-emerald-50",
+        border: "border-emerald-400 dark:border-emerald-600",
+        bg: "bg-emerald-50 dark:bg-emerald-800/50",
         glassBg: "bg-emerald-100/70 dark:bg-emerald-800/70",
       },
       glassBg: "bg-emerald-100/40 dark:bg-emerald-800/40",
@@ -331,8 +331,8 @@ export const themeVariants: Record<
     background: "bg-rose-50",
     card: {
       selected: {
-        border: "border-rose-400",
-        bg: "bg-rose-50",
+        border: "border-rose-400 dark:border-rose-600",
+        bg: "bg-rose-50 dark:bg-rose-800/50",
         glassBg: "bg-rose-100/70 dark:bg-rose-800/70",
       },
       glassBg: "bg-rose-100/40 dark:bg-rose-800/40",

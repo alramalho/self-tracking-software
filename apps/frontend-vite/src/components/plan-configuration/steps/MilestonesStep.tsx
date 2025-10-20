@@ -17,12 +17,14 @@ interface MilestonesStepProps {
   milestones?: PlanMilestone[];
   setMilestones?: Dispatch<SetStateAction<PlanMilestone[]>>;
   activities: CompletePlan["activities"];
+  number: number;
 }
 
 const MilestonesStep: React.FC<MilestonesStepProps> = ({
   milestones = [],
   setMilestones = () => {},
   activities = [],
+  number,
 }) => {
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -249,7 +251,7 @@ const MilestonesStep: React.FC<MilestonesStepProps> = ({
     <div className="space-y-6">
       <div>
         <div className="flex items-start gap-2">
-          <Number className="mt-1">6</Number>
+          <Number className="mt-1">{number}</Number>
           <div className="flex flex-col gap-2">
             <Label className="text-lg font-medium">
               What are your next milestones in this plan?

@@ -9,11 +9,13 @@ import Number from "../Number";
 interface ActivitiesStepProps {
   onActivitiesChange: (activities: Activity[]) => void;
   initialActivities?: Activity[];
+  number: number;
 }
 
 const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
   onActivitiesChange,
   initialActivities = [],
+  number,
 }) => {
   const {activities} = useActivities();
   const [showActivityEditor, setShowActivityEditor] = useState(false);
@@ -36,7 +38,7 @@ const ActivitiesStep: React.FC<ActivitiesStepProps> = ({
     <div className="space-y-8">
       <div>
         <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-          <Number>4</Number>
+          <Number>{number}</Number>
           Your Activities
         </h3>
         <p className="text-sm text-muted-foreground mb-4">

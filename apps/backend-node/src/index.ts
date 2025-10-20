@@ -94,6 +94,9 @@ app.use(morganMiddleware);
 // Apply rate limiting
 app.use(limiter);
 
+// Disable ETags to prevent 304 responses - let client-side caching (TanStack Query) handle it
+app.set('etag', false);
+
 // Health check endpoint
 
 app.get("/health", (_req, res) => {

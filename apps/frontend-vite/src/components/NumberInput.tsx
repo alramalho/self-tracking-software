@@ -28,7 +28,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 px-3 rounded-full bg-secondary text-primary-secondary"
+              className="h-8 px-3 rounded-full "
               onClick={() => onChange(Math.max(min, value - 10))}
               disabled={value <= min}
             >
@@ -41,7 +41,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 shrink-0 rounded-full bg-secondary text-primary-secondary"
+          className="h-8 w-8 shrink-0 rounded-full"
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
         >

@@ -26,8 +26,9 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  // You can enable defaultCache or customize it as needed
-  // runtimeCaching: defaultCache, // uncomment if you want runtime caching
+  disablePrecacheManifest: false,
+  // No runtime caching - only cache precached static assets
+  runtimeCaching: [],
 });
 
 // This replaces the old installSerwist call

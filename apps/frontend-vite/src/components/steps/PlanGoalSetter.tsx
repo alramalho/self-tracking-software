@@ -89,7 +89,7 @@ function PlanGoalSetter() {
   return (
     <>
       <DynamicUISuggester<PlanGoalSetterResponse>
-        id="plan-creator"
+        id="plan-goal-setter"
         initialValue={planGoal || undefined}
         headerIcon={<Goal className="w-[10rem] h-[10rem] text-blue-600" />}
         title="Let's start by creating you a goal"

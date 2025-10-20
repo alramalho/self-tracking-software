@@ -77,7 +77,7 @@ function PlanActivitySetter() {
   return (
     <>
       <DynamicUISuggester<PlanActivitySetterResponse>
-        id="plan-creator"
+        id="plan-activity-setter"
         initialValue={planActivities?.map((activity) => `${activity.title} (${activity.measure})`).join(", ") || undefined}
         headerIcon={<BicepsFlexed className="w-[10rem] h-[10rem] text-blue-600" />}
         title="Which activities would you like to include?"

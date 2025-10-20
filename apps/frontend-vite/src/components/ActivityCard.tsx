@@ -4,20 +4,6 @@ import { getThemeVariants } from "@/utils/theme";
 import { type Activity } from "@tsw/prisma";
 import { Edit } from "lucide-react";
 
-// export function getActivityPrivacySettingIcon(
-//   privacySetting: VisibilityType,
-//   size: number = 12
-// ) {
-//   switch (privacySetting) {
-//     case "public":
-//       return <Earth size={size} className="inline-block" />;
-//     case "private":
-//       return <Lock size={size} className="inline-block" />;
-//     case "friends":
-//       return <Users size={size} className="inline-block" />;
-//   }
-// }
-
 export const ActivityCard = ({
   activity,
   selected,
@@ -50,14 +36,6 @@ export const ActivityCard = ({
         <span className="text-sm text-muted-foreground text-left">
           {activity.measure}
         </span>
-        {/* {activity.privacy_settings &&
-          activity.privacy_settings !==
-            userData?.defaultActivityVisibility && (
-            <span className="text-[10px] text-left flex items-center gap-1 mt-2 text-gray-400">
-              {getActivityPrivacySettingIcon(activity.privacy_settings)}
-              {toReadablePrivacySetting(activity.privacy_settings)}
-            </span>
-          )} */}
         <div
           className="absolute bottom-2 right-2 w-5 h-5 rounded-sm"
           style={{ backgroundColor: activity.colorHex || "transparent" }}

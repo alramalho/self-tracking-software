@@ -6,12 +6,14 @@ interface GoalStepProps {
   goal: string;
   setGoal: (goal: string) => void;
   isEdit?: boolean;
+  number: number;
 }
 
 const GoalStep: React.FC<GoalStepProps> = ({
   goal,
   setGoal,
   isEdit = false,
+  number,
 }) => {
   return (
     <div>
@@ -19,8 +21,8 @@ const GoalStep: React.FC<GoalStepProps> = ({
         className="text-lg font-medium mb-2 block flex items-center gap-2"
         htmlFor="goal"
       >
-        <Number>2</Number>
-        Great, now what exactly do you want to do?
+        <Number>{number}</Number>
+        What is your goal?
       </label>
       <div className="space-y-2">
         <Textarea
