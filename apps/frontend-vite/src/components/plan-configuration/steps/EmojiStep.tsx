@@ -5,16 +5,18 @@ import Number from "../Number";
 interface EmojiStepProps {
   selectedEmoji: string;
   setSelectedEmoji: (emoji: string) => void;
+  number: number;
 }
 
 const EmojiStep: React.FC<EmojiStepProps> = ({
   selectedEmoji,
   setSelectedEmoji,
+  number,
 }) => {
   return (
     <div>
       <h3 className="text-lg font-medium mb-2 block flex items-center gap-2">
-        <Number>3</Number>
+        <Number>{number}</Number>
         Choose a plan emoji
       </h3>
       <EmojiInput

@@ -67,6 +67,7 @@ const PlanUpsertSchema = z.object({
   suggestedByCoachAt: z.date().nullable().optional(),
   coachSuggestedTimesPerWeek: z.number().positive().nullable().optional(),
   deletedAt: z.iso.datetime().nullable().optional(),
+  visibility: z.enum(["PUBLIC", "PRIVATE"]).optional(),
 });
 
 /**
@@ -1645,7 +1646,6 @@ router.post(
                   measure: templateActivity.measure,
                   emoji: templateActivity.emoji,
                   colorHex: templateActivity.colorHex,
-                  privacySettings: templateActivity.privacySettings,
                 },
               });
             })

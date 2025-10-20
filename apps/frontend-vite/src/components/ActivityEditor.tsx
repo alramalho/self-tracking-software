@@ -42,11 +42,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       setTitle(activity.title || "");
       setMeasure(activity.measure || "");
       setEmoji(activity.emoji || "");
-      // setPrivacySetting(
-      //   activity.privacy_settings ||
-      //     userData?.defaultActivityVisibility ||
-      //     "public"
-      // );
       setColorHex(activity.colorHex || "");
     }
   }, [activity]);
@@ -111,15 +106,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           </h2>
           <div className="flex flex-col justify-between h-full">
             <div className="flex flex-col gap-4">
-              {/* <div className="flex flex-row justify-between items-center gap-2">
-                <span className="text-md h-fit">
-                  Who can see this activity?
-                </span>
-                <ActivityPrivacyDropdown
-                  value={privacySetting}
-                  onChange={setPrivacySetting}
-                />
-              </div> */}
               <EmojiInput
                 value={emoji}
                 onChange={(emoji) => setEmoji(emoji)}

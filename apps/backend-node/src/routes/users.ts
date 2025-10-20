@@ -551,6 +551,12 @@ usersRouter.post(
         return;
       }
 
+      // If viewing another user's profile, filter out private plans
+      const isOwnProfile = user.id === req.user!.id;
+      if (!isOwnProfile) {
+        user.plans = user.plans.filter((plan) => plan.visibility !== "PRIVATE");
+      }
+
       // Batch load progress for all user's plans
       const planIds = user.plans.map((p) => p.id);
       const plansProgress = await plansService.getBatchPlanProgress(
@@ -595,7 +601,9 @@ usersRouter.get(
                 { finishingDate: null },
               ],
             },
-            include: {
+            select: {
+              id: true,
+              visibility: true,
               activities: { select: { id: true } },
             },
           },
@@ -615,7 +623,9 @@ usersRouter.get(
                         { finishingDate: null },
                       ],
                     },
-                    include: {
+                    select: {
+                      id: true,
+                      visibility: true,
                       activities: { select: { id: true } },
                     },
                   },
@@ -639,7 +649,9 @@ usersRouter.get(
                         { finishingDate: null },
                       ],
                     },
-                    include: {
+                    select: {
+                      id: true,
+                      visibility: true,
                       activities: { select: { id: true } },
                     },
                   },
@@ -678,10 +690,55 @@ usersRouter.get(
       }
 
       const userIds = [user.id, ...connections.map((friend) => friend.id)];
+      const allUsers = [user, ...connections];
 
-      const activityEntries = await prisma.activityEntry.findMany({
+      // Build sets of activity IDs in plans
+      const activityIdsInPublicPlans = new Set<string>();
+      const activityIdsInAnyPlan = new Set<string>();
+
+      allUsers.forEach((u) => {
+        u.plans?.forEach((plan: any) => {
+          plan.activities?.forEach((activity: { id: string }) => {
+            activityIdsInAnyPlan.add(activity.id);
+            if (plan.visibility === "PUBLIC") {
+              activityIdsInPublicPlans.add(activity.id);
+            }
+          });
+        });
+      });
+
+      // Get all activities for these users
+      const allActivities = await prisma.activity.findMany({
         where: {
           userId: { in: userIds },
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      // Determine which activity IDs to include:
+      // - Activities in at least one PUBLIC plan, OR
+      // - Activities not in any plan
+      const validActivityIds = allActivities
+        .filter((activity) => {
+          if (activityIdsInPublicPlans.has(activity.id)) {
+            // If activity is in at least one PUBLIC plan, include it
+            return true;
+          }
+          // If activity is not in any plan, include it
+          if (!activityIdsInAnyPlan.has(activity.id)) {
+            return true;
+          }
+          // Otherwise, exclude (it's only in non-PUBLIC plans)
+          return false;
+        })
+        .map((a) => a.id);
+
+      // Fetch only activity entries for valid activities
+      const filteredActivityEntries = await prisma.activityEntry.findMany({
+        where: {
+          userId: { in: userIds },
+          activityId: { in: validActivityIds },
           deletedAt: null,
         },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -713,14 +770,13 @@ usersRouter.get(
       });
 
       const activityIds = Array.from(
-        new Set(activityEntries.map((entry) => entry.activityId))
+        new Set(filteredActivityEntries.map((entry) => entry.activityId))
       );
       const activities = await prisma.activity.findMany({
         where: { id: { in: activityIds } },
       });
 
       // Collect all plan IDs from all users
-      const allUsers = [user, ...connections];
       const allPlanIds = allUsers.flatMap(
         (u) => u.plans?.map((p) => p.id) || []
       );
@@ -745,7 +801,7 @@ usersRouter.get(
       }));
 
       res.json({
-        recommendedActivityEntries: activityEntries,
+        recommendedActivityEntries: filteredActivityEntries,
         recommendedActivities: activities,
         recommendedUsers: usersWithProgress,
       });

@@ -6,10 +6,11 @@ import { type CompletePlan } from "@/contexts/plans";
 import { type Activity, type PlanOutlineType, type PlanSession } from "@tsw/prisma";
 import React, { useState } from "react";
 import Number from "../Number";
-import NumberInput from "../NumberInput";
 import { OutlineOption } from "../OutlineOption";
+import NumberInput from "@/components/NumberInput";
 
 interface OutlineStepProps {
+  number: number;
   outlineType: PlanOutlineType;
   setOutlineType: (type: PlanOutlineType) => void;
   timesPerWeek: number;
@@ -25,6 +26,7 @@ interface OutlineStepProps {
 }
 
 const OutlineStep: React.FC<OutlineStepProps> = ({
+  number,
   outlineType,
   setOutlineType,
   timesPerWeek,
@@ -63,7 +65,7 @@ const OutlineStep: React.FC<OutlineStepProps> = ({
     <div className="space-y-8">
       <div>
         <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-          <Number>5</Number>
+          <Number>{number}</Number>
           How would you like to track your progress?
         </h3>
         <p className="text-sm text-muted-foreground mb-4">

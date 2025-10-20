@@ -46,7 +46,6 @@ model User {
   unactivatedEmailSentAt          DateTime?
   themeBaseColor                  ThemeColor         @default(BLUE)
   themeMode                       ThemeMode          @default(LIGHT)
-  defaultActivityVisibility       ActivityVisibility @default(PUBLIC)
   recommendationsOutdated         Boolean            @default(false)
   recommendationsLastCalculatedAt DateTime?
   onboardingCompletedAt           DateTime?
@@ -117,7 +116,6 @@ model Activity {
   emoji           String
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @default(now()) @updatedAt
-  privacySettings ActivityVisibility?
   colorHex        String?
   deletedAt       DateTime?
 
@@ -128,7 +126,6 @@ model Activity {
   plans        Plan[]
 
   @@index([userId, deletedAt])
-  @@index([deletedAt, privacySettings])
   @@index([createdAt])
   @@map("activities")
   @@schema("public")
@@ -264,6 +261,7 @@ model Plan {
   coachNotes                 String?
   suggestedByCoachAt         DateTime?
   sortOrder                  Int?
+  visibility                 Visibility         @default(PUBLIC)
 
   // Current week state
   currentWeekState             PlanState?
@@ -510,7 +508,7 @@ enum ThemeMode {
   @@schema("public")
 }
 
-enum ActivityVisibility {
+enum Visibility {
   PUBLIC
   PRIVATE
   FRIENDS

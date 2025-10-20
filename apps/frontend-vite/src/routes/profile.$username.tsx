@@ -584,9 +584,16 @@ function ProfilePage() {
                         <div className="flex flex-row items-center gap-2 mb-2">
                           <span className="text-4xl">{plan.emoji}</span>
                           <div className="flex flex-col gap-0">
-                            <h3 className="text-lg font-semibold">
-                              {plan.goal}
-                            </h3>
+                            <div className="flex flex-row items-center gap-2">
+                              <h3 className="text-lg font-semibold">
+                                {plan.goal}
+                              </h3>
+                              {(plan as any).visibility === "PRIVATE" && isOwnProfile && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
+                                  Private
+                                </span>
+                              )}
+                            </div>
                             {plan.outlineType == "TIMES_PER_WEEK" && (
                               <span className="text-sm text-muted-foreground">
                                 {plan.timesPerWeek} times per week
