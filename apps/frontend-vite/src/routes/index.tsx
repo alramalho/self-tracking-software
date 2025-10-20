@@ -379,7 +379,7 @@ function HomePage() {
         title="Night Mode is Here!"
         icon={<Moon size={32} className="text-foreground" />}
         description="Switch between light and dark themes to match your preference. Perfect for late-night tracking sessions!"
-        imageSrc={"/public/images/screenshots/night-mode.png"}
+        imageSrc={"/images/screenshots/night-mode.png"}
         actionLabel="Try it out →"
         onAction={() =>
           navigate({
