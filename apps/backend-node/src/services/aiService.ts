@@ -368,20 +368,21 @@ export class AIService {
     });
 
     const systemPrompt =
-      `You are an expert at extracting activities for plan creation.` +
-      `${userContext ? ` Context: ${userContext}` : ""}` +
-      `` +
+      `You are an expert at extracting activities for plan creation.\m` +
+      `${userContext ? ` Context: ${userContext}` : ""}\n` +
+      `\n` +
       `Guidelines:` +
-      `- Extract activities mentioned in the conversation` +
-      `- Use atomic measures (e.g., 'pages', 'minutes', 'kilometers', not 'books' or 'marathons')` +
-      `- Only single measure per activity (Never joint measures like 'pages or minutes')` +
-      `- Provide clear reasoning for each activity` +
-      `- Set confidence based on clarity of information` +
-      `` +
-      `Examples` +
-      `- 'Reading' measured in 'pages' or 'minutes'` +
-      `- 'Running' measured in 'kilometers' or 'minutes'` +
-      `- 'Gym' measured in 'minutes' or 'sessions'`;
+      `- Extract activities mentioned in the conversation\n` +
+      `- Use atomic measures (e.g., 'pages', 'minutes', 'kilometers', NOT 'books' or 'marathons')\n` +
+      `- Only single measure per activity (Never joint measures like 'pages or minutes')\n` +
+      `- Provide clear reasoning for each activity\n` +
+      `- Set confidence based on clarity of information\n` +
+      `– Take special attention to the user messages in the conversation history, if any` +
+      `\n` +
+      `Examples:\n` +
+      `- 'Reading' measured in 'pages' or 'minutes'\n` +
+      `- 'Running' measured in 'kilometers' or 'minutes'\n` +
+      `- 'Gym' measured in 'minutes' or 'sessions'\n`;
     return this.generateStructuredResponse(message, schema, systemPrompt);
   }
 

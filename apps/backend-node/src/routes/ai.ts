@@ -474,10 +474,10 @@ router.post(
       // Send to Telegram notification service for significant errors
       if (attempts >= 3) {
         telegramService.sendMessage(
-          `⚠️ Dynamic UI attempt error\n\n` +
+          `⚠️ User struggling to accept the AI extraction in step ${id}\n\n` +
             `User: ${req.user!.username}\n` +
             `Attempts: ${attempts}\n` +
-            `ID: ${id}\n` +
+            `Extracted data: ${JSON.stringify(extracted_data, null, 2)}\n` +
             `UTC Time: ${new Date().toISOString()}`
         );
       }
