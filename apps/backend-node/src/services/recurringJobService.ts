@@ -46,14 +46,14 @@ export class RecurringJobService {
   /**
    * Check if it's currently 8am in the user's timezone
    */
-  private isUserTimezone8AM(user: User): boolean {
+  private isUserTimezoneHour(user: User, hour: number): boolean {
     try {
       const timezone = user.timezone || "UTC";
       const now = new Date();
       const userTime = new TZDate(now, timezone);
-      const hour = userTime.getHours();
+      const userHour = userTime.getHours();
 
-      return hour === 8;
+      return userHour === hour;
     } catch (error) {
       logger.error(`Error checking timezone for user ${user.username}:`, error);
       return false;
@@ -243,7 +243,7 @@ export class RecurringJobService {
       if (force) {
         return true;
       }
-      return this.isUserTimezone8AM(user);
+      return this.isUserTimezoneHour(user, 8);
     });
 
     logger.info(
