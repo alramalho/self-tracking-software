@@ -1,5 +1,4 @@
 import { TelegramService } from "@/services/telegramService";
-import { clerkMiddleware, getAuth } from "@clerk/express";
 import { createClient } from "@supabase/supabase-js";
 import { User } from "@tsw/prisma";
 import { NextFunction, Request, RequestHandler, Response } from "express";
@@ -28,7 +27,7 @@ async function trySupabaseAuth(
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return null; // No Supabase token, will try Clerk
+      return null;
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
@@ -41,7 +40,7 @@ async function trySupabaseAuth(
 
     if (error || !supabaseUser) {
       logger.warn("Invalid Supabase token:", error?.message);
-      return null; // Invalid token, will try Clerk
+      return null;
     }
 
     // Load user from database - try supabaseAuthId first, fallback to email for migration
@@ -70,49 +69,21 @@ async function trySupabaseAuth(
     return user;
   } catch (error) {
     logger.error("Failed to verify Supabase auth:", error);
-    return null; // Error, will try Clerk
-  }
-}
-
-// Middleware to load user from Clerk
-async function tryClerkAuth(req: Request, res: Response): Promise<User | null> {
-  try {
-    const { userId: clerkUserId } = getAuth(req);
-
-    if (!clerkUserId) {
-      return null; // No Clerk user
-    }
-
-    const user = await userService.getUserByClerkId(clerkUserId);
-
-    if (!user) {
-      logger.warn(`Clerk user ${clerkUserId} not found in database`);
-      return null;
-    }
-
-    return user;
-  } catch (error) {
-    logger.error("Failed to verify Clerk auth:", error);
     return null;
   }
 }
 
-// Combined middleware: Try Supabase first, fallback to Clerk
+// Middleware to verify authentication
 async function verifyAuth(
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
-    // Try Supabase auth first (priority)
-    let user = await trySupabaseAuth(req, res);
+    // Try Supabase auth
+    const user = await trySupabaseAuth(req, res);
 
-    // If Supabase fails, try Clerk
-    if (!user) {
-      user = await tryClerkAuth(req, res);
-    }
-
-    // If both auth methods fail, return 401
+    // If auth fails, return 401
     if (!user) {
       res.status(401).json({
         success: false,
@@ -138,8 +109,4 @@ async function verifyAuth(
 }
 
 // Export as array for compatibility with existing route definitions
-// clerkMiddleware() is non-blocking and just adds auth context for getAuth() to work
-export const requireAuth: RequestHandler[] = [
-  clerkMiddleware() as unknown as RequestHandler,
-  verifyAuth as RequestHandler,
-];
+export const requireAuth: RequestHandler[] = [verifyAuth as RequestHandler];
