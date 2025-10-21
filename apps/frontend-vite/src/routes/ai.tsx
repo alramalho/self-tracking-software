@@ -1,5 +1,6 @@
 import { MessageBubble } from "@/components/MessageBubble";
 import { MessageFeedback } from "@/components/MessageFeedback";
+import { PlanLink } from "@/components/PlanLink";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,9 @@ import AppleLikePopover from "@/components/AppleLikePopover";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Send, Target, Loader2, Home, Plus, Menu, X, Pencil } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import { PlansContext } from "@/contexts/plans/types";
+import { usePlans } from "@/contexts/plans";
 
 export const Route = createFileRoute("/ai")({
   component: AICoachPage,
@@ -42,7 +46,7 @@ function AICoachPage() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitleValue, setEditTitleValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+const { plans } = usePlans();
   const coachIcon = isDarkMode
     ? "/images/jarvis_logo_white_transparent.png"
     : "/images/jarvis_logo_transparent.png";
@@ -332,9 +336,61 @@ function AICoachPage() {
                             : "bg-transparent px-1"
                         }
                       >
-                        <p className="text-sm whitespace-pre-wrap">
-                          {message.content}
-                        </p>
+                        {message.role === "COACH" ? (
+                          <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none">
+                            <ReactMarkdown
+                              components={{
+                                a: ({ node, href, children, ...props }) => {
+
+                                  // Check if this is a plan reference: [text](plan://goal-with-hyphens)
+                                  if (href?.startsWith("plan-goal-")) {
+                                    const displayText =
+                                      typeof children === "string"
+                                        ? children
+                                        : Array.isArray(children)
+                                          ? children.join("")
+                                          : "";
+
+                                    // Extract the goal from the href and convert hyphens back to spaces
+                                    const hyphenatedGoal = href.replace("plan-goal-", "").trim();
+                                    const planGoal = hyphenatedGoal.replace(/-/g, " ");
+
+                                    // Find exact plan match (case-insensitive)
+                                    const plan = plans?.find(
+                                      (p) => p.goal.toLowerCase() === planGoal.toLowerCase()
+                                    );
+
+                                    if (!plan) {
+                                      return <span>{displayText}</span>;
+                                    }
+
+                                    return (
+                                      <PlanLink
+                                        planId={plan.id}
+                                        displayText={displayText}
+                                        emoji={plan.emoji || undefined}
+                                      />
+                                    );
+                                  }
+                                  return (
+                                    <a href={href} {...props}>
+                                      {children}
+                                    </a>
+                                  );
+                                },
+                                p: ({ children }) => (
+                                  <p className="mb-0">{children}</p>
+                                ),
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap">
+                            {message.content}
+                          </p>
+                        )}
                       </MessageBubble>
                       {message.role === "COACH" && (
                         <MessageFeedback
