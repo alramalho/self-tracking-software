@@ -40,7 +40,7 @@ export function DailyCheckinViewer({ entries }: DailyCheckinViewerProps) {
               "w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all duration-300",
               hasEntryForDate(date)
                 ? "border-green-500 bg-green-500 scale-100"
-                : "border-border scale-90"
+                : "border-muted-foreground scale-90"
             )}
           >
             {hasEntryForDate(date) && (
