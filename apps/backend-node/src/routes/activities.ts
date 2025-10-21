@@ -259,8 +259,13 @@ router.post(
         ]);
       }
 
+      // Find the plan with the minimum sortOrder (first plan)
+      const minSortOrder = Math.min(
+        ...plans.map((p) => p.sortOrder ?? Infinity)
+      );
+
       for (const plan of plans) {
-        if (plan.sortOrder == 0) {
+        if (plan.sortOrder === minSortOrder) {
           // only coach first plan
           plansService.recalculateCurrentWeekState(plan, req.user!);
         } else {
