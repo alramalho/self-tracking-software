@@ -26,7 +26,6 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  disablePrecacheManifest: false,
   // No runtime caching - only cache precached static assets
   runtimeCaching: [],
 });
