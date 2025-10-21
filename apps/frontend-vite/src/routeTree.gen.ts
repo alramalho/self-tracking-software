@@ -16,6 +16,7 @@ import { Route as PlansRouteImport } from './routes/plans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as CreateNewPlanRouteImport } from './routes/create-new-plan'
+import { Route as AiRouteImport } from './routes/ai'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
@@ -59,6 +60,11 @@ const CreateNewPlanRoute = CreateNewPlanRouteImport.update({
   path: '/create-new-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiRoute = AiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AddRoute = AddRouteImport.update({
   id: '/add',
   path: '/add',
@@ -98,6 +104,7 @@ const FriendsUsernameRoute = FriendsUsernameRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
+  '/ai': typeof AiRoute
   '/create-new-plan': typeof CreateNewPlanRoute
   '/download': typeof DownloadRoute
   '/onboarding': typeof OnboardingRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
+  '/ai': typeof AiRoute
   '/create-new-plan': typeof CreateNewPlanRoute
   '/download': typeof DownloadRoute
   '/onboarding': typeof OnboardingRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/add': typeof AddRoute
+  '/ai': typeof AiRoute
   '/create-new-plan': typeof CreateNewPlanRoute
   '/download': typeof DownloadRoute
   '/onboarding': typeof OnboardingRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/add'
+    | '/ai'
     | '/create-new-plan'
     | '/download'
     | '/onboarding'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/add'
+    | '/ai'
     | '/create-new-plan'
     | '/download'
     | '/onboarding'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/add'
+    | '/ai'
     | '/create-new-plan'
     | '/download'
     | '/onboarding'
@@ -198,6 +210,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddRoute: typeof AddRoute
+  AiRoute: typeof AiRoute
   CreateNewPlanRoute: typeof CreateNewPlanRoute
   DownloadRoute: typeof DownloadRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateNewPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai': {
+      id: '/ai'
+      path: '/ai'
+      fullPath: '/ai'
+      preLoaderRoute: typeof AiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/add': {
       id: '/add'
       path: '/add'
@@ -318,6 +338,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddRoute: AddRoute,
+  AiRoute: AiRoute,
   CreateNewPlanRoute: CreateNewPlanRoute,
   DownloadRoute: DownloadRoute,
   OnboardingRoute: OnboardingRoute,

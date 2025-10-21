@@ -65,7 +65,6 @@ model User {
   metrics                 Metric[]
   metricEntries           MetricEntry[]
   plans                   Plan[]
-  messages                Message[]
   notifications           Notification[]
   planGroupMemberships    PlanGroupMember[] @relation("PlanGroupMember")
   planGroupInvitesSent    PlanGroupMember[] @relation("PlanGroupMemberInviter")
@@ -73,6 +72,9 @@ model User {
   recommendations         Recommendation[]
   reactionsSent           Reaction[]
   commentsSent            Comment[]
+  coaches                 Coach[]
+  chats                   Chat[]
+  messageFeedback         MessageFeedback[]
 
   // Connection relationships (replaces friend system)
   connectionsFrom Connection[] @relation("ConnectionFrom")
@@ -246,6 +248,7 @@ model Plan {
   id                         String                       @id @default(cuid())
   userId                     String
   planGroupId                String?
+  coachId                    String?
   goal                       String
   embedding                  Unsupported("vector(1536)")?
   emoji                      String?
@@ -274,10 +277,12 @@ model Plan {
   // Relations
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   planGroup         PlanGroup?        @relation(fields: [planGroupId], references: [id])
+  coach             Coach?            @relation(fields: [coachId], references: [id], onDelete: SetNull)
   sessions          PlanSession[]
   activities        Activity[]
   milestones        PlanMilestone[]
   planGroupMembers  PlanGroupMember[]
+  messages          Message[]
 
   @@index([userId, deletedAt])
   @@index([userId, id])
@@ -381,18 +386,58 @@ model PlanInviteLink {
   @@schema("public")
 }
 
+model Coach {
+  id        String   @id @default(cuid())
+  ownerId   String
+  details   Json     @default("{}") // bio, personality, appearance, voice, etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  plans Plan[]
+  chats Chat[]
+
+  @@index([ownerId])
+  @@map("coaches")
+  @@schema("public")
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  userId    String
+  coachId   String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coach    Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId])
+  @@index([coachId])
+  @@map("chats")
+  @@schema("public")
+}
+
 model Message {
   id        String      @id @default(cuid())
-  userId    String
+  chatId    String
+  planId    String?
   role      MessageRole
   content   String
   createdAt DateTime    @default(now())
 
   // Relations
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat     Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  plan     Plan?             @relation(fields: [planId], references: [id], onDelete: Cascade)
   emotions MessageEmotion[]
+  feedback MessageFeedback[]
 
-  @@index([userId])
+  @@index([chatId])
+  @@index([planId])
   @@index([createdAt])
   @@map("messages")
   @@schema("public")
@@ -409,6 +454,27 @@ model MessageEmotion {
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@map("message_emotions")
+  @@schema("public")
+}
+
+model MessageFeedback {
+  id                 String       @id @default(cuid())
+  messageId          String
+  userId             String
+  feedbackType       FeedbackType
+  feedbackReasons    String[]     @default([])
+  additionalComments String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@map("message_feedback")
   @@schema("public")
 }
 
@@ -592,8 +658,15 @@ enum RecommendationObjectType {
 
 enum MessageRole {
   USER
-  ASSISTANT
+  COACH
   SYSTEM
+
+  @@schema("public")
+}
+
+enum FeedbackType {
+  POSITIVE
+  NEGATIVE
 
   @@schema("public")
 }

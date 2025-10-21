@@ -1202,6 +1202,61 @@ export class PlansService {
         updatedPlan
       );
 
+      // Get or create coach for this user's plan
+      let coach = await prisma.coach.findFirst({
+        where: { ownerId: user.id },
+      });
+
+      if (!coach) {
+        coach = await prisma.coach.create({
+          data: {
+            ownerId: user.id,
+            details: {
+              name: "Coach Oli",
+              bio: "Your personal AI coach helping you achieve your goals",
+            },
+          },
+        });
+        logger.info(`Created new coach for user '${user.username}'`);
+      }
+
+      // Link coach to plan if not already linked
+      if (updatedPlan.coachId !== coach.id) {
+        await prisma.plan.update({
+          where: { id: updatedPlan.id },
+          data: { coachId: coach.id },
+        });
+      }
+
+      // Get or create a chat for this user and coach
+      let chat = await prisma.chat.findFirst({
+        where: {
+          userId: user.id,
+          coachId: coach.id,
+        },
+      });
+
+      if (!chat) {
+        chat = await prisma.chat.create({
+          data: {
+            userId: user.id,
+            coachId: coach.id,
+            title: "General Coaching",
+          },
+        });
+        logger.info(`Created new chat for user '${user.username}'`);
+      }
+
+      // Create message for conversation history
+      await prisma.message.create({
+        data: {
+          chatId: chat.id,
+          planId: plan.id,
+          role: "COACH",
+          content: `${coachMessage.title}\n\n${coachMessage.message}`,
+        },
+      });
+
       // Create and send notification
       const notification =
         await notificationService.createAndProcessNotification(
@@ -1223,7 +1278,7 @@ export class PlansService {
         );
 
       logger.info(
-        `Plan coaching notification sent to user '${user.username}' for plan '${plan.goal}'`
+        `Plan coaching notification and message sent to user '${user.username}' for plan '${plan.goal}'`
       );
 
       return notification;

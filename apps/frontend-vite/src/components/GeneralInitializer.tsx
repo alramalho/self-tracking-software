@@ -46,7 +46,7 @@ export default function GeneralInitializer({
   const pathname = location.pathname;
   const isOnboardingPage = pathname.startsWith("/onboarding");
   const isDownloadPage = pathname.startsWith("/download");
-
+  const isAiPage = pathname.startsWith("/ai");
   const friends = useMemo(() => {
     return [
       ...(currentUser?.connectionsFrom
@@ -199,6 +199,7 @@ export default function GeneralInitializer({
 
   const isProfilePage = pathname.startsWith("/profile");
   const isHomePage = pathname == "/";
+  const showsBottomNav = isSignedIn && !isDownloadPage && !isAiPage;
   return (
     <>
       {isOnboardingPage ? (
@@ -209,8 +210,8 @@ export default function GeneralInitializer({
             ref={scrollContainerRef}
             className={cn(
               "absolute inset-0 overflow-auto",
-              isSignedIn && !isDesktop ? "pb-[4.7rem]" : "",
-              isSignedIn && isDesktop ? "left-0" : ""
+              showsBottomNav && !isDesktop ? "pb-[5.9rem]" : "",
+              showsBottomNav && isDesktop ? "left-0" : ""
             )}
           >
             {isProfilePage || isHomePage ? (
@@ -239,7 +240,7 @@ export default function GeneralInitializer({
 
             {children}
           </div>
-          {isSignedIn && !isDownloadPage && <BottomNav />}
+          {showsBottomNav && <BottomNav />}
         </>
       )}
     </>

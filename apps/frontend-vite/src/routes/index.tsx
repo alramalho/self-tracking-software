@@ -3,8 +3,8 @@
 import { AICoachFeaturePreview } from "@/components/AICoachFeaturePreview";
 import { AnnouncementPopover } from "@/components/AnnouncementPopover";
 import AppleLikePopover from "@/components/AppleLikePopover";
-import { CoachNotificationBanner } from "@/components/CoachNotificationBanner";
 import FeedbackPopover from "@/components/FeedbackPopover";
+import { FloatingCoachWidget } from "@/components/FloatingCoachWidget";
 import { HomepageMetricsSection } from "@/components/HomepageMetricsSection";
 import Notifications from "@/components/Notifications";
 import { PlansProgressDisplay } from "@/components/PlansProgressDisplay";
@@ -23,8 +23,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
-import supportAgentWhiteSvg from '../assets/icons/support-agent-white.svg';
-import supportAgentSvg from '../assets/icons/support-agent.svg';
+import supportAgentWhiteSvg from "../assets/icons/support-agent-white.svg";
+import supportAgentSvg from "../assets/icons/support-agent.svg";
+import jarvisLogoSvg from "../assets/icons/jarvis_logo_transparent.png";
+import jarvisLogoWhiteSvg from "../assets/icons/jarvis_logo_white_transparent.png";
 
 import { MaintenanceOverlay } from "@/components/MaintenanceOverlay";
 import { ProgressRing } from "@/components/ProgressRing";
@@ -43,15 +45,16 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { isAfter, isFuture } from "date-fns";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
 // Maintenance mode configuration
-const MAINTENANCE_MODE_ENABLED = import.meta.env.VITE_MAINTENANCE_MODE_ENABLED === "true";
+const MAINTENANCE_MODE_ENABLED =
+  import.meta.env.VITE_MAINTENANCE_MODE_ENABLED === "true";
 const WHITELISTED_EMAILS: string[] = [];
 // Fixed maintenance end date: October 10th, 2025 at midnight UTC
-const MAINTENANCE_END_DATE = new Date('2025-10-10T00:00:00Z');
+const MAINTENANCE_END_DATE = new Date("2025-10-10T00:00:00Z");
 
 function HomePage() {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
@@ -81,7 +84,10 @@ function HomePage() {
 
   const unopenedNotifications =
     notifications?.filter(
-      (n) => n.status !== "OPENED" && n.status !== "CONCLUDED" && n.type !== "ENGAGEMENT"
+      (n) =>
+        n.status !== "OPENED" &&
+        n.status !== "CONCLUDED" &&
+        n.type !== "ENGAGEMENT"
     ) || [];
 
   const unopenedNotificationsCount = unopenedNotifications.length;
@@ -172,8 +178,13 @@ function HomePage() {
   }
 
   // Check if maintenance mode is enabled and user is not whitelisted
-  const isUserWhitelisted = currentUser?.email && WHITELISTED_EMAILS.includes(currentUser.email);
-  if (MAINTENANCE_MODE_ENABLED && !isUserWhitelisted && isFuture(MAINTENANCE_END_DATE)) {
+  const isUserWhitelisted =
+    currentUser?.email && WHITELISTED_EMAILS.includes(currentUser.email);
+  if (
+    MAINTENANCE_MODE_ENABLED &&
+    !isUserWhitelisted &&
+    isFuture(MAINTENANCE_END_DATE)
+  ) {
     return <MaintenanceOverlay targetDate={MAINTENANCE_END_DATE} />;
   }
 
@@ -190,7 +201,10 @@ function HomePage() {
         }
         refreshingContent={
           <div className="flex items-center justify-center my-4">
-            <RefreshCcw size={24} className="text-muted-foreground animate-spin" />
+            <RefreshCcw
+              size={24}
+              className="text-muted-foreground animate-spin"
+            />
           </div>
         }
       >
@@ -256,36 +270,19 @@ function HomePage() {
               >
                 <ScanFace size={24} />
               </button>
+              <button
+                onClick={() => navigate({ to: "/ai" })}
+                className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                title="Send Feedback"
+              >
+                <img
+                  src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
+                  alt="AI Coach"
+                  className="w-9 h-9"
+                />
+              </button>
             </div>
           </div>
-
-          {isUserOnFreePlan ? (
-            <div
-              onClick={() => setShowAICoachPopover(true)}
-              className="ring-1 ring-border backdrop-blur-md bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-3xl py-3 px-4 shadow-sm cursor-pointer hover:from-blue-100/60 hover:to-purple-100/60 dark:hover:from-blue-900/40 dark:hover:to-purple-900/40 transition-all duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={isDarkMode ? "/images/jarvis_logo_white_transparent.png" : "/images/jarvis_logo_transparent.png"}
-                    alt="Oli AI Coach"
-                    className="w-10 h-10"
-                  />
-                  <div>
-                    <span className="text-sm font-semibold text-foreground">
-                      Struggling with consistency?
-                    </span>
-                    <p className="text-xs text-muted-foreground">
-                      Perhaps our AI coach can help. Try it freely
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight size={20} className="text-muted-foreground" />
-              </div>
-            </div>
-          ) : (
-            <CoachNotificationBanner />
-          )}
 
           {activePlans && activePlans.length > 0 && (
             <div className="mb-3">
@@ -300,9 +297,15 @@ function HomePage() {
                       }
                     >
                       {isPlansCollapsed ? (
-                        <ChevronRight size={16} className="text-muted-foreground" />
+                        <ChevronRight
+                          size={16}
+                          className="text-muted-foreground"
+                        />
                       ) : (
-                        <ChevronDown size={16} className="text-muted-foreground" />
+                        <ChevronDown
+                          size={16}
+                          className="text-muted-foreground"
+                        />
                       )}
                     </button>
                   )}
@@ -389,8 +392,11 @@ function HomePage() {
           })
         }
       />
+
+      {/* Floating Coach Widget */}
+      <FloatingCoachWidget />
     </div>
   );
-};
+}
 
 export default HomePage;
