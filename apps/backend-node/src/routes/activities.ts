@@ -748,6 +748,10 @@ router.post(
         where: { id: activityEntryId },
       });
 
+      // Set to track users who have been notified (to prevent duplicates)
+      const notifiedUserIds = new Set<string>();
+
+      // Notify activity entry owner (if not the commenter)
       if (activityEntry && activityEntry.userId !== req.user!.id) {
         const truncatedText =
           text.length > 30 ? `${text.slice(0, 30)}...` : text;
@@ -761,6 +765,55 @@ router.post(
             username: req.user!.username,
           },
         });
+        notifiedUserIds.add(activityEntry.userId);
+      }
+
+      // Extract @mentions from comment text
+      const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+      const mentions = [...text.matchAll(mentionRegex)];
+
+      if (mentions.length > 0) {
+        // Get unique usernames
+        const uniqueUsernames = [...new Set(mentions.map(m => m[1].toLowerCase()))];
+
+        // Look up mentioned users
+        const mentionedUsers = await prisma.user.findMany({
+          where: {
+            username: { in: uniqueUsernames },
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            username: true,
+          },
+        });
+
+        // Send notifications to mentioned users
+        for (const mentionedUser of mentionedUsers) {
+          // Skip if user is the commenter or already notified
+          if (
+            mentionedUser.id === req.user!.id ||
+            notifiedUserIds.has(mentionedUser.id)
+          ) {
+            continue;
+          }
+
+          const truncatedText =
+            text.length > 30 ? `${text.slice(0, 30)}...` : text;
+
+          await notificationService.createAndProcessNotification({
+            userId: mentionedUser.id,
+            message: `@${req.user!.username} mentioned you in a comment: "${truncatedText}"`,
+            type: "INFO",
+            relatedData: {
+              picture: req.user!.picture,
+              name: req.user!.name,
+              username: req.user!.username,
+            },
+          });
+
+          notifiedUserIds.add(mentionedUser.id);
+        }
       }
 
       // Get all comments for this activity entry to return the updated list
