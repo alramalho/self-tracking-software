@@ -378,27 +378,42 @@ usersRouter.post(
   }
 );
 
-// Search users
+// Search users (only returns friends/connections)
 usersRouter.get(
-  "/search-users/:username",
+  "/search-users/:username?",
   requireAuth,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { username } = req.params;
 
-      if (req.user!.username?.toLowerCase() === username.toLowerCase()) {
+      // Get user's accepted connections
+      const connections = await userService.getUserConnections(req.user!.id);
+
+      // If no connections, return empty array
+      if (connections.length === 0) {
         res.json([]);
         return;
       }
 
-      let results = await userService.searchUsers(req.user!.id, username);
-
-      if (results.length === 0) {
-        // If no results, return all users (up to 5)
-        const allUsers = await userService.getAllUsers();
-        results = allUsers
-          .filter((u) => u.id !== req.user!.id)
-          .slice(0, 5)
+      // Filter connections based on search query
+      let results;
+      if (!username || username.trim() === "") {
+        // No search query - return all connections (up to 10)
+        results = connections.slice(0, 10).map((u) => ({
+          userId: u.id,
+          username: u.username!,
+          name: u.name,
+          picture: u.picture,
+        }));
+      } else {
+        // Search within connections only
+        const searchTerm = username.toLowerCase();
+        results = connections
+          .filter((u) =>
+            u.username?.toLowerCase().includes(searchTerm) ||
+            u.name?.toLowerCase().includes(searchTerm)
+          )
+          .slice(0, 10)
           .map((u) => ({
             userId: u.id,
             username: u.username!,
