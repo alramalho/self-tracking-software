@@ -73,17 +73,24 @@ export class AIService {
     });
   }
 
-  async generateText(prompt: string, systemPrompt?: string): Promise<string> {
+  async generateText(
+    prompt: string,
+    systemPrompt?: string,
+    options: { model: string; temperature: number } = {
+      model: this.model,
+      temperature: 0.7,
+    }
+  ): Promise<string> {
     try {
-      console.log("Generating text with model:", this.model);
+      console.log("Generating text with model:", options.model);
       console.log("Prompt:", prompt);
       console.log("System prompt:", systemPrompt);
       const openrouter = this.getOpenRouterWithUserId();
       const result = await generateText({
-        model: openrouter.chat(this.model),
+        model: openrouter.chat(options.model),
         prompt,
         system: systemPrompt,
-        temperature: 0.7,
+        temperature: options.temperature,
       });
 
       return result.text;

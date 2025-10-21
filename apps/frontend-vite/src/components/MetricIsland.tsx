@@ -6,7 +6,7 @@ import { todaysLocalDate } from "@/lib/utils";
 import { getThemeVariants } from "@/utils/theme";
 import { CircleCheckBig, Loader2 } from "lucide-react";
 import React, { useState } from "react";
-import { PulsatingCirclePill } from "../../../frontend/src/components/ui/pulsating-circle-pill";
+import { PulsatingCirclePill } from "./ui/pulsating-circle-pill";
 
 interface MetricIslandProps {
   metric: {

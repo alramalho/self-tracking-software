@@ -95,9 +95,7 @@ router.get(
         orderBy: { updatedAt: "desc" },
       });
 
-      logger.info(
-        `Fetched ${chats.length} chats for user ${user.username}`
-      );
+      logger.info(`Fetched ${chats.length} chats for user ${user.username}`);
 
       res.json({ chats });
     } catch (error) {
@@ -146,9 +144,7 @@ router.post(
         },
       });
 
-      logger.info(
-        `Created new chat ${chat.id} for user ${user.username}`
-      );
+      logger.info(`Created new chat ${chat.id} for user ${user.username}`);
 
       res.json({ chat });
     } catch (error) {
@@ -219,7 +215,9 @@ router.post(
       const { feedbackType, feedbackReasons, additionalComments } = req.body;
 
       if (!feedbackType || !["POSITIVE", "NEGATIVE"].includes(feedbackType)) {
-        return res.status(400).json({ error: "Valid feedbackType is required (POSITIVE or NEGATIVE)" });
+        return res.status(400).json({
+          error: "Valid feedbackType is required (POSITIVE or NEGATIVE)",
+        });
       }
 
       // Verify message exists and user has access to it
@@ -347,7 +345,7 @@ router.post(
           plans
             .map((p) => {
               const activities = p.activities.map((a) => a.title).join(", ");
-              return `- ${p.goal} (${activities})`;
+              return `- Goal: "${p.goal}" / Activities: ${activities}`;
             })
             .join("\n");
       }
@@ -362,21 +360,26 @@ router.post(
       const systemPrompt =
         `You are Coach Oli, a supportive personal AI coach helping users achieve their goals and stay on track with their plans.` +
         `${plansContext}` +
-        `` +
+        `\n\n` +
         `Guidelines:` +
-        `- Keep responses concise (2-3 sentences)` +
-        `- Reference their plans when relevant` +
-        `- Provide actionable advice` +
-        `- Copy user's tone`;
+        `\n- Keep responses concise (2-3 sentences)` +
+        `\n- When mentioning a plan, use this exact markdown format: [natural text](plan-goal-exact-goal-text)` +
+        `\n  - The text in brackets should flow naturally in the sentence` +
+        `\n  - Replace spaces with hyphens in the URL (e.g., "play a bit of chess" becomes "play-a-bit-of-chess")` +
+        `\n  - The goal text must match the EXACT goal from the list above (with spaces replaced by hyphens)` +
+        `\n  Examples: "your [chess practice](plan-goal-play-a-bit-of-chess-every-day)", "the [reading goal](plan-goal-read-12-books)"` +
+        `\n- Provide actionable advice` +
+        `\n- Copy user's tone over time, as conversation progresses`;
 
       // Generate AI response
       const aiResponse = await aiService.generateText(
         conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n") +
           "\nassistant:",
-        systemPrompt
+        systemPrompt,
+        { model: "x-ai/grok-4-fast", temperature: 0.5 }
       );
 
-      // Save coach message
+      // Save coach message (AI now handles the plan link format directly)
       const coachMessage = await prisma.message.create({
         data: {
           chatId: chatId,
