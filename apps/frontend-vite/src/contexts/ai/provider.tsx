@@ -6,6 +6,7 @@ import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import { createChat, getChats, getMessages, sendMessage, submitFeedback, updateChatTitle } from "./service";
 import { AIContext, type AIContextType, type Chat, type Message } from "./types";
+import { useCurrentUser } from "@/contexts/users";
 
 export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -15,6 +16,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   const api = useApiWithAuth();
   const { handleQueryError } = useLogError();
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const {currentUser} = useCurrentUser(); 
 
   const chats = useQuery({
     queryKey: ["ai-chats"],
@@ -210,6 +212,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     isUpdatingChatTitle: updateChatTitleMutation.isPending,
     submitFeedback: submitFeedbackMutation.mutateAsync,
     isSubmittingFeedback: submitFeedbackMutation.isPending,
+    isUserAIWhitelisted: ["liocas", "alex"].includes(currentUser?.username || ""),
   };
 
   return <AIContext.Provider value={context}>{children}</AIContext.Provider>;

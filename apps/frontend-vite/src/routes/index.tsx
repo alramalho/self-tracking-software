@@ -44,6 +44,7 @@ import { useAccountLevel } from "@/hooks/useAccountLevel";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { isAfter, isFuture } from "date-fns";
+import { useAI } from "@/contexts/ai";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -81,7 +82,7 @@ function HomePage() {
   const isUserOnFreePlan = userPaidPlanType === "FREE";
   const [showAICoachPopover, setShowAICoachPopover] = useState(false);
   const { isLoaded, isSignedIn } = useSession();
-
+  const { isUserAIWhitelisted } = useAI();
   const unopenedNotifications =
     notifications?.filter(
       (n) =>
@@ -270,17 +271,21 @@ function HomePage() {
               >
                 <ScanFace size={24} />
               </button>
-              <button
-                onClick={() => navigate({ to: "/ai" })}
-                className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
-                title="Send Feedback"
-              >
-                <img
-                  src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
-                  alt="AI Coach"
-                  className="w-9 h-9"
-                />
-              </button>
+              {isUserAIWhitelisted && (
+                <>
+                  <button
+                    onClick={() => navigate({ to: "/ai" })}
+                    className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                    title="Send Feedback"
+                  >
+                    <img
+                      src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
+                      alt="AI Coach"
+                      className="w-9 h-9"
+                    />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

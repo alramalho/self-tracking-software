@@ -7,6 +7,7 @@ import React, { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { MessageBubble } from "./MessageBubble";
 import { useCurrentUser } from "@/contexts/users";
+import { useAI } from "@/contexts/ai";
 
 export const FloatingCoachWidget: React.FC = () => {
   const { notifications, concludeNotification } = useDataNotifications();
@@ -14,9 +15,8 @@ export const FloatingCoachWidget: React.FC = () => {
   const { isUserFree } = usePaidPlan();
   const {currentUser} = useCurrentUser();
   const navigate = useNavigate();
+  const {isUserAIWhitelisted} = useAI();
   const [isOpen, setIsOpen] = useState(false);
-
-  const isUserWhitelisted = ["liocas", "alex"].includes(currentUser?.username || "");
 
   // Get the most recent unread coach notification
   const latestCoachNotification = useMemo(() => {
@@ -47,7 +47,7 @@ export const FloatingCoachWidget: React.FC = () => {
   };
 
   // Only show for paid users and when there's a coach notification
-  if (isUserFree || !isUserWhitelisted || !latestCoachNotification) {
+  if (isUserFree || !isUserAIWhitelisted || !latestCoachNotification) {
     return null;
   }
 

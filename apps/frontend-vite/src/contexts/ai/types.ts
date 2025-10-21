@@ -46,6 +46,7 @@ export interface AIContextType {
     additionalComments?: string;
   }) => Promise<MessageFeedback>;
   isSubmittingFeedback: boolean;
+  isUserAIWhitelisted: boolean;
 }
 
 export const AIContext = createContext<AIContextType | undefined>(undefined);
