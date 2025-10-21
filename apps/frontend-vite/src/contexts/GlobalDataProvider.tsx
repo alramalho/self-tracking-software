@@ -8,6 +8,7 @@ import { useRouter } from "@tanstack/react-router";
 import React from "react";
 import toast from "react-hot-toast";
 import { ActivitiesProvider } from "./activities/provider";
+import { AIProvider } from "./ai";
 import { DailyCheckinPopoverProvider } from "./daily-checkin";
 import { MetricsProvider } from "./metrics";
 import { DataNotificationsProvider } from "./notifications";
@@ -78,9 +79,11 @@ export const GlobalDataProvider: React.FC<GlobalDataProviderProps> = ({
               <PlansProvider>
                 <PlansProgressProvider>
                   <ActivitiesProvider>
-                    <RecommendationsProvider>
-                      <NotificationsProvider>{children}</NotificationsProvider>
-                    </RecommendationsProvider>
+                    <AIProvider>
+                      <RecommendationsProvider>
+                        <NotificationsProvider>{children}</NotificationsProvider>
+                      </RecommendationsProvider>
+                    </AIProvider>
                   </ActivitiesProvider>
                 </PlansProgressProvider>
               </PlansProvider>
