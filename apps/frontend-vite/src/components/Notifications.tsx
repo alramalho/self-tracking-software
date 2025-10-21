@@ -21,6 +21,7 @@ interface NotificationItemProps {
   renderActionButtons: (notification: Notification) => React.ReactNode;
   hasPictureData: (notification: Notification) => boolean;
   hasUsernameData: (notification: Notification) => boolean;
+  onClose?: () => void;
 }
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
@@ -30,6 +31,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   renderActionButtons,
   hasPictureData,
   hasUsernameData,
+  onClose,
 }) => {
   const { ref, inView } = useInView({
     threshold: 0.5,
@@ -37,12 +39,38 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   });
 
   const relatedData = notification.relatedData as {
-    username: string;
-    picture: string;
-    name: string;
+    username?: string;
+    picture?: string;
+    name?: string;
+    activityEntryId?: string;
+    commenterUsername?: string;
+    reactorUsername?: string;
+    userUsername?: string;
   };
 
   const isUnopened = notification.status !== "OPENED" && notification.status !== "CONCLUDED";
+
+  // Determine navigation target - activity entry or user profile
+  const getNavigationProps = () => {
+    if (relatedData?.activityEntryId) {
+      // Navigate to timeline with activity entry ID as search param
+      return {
+        to: "/" as const,
+        search: { activityEntryId: relatedData.activityEntryId },
+      };
+    }
+    // Fallback to profile navigation
+    const username = relatedData?.username || relatedData?.commenterUsername || relatedData?.reactorUsername || relatedData?.userUsername;
+    if (username) {
+      return {
+        to: "/profile/$username" as const,
+        params: { username },
+      };
+    }
+    return null;
+  };
+
+  const navigationProps = getNavigationProps();
 
   useEffect(() => {
     if (inView && isUnopened) {
@@ -66,21 +94,21 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           "INFO",
           "COACH",
         ].includes(notification.type) &&
-          hasPictureData(notification) && (
-            <Link to={`/profile/$username`} params={{ username: relatedData.username }}>
+          hasPictureData(notification) && navigationProps && (
+            <Link {...navigationProps} onClick={onClose}>
               <Avatar>
                 <AvatarImage
-                  src={relatedData.picture}
-                  alt={relatedData.name || ""}
+                  src={relatedData.picture || (relatedData as any).commenterPicture || (relatedData as any).reactorPicture || (relatedData as any).userPicture}
+                  alt={relatedData.name || (relatedData as any).commenterName || (relatedData as any).reactorName || (relatedData as any).userName || ""}
                 />
                 <AvatarFallback>
-                  {(relatedData.name || "U")[0]}
+                  {(relatedData.name || (relatedData as any).commenterName || (relatedData as any).reactorName || (relatedData as any).userName || "U")[0]}
                 </AvatarFallback>
               </Avatar>
             </Link>
           )}
-        {hasUsernameData(notification) ? (
-          <Link to={`/profile/$username`} params={{ username: relatedData.username }}>
+        {navigationProps ? (
+          <Link {...navigationProps} onClick={onClose}>
             <div className="markdown text-sm text-foreground">
               <Remark>{notification.message}</Remark>
               <div className="text-xs text-muted-foreground mt-1">
@@ -104,7 +132,11 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   );
 };
 
-const Notifications: React.FC = () => {
+interface NotificationsProps {
+  onClose?: () => void;
+}
+
+const Notifications: React.FC<NotificationsProps> = ({ onClose }) => {
   const {
     concludeNotification,
     clearAllNotifications,
@@ -281,8 +313,13 @@ const Notifications: React.FC = () => {
   };
 
   const hasPictureData = (notification: Notification) => {
-    return (
-      notification.relatedData && (notification.relatedData as any).picture
+    if (!notification.relatedData) return false;
+    const data = notification.relatedData as any;
+    return !!(
+      data.picture ||
+      data.commenterPicture ||
+      data.reactorPicture ||
+      data.userPicture
     );
   };
   const hasUsernameData = (notification: Notification) => {
@@ -398,6 +435,7 @@ const Notifications: React.FC = () => {
               renderActionButtons={renderActionButtons}
               hasPictureData={hasPictureData}
               hasUsernameData={hasUsernameData}
+              onClose={onClose}
             />
           ))}
         </div>

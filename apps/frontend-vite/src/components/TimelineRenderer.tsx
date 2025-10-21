@@ -9,13 +9,18 @@ import { useShareOrCopy } from "@/hooks/useShareOrCopy";
 import { useNavigate } from "@tanstack/react-router";
 import { type Activity, type PlanType } from "@tsw/prisma";
 import { Bell, RefreshCcw, Squirrel } from "lucide-react";
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
+import { cn } from "@/lib/utils";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
+import toast from "react-hot-toast";
 
 const TimelineRenderer: React.FC<{
   onOpenSearch: () => void;
-}> = ({ onOpenSearch }) => {
+  highlightActivityEntryId?: string;
+}> = ({ onOpenSearch, highlightActivityEntryId }) => {
   const { timelineData, isLoadingTimeline } = useTimeline();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
@@ -27,6 +32,44 @@ const TimelineRenderer: React.FC<{
     useLocalStorage<boolean>("partner-section-collapsed", false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const { activities } = useActivities();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
+
+  const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
+  const processedEntryIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (highlightActivityEntryId && timelineData?.recommendedActivityEntries) {
+      // Skip if we've already processed this ID
+      if (processedEntryIdRef.current === highlightActivityEntryId) {
+        return;
+      }
+
+      const entryExists = timelineData.recommendedActivityEntries.some(
+        (entry) => entry.id === highlightActivityEntryId
+      );
+
+      // Mark as processed
+      processedEntryIdRef.current = highlightActivityEntryId;
+
+      if (entryExists) {
+        setTimeout(() => {
+          const element = entryRefs.current.get(highlightActivityEntryId);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            setHighlightedEntryId(highlightActivityEntryId);
+
+            setTimeout(() => {
+              setHighlightedEntryId(null);
+            }, 3000);
+          }
+        }, 100);
+      } else {
+        toast("ℹ️ This activity is no longer visible in your timeline");
+      }
+    }
+  }, [highlightActivityEntryId, timelineData]);
 
   const friends = useMemo(() => {
     return [
@@ -154,10 +197,8 @@ const TimelineRenderer: React.FC<{
             currentUser,
           ];
           const user = allUsers?.find((u: any) => u.id === activity?.userId);
-          // wacky casting, should be dealt in the query level
           if (!activity || !user || user.username === null) return null;
 
-          // Get plan progress data for this user's plans from inline data
           const timelineUser = timelineData?.recommendedUsers?.find(
             (u) => u.id === user.id
           );
@@ -170,40 +211,47 @@ const TimelineRenderer: React.FC<{
 
           return (
             <React.Fragment key={entry.id}>
-              <ActivityEntryPhotoCard
-                key={entry.id}
-                activity={activity}
-                activityEntry={entry as any}
-                user={
-                  user as {
-                    username: string;
-                    name: string;
-                    picture: string;
-                    planType: PlanType;
+              <div
+                ref={(el) => {
+                  if (el) {
+                    entryRefs.current.set(entry.id, el);
+                  } else {
+                    entryRefs.current.delete(entry.id);
                   }
-                }
-                userPlansProgressData={userPlansProgress}
-                onAvatarClick={() => {
-                  navigate({
-                    to: `/profile/$username`,
-                    params: { username: user?.username || "" },
-                  });
                 }}
-                onUsernameClick={() => {
-                  navigate({
-                    to: `/profile/$username`,
-                    params: { username: user?.username || "" },
-                  });
-                }}
-              />
-              {/* {entry.isWeekFinisher && isInCurrentWeek(entry.date) && (
-                <WeeklyCompletionCard
-                  key={`${entry.id}-completion`}
-                  small
-                  username={user?.name}
-                  planName={entry.planFinishedName}
+                className={`transition-all duration-500 ${
+                  highlightedEntryId === entry.id
+                    ? cn("ring-4 ring-opacity-50 rounded-2xl", variants.ring)
+                    : ""
+                }`}
+              >
+                <ActivityEntryPhotoCard
+                  key={entry.id}
+                  activity={activity}
+                  activityEntry={entry as any}
+                  user={
+                    user as {
+                      username: string;
+                      name: string;
+                      picture: string;
+                      planType: PlanType;
+                    }
+                  }
+                  userPlansProgressData={userPlansProgress}
+                  onAvatarClick={() => {
+                    navigate({
+                      to: `/profile/$username`,
+                      params: { username: user?.username || "" },
+                    });
+                  }}
+                  onUsernameClick={() => {
+                    navigate({
+                      to: `/profile/$username`,
+                      params: { username: user?.username || "" },
+                    });
+                  }}
                 />
-              )} */}
+              </div>
             </React.Fragment>
           );
         })}
