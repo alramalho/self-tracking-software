@@ -580,7 +580,6 @@ const ActivityEntryPhotoCard: React.FC<ActivityEntryPhotoCardProps> = ({
                 onToggleShowAll={setShowAllComments}
                 isAddingComment={isAddingComment}
                 isRemovingComment={isRemovingComment}
-                className="backdrop-blur-md"
               />
             </div>
           </>
