@@ -216,10 +216,12 @@ router.post(
                 userId: connectedUser.id,
                 message,
                 type: "INFO",
+                relatedId: entry.id,
                 relatedData: {
-                  picture: req.user!.picture,
-                  name: req.user!.name,
-                  username: req.user!.username,
+                  activityEntryId: entry.id,
+                  userPicture: req.user!.picture,
+                  userName: req.user!.name,
+                  userUsername: req.user!.username,
                 },
               });
             }
@@ -476,10 +478,12 @@ router.post(
             userId: activityEntry.userId,
             message: `@${req.user!.username} reacted to your activity with ${emojiText}`,
             type: "INFO",
+            relatedId: activityEntryId,
             relatedData: {
-              picture: req.user!.picture,
-              name: req.user!.name,
-              username: req.user!.username,
+              activityEntryId: activityEntryId,
+              reactorPicture: req.user!.picture,
+              reactorName: req.user!.name,
+              reactorUsername: req.user!.username,
             },
           });
         }
@@ -559,10 +563,12 @@ router.post(
             userId: activityEntry.userId,
             message: `@${req.user!.username} reacted to your activity with ${emojiText}`,
             type: "INFO",
+            relatedId: activityEntryId,
             relatedData: {
-              picture: req.user!.picture,
-              name: req.user!.name,
-              username: req.user!.username,
+              activityEntryId: activityEntryId,
+              reactorPicture: req.user!.picture,
+              reactorName: req.user!.name,
+              reactorUsername: req.user!.username,
             },
           });
         }
@@ -759,10 +765,13 @@ router.post(
           userId: activityEntry.userId,
           message: `@${req.user!.username} commented on your activity: "${truncatedText}"`,
           type: "INFO",
+          relatedId: activityEntryId,
           relatedData: {
-            picture: req.user!.picture,
-            name: req.user!.name,
-            username: req.user!.username,
+            activityEntryId: activityEntryId,
+            commenterId: req.user!.id,
+            commenterPicture: req.user!.picture,
+            commenterName: req.user!.name,
+            commenterUsername: req.user!.username,
           },
         });
         notifiedUserIds.add(activityEntry.userId);
@@ -805,10 +814,13 @@ router.post(
             userId: mentionedUser.id,
             message: `@${req.user!.username} mentioned you in a comment: "${truncatedText}"`,
             type: "INFO",
+            relatedId: activityEntryId,
             relatedData: {
-              picture: req.user!.picture,
-              name: req.user!.name,
-              username: req.user!.username,
+              activityEntryId: activityEntryId,
+              commenterId: req.user!.id,
+              commenterPicture: req.user!.picture,
+              commenterName: req.user!.name,
+              commenterUsername: req.user!.username,
             },
           });
 

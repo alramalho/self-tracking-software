@@ -48,6 +48,11 @@ import { useAI } from "@/contexts/ai";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
+  validateSearch: (search: Record<string, unknown>): { activityEntryId?: string } => {
+    return {
+      activityEntryId: (search.activityEntryId as string) || undefined,
+    };
+  },
 });
 
 // Maintenance mode configuration
@@ -61,6 +66,7 @@ function HomePage() {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
   const navigate = useNavigate();
   const { isLightMode, isDarkMode } = useTheme();
+  const { activityEntryId } = Route.useSearch();
   const { notifications } = useDataNotifications();
   const { plans } = usePlans();
   const activePlans = plans?.filter(
@@ -341,7 +347,10 @@ function HomePage() {
       )}
 
       <div className="mb-6">
-        <TimelineRenderer onOpenSearch={() => navigate({ to: "/search" })} />
+        <TimelineRenderer
+          onOpenSearch={() => navigate({ to: "/search" })}
+          highlightActivityEntryId={activityEntryId}
+        />
       </div>
 
       <AppleLikePopover
@@ -350,7 +359,7 @@ function HomePage() {
         title="Notifications"
         displayIcon={false}
       >
-        <Notifications />
+        <Notifications onClose={handleNotificationsClose} />
       </AppleLikePopover>
 
       {/* AI Coach Popover */}
