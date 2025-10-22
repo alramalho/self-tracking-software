@@ -334,7 +334,7 @@ router.post(
         include: {
           activities: true,
         },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ createdAt: "desc" }],
       });
 
       // Build context for AI

@@ -263,7 +263,7 @@ model Plan {
   notes                      String?
   coachNotes                 String?
   suggestedByCoachAt         DateTime?
-  sortOrder                  Int?
+  isCoached                  Boolean            @default(false)
   visibility                 Visibility         @default(PUBLIC)
 
   // Current week state

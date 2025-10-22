@@ -10,12 +10,9 @@ export const CollapsibleSelfUserCard: React.FC = () => {
     return null;
   }
 
-  const firstPlan = plans?.reduce((min, plan) => {
-    if (!plan.sortOrder && !min.sortOrder) return min;
-    if (!plan.sortOrder) return min;
-    if (!min.sortOrder) return plan;
-    return plan.sortOrder < min.sortOrder ? plan : min;
-  }, plans[0]);
+  // Find coached plan, or fallback to newest plan
+  const firstPlan = (plans?.find((p: any) => p.isCoached)) ||
+    plans?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
   return (
     <div>

@@ -59,7 +59,7 @@ const PlanUpsertSchema = z.object({
   durationType: z.enum(["HABIT", "LIFESTYLE", "CUSTOM"]).optional(),
   outlineType: z.enum(["SPECIFIC", "TIMES_PER_WEEK"]).optional(),
   timesPerWeek: z.number().positive().optional(),
-  sortOrder: z.number().optional(),
+  isCoached: z.boolean().optional(),
   activities: z.array(ActivitySchema).optional(),
   sessions: z.array(SessionSchema).optional(),
   milestones: z.array(MilestoneSchema).optional(),
@@ -97,56 +97,27 @@ async function markUserRecommendationsOutdated(userId: string): Promise<void> {
 }
 
 /**
- * Update sort orders for plans without sortOrder values
+ * Ensure only one plan is coached at a time
+ * If isCoached is being set to true, uncoach all other plans
  */
-async function updateSortOrders(
+async function ensureSingleCoachedPlan(
   tx: any,
   userId: string,
-  excludePlanId?: string
+  planId: string,
+  isCoached: boolean
 ): Promise<void> {
-  // Update all other active plans to increase sort order by one
-  await tx.plan.updateMany({
-    where: {
-      userId,
-      deletedAt: null,
-      id: {
-        not: excludePlanId,
+  if (isCoached) {
+    // Uncoach all other plans for this user
+    await tx.plan.updateMany({
+      where: {
+        userId,
+        deletedAt: null,
+        id: { not: planId },
+        isCoached: true,
       },
-      sortOrder: { not: null },
-    },
-    data: {
-      sortOrder: { increment: 1 },
-    },
-  });
-
-  // First, get the max sortOrder
-  const maxSortOrder = await tx.plan.aggregate({
-    where: {
-      userId,
-      deletedAt: null,
-      sortOrder: { not: null },
-    },
-    _max: { sortOrder: true },
-  });
-
-  const currentMax = maxSortOrder._max.sortOrder || 0;
-
-  // Find plans without sortOrder
-  const plansWithoutSort = await tx.plan.findMany({
-    where: {
-      userId,
-      deletedAt: null,
-      sortOrder: null,
-      ...(excludePlanId && { id: { not: excludePlanId } }),
-    },
-    select: { id: true },
-  });
-
-  // Update plans without sortOrder sequentially
-  for (let i = 0; i < plansWithoutSort.length; i++) {
-    await tx.plan.update({
-      where: { id: plansWithoutSort[i].id },
-      data: { sortOrder: currentMax + i + 1 },
+      data: {
+        isCoached: false,
+      },
     });
   }
 }
@@ -196,7 +167,7 @@ router.get(
           },
           milestones: true,
         },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ createdAt: "desc" }],
       });
 
       // Batch load progress for all plans
@@ -539,7 +510,7 @@ router.get(
           },
           activities: true,
         },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ createdAt: "desc" }],
       });
 
       // Transform the data to match expected format
@@ -794,24 +765,10 @@ router.get(
           const memberPlan = member.plan;
 
           // Check if this is a coached plan
-          // Coached = user is PLUS AND sortOrder is minimum of all user's plans
+          // Coached = user is PLUS AND plan has isCoached flag set
           let isCoached = false;
           if (user.planType === "PLUS") {
-            const userPlans = await prisma.plan.findMany({
-              where: {
-                userId: user.id,
-                deletedAt: null,
-              },
-              select: {
-                sortOrder: true,
-              },
-              orderBy: {
-                sortOrder: "asc",
-              },
-            });
-
-            const minSortOrder = userPlans[0]?.sortOrder;
-            isCoached = memberPlan.sortOrder === minSortOrder;
+            isCoached = (memberPlan as any).isCoached || false;
           }
 
           // Get current week's activity count
@@ -1339,7 +1296,7 @@ router.post(
               durationType: planData.durationType,
               outlineType: planData.outlineType || "SPECIFIC",
               timesPerWeek: planData.timesPerWeek,
-              sortOrder: 1,
+              isCoached: planData.isCoached || false,
 
               // Connect activities directly - handle both activities array and activityIds array
               ...(planData.activities && {
@@ -1384,8 +1341,10 @@ router.post(
             },
           });
 
-          // Update sort orders for plans without sortOrder
-          await updateSortOrders(tx, req.user!.id, newPlan.id);
+          // Ensure only one plan is coached at a time
+          if (planData.isCoached) {
+            await ensureSingleCoachedPlan(tx, req.user!.id, newPlan.id, true);
+          }
 
           return newPlan;
         });
@@ -1662,7 +1621,7 @@ router.post(
               durationType: templatePlan.durationType,
               outlineType: templatePlan.outlineType,
               timesPerWeek: templatePlan.timesPerWeek,
-              sortOrder: 1,
+              isCoached: false, // Default to not coached when joining a plan group
               planGroupId: planGroup.id,
               // Connect to the newly created activities
               activities: {
@@ -1703,8 +1662,7 @@ router.post(
             },
           });
 
-          // Update sort orders for other plans
-          await updateSortOrders(tx, req.user!.id, userPlan.id);
+          // Note: isCoached is false for plan group joins, no need to call ensureSingleCoachedPlan
         }
 
         // Create or update member record

@@ -5,27 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { Link } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
-import { Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
+import { BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { motion } from "framer-motion";
 import Divider from "./Divider";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
@@ -38,48 +22,28 @@ export const isPlanExpired = (plan: {
   return isBefore(plan.finishingDate, new Date());
 };
 
-// Function to sort plans by sortOrder field, with fallback to creation date
-const sortPlansByOrder = (plans: CompletePlan[]): CompletePlan[] => {
+// Function to sort plans by creation date (newest first)
+const sortPlansByDate = (plans: CompletePlan[]): CompletePlan[] => {
   return [...plans].sort((a, b) => {
-    // If both have sortOrder, use that
-    if (a.sortOrder !== null && b.sortOrder !== null) {
-      return a.sortOrder - b.sortOrder;
-    }
-    // If only one has sortOrder, prioritize it
-    if (a.sortOrder !== null && b.sortOrder === null) return -1;
-    if (a.sortOrder === null && b.sortOrder !== null) return 1;
-    // If neither has sortOrder, fall back to creation date (newest first)
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 };
 
-interface SortablePlanProps {
+interface PlanCardProps {
   plan: CompletePlan;
   isSelected: boolean;
-  currentUserId?: string;
   onSelect: (planId: string) => void;
-  onInviteSuccess: () => void;
-  priority: number;
   onExpiredPlanClick?: (plan: CompletePlan) => void;
+  isCoached?: boolean;
 }
 
-const SortablePlan: React.FC<SortablePlanProps> = ({
+const PlanCard: React.FC<PlanCardProps> = ({
   plan,
   isSelected,
   onSelect,
-  onInviteSuccess,
-  priority,
   onExpiredPlanClick,
+  isCoached = false,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: plan.id! });
-
   const isExpired = isPlanExpired(plan);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
@@ -92,46 +56,30 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
     }
   };
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    userSelect: "none" as const,
-    WebkitUserSelect: "none" as const,
-    touchAction: isDragging ? ("none" as const) : ("pan-y" as const),
-    opacity: isExpired ? 0.5 : 1,
-    position: "relative" as const,
-  };
-
   return (
     <div className="relative">
-      <motion.div
-        ref={setNodeRef}
-        style={style}
-        layout
-        initial={false}
-        transition={{
-          layout: { duration: 0.3, ease: "easeInOut" },
-        }}
-      >
-        <div
-          className={`flex items-center justify-center h-20 rounded-lg ring-2 bg-card cursor-pointer transition-all ${
-            isSelected
-              ? `${variants.ringBright} ${variants.veryFadedBg}`
-              : "ring-border hover:ring-muted-foreground/50"
-          }`}
-          onClick={handleCardClick}
-          {...attributes}
-          {...listeners}
-        >
-          {plan.emoji ? (
-            <span className="text-5xl">{plan.emoji}</span>
-          ) : (
-            <span className="text-xl text-muted-foreground font-medium">
-              {plan.goal.substring(0, 2).toUpperCase()}
-            </span>
-          )}
+      {isCoached && (
+        <div className="absolute top-1 right-1 z-10 flex bg-transparent">
+          <BadgeCheck className={`h-4 w-4 ${variants.fadedText}`} />
         </div>
-      </motion.div>
+      )}
+      <div
+        className={`flex items-center justify-center h-20 rounded-lg ring-2 bg-card cursor-pointer transition-all ${
+          isSelected
+            ? `${variants.ringBright} ${variants.veryFadedBg}`
+            : "ring-border hover:ring-muted-foreground/50"
+        }`}
+        onClick={handleCardClick}
+        style={{ opacity: isExpired ? 0.5 : 1 }}
+      >
+        {plan.emoji ? (
+          <span className="text-5xl">{plan.emoji}</span>
+        ) : (
+          <span className="text-xl text-muted-foreground font-medium">
+            {plan.goal.substring(0, 2).toUpperCase()}
+          </span>
+        )}
+      </div>
     </div>
   );
 };
@@ -143,7 +91,7 @@ interface PlansRendererProps {
 const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
 }) => {
-  const { plans, updatePlans, isLoadingPlans, upsertPlan, deletePlan } = usePlans();
+  const { plans, isLoadingPlans, upsertPlan, deletePlan } = usePlans();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
     initialSelectedPlanId || null
   );
@@ -153,25 +101,10 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
-  const mouseSensor = useSensor(MouseSensor, {
-    activationConstraint: {
-      distance: 10,
-    },
-  });
-
-  const touchSensor = useSensor(TouchSensor, {
-    activationConstraint: {
-      delay: 250,
-      tolerance: 5,
-    },
-  });
-
-  const sensors = useSensors(mouseSensor, touchSensor);
-
   useEffect(() => {
     if (plans) {
-      // Sort plans by sortOrder field
-      setOrderedPlans(sortPlansByOrder(plans as CompletePlan[]));
+      // Sort plans by creation date
+      setOrderedPlans(sortPlansByDate(plans as CompletePlan[]));
     }
   }, [plans]);
 
@@ -209,12 +142,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       </>
     );
   }
-
-  const getPlanGroup = (
-    planId: string
-  ): CompletePlan["planGroup"] | undefined => {
-    return plans?.find((p) => p.id === planId)?.planGroup || undefined;
-  };
 
   const handlePlanSelect = (planId: string) => {
     if (selectedPlanId === planId) {
@@ -265,46 +192,6 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const oldIndex = orderedPlans.findIndex((plan) => plan.id === active.id);
-    const newIndex = orderedPlans.findIndex((plan) => plan.id === over.id);
-
-    const items = Array.from(orderedPlans);
-    const [reorderedItem] = items.splice(oldIndex, 1);
-    items.splice(newIndex, 0, reorderedItem);
-
-    setOrderedPlans(items);
-
-    try {
-      // Update sortOrder for each plan based on new positions
-      const updates = items.map((plan, index) => ({
-        planId: plan.id!,
-        updates: { sortOrder: index + 1 },
-      }));
-
-      const result = await updatePlans({ updates, muteNotifications: true });
-
-      if (result.success) {
-        toast.success("Plan priority updated");
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      toast.error("Failed to update plan priority");
-      console.error("Failed to update plan priority:", error);
-      // Revert the local state change
-      setOrderedPlans(
-        sortPlansByOrder((plans as CompletePlan[]) || [])
-      );
-    }
-  };
-
   // Filter plans based on whether we're showing old plans
   const displayedPlans = showOldPlans
     ? orderedPlans
@@ -314,39 +201,26 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
 
   return (
     <div className="space-y-6">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        autoScroll={false}
-      >
-        <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
-          <SortableContext
-            items={displayedPlans.map((plan) => plan.id!)}
-            strategy={verticalListSortingStrategy}
+      <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
+        {displayedPlans.map((plan) => (
+          <PlanCard
+            key={plan.id}
+            plan={plan}
+            isSelected={selectedPlanId === plan.id}
+            onSelect={handlePlanSelect}
+            onExpiredPlanClick={handleExpiredPlanClick}
+            isCoached={plan.isCoached}
+          />
+        ))}
+        <Link to="/create-new-plan">
+          <Button
+            variant="outline"
+            className="bg-muted/50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"
           >
-            {displayedPlans.map((plan, index) => (
-              <SortablePlan
-                key={plan.id}
-                plan={plan}
-                isSelected={selectedPlanId === plan.id}
-                onSelect={handlePlanSelect}
-                onInviteSuccess={() => {}}
-                priority={index + 1}
-                onExpiredPlanClick={handleExpiredPlanClick}
-              />
-            ))}
-          </SortableContext>
-          <Link to="/create-new-plan">
-            <Button
-              variant="outline"
-              className="bg-muted/50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"
-            >
-              <Plus className="h-12 w-12 my-1 text-muted-foreground/70" />
-            </Button>
-          </Link>
-        </div>
-      </DndContext>
+            <Plus className="h-12 w-12 my-1 text-muted-foreground/70" />
+          </Button>
+        </Link>
+      </div>
 
       {hasExpiredPlans && !showOldPlans && (
         <div className="flex justify-center">

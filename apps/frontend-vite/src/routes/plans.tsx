@@ -35,9 +35,7 @@ function PlansPage() {
   return (
     <div className="container mx-auto p-3 max-w-2xl">
       <h1 className="text-2xl font-bold mb-4">
-        Welcome{" "}
-        {currentUser?.name || ""}! Here are your
-        active plans:
+        Plans
       </h1>
       <PlansRenderer initialSelectedPlanId={selectedPlan} />
     </div>

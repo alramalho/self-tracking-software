@@ -179,19 +179,11 @@ export const RecommendedUsers: React.FC<RecommendedUsersProps> = ({
           if (!user || !user.id) {
             return null;
           }
-          const plan = recommendedPlans
-            ?.filter((plan) => plan.userId === user.id)
-            .sort((a, b) => {
-              if (a.sortOrder !== null && b.sortOrder !== null) {
-                return a.sortOrder - b.sortOrder;
-              }
-              if (a.sortOrder !== null && b.sortOrder === null) return -1;
-              if (a.sortOrder === null && b.sortOrder !== null) return 1;
-              return (
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime()
-              );
-            })[0];
+          const userPlans = recommendedPlans?.filter((plan) => plan.userId === user.id) || [];
+          // Find coached plan, or fallback to newest plan
+          const plan = (userPlans.find((p: any) => p.isCoached)) || userPlans.sort((a, b) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          })[0];
 
           const score = recommendation.score;
           const connectionStatus = getConnectionStatus(user.id);
