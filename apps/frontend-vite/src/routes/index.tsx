@@ -377,12 +377,9 @@ function HomePage() {
         </div>
       </PullToRefresh>
 
-      <p>asdfasdfasdfa</p>
-
       {metrics && metrics.length > 0 && !isUserOnFreePlan && (
         <AnimatedSection delay={0.15}>
-          <p>dafuq</p>
-          {/* <HomepageMetricsSection /> */}
+          <HomepageMetricsSection />
         </AnimatedSection>
       )}
 
