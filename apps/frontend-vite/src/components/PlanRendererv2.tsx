@@ -1,12 +1,34 @@
 import { useActivities } from "@/contexts/activities/useActivities";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
+import { useMetrics } from "@/contexts/metrics";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { getPeriodLabel } from "@/utils/coachingTime";
+import { MINIMUM_ENTRIES } from "@/lib/metrics";
 import { Link } from "@tanstack/react-router";
-import { addWeeks, endOfWeek, format, isFuture, isSameWeek, startOfWeek, subDays } from "date-fns";
-import { BadgeCheck, ChartArea, Loader2, Maximize2, Minimize2, Pencil, PlusSquare, Send, Trash2, UserPlus } from "lucide-react";
+import {
+  addWeeks,
+  endOfWeek,
+  format,
+  isFuture,
+  isSameWeek,
+  startOfWeek,
+  subDays,
+} from "date-fns";
+import {
+  BadgeCheck,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Pencil,
+  PlusSquare,
+  Send,
+  Trash2,
+  UserPlus,
+  BarChart3,
+  BarChartHorizontal,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -21,6 +43,8 @@ import { PlanEditModal } from "./PlanEditModal";
 import PlanSessionsRenderer from "./PlanSessionsRenderer";
 import { PlanWeekDisplay } from "./PlanWeekDisplay";
 import { PlanGroupProgressChart } from "./PlanGroupProgressChart";
+import { MetricInsightsCard } from "./metrics/MetricInsightsCard";
+import { CorrelationHelpPopover } from "./metrics/CorrelationHelpPopover";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -40,6 +64,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
   const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan } = usePlans();
   const { activities, activityEntries } = useActivities();
+  const { metrics, entries: metricEntries } = useMetrics();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
@@ -48,18 +73,23 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [showAllWeeksPopover, setShowAllWeeksPopover] = useState(false);
   const [showLeaveGroupPopover, setShowLeaveGroupPopover] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCoachingTimeSelector, setShowCoachingTimeSelector] = useState(false);
+  const [showCoachingTimeSelector, setShowCoachingTimeSelector] =
+    useState(false);
+  const [helpMetricId, setHelpMetricId] = useState<string | null>(null);
 
   const planProgress = selectedPlan.progress;
   const currentWeekRef = useRef<HTMLDivElement>(null);
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
 
-  const isPlanCoached = useCallback((selectedPlan: CompletePlan) => {
-    if (!plans) return false;
-    // Check if the plan has the isCoached flag
-    return (selectedPlan as any).isCoached || false;
-  }, [selectedPlan, plans]);
+  const isPlanCoached = useCallback(
+    (selectedPlan: CompletePlan) => {
+      if (!plans) return false;
+      // Check if the plan has the isCoached flag
+      return (selectedPlan as any).isCoached || false;
+    },
+    [selectedPlan, plans]
+  );
 
   // Auto-scroll to current week when weeks data loads
   useEffect(() => {
@@ -192,7 +222,11 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   const allWeeksData = useMemo(() => {
     if (!planProgress?.weeks) return [];
-    return planProgress.weeks.filter(w => isFuture(startOfWeek(w.startDate)) || isSameWeek(startOfWeek(w.startDate), new Date(), { weekStartsOn: 0 }));
+    return planProgress.weeks.filter(
+      (w) =>
+        isFuture(startOfWeek(w.startDate)) ||
+        isSameWeek(startOfWeek(w.startDate), new Date(), { weekStartsOn: 0 })
+    );
   }, [planProgress?.weeks]);
 
   // useEffect(() => {
@@ -308,7 +342,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     if (!currentUser) return;
 
     try {
-      await updateUser({ updates: { preferredCoachingHour: startHour }, muteNotifications: true });
+      await updateUser({
+        updates: { preferredCoachingHour: startHour },
+        muteNotifications: true,
+      });
       toast.success("Coaching time updated");
     } catch (error) {
       console.error("Failed to update coaching time:", error);
@@ -319,6 +356,25 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
   const periodLabel = getPeriodLabel(preferredCoachingHour);
+
+  // Filter activities to only those in this plan
+  const planActivities = useMemo(() => {
+    const planActivityIds = selectedPlan.activities.map((a) => a.id);
+    return activities.filter((activity) =>
+      planActivityIds.includes(activity.id)
+    );
+  }, [selectedPlan.activities, activities]);
+
+  // Filter metrics that have enough entries
+  const metricsWithEnoughData = useMemo(() => {
+    return (
+      metrics?.filter((metric) => {
+        const count =
+          metricEntries?.filter((e) => e.metricId === metric.id).length || 0;
+        return count >= MINIMUM_ENTRIES;
+      }) || []
+    );
+  }, [metrics, metricEntries]);
 
   return (
     <div>
@@ -418,9 +474,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             <Send className={`h-5 w-5 text-muted-foreground`} />
             <span className="text-sm font-medium text-foreground">
               Sends message every{" "}
-              <span className={`underline`}>
-                {periodLabel}
-              </span>
+              <span className={`underline`}>{periodLabel}</span>
             </span>
           </div>
         </div>
@@ -457,10 +511,98 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         )}
       </div>
 
-      {/* 4. Plan Group Progress */}
+      {/* 4. Metrics Insights for Plan Activities */}
+      {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (
+        <div className="mb-12">
+          <h3 className="text-lg font-semibold mb-2">Metrics Insights</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            See how this plan's activities correlate with your tracked metrics
+          </p>
+          <div className="space-y-4">
+            {metricsWithEnoughData.map((metric) => (
+              <div key={metric.id}>
+                <MetricInsightsCard
+                  metric={metric}
+                  activities={planActivities}
+                  activityEntries={activityEntries}
+                  metricEntries={metricEntries || []}
+                  onHelpClick={() => setHelpMetricId(metric.id)}
+                />
+                <CorrelationHelpPopover
+                  isOpen={helpMetricId === metric.id}
+                  onClose={() => setHelpMetricId(null)}
+                  metricTitle={metric.title}
+                />
+              </div>
+            ))}
+          </div>
+          <Link to="/insights/dashboard">
+            <div className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4">
+              <BarChartHorizontal className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">
+                See full metrics dashboard
+              </span>
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {/* 5. Plan Group Progress */}
       {selectedPlan.planGroupId && (
         <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">Group Progress</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            See how your plan group is progressing this week
+          </p>
           <PlanGroupProgressChart planId={selectedPlan.id} />
+
+          {selectedPlan.planGroup?.members &&
+            selectedPlan.planGroup.members.length >= 2 && (
+              <div className="bg-card border border-border rounded-lg p-4 mt-4">
+                <div className="flex flex-row items-center justify-between mb-2">
+                  <h2 className="text-lg font-semibold">People in this plan</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowLeaveGroupPopover(true)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    Leave Group
+                  </Button>
+                </div>
+                <div className="flex flex-row flex-wrap gap-6">
+                  {selectedPlan.planGroup.members.map((member) => {
+                    const user = (member as any).user || member;
+                    return (
+                      <div
+                        key={member.id}
+                        className="flex flex-row flex-nowrap gap-2 items-center"
+                      >
+                        <Link
+                          to="/profile/$username"
+                          params={{ username: user.username || "" }}
+                        >
+                          <Avatar className="w-12 h-12 text-2xl">
+                            <AvatarImage
+                              src={user.picture || ""}
+                              alt={user.name || user.username || ""}
+                            />
+                            <AvatarFallback>
+                              {user.name?.[0] || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Link>
+                        <div className="text-lg text-foreground">
+                          {currentUser?.username === user.username
+                            ? "You"
+                            : user.name}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
         </div>
       )}
 
@@ -515,49 +657,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         )
       )} */}
 
-      {selectedPlan.planGroup?.members &&
-        selectedPlan.planGroup.members.length >= 2 && (
-          <div className="bg-card border border-border rounded-lg p-4 mt-4">
-            <div className="flex flex-row items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold">People in this plan</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowLeaveGroupPopover(true)}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                Leave Group
-              </Button>
-            </div>
-            <div className="flex flex-row flex-wrap gap-6">
-              {selectedPlan.planGroup.members.map((member) => {
-                const user = (member as any).user || member;
-                return (
-                  <div
-                    key={member.id}
-                    className="flex flex-row flex-nowrap gap-2 items-center"
-                  >
-                    <Link to="/profile/$username" params={{ username: user.username || "" }}>
-                      <Avatar className="w-12 h-12 text-2xl">
-                        <AvatarImage
-                          src={user.picture || ""}
-                          alt={user.name || user.username || ""}
-                        />
-                        <AvatarFallback>{user.name?.[0] || "U"}</AvatarFallback>
-                      </Avatar>
-                    </Link>
-                    <div className="text-lg text-foreground">
-                      {currentUser?.username === user.username
-                        ? "You"
-                        : user.name}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
       <Link to="/add">
         <Button
           variant="outline"
@@ -574,10 +673,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         title="Leave Plan Group"
       >
         <div className="flex flex-col gap-4 p-4">
-          <h2 className="text-xl font-semibold text-center">Leave Plan Group?</h2>
+          <h2 className="text-xl font-semibold text-center">
+            Leave Plan Group?
+          </h2>
           <p className="text-sm text-muted-foreground text-center">
-            You'll leave this group but your plan and activities will remain intact.
-            You can continue working on your plan independently.
+            You'll leave this group but your plan and activities will remain
+            intact. You can continue working on your plan independently.
           </p>
           <div className="flex flex-col gap-2 mt-4">
             <Button

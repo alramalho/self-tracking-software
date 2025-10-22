@@ -24,7 +24,7 @@ import { type ActivityEntry } from "@tsw/prisma";
 import { type PlanProgressData } from "@tsw/prisma/types";
 import { subDays } from "date-fns";
 import {
-  ChartArea,
+  BarChart3,
   Check,
   ChevronLeft,
   EllipsisVertical,
@@ -517,7 +517,7 @@ function ProfilePage() {
             <TabsList className="grid w-full h-13 grid-cols-2">
               <TabsTrigger value="plans">
                 <div className="flex flex-row gap-2 py-[2px] items-center">
-                  <ChartArea size={20} />
+                  <BarChart3 size={20} />
                   <span>Plans</span>
                 </div>
               </TabsTrigger>

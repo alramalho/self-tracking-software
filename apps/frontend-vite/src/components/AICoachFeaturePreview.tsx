@@ -9,7 +9,7 @@ import { type CompletePlan } from "@/contexts/plans";
 import { type PlanProgressData } from "@/contexts/plans-progress";
 import { type Activity, type ActivityEntry } from "@tsw/prisma";
 import {
-  ChartArea,
+  BarChart3,
   Home,
   LandPlot,
   MoveRight,
@@ -261,7 +261,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
           <p className="text-md text-muted-foreground font-semibold">
             Or if you want an in-depth view with custom metrics, you can check
             the <br />
-            <ChartArea className="w-5 h-5 inline-block mb-1" /> Plans page.
+            <BarChart3 className="w-5 h-5 inline-block mb-1" /> Plans page.
           </p>
 
           <div className="text-left">
@@ -294,7 +294,7 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
           <p className="text-md text-muted-foreground font-semibold text-center">
             Oli will make sure you&apos;re grounded in achievable goals! You can
             find weekly notes like this on the{" "}
-            <ChartArea className="w-5 h-5 inline-block mb-1" /> Plans page:
+            <BarChart3 className="w-5 h-5 inline-block mb-1" /> Plans page:
           </p>
           <div className="text-left pb-5">
             <CoachOverviewCard

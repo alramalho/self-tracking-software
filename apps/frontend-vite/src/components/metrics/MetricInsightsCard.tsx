@@ -1,15 +1,11 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 import { CorrelationEntry } from "@/components/metrics/CorrelationEntry";
-
-interface Activity {
-  id: string;
-  title: string;
-  emoji?: string;
-  measure?: string;
-}
+import { ReliabilityHelpPopover } from "@/components/metrics/ReliabilityHelpPopover";
+import { ACTIVITY_WINDOW_DAYS } from "@/lib/metrics";
+import type { Activity, ActivityEntry, MetricEntry } from "@tsw/prisma";
 
 interface Correlation {
   activity: Activity;
@@ -23,28 +19,111 @@ interface MetricInsightsCardProps {
     title: string;
     emoji: string;
   };
-  correlations: Correlation[];
+  activities: Activity[];
+  activityEntries: ActivityEntry[];
+  metricEntries: MetricEntry[];
   onHelpClick: () => void;
 }
 
+// Calculate Pearson correlation between two arrays
+const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
+  const n = x.length;
+  if (n !== y.length || n === 0) return 0;
+
+  const sum1 = x.reduce((a, b) => a + b, 0);
+  const sum2 = y.reduce((a, b) => a + b, 0);
+  const sum1Sq = x.reduce((a, b) => a + b * b, 0);
+  const sum2Sq = y.reduce((a, b) => a + b * b, 0);
+  const pSum = x.reduce((a, b, i) => a + b * y[i], 0);
+
+  const num = pSum - (sum1 * sum2) / n;
+  const den = Math.sqrt(
+    (sum1Sq - (sum1 * sum1) / n) * (sum2Sq - (sum2 * sum2) / n)
+  );
+
+  return den === 0 ? 0 : num / den;
+};
+
+// Check if an activity happened within the configured window before a date
+const activityHappenedWithinWindow = (
+  activityId: string,
+  targetDate: Date,
+  activityEntries: ActivityEntry[]
+): boolean => {
+  const windowStart = new Date(targetDate);
+  windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
+
+  return activityEntries.some((entry) => {
+    const entryDate = new Date(entry.date);
+    return (
+      entry.activityId === activityId &&
+      entryDate >= windowStart &&
+      entryDate <= targetDate
+    );
+  });
+};
+
 export function MetricInsightsCard({
   metric,
-  correlations,
+  activities,
+  activityEntries,
+  metricEntries,
   onHelpClick,
 }: MetricInsightsCardProps) {
+  const [showReliabilityHelp, setShowReliabilityHelp] = useState(false);
+
+  // Calculate correlations for the metric
+  const correlations = useMemo(() => {
+    const filteredMetricEntries = metricEntries
+      .filter((entry) => entry.metricId === metric.id)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const calculatedCorrelations = activities
+      .map((activity) => {
+        const binaryActivityArray = filteredMetricEntries.map((entry) => {
+          const didActivity = activityHappenedWithinWindow(
+            activity.id,
+            new Date(entry.date),
+            activityEntries
+          );
+          return didActivity ? 1 : 0;
+        });
+
+        // Count how many times this activity actually occurred (sample size for this specific activity)
+        const activitySampleSize = binaryActivityArray.filter((v) => v === 1).length;
+
+        // Only calculate correlation if the activity has some occurrences
+        if (activitySampleSize > 0) {
+          const ratings = filteredMetricEntries.map((e) => e.rating);
+
+          const correlation = calculatePearsonCorrelation(
+            ratings,
+            binaryActivityArray
+          );
+
+          return {
+            activity,
+            correlation,
+            sampleSize: activitySampleSize,
+          };
+        }
+        return null;
+      })
+      .filter((c): c is Correlation => c !== null);
+
+    // Sort by absolute correlation value
+    return calculatedCorrelations.sort(
+      (a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)
+    );
+  }, [metric.id, activities, activityEntries, metricEntries]);
+
   return (
     <Card className="p-6">
       <div className="space-y-6">
         <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <div className="flex flex-row items-center gap-2">
-              <span className="text-4xl">{metric.emoji}</span>
-              <h2 className="text-lg font-bold">{metric.title} Insights</h2>
-            </div>
-            <p className="text-muted-foreground">
-              Here&apos;s how your activities correlate with{" "}
-              {metric.title.toLowerCase()}
-            </p>
+          <div className="flex flex-row items-center gap-2">
+            <span className="text-4xl">{metric.emoji}</span>
+            <h2 className="text-lg font-bold">{metric.title} Insights</h2>
           </div>
           <Button
             variant="ghost"
@@ -63,10 +142,16 @@ export function MetricInsightsCard({
               title={`${correlation.activity.emoji || "📊"} ${correlation.activity.title}`}
               pearsonValue={correlation.correlation}
               sampleSize={correlation.sampleSize}
+              onReliabilityClick={() => setShowReliabilityHelp(true)}
             />
           ))}
         </div>
       </div>
+
+      <ReliabilityHelpPopover
+        isOpen={showReliabilityHelp}
+        onClose={() => setShowReliabilityHelp(false)}
+      />
     </Card>
   );
 }
