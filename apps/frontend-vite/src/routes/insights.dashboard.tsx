@@ -1,7 +1,7 @@
 import AINotification from "@/components/AINotification";
 import { DailyCheckinViewer } from "@/components/DailyCheckinViewer";
 import { CorrelationHelpPopover } from "@/components/metrics/CorrelationHelpPopover";
-import { MetricInsightsCard } from "@/components/metrics/MetricInsightsCard";
+import { MetricInsightsCard, type Correlation } from "@/components/metrics/MetricInsightsCard";
 import { MetricTrendCard } from "@/components/metrics/MetricTrendCard";
 import { TrendHelpPopover } from "@/components/metrics/TrendHelpPopover";
 import { Button } from "@/components/ui/button";
@@ -200,13 +200,13 @@ function InsightsDashboardPage() {
 
             <MetricInsightsCard
               metric={{ id: "demo", title: "Happiness", emoji: "😊" }}
-              correlations={[
+              hardcodedCorrelations={[
                 {
                   activity: {
                     id: "exercise",
                     title: "Exercise",
                     emoji: "🏃‍♂️",
-                  },
+                  } as any,
                   correlation: 0.75,
                   sampleSize: 35,
                 },
@@ -215,7 +215,7 @@ function InsightsDashboardPage() {
                     id: "meditation",
                     title: "Meditation",
                     emoji: "🧘‍♂️",
-                  },
+                  } as any,
                   correlation: 0.65,
                   sampleSize: 20,
                 },
@@ -224,7 +224,7 @@ function InsightsDashboardPage() {
                     id: "gym",
                     title: "Gym",
                     emoji: "🏋️‍♂️",
-                  },
+                  } as any,
                   correlation: -0.35,
                   sampleSize: 12,
                 },
@@ -233,11 +233,11 @@ function InsightsDashboardPage() {
                     id: "reading",
                     title: "Reading",
                     emoji: "📚",
-                  },
+                  } as any,
                   correlation: -0.05,
                   sampleSize: 8,
                 },
-              ]}
+              ] as Correlation[]}
               onHelpClick={() => setHelpMetricId("demo")}
             />
 
