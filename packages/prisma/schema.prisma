@@ -54,6 +54,9 @@ model User {
   dailyCheckinDays String[]          @default([])
   dailyCheckinTime DailyCheckinTime?
 
+  // Coaching message settings (2-hour intervals: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
+  preferredCoachingHour Int? @default(6) // Default to 6-8am
+
   // Stripe settings
   stripeCustomerId         String?            @unique
   stripeSubscriptionId     String?

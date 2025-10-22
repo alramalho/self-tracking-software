@@ -3,11 +3,14 @@ import { type CompletePlan, usePlans } from "@/contexts/plans";
 import { useCurrentUser } from "@/contexts/users";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
+import { getPeriodLabel } from "@/utils/coachingTime";
 import { Link } from "@tanstack/react-router";
 import { addWeeks, endOfWeek, format, isFuture, isSameWeek, startOfWeek, subDays } from "date-fns";
-import { BadgeCheck, ChartArea, Loader2, Maximize2, Minimize2, Pencil, PlusSquare, Trash2, UserPlus } from "lucide-react";
+import { BadgeCheck, ChartArea, Loader2, Maximize2, Minimize2, Pencil, PlusSquare, Send, Trash2, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
+import { CoachingTimeSelector } from "./CoachingTimeSelector";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import { CoachOverviewCard } from "./CoachOverviewCard";
 import InviteButton from "./InviteButton";
@@ -33,7 +36,7 @@ interface PlanRendererv2Props {
 }
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
-  const { currentUser } = useCurrentUser();
+  const { currentUser, updateUser } = useCurrentUser();
   const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan } = usePlans();
   const { activities, activityEntries } = useActivities();
 
@@ -44,6 +47,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [showAllWeeks, setShowAllWeeks] = useState(false);
   const [showLeaveGroupPopover, setShowLeaveGroupPopover] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCoachingTimeSelector, setShowCoachingTimeSelector] = useState(false);
 
   const planProgress = selectedPlan.progress;
   const currentWeekRef = useRef<HTMLDivElement>(null);
@@ -302,6 +306,22 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     setShowDeleteConfirm(false);
   };
 
+  const handleSaveCoachingTime = async (startHour: number) => {
+    if (!currentUser) return;
+
+    try {
+      await updateUser({ updates: { preferredCoachingHour: startHour }, muteNotifications: true });
+      toast.success("Coaching time updated");
+    } catch (error) {
+      console.error("Failed to update coaching time:", error);
+      toast.error("Failed to update coaching time");
+      throw error;
+    }
+  };
+
+  const preferredCoachingHour = currentUser?.preferredCoachingHour ?? 6;
+  const periodLabel = getPeriodLabel(preferredCoachingHour);
+
   return (
     <div>
       <div className="flex flex-row items-start justify-start gap-2 mb-8">
@@ -386,10 +406,26 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </Button>
         </div>
         {isPlanCoached(selectedPlan) && (
-          <CoachOverviewCard
-            selectedPlan={selectedPlan}
-            activities={activities}
-          />
+          <>
+            <CoachOverviewCard
+              selectedPlan={selectedPlan}
+              activities={activities}
+            />
+
+            {/* Coaching Time Selector Section */}
+            <div
+              className={`flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors`}
+              onClick={() => setShowCoachingTimeSelector(true)}
+            >
+              <Send className={`h-5 w-5 text-muted-foreground`} />
+              <span className="text-sm font-medium text-foreground">
+                Sends message every{" "}
+                <span className={`underline`}>
+                  {periodLabel}
+                </span>
+              </span>
+            </div>
+          </>
         )}
         {weeksToDisplay.map((week, index) => {
           const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
@@ -727,6 +763,16 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         }}
         scrollToMilestones={openedFromMilestone}
       />
+
+      {/* Coaching Time Selector Popover */}
+      {isPlanCoached(selectedPlan) && (
+        <CoachingTimeSelector
+          open={showCoachingTimeSelector}
+          onClose={() => setShowCoachingTimeSelector(false)}
+          onSave={handleSaveCoachingTime}
+          currentStartHour={preferredCoachingHour}
+        />
+      )}
     </div>
   );
 }

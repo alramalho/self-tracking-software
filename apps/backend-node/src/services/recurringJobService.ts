@@ -44,7 +44,9 @@ interface HourlyJobResult {
 
 export class RecurringJobService {
   /**
-   * Check if it's currently 8am in the user's timezone
+   * Check if it's currently within the user's preferred 2-hour coaching interval
+   * @param user - User with preferredCoachingHour (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
+   * @returns true if current hour is within the 2-hour interval
    */
   private isUserTimezoneHour(user: User, hour: number): boolean {
     try {
@@ -56,6 +58,62 @@ export class RecurringJobService {
       return userHour === hour;
     } catch (error) {
       logger.error(`Error checking timezone for user ${user.username}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if it's currently within the user's preferred 2-hour coaching interval
+   * @param user - User with preferredCoachingHour (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
+   * @returns true if current hour is within the 2-hour interval
+   */
+  private isUserPreferredCoachingTime(user: User): boolean {
+    try {
+      const timezone = user.timezone || "UTC";
+      const now = new Date();
+      const userTime = new TZDate(now, timezone);
+      const userHour = userTime.getHours();
+
+      // Default to 6-8am if not set (matches schema default)
+      const preferredStartHour = user.preferredCoachingHour ?? 6;
+
+      // Check if current hour is within the 2-hour interval
+      // e.g., if preferredStartHour is 6, check if userHour is 6 or 7
+      return userHour >= preferredStartHour && userHour < preferredStartHour + 2;
+    } catch (error) {
+      logger.error(`Error checking coaching time for user ${user.username}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a coaching notification was sent to this user in the last 12 hours
+   * This prevents sending multiple coaching messages within the same day
+   * @param userId - User ID to check
+   * @returns true if a coaching notification was sent recently
+   */
+  private async hasRecentCoachingNotification(userId: string): Promise<boolean> {
+    try {
+      const twelveHoursAgo = new Date();
+      twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
+
+      const recentNotification = await prisma.notification.findFirst({
+        where: {
+          userId: userId,
+          type: "COACH",
+          createdAt: {
+            gte: twelveHoursAgo,
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return recentNotification !== null;
+    } catch (error) {
+      logger.error(`Error checking recent coaching notifications for user ${userId}:`, error);
+      // If there's an error checking, assume no recent notification to avoid blocking
       return false;
     }
   }
@@ -234,7 +292,7 @@ export class RecurringJobService {
       );
     }
 
-    // Filter users who have plans and it's 8am in their timezone (or force is true)
+    // Filter users who have plans and it's their preferred coaching time (or force is true)
     const usersToCoach = users.filter((user) => {
       if (!user.plans || user.plans.length === 0) {
         return false;
@@ -243,13 +301,13 @@ export class RecurringJobService {
       if (force) {
         return true;
       }
-      return this.isUserTimezoneHour(user, 8);
+      return this.isUserPreferredCoachingTime(user);
     });
 
     logger.info(
       force
         ? `Processing ${usersToCoach.length} users (FORCED mode)`
-        : `Found ${usersToCoach.length} users where it's 8am (out of ${users.length} paid users)`
+        : `Found ${usersToCoach.length} users at their preferred coaching time (out of ${users.length} paid users)`
     );
 
     let coachingSuccesses = 0;
@@ -260,6 +318,15 @@ export class RecurringJobService {
     // Process their coached plan, or fallback to newest plan
     for (const user of usersToCoach) {
       try {
+        // Check if user received a coaching notification recently
+        const hasRecentNotification = await this.hasRecentCoachingNotification(user.id);
+        if (hasRecentNotification) {
+          logger.info(
+            `User ${user.username} received a coaching notification in the last 12 hours - skipping`
+          );
+          continue;
+        }
+
         // Get the user's coached plan, or the newest plan as fallback
         const coachedPlan = (user.plans as any[]).find((p: any) => p.isCoached);
         const firstPlan = coachedPlan || user.plans.sort((a, b) => {

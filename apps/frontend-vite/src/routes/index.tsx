@@ -90,12 +90,18 @@ function HomePage() {
   const { isLoaded, isSignedIn } = useSession();
   const { isUserAIWhitelisted } = useAI();
   const unopenedNotifications =
-    notifications?.filter(
-      (n) =>
-        n.status !== "OPENED" &&
-        n.status !== "CONCLUDED" &&
-        n.type !== "ENGAGEMENT"
-    ) || [];
+    notifications?.filter((n) => {
+      // Exclude engagement notifications
+      if (n.type === "ENGAGEMENT") return false;
+
+      // Actionable notifications (require user action) - count until concluded
+      if (n.type === "FRIEND_REQUEST" || n.type === "PLAN_INVITATION") {
+        return n.status !== "CONCLUDED";
+      }
+
+      // Non-actionable notifications - count until opened
+      return n.status !== "OPENED" && n.status !== "CONCLUDED";
+    }) || [];
 
   const unopenedNotificationsCount = unopenedNotifications.length;
   const { activityEntries } = useActivities();
