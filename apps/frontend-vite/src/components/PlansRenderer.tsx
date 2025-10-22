@@ -3,6 +3,8 @@ import { PlanRendererv2 } from "@/components/PlanRendererv2";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type CompletePlan, usePlans } from "@/contexts/plans";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { getThemeVariants } from "@/utils/theme";
 import {
   closestCenter,
   DndContext,
@@ -20,11 +22,13 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Link } from "@tanstack/react-router";
 import { addMonths, isBefore } from "date-fns";
-import { Plus, PlusSquare, RefreshCw } from "lucide-react";
+import { Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 import Divider from "./Divider";
-import PlanCard from "./PlanCard";
+import AppleLikePopover from "./AppleLikePopover";
+import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 
 // Helper function to check if a plan is expired
 export const isPlanExpired = (plan: {
@@ -56,6 +60,7 @@ interface SortablePlanProps {
   onSelect: (planId: string) => void;
   onInviteSuccess: () => void;
   priority: number;
+  onExpiredPlanClick?: (plan: CompletePlan) => void;
 }
 
 const SortablePlan: React.FC<SortablePlanProps> = ({
@@ -64,6 +69,7 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   onSelect,
   onInviteSuccess,
   priority,
+  onExpiredPlanClick,
 }) => {
   const {
     attributes,
@@ -75,19 +81,14 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
   } = useSortable({ id: plan.id! });
 
   const isExpired = isPlanExpired(plan);
-  const [isReactivating, setIsReactivating] = useState(false);
-  const { upsertPlan } = usePlans();
+  const themeColors = useThemeColors();
+  const variants = getThemeVariants(themeColors.raw);
 
-  const handleReactivate = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isReactivating) return;
-
-    setIsReactivating(true);
-    try {
-      const oneMonthLater = addMonths(new Date(), 1);
-      await upsertPlan({ planId: plan.id!, updates: { finishingDate: oneMonthLater } });
-    } finally {
-      setIsReactivating(false);
+  const handleCardClick = () => {
+    if (isExpired && onExpiredPlanClick) {
+      onExpiredPlanClick(plan);
+    } else {
+      onSelect(plan.id!);
     }
   };
 
@@ -97,41 +98,40 @@ const SortablePlan: React.FC<SortablePlanProps> = ({
     userSelect: "none" as const,
     WebkitUserSelect: "none" as const,
     touchAction: isDragging ? ("none" as const) : ("pan-y" as const),
-    opacity: isExpired ? 0.35 : 1,
+    opacity: isExpired ? 0.5 : 1,
     position: "relative" as const,
   };
 
   return (
     <div className="relative">
-      <div ref={setNodeRef} style={style}>
-        <PlanCard
-          plan={plan}
-          isSelected={isSelected}
-          onSelect={onSelect}
-          onInviteSuccess={onInviteSuccess}
-          priority={priority}
-          isDragging={isDragging}
-          dragHandleProps={{ ...attributes, ...listeners }}
-        />
-      </div>
-      {isExpired && (
+      <motion.div
+        ref={setNodeRef}
+        style={style}
+        layout
+        initial={false}
+        transition={{
+          layout: { duration: 0.3, ease: "easeInOut" },
+        }}
+      >
         <div
-          className="absolute inset-0 flex items-center justify-center rounded-md"
-          onClick={(e) => e.stopPropagation()}
+          className={`flex items-center justify-center h-20 rounded-lg ring-2 bg-card cursor-pointer transition-all ${
+            isSelected
+              ? `${variants.ringBright} ${variants.veryFadedBg}`
+              : "ring-border hover:ring-muted-foreground/50"
+          }`}
+          onClick={handleCardClick}
+          {...attributes}
+          {...listeners}
         >
-          <Button
-            variant="secondary"
-            className="font-medium border-2"
-            onClick={handleReactivate}
-            disabled={isReactivating}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isReactivating ? "animate-spin" : ""}`}
-            />
-            Reactivate
-          </Button>
+          {plan.emoji ? (
+            <span className="text-5xl">{plan.emoji}</span>
+          ) : (
+            <span className="text-xl text-muted-foreground font-medium">
+              {plan.goal.substring(0, 2).toUpperCase()}
+            </span>
+          )}
         </div>
-      )}
+      </motion.div>
     </div>
   );
 };
@@ -143,11 +143,15 @@ interface PlansRendererProps {
 const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
 }) => {
-  const { plans, updatePlans, isLoadingPlans } = usePlans();
+  const { plans, updatePlans, isLoadingPlans, upsertPlan, deletePlan } = usePlans();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
     initialSelectedPlanId || null
   );
   const [orderedPlans, setOrderedPlans] = useState<CompletePlan[]>([]);
+  const [showOldPlans, setShowOldPlans] = useState(false);
+  const [expiredPlanPopover, setExpiredPlanPopover] = useState<CompletePlan | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
@@ -220,6 +224,47 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   };
 
+  const handleExpiredPlanClick = (plan: CompletePlan) => {
+    setExpiredPlanPopover(plan);
+  };
+
+  const handleReactivate = async () => {
+    if (!expiredPlanPopover || isReactivating) return;
+
+    setIsReactivating(true);
+    try {
+      const oneMonthLater = addMonths(new Date(), 1);
+      await upsertPlan({
+        planId: expiredPlanPopover.id!,
+        updates: { finishingDate: oneMonthLater }
+      });
+      toast.success("Plan reactivated");
+      setExpiredPlanPopover(null);
+    } catch (error) {
+      toast.error("Failed to reactivate plan");
+      console.error("Failed to reactivate plan:", error);
+    } finally {
+      setIsReactivating(false);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!expiredPlanPopover) return;
+
+    try {
+      await deletePlan(expiredPlanPopover.id!);
+      setShowDeleteConfirm(false);
+      setExpiredPlanPopover(null);
+    } catch (error) {
+      toast.error("Failed to delete plan");
+      console.error("Failed to delete plan:", error);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -260,6 +305,13 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
     }
   };
 
+  // Filter plans based on whether we're showing old plans
+  const displayedPlans = showOldPlans
+    ? orderedPlans
+    : orderedPlans.filter((plan) => !isPlanExpired(plan));
+
+  const hasExpiredPlans = orderedPlans.some((plan) => isPlanExpired(plan));
+
   return (
     <div className="space-y-6">
       <DndContext
@@ -268,12 +320,12 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
         onDragEnd={handleDragEnd}
         autoScroll={false}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-6">
           <SortableContext
-            items={orderedPlans.map((plan) => plan.id!)}
+            items={displayedPlans.map((plan) => plan.id!)}
             strategy={verticalListSortingStrategy}
           >
-            {orderedPlans.map((plan, index) => (
+            {displayedPlans.map((plan, index) => (
               <SortablePlan
                 key={plan.id}
                 plan={plan}
@@ -281,20 +333,46 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
                 onSelect={handlePlanSelect}
                 onInviteSuccess={() => {}}
                 priority={index + 1}
+                onExpiredPlanClick={handleExpiredPlanClick}
               />
             ))}
           </SortableContext>
           <Link to="/create-new-plan">
             <Button
               variant="outline"
-              className="bg-muted/50 w-full h-full min-h-[120px] flex flex-col items-center justify-center border-2 border-dashed border-border text-muted-foreground"
+              className="bg-muted/50 w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground"
             >
-              <Plus className="h-6 w-6 mb-1 text-muted-foreground/70" />
-              <span className="text-sm">Create New Plan</span>
+              <Plus className="h-12 w-12 my-1 text-muted-foreground/70" />
             </Button>
           </Link>
         </div>
       </DndContext>
+
+      {hasExpiredPlans && !showOldPlans && (
+        <div className="flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowOldPlans(true)}
+            className="text-muted-foreground"
+          >
+            Show old plans
+          </Button>
+        </div>
+      )}
+
+      {showOldPlans && (
+        <div className="flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowOldPlans(false)}
+            className="text-muted-foreground"
+          >
+            Hide old plans
+          </Button>
+        </div>
+      )}
 
       <Divider />
 
@@ -305,6 +383,66 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
           }
         />
       )}
+
+      <AppleLikePopover
+        open={expiredPlanPopover !== null}
+        onClose={() => setExpiredPlanPopover(null)}
+        title="Manage Plan"
+      >
+        <div className="py-6 space-y-4">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-3">
+              {expiredPlanPopover?.emoji || "📋"}
+            </div>
+            <h3 className="text-lg font-semibold">
+              {expiredPlanPopover?.goal}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              This plan has expired
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={handleReactivate}
+              disabled={isReactivating}
+              className="w-full"
+              size="lg"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isReactivating ? "animate-spin" : ""}`}
+              />
+              Reactivate Plan
+            </Button>
+
+            <Button
+              onClick={handleDeleteClick}
+              disabled={isReactivating}
+              variant="destructive"
+              className="w-full"
+              size="lg"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Plan
+            </Button>
+          </div>
+        </div>
+      </AppleLikePopover>
+
+      <ConfirmDialogOrPopover
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteConfirm}
+        title={
+          <div className="flex items-center justify-center gap-2">
+            <Trash2 className="h-6 w-6 text-red-400" /> Delete Plan
+          </div>
+        }
+        description="Are you sure you want to delete this plan? This action cannot be undone."
+        confirmText="Delete Plan"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 };

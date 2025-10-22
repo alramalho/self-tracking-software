@@ -409,9 +409,10 @@ usersRouter.get(
         // Search within connections only
         const searchTerm = username.toLowerCase();
         results = connections
-          .filter((u) =>
-            u.username?.toLowerCase().includes(searchTerm) ||
-            u.name?.toLowerCase().includes(searchTerm)
+          .filter(
+            (u) =>
+              u.username?.toLowerCase().includes(searchTerm) ||
+              u.name?.toLowerCase().includes(searchTerm)
           )
           .slice(0, 10)
           .map((u) => ({
@@ -1363,75 +1364,6 @@ usersRouter.post(
               ? error.message
               : "Failed to handle referral",
         },
-      });
-    }
-  }
-);
-
-// Load messages
-usersRouter.get(
-  "/load-messages",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const userId = req.user!.id;
-      const { limit = 50, before } = req.query;
-
-      // Build where clause for pagination
-      const whereClause: any = {
-        OR: [{ senderId: userId }, { recipientId: userId }],
-      };
-
-      // Add before cursor for pagination
-      if (before && typeof before === "string") {
-        whereClause.createdAt = {
-          lt: new Date(before),
-        };
-      }
-
-      // Fetch messages with pagination
-      const messages = await prisma.message.findMany({
-        where: whereClause,
-        include: {
-          user: true,
-          emotions: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: parseInt(limit as string) || 50,
-      });
-
-      // Transform messages for frontend
-      // const transformedMessages = messages.map((message) => ({
-      //   id: message.id,
-      //   text: message.text,
-      //   createdAt: message.createdAt,
-      //   sender: {
-      //     id: message.sender.id,
-      //     username: message.sender.username,
-      //     name: message.sender.name,
-      //     picture: message.sender.picture,
-      //   },
-      //   recipient: {
-      //     id: message.recipient.id,
-      //     username: message.recipient.username,
-      //     name: message.recipient.name,
-      //     picture: message.recipient.picture,
-      //   },
-      //   emotions: message.emotions,
-      //   isSentByMe: message.senderId === userId,
-      // }));
-
-      res.json({
-        messages,
-        hasMore: messages.length === (parseInt(limit as string) || 50),
-      });
-    } catch (error) {
-      logger.error("Failed to load messages:", error);
-      res.status(500).json({
-        success: false,
-        error: { message: "Failed to load messages" },
       });
     }
   }

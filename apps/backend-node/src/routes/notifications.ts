@@ -4,6 +4,8 @@ import { memoryService } from "../services/memoryService";
 import { notificationService } from "../services/notificationService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
+import { MessageRole } from "@tsw/prisma";
+import { chatService } from "@/services/chatService";
 
 const router = Router();
 
@@ -58,11 +60,15 @@ router.post(
         }
       }
 
+      const { chat } = await chatService.ensureNotificationsCoachExists(
+        notification.userId
+      );
+
       // Store message in conversation memory
       await memoryService.writeMessage({
         content: processedNotification.message,
-        userId: notification.user.id,
-        role: "ASSISTANT",
+        chatId: chat.id,
+        role: MessageRole.COACH,
       });
 
       res.json({ message: "Notification processed and sent successfully" });
@@ -134,7 +140,9 @@ router.post(
       const { notification_ids } = req.body;
 
       if (!notification_ids || !Array.isArray(notification_ids)) {
-        return res.status(400).json({ error: "notification_ids array is required" });
+        return res
+          .status(400)
+          .json({ error: "notification_ids array is required" });
       }
 
       if (notification_ids.length === 0) {
@@ -331,7 +339,8 @@ router.post(
         `Cleared ${notificationsToClose.length} notifications for user ${req.user!.id}`
       );
       res.json({
-        message: "All notifications cleared except action-required notifications",
+        message:
+          "All notifications cleared except action-required notifications",
       });
     } catch (error) {
       logger.error("Error clearing notifications:", error);

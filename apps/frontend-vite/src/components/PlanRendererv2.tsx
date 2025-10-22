@@ -5,10 +5,12 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Link } from "@tanstack/react-router";
 import { addWeeks, endOfWeek, format, isFuture, isSameWeek, startOfWeek, subDays } from "date-fns";
-import { ChartArea, Loader2, Maximize2, Minimize2, PlusSquare } from "lucide-react";
+import { ChartArea, Loader2, Maximize2, Minimize2, Pencil, PlusSquare, Trash2, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppleLikePopover from "./AppleLikePopover";
+import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
 import { CoachOverviewCard } from "./CoachOverviewCard";
+import InviteButton from "./InviteButton";
 import { MilestoneOverview } from "./MilestoneOverview";
 import PlanActivityEntriesRenderer from "./PlanActivityEntriesRenderer";
 import { PlanEditModal } from "./PlanEditModal";
@@ -32,7 +34,7 @@ interface PlanRendererv2Props {
 
 export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const { currentUser } = useCurrentUser();
-  const { plans, leavePlanGroup, isLeavingPlanGroup } = usePlans();
+  const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan } = usePlans();
   const { activities, activityEntries } = useActivities();
 
   const [showEditModal, setShowEditModal] = useState(false);
@@ -41,6 +43,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
   const [showLeaveGroupPopover, setShowLeaveGroupPopover] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const planProgress = selectedPlan.progress;
   const currentWeekRef = useRef<HTMLDivElement>(null);
@@ -300,17 +303,47 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   //   );
   // }, [selectedPlan.sessions]);
 
+  const handleDeletePlan = async () => {
+    await deletePlan(selectedPlan.id!);
+    setShowDeleteConfirm(false);
+  };
+
   return (
     <div>
-      <div className="flex flex-row items-center justify-start gap-2 mb-8">
-        <span className="text-4xl">{selectedPlan.emoji}</span>
-        <div className="flex flex-col">
-          <h2 className="text-2xl font-semibold mt-2">{selectedPlan.goal}</h2>
+      <div className="flex flex-row items-start justify-start gap-2 mb-8">
+        <span className="text-5xl">{selectedPlan.emoji}</span>
+        <div className="flex flex-col gap-2 justify-start">
+          <h2 className="text-2xl font-semibold">{selectedPlan.goal}</h2>
           <span className="text-sm text-muted-foreground">
             {selectedPlan.outlineType === "TIMES_PER_WEEK"
               ? `${selectedPlan.timesPerWeek} times per week`
               : `custom plan`}
           </span>
+          <div className="flex gap-2 items-center justify-start">
+            <InviteButton
+              planId={selectedPlan.id!}
+              onInviteSuccess={() => {}}
+              isExternalSupported={false}
+              planEmoji={selectedPlan.emoji || undefined}
+              planGoal={selectedPlan.goal}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowEditModal(true)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Pencil className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-red-400 hover:text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
       {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
@@ -665,6 +698,21 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           </div>
         </div>
       </AppleLikePopover>
+
+      <ConfirmDialogOrPopover
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeletePlan}
+        title={
+          <div className="flex items-center justify-center gap-2">
+            <Trash2 className="h-6 w-6 text-red-400" /> Delete Plan
+          </div>
+        }
+        description="Are you sure you want to delete this plan? This action cannot be undone."
+        confirmText="Delete Plan"
+        cancelText="Cancel"
+        variant="destructive"
+      />
 
       <PlanEditModal
         plan={selectedPlan}

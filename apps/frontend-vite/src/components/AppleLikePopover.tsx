@@ -7,6 +7,7 @@ import {
   DrawerTitle
 } from "@/components/ui/drawer";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import React from "react";
 
@@ -33,7 +34,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
 
   if (isDesktop) {
     return (
-      <div className="max-w-lg mx-auto">
+      <div className={cn("max-w-lg mx-auto", !open && "hidden")}>
         <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && onClose()}>
           <DialogContent className={`px-4 pb-4 ${className}`}>
             <DialogTitle className="sr-only">{title}</DialogTitle>
@@ -44,7 +45,7 @@ const AppleLikePopover: React.FC<AppleLikePopoverProps> = ({
     );
   } else {
     return (
-      <div className="max-w-lg mx-auto">
+      <div className={cn("max-w-lg mx-auto", !open && "hidden")}>
         <Drawer open={open} onOpenChange={(isOpen: boolean) => !isOpen && onClose()}>
           <DrawerContent className={`px-4 pb-4 ${className}`}>
             <DrawerTitle className="sr-only">{title}</DrawerTitle>

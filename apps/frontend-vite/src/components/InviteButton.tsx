@@ -12,12 +12,16 @@ interface InviteButtonProps {
   planId: string;
   onInviteSuccess: () => void;
   isExternalSupported: boolean;
+  planEmoji?: string;
+  planGoal?: string;
 }
 
 const InviteButton: React.FC<InviteButtonProps> = ({
   planId,
   onInviteSuccess,
   isExternalSupported = true,
+  planEmoji,
+  planGoal,
 }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [invitees, setInvitees] = useState<UserSearchResult[]>([]);
@@ -121,7 +125,21 @@ const InviteButton: React.FC<InviteButtonProps> = ({
       <AppleLikePopover
         open={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        title="Invite to Plan"
       >
+        {planEmoji && planGoal && (
+          <div className="text-center mb-6 mt-4">
+            <div className="text-6xl mb-3">
+              {planEmoji}
+            </div>
+            <h3 className="text-lg font-semibold">
+              {planGoal}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Invite people to join this plan
+            </p>
+          </div>
+        )}
         {isExternalSupported && shareOrCopyButton}
         {isExternalSupported && <Divider text="OR" />}
         <UserSearch
