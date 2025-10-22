@@ -7,7 +7,7 @@ import { ReliabilityHelpPopover } from "@/components/metrics/ReliabilityHelpPopo
 import { ACTIVITY_WINDOW_DAYS } from "@/lib/metrics";
 import type { Activity, ActivityEntry, MetricEntry } from "@tsw/prisma";
 
-interface Correlation {
+export interface Correlation {
   activity: Activity;
   correlation: number;
   sampleSize: number;
@@ -19,10 +19,11 @@ interface MetricInsightsCardProps {
     title: string;
     emoji: string;
   };
-  activities: Activity[];
-  activityEntries: ActivityEntry[];
-  metricEntries: MetricEntry[];
+  activities?: Activity[];
+  activityEntries?: ActivityEntry[];
+  metricEntries?: MetricEntry[];
   onHelpClick: () => void;
+  hardcodedCorrelations?: Correlation[];
 }
 
 // Calculate Pearson correlation between two arrays
@@ -65,10 +66,11 @@ const activityHappenedWithinWindow = (
 
 export function MetricInsightsCard({
   metric,
-  activities,
-  activityEntries,
-  metricEntries,
+  activities = [],
+  activityEntries = [],
+  metricEntries = [],
   onHelpClick,
+  hardcodedCorrelations,
 }: MetricInsightsCardProps) {
   const [showReliabilityHelp, setShowReliabilityHelp] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -98,7 +100,7 @@ export function MetricInsightsCard({
   }, []);
 
   // Calculate correlations for the metric
-  const correlations = useMemo(() => {
+  const calculatedCorrelations = useMemo(() => {
     const filteredMetricEntries = metricEntries
       .filter((entry) => entry.metricId === metric.id)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -141,6 +143,9 @@ export function MetricInsightsCard({
       (a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)
     );
   }, [metric.id, activities, activityEntries, metricEntries]);
+
+  // Use hardcoded correlations if provided, otherwise use calculated
+  const correlations = hardcodedCorrelations || calculatedCorrelations;
 
   return (
     <Card ref={cardRef} className="p-6">

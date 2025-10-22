@@ -252,7 +252,6 @@ export const AICoachFeaturePreview: React.FC<AICoachFeaturePreviewProps> = ({
               plan={dummyCoachPlan as any}
               weeks={dummyPlanProgressData.weeks}
               achievement={dummyAchievement}
-              isCoached={true}
               isExpanded={true}
               isDemo={true}
             />
