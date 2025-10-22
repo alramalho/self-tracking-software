@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import { createChat, getChats, getMessages, sendMessage, submitFeedback, updateChatTitle } from "./service";
 import { AIContext, type AIContextType, type Chat, type Message } from "./types";
 import { useCurrentUser } from "@/contexts/users";
+import { useAI } from ".";
 
 export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -17,6 +18,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
   const { handleQueryError } = useLogError();
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const {currentUser} = useCurrentUser(); 
+  const isUserAIWhitelisted = ["liocas", "alex"].includes(currentUser?.username || "");
 
   const chats = useQuery({
     queryKey: ["ai-chats"],
@@ -29,7 +31,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return result;
     },
-    enabled: isLoaded && isSignedIn,
+    enabled: isLoaded && isSignedIn && isUserAIWhitelisted,
   });
 
   if (chats.error) {
@@ -45,7 +47,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("fetching messages for chat", currentChatId);
       return await getMessages(api, currentChatId);
     },
-    enabled: isLoaded && isSignedIn && !!currentChatId,
+    enabled: isLoaded && isSignedIn && isUserAIWhitelisted && !!currentChatId,
   });
 
   if (messages.error) {
@@ -212,7 +214,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({
     isUpdatingChatTitle: updateChatTitleMutation.isPending,
     submitFeedback: submitFeedbackMutation.mutateAsync,
     isSubmittingFeedback: submitFeedbackMutation.isPending,
-    isUserAIWhitelisted: ["liocas", "alex"].includes(currentUser?.username || ""),
+    isUserAIWhitelisted,
   };
 
   return <AIContext.Provider value={context}>{children}</AIContext.Provider>;
