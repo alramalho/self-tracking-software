@@ -6,14 +6,12 @@ import BaseHeatmapRenderer from "./BaseHeatmapRenderer";
 interface ActivityGridRendererProps {
   activities: Activity[];
   activityEntries: ActivityEntry[];
-  timeRange: string;
   endDate?: Date;
 }
 
 const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
   activities,
   activityEntries,
-  timeRange,
   endDate,
 }) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
@@ -117,7 +115,7 @@ const ActivityGridRenderer: React.FC<ActivityGridRendererProps> = ({
     );
   };
 
-  const startDate = subDays(new Date(), timeRange === "30 Days" ? 30 : 180);
+  const startDate = subDays(new Date(), 180);
 
   return (
     <div className="space-y-4">
