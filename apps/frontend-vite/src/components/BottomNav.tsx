@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { type BaseLoweredThemeColor } from "@/utils/theme";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  ChartArea,
+  BarChart3,
   Home,
   Loader2,
   Plus,
@@ -148,7 +148,7 @@ const BottomNav = () => {
               {isLoadingPlans ? (
                 <Loader2 size={24} className="animate-spin" />
               ) : (
-                <ChartArea size={24} strokeWidth={2.5} />
+                <BarChart3 size={24} strokeWidth={2.5} />
               )}
             </div>
             <span className={cn(

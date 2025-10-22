@@ -13,10 +13,10 @@ import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 import { useCurrentUser } from "@/contexts/users";
 import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { ACTIVITY_WINDOW_DAYS, defaultMetrics, MINIMUM_ENTRIES } from "@/lib/metrics";
+import { defaultMetrics, MINIMUM_ENTRIES } from "@/lib/metrics";
 import { getThemeVariants } from "@/utils/theme";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { type Activity, type Metric, type MetricEntry } from "@tsw/prisma";
+import { type Metric, type MetricEntry } from "@tsw/prisma";
 import { subDays } from "date-fns";
 import { ArrowDown, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -349,87 +349,6 @@ function InsightsDashboardPage() {
     );
   }
 
-  // Calculate Pearson correlation between two arrays
-  const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
-    const n = x.length;
-    if (n !== y.length || n === 0) return 0;
-
-    const sum1 = x.reduce((a, b) => a + b, 0);
-    const sum2 = y.reduce((a, b) => a + b, 0);
-    const sum1Sq = x.reduce((a, b) => a + b * b, 0);
-    const sum2Sq = y.reduce((a, b) => a + b * b, 0);
-    const pSum = x.reduce((a, b, i) => a + b * y[i], 0);
-
-    const num = pSum - (sum1 * sum2) / n;
-    const den = Math.sqrt(
-      (sum1Sq - (sum1 * sum1) / n) * (sum2Sq - (sum2 * sum2) / n)
-    );
-
-    return den === 0 ? 0 : num / den;
-  };
-
-  // Check if an activity happened within the configured window before a date
-  const activityHappenedWithinWindow = (
-    activityId: string,
-    targetDate: Date
-  ): boolean => {
-    const windowStart = new Date(targetDate);
-    windowStart.setDate(windowStart.getDate() - ACTIVITY_WINDOW_DAYS);
-
-    return activityEntries.some((entry) => {
-      const entryDate = new Date(entry.date);
-      return (
-        entry.activityId === activityId &&
-        entryDate >= windowStart &&
-        entryDate <= targetDate
-      );
-    });
-  };
-
-  // Calculate correlations for a metric
-  const calculateMetricCorrelations = (metricId: string) => {
-    const metricEntries = entries
-      ?.filter((entry) => entry.metricId === metricId)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const sampleSize = metricEntries?.length || 0;
-
-    const correlations = activities
-      .map((activity) => {
-        const binaryActivityArray = metricEntries?.map((entry) => {
-          const didActivity = activityHappenedWithinWindow(
-            activity.id,
-            new Date(entry.date)
-          );
-          return didActivity ? 1 : 0;
-        });
-
-        // Only calculate correlation if the activity has some occurrences
-        if (binaryActivityArray?.some((v) => v === 1)) {
-          const ratings = metricEntries?.map((e) => e.rating);
-
-          const correlation = calculatePearsonCorrelation(
-            ratings || [],
-            binaryActivityArray
-          );
-
-          return {
-            activity,
-            correlation,
-            sampleSize,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
-
-    // Sort by absolute correlation value
-    const sortedCorrelations = correlations.sort(
-      (a, b) => Math.abs(b!.correlation) - Math.abs(a!.correlation)
-    );
-
-    return sortedCorrelations;
-  };
 
   // Calculate next milestone based on current entries
   const getNextMilestone = (entries: number) => {
@@ -499,16 +418,9 @@ function InsightsDashboardPage() {
             const count = entries?.filter(
               (e) => e.metricId === metric.id
             ).length;
-            const correlations =
-              count && count >= MINIMUM_ENTRIES
-                ? calculateMetricCorrelations(metric.id)
-                    .filter(
-                      (c): c is { activity: Activity; correlation: number; sampleSize: number } =>
-                        c !== null
-                    )
-                : [];
 
-            const hasCorrelations = correlations.length > 0;
+            // Check if we have enough data to show insights
+            const hasEnoughData = count && count >= MINIMUM_ENTRIES;
             const trend = calculateMetricTrend(
               entries?.filter((e) => e.metricId === metric.id) || []
             );
@@ -549,7 +461,7 @@ function InsightsDashboardPage() {
                   ) / lastWeekEntries.length
                 : 0;
 
-            if (!hasCorrelations) {
+            if (!hasEnoughData) {
               const nextMilestone = getNextMilestone(count || 0);
               return renderProgressUI(nextMilestone, metric);
             }
@@ -568,7 +480,9 @@ function InsightsDashboardPage() {
 
                 <MetricInsightsCard
                   metric={metric}
-                  correlations={correlations}
+                  activities={activities}
+                  activityEntries={activityEntries}
+                  metricEntries={entries || []}
                   onHelpClick={() => setHelpMetricId(metric.id)}
                 />
 

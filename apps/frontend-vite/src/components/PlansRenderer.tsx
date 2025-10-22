@@ -114,6 +114,12 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       orderedPlans.some((plan) => plan.id === initialSelectedPlanId)
     ) {
       setSelectedPlanId(initialSelectedPlanId);
+    } else if (!initialSelectedPlanId && orderedPlans.length > 0 && !selectedPlanId) {
+      // If no initial plan is selected, default to coached plan or first non-expired plan
+      const coachedPlan = orderedPlans.find(plan => plan.isCoached && !isPlanExpired(plan));
+      const firstNonExpiredPlan = orderedPlans.find(plan => !isPlanExpired(plan));
+      const defaultPlan = coachedPlan || firstNonExpiredPlan || orderedPlans[0];
+      setSelectedPlanId(defaultPlan.id!);
     }
   }, [orderedPlans, initialSelectedPlanId]);
 

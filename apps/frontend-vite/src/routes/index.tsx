@@ -13,13 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  BarChartHorizontal,
   Bell,
   ChevronDown,
   ChevronRight,
   Moon,
   MoveRight,
   RefreshCcw,
-  ScanFace,
 } from "lucide-react";
 import { useState } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -281,7 +281,7 @@ function HomePage() {
                 className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
                 title="AI Insights"
               >
-                <ScanFace size={24} />
+                <BarChartHorizontal size={24} />
               </button>
               {isUserAIWhitelisted && (
                 <>
