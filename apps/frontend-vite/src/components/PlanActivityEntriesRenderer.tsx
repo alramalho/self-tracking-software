@@ -10,11 +10,11 @@ interface PlanActivityEntriesRendererProps {
   activityEntries: ActivityEntry[];
   startDate?: Date;
   endDate?: Date;
-}
+  }
 
 const PlanActivityEntriesRenderer: React.FC<
   PlanActivityEntriesRendererProps
-> = ({ plan, activities, activityEntries, startDate, endDate }) => {
+> = ({ plan, activities, activityEntries, startDate, endDate}) => {
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
@@ -156,6 +156,7 @@ const PlanActivityEntriesRenderer: React.FC<
           isWeekCompleted(weekStartDate)
         }
         onEditActivity={handleOpenActivityEditor}
+        uniqueId={plan.id}
       />
       {editingActivity && (
         <ActivityEditor

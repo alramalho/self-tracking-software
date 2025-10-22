@@ -2,12 +2,15 @@
 
 import { useActivities } from "@/contexts/activities/useActivities";
 import { useTheme } from "@/contexts/theme/useTheme";
+import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { type Activity } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
-import { format } from "date-fns";
+import { format, subDays, differenceInDays } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import { Brush, ChevronDown } from "lucide-react";
-import React, { useState } from "react";
+import { Brush, ChevronDown, Lock } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useUpgrade } from "@/contexts/upgrade/useUpgrade";
 
 export interface HeatmapData {
   date: string;
@@ -27,6 +30,8 @@ export interface BaseHeatmapRendererProps {
   getWeekCompletionStatus?: (weekStartDate: Date) => boolean;
   onEditActivity?: (activity: Activity) => void;
   refreshKey?: number | string;
+  uniqueId?: string;
+  bgClassName?: string;
 }
 
 export const getActivityColorMatrix = (isLightMode: boolean = true) => {
@@ -92,15 +97,20 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   noActivityLegend = false,
   getWeekCompletionStatus,
   onEditActivity,
+  uniqueId,
 }) => {
   const { isLightMode } = useTheme();
+  const { isUserPremium } = usePaidPlan();
+  const navigate = useNavigate();
   // Add state for selected date
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   // Add state for legend expansion
   const [isLegendExpanded, setIsLegendExpanded] = useState(false);
+  // Add ref for scroll container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Convert dates to UTC
-  const utcStartDate = new Date(
+  const originalUtcStartDate = new Date(
     Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
   );
   const utcEndDate = endDate
@@ -108,7 +118,31 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
         Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
       )
     : undefined;
+
+  // For free users, limit to 180 days of history
+  const FREE_USER_DAYS_LIMIT = 180;
+  const today = new Date();
+  const daysFromStart = differenceInDays(today, originalUtcStartDate);
+  const isHistoryLimited =
+    !isUserPremium && daysFromStart > FREE_USER_DAYS_LIMIT;
+
+  const utcStartDate = isHistoryLimited
+    ? new Date(
+        Date.UTC(
+          ...(subDays(today, FREE_USER_DAYS_LIMIT)
+            .toISOString()
+            .split("T")[0]
+            .split("-")
+            .map((n, i) => (i === 1 ? parseInt(n) - 1 : parseInt(n))) as [
+            number,
+            number,
+            number
+          ])
+        )
+      )
+    : originalUtcStartDate;
   const { activities: userActivities } = useActivities();
+  const {setShowUpgradePopover} = useUpgrade();
 
   const isOwnActivity = (activity: Activity) => {
     return userActivities?.some(
@@ -122,6 +156,26 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
           (7 * 24 * 60 * 60 * 1000)
       )
     : 52;
+
+  // Auto-scroll to center today's date
+  useEffect(() => {
+    // Wait for heatmap to render, then scroll to today
+    const timeoutId = setTimeout(() => {
+      const cellId = uniqueId
+        ? `heatmap-today-cell-${uniqueId}`
+        : "heatmap-today-cell";
+      const todayCell = document.getElementById(cellId);
+      if (todayCell) {
+        todayCell.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [heatmapData.length, uniqueId]);
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix(isLightMode);
     return (
@@ -223,84 +277,367 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
     );
   };
 
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const handleLockerClick = () => {
+    setShowUpgradePopover(true);
+  };
+
   return (
-    <div className="mb-4 grid gap-3">
-      <div className="overflow-x-auto">
-        <div className="relative mt-2">
-          <HeatMap
-            value={heatmapData}
-            startDate={utcStartDate}
-            endDate={utcEndDate}
-            width={45 + 26 * numberOfWeeks}
-            height={220}
-            rectSize={20}
-            legendRender={() => <></>}
-            rectProps={{
-              rx: 4,
-            }}
-            rectRender={(props, data) => {
-              // Convert date string to UTC Date object
-              const [year, month, day] = data.date.split("/").map(Number);
-              const dateObj = new Date(Date.UTC(year, month - 1, day));
+    <div className="mb-4 grid gap-3 -mx-4">
+      <div className="relative flex max-w-full overflow-x-scroll">
+        {/* Fixed weekday labels - outside scroll container */}
+        <div
+          className={`sticky left-0 z-20 flex flex-col gap-[6px] pt-[30px] pr-2 pl-4 ml-0 bg-card`}
+        >
+          {weekdays.map((day, index) => (
+            <div
+              key={day}
+              className="text-[10px] text-foreground h-[16px] flex items-center"
+              style={{ width: "30px" }}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
 
-              const dateStrForIntensity = format(dateObj, "yyyy-MM-dd");
-              const intensities = getIntensityForDate(dateStrForIntensity);
+        {/* Locker for limited history - sticky on left */}
 
-              // Compare UTC dates for today check
-              const today = new Date();
-              const todayUTC = new Date(
-                Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
-              );
-              const isCurrentDay = dateObj.getTime() === todayUTC.getTime();
+        <div className={`flex-1 max-w-full flex flex-row justify-center items-center overflow-x-scroll`} ref={scrollContainerRef}>
+          {isHistoryLimited && (
+            <div
+              className="flex flex-col self-center justify-center w-16 bg-gradient-to-r from-card via-card/80 to-transparent cursor-pointer hover:from-muted transition-colors pb-5 px-4 ml-3 "
+              onClick={handleLockerClick}
+              title="Upgrade to view full history"
+            >
+              <Lock className="w-5 h-5 text-muted-foreground ml-2" />
+            </div>
+          )}
+          <div className="relative mt-2 max-w-full">
+            <HeatMap
+              value={heatmapData}
+              startDate={utcStartDate}
+              endDate={utcEndDate}
+              width={26 * numberOfWeeks}
+              height={220}
+              rectSize={20}
+              legendRender={() => <></>}
+              rectProps={{
+                rx: 4,
+              }}
+              weekLabels={false}
+              rectRender={(props, data) => {
+                // Convert date string to UTC Date object
+                const [year, month, day] = data.date.split("/").map(Number);
+                const dateObj = new Date(Date.UTC(year, month - 1, day));
 
-              // Check if this date is selected
-              const isSelectedDate =
-                selectedDate &&
-                (() => {
-                  const selectedUTC = new Date(
-                    Date.UTC(
-                      selectedDate.getFullYear(),
-                      selectedDate.getMonth(),
-                      selectedDate.getDate()
-                    )
-                  );
-                  return dateObj.getTime() === selectedUTC.getTime();
-                })();
+                const dateStrForIntensity = format(dateObj, "yyyy-MM-dd");
+                const intensities = getIntensityForDate(dateStrForIntensity);
 
-              // note to self:
-              // we were refactoring plan prgoress, right now its scatteres throughout the frontend,
-              // making it hard to iterate, and prone to bugs
-              // we must centralize as we are doing in SimplifiedPlanProgressContext
-              // like here below, we'd just change the getWeekCompeltionStatus for something that get's current week based
-              // on data and then .isCompleted (where each week has startDate, endDate, and isCompleted)
+                // Compare UTC dates for today check
+                const today = new Date();
+                const todayUTC = new Date(
+                  Date.UTC(
+                    today.getFullYear(),
+                    today.getMonth(),
+                    today.getDate()
+                  )
+                );
+                const isCurrentDay = dateObj.getTime() === todayUTC.getTime();
 
-              // Check if this is the last day of the week (Saturday)
-              const isLastDayOfWeek = dateObj.getUTCDay() === 6;
+                // Check if this date is selected
+                const isSelectedDate =
+                  selectedDate &&
+                  (() => {
+                    const selectedUTC = new Date(
+                      Date.UTC(
+                        selectedDate.getFullYear(),
+                        selectedDate.getMonth(),
+                        selectedDate.getDate()
+                      )
+                    );
+                    return dateObj.getTime() === selectedUTC.getTime();
+                  })();
 
-              // If it's Saturday and we have the completion check function, check if the week is completed
-              // We need to get the start of this week (Sunday) to check completion
-              const isWeekCompleted =
-                isLastDayOfWeek &&
-                getWeekCompletionStatus &&
-                (() => {
-                  const weekStart = new Date(dateObj);
-                  weekStart.setUTCDate(weekStart.getUTCDate() - 6); // Go back 6 days to get to Sunday
-                  return getWeekCompletionStatus(weekStart);
-                })();
+                // note to self:
+                // we were refactoring plan prgoress, right now its scatteres throughout the frontend,
+                // making it hard to iterate, and prone to bugs
+                // we must centralize as we are doing in SimplifiedPlanProgressContext
+                // like here below, we'd just change the getWeekCompeltionStatus for something that get's current week based
+                // on data and then .isCompleted (where each week has startDate, endDate, and isCompleted)
 
-              const renderRects = () => {
-                if (!intensities || intensities.length === 0) {
+                // Check if this is the last day of the week (Saturday)
+                const isLastDayOfWeek = dateObj.getUTCDay() === 6;
+
+                // If it's Saturday and we have the completion check function, check if the week is completed
+                // We need to get the start of this week (Sunday) to check completion
+                const isWeekCompleted =
+                  isLastDayOfWeek &&
+                  getWeekCompletionStatus &&
+                  (() => {
+                    const weekStart = new Date(dateObj);
+                    weekStart.setUTCDate(weekStart.getUTCDate() - 6); // Go back 6 days to get to Sunday
+                    return getWeekCompletionStatus(weekStart);
+                  })();
+
+                const todayCellId = isCurrentDay
+                  ? uniqueId
+                    ? `heatmap-today-cell-${uniqueId}`
+                    : "heatmap-today-cell"
+                  : undefined;
+
+                const renderRects = () => {
+                  if (!intensities || intensities.length === 0) {
+                    const rects = [];
+                    rects.push(
+                      <rect
+                        key={data.index}
+                        id={todayCellId}
+                        {...(props as React.SVGProps<SVGRectElement>)}
+                        fill={isLightMode ? "#EBEDF0" : "#242424"}
+                        stroke={isCurrentDay ? "#FF0000" : "none"}
+                        strokeWidth={isCurrentDay ? 2 : 0}
+                        rx={4}
+                      />
+                    );
+
+                    // Add today's border if needed
+                    if (isCurrentDay) {
+                      rects.push(
+                        <rect
+                          key="today-border"
+                          {...(props as React.SVGProps<SVGRectElement>)}
+                          fill="none"
+                          stroke="#FF0000"
+                          strokeWidth={2}
+                          rx={4}
+                        />
+                      );
+                    }
+
+                    // Add selected date border if needed
+                    if (isSelectedDate) {
+                      rects.push(
+                        <rect
+                          key="selected-border"
+                          {...(props as React.SVGProps<SVGRectElement>)}
+                          fill="none"
+                          stroke="#0066FF"
+                          strokeWidth={2}
+                          rx={4}
+                        />
+                      );
+                    }
+
+                    return <g id={todayCellId}>{rects}</g>;
+                  }
+
                   const rects = [];
-                  rects.push(
-                    <rect
-                      key={data.index}
-                      {...(props as React.SVGProps<SVGRectElement>)}
-                      fill={isLightMode ? "#EBEDF0" : "#242424"}
-                      stroke={isCurrentDay ? "#FF0000" : "none"}
-                      strokeWidth={isCurrentDay ? 2 : 0}
-                      rx={4}
-                    />
-                  );
+                  const rectWidth = Number(props.width) || 0;
+                  const rectHeight = Number(props.height) || 0;
+                  const baseX = Number(props.x) || 0;
+                  const baseY = Number(props.y) || 0;
+                  const gap = 1; // Gap between rectangles
+
+                  if (intensities.length === 1) {
+                    const activity = activities[intensities[0].activityIndex];
+                    rects.push(
+                      <rect
+                        key={0}
+                        {...(props as React.SVGProps<SVGRectElement>)}
+                        fill={getActivityColor(
+                          intensities[0].activityIndex,
+                          intensities[0].intensity,
+                          activity,
+                          isLightMode
+                        )}
+                        rx={4}
+                      />
+                    );
+                  } else if (intensities.length === 2) {
+                    const halfWidth = (rectWidth - gap) / 2;
+                    const activity1 = activities[intensities[0].activityIndex];
+                    const activity2 = activities[intensities[1].activityIndex];
+                    rects.push(
+                      <path
+                        key={0}
+                        d={`M ${baseX + 4} ${baseY}
+                         L ${baseX + halfWidth} ${baseY}
+                         L ${baseX + halfWidth} ${baseY + rectHeight}
+                         L ${baseX + 4} ${baseY + rectHeight}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
+                          baseY + rectHeight - 4
+                        }
+                         L ${baseX} ${baseY + 4}
+                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
+                        fill={getActivityColor(
+                          intensities[0].activityIndex,
+                          intensities[0].intensity,
+                          activity1,
+                          isLightMode
+                        )}
+                      />,
+                      <path
+                        key={1}
+                        d={`M ${baseX + halfWidth + gap} ${baseY}
+                         L ${baseX + rectWidth - 4} ${baseY}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
+                          baseY + 4
+                        }
+                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
+                          baseX + rectWidth - 4
+                        } ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${baseY}`}
+                        fill={getActivityColor(
+                          intensities[1].activityIndex,
+                          intensities[1].intensity,
+                          activity2,
+                          isLightMode
+                        )}
+                      />
+                    );
+                  } else if (intensities.length === 3) {
+                    const halfWidth = (rectWidth - gap) / 2;
+                    const halfHeight = (rectHeight - gap) / 2;
+                    const activity1 = activities[intensities[0].activityIndex];
+                    const activity2 = activities[intensities[1].activityIndex];
+                    const activity3 = activities[intensities[2].activityIndex];
+                    rects.push(
+                      <path
+                        key={0}
+                        d={`M ${baseX + 4} ${baseY}
+                         L ${baseX + halfWidth} ${baseY}
+                         L ${baseX + halfWidth} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + 4}
+                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
+                        fill={getActivityColor(
+                          intensities[0].activityIndex,
+                          intensities[0].intensity,
+                          activity1,
+                          isLightMode
+                        )}
+                      />,
+                      <path
+                        key={1}
+                        d={`M ${baseX + halfWidth + gap} ${baseY}
+                         L ${baseX + rectWidth - 4} ${baseY}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
+                          baseY + 4
+                        }
+                         L ${baseX + rectWidth} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY}`}
+                        fill={getActivityColor(
+                          intensities[1].activityIndex,
+                          intensities[1].intensity,
+                          activity2,
+                          isLightMode
+                        )}
+                      />,
+                      <path
+                        key={2}
+                        d={`M ${baseX} ${baseY + halfHeight + gap}
+                         L ${baseX + rectWidth} ${baseY + halfHeight + gap}
+                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
+                          baseX + rectWidth - 4
+                        } ${baseY + rectHeight}
+                         L ${baseX + 4} ${baseY + rectHeight}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
+                          baseY + rectHeight - 4
+                        }
+                         L ${baseX} ${baseY + halfHeight + gap}`}
+                        fill={getActivityColor(
+                          intensities[2].activityIndex,
+                          intensities[2].intensity,
+                          activity3,
+                          isLightMode
+                        )}
+                      />
+                    );
+                  } else if (intensities.length >= 4) {
+                    const halfWidth = (rectWidth - gap) / 2;
+                    const halfHeight = (rectHeight - gap) / 2;
+                    const activity1 = activities[intensities[0].activityIndex];
+                    const activity2 = activities[intensities[1].activityIndex];
+                    const activity3 = activities[intensities[2].activityIndex];
+                    const activity4 = activities[intensities[3].activityIndex];
+                    rects.push(
+                      <path
+                        key={0}
+                        d={`M ${baseX + 4} ${baseY}
+                         L ${baseX + halfWidth} ${baseY}
+                         L ${baseX + halfWidth} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + halfHeight}
+                         L ${baseX} ${baseY + 4}
+                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
+                        fill={getActivityColor(
+                          intensities[0].activityIndex,
+                          intensities[0].intensity,
+                          activity1,
+                          isLightMode
+                        )}
+                      />,
+                      <path
+                        key={1}
+                        d={`M ${baseX + halfWidth + gap} ${baseY}
+                         L ${baseX + rectWidth - 4} ${baseY}
+                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
+                          baseY + 4
+                        }
+                         L ${baseX + rectWidth} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + halfHeight}
+                         L ${baseX + halfWidth + gap} ${baseY}`}
+                        fill={getActivityColor(
+                          intensities[1].activityIndex,
+                          intensities[1].intensity,
+                          activity2,
+                          isLightMode
+                        )}
+                      />,
+                      <path
+                        key={2}
+                        d={`M ${baseX} ${baseY + halfHeight + gap}
+                         L ${baseX + halfWidth} ${baseY + halfHeight + gap}
+                         L ${baseX + halfWidth} ${baseY + rectHeight}
+                         L ${baseX + 4} ${baseY + rectHeight}
+                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
+                          baseY + rectHeight - 4
+                        }
+                         L ${baseX} ${baseY + halfHeight + gap}`}
+                        fill={getActivityColor(
+                          intensities[2].activityIndex,
+                          intensities[2].intensity,
+                          activity3,
+                          isLightMode
+                        )}
+                      />,
+                      <path
+                        key={3}
+                        d={`M ${baseX + halfWidth + gap} ${
+                          baseY + halfHeight + gap
+                        }
+                         L ${baseX + rectWidth} ${baseY + halfHeight + gap}
+                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
+                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
+                          baseX + rectWidth - 4
+                        } ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${baseY + rectHeight}
+                         L ${baseX + halfWidth + gap} ${
+                          baseY + halfHeight + gap
+                        }`}
+                        fill={getActivityColor(
+                          intensities[3].activityIndex,
+                          intensities[3].intensity,
+                          activity4,
+                          isLightMode
+                        )}
+                      />
+                    );
+                  }
 
                   // Add today's border if needed
                   if (isCurrentDay) {
@@ -331,273 +668,37 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
                   }
 
                   return <g>{rects}</g>;
-                }
+                };
 
-                const rects = [];
-                const rectWidth = Number(props.width) || 0;
-                const rectHeight = Number(props.height) || 0;
-                const baseX = Number(props.x) || 0;
-                const baseY = Number(props.y) || 0;
-                const gap = 1; // Gap between rectangles
-
-                if (intensities.length === 1) {
-                  const activity = activities[intensities[0].activityIndex];
-                  rects.push(
-                    <rect
-                      key={0}
-                      {...(props as React.SVGProps<SVGRectElement>)}
-                      fill={getActivityColor(
-                        intensities[0].activityIndex,
-                        intensities[0].intensity,
-                        activity,
-                        isLightMode
-                      )}
-                      rx={4}
-                    />
-                  );
-                } else if (intensities.length === 2) {
-                  const halfWidth = (rectWidth - gap) / 2;
-                  const activity1 = activities[intensities[0].activityIndex];
-                  const activity2 = activities[intensities[1].activityIndex];
-                  rects.push(
-                    <path
-                      key={0}
-                      d={`M ${baseX + 4} ${baseY}
-                         L ${baseX + halfWidth} ${baseY}
-                         L ${baseX + halfWidth} ${baseY + rectHeight}
-                         L ${baseX + 4} ${baseY + rectHeight}
-                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
-                        baseY + rectHeight - 4
+                return (
+                  <g
+                    id={todayCellId}
+                    onClick={() => {
+                      if (!isNaN(dateObj.getTime())) {
+                        setSelectedDate(dateObj);
+                        onDateClick(dateObj);
                       }
-                         L ${baseX} ${baseY + 4}
-                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(
-                        intensities[0].activityIndex,
-                        intensities[0].intensity,
-                        activity1,
-                        isLightMode
-                      )}
-                    />,
-                    <path
-                      key={1}
-                      d={`M ${baseX + halfWidth + gap} ${baseY}
-                         L ${baseX + rectWidth - 4} ${baseY}
-                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
-                        baseY + 4
-                      }
-                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
-                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
-                        baseX + rectWidth - 4
-                      } ${baseY + rectHeight}
-                         L ${baseX + halfWidth + gap} ${baseY + rectHeight}
-                         L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(
-                        intensities[1].activityIndex,
-                        intensities[1].intensity,
-                        activity2,
-                        isLightMode
-                      )}
-                    />
-                  );
-                } else if (intensities.length === 3) {
-                  const halfWidth = (rectWidth - gap) / 2;
-                  const halfHeight = (rectHeight - gap) / 2;
-                  const activity1 = activities[intensities[0].activityIndex];
-                  const activity2 = activities[intensities[1].activityIndex];
-                  const activity3 = activities[intensities[2].activityIndex];
-                  rects.push(
-                    <path
-                      key={0}
-                      d={`M ${baseX + 4} ${baseY}
-                         L ${baseX + halfWidth} ${baseY}
-                         L ${baseX + halfWidth} ${baseY + halfHeight}
-                         L ${baseX} ${baseY + halfHeight}
-                         L ${baseX} ${baseY + 4}
-                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(
-                        intensities[0].activityIndex,
-                        intensities[0].intensity,
-                        activity1,
-                        isLightMode
-                      )}
-                    />,
-                    <path
-                      key={1}
-                      d={`M ${baseX + halfWidth + gap} ${baseY}
-                         L ${baseX + rectWidth - 4} ${baseY}
-                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
-                        baseY + 4
-                      }
-                         L ${baseX + rectWidth} ${baseY + halfHeight}
-                         L ${baseX + halfWidth + gap} ${baseY + halfHeight}
-                         L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(
-                        intensities[1].activityIndex,
-                        intensities[1].intensity,
-                        activity2,
-                        isLightMode
-                      )}
-                    />,
-                    <path
-                      key={2}
-                      d={`M ${baseX} ${baseY + halfHeight + gap}
-                         L ${baseX + rectWidth} ${baseY + halfHeight + gap}
-                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
-                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
-                        baseX + rectWidth - 4
-                      } ${baseY + rectHeight}
-                         L ${baseX + 4} ${baseY + rectHeight}
-                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
-                        baseY + rectHeight - 4
-                      }
-                         L ${baseX} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(
-                        intensities[2].activityIndex,
-                        intensities[2].intensity,
-                        activity3,
-                        isLightMode
-                      )}
-                    />
-                  );
-                } else if (intensities.length >= 4) {
-                  const halfWidth = (rectWidth - gap) / 2;
-                  const halfHeight = (rectHeight - gap) / 2;
-                  const activity1 = activities[intensities[0].activityIndex];
-                  const activity2 = activities[intensities[1].activityIndex];
-                  const activity3 = activities[intensities[2].activityIndex];
-                  const activity4 = activities[intensities[3].activityIndex];
-                  rects.push(
-                    <path
-                      key={0}
-                      d={`M ${baseX + 4} ${baseY}
-                         L ${baseX + halfWidth} ${baseY}
-                         L ${baseX + halfWidth} ${baseY + halfHeight}
-                         L ${baseX} ${baseY + halfHeight}
-                         L ${baseX} ${baseY + 4}
-                         Q ${baseX} ${baseY} ${baseX + 4} ${baseY}`}
-                      fill={getActivityColor(
-                        intensities[0].activityIndex,
-                        intensities[0].intensity,
-                        activity1,
-                        isLightMode
-                      )}
-                    />,
-                    <path
-                      key={1}
-                      d={`M ${baseX + halfWidth + gap} ${baseY}
-                         L ${baseX + rectWidth - 4} ${baseY}
-                         Q ${baseX + rectWidth} ${baseY} ${baseX + rectWidth} ${
-                        baseY + 4
-                      }
-                         L ${baseX + rectWidth} ${baseY + halfHeight}
-                         L ${baseX + halfWidth + gap} ${baseY + halfHeight}
-                         L ${baseX + halfWidth + gap} ${baseY}`}
-                      fill={getActivityColor(
-                        intensities[1].activityIndex,
-                        intensities[1].intensity,
-                        activity2,
-                        isLightMode
-                      )}
-                    />,
-                    <path
-                      key={2}
-                      d={`M ${baseX} ${baseY + halfHeight + gap}
-                         L ${baseX + halfWidth} ${baseY + halfHeight + gap}
-                         L ${baseX + halfWidth} ${baseY + rectHeight}
-                         L ${baseX + 4} ${baseY + rectHeight}
-                         Q ${baseX} ${baseY + rectHeight} ${baseX} ${
-                        baseY + rectHeight - 4
-                      }
-                         L ${baseX} ${baseY + halfHeight + gap}`}
-                      fill={getActivityColor(
-                        intensities[2].activityIndex,
-                        intensities[2].intensity,
-                        activity3,
-                        isLightMode
-                      )}
-                    />,
-                    <path
-                      key={3}
-                      d={`M ${baseX + halfWidth + gap} ${
-                        baseY + halfHeight + gap
-                      }
-                         L ${baseX + rectWidth} ${baseY + halfHeight + gap}
-                         L ${baseX + rectWidth} ${baseY + rectHeight - 4}
-                         Q ${baseX + rectWidth} ${baseY + rectHeight} ${
-                        baseX + rectWidth - 4
-                      } ${baseY + rectHeight}
-                         L ${baseX + halfWidth + gap} ${baseY + rectHeight}
-                         L ${baseX + halfWidth + gap} ${
-                        baseY + halfHeight + gap
-                      }`}
-                      fill={getActivityColor(
-                        intensities[3].activityIndex,
-                        intensities[3].intensity,
-                        activity4,
-                        isLightMode
-                      )}
-                    />
-                  );
-                }
-
-                // Add today's border if needed
-                if (isCurrentDay) {
-                  rects.push(
-                    <rect
-                      key="today-border"
-                      {...(props as React.SVGProps<SVGRectElement>)}
-                      fill="none"
-                      stroke="#FF0000"
-                      strokeWidth={2}
-                      rx={4}
-                    />
-                  );
-                }
-
-                // Add selected date border if needed
-                if (isSelectedDate) {
-                  rects.push(
-                    <rect
-                      key="selected-border"
-                      {...(props as React.SVGProps<SVGRectElement>)}
-                      fill="none"
-                      stroke="#0066FF"
-                      strokeWidth={2}
-                      rx={4}
-                    />
-                  );
-                }
-
-                return <g>{rects}</g>;
-              };
-
-              return (
-                <g
-                  onClick={() => {
-                    if (!isNaN(dateObj.getTime())) {
-                      setSelectedDate(dateObj);
-                      onDateClick(dateObj);
-                    }
-                  }}
-                >
-                  {renderRects()}
-                  {isLastDayOfWeek && isWeekCompleted && (
-                    <text
-                      x={Number(props.x) + 10}
-                      y={Number(props.y) + 40}
-                      className="select-none text-xl"
-                      textAnchor="middle"
-                    >
-                      🔥
-                    </text>
-                  )}
-                </g>
-              );
-            }}
-          />
+                    }}
+                  >
+                    {renderRects()}
+                    {isLastDayOfWeek && isWeekCompleted && (
+                      <text
+                        x={Number(props.x) + 10}
+                        y={Number(props.y) + 40}
+                        className="select-none text-xl"
+                        textAnchor="middle"
+                      >
+                        🔥
+                      </text>
+                    )}
+                  </g>
+                );
+              }}
+            />
+          </div>
         </div>
       </div>
-      <div className="flex justify-center">{renderActivityLegend()}</div>
+      <div className="flex justify-center mx-4">{renderActivityLegend()}</div>
     </div>
   );
 };

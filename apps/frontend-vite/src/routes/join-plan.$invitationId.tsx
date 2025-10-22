@@ -197,16 +197,16 @@ function JoinPlanPage() {
 
             <Button
               onClick={handleAcceptWithNewPlan}
-              className="w-full rounded-xl h-auto py-4 bg-black text-white hover:bg-foreground/90"
+              className="w-full rounded-xl h-auto p-4 bg-black text-white hover:bg-foreground/90"
               disabled={isAcceptingPlanInvitation}
             >
-              <div className="flex items-center justify-center gap-3">
-                <Plus size={20} />
-                <div className="text-left">
+              <div className="flex items-center justify-center gap-3 w-full">
+                <Plus size={20} className="flex-shrink-0" />
+                <div className="text-left flex-1 min-w-0">
                   <p className="font-semibold">Copy their Plan</p>
-                  <p className="text-sm opacity-80">
+                  <span className="text-sm opacity-80 break-words text-wrap">
                     Start fresh by mimicking their plan and activities
-                  </p>
+                  </span>
                 </div>
               </div>
             </Button>

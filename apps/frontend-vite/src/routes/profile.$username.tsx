@@ -147,7 +147,6 @@ function ProfilePage() {
     : profileData?.username;
 
   const planIds = profileActivePlans?.map((plan) => plan.id) || [];
-  const [timeRange, setTimeRange] = useState<TimeRange>("60 Days");
   const [endDate, setEndDate] = useState(new Date());
   const { shareOrCopyLink, isShareSupported } = useShareOrCopy();
   const profilePaidPlanType = profileData?.planType;
@@ -200,11 +199,6 @@ function ProfilePage() {
     profileData?.activities,
     profileData?.activityEntries,
   ]);
-
-  const handleTimeRangeChange = (value: TimeRange) => {
-    setTimeRange(value);
-    setEndDate(new Date());
-  };
 
   const hasPendingReceivedConnectionRequest = useMemo(() => {
     return currentUserReceivedConnectionRequests?.some((request) => {
@@ -537,29 +531,6 @@ function ProfilePage() {
 
             <TabsContent value="plans">
               <div className="space-y-4 mt-4">
-                {profileData?.plans && profileData?.plans.length > 0 && (
-                  <div className="flex flex-row gap-4 justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Time range</span>
-                    <div className="flex self-center">
-                      <select
-                        className="p-2 border rounded-md font-medium text-foreground"
-                        value={timeRange}
-                        onChange={(e) =>
-                          handleTimeRangeChange(
-                            e.target.value as
-                              | "60 Days"
-                              | "120 Days"
-                              | "180 Days"
-                          )
-                        }
-                      >
-                        <option value="60 Days">Since 60 days ago</option>
-                        <option value="120 Days">Since 120 days ago</option>
-                        <option value="180 Days">Since 180 days ago</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
                 {profileActivePlans &&
                   profileActivePlans.length > 0 &&
                   profileActivePlans.map((plan) => {
@@ -643,10 +614,6 @@ function ProfilePage() {
                           plan={plan as any}
                           activities={activities}
                           activityEntries={activityEntries}
-                          startDate={subDays(
-                            new Date(),
-                            getTimeRangeDays(timeRange)
-                          )}
                         />
                       </NeonCard>
                     );
@@ -668,7 +635,6 @@ function ProfilePage() {
                           .map((a) => a.id)
                           .includes(entry.activityId)
                       )}
-                      timeRange={timeRange}
                       endDate={endDate}
                     />
                   </>

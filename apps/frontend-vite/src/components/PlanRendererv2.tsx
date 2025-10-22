@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { addWeeks, endOfWeek, format, isFuture, isSameWeek, startOfWeek, subDays } from "date-fns";
 import { BadgeCheck, ChartArea, Loader2, Maximize2, Minimize2, Pencil, PlusSquare, Send, Trash2, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { CoachingTimeSelector } from "./CoachingTimeSelector";
@@ -42,9 +43,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [openedFromMilestone, setOpenedFromMilestone] = useState(false);
-  const [timeRange, setTimeRange] = useState<"recent" | "all">("recent");
   const [displayFutureActivities, setDisplayFutureActivities] = useState(false);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
+  const [showAllWeeksPopover, setShowAllWeeksPopover] = useState(false);
   const [showLeaveGroupPopover, setShowLeaveGroupPopover] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCoachingTimeSelector, setShowCoachingTimeSelector] = useState(false);
@@ -73,12 +74,10 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     }
   }, [planProgress?.weeks?.length]);
 
+  // Always show all-time data - no start date filtering
   const getStartDate = useCallback(() => {
-    if (timeRange === "recent") {
-      return subDays(new Date(), 30);
-    }
     return undefined;
-  }, [timeRange, selectedPlan.sessions]);
+  }, []);
 
   // const memberUsernames = useMemo(() => {
   //   if (!selectedPlan.planGroupId || !currentUser?.username) return [];
@@ -175,27 +174,26 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   //   [currentUser, planGroupMembers, membersData]
   // );
 
-  // Filter weeks to show current and next week, or all weeks based on showAllWeeks state
-  const weeksToDisplay = useMemo(() => {
-    if (!planProgress?.weeks) return [];
-
-
-    if (showAllWeeks) {
-      return planProgress.weeks.filter(w => isFuture(startOfWeek(w.startDate)) || isSameWeek(startOfWeek(w.startDate), new Date(), { weekStartsOn: 0 }));
-    }
+  // Filter weeks to show only current week, or all weeks for popover
+  const currentWeekData = useMemo(() => {
+    if (!planProgress?.weeks) return null;
 
     const currentWeekIndex = planProgress.weeks.findIndex((week) =>
       isSameWeek(week.startDate, new Date(), { weekStartsOn: 0 })
     );
 
     if (currentWeekIndex === -1) {
-      // If no current week found, show first two weeks
-      return planProgress.weeks.slice(0, 2);
+      // If no current week found, show first week
+      return planProgress.weeks[0] || null;
     }
 
-    // Show current week and next week (if it exists)
-    return planProgress.weeks.slice(currentWeekIndex, currentWeekIndex + 2);
-  }, [planProgress?.weeks, showAllWeeks]);
+    return planProgress.weeks[currentWeekIndex];
+  }, [planProgress?.weeks]);
+
+  const allWeeksData = useMemo(() => {
+    if (!planProgress?.weeks) return [];
+    return planProgress.weeks.filter(w => isFuture(startOfWeek(w.startDate)) || isSameWeek(startOfWeek(w.startDate), new Date(), { weekStartsOn: 0 }));
+  }, [planProgress?.weeks]);
 
   // useEffect(() => {
   //   const calculateSessionData = () => {
@@ -379,215 +377,92 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         </div>
       )}
 
-      {selectedPlan.planGroupId && (
-        <div className="mb-8">
-          <PlanGroupProgressChart planId={selectedPlan.id} />
+      {/* 1. Current Week Card */}
+      {currentWeekData && (
+        <div className="rounded-2xl bg-card border border-border p-4 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">Current week</span>
+              <span className="text-sm text-muted-foreground">
+                {format(currentWeekData.startDate, "d")}-
+                {format(endOfWeek(currentWeekData.startDate), "d MMM")}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAllWeeksPopover(true)}
+              className="text-xs"
+            >
+              See all weeks
+            </Button>
+          </div>
+          <PlanWeekDisplay
+            plan={selectedPlan}
+            date={currentWeekData.startDate}
+          />
         </div>
       )}
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-row items-center justify-between mb-2">
-          <div className="flex flex-row items-center justify-start gap-2">
-            <ChartArea className={`h-10 w-10 -mt-1 ${variants.text}`} />
-            <h2 className="text-xl font-semibold">{isPlanCoached(selectedPlan) ? "Coach Overview" : "Plan Overview"}</h2>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowAllWeeks(!showAllWeeks)}
-            className="text-xs flex flex-row items-center gap-1"
-          >
-            {showAllWeeks ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
-            {showAllWeeks ? "Show Current + Next" : "Show All Weeks"}
-          </Button>
-        </div>
-        {isPlanCoached(selectedPlan) && (
-          <>
-            <CoachOverviewCard
-              selectedPlan={selectedPlan}
-              activities={activities}
-            />
-
-            {/* Coaching Time Selector Section */}
-            <div
-              className={`flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors`}
-              onClick={() => setShowCoachingTimeSelector(true)}
-            >
-              <Send className={`h-5 w-5 text-muted-foreground`} />
-              <span className="text-sm font-medium text-foreground">
-                Sends message every{" "}
-                <span className={`underline`}>
-                  {periodLabel}
-                </span>
-              </span>
-            </div>
-          </>
-        )}
-        {weeksToDisplay.map((week, index) => {
-          const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
-            weekStartsOn: 0,
-          });
-          const isNextWeek = isSameWeek(
-            week.startDate,
-            addWeeks(new Date(), 1),
-            {
-              weekStartsOn: 0,
-            }
-          );
-          const totalWeeks = planProgress?.weeks?.length ?? 0;
-          console.log({weeks: planProgress?.weeks})
-          const actualWeekIndex =
-            planProgress?.weeks?.findIndex(
-              (w) => {
-                console.log({startDate: w?.startDate});
-                return w?.startDate.getTime() === week?.startDate.getTime();
-              }
-            ) ?? index;
-          return (
-            <div
-              key={actualWeekIndex}
-              ref={isCurrentWeek ? currentWeekRef : null}
-              className="flex flex-col gap-2 p-3 rounded-2xl bg-card p-2 border border-border"
-            >
-              <PlanWeekDisplay
-                title={
-                  <div className="flex justify-between items-center w-full">
-                    <span className="text-lg font-semibold">
-                      {isCurrentWeek
-                        ? "Current week"
-                        : isNextWeek
-                        ? "Next week"
-                        : `Week ${actualWeekIndex + 1} / ${totalWeeks}`}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {format(week.startDate, "d")}-
-                      {format(endOfWeek(week.startDate), "d MMM")}
-                    </span>
-                  </div>
-                }
-                plan={selectedPlan}
-                date={week.startDate}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-row items-center justify-start gap-2 mb-2 mt-6">
-        <span className="text-4xl">🎯</span>
-        <h2 className="text-xl font-semibold mt-2">Full Activities Overview</h2>
-      </div>
-      <div className="bg-card border border-border rounded-2xl p-4 mt-4">
-        <div className="flex flex-row justify-between items-center my-4">
-          <span className="text-sm text-muted-foreground">Time range</span>
-          <Select
-            value={timeRange}
-            onValueChange={(value: "recent" | "all") => setTimeRange(value)}
-          >
-            <div className="bg-card font-semibold text-foreground">
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select time range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Since 30 days ago</SelectItem>
-                <SelectItem value="all">All time</SelectItem>
-              </SelectContent>
-            </div>
-          </Select>
-        </div>
-        {/* {selectedPlan.outlineType === "timesPerWeek" && (
-          <WeeklySessionsChecklist
-            plan={selectedPlan}
-            activityEntries={activityEntries}
+      {/* 2. Coach Overview (no card) */}
+      {isPlanCoached(selectedPlan) && (
+        <div className="mb-6">
+          <CoachOverviewCard
+            selectedPlan={selectedPlan}
+            activities={activities}
           />
-        )} */}
-
-        {/* {selectedPlan.outlineType === "specific" &&
-          areAllWeeklyActivitiesCompleted() && <WeeklyCompletionCard />} */}
-        {/*
-        {selectedPlan.outlineType === "specific" && (
-          <>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gfrom './EmblaCarouselSelecteay-800">This week</h2>
-
-              <span className="text-sm text-muted-foreground ">
-                Completed activities are calculated on a per week count basis.
+          <div
+            className={`flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted cursor-pointer hover:bg-accent/50 transition-colors mt-4`}
+            onClick={() => setShowCoachingTimeSelector(true)}
+          >
+            <Send className={`h-5 w-5 text-muted-foreground`} />
+            <span className="text-sm font-medium text-foreground">
+              Sends message every{" "}
+              <span className={`underline`}>
+                {periodLabel}
               </span>
-            </div>
-            <div className="flex flex-row flex-wrap gap-4">
-              {selectedPlan.sessions
-                .filter((session) => {
-                  const sessionDate = parseISO(session.date);
-                  const endOfCurrentWeek = endOfWeek(new Date());
-                  const beginningOfCurrentWeek = startOfWeek(new Date());
-                  return (
-                    isAfter(sessionDate, beginningOfCurrentWeek) &&
-                    isBefore(sessionDate, endOfCurrentWeek)
-                  );
-                })
-                .map((session) => {
-                  const activity = activities.find(
-                    (a) => a.id === session.activityId
-                  );
-                  const completed = isSessionCompleted(
-                    session,
-                    selectedPlan,
-                    activityEntries
-                  );
-                  const completedOn = getCompletedOn(
-                    session,
-                    selectedPlan,
-                    activityEntries
-                  );
-                  if (!activity) return null;
-
-                  return (
-                    <SmallActivityEntryCard
-                      key={`${session.date}-${session.activityId}`}
-                      entry={session as Entry}
-                      activity={activity}
-                      completed={completed}
-                      completedOn={completedOn}
-                    />
-                  );
-                })}
-            </div>
-          </>
-        )} */}
-        <div className="mt-4">
-          {selectedPlan.outlineType === "SPECIFIC" && (
-            <div className="flex flex-row flex-nowrap items-center gap-2 mb-4">
-              <span className="text-xs text-muted-foreground">Completed</span>
-              <Switch
-                data-testid="display-future-activities-switch"
-                checked={displayFutureActivities}
-                onCheckedChange={setDisplayFutureActivities}
-              />
-              <span className="text-xs text-muted-foreground">Planned</span>
-            </div>
-          )}
-          {displayFutureActivities ? (
-            <PlanSessionsRenderer
-              plan={selectedPlan}
-              activities={activities.filter((a) =>
-                selectedPlan.activities.map((a) => a.id).includes(a.id)
-              )}
-              startDate={getStartDate()}
-            />
-          ) : (
-            <PlanActivityEntriesRenderer
-              plan={selectedPlan}
-              activities={activities}
-              activityEntries={activityEntries}
-              startDate={getStartDate()}
-            />
-          )}
+            </span>
+          </div>
         </div>
+      )}
+
+      {/* 3. Activities Overview Grid Card */}
+      <div className="rounded-2xl bg-card border border-border p-4 mb-6">
+        {selectedPlan.outlineType === "SPECIFIC" && (
+          <div className="flex flex-row justify-end items-center gap-2 mb-4">
+            <span className="text-xs text-muted-foreground">Completed</span>
+            <Switch
+              data-testid="display-future-activities-switch"
+              checked={displayFutureActivities}
+              onCheckedChange={setDisplayFutureActivities}
+            />
+            <span className="text-xs text-muted-foreground">Planned</span>
+          </div>
+        )}
+        {displayFutureActivities ? (
+          <PlanSessionsRenderer
+            plan={selectedPlan}
+            activities={activities.filter((a) =>
+              selectedPlan.activities.map((a) => a.id).includes(a.id)
+            )}
+            startDate={getStartDate()}
+          />
+        ) : (
+          <PlanActivityEntriesRenderer
+            plan={selectedPlan}
+            activities={activities}
+            activityEntries={activityEntries}
+            startDate={getStartDate()}
+          />
+        )}
       </div>
+
+      {/* 4. Plan Group Progress */}
+      {selectedPlan.planGroupId && (
+        <div className="mb-6">
+          <PlanGroupProgressChart planId={selectedPlan.id} />
+        </div>
+      )}
 
       {/* {loading ? (
         <div className="flex items-center justify-center mt-4">
@@ -773,6 +648,51 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           currentStartHour={preferredCoachingHour}
         />
       )}
+
+      {/* All Weeks Popover */}
+      <AppleLikePopover
+        open={showAllWeeksPopover}
+        onClose={() => setShowAllWeeksPopover(false)}
+        title="All Weeks"
+      >
+        <div className="flex flex-col gap-4 p-4 max-h-[70vh] overflow-y-auto">
+          {allWeeksData.map((week, index) => {
+            const isCurrentWeek = isSameWeek(week.startDate, new Date(), {
+              weekStartsOn: 0,
+            });
+            const totalWeeks = planProgress?.weeks?.length ?? 0;
+            const actualWeekIndex =
+              planProgress?.weeks?.findIndex(
+                (w) => w?.startDate.getTime() === week?.startDate.getTime()
+              ) ?? index;
+
+            return (
+              <div
+                key={actualWeekIndex}
+                className="flex flex-col gap-2 p-3 rounded-2xl bg-card border border-border"
+              >
+                <PlanWeekDisplay
+                  title={
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-lg font-semibold">
+                        {isCurrentWeek
+                          ? "Current week"
+                          : `Week ${actualWeekIndex + 1} / ${totalWeeks}`}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {format(week.startDate, "d")}-
+                        {format(endOfWeek(week.startDate), "d MMM")}
+                      </span>
+                    </div>
+                  }
+                  plan={selectedPlan}
+                  date={week.startDate}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </AppleLikePopover>
     </div>
   );
 }
