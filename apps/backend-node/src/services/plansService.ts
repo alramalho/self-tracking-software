@@ -1127,8 +1127,135 @@ export class PlansService {
   }
 
   /**
+   * Process post-activity coaching - sends celebration message after activity completion
+   * This is called 30-90 seconds after user logs an activity
+   */
+  async processPostActivityCoaching(
+    user: User,
+    plan: Plan & { activities: Activity[] },
+    activityEntry: ActivityEntry
+  ): Promise<any | null> {
+    try {
+      logger.info(
+        `Processing post-activity coaching for user '${user.username}' on plan '${plan.goal}'`
+      );
+
+      // Check if user is on free plan
+      if (user.planType === "FREE") {
+        logger.info(
+          `Skipping user ${user.username} because they are on free plan`
+        );
+        return null;
+      }
+
+      // Import services dynamically to avoid circular dependency
+      const { notificationService } = await import("./notificationService");
+      const { aiService } = await import("./aiService");
+
+      // Generate celebration message using AI
+      const celebrationMessage = await aiService.generatePostActivityMessage(
+        user,
+        plan,
+        {
+          activityId: activityEntry.activityId,
+          quantity: activityEntry.quantity,
+          date: activityEntry.date,
+        }
+      );
+
+      // Get or create coach for this user's plan
+      let coach = await prisma.coach.findFirst({
+        where: { ownerId: user.id },
+      });
+
+      if (!coach) {
+        coach = await prisma.coach.create({
+          data: {
+            ownerId: user.id,
+            details: {
+              name: "Coach Oli",
+              bio: "Your personal AI coach helping you achieve your goals",
+            },
+          },
+        });
+        logger.info(`Created new coach for user '${user.username}'`);
+      }
+
+      // Link coach to plan if not already linked
+      if (plan.coachId !== coach.id) {
+        await prisma.plan.update({
+          where: { id: plan.id },
+          data: { coachId: coach.id },
+        });
+      }
+
+      // Get or create a chat for this user and coach
+      let chat = await prisma.chat.findFirst({
+        where: {
+          userId: user.id,
+          coachId: coach.id,
+        },
+      });
+
+      if (!chat) {
+        chat = await prisma.chat.create({
+          data: {
+            userId: user.id,
+            coachId: coach.id,
+            title: "General Coaching",
+          },
+        });
+        logger.info(`Created new chat for user '${user.username}'`);
+      }
+
+      // Create message for conversation history
+      await prisma.message.create({
+        data: {
+          chatId: chat.id,
+          planId: plan.id,
+          role: "COACH",
+          content: `${celebrationMessage.title}\n\n${celebrationMessage.message}`,
+        },
+      });
+
+      // Create and send notification
+      const notification =
+        await notificationService.createAndProcessNotification(
+          {
+            userId: user.id,
+            title: celebrationMessage.title,
+            message: celebrationMessage.message,
+            type: "COACH",
+            relatedId: plan.id,
+            relatedData: {
+              picture:
+                "https://alramalhosandbox.s3.eu-west-1.amazonaws.com/tracking_software/jarvis_logo_transparent.png",
+              planId: plan.id,
+              activityEntryId: activityEntry.id,
+              celebrationType: "post_activity",
+            },
+          },
+          true // pushNotify
+        );
+
+      logger.info(
+        `Post-activity celebration notification sent to user '${user.username}' for plan '${plan.goal}'`
+      );
+
+      return notification;
+    } catch (error) {
+      logger.error(
+        `Error processing post-activity coaching for user ${user.username}:`,
+        error
+      );
+      // Don't throw - we don't want to fail the activity logging
+      return null;
+    }
+  }
+
+  /**
    * Process plan coaching for a user - recalculates plan state and sends notification if needed
-   * This is called by the hourly job at 8am in each user's timezone
+   * This is called by the hourly job at the user's preferred coaching time
    */
   async processPlanCoaching(
     user: User & { plans: Plan[] },

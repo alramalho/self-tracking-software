@@ -30,7 +30,7 @@ import {
   BarChartHorizontal,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { toast } from "react-hot-toast";
 import AppleLikePopover from "./AppleLikePopover";
 import { CoachingTimeSelector } from "./CoachingTimeSelector";
@@ -58,9 +58,27 @@ import { Switch } from "./ui/switch";
 
 interface PlanRendererv2Props {
   selectedPlan: CompletePlan;
+  scrollTo?: string;
 }
 
-export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
+// Animated section component that fades in when scrolled into view
+const AnimatedSection = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 20 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+export function PlanRendererv2({ selectedPlan, scrollTo }: PlanRendererv2Props) {
   const { currentUser, updateUser } = useCurrentUser();
   const { plans, leavePlanGroup, isLeavingPlanGroup, deletePlan } = usePlans();
   const { activities, activityEntries } = useActivities();
@@ -91,9 +109,9 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
     [selectedPlan, plans]
   );
 
-  // Auto-scroll to current week when weeks data loads
+  // Conditional scroll to current week based on URL parameter
   useEffect(() => {
-    if (currentWeekRef.current && planProgress?.weeks?.length) {
+    if (scrollTo === "current-week" && currentWeekRef.current && planProgress?.weeks?.length) {
       // Small delay to ensure the layout is complete
       setTimeout(() => {
         currentWeekRef.current?.scrollIntoView({
@@ -102,7 +120,7 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         });
       }, 100);
     }
-  }, [planProgress?.weeks?.length]);
+  }, [scrollTo, planProgress?.weeks?.length]);
 
   // Always show all-time data - no start date filtering
   const getStartDate = useCallback(() => {
@@ -377,8 +395,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
   }, [metrics, metricEntries]);
 
   return (
-    <div>
-      <div className="flex flex-row items-start justify-start gap-2 mb-8">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <AnimatedSection>
+        <div className="flex flex-row items-start justify-start gap-2 mb-8">
         <span className="text-5xl">{selectedPlan.emoji}</span>
         <div className="flex flex-col gap-2 justify-start">
           <h2 className="text-2xl font-semibold">{selectedPlan.goal}</h2>
@@ -419,23 +443,28 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             </Button>
           </div>
         </div>
-      </div>
-      {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
-        <div className="mb-8">
-          <MilestoneOverview
-            milestones={selectedPlan.milestones}
-            planId={selectedPlan.id}
-            onEdit={() => {
-              setOpenedFromMilestone(true);
-              setShowEditModal(true);
-            }}
-          />
         </div>
+      </AnimatedSection>
+
+      {selectedPlan.milestones && selectedPlan.milestones.length > 0 && (
+        <AnimatedSection delay={0.1}>
+          <div className="mb-8">
+            <MilestoneOverview
+              milestones={selectedPlan.milestones}
+              planId={selectedPlan.id}
+              onEdit={() => {
+                setOpenedFromMilestone(true);
+                setShowEditModal(true);
+              }}
+            />
+          </div>
+        </AnimatedSection>
       )}
 
       {/* 1. Current Week Card */}
       {currentWeekData && (
-        <div className="rounded-2xl bg-card border border-border p-4 mb-6">
+        <AnimatedSection delay={0.15}>
+          <div id="current-week" ref={currentWeekRef} className="rounded-2xl bg-card border border-border p-4 mb-6">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <span className="text-lg font-semibold">Current week</span>
@@ -457,12 +486,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             plan={selectedPlan}
             date={currentWeekData.startDate}
           />
-        </div>
+          </div>
+        </AnimatedSection>
       )}
 
       {/* 2. Coach Overview (no card) */}
       {isPlanCoached(selectedPlan) && (
-        <div className="mb-6">
+        <AnimatedSection delay={0.2}>
+          <div className="mb-6">
           <CoachOverviewCard
             selectedPlan={selectedPlan}
             activities={activities}
@@ -477,11 +508,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               <span className={`underline`}>{periodLabel}</span>
             </span>
           </div>
-        </div>
+          </div>
+        </AnimatedSection>
       )}
 
       {/* 3. Activities Overview Grid Card */}
-      <div className="rounded-2xl bg-card border border-border p-4 mb-6">
+      <AnimatedSection delay={0.25}>
+        <div className="rounded-2xl bg-card border border-border p-4 mb-6">
         {selectedPlan.outlineType === "SPECIFIC" && (
           <div className="flex flex-row justify-end items-center gap-2 mb-4">
             <span className="text-xs text-muted-foreground">Completed</span>
@@ -509,11 +542,13 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
             startDate={getStartDate()}
           />
         )}
-      </div>
+        </div>
+      </AnimatedSection>
 
       {/* 4. Metrics Insights for Plan Activities */}
       {metricsWithEnoughData.length > 0 && planActivities.length > 0 && (
-        <div className="mb-12">
+        <AnimatedSection delay={0.3}>
+          <div className="mb-12">
           <h3 className="text-lg font-semibold mb-2">Metrics Insights</h3>
           <p className="text-sm text-muted-foreground mb-4">
             See how this plan's activities correlate with your tracked metrics
@@ -544,12 +579,14 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               </span>
             </div>
           </Link>
-        </div>
+          </div>
+        </AnimatedSection>
       )}
 
       {/* 5. Plan Group Progress */}
       {selectedPlan.planGroupId && (
-        <div className="mb-6">
+        <AnimatedSection delay={0.35}>
+          <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Group Progress</h3>
           <p className="text-sm text-muted-foreground mb-4">
             See how your plan group is progressing this week
@@ -603,7 +640,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
                 </div>
               </div>
             )}
-        </div>
+          </div>
+        </AnimatedSection>
       )}
 
       {/* {loading ? (
@@ -657,15 +695,17 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
         )
       )} */}
 
-      <Link to="/add">
-        <Button
+      <AnimatedSection delay={0.4}>
+        <Link to="/add">
+          <Button
           variant="outline"
           className="bg-muted/50 mt-4 w-full h-[100px] flex flex-col items-center justify-center border-2 border-dashed border-border text-muted-foreground"
         >
           <PlusSquare className="h-8 w-8 mb-2 text-muted-foreground/70" />
           <span>Log Activity</span>
-        </Button>
-      </Link>
+          </Button>
+        </Link>
+      </AnimatedSection>
 
       <AppleLikePopover
         open={showLeaveGroupPopover}
@@ -794,6 +834,6 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
           })}
         </div>
       </AppleLikePopover>
-    </div>
+    </motion.div>
   );
 }

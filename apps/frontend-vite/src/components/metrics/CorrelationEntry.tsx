@@ -1,11 +1,13 @@
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface CorrelationEntryProps {
   title: string;
   pearsonValue: number; // between -1 and 1
   sampleSize: number; // number of entries used for correlation
   onReliabilityClick?: () => void;
+  isVisible?: boolean;
+  animationDelay?: number;
 }
 
 type StrengthLevel = "impossible" | "weak" | "medium" | "strong";
@@ -40,11 +42,20 @@ const strengthConfig = {
   },
 };
 
-export function CorrelationEntry({ title, pearsonValue, sampleSize, onReliabilityClick }: CorrelationEntryProps) {
+export function CorrelationEntry({
+  title,
+  pearsonValue,
+  sampleSize,
+  onReliabilityClick,
+  isVisible = true,
+  animationDelay = 0
+}: CorrelationEntryProps) {
+  const [animatedValue, setAnimatedValue] = useState(0);
+
   const isPositive = pearsonValue >= 0;
   const absoluteValue = Math.abs(pearsonValue);
-  const percentage = absoluteValue * 100;
-  const isWeak = percentage < 10;
+  const targetPercentage = absoluteValue * 100;
+  const isWeak = targetPercentage < 10;
   const color = isWeak ? "bg-gray-400" : (isPositive ? "bg-green-500" : "bg-red-500");
   const sign = isPositive ? "+ " : "– ";
 
@@ -52,6 +63,17 @@ export function CorrelationEntry({ title, pearsonValue, sampleSize, onReliabilit
   const strengthStyle = strengthConfig[strength];
 
   const isInsufficient = strength === "impossible";
+
+  // Animate the progress bar when component becomes visible
+  useEffect(() => {
+    if (isVisible) {
+      const timeout = setTimeout(() => {
+        setAnimatedValue(targetPercentage);
+      }, animationDelay);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isVisible, targetPercentage, animationDelay]);
 
   return (
     <div className={`space-y-2 ${isInsufficient ? "opacity-40" : ""}`}>
@@ -69,10 +91,10 @@ export function CorrelationEntry({ title, pearsonValue, sampleSize, onReliabilit
           </button>
         </div>
         <span className={`font-medium ${isWeak ? "text-gray-400" : (isPositive ? "text-green-500" : "text-red-500")}`}>
-          {sign}{percentage.toFixed(0)}%
+          {sign}{targetPercentage.toFixed(0)}%
         </span>
       </div>
-      <Progress value={percentage} indicatorColor={color} />
+      <Progress value={animatedValue} indicatorColor={color} />
     </div>
   );
 }

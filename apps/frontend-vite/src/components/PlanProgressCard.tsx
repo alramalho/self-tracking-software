@@ -64,7 +64,6 @@ interface PlanProgressCardProps {
   plan: CompletePlan;
   weeks: any[];
   achievement: any;
-  isCoached?: boolean;
   isExpanded?: boolean;
   className?: string;
   isDemo?: boolean;
@@ -77,7 +76,6 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
   plan,
   weeks,
   achievement,
-  isCoached = false,
   isExpanded = true,
   className,
   isDemo = false,
@@ -146,6 +144,7 @@ export const PlanProgressCard: React.FC<PlanProgressCardProps> = ({
       : totalCompletedActivities === totalPlannedActivities;
   const isCurrentWeek = isSameWeek(currentWeek.startDate, new Date());
   const showConfetti = isCurrentWeek && isWeekCompleted;
+  const isCoached = plan.isCoached
 
   // Calculate total number of animations that will run
   const totalProgressBars =
