@@ -339,9 +339,34 @@ const Notifications: React.FC<NotificationsProps> = ({ onClose }) => {
     (n) => n.type !== "ENGAGEMENT"
   );
 
-  // Show all non-concluded notifications
+  // Define priority for notification types (lower number = higher priority)
+  const getNotificationPriority = (notification: Notification): number => {
+    switch (notification.type) {
+      case "FRIEND_REQUEST":
+        return 1;
+      case "PLAN_INVITATION":
+        return 2;
+      case "COACH":
+        return 3;
+      case "INFO":
+        return 4;
+      default:
+        return 5;
+    }
+  };
+
+  // Show all non-concluded notifications, sorted by priority then by date
   const displayedNotifications =
-    regularNotifications?.filter((n) => n.status !== "CONCLUDED") || [];
+    regularNotifications
+      ?.filter((n) => n.status !== "CONCLUDED")
+      .sort((a, b) => {
+        const priorityDiff = getNotificationPriority(a) - getNotificationPriority(b);
+        if (priorityDiff !== 0) {
+          return priorityDiff;
+        }
+        // If same priority, sort by creation date (most recent first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }) || [];
 
   if (isLoadingNotifications) {
     return (
