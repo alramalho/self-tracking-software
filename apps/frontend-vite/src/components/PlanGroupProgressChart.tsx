@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlanGroupProgress } from "@/hooks/usePlanGroupProgress";
+import { useThemeColors } from "@/hooks/useThemeColors";
 import { Loader2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -38,6 +39,7 @@ const STATUS_LABELS = {
 
 export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) {
   const { data, isLoading, error } = usePlanGroupProgress(planId);
+  const variants = useThemeColors();
 
   // Get computed CSS custom properties for chart colors
   const [cssColors, setCssColors] = useState({
@@ -202,7 +204,7 @@ export function PlanGroupProgressChart({ planId }: PlanGroupProgressChartProps) 
             <Bar dataKey="completed" name="Completed" radius={[8, 8, 0, 0]}>
               {chartData.map((entry, index) => {
                 const STATUS_COLORS = getStatusColors(cssColors.mutedForeground);
-                let fillColor = STATUS_COLORS.DEFAULT;
+                let fillColor = variants.hex;
                 if (entry.isCoached) {
                   // For coached plans, use status-based colors
                   if (entry.status && entry.status in STATUS_COLORS) {

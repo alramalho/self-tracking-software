@@ -17,31 +17,39 @@ export const PlansProgressDisplay: React.FC<PlansProgressDisplayProps> = ({
   const { plans, isLoadingPlans } = usePlans();
   const activePlans = plans?.filter(p => !p.deletedAt) ?? [];
 
+  // Sort plans to prioritize coached plans first
+  const sortedPlans = [...activePlans].sort((a, b) => {
+    // Coached plans come first
+    if (a.isCoached && !b.isCoached) return -1;
+    if (!a.isCoached && b.isCoached) return 1;
+    return 0; // Maintain original order for plans of the same type
+  });
+
   if (isLoadingPlans || !plans) {
     return <div className={cn("w-full flex flex-col gap-4", className)}>Loading...</div>;
   }
 
   return (
-    <div className={cn("w-full flex flex-col gap-4", className)}>
+    <div className={cn("w-full flex flex-col", isExpanded ? "gap-4" : "gap-0", className)}>
       {/* Progress bars section */}
-      {activePlans.filter(Boolean).map((plan, index: number) => {
-        const { progress } = plan;
-        const { weeks, achievement } = progress;
+      {sortedPlans
+        .filter(Boolean)
+        .map((plan, index: number) => {
+          const { progress } = plan;
+          const { weeks, achievement } = progress;
 
-        const shouldShow = index == 0 || isExpanded;
-        const isCoached = index == 0 && userPaidPlanType != "FREE";
+          const shouldShow = index === 0 || isExpanded;
 
-        return (
-          <PlanProgressCard
-            key={plan.id}
-            plan={plan}
-            weeks={weeks}
-            achievement={achievement}
-            isCoached={isCoached}
-            isExpanded={shouldShow}
-          />
-        );
-      })}
+          return (
+            <PlanProgressCard
+              key={plan.id}
+              plan={plan}
+              weeks={weeks}
+              achievement={achievement}
+              isExpanded={shouldShow}
+            />
+          );
+        })}
     </div>
   );
 };

@@ -38,8 +38,9 @@ import {
   UserX,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
+import { motion, useInView } from "framer-motion";
 
 
 export const Route = createFileRoute("/profile/$username")({
@@ -91,6 +92,23 @@ function userifyPlansProgress(plansProgress: PlanProgressData[]): {
     ),
   };
 }
+
+// Animated section component that fades in when scrolled into view
+const AnimatedSection = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 20 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 function ProfilePage() {
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -299,12 +317,18 @@ function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-col items-center min-h-screen">
+    <motion.div
+      className="flex flex-col items-center min-h-screen"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="w-full max-w-md">
         {/* TikTok-style Header */}
-        <div className="flex flex-col items-center py-6">
-          {/* Top bar */}
-          <div className="flex justify-between items-center w-full mb-2">
+        <AnimatedSection>
+          <div className="flex flex-col items-center py-6">
+            {/* Top bar */}
+            <div className="flex justify-between items-center w-full mb-2">
             {!isOwnProfile ? (
               <button
                 className="p-2 rounded-full hover:bg-muted/50"
@@ -324,10 +348,14 @@ function ProfilePage() {
                 <EllipsisVertical size={26} />
               </button>
             )}
+            </div>
           </div>
+        </AnimatedSection>
 
-          {/* Avatar with progress ring */}
-          <div className="relative mb-4">
+        <AnimatedSection delay={0.1}>
+          <div className="flex flex-col items-center">
+            {/* Avatar with progress ring */}
+            <div className="relative mb-4">
             <ProgressRing
               size={112}
               strokeWidth={5}
@@ -348,14 +376,18 @@ function ProfilePage() {
             </ProgressRing>
           </div>
 
-          {/* Name and username */}
-          <h2 className="text-xl font-bold text-foreground">
-            {profileData?.name}
-          </h2>
-          <p className="text-muted-foreground text-sm mb-3">@{profileData?.username}</p>
+            {/* Name and username */}
+            <h2 className="text-xl font-bold text-foreground">
+              {profileData?.name}
+            </h2>
+            <p className="text-muted-foreground text-sm mb-3">@{profileData?.username}</p>
+          </div>
+        </AnimatedSection>
 
-          {/* TikTok-style stats */}
-          <div className="flex justify-center space-x-8 mb-6">
+        <AnimatedSection delay={0.15}>
+          <div className="flex flex-col items-center">
+            {/* TikTok-style stats */}
+            <div className="flex justify-center space-x-8 mb-6">
             <Link
               to={`/friends/$username`}
               params={{ username: profileData?.username || "" }}
@@ -374,10 +406,14 @@ function ProfilePage() {
               </p>
               <p className="text-sm text-muted-foreground">Entries</p>
             </div>
+            </div>
           </div>
+        </AnimatedSection>
 
-          {/* Badges */}
-          <div className="flex justify-center mb-6 gap-3">
+        <AnimatedSection delay={0.2}>
+          <div className="flex flex-col items-center">
+            {/* Badges */}
+            <div className="flex justify-center mb-6 gap-3">
             <BadgeCard
               count={totalStreaks}
               width={70}
@@ -442,10 +478,14 @@ function ProfilePage() {
                 <Rocket size={90} className="pb-2 text-orange-500 mt-5" />
               )}
             </BadgeCard>
+            </div>
           </div>
+        </AnimatedSection>
 
-          {/* Action buttons */}
-          {!isOwnProfile && !isFriend && (
+        <AnimatedSection delay={0.25}>
+          <div className="flex flex-col items-center">
+            {/* Action buttons */}
+            {!isOwnProfile && !isFriend && (
             <>
               {hasPendingReceivedConnectionRequest ? (
                 <div className="flex space-x-3 mb-6">
@@ -497,11 +537,13 @@ function ProfilePage() {
                 </Button>
               )}
             </>
-          )}
-        </div>
+            )}
+          </div>
+        </AnimatedSection>
 
         {/* Content */}
-        <div className="p-4">
+        <AnimatedSection delay={0.3}>
+          <div className="p-4">
           {/* Profile Settings Popover */}
           {isOwnProfile && (
             <ProfileSettingsPopover
@@ -694,7 +736,8 @@ function ProfilePage() {
               )}
             </TabsContent>
           </Tabs>
-        </div>
+          </div>
+        </AnimatedSection>
 
         {/* Activity Entry Editor */}
         {showEditActivityEntry && isOwnProfile && (
@@ -730,6 +773,6 @@ function ProfilePage() {
           onClose={() => setProgressExplainerOpen(false)}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

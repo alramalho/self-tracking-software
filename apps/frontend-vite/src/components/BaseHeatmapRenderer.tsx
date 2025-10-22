@@ -6,7 +6,7 @@ import { usePaidPlan } from "@/hooks/usePaidPlan";
 import { type Activity } from "@tsw/prisma";
 import HeatMap from "@uiw/react-heat-map";
 import { format, subDays, differenceInDays } from "date-fns";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useInView } from "framer-motion";
 import { Brush, ChevronDown, Lock } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -108,6 +108,9 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   const [isLegendExpanded, setIsLegendExpanded] = useState(false);
   // Add ref for scroll container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Add ref for the card container to detect when it's in view
+  const cardContainerRef = useRef<HTMLDivElement>(null);
+  const isCardInView = useInView(cardContainerRef, { once: true, margin: "-100px" });
 
   // Convert dates to UTC
   const originalUtcStartDate = new Date(
@@ -157,8 +160,10 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
       )
     : 52;
 
-  // Auto-scroll to center today's date
+  // Auto-scroll to center today's date only when card is in view
   useEffect(() => {
+    if (!isCardInView) return;
+
     // Wait for heatmap to render, then scroll to today
     const timeoutId = setTimeout(() => {
       const cellId = uniqueId
@@ -175,7 +180,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [heatmapData.length, uniqueId]);
+  }, [heatmapData.length, uniqueId, isCardInView]);
   const renderActivityLegend = () => {
     const colorMatrix = getActivityColorMatrix(isLightMode);
     return (
@@ -284,7 +289,7 @@ const BaseHeatmapRenderer: React.FC<BaseHeatmapRendererProps> = ({
   };
 
   return (
-    <div className="mb-4 grid gap-3 -mx-4">
+    <div ref={cardContainerRef} className="mb-4 grid gap-3 -mx-4">
       <div className="relative flex max-w-full overflow-x-scroll">
         {/* Fixed weekday labels - outside scroll container */}
         <div

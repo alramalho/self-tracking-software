@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
@@ -71,6 +71,31 @@ export function MetricInsightsCard({
   onHelpClick,
 }: MetricInsightsCardProps) {
   const [showReliabilityHelp, setShowReliabilityHelp] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer to detect when card enters viewport
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 } // Trigger when 10% of the card is visible
+    );
+
+    const currentRef = cardRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, []);
 
   // Calculate correlations for the metric
   const correlations = useMemo(() => {
@@ -118,7 +143,7 @@ export function MetricInsightsCard({
   }, [metric.id, activities, activityEntries, metricEntries]);
 
   return (
-    <Card className="p-6">
+    <Card ref={cardRef} className="p-6">
       <div className="space-y-6">
         <div className="flex justify-between items-start">
           <div className="flex flex-row items-center gap-2">
@@ -136,13 +161,15 @@ export function MetricInsightsCard({
         </div>
 
         <div className="space-y-4">
-          {correlations.map((correlation) => (
+          {correlations.map((correlation, index) => (
             <CorrelationEntry
               key={correlation.activity.id}
               title={`${correlation.activity.emoji || "📊"} ${correlation.activity.title}`}
               pearsonValue={correlation.correlation}
               sampleSize={correlation.sampleSize}
               onReliabilityClick={() => setShowReliabilityHelp(true)}
+              isVisible={isVisible}
+              animationDelay={index * 100} // Stagger animation by 100ms per bar
             />
           ))}
         </div>

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  BarChart3,
   BarChartHorizontal,
   Bell,
   ChevronDown,
@@ -21,8 +22,9 @@ import {
   MoveRight,
   RefreshCcw,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
+import { motion } from "framer-motion";
 import supportAgentWhiteSvg from "../assets/icons/support-agent-white.svg";
 import supportAgentSvg from "../assets/icons/support-agent.svg";
 import jarvisLogoSvg from "../assets/icons/jarvis_logo_transparent.png";
@@ -48,7 +50,9 @@ import { useAI } from "@/contexts/ai";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
-  validateSearch: (search: Record<string, unknown>): { activityEntryId?: string } => {
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { activityEntryId?: string } => {
     return {
       activityEntryId: (search.activityEntryId as string) || undefined,
     };
@@ -61,6 +65,25 @@ const MAINTENANCE_MODE_ENABLED =
 const WHITELISTED_EMAILS: string[] = [];
 // Fixed maintenance end date: October 10th, 2025 at midnight UTC
 const MAINTENANCE_END_DATE = new Date("2025-10-10T00:00:00Z");
+
+// Animated section component that fades in on mount
+const AnimatedSection = ({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 function HomePage() {
   const { currentUser, hasLoadedUserData } = useCurrentUser();
@@ -222,142 +245,155 @@ function HomePage() {
         }
       >
         <div className="space-y-4 p-[1px]">
-          <div className={`flex justify-between items-center`}>
-            <div className="flex flex-row gap-1 items-center text-center">
-              <ProgressRing
-                size={50}
-                strokeWidth={4}
-                atLeastBronze={accountLevel.atLeastBronze}
-                percentage={accountLevel.percentage}
-                currentLevel={accountLevel.currentLevel}
-                badge={false}
-                onClick={() =>
-                  navigate({
-                    to: `/profile/$username`,
-                    params: { username: currentUser?.username || "" },
-                  })
-                }
-              >
-                <Avatar className="w-10 h-10">
-                  <AvatarImage
-                    src={currentUser?.picture || ""}
-                    alt={currentUser?.name || ""}
-                  />
-                  <AvatarFallback className="text-2xl">
-                    {(currentUser?.name || "U")[0]}
-                  </AvatarFallback>
-                </Avatar>
-              </ProgressRing>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsFeedbackOpen(true)}
-                className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
-                title="Send Feedback"
-              >
-                <img
-                  src={isLightMode ? supportAgentSvg : supportAgentWhiteSvg}
-                  alt="Support"
-                  className="w-9 h-9"
-                />
-              </button>
-              <div className="relative">
-                <button
-                  onClick={() => setIsNotificationsOpen(true)}
-                  className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200 relative"
+          <AnimatedSection delay={0}>
+            <div className={`flex justify-between items-center`}>
+              <div className="flex flex-row gap-1 items-center text-center">
+                <ProgressRing
+                  size={50}
+                  strokeWidth={4}
+                  atLeastBronze={accountLevel.atLeastBronze}
+                  percentage={accountLevel.percentage}
+                  currentLevel={accountLevel.currentLevel}
+                  badge={false}
+                  onClick={() =>
+                    navigate({
+                      to: `/profile/$username`,
+                      params: { username: currentUser?.username || "" },
+                    })
+                  }
                 >
-                  <Bell size={24} />
-                  {unopenedNotificationsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {unopenedNotificationsCount > 9
-                        ? "9+"
-                        : unopenedNotificationsCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-              <button
-                onClick={() => navigate({ to: "/insights/dashboard" })}
-                className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
-                title="AI Insights"
-              >
-                <BarChartHorizontal size={24} />
-              </button>
-              {isUserAIWhitelisted && (
-                <>
-                  <button
-                    onClick={() => navigate({ to: "/ai" })}
-                    className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
-                    title="Send Feedback"
-                  >
-                    <img
-                      src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
-                      alt="AI Coach"
-                      className="w-9 h-9"
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage
+                      src={currentUser?.picture || ""}
+                      alt={currentUser?.name || ""}
                     />
+                    <AvatarFallback className="text-2xl">
+                      {(currentUser?.name || "U")[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </ProgressRing>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsFeedbackOpen(true)}
+                  className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                  title="Send Feedback"
+                >
+                  <img
+                    src={isLightMode ? supportAgentSvg : supportAgentWhiteSvg}
+                    alt="Support"
+                    className="w-9 h-9"
+                  />
+                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsNotificationsOpen(true)}
+                    className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200 relative"
+                  >
+                    <Bell size={24} />
+                    {unopenedNotificationsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unopenedNotificationsCount > 9
+                          ? "9+"
+                          : unopenedNotificationsCount}
+                      </span>
+                    )}
                   </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {activePlans && activePlans.length > 0 && (
-            <div className="mb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {activePlans.length > 1 && (
-                    <button
-                      onClick={() => setIsPlansCollapsed((prev) => !prev)}
-                      className="p-1 hover:bg-muted/50 rounded transition-colors duration-200 flex items-center justify-center"
-                      aria-label={
-                        isPlansCollapsed ? "Expand streaks" : "Collapse streaks"
-                      }
-                    >
-                      {isPlansCollapsed ? (
-                        <ChevronRight
-                          size={16}
-                          className="text-muted-foreground"
-                        />
-                      ) : (
-                        <ChevronDown
-                          size={16}
-                          className="text-muted-foreground"
-                        />
-                      )}
-                    </button>
-                  )}
-                  <div className="flex flex-row items-center justify-between gap-2">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Your Plans
-                    </h3>
-                  </div>
                 </div>
                 <button
-                  onClick={() => navigate({ to: "/plans" })}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                  onClick={() => navigate({ to: "/insights/dashboard" })}
+                  className="p-2 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                  title="AI Insights"
                 >
-                  View Details
-                  <ChevronRight size={16} />
+                  <BarChartHorizontal size={24} />
                 </button>
-              </div>
-              <div className="mt-2">
-                <PlansProgressDisplay isExpanded={!isPlansCollapsed} />
+                {isUserAIWhitelisted && (
+                  <>
+                    <button
+                      onClick={() => navigate({ to: "/ai" })}
+                      className="p-0 hover:bg-muted/50 rounded-full transition-colors duration-200"
+                      title="Send Feedback"
+                    >
+                      <img
+                        src={isLightMode ? jarvisLogoSvg : jarvisLogoWhiteSvg}
+                        alt="AI Coach"
+                        className="w-9 h-9"
+                      />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
+          </AnimatedSection>
+
+          {activePlans && activePlans.length > 0 && (
+            <AnimatedSection delay={0.1}>
+              <div className="mb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {activePlans.length > 1 && (
+                      <button
+                        onClick={() => setIsPlansCollapsed((prev) => !prev)}
+                        className="p-1 hover:bg-muted/50 rounded transition-colors duration-200 flex items-center justify-center"
+                        aria-label={
+                          isPlansCollapsed
+                            ? "Expand streaks"
+                            : "Collapse streaks"
+                        }
+                      >
+                        {isPlansCollapsed ? (
+                          <ChevronRight
+                            size={16}
+                            className="text-muted-foreground"
+                          />
+                        ) : (
+                          <ChevronDown
+                            size={16}
+                            className="text-muted-foreground"
+                          />
+                        )}
+                      </button>
+                    )}
+                    <div className="flex flex-row items-center justify-between gap-2">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Your Plans
+                      </h3>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate({ to: "/plans" })}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                  >
+                    View Details
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <PlansProgressDisplay isExpanded={!isPlansCollapsed} />
+                </div>
+              </div>
+            </AnimatedSection>
           )}
         </div>
       </PullToRefresh>
 
+      <p>asdfasdfasdfa</p>
+
       {metrics && metrics.length > 0 && !isUserOnFreePlan && (
-        <HomepageMetricsSection />
+        <AnimatedSection delay={0.15}>
+          <p>dafuq</p>
+          {/* <HomepageMetricsSection /> */}
+        </AnimatedSection>
       )}
 
-      <div className="mb-6">
-        <TimelineRenderer
-          onOpenSearch={() => navigate({ to: "/search" })}
-          highlightActivityEntryId={activityEntryId}
-        />
-      </div>
+      <AnimatedSection delay={0.2}>
+        <div className="mb-6">
+          <TimelineRenderer
+            onOpenSearch={() => navigate({ to: "/search" })}
+            highlightActivityEntryId={activityEntryId}
+          />
+        </div>
+      </AnimatedSection>
 
       <AppleLikePopover
         onClose={handleNotificationsClose}
@@ -396,8 +432,7 @@ function HomePage() {
         open={isFeedbackOpen}
       />
 
-      {/* Night Mode Announcement */}
-      <AnnouncementPopover
+      {/* <AnnouncementPopover
         id="night-mode-2025"
         title="Night Mode is Here!"
         icon={<Moon size={32} className="text-foreground" />}
@@ -411,6 +446,16 @@ function HomePage() {
             search: { activeView: "themeMode" },
           })
         }
+      /> */}
+
+      <AnnouncementPopover
+        id="new-plans-2025-october"
+        title="New plans page!"
+        icon={<BarChart3 size={32} className="text-foreground" />}
+        description="We've revamped the plans page to make it easier to manage your plans and see insightful data."
+        imageSrcs={["/images/screenshots/new-plans.png", "/images/screenshots/new-plans-2.png", "/images/screenshots/new-plans-3.png"]}
+        actionLabel="Try it out →"
+        onAction={() => navigate({ to: "/plans" })}
       />
 
       {/* Floating Coach Widget */}

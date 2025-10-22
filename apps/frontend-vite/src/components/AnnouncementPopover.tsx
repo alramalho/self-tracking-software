@@ -13,7 +13,7 @@ interface AnnouncementPopoverProps {
   title: string;
   icon: React.ReactNode;
   description: string | React.ReactNode;
-  imageSrc?: string; // optional screenshot to display in iPhone mockup
+  imageSrcs?: string[]; // optional screenshots to display in iPhone mockups (horizontally scrollable)
   actionLabel: string;
   onAction: () => void;
   open?: boolean; // allow external control
@@ -25,7 +25,7 @@ export const AnnouncementPopover: React.FC<AnnouncementPopoverProps> = ({
   title,
   icon,
   description,
-  imageSrc,
+  imageSrcs,
   actionLabel,
   onAction,
   open: controlledOpen,
@@ -76,7 +76,7 @@ export const AnnouncementPopover: React.FC<AnnouncementPopoverProps> = ({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className={`relative ${imageSrc ? 'pb-0' : 'p-6'}`}
+        className={`relative ${imageSrcs && imageSrcs.length > 0 ? 'pb-0' : 'p-6'}`}
       >
         {/* Close button */}
         <button
@@ -88,8 +88,8 @@ export const AnnouncementPopover: React.FC<AnnouncementPopoverProps> = ({
         </button>
 
         {/* Scrollable content wrapper */}
-        <div className={imageSrc ? 'max-h-[70vh] overflow-y-auto' : ''}>
-          <div className={imageSrc ? 'p-6 pb-32' : ''}>
+        <div className={imageSrcs && imageSrcs.length > 0 ? 'max-h-[70vh] overflow-y-auto' : ''}>
+          <div className={imageSrcs && imageSrcs.length > 0 ? 'p-6 pb-32' : ''}>
             {/* Icon */}
             <motion.div
               initial={{ scale: 0 }}
@@ -115,29 +115,44 @@ export const AnnouncementPopover: React.FC<AnnouncementPopoverProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className={`text-sm text-center text-muted-foreground ${imageSrc ? 'mb-4' : 'mb-6'}`}
+              className={`text-sm text-center text-muted-foreground ${imageSrcs && imageSrcs.length > 0 ? 'mb-4' : 'mb-6'}`}
             >
               {description}
             </motion.div>
 
-            {/* Optional Image/Screenshot */}
-            {imageSrc && (
+            {/* Optional Images/Screenshots - Horizontal Scroll */}
+            {imageSrcs && imageSrcs.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="flex justify-center"
               >
-                <div className="w-[280px] sm:w-[320px]">
-                  <Iphone src={imageSrc} />
+                {/* Horizontal scroll container */}
+                <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-4 pb-4 px-2">
+                  {imageSrcs.map((src, index) => (
+                    <div key={index} className="flex-shrink-0 snap-center w-[280px] sm:w-[320px]">
+                      <Iphone src={src} />
+                    </div>
+                  ))}
                 </div>
+                {/* Pagination dots */}
+                {imageSrcs.length > 1 && (
+                  <div className="flex justify-center gap-2 mt-2">
+                    {imageSrcs.map((_, index) => (
+                      <div
+                        key={index}
+                        className="w-2 h-2 rounded-full bg-muted-foreground/30"
+                      />
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
           </div>
         </div>
 
         {/* Gradient fade and Action button (fixed to bottom when image exists) */}
-        {imageSrc ? (
+        {imageSrcs && imageSrcs.length > 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 const plansSearchSchema = z.object({
   selectedPlan: z.string().optional(),
+  scrollTo: z.string().optional(),
 })
 
 export const Route = createFileRoute('/plans')({
@@ -17,7 +18,7 @@ function PlansPage() {
   const { isSignedIn } = useUser()
   const { currentUser } = useCurrentUser()
   const search = Route.useSearch()
-  const { selectedPlan } = search
+  const { selectedPlan, scrollTo } = search
 
   if (!isSignedIn) {
     return (
@@ -37,7 +38,7 @@ function PlansPage() {
       <h1 className="text-2xl font-bold mb-4">
         Plans
       </h1>
-      <PlansRenderer initialSelectedPlanId={selectedPlan} />
+      <PlansRenderer initialSelectedPlanId={selectedPlan} scrollTo={scrollTo} />
     </div>
   )
 }

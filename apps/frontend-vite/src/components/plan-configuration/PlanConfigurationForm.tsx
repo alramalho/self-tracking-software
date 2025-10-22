@@ -469,9 +469,9 @@ const PlanConfigurationForm: React.FC<PlanConfigurationFormProps> = ({
             )}
           </Step>
         ) : (
-          <button onClick={() => setShowUpgradePopover(true)}>
-            <div className="p-4 text-left bg-card rounded-lg border-2 border-border opacity-60 cursor-pointer hover:opacity-75 transition-opacity">
-              <div className="flex flex-row items-center gap-4">
+          <button className="w-full" onClick={() => setShowUpgradePopover(true)}>
+            <div className="p-4 w-full text-left bg-card rounded-lg border-2 border-border opacity-60 cursor-pointer hover:opacity-75 transition-opacity">
+              <div className="flex flex-row items-center gap-4 w-full">
                 <Target className="w-7 h-7 text-muted-foreground self-start mt-2" />
                 <div className="flex flex-col items-start gap-3">
                   <div className="flex-1">

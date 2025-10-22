@@ -10,6 +10,7 @@ import { addMonths, isBefore } from "date-fns";
 import { BadgeCheck, Plus, PlusSquare, RefreshCw, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { AnimatePresence } from "framer-motion";
 import Divider from "./Divider";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
@@ -86,10 +87,12 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
 interface PlansRendererProps {
   initialSelectedPlanId?: string | null;
+  scrollTo?: string;
 }
 
 const PlansRenderer: React.FC<PlansRendererProps> = ({
   initialSelectedPlanId,
+  scrollTo,
 }) => {
   const { plans, isLoadingPlans, upsertPlan, deletePlan } = usePlans();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
@@ -121,7 +124,7 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
       const defaultPlan = coachedPlan || firstNonExpiredPlan || orderedPlans[0];
       setSelectedPlanId(defaultPlan.id!);
     }
-  }, [orderedPlans, initialSelectedPlanId]);
+  }, [orderedPlans, initialSelectedPlanId, selectedPlanId]);
 
   if (isLoadingPlans) {
     return (
@@ -256,13 +259,17 @@ const PlansRenderer: React.FC<PlansRendererProps> = ({
 
       <Divider />
 
-      {selectedPlanId && orderedPlans.find((p) => p.id === selectedPlanId) && (
-        <PlanRendererv2
-          selectedPlan={
-            orderedPlans.find((p) => p.id === selectedPlanId)! as CompletePlan
-          }
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {selectedPlanId && orderedPlans.find((p) => p.id === selectedPlanId) && (
+          <PlanRendererv2
+            key={selectedPlanId}
+            selectedPlan={
+              orderedPlans.find((p) => p.id === selectedPlanId)! as CompletePlan
+            }
+            scrollTo={scrollTo}
+          />
+        )}
+      </AnimatePresence>
 
       <AppleLikePopover
         open={expiredPlanPopover !== null}

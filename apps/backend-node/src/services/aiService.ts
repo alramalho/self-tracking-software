@@ -349,6 +349,76 @@ export class AIService {
     this.plansService = plansService;
   }
 
+  /**
+   * Shared helper to build plan context for coaching messages
+   * @private
+   */
+  private async buildPlanContext(
+    userName: string,
+    plan: Plan & { activities: Activity[] },
+    user: User
+  ): Promise<string> {
+    let achievement;
+    let currentWeekStats;
+
+    if (this.plansService) {
+      try {
+        const progressData = await this.plansService.getPlanProgress(plan, user);
+        achievement = progressData.achievement;
+        currentWeekStats = progressData.currentWeekStats;
+      } catch (error) {
+        logger.error("Could not get plan progress data", error);
+        throw error;
+      }
+    }
+
+    // Determine time context for this week
+    const now = new Date();
+    const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 }); // Sunday = 0
+    const daysLeft = Math.ceil(
+      (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    let context = `${userName}'s plan: "${plan.goal}"`;
+
+    if (currentWeekStats) {
+      const { daysCompletedThisWeek, numActiveDaysInTheWeek } =
+        currentWeekStats;
+      const daysNeeded = numActiveDaysInTheWeek - daysCompletedThisWeek;
+
+      // Determine week feasibility (aligned with PlanState calculation logic from plansService)
+      let weekStatus: "COMPLETED" | "FAILED" | "AT_RISK" | "ON_TRACK";
+      if (daysNeeded === 0) {
+        weekStatus = "COMPLETED";
+      } else if (daysNeeded > daysLeft) {
+        // Impossible to complete = FAILED
+        weekStatus = "FAILED";
+      } else if (daysNeeded === daysLeft) {
+        // No margin for error = AT_RISK
+        weekStatus = "AT_RISK";
+      } else {
+        // Has buffer time = ON_TRACK
+        weekStatus = "ON_TRACK";
+      }
+
+      context += `\n- This week: ${daysCompletedThisWeek}/${numActiveDaysInTheWeek} days completed`;
+      context += `\n- Days needed: ${daysNeeded} more ${daysNeeded === 1 ? "day" : "days"}`;
+      context += `\n- Time left: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} remaining`;
+      context += `\n- Week status: ${weekStatus}`;
+
+      // If week is failed (impossible to complete), mention plan has been adjusted
+      if (weekStatus === "FAILED") {
+        context += `\n- Important: The plan has been automatically adjusted to be more achievable going forward`;
+      }
+    }
+
+    if (achievement && achievement.streak > 0) {
+      context += `\n- Current streak: ${achievement.streak} ${achievement.streak === 1 ? "week" : "weeks"}`;
+    }
+
+    return context;
+  }
+
   // Extract activities for plan creation
   async extractActivitiesForPlan(
     message: string,
@@ -471,31 +541,18 @@ export class AIService {
   ): Promise<{ title: string; message: string }> {
     const userName = user.name || user.username || "there";
 
-    // Get comprehensive progress data including streaks
-    let achievement;
-    let currentWeekStats;
-
-    if (this.plansService) {
-      try {
-        // Get comprehensive progress data including streaks
-        const progressData = await this.plansService.getPlanProgress(
-          plan,
-          user
-        );
-        achievement = progressData.achievement;
-        currentWeekStats = progressData.currentWeekStats;
-      } catch (error) {
-        logger.error("Could not get plan progress data", error);
-        throw error;
-      }
+    // Determine time-of-day context based on user's preferred coaching hour
+    const preferredHour = user.preferredCoachingHour ?? 6;
+    let timeOfDay = "check-in";
+    if (preferredHour >= 5 && preferredHour < 12) {
+      timeOfDay = "morning check-in";
+    } else if (preferredHour >= 12 && preferredHour < 17) {
+      timeOfDay = "afternoon check-in";
+    } else if (preferredHour >= 17 && preferredHour < 21) {
+      timeOfDay = "evening check-in";
+    } else {
+      timeOfDay = "check-in";
     }
-
-    // Determine time context for this week
-    const now = new Date();
-    const endOfWeekDate = endOfWeek(now, { weekStartsOn: 0 }); // Sunday = 0
-    const daysLeft = Math.ceil(
-      (endOfWeekDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
 
     const schema = z.object({
       title: z
@@ -511,53 +568,68 @@ export class AIService {
     });
 
     const systemPrompt =
-      `You are a supportive personal coach. Generate a brief coaching notification with a title and message.` +
+      `You are a supportive personal coach sending a ${timeOfDay} to encourage the user. ` +
+      `Title: Short, punchy summary (3-5 words) of the week's status or key point ` +
+      `Message: Brief, personalized advice (1-2 sentences) that's encouraging but realistic, helping them stay on track ` +
       `` +
-      `Title: Short, punchy summary (3-5 words) of the week's status or key point` +
-      `Message: Brief, personalized advice (1-2 sentences) that's encouraging but realistic` +
-      `` +
-      `Keep it natural and varied - don't follow a fixed template. Focus on what matters most given the context.` +
+      `Keep it natural and varied - don't follow a fixed template. Focus on what matters most given the context. ` +
       `Use their name in the message. Optionally include 🔥 if it feels appropriate.`;
 
-    // Build a simple, clear context
-    let context = `${userName}'s plan: "${plan.goal}"`;
-
-    if (currentWeekStats) {
-      const { daysCompletedThisWeek, numActiveDaysInTheWeek } =
-        currentWeekStats;
-      const daysNeeded = numActiveDaysInTheWeek - daysCompletedThisWeek;
-
-      // Determine week feasibility (aligned with PlanState calculation logic from plansService)
-      let weekStatus: "COMPLETED" | "FAILED" | "AT_RISK" | "ON_TRACK";
-      if (daysNeeded === 0) {
-        weekStatus = "COMPLETED";
-      } else if (daysNeeded > daysLeft) {
-        // Impossible to complete = FAILED
-        weekStatus = "FAILED";
-      } else if (daysNeeded === daysLeft) {
-        // No margin for error = AT_RISK
-        weekStatus = "AT_RISK";
-      } else {
-        // Has buffer time = ON_TRACK
-        weekStatus = "ON_TRACK";
-      }
-
-      context += `\n- This week: ${daysCompletedThisWeek}/${numActiveDaysInTheWeek} days completed`;
-      context += `\n- Days needed: ${daysNeeded} more ${daysNeeded === 1 ? "day" : "days"}`;
-      context += `\n- Time left: ${daysLeft} ${daysLeft === 1 ? "day" : "days"} remaining`;
-      context += `\n- Week status: ${weekStatus}`;
-
-      // If week is failed (impossible to complete), mention plan has been adjusted
-      if (weekStatus === "FAILED") {
-        context += `\n- Important: The plan has been automatically adjusted to be more achievable going forward`;
-      }
-    }
-
-    if (achievement && achievement.streak > 0) {
-      context += `\n- Current streak: ${achievement.streak} ${achievement.streak === 1 ? "week" : "weeks"}`;
-    }
+    // Build plan context using shared helper
+    const context = await this.buildPlanContext(userName, plan, user);
 
     const prompt = `Generate a coaching notification for this user based on their current progress:\n\n${context}`;
+
+    return this.generateStructuredResponse(prompt, schema, systemPrompt);
+  }
+
+  /**
+   * Generate a post-activity celebration message sent immediately after activity completion
+   * This congratulates the user and asks how it went
+   */
+  async generatePostActivityMessage(
+    user: User,
+    plan: Plan & { activities: Activity[] },
+    activityEntry: { activityId: string; quantity: number; date: Date }
+  ): Promise<{ title: string; message: string }> {
+    const userName = user.name || user.username || "there";
+
+    // Find the activity details
+    const activity = plan.activities.find((a) => a.id === activityEntry.activityId);
+    if (!activity) {
+      throw new Error(`Activity ${activityEntry.activityId} not found in plan`);
+    }
+
+    const schema = z.object({
+      title: z
+        .string()
+        .describe(
+          "A short, celebratory title (2-4 words) acknowledging the achievement"
+        ),
+      message: z
+        .string()
+        .describe(
+          "A brief congratulatory message (1-2 sentences) that celebrates completion and asks how it went or how they feel"
+        ),
+    });
+
+    const systemPrompt =
+      `You are a supportive personal coach sending an IMMEDIATE CELEBRATION right after the user completed an activity. ` +
+      `Title: Short, celebratory (2-4 words) acknowledging what they just did ` +
+      `Message: Congratulate them briefly (1-2 sentences) and ask how it went or how they feel. Be genuine and warm. ` +
+      `` +
+      `Keep it natural and varied - don't follow a fixed template. This is a moment of celebration! ` +
+      `Use their name in the message. Optionally include 🔥, 💪, or ✨ if it feels appropriate.`;
+
+    // Build plan context using shared helper
+    const context = await this.buildPlanContext(userName, plan, user);
+
+    // Add activity-specific context
+    const activityContext =
+      `${context}\n\n` +
+      `- Just completed: ${activityEntry.quantity} ${activity.measure} of ${activity.emoji} ${activity.title}`;
+
+    const prompt = `Generate a celebration message for this user who just completed an activity:\n\n${activityContext}`;
 
     return this.generateStructuredResponse(prompt, schema, systemPrompt);
   }
