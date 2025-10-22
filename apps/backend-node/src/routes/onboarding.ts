@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { aiService } from "../services/aiService";
 import { memoryService } from "../services/memoryService";
+import { chatService } from "../services/chatService";
 import { logger } from "../utils/logger";
 import { prisma } from "../utils/prisma";
 
@@ -29,10 +30,13 @@ router.post(
 
       logger.info(`Plan goal check for user ${req.user!.id}`);
 
+      const { coach, chat } =
+        await chatService.ensureOnboardingChatAndCoachExist(req.user!.id);
+
       // Store user message in memory
       await memoryService.writeMessage({
         content: message,
-        userId: req.user!.id,
+        chatId: chat.id,
         role: "USER",
       });
 
@@ -89,10 +93,13 @@ router.post(
 
       logger.info(`Generating plan activities for user ${req.user!.id}`);
 
+      const { coach, chat } =
+        await chatService.ensureOnboardingChatAndCoachExist(req.user!.id);
+
       // Store user message in memory
       await memoryService.writeMessage({
         content: message,
-        userId: req.user!.id,
+        chatId: chat.id,
         role: "USER",
       });
 

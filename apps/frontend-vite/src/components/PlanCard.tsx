@@ -158,7 +158,13 @@ const PlanCard: React.FC<PlanCardProps> = ({
             </div>
           )}
           {!hideInviteButton && (
-            <InviteButton planId={plan.id!} onInviteSuccess={onInviteSuccess} isExternalSupported={false} />
+            <InviteButton
+              planId={plan.id!}
+              onInviteSuccess={onInviteSuccess}
+              isExternalSupported={false}
+              planEmoji={plan.emoji || undefined}
+              planGoal={plan.goal}
+            />
           )}
           <button
             data-testid="plan-edit-button"
