@@ -330,7 +330,7 @@ export class RecommendationsService {
           deletedAt: null,
           OR: [{ finishingDate: null }, { finishingDate: { gt: new Date() } }],
         },
-        orderBy: { sortOrder: "asc" },
+        orderBy: { createdAt: "desc" },
       });
 
       if (userPlans.length === 0) {

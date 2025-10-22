@@ -257,15 +257,13 @@ export class RecurringJobService {
     const startedForUsers: string[] = [];
 
     // Process plan coaching for each eligible user
-    // Process their first active plan (most important one based on sortOrder)
+    // Process their coached plan, or fallback to newest plan
     for (const user of usersToCoach) {
       try {
-        // Get the user's first plan (sorted by sortOrder or createdAt)
-        const firstPlan = user.plans.sort((a, b) => {
-          if (a.sortOrder !== null && b.sortOrder !== null) {
-            return a.sortOrder - b.sortOrder;
-          }
-          return a.createdAt.getTime() - b.createdAt.getTime();
+        // Get the user's coached plan, or the newest plan as fallback
+        const coachedPlan = (user.plans as any[]).find((p: any) => p.isCoached);
+        const firstPlan = coachedPlan || user.plans.sort((a, b) => {
+          return b.createdAt.getTime() - a.createdAt.getTime();
         })[0];
 
         if (!firstPlan) {

@@ -38,12 +38,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
   const { plans, deletePlan } = usePlans();
   const { isUserPremium } = usePaidPlan();
   const { currentUser } = useCurrentUser();
-  const isCoached =
-    isUserPremium &&
-    plans?.find(
-      (p) =>
-        p.sortOrder === Math.min(...plans.map((p) => p.sortOrder ?? Infinity))
-    )?.id === plan.id;
+  const isCoached = isUserPremium && (plan as any).isCoached;
   const themeColors = useThemeColors();
   const variants = getThemeVariants(themeColors.raw);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

@@ -588,7 +588,7 @@ function ProfilePage() {
                               <h3 className="text-lg font-semibold">
                                 {plan.goal}
                               </h3>
-                              {(plan as any).visibility === "PRIVATE" && isOwnProfile && (
+                              {plan.visibility === "PRIVATE" && isOwnProfile && (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
                                   Private
                                 </span>

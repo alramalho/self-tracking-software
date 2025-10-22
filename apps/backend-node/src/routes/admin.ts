@@ -560,7 +560,7 @@ router.get(
                 { finishingDate: { gt: new Date() } },
               ],
             },
-            orderBy: { sortOrder: "asc" },
+            orderBy: { createdAt: "desc" },
           },
         },
       });

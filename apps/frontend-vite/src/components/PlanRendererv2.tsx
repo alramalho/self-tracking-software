@@ -5,7 +5,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { getThemeVariants } from "@/utils/theme";
 import { Link } from "@tanstack/react-router";
 import { addWeeks, endOfWeek, format, isFuture, isSameWeek, startOfWeek, subDays } from "date-fns";
-import { ChartArea, Loader2, Maximize2, Minimize2, Pencil, PlusSquare, Trash2, UserPlus } from "lucide-react";
+import { BadgeCheck, ChartArea, Loader2, Maximize2, Minimize2, Pencil, PlusSquare, Trash2, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppleLikePopover from "./AppleLikePopover";
 import ConfirmDialogOrPopover from "./ConfirmDialogOrPopover";
@@ -52,14 +52,8 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
 
   const isPlanCoached = useCallback((selectedPlan: CompletePlan) => {
     if (!plans) return false;
-    // we must check if the plan has the minimum .sortOrder of plans
-    const minSortOrder = plans.reduce((min, plan) => {
-      if (!plan.sortOrder) return Infinity;
-      return plan.sortOrder < min ? plan.sortOrder : min;
-    }, Infinity) ?? 0;
-
-    return selectedPlan.sortOrder === minSortOrder;
-
+    // Check if the plan has the isCoached flag
+    return (selectedPlan as any).isCoached || false;
   }, [selectedPlan, plans]);
 
   // Auto-scroll to current week when weeks data loads
@@ -320,6 +314,12 @@ export function PlanRendererv2({ selectedPlan }: PlanRendererv2Props) {
               : `custom plan`}
           </span>
           <div className="flex gap-2 items-center justify-start">
+            {isPlanCoached(selectedPlan) && (
+              <div className="flex items-center gap-1 mr-2">
+                <BadgeCheck className={`h-5 w-5 ${variants.text}`} />
+                <span className="text-sm text-muted-foreground">Coached</span>
+              </div>
+            )}
             <InviteButton
               planId={selectedPlan.id!}
               onInviteSuccess={() => {}}

@@ -58,10 +58,12 @@ export class PlansService {
           },
           activities: true,
         },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ createdAt: "desc" }],
       });
 
-      return plans.length > 0 ? plans[0] : null;
+      // Return the coached plan, or the first plan if none are coached
+      const coachedPlan = plans.find((p: any) => p.isCoached);
+      return coachedPlan || (plans.length > 0 ? plans[0] : null);
     } catch (error) {
       logger.error("Error getting user's first plan:", error);
       throw error;

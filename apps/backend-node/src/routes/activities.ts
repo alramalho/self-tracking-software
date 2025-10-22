@@ -261,17 +261,13 @@ router.post(
         ]);
       }
 
-      // Find the plan with the minimum sortOrder (first plan)
-      const minSortOrder = Math.min(
-        ...plans.map((p) => p.sortOrder ?? Infinity)
-      );
-
+      // Find coached plan and recalculate its state
       for (const plan of plans) {
-        if (plan.sortOrder === minSortOrder) {
-          // only coach first plan
+        if (plan.isCoached) {
+          // only coach the coached plan
           plansService.recalculateCurrentWeekState(plan, req.user!);
         } else {
-          logger.info(`Plan '${plan.goal}' is not the first plan, skipping`);
+          logger.info(`Plan '${plan.goal}' is not coached, skipping`);
         }
       }
 
@@ -783,7 +779,9 @@ router.post(
 
       if (mentions.length > 0) {
         // Get unique usernames
-        const uniqueUsernames = [...new Set(mentions.map(m => m[1].toLowerCase()))];
+        const uniqueUsernames = [
+          ...new Set(mentions.map((m) => m[1].toLowerCase())),
+        ];
 
         // Look up mentioned users
         const mentionedUsers = await prisma.user.findMany({
