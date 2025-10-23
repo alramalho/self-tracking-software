@@ -66,7 +66,7 @@ const hexToRgba = (hex: string, alpha: number): string => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const intensityAlphaLevels = [0.2, 0.4, 0.6, 0.8, 1.0]; // Define alpha levels for intensities 0-4
+const intensityAlphaLevels = [0.4, 0.55, 0.7, 0.85, 1.0]; // Define alpha levels for intensities 0-4
 
 export const getActivityColor = (
   activityIndex: number,
