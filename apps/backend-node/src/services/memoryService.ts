@@ -7,6 +7,7 @@ export class MemoryService {
     chatId: string;
     role: MessageRole;
     planId?: string;
+    metadata?: any;
   }): Promise<Message> {
     try {
       const savedMessage = await prisma.message.create({
@@ -15,6 +16,7 @@ export class MemoryService {
           role: options.role,
           content: options.content,
           planId: options.planId,
+          metadata: options.metadata,
         },
       });
 
@@ -25,6 +27,7 @@ export class MemoryService {
         role: savedMessage.role,
         content: savedMessage.content,
         createdAt: savedMessage.createdAt,
+        metadata: savedMessage.metadata,
       };
     } catch (error) {
       logger.warn(
@@ -38,6 +41,7 @@ export class MemoryService {
         content: options.content,
         createdAt: new Date(),
         planId: options.planId || null,
+        metadata: null,
       };
     }
   }
